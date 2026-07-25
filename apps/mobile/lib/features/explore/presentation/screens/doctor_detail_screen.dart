@@ -6,6 +6,9 @@ import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_profile_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 
 // ======================================================================
@@ -136,6 +139,20 @@ class _DoctorDetailContent extends ConsumerWidget {
     this.facilityId,
   });
 
+  Future<void> _editField(
+    BuildContext context,
+    WidgetRef ref,
+    DoctorEditableField field,
+  ) async {
+    final updated = await showEditDoctorFieldSheet(
+      context,
+      detail: detail,
+      field: field,
+    );
+    if (updated == null) return;
+    ref.invalidate(doctorDetailProvider(doctorId));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notesAsync = ref.watch(professionalNotesProvider(doctorId));
@@ -165,16 +182,17 @@ class _DoctorDetailContent extends ConsumerWidget {
               _DoctorSignals(signals: detail.signals),
               const SizedBox(height: 16),
             ],
-            _DoctorPersonalCard(detail: detail),
+            _DoctorPersonalCard(
+              detail: detail,
+              onEditField: (field) => _editField(context, ref, field),
+            ),
             const SizedBox(height: 16),
             if (detail.prescribing.isNotEmpty) ...[
               _DoctorPrescribing(items: detail.prescribing),
               const SizedBox(height: 16),
             ],
-            if (detail.clinics.isNotEmpty) ...[
-              _DoctorClinics(clinics: detail.clinics),
-              const SizedBox(height: 16),
-            ],
+            _DoctorClinics(clinics: detail.clinics),
+            const SizedBox(height: 16),
             if (detail.visits.isNotEmpty) ...[
               _DoctorVisits(visits: detail.visits),
               const SizedBox(height: 16),
@@ -306,10 +324,14 @@ class _DoctorRelationshipCardState extends State<_DoctorRelationshipCard> {
               ),
             )
           else ...[
-            RelationshipStars(score: _score, onChanged: _saving ? null : _set),
-            const SizedBox(height: 4),
+            RelationshipStars(
+              score: _score,
+              onChanged: _saving ? null : _set,
+              showLabel: false,
+            ),
+            const SizedBox(height: 6),
             const Text(
-              'Toque nas estrelas para definir (segure para limpar).',
+              'Toque à esquerda da estrela para meia, à direita para cheia. Segure para limpar.',
               style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
             ),
           ],
@@ -923,190 +945,147 @@ class _SignalCard extends StatelessWidget {
 
 class _DoctorPersonalCard extends StatelessWidget {
   final DoctorDetail detail;
-  const _DoctorPersonalCard({required this.detail});
+  final ValueChanged<DoctorEditableField>? onEditField;
+  const _DoctorPersonalCard({required this.detail, this.onEditField});
+
+  static String? _displayBirthday(String? isoOrLabel) {
+    if (isoOrLabel == null || isoOrLabel.isEmpty) return null;
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(isoOrLabel);
+    if (match == null) return isoOrLabel;
+    const months = [
+      'jan',
+      'fev',
+      'mar',
+      'abr',
+      'mai',
+      'jun',
+      'jul',
+      'ago',
+      'set',
+      'out',
+      'nov',
+      'dez',
+    ];
+    final month = int.tryParse(match.group(2)!) ?? 1;
+    final day = match.group(3)!;
+    return '$day/${months[month - 1]}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final rows = [
-      _InfoRow(icon: '🎓', label: 'Formação', value: detail.faculty),
-      _InfoRow(icon: '🏥', label: 'Residência', value: detail.residency),
-      _InfoRow(icon: '🎂', label: 'Aniversário', value: detail.birthday),
-      _InfoRow(icon: '⚽', label: 'Time', value: detail.team),
-      _InfoRow(icon: '♡', label: 'Interesses', value: detail.interests),
-      _InfoRow(icon: '🗣', label: 'Idiomas', value: detail.language),
-    ];
+    final canEdit = onEditField != null;
+    final fields =
+        <
+          ({
+            String label,
+            String? value,
+            IconData icon,
+            DoctorEditableField? field,
+          })
+        >[
+          (
+            label: 'Formação',
+            value: detail.faculty,
+            icon: Icons.school_outlined,
+            field: null,
+          ),
+          (
+            label: 'Residência',
+            value: detail.residency,
+            icon: Icons.local_hospital_outlined,
+            field: null,
+          ),
+          (
+            label: 'Aniversário',
+            value: _displayBirthday(detail.birthday),
+            icon: Icons.cake_outlined,
+            field: DoctorEditableField.birthDate,
+          ),
+          (
+            label: 'Time',
+            value: detail.team,
+            icon: Icons.sports_soccer_outlined,
+            field: DoctorEditableField.favoriteTeam,
+          ),
+          (
+            label: 'Interesses',
+            value: detail.interests,
+            icon: Icons.favorite_outline,
+            field: DoctorEditableField.hobbies,
+          ),
+          (
+            label: 'Idiomas',
+            value: detail.language,
+            icon: Icons.translate_outlined,
+            field: DoctorEditableField.languages,
+          ),
+          (
+            label: 'Telefone',
+            value: detail.phone,
+            icon: Icons.phone_outlined,
+            field: DoctorEditableField.mobilePhone,
+          ),
+          (
+            label: 'WhatsApp',
+            value: detail.whatsapp ?? detail.phone,
+            icon: Icons.chat_outlined,
+            field: DoctorEditableField.mobilePhone,
+          ),
+          (
+            label: 'E-mail',
+            value: detail.email,
+            icon: Icons.email_outlined,
+            field: DoctorEditableField.email,
+          ),
+        ];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFedeff3)),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0f1729).withValues(alpha: 0.03),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
+    return ClinicDetailCard(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section header
-            Row(
-              children: [
-                const Text(
-                  'PESSOAL',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: Color(0xFF8a94a6),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(height: 1, color: const Color(0xFFeef0f3)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Personal info grid
-            Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              children: rows
-                  .where((r) => r.value != null)
-                  .map(
-                    (r) => SizedBox(
-                      width: (MediaQuery.of(context).size.width - 60) / 2,
-                      child: r,
-                    ),
-                  )
-                  .toList(),
-            ),
-            if (detail.phone != null ||
-                detail.email != null ||
-                detail.whatsapp != null) ...[
-              Container(
-                height: 1,
-                color: const Color(0xFFeef0f3),
-                margin: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              // Contacts
-              if (detail.phone != null)
-                _ContactRow(
-                  label: 'TELEFONE',
-                  value: detail.phone!,
-                  mono: true,
-                ),
-              if (detail.whatsapp != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _ContactRow(
-                    label: 'WHATSAPP',
-                    value: detail.whatsapp!,
-                    mono: true,
-                  ),
-                ),
-              if (detail.email != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _ContactRow(label: 'E-MAIL', value: detail.email!),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final String icon;
-  final String label;
-  final String? value;
-  const _InfoRow({required this.icon, required this.label, this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 14, height: 1)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 9.5,
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+              child: Text(
+                'PESSOAL',
+                style: TextStyle(
+                  fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
+                  letterSpacing: 0.8,
                   color: Color(0xFF8a94a6),
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                value ?? '',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF0f1729),
+            ),
+            if (canEdit)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Text(
+                  'Toque no lápis ou em + Completar para editar um campo',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFb0b7c3),
+                  ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            for (var i = 0; i < fields.length; i++)
+              EditableFieldRow(
+                label: fields[i].label,
+                value: fields[i].value,
+                icon: fields[i].icon,
+                emptyActionLabel: '+ Completar',
+                showDivider: i < fields.length - 1,
+                showEditButton: canEdit && fields[i].field != null,
+                onEdit: fields[i].field == null
+                    ? null
+                    : () => onEditField!(fields[i].field!),
+              ),
+          ],
         ),
-      ],
-    );
-  }
-}
-
-class _ContactRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool mono;
-  const _ContactRow({
-    required this.label,
-    required this.value,
-    this.mono = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 68,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: Color(0xFF8a94a6),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 12.5,
-              color: const Color(0xFF0f1729),
-              fontFamily: mono ? 'monospace' : null,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1320,14 +1299,17 @@ class _DoctorClinics extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: 'CLÍNICAS · ${clinics.length}',
-          subtitle: 'onde atende',
+          title: clinics.isEmpty ? 'CLÍNICAS' : 'CLÍNICAS · ${clinics.length}',
+          subtitle: 'onde atende (no seu território)',
         ),
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: clinics.isEmpty ? 16 : 0,
+            ),
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border.all(color: const Color(0xFFedeff3)),
@@ -1340,110 +1322,126 @@ class _DoctorClinics extends StatelessWidget {
                 ),
               ],
             ),
-            child: Column(
-              children: List.generate(clinics.length, (i) {
-                final c = clinics[i];
-                return InkWell(
-                  onTap: () {
-                    context.push('/workspace/clinic/${c.id}');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      border: i > 0
-                          ? const Border(
-                              top: BorderSide(color: Color(0xFFeef0f3)),
-                            )
-                          : null,
+            child: clinics.isEmpty
+                ? const Text(
+                    'Nenhuma clínica do seu território vinculada a este médico.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF9ca3af),
+                      height: 1.35,
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 34,
-                          height: 34,
+                  )
+                : Column(
+                    children: List.generate(clinics.length, (i) {
+                      final c = clinics[i];
+                      final meta = [
+                        if (c.role.trim().isNotEmpty) c.role.trim(),
+                        if (c.days.trim().isNotEmpty) c.days.trim(),
+                      ].join(' · ');
+                      return InkWell(
+                        onTap: () {
+                          context.push('/workspace/clinic/${c.id}');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: c.isMain
-                                ? const Color(0xFFeef2ff)
-                                : const Color(0xFFf3f4f6),
-                            borderRadius: BorderRadius.circular(8),
+                            border: i > 0
+                                ? const Border(
+                                    top: BorderSide(color: Color(0xFFeef0f3)),
+                                  )
+                                : null,
                           ),
-                          child: Icon(
-                            Icons.local_hospital_rounded,
-                            size: 16,
-                            color: c.isMain
-                                ? const Color(0xFF1e40af)
-                                : const Color(0xFF6b7280),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      c.name,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0f1729),
-                                        letterSpacing: -0.1,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (c.isMain) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF1e40af,
-                                        ).withValues(alpha: 0.10),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'principal',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.3,
-                                          color: Color(0xFF1e40af),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 1),
-                              Text(
-                                '${c.role} · ${c.days}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF6b7280),
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: c.isMain
+                                      ? const Color(0xFFeef2ff)
+                                      : const Color(0xFFf3f4f6),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
+                                child: Icon(
+                                  Icons.local_hospital_rounded,
+                                  size: 16,
+                                  color: c.isMain
+                                      ? const Color(0xFF1e40af)
+                                      : const Color(0xFF6b7280),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            c.name,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF0f1729),
+                                              letterSpacing: -0.1,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (c.isMain) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF1e40af,
+                                              ).withValues(alpha: 0.10),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                            child: const Text(
+                                              'principal',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.3,
+                                                color: Color(0xFF1e40af),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    if (meta.isNotEmpty) ...[
+                                      const SizedBox(height: 1),
+                                      Text(
+                                        meta,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF6b7280),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 18,
+                                color: const Color(
+                                  0xFF8a94a6,
+                                ).withValues(alpha: 0.7),
                               ),
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 18,
-                          color: const Color(0xFF8a94a6).withValues(alpha: 0.7),
-                        ),
-                      ],
-                    ),
+                      );
+                    }),
                   ),
-                );
-              }),
-            ),
           ),
         ),
       ],

@@ -25,6 +25,7 @@ export function applyRoleAbilities(
       can("manage", "CATALOG");
       can("manage", "VISIT");
       can("manage", "FIELD_SUGGESTION");
+      can("manage", "CADASTRO_SUBMISSION");
       break;
 
     case "MANAGER":
@@ -50,6 +51,8 @@ export function applyRoleAbilities(
       can("create", "FIELD_SUGGESTION");
       can("read", "FIELD_SUGGESTION");
       can("update", "FIELD_SUGGESTION");
+      can("read", "CADASTRO_SUBMISSION");
+      can("update", "CADASTRO_SUBMISSION");
       break;
 
     case "REP":
@@ -64,6 +67,9 @@ export function applyRoleAbilities(
       can("create", "FIELD_SUGGESTION");
       cannot("read", "FIELD_SUGGESTION");
       cannot("update", "FIELD_SUGGESTION");
+      // Upload/submit uses update FACILITY; ops Cadastro queue requires CADASTRO_SUBMISSION.
+      cannot("read", "CADASTRO_SUBMISSION");
+      cannot("update", "CADASTRO_SUBMISSION");
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");
@@ -77,6 +83,8 @@ export function applyRoleAbilities(
       can("read", "FIELD_SUGGESTION");
       can("update", "FIELD_SUGGESTION");
       cannot("create", "FIELD_SUGGESTION");
+      can("read", "CADASTRO_SUBMISSION");
+      can("update", "CADASTRO_SUBMISSION");
       cannot("create", "FACILITY");
       cannot("update", "FACILITY");
       cannot("delete", "FACILITY");

@@ -22,6 +22,8 @@
     "db:seed": "bun src/infrastructure/database/seed.ts",
     "db:import:mcp-test": "bun src/scripts/import-mcp-test-data.ts",
     "db:import:mcp-test:all": "bun src/scripts/import-mcp-test-data.ts --all --admin-email=admin@demo.atlasmed.local",
+    "db:geocode:facilities": "bash -lc 'set -a; source .env; set +a; bun src/scripts/geocode-facilities.ts \"$@\"' --",
+    "db:geocode:facilities:apply": "bash -lc 'set -a; source .env; set +a; bun src/scripts/geocode-facilities.ts --apply \"$@\"' --",
     "db:reset:test": "cd ../../packages/database && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bunx drizzle-kit push --force"
   },
   "dependencies": {

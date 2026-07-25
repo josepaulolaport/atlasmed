@@ -88,6 +88,7 @@ export {
   canManageCatalog,
   canReadCatalog,
   canReadFieldSuggestions,
+  canReadCadastroSubmissions,
   hasMinimumRole,
   isAdmin,
 } from "./permissions/ui.permissions";

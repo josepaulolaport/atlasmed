@@ -11,7 +11,7 @@ describe("ListProfessionalsUseCase filters", () => {
           id: "professional-1", firstName: "Ana", lastName: "Silva", fullName: "Ana Silva",
           socialName: null, taxId: null, birthDate: null, mobilePhone: null, landlinePhone: null,
           email: null, websiteUrl: null, imageUrl: null, favoriteTeam: null, favoriteSport: null,
-          hobbies: null, notes: null, specialty: "Cardiology", crmCouncil: null, crmNumber: null,
+          languages: null, hobbies: null, notes: null, specialty: "Cardiology", crmCouncil: null, crmNumber: null,
           crmState: null, sourceProvider: null, externalSourceId: null, sourceContentHash: null,
           sourceFirstSeenAt: null, sourceLastSeenAt: null, sourcePresent: false, sourceTracked: false,
           manuallyEditedAt: null, facilityIds: ["facility-1"], createdAt: new Date("2026-01-01"),

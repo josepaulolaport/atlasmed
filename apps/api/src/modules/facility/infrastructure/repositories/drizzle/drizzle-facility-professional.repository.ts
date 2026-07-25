@@ -3,7 +3,18 @@ import {
   professionals,
   facilities,
 } from "@atlasmed/database";
-import { eq, and, or, isNull, isNotNull, ilike, sql, asc, type SQL } from "drizzle-orm";
+import {
+  eq,
+  and,
+  or,
+  isNull,
+  isNotNull,
+  ilike,
+  sql,
+  asc,
+  desc,
+  type SQL,
+} from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityProfessionalRecord,
@@ -119,17 +130,25 @@ export class DrizzleFacilityProfessionalRepository
   async findByProfessionalAndFacility(
     professionalId: string,
     facilityId: string,
-    occupationCode = LEGACY_OCCUPATION_CODE
+    occupationCode?: string
   ): Promise<FacilityProfessionalRecord | null> {
+    const conditions: SQL[] = [
+      eq(facilityProfessionals.facilityId, facilityId),
+      eq(facilityProfessionals.professionalId, professionalId),
+    ];
+
+    // When occupation is omitted, match any code (CNES uses MED/etc., not only LEGACY).
+    if (occupationCode !== undefined) {
+      conditions.push(eq(facilityProfessionals.occupationCode, occupationCode));
+    }
+
     const [association] = await db
       .select()
       .from(facilityProfessionals)
-      .where(
-        and(
-          eq(facilityProfessionals.facilityId, facilityId),
-          eq(facilityProfessionals.professionalId, professionalId),
-          eq(facilityProfessionals.occupationCode, occupationCode)
-        )
+      .where(and(...conditions))
+      .orderBy(
+        sql`case when ${facilityProfessionals.endedAt} is null then 0 else 1 end`,
+        desc(facilityProfessionals.updatedAt)
       )
       .limit(1);
 
@@ -139,8 +158,19 @@ export class DrizzleFacilityProfessionalRepository
   async findActiveWithProfessional(
     facilityId: string,
     professionalId: string,
-    occupationCode = LEGACY_OCCUPATION_CODE
+    occupationCode?: string
   ) {
+    const conditions: SQL[] = [
+      eq(facilityProfessionals.facilityId, facilityId),
+      eq(facilityProfessionals.professionalId, professionalId),
+      isNull(facilityProfessionals.endedAt),
+      isNull(professionals.deletedAt),
+    ];
+
+    if (occupationCode !== undefined) {
+      conditions.push(eq(facilityProfessionals.occupationCode, occupationCode));
+    }
+
     const [row] = await db
       .select({
         ...associationColumns,
@@ -163,6 +193,7 @@ export class DrizzleFacilityProfessionalRepository
           crmState: professionals.crmState,
           favoriteTeam: professionals.favoriteTeam,
           favoriteSport: professionals.favoriteSport,
+          languages: professionals.languages,
           hobbies: professionals.hobbies,
           notes: professionals.notes,
           createdAt: professionals.createdAt,
@@ -171,15 +202,8 @@ export class DrizzleFacilityProfessionalRepository
       })
       .from(facilityProfessionals)
       .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
-      .where(
-        and(
-          eq(facilityProfessionals.facilityId, facilityId),
-          eq(facilityProfessionals.professionalId, professionalId),
-          eq(facilityProfessionals.occupationCode, occupationCode),
-          isNull(facilityProfessionals.endedAt),
-          isNull(professionals.deletedAt)
-        )
-      )
+      .where(and(...conditions))
+      .orderBy(desc(facilityProfessionals.updatedAt))
       .limit(1);
 
     if (!row) return null;

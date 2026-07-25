@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/distance_bands.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
@@ -62,15 +61,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         : state.filteredDoctors;
     final displayedList = filteredList.take(state.visibleCount).toList();
     final hasMore = state.visibleCount < filteredList.length;
-    final banded = isClinic
-        ? withDistanceBandHeaders<Clinic>(
-            displayedList.cast<Clinic>(),
-            (c) => c.distanceKm,
-          )
-        : withDistanceBandHeaders<Doctor>(
-            displayedList.cast<Doctor>(),
-            (d) => d.distanceKm,
-          );
 
     final filterChips = buildFilterChips(state, notifier, isClinic);
     final filterCount = filterChips.length;
@@ -88,18 +78,23 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 TabToggle(
                   value: state.activeTab,
                   onChanged: notifier.setTab,
-                  clinicCount: state.clinics.length,
-                  doctorCount: state.doctors.length,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 10, 0, 4),
-                  child: SortRow(
+                  clinicCount: state.clinicTotal,
+                  doctorCount: state.doctorTotal,
+                  trailing: ExploreSortChip(
                     sort: state.sort,
-                    onSortTap: () => setState(() => _sortOpen = true),
-                    filterChips: filterChips,
+                    onTap: () => setState(() => _sortOpen = true),
                   ),
                 ),
-                _buildResultCount(filteredList.length, isClinic),
+                if (filterChips.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: SortRow(
+                      sort: state.sort,
+                      onSortTap: () => setState(() => _sortOpen = true),
+                      filterChips: filterChips,
+                      includeSort: false,
+                    ),
+                  ),
                 Expanded(
                   child: state.loading
                       ? ListView.builder(
@@ -113,8 +108,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                           onRefresh: () => ref
                               .read(exploreProvider.notifier)
                               .refreshGpsAndList(),
-                          child: _buildBandedList(
-                            banded,
+                          child: _buildResultsList(
+                            displayedList,
                             hasMore,
                             isClinic,
                             notifier,
@@ -179,25 +174,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-  Widget _buildResultCount(int count, bool isClinic) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          '$count ${isClinic ? (count == 1 ? 'clínica' : 'clínicas') : (count == 1 ? 'médico' : 'médicos')}',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF9ca3af),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBandedList(
-    List<BandedListEntry<dynamic>> banded,
+  Widget _buildResultsList(
+    List<Object> items,
     bool hasMore,
     bool isClinic,
     ExploreNotifier notifier,
@@ -216,9 +194,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        itemCount: banded.length + (hasMore ? 1 : 0),
+        itemCount: items.length + (hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index >= banded.length) {
+          if (index >= items.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Center(
@@ -234,35 +212,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             );
           }
 
-          final entry = banded[index];
-          switch (entry) {
-            case BandHeader(:final band):
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-                child: Text(
-                  band.label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.4,
-                    color: Color(0xFF6b7280),
-                  ),
-                ),
-              );
-            case BandItem(:final item):
-              if (isClinic) {
-                final clinic = item as Clinic;
-                return ClinicRow(
-                  clinic: clinic,
-                  onTap: () => context.push('/workspace/clinic/${clinic.id}'),
-                );
-              }
-              final doctor = item as Doctor;
-              return DoctorRow(
-                doctor: doctor,
-                onTap: () => context.push('/workspace/doctor/${doctor.id}'),
-              );
+          if (isClinic) {
+            final clinic = items[index] as Clinic;
+            return ClinicRow(
+              clinic: clinic,
+              onTap: () => context.push('/workspace/clinic/${clinic.id}'),
+            );
           }
+          final doctor = items[index] as Doctor;
+          return DoctorRow(
+            doctor: doctor,
+            onTap: () => context.push('/workspace/doctor/${doctor.id}'),
+          );
         },
       ),
     );

@@ -137,44 +137,55 @@ Future<DoctorDetail> _fetchDoctorDetail(String id) async {
     if (apiDoctor == null) {
       throw Exception('Doctor not found: $id');
     }
-    final name = apiDoctor.displayName;
-    final nameParts = name.split(' ');
-    final initials = nameParts.length >= 2
-        ? '${nameParts.first[0]}${nameParts.last[0]}'
-        : name.isNotEmpty
-        ? name[0]
-        : '?';
-    final crm = apiDoctor.crm;
-    return DoctorDetail(
-      id: apiDoctor.id,
-      name: name,
-      initials: initials.toUpperCase(),
-      hue: 0,
-      specialty: apiDoctor.specialty ?? '',
-      crm: crm,
-      role: apiDoctor.specialty != null ? '${apiDoctor.specialty}' : '',
-      distanceKm: apiDoctor.distanceKm ?? 0,
-      phone: null,
-      email: null,
-      whatsapp: null,
-      birthday: null,
-      faculty: null,
-      residency: null,
-      team: null,
-      interests: null,
-      language: null,
-      statusLabel: '',
-      relationshipLabel: '',
-      notes: const [],
-      clinics: const [],
-      gallery: const [],
-      signals: const [],
-      prescribing: const [],
-      visits: const [],
-    );
+    return doctorDetailFromApi(apiDoctor);
   } finally {
     repo.dispose();
   }
+}
+
+/// Maps a professional API profile into the doctor detail UI model.
+DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
+  final name = apiDoctor.displayName;
+  final nameParts = name.split(' ');
+  final initials = nameParts.length >= 2
+      ? '${nameParts.first[0]}${nameParts.last[0]}'
+      : name.isNotEmpty
+      ? name[0]
+      : '?';
+  return DoctorDetail(
+    id: apiDoctor.id,
+    name: name,
+    initials: initials.toUpperCase(),
+    hue: 0,
+    specialty: apiDoctor.specialty ?? '',
+    crm: apiDoctor.crm,
+    role: apiDoctor.specialty ?? '',
+    distanceKm: apiDoctor.distanceKm ?? 0,
+    phone: apiDoctor.phone,
+    email: apiDoctor.email,
+    whatsapp: null,
+    // ISO `YYYY-MM-DD` for edit round-trip; UI formats for display.
+    birthday: apiDoctor.birthDate == null
+        ? null
+        : '${apiDoctor.birthDate!.year.toString().padLeft(4, '0')}-'
+              '${apiDoctor.birthDate!.month.toString().padLeft(2, '0')}-'
+              '${apiDoctor.birthDate!.day.toString().padLeft(2, '0')}',
+    faculty: null,
+    residency: null,
+    team: apiDoctor.favoriteTeam,
+    interests: apiDoctor.hobbies,
+    language: apiDoctor.languages,
+    statusLabel: '',
+    relationshipLabel: '',
+    notes: const [],
+    clinics: apiDoctor.facilities
+        .map((f) => DoctorClinic(id: f.id, name: f.name, role: '', days: ''))
+        .toList(growable: false),
+    gallery: const [],
+    signals: const [],
+    prescribing: const [],
+    visits: const [],
+  );
 }
 
 // ── Clinic detail provider ──────────────────────────────────
@@ -232,6 +243,10 @@ final clinicVisitsProvider = FutureProvider.family<List<ClinicVisit>, String>((
 class ExploreState {
   final List<Clinic> clinics;
   final List<Doctor> doctors;
+
+  /// API pagination totals (not loaded-page length).
+  final int clinicTotal;
+  final int doctorTotal;
   final bool loading;
   final bool loadingMore;
   final String activeTab; // 'clinic' | 'doctor'
@@ -252,6 +267,8 @@ class ExploreState {
   const ExploreState({
     this.clinics = const [],
     this.doctors = const [],
+    this.clinicTotal = 0,
+    this.doctorTotal = 0,
     this.loading = true,
     this.loadingMore = false,
     this.activeTab = 'clinic',
@@ -266,6 +283,8 @@ class ExploreState {
   ExploreState copyWith({
     List<Clinic>? clinics,
     List<Doctor>? doctors,
+    int? clinicTotal,
+    int? doctorTotal,
     bool? loading,
     bool? loadingMore,
     String? activeTab,
@@ -282,6 +301,8 @@ class ExploreState {
     return ExploreState(
       clinics: clinics ?? this.clinics,
       doctors: doctors ?? this.doctors,
+      clinicTotal: clinicTotal ?? this.clinicTotal,
+      doctorTotal: doctorTotal ?? this.doctorTotal,
       loading: loading ?? this.loading,
       loadingMore: loadingMore ?? this.loadingMore,
       activeTab: activeTab ?? this.activeTab,
@@ -473,9 +494,15 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       if (result != null) {
         final items = result.items.map(Clinic.fromApi).toList();
         if (append) {
-          state = state.copyWith(clinics: [...state.clinics, ...items]);
+          state = state.copyWith(
+            clinics: [...state.clinics, ...items],
+            clinicTotal: result.pagination.total,
+          );
         } else {
-          state = state.copyWith(clinics: items);
+          state = state.copyWith(
+            clinics: items,
+            clinicTotal: result.pagination.total,
+          );
         }
         _clinicPage = result.pagination.page;
         _clinicHasMore = result.pagination.page < result.pagination.totalPages;
@@ -509,9 +536,15 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       if (result != null) {
         final items = result.items.map(Doctor.fromApi).toList();
         if (append) {
-          state = state.copyWith(doctors: [...state.doctors, ...items]);
+          state = state.copyWith(
+            doctors: [...state.doctors, ...items],
+            doctorTotal: result.pagination.total,
+          );
         } else {
-          state = state.copyWith(doctors: items);
+          state = state.copyWith(
+            doctors: items,
+            doctorTotal: result.pagination.total,
+          );
         }
         _doctorPage = result.pagination.page;
         _doctorHasMore = result.pagination.page < result.pagination.totalPages;

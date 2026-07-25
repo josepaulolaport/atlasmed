@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_r
 ///
 /// Distance in the response is from [latitude]/[longitude], not the user.
 Future<List<NearbyEstablishment>> fetchNearbyFacilities({
-  required String excludeFacilityId,
+  String excludeFacilityId = '',
   required double latitude,
   required double longitude,
   required double radiusKm,
@@ -25,7 +25,10 @@ Future<List<NearbyEstablishment>> fetchNearbyFacilities({
     final page = await repo.currentValueOrResolve();
     final items = page?.items ?? const <api.Clinic>[];
     return items
-        .where((clinic) => clinic.id != excludeFacilityId)
+        .where(
+          (clinic) =>
+              excludeFacilityId.isEmpty || clinic.id != excludeFacilityId,
+        )
         .where((clinic) => clinic.lat != null && clinic.lng != null)
         .map(clinicToNearbyEstablishment)
         .toList(growable: false);

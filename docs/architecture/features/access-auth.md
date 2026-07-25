@@ -48,6 +48,15 @@ API lists/details that take `getScope()` filter or `assertResourceInScope` on `f
 
 Orders: REP list/detail restricted to `sellerId = actor` within facility scope.
 
+## Cadastro review vs upload
+
+| Action | CASL | Roles |
+|---|---|---|
+| Upload / submit facility docs | `update FACILITY` | ADMIN, MANAGER, REP |
+| List / approve / reject Cadastro queue | `read` / `update CADASTRO_SUBMISSION` | ADMIN, MANAGER, OPS |
+
+REP must not see the Cadastros ops queue. OPS reviews without needing `update FACILITY`.
+
 ## Known Follow-Ups
 
 - Align grant `conditions` semantics between API, CASL helpers, and UI.

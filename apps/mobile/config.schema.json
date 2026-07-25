@@ -12,6 +12,14 @@
       "type": "string",
       "minLength": 1,
       "description": "Token público do Mapbox usado pelo mapa nativo"
+    },
+    "DEBUG_FIXED_LATITUDE": {
+      "type": "string",
+      "description": "Latitude fixa opcional para desenvolvimento (ex.: Rio -22.9068)"
+    },
+    "DEBUG_FIXED_LONGITUDE": {
+      "type": "string",
+      "description": "Longitude fixa opcional para desenvolvimento (ex.: Rio -43.1729)"
     }
   },
   "required": [

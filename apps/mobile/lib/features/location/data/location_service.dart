@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:geolocator/geolocator.dart';
 
 class DeviceLocation {
@@ -107,13 +108,23 @@ class LocationService {
 }
 
 class GeolocatorLocationPlatform implements LocationPlatform {
+  DeviceLocation? get _fixedLocation {
+    final fixed = AppConfig.debugFixedLocation;
+    if (fixed == null) return null;
+    return DeviceLocation(latitude: fixed.latitude, longitude: fixed.longitude);
+  }
+
   @override
   Future<LocationPermissionStatus> checkPermission() async {
+    if (_fixedLocation != null) return LocationPermissionStatus.whileInUse;
     return _permissionFrom(await Geolocator.checkPermission());
   }
 
   @override
   Future<DeviceLocation> getCurrentPosition() async {
+    final fixed = _fixedLocation;
+    if (fixed != null) return fixed;
+
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -141,19 +152,24 @@ class GeolocatorLocationPlatform implements LocationPlatform {
   }
 
   @override
-  Future<bool> isLocationServiceEnabled() =>
-      Geolocator.isLocationServiceEnabled();
+  Future<bool> isLocationServiceEnabled() async {
+    if (_fixedLocation != null) return true;
+    return Geolocator.isLocationServiceEnabled();
+  }
 
   @override
   Future<LocationPermissionStatus> requestPermission() async {
+    if (_fixedLocation != null) return LocationPermissionStatus.whileInUse;
     return _permissionFrom(await Geolocator.requestPermission());
   }
 
   @override
-  Stream<bool> get locationServicesEnabledStream =>
-      Geolocator.getServiceStatusStream().map(
-        (status) => status == ServiceStatus.enabled,
-      );
+  Stream<bool> get locationServicesEnabledStream {
+    if (_fixedLocation != null) return Stream<bool>.value(true);
+    return Geolocator.getServiceStatusStream().map(
+      (status) => status == ServiceStatus.enabled,
+    );
+  }
 
   LocationPermissionStatus _permissionFrom(LocationPermission permission) {
     return switch (permission) {

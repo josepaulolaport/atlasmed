@@ -5,14 +5,18 @@ class SortRow extends StatelessWidget {
   final VoidCallback onSortTap;
   final List<FilterChipData> filterChips;
 
+  /// When false, only filter chips are shown (sort lives elsewhere).
+  final bool includeSort;
+
   const SortRow({
     super.key,
     required this.sort,
     required this.onSortTap,
     required this.filterChips,
+    this.includeSort = true,
   });
 
-  String _sortLabel(String key) {
+  static String labelFor(String key) {
     switch (key) {
       case 'name-asc':
         return 'Nome A–Z';
@@ -29,29 +33,45 @@ class SortRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (filterChips.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: _SortChip(label: _sortLabel(sort), onTap: onSortTap),
-      );
+    if (!includeSort && filterChips.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
-          _SortChip(label: _sortLabel(sort), onTap: onSortTap),
-          const SizedBox(width: 6),
-          ...filterChips.map(
-            (chip) => Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: _FilterChip(label: chip.label, onRemove: chip.onRemove),
+          if (includeSort) ...[
+            Center(
+              child: _SortChip(label: labelFor(sort), onTap: onSortTap),
             ),
-          ),
+            if (filterChips.isNotEmpty) const SizedBox(width: 6),
+          ],
+          for (final chip in filterChips)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Center(
+                child: _FilterChip(label: chip.label, onRemove: chip.onRemove),
+              ),
+            ),
         ],
       ),
     );
+  }
+}
+
+/// Sort control chip — used in the Explorar tab bar.
+class ExploreSortChip extends StatelessWidget {
+  final String sort;
+  final VoidCallback onTap;
+
+  const ExploreSortChip({super.key, required this.sort, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SortChip(label: SortRow.labelFor(sort), onTap: onTap);
   }
 }
 

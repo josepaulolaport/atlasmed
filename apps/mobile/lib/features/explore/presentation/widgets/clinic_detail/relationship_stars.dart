@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 /// "Relacionamento" star rating (1–10 → 5 stars, 2 points each).
 ///
-/// When [onChanged] is set, taps adjust the score (tap star N → 2N, or
-/// toggle half-step). A `null` score means not assessed yet.
+/// When [onChanged] is set, each star is split into left/right hit zones
+/// (half vs full) sized for finger taps. Long-press clears the score.
+/// A `null` score means not assessed yet.
 class RelationshipStars extends StatelessWidget {
   const RelationshipStars({
     super.key,
@@ -20,6 +21,15 @@ class RelationshipStars extends StatelessWidget {
   static const _emptyColor = Color(0xFFcbd5e1);
   static const _undeterminedColor = Color(0xFFcbd5e1);
 
+  /// Icon size when editable — large enough to see half-fill.
+  static const _editableIconSize = 34.0;
+
+  /// Per-star touch width (~48dp Material minimum, split into two halves).
+  static const _editableStarWidth = 48.0;
+  static const _editableStarHeight = 48.0;
+
+  static const _readonlyIconSize = 14.5;
+
   bool get _editable => onChanged != null;
 
   @override
@@ -32,15 +42,15 @@ class RelationshipStars extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (showLabel) ...[
-          const Text(
+          Text(
             'Relacionamento:',
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: _editable ? 13 : 11.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF6b7280),
+              color: const Color(0xFF6b7280),
             ),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: _editable ? 10 : 6),
         ],
         ...List.generate(5, (i) {
           IconData icon;
@@ -59,37 +69,59 @@ class RelationshipStars extends StatelessWidget {
             color = _emptyColor;
           }
 
-          final star = Icon(icon, size: _editable ? 22 : 14.5, color: color);
+          final star = Icon(
+            icon,
+            size: _editable ? _editableIconSize : _readonlyIconSize,
+            color: color,
+          );
+
           if (!_editable) return star;
 
-          return InkWell(
-            onTap: () => _handleTap(i),
-            onLongPress: () => onChanged!(null),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 1),
-              child: star,
+          final halfLevel = (i + 1) * 2 - 1;
+          final fullLevel = (i + 1) * 2;
+
+          return SizedBox(
+            width: _editableStarWidth,
+            height: _editableStarHeight,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                IgnorePointer(child: star),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => onChanged!(halfLevel),
+                          onLongPress: () => onChanged!(null),
+                          borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(10),
+                          ),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => onChanged!(fullLevel),
+                          onLongPress: () => onChanged!(null),
+                          borderRadius: const BorderRadius.horizontal(
+                            right: Radius.circular(10),
+                          ),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           );
         }),
       ],
     );
-  }
-
-  void _handleTap(int starIndex) {
-    final onChanged = this.onChanged;
-    if (onChanged == null) return;
-
-    final fullLevel = (starIndex + 1) * 2;
-    final halfLevel = fullLevel - 1;
-    final current = score;
-
-    if (current == fullLevel) {
-      onChanged(halfLevel);
-    } else if (current == halfLevel) {
-      onChanged(null);
-    } else {
-      onChanged(fullLevel);
-    }
   }
 }

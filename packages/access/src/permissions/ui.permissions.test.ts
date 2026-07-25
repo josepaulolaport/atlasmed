@@ -4,6 +4,7 @@ import {
   canManageUsers,
   canReadCatalog,
   canManageCatalog,
+  canReadCadastroSubmissions,
   canReadFieldSuggestions,
   canReadTerritories,
   canManageTerritories,
@@ -80,6 +81,15 @@ describe("ui.permissions", () => {
       expect(canReadFieldSuggestions(Role.MANAGER)).toBe(true);
       expect(canReadFieldSuggestions(Role.OPS)).toBe(true);
       expect(canReadFieldSuggestions(Role.REP)).toBe(false);
+    });
+  });
+
+  describe("canReadCadastroSubmissions", () => {
+    it("should allow ADMIN, MANAGER, OPS and deny REP", () => {
+      expect(canReadCadastroSubmissions(Role.ADMIN)).toBe(true);
+      expect(canReadCadastroSubmissions(Role.MANAGER)).toBe(true);
+      expect(canReadCadastroSubmissions(Role.OPS)).toBe(true);
+      expect(canReadCadastroSubmissions(Role.REP)).toBe(false);
     });
   });
 });

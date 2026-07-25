@@ -4,16 +4,39 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builde
 /// Shared API response types for the explore feature's doctor domain.
 /// Used by [DoctorsRepository].
 
+class ApiDoctorFacility {
+  const ApiDoctorFacility({required this.id, required this.name});
+
+  factory ApiDoctorFacility.fromMap(Map<String, dynamic> map) {
+    return ApiDoctorFacility(
+      id: readString(map['id']),
+      name: readString(map['name']),
+    );
+  }
+
+  final String id;
+  final String name;
+}
+
 class ApiDoctor {
   const ApiDoctor({
     required this.id,
     required this.firstName,
     required this.lastName,
     required this.facilityIds,
+    this.facilities = const [],
     this.fullName,
     this.specialty,
     this.crmNumber,
     this.crmState,
+    this.mobilePhone,
+    this.landlinePhone,
+    this.email,
+    this.birthDate,
+    this.favoriteTeam,
+    this.favoriteSport,
+    this.languages,
+    this.hobbies,
     this.distanceKm,
     this.createdAt,
     this.updatedAt,
@@ -30,7 +53,18 @@ class ApiDoctor {
       ),
       crmNumber: readNullableString(map['crmNumber']),
       crmState: readNullableString(map['crmState']),
+      mobilePhone: readNullableString(map['mobilePhone']),
+      landlinePhone: readNullableString(map['landlinePhone']),
+      email: readNullableString(map['email']),
+      birthDate: readNullableDateTime(map['birthDate']),
+      favoriteTeam: readNullableString(map['favoriteTeam']),
+      favoriteSport: readNullableString(map['favoriteSport']),
+      languages: readNullableString(map['languages']),
+      hobbies: readNullableString(map['hobbies']),
       facilityIds: readStringList(map['facilityIds']),
+      facilities: readObjectList(
+        map['facilities'],
+      ).map(ApiDoctorFacility.fromMap).toList(growable: false),
       distanceKm: readNullableDouble(map['distanceKm']),
       createdAt: readNullableDateTime(map['createdAt']),
       updatedAt: readNullableDateTime(map['updatedAt']),
@@ -44,7 +78,18 @@ class ApiDoctor {
   final String? specialty;
   final String? crmNumber;
   final String? crmState;
+  final String? mobilePhone;
+  final String? landlinePhone;
+  final String? email;
+  final DateTime? birthDate;
+  final String? favoriteTeam;
+  final String? favoriteSport;
+  final String? languages;
+  final String? hobbies;
   final List<String> facilityIds;
+
+  /// Active clinics in the caller's scope (`GET /professionals/:id`).
+  final List<ApiDoctorFacility> facilities;
   final double? distanceKm;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -65,6 +110,14 @@ class ApiDoctor {
       return crmNumber!;
     }
     return 'CRM-$crmState $crmNumber';
+  }
+
+  String? get phone {
+    final mobile = mobilePhone?.trim();
+    if (mobile != null && mobile.isNotEmpty) return mobile;
+    final landline = landlinePhone?.trim();
+    if (landline != null && landline.isNotEmpty) return landline;
+    return null;
   }
 }
 

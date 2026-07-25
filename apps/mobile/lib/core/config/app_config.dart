@@ -14,4 +14,18 @@ final class AppConfig {
 
   static String get mapboxAccessToken =>
       const String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
+
+  /// Optional fixed GPS for local/dev (e.g. simulator without a real fix).
+  /// Set via `DEBUG_FIXED_LATITUDE` + `DEBUG_FIXED_LONGITUDE` dart-defines.
+  static ({double latitude, double longitude})? get debugFixedLocation {
+    const latRaw = String.fromEnvironment('DEBUG_FIXED_LATITUDE');
+    const lngRaw = String.fromEnvironment('DEBUG_FIXED_LONGITUDE');
+    if (latRaw.isEmpty || lngRaw.isEmpty) return null;
+    final latitude = double.tryParse(latRaw);
+    final longitude = double.tryParse(lngRaw);
+    if (latitude == null || longitude == null) return null;
+    return (latitude: latitude, longitude: longitude);
+  }
+
+  static bool get hasDebugFixedLocation => debugFixedLocation != null;
 }

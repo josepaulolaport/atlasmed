@@ -27,6 +27,7 @@ function professionalRecord(id: string): ProfessionalRecord {
     imageUrl: null,
     favoriteTeam: null,
     favoriteSport: null,
+    languages: null,
     hobbies: null,
     notes: null,
     specialty: "Cardiologia",
