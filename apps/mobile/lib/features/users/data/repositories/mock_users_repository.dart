@@ -395,8 +395,9 @@ class MockUsersRepository implements UsersRepository {
   Future<void> assignVertical(String userId, String verticalId) async {
     await _delay();
     final current = await getUserAssignments(userId);
-    if (current.verticalAssignments.any((s) => s.verticalId == verticalId))
+    if (current.verticalAssignments.any((s) => s.verticalId == verticalId)) {
       return;
+    }
     final sector = mockVerticalOptions.firstWhere(
       (s) => s.id == verticalId,
       orElse: () => VerticalOption(id: verticalId, name: '—'),
@@ -515,8 +516,9 @@ class MockUsersRepository implements UsersRepository {
         : mockTerritoryOptions
               .where((t) {
                 if (t.managerTerritoryId != zoneId) return false;
-                if (verticalId != null && t.verticalId != verticalId)
+                if (verticalId != null && t.verticalId != verticalId) {
                   return false;
+                }
                 return true;
               })
               .toList(growable: false);
