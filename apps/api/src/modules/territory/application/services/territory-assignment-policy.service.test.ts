@@ -25,7 +25,6 @@ function buildService(options: {
       code: "T1",
       territoryTypeId: "type-1",
       isActive: true,
-      sectorId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       managerTerritoryId: null,

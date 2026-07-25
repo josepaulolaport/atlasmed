@@ -18,8 +18,8 @@ interface CreateInviteParams {
   managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
-  sectorAssignments?: Array<{
-    sectorId: string;
+  verticalAssignments?: Array<{
+    verticalId: string;
     managerId?: string | undefined;
     territoryIds: string[];
   }>;
@@ -44,7 +44,7 @@ export class InviteService {
       managerId: params.managerId,
       managerTerritoryId: params.managerTerritoryId,
       repTerritoryId: params.repTerritoryId,
-      sectorAssignments: params.sectorAssignments,
+      verticalAssignments: params.verticalAssignments,
       expiresAt: new Date(
         Date.now() + environment.INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
       ),

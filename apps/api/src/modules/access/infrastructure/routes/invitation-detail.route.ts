@@ -46,7 +46,7 @@ export const invitationDetailRoute = new Elysia({
         managerId: parsed.managerId,
         managerTerritoryId: parsed.managerTerritoryId,
         repTerritoryId: parsed.repTerritoryId,
-        sectorAssignments: parsed.sectorAssignments,
+        verticalAssignments: parsed.verticalAssignments,
       });
     },
     {
@@ -67,10 +67,10 @@ export const invitationDetailRoute = new Elysia({
         managerId: t.Optional(t.String()),
         managerTerritoryId: t.Optional(t.String()),
         repTerritoryId: t.Optional(t.String()),
-        sectorAssignments: t.Optional(
+        verticalAssignments: t.Optional(
           t.Array(
             t.Object({
-              sectorId: t.String(),
+              verticalId: t.String(),
               managerId: t.Optional(t.String()),
               territoryIds: t.Array(t.String()),
             }),

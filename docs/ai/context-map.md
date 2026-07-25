@@ -42,6 +42,7 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 | Area | Load |
 |---|---|
 | Auth / access / users | `docs/architecture/features/access-auth.md` |
+| Business verticals (legacy: sectors) | `docs/architecture/features/business-verticals.md`, `docs/architecture/features/access-auth.md` |
 | Facilities / professionals / registry | `docs/architecture/features/clinic-doctor-registry.md` |
 | Territory management | `docs/specs/0003-territory-management/requirements.md` |
 | Multi-tenancy | `docs/specs/0001-multi-tenancy/design.md`, `docs/specs/0001-multi-tenancy/tasks.md` |

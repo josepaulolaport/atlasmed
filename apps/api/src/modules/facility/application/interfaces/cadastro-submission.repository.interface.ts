@@ -10,6 +10,7 @@ import type {
 export interface CadastroSubmissionRecord {
   id: string;
   facilityId: string;
+  verticalId: string | null;
   submittedByUserId: string | null;
   status: CadastroSubmissionStatus;
   version: number;
@@ -94,6 +95,7 @@ export interface CadastroSubmissionRepository {
   findLatestByFacility(facilityId: string): Promise<CadastroSubmissionRecord | null>;
   createSubmission(input: {
     facilityId: string;
+    verticalId: string;
     submittedByUserId?: string | null;
     version: number;
   }): Promise<CadastroSubmissionRecord>;

@@ -14,7 +14,7 @@ export class ListConformityRequirementsUseCase {
         slug: requirement.slug,
         name: requirement.name,
         description: requirement.description ?? undefined,
-        sectorId: requirement.sectorId ?? undefined,
+        verticalId: requirement.verticalId ?? undefined,
         appliesToTaxIdType: requirement.appliesToTaxIdType ?? undefined,
         isActive: requirement.isActive,
         createdAt: requirement.createdAt.toISOString(),

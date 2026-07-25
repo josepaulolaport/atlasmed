@@ -1,20 +1,11 @@
-import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/manager_picker_field.dart';
-import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/sector_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Full-screen form for editing an existing territory's metadata — name,
-/// sector, active status, and (for rep patches) which manager zone it
-/// reports to. Deliberately trimmed compared to [TerritoryMetadataForm]:
-/// mirrors the real `PATCH /territories/:id`, which never touches kind or
-/// the boundary itself. Saves directly via
-/// `TerritoryRepository.updateTerritoryInfo` — no need to route through
-/// the geometry editor for a metadata-only change.
 class TerritoryInfoForm extends ConsumerStatefulWidget {
   final Territory territory;
 
@@ -36,7 +27,6 @@ class TerritoryInfoForm extends ConsumerStatefulWidget {
 
 class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
   late final TextEditingController _nameController;
-  late String _sectorId;
   late bool _isActive;
   String? _managerTerritoryId;
   bool _saving = false;
@@ -48,7 +38,6 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
     super.initState();
     final territory = widget.territory;
     _nameController = TextEditingController(text: territory.name);
-    _sectorId = territory.sectorId;
     _isActive = territory.isActive;
     _managerTerritoryId = territory.managerTerritoryId;
   }
@@ -72,7 +61,6 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
           .updateTerritoryInfo(
             widget.territory.id,
             name: _nameController.text.trim(),
-            sectorId: _sectorId,
             isActive: _isActive,
             managerTerritoryId: _isPatch ? _managerTerritoryId : null,
           );
@@ -96,8 +84,6 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
 
   @override
   Widget build(BuildContext context) {
-    final sectorsAsync = ref.watch(sectorsProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FB),
       appBar: AppBar(
@@ -110,128 +96,105 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
       ),
-      body: sectorsAsync.when(
-        data: (sectors) => _buildForm(sectors),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) =>
-            const Center(child: Text('Não foi possível carregar os setores.')),
-      ),
-    );
-  }
-
-  Widget _buildForm(List<Sector> sectors) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                const _FieldLabel('Nome do território'),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: _nameController,
-                  onChanged: (_) => setState(() {}),
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    hintText: 'Ex.: Zona Oncologia Norte',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                children: [
+                  const _FieldLabel('Nome do território'),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _nameController,
+                    onChanged: (_) => setState(() {}),
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      hintText: 'Ex.: Zona Oncologia Norte',
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                const _FieldLabel('Setor'),
-                const SizedBox(height: 6),
-                SectorSelector(
-                  sectors: sectors,
-                  selectedSectorId: _sectorId,
-                  onChanged: (sectorId) {
-                    if (sectorId == _sectorId) return;
-                    setState(() {
-                      _sectorId = sectorId;
-                      _managerTerritoryId = null;
-                    });
-                  },
-                ),
-                if (_isPatch) ...[
+                  if (_isPatch) ...[
+                    const SizedBox(height: 20),
+                    const _FieldLabel('Zona de gerente'),
+                    const SizedBox(height: 6),
+                    ManagerPickerField(
+                      managerTerritoryId: _managerTerritoryId,
+                      onChanged: (zoneId) =>
+                          setState(() => _managerTerritoryId = zoneId),
+                    ),
+                  ],
                   const SizedBox(height: 20),
-                  const _FieldLabel('Zona de gerente'),
-                  const SizedBox(height: 6),
-                  ManagerPickerField(
-                    sectorId: _sectorId,
-                    managerTerritoryId: _managerTerritoryId,
-                    onChanged: (zoneId) =>
-                        setState(() => _managerTerritoryId = zoneId),
-                  ),
-                ],
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE1E4EA)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Território ativo',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF111827),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE1E4EA)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Território ativo',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF111827),
+                            ),
                           ),
                         ),
-                      ),
-                      Switch(
-                        value: _isActive,
-                        activeThumbColor: const Color(0xFF0a2f7f),
-                        onChanged: (value) => setState(() => _isActive = value),
-                      ),
-                    ],
+                        Switch(
+                          value: _isActive,
+                          activeThumbColor: const Color(0xFF0a2f7f),
+                          onChanged: (value) =>
+                              setState(() => _isActive = value),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: FilledButton(
+                onPressed: _isValid && !_saving ? _submit : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF0a2f7f),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: FilledButton(
-              onPressed: _isValid && !_saving ? _submit : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0a2f7f),
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Salvar',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                        ),
+                      ),
               ),
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Salvar',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.5,
-                      ),
-                    ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

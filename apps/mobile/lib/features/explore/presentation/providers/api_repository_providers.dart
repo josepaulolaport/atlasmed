@@ -17,6 +17,7 @@ class ClinicsQuery {
     this.radiusKm,
     this.commercialStatus,
     this.productIds,
+    this.verticalId,
   });
 
   final int page;
@@ -27,6 +28,7 @@ class ClinicsQuery {
   final double? radiusKm;
   final String? commercialStatus;
   final String? productIds;
+  final String? verticalId;
 
   @override
   bool operator ==(Object other) {
@@ -38,7 +40,8 @@ class ClinicsQuery {
         other.longitude == longitude &&
         other.radiusKm == radiusKm &&
         other.commercialStatus == commercialStatus &&
-        other.productIds == productIds;
+        other.productIds == productIds &&
+        other.verticalId == verticalId;
   }
 
   @override
@@ -51,6 +54,7 @@ class ClinicsQuery {
     radiusKm,
     commercialStatus,
     productIds,
+    verticalId,
   );
 
   /// Whether this query would return distinct results from [other].
@@ -116,6 +120,7 @@ final clinicsRepositoryProvider = Provider.autoDispose
         radiusKm: query.radiusKm,
         commercialStatus: query.commercialStatus,
         productIds: query.productIds,
+        verticalId: query.verticalId,
       );
       ref.onDispose(repository.dispose);
       return repository;

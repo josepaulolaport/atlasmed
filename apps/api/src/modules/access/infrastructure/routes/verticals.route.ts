@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { accessRepositories, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
-export const sectorsRoute = new Elysia({
+export const verticalsRoute = new Elysia({
   detail: {
     tags: ["Users"],
   },
@@ -10,24 +10,25 @@ export const sectorsRoute = new Elysia({
   .use(auth)
   .use(requirePermission("read", "USER"))
   .get(
-    "/sectors",
+    "/business-verticals",
     async () => {
-      const sectors = await accessRepositories.scope.listActiveSectors();
-      return { sectors };
+      const verticals = await accessRepositories.scope.listActiveVerticals();
+      return { verticals };
     },
     {
       detail: {
-        summary: "List healthcare sectors",
-        description: "Returns all active healthcare sectors. Used to populate sector selectors in invite and profile forms.",
+        summary: "List business verticals",
+        description:
+          "Returns all active business verticals. Used to populate vertical selectors in invite and profile forms.",
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
       response: {
         200: t.Object({
-          sectors: t.Array(
+          verticals: t.Array(
             t.Object({
               id: t.String(),
-              slug: t.String(),
+              code: t.String(),
               name: t.String(),
             })
           ),

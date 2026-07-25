@@ -6,19 +6,19 @@ import { ResourceNotFoundError } from "../../../../shared/errors";
 import { competitorProductsRoute } from "./competitor-products.route";
 import { productComparisonsRoute } from "./product-comparisons.route";
 
-const listSectorsRoute = new Elysia()
+const listBusinessVerticalsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "CATALOG"))
   .get(
-    "/sectors",
+    "/business-verticals",
     async ({ query }) =>
-      catalogUseCases.listSectors().execute({
+      catalogUseCases.listBusinessVerticals().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
       }),
     {
-      detail: { summary: "List sectors", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
+      detail: { summary: "List business verticals", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       query: t.Object({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
@@ -27,39 +27,39 @@ const listSectorsRoute = new Elysia()
     }
   );
 
-const createSectorRoute = new Elysia()
+const createBusinessVerticalRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "CATALOG"))
   .post(
-    "/sectors",
-    async ({ body }) => catalogUseCases.createSector().execute(body),
+    "/business-verticals",
+    async ({ body }) => catalogUseCases.createBusinessVertical().execute(body),
     {
-      detail: { summary: "Create sector", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
+      detail: { summary: "Create business vertical", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       body: t.Object({
-        slug: t.String(),
+        code: t.String(),
         name: t.String(),
         isActive: t.Optional(t.Boolean()),
       }),
     }
   );
 
-const updateSectorRoute = new Elysia()
+const updateBusinessVerticalRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CATALOG"))
   .patch(
-    "/sectors/:id",
+    "/business-verticals/:id",
     async ({ params, body }) => {
-      const sector = await catalogUseCases.updateSector().execute({
-        sectorId: params.id,
+      const vertical = await catalogUseCases.updateBusinessVertical().execute({
+        verticalId: params.id,
         ...body,
       });
-      if (!sector) throw new ResourceNotFoundError("Sector", params.id);
-      return sector;
+      if (!vertical) throw new ResourceNotFoundError("BusinessVertical", params.id);
+      return vertical;
     },
     {
-      detail: { summary: "Update sector", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
+      detail: { summary: "Update business vertical", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       body: t.Object({
-        slug: t.Optional(t.String()),
+        code: t.Optional(t.String()),
         name: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
       }),
@@ -75,7 +75,7 @@ const listProductsRoute = new Elysia()
       catalogUseCases.listProducts().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
-        sectorId: query.sectorId,
+        verticalId: query.verticalId,
         search: query.search,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
       }),
@@ -84,7 +84,7 @@ const listProductsRoute = new Elysia()
       query: t.Object({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
-        sectorId: t.Optional(t.String()),
+        verticalId: t.Optional(t.String()),
         search: t.Optional(t.String()),
         isActive: t.Optional(t.String()),
       }),
@@ -113,7 +113,7 @@ const createProductRoute = new Elysia()
       body: t.Object({
         code: t.String(),
         name: t.String(),
-        sectorIds: t.Array(t.String(), { minItems: 1 }),
+        verticalIds: t.Array(t.String(), { minItems: 1 }),
         pictureUrl: t.Optional(t.Nullable(t.String())),
         simproCode: t.String(),
         brasindiceCode: t.String(),
@@ -142,7 +142,7 @@ const updateProductRoute = new Elysia()
       body: t.Object({
         code: t.Optional(t.String()),
         name: t.Optional(t.String()),
-        sectorIds: t.Optional(t.Array(t.String(), { minItems: 1 })),
+        verticalIds: t.Optional(t.Array(t.String(), { minItems: 1 })),
         pictureUrl: t.Optional(t.Nullable(t.String())),
         simproCode: t.Optional(t.String()),
         brasindiceCode: t.Optional(t.String()),
@@ -318,9 +318,9 @@ const replaceFacilitySharesRoute = new Elysia()
   );
 
 export const catalogRoute = new Elysia()
-  .use(listSectorsRoute)
-  .use(createSectorRoute)
-  .use(updateSectorRoute)
+  .use(listBusinessVerticalsRoute)
+  .use(createBusinessVerticalRoute)
+  .use(updateBusinessVerticalRoute)
   .use(listProductsRoute)
   .use(getProductRoute)
   .use(createProductRoute)

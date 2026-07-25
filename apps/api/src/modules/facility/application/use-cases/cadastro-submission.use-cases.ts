@@ -16,6 +16,7 @@ import type {
   FileAssetRecord,
 } from "../interfaces/cadastro-submission.repository.interface";
 import { FacilityCadastroCompletionService } from "../services/facility-cadastro-completion.service";
+import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
 import { resolveFacilityTaxIdType } from "../utils/facility-tax-id.utils";
 
 const DEFAULT_PART_SIZE = 10 * 1024 * 1024;
@@ -243,6 +244,7 @@ export class EnsureDraftCadastroSubmissionUseCase {
     facilityId: string;
     userId: string;
     scope: ScopeContext;
+    verticalId?: string;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -252,11 +254,18 @@ export class EnsureDraftCadastroSubmissionUseCase {
       input.facilityId
     );
     if (!draft) {
+      const verticalId = await resolveCadastroVerticalId({
+        facilityId: input.facilityId,
+        assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+        facilityRepository: this.deps.facilityRepository,
+        verticalId: input.verticalId,
+      });
       const latest = await this.deps.cadastroRepository.findLatestByFacility(
         input.facilityId
       );
       draft = await this.deps.cadastroRepository.createSubmission({
         facilityId: input.facilityId,
+        verticalId,
         submittedByUserId: input.userId,
         version: (latest?.version ?? 0) + 1,
       });
@@ -898,6 +907,13 @@ export class ReviewCadastroDocumentUseCase {
       });
       const next = await this.deps.cadastroRepository.createSubmission({
         facilityId: input.facilityId,
+        verticalId:
+          submission.verticalId ??
+          (await resolveCadastroVerticalId({
+            facilityId: input.facilityId,
+            assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+            facilityRepository: this.deps.facilityRepository,
+          })),
         submittedByUserId: submission.submittedByUserId,
         version: submission.version + 1,
       });
@@ -955,7 +971,15 @@ export class ReviewCadastroDocumentUseCase {
         id: submission.id,
         status: "APPROVED",
       });
-      await this.deps.completionService.evaluateAndApply(input.facilityId);
+      await this.deps.completionService.evaluateAndApply(
+        input.facilityId,
+        submission.verticalId ??
+          (await resolveCadastroVerticalId({
+            facilityId: input.facilityId,
+            assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+            facilityRepository: this.deps.facilityRepository,
+          })),
+      );
     } else if (statuses.some((s) => s === "REJECTED") && statuses.every((s) => s === "APPROVED" || s === "REJECTED")) {
       await this.deps.cadastroRepository.updateSubmissionStatus({
         id: submission.id,

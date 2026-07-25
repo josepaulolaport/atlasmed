@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
-import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 
@@ -37,9 +37,13 @@ const repPatchType = TerritoryType(
   assignableToManagers: false,
 );
 
-final mockSectors = <Sector>[
-  const Sector(id: 'sector-oncologia', slug: 'oncologia', name: 'Oncologia'),
-  const Sector(
+final mockSectors = <BusinessVertical>[
+  const BusinessVertical(
+    id: 'sector-oncologia',
+    slug: 'oncologia',
+    name: 'Oncologia',
+  ),
+  const BusinessVertical(
     id: 'sector-cardiologia',
     slug: 'cardiologia',
     name: 'Cardiologia',
@@ -49,7 +53,7 @@ final mockSectors = <Sector>[
 class _ManagerZoneSpec {
   final String idSuffix;
   final String name;
-  final String sectorId;
+  final String verticalId;
   final double centerLat;
   final double centerLng;
   final double halfWidthLng;
@@ -69,7 +73,7 @@ class _ManagerZoneSpec {
   const _ManagerZoneSpec({
     required this.idSuffix,
     required this.name,
-    required this.sectorId,
+    required this.verticalId,
     required this.centerLat,
     required this.centerLng,
     required this.halfWidthLng,
@@ -85,7 +89,7 @@ const _zoneSpecs = <_ManagerZoneSpec>[
   _ManagerZoneSpec(
     idSuffix: 'onco-oeste',
     name: 'Zona Oncologia Oeste',
-    sectorId: 'sector-oncologia',
+    verticalId: 'sector-oncologia',
     centerLat: -23.53,
     centerLng: -46.72,
     halfWidthLng: 0.045,
@@ -98,7 +102,7 @@ const _zoneSpecs = <_ManagerZoneSpec>[
   _ManagerZoneSpec(
     idSuffix: 'onco-sudeste',
     name: 'Zona Oncologia Sudeste',
-    sectorId: 'sector-oncologia',
+    verticalId: 'sector-oncologia',
     centerLat: -23.60,
     centerLng: -46.60,
     halfWidthLng: 0.045,
@@ -115,7 +119,7 @@ const _zoneSpecs = <_ManagerZoneSpec>[
   _ManagerZoneSpec(
     idSuffix: 'cardio-nordeste',
     name: 'Zona Cardiologia Nordeste',
-    sectorId: 'sector-cardiologia',
+    verticalId: 'sector-cardiologia',
     centerLat: -23.50,
     centerLng: -46.56,
     halfWidthLng: 0.045,
@@ -128,7 +132,7 @@ const _zoneSpecs = <_ManagerZoneSpec>[
   _ManagerZoneSpec(
     idSuffix: 'cardio-sudoeste',
     name: 'Zona Cardiologia Sudoeste',
-    sectorId: 'sector-cardiologia',
+    verticalId: 'sector-cardiologia',
     centerLat: -23.65,
     centerLng: -46.73,
     halfWidthLng: 0.045,
@@ -208,7 +212,6 @@ List<Territory> _buildMockTerritories() {
         slug: zoneSpec.idSuffix,
         code: zoneId.toUpperCase(),
         territoryType: managerZoneType,
-        sectorId: zoneSpec.sectorId,
         clinicCount: zoneSpec.baseClinicCount,
         assignedUserCount: zoneSpec.baseUserCount,
         repPatchCount: _patchNames.length,
@@ -258,7 +261,6 @@ List<Territory> _buildMockTerritories() {
           slug: '${zoneSpec.idSuffix}-$i',
           code: patchId.toUpperCase(),
           territoryType: repPatchType,
-          sectorId: zoneSpec.sectorId,
           managerTerritoryId: zoneId,
           clinicCount: (zoneSpec.baseClinicCount / _patchNames.length).round(),
           assignedUserCount: zoneSpec.repUserIds[i] == null ? 0 : 1,

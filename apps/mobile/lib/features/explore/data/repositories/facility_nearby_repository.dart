@@ -13,6 +13,7 @@ Future<List<NearbyEstablishment>> fetchNearbyFacilities({
   required double longitude,
   required double radiusKm,
   int limit = 100,
+  String? verticalId,
 }) async {
   final repo = ClinicsRepository(
     page: 1,
@@ -20,6 +21,7 @@ Future<List<NearbyEstablishment>> fetchNearbyFacilities({
     latitude: latitude,
     longitude: longitude,
     radiusKm: radiusKm,
+    verticalId: verticalId,
   );
   try {
     final page = await repo.currentValueOrResolve();

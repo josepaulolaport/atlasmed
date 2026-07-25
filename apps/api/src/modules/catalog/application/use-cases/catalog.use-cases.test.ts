@@ -33,7 +33,7 @@ const product: ProductRecord = {
   productClassification: "Tópico",
   brand: "Atlas",
   unit: "240g",
-  sectorIds: ["sector-1"],
+  verticalIds: ["vertical-1"],
   pictureUrl: "https://cdn.example.com/atlas-gel.png",
   simproCode: "SIM-1",
   brasindiceCode: "BRA-1",
@@ -116,7 +116,7 @@ describe("catalog product use cases", () => {
       page: 2,
       limit: 10,
       search: "atlas",
-      sectorId: undefined,
+      verticalId: undefined,
       isActive: undefined,
     });
     expect(result).toEqual({

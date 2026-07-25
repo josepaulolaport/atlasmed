@@ -3,23 +3,13 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/mock/mock_territories_data.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_manager.dart';
-import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/user_repository.dart';
 
-/// In-memory [TerritoryRepository] backed by the static mock dataset.
-///
-/// Simulates network latency so loading states can be exercised while the
-/// screen isn't wired to the real API yet. Holds its own mutable copy of
-/// the seed data so edits made in the territory editor persist for the
-/// app's session (the repository is a `Provider`, so one instance lives
-/// as long as the app does) without touching the real backend yet.
-///
-/// Takes a [UserRepository] so [getAssignableManagers] can resolve each
-/// manager zone's `assignedUserId` into a display-ready [AssignableManager].
 class MockTerritoryRepository implements TerritoryRepository {
   MockTerritoryRepository(this._userRepository);
 
@@ -27,7 +17,7 @@ class MockTerritoryRepository implements TerritoryRepository {
   final List<Territory> _territories = List<Territory>.of(mockTerritories);
 
   @override
-  Future<List<Sector>> getSectors() async {
+  Future<List<BusinessVertical>> getVerticals() async {
     await Future.delayed(const Duration(milliseconds: 250));
     return mockSectors;
   }
@@ -35,15 +25,10 @@ class MockTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
-    required String sectorId,
   }) async {
     await Future.delayed(const Duration(milliseconds: 350));
     return _territories
-        .where(
-          (territory) =>
-              territory.territoryType.slug == territoryTypeSlug &&
-              territory.sectorId == sectorId,
-        )
+        .where((territory) => territory.territoryType.slug == territoryTypeSlug)
         .toList();
   }
 
@@ -93,7 +78,6 @@ class MockTerritoryRepository implements TerritoryRepository {
       slug: slug,
       code: id.toUpperCase(),
       territoryType: territoryType,
-      sectorId: draft.sectorId,
       managerTerritoryId: draft.managerTerritoryId,
       repPatchCount: draft.kind == TerritoryKind.managerZone ? 0 : null,
       boundary: boundary,
@@ -142,7 +126,6 @@ class MockTerritoryRepository implements TerritoryRepository {
   Future<void> updateTerritoryInfo(
     String territoryId, {
     required String name,
-    required String sectorId,
     required bool isActive,
     String? managerTerritoryId,
   }) async {
@@ -151,20 +134,18 @@ class MockTerritoryRepository implements TerritoryRepository {
     if (index == -1) return;
     _territories[index] = _territories[index].copyWith(
       name: name,
-      sectorId: sectorId,
       isActive: isActive,
       managerTerritoryId: managerTerritoryId,
     );
   }
 
   @override
-  Future<List<AssignableManager>> getAssignableManagers(String sectorId) async {
+  Future<List<AssignableManager>> getAssignableManagers() async {
     await Future.delayed(const Duration(milliseconds: 200));
     final zones = _territories.where(
       (t) =>
           t.kind == TerritoryKind.managerZone &&
           t.isActive &&
-          t.sectorId == sectorId &&
           t.assignedUserId != null,
     );
 

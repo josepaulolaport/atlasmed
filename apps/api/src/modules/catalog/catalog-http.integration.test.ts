@@ -9,7 +9,7 @@ import {
 import { Elysia } from "elysia";
 import { eq } from "drizzle-orm";
 import { HttpError } from "@atlasmed/access";
-import { competitorProducts, products, sectors } from "@atlasmed/database";
+import { competitorProducts, products, businessVerticals } from "@atlasmed/database";
 import { access } from "../access/index";
 import { catalog } from "../catalog/index";
 import { AppError } from "../../shared/errors";
@@ -111,40 +111,40 @@ describe("Catalog HTTP auth integration", () => {
   it("returns 401 for unauthenticated catalog list", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    const response = await authRequest("http://localhost/api/v1/sectors", null);
+    const response = await authRequest("http://localhost/api/v1/business-verticals", null);
     expect(response.status).toBe(401);
   });
 
-  it("returns 403 when MANAGER lists sectors", async () => {
+  it("returns 403 when MANAGER lists business verticals", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
-      "http://localhost/api/v1/sectors",
+      "http://localhost/api/v1/business-verticals",
       token
     );
 
     expect(response.status).toBe(403);
   });
 
-  it("returns 403 when USER lists sectors", async () => {
+  it("returns 403 when USER lists business verticals", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
-      "http://localhost/api/v1/sectors",
+      "http://localhost/api/v1/business-verticals",
       token
     );
 
     expect(response.status).toBe(403);
   });
 
-  it("allows ADMIN to list sectors", async () => {
+  it("allows ADMIN to list business verticals", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
-      "http://localhost/api/v1/sectors",
+      "http://localhost/api/v1/business-verticals",
       token
     );
 
@@ -153,19 +153,19 @@ describe("Catalog HTTP auth integration", () => {
     expect(Array.isArray(body.data)).toBe(true);
   });
 
-  it("returns 403 when MANAGER creates a sector", async () => {
+  it("returns 403 when MANAGER creates a business vertical", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
-      "http://localhost/api/v1/sectors",
+      "http://localhost/api/v1/business-verticals",
       token,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          slug: `sector-${fixtures.uniqueId}`,
-          name: `Sector ${fixtures.uniqueId}`,
+          code: `VERTICAL_${fixtures.uniqueId}`,
+          name: `Vertical ${fixtures.uniqueId}`,
         }),
       }
     );
@@ -278,21 +278,21 @@ describe("Catalog HTTP auth integration", () => {
     const adminToken = await loginToken(fixtures.admin.email);
     const managerToken = await loginToken(fixtures.manager.email);
 
-    let sectorId: string | undefined;
+    let verticalId: string | undefined;
     let productId: string | undefined;
     let competitorProductId: string | undefined;
 
     try {
-      const sectorResponse = await authRequest("http://localhost/api/v1/sectors", adminToken, {
+      const verticalResponse = await authRequest("http://localhost/api/v1/business-verticals", adminToken, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          slug: `comparison-sector-${fixtures.uniqueId}`,
-          name: `Comparison Sector ${fixtures.uniqueId}`,
+          code: `COMPARISON_${fixtures.uniqueId}`,
+          name: `Comparison Vertical ${fixtures.uniqueId}`,
         }),
       });
-      expect(sectorResponse.status).toBe(200);
-      sectorId = ((await sectorResponse.json()) as { id: string }).id;
+      expect(verticalResponse.status).toBe(200);
+      verticalId = ((await verticalResponse.json()) as { id: string }).id;
 
       const productResponse = await authRequest("http://localhost/api/v1/products", adminToken, {
         method: "POST",
@@ -300,7 +300,7 @@ describe("Catalog HTTP auth integration", () => {
         body: JSON.stringify({
           code: `PROD-${fixtures.uniqueId}`,
           name: `AtlasProduct ${fixtures.uniqueId}`,
-          sectorIds: [sectorId],
+          verticalIds: [verticalId],
           simproCode: "SIM-1",
           brasindiceCode: "BRA-1",
           tissCode: "TISS-1",
@@ -405,8 +405,8 @@ describe("Catalog HTTP auth integration", () => {
       if (productId) {
         await db.delete(products).where(eq(products.id, productId));
       }
-      if (sectorId) {
-        await db.delete(sectors).where(eq(sectors.id, sectorId));
+      if (verticalId) {
+        await db.delete(businessVerticals).where(eq(businessVerticals.id, verticalId));
       }
     }
   });

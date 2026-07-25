@@ -1,20 +1,20 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:equatable/equatable.dart';
 
 /// A single territory assignment row — used by map cards and legacy list UIs.
 ///
-/// Prefer [UserAssignments.sectorAssignments] (invite-shaped) as the source
+/// Prefer [UserAssignments.verticalAssignments] (invite-shaped) as the source
 /// of truth; [TerritoryAssignment] is derived for rendering.
 class TerritoryAssignment extends Equatable {
   const TerritoryAssignment({
     required this.territoryId,
     required this.territoryName,
     required this.assignedAt,
-    this.sectorId,
-    this.sectorName,
+    this.verticalId,
+    this.verticalName,
     this.centroid,
     this.boundary,
   });
@@ -22,8 +22,8 @@ class TerritoryAssignment extends Equatable {
   final String territoryId;
   final String territoryName;
   final DateTime assignedAt;
-  final String? sectorId;
-  final String? sectorName;
+  final String? verticalId;
+  final String? verticalName;
   final MapCoordinate? centroid;
   final TerritoryGeometry? boundary;
 
@@ -35,8 +35,8 @@ class TerritoryAssignment extends Equatable {
       territoryId: option.id,
       territoryName: option.name,
       assignedAt: assignedAt ?? DateTime.now(),
-      sectorId: option.sectorId,
-      sectorName: option.sectorName,
+      verticalId: option.verticalId,
+      verticalName: option.verticalName,
       centroid: option.centroid,
       boundary: option.boundary,
     );
@@ -47,8 +47,8 @@ class TerritoryAssignment extends Equatable {
         territoryId: json['territoryId'] as String,
         territoryName: (json['territoryName'] as String?) ?? '—',
         assignedAt: DateTime.parse(json['assignedAt'] as String),
-        sectorId: json['sectorId'] as String?,
-        sectorName: json['sectorName'] as String?,
+        verticalId: json['verticalId'] as String?,
+        verticalName: json['verticalName'] as String?,
         centroid: json['centroid'] == null
             ? null
             : MapCoordinate(
@@ -67,63 +67,63 @@ class TerritoryAssignment extends Equatable {
     territoryId,
     territoryName,
     assignedAt,
-    sectorId,
-    sectorName,
+    verticalId,
+    verticalName,
     centroid,
     boundary,
   ];
 }
 
 /// A single sector assignment row (legacy flat list shape).
-class SectorAssignment extends Equatable {
-  const SectorAssignment({
-    required this.sectorId,
-    required this.sectorName,
+class VerticalAssignment extends Equatable {
+  const VerticalAssignment({
+    required this.verticalId,
+    required this.verticalName,
     required this.assignedAt,
   });
 
-  final String sectorId;
-  final String sectorName;
+  final String verticalId;
+  final String verticalName;
   final DateTime assignedAt;
 
-  factory SectorAssignment.fromJson(Map<String, dynamic> json) =>
-      SectorAssignment(
-        sectorId: json['sectorId'] as String,
-        sectorName: (json['sectorName'] as String?) ?? '—',
+  factory VerticalAssignment.fromJson(Map<String, dynamic> json) =>
+      VerticalAssignment(
+        verticalId: json['verticalId'] as String,
+        verticalName: (json['verticalName'] as String?) ?? '—',
         assignedAt: DateTime.parse(json['assignedAt'] as String),
       );
 
   @override
-  List<Object?> get props => [sectorId, sectorName, assignedAt];
+  List<Object?> get props => [verticalId, verticalName, assignedAt];
 }
 
 /// Admin assignments for a user — same per-sector shape as the invite flow
-/// ([InviteSectorAssignment]: manager + territories scoped to a sector).
+/// ([InviteVerticalAssignment]: manager + territories scoped to a sector).
 class UserAssignments extends Equatable {
   const UserAssignments({
     required this.userId,
-    this.sectorAssignments = const [],
+    this.verticalAssignments = const [],
     required this.isOperationallyActive,
   });
 
   final String userId;
 
   /// Per-sector manager + territory picks (invite-compatible).
-  final List<InviteSectorAssignment> sectorAssignments;
+  final List<InviteVerticalAssignment> verticalAssignments;
 
   /// REP with at least one territory assigned.
   final bool isOperationallyActive;
 
   /// First manager found across sectors (summary for list/tests).
   String? get managerId {
-    for (final assignment in sectorAssignments) {
+    for (final assignment in verticalAssignments) {
       if (assignment.managerId != null) return assignment.managerId;
     }
     return null;
   }
 
   String? get managerName {
-    for (final assignment in sectorAssignments) {
+    for (final assignment in verticalAssignments) {
       if (assignment.managerName != null) return assignment.managerName;
     }
     return null;
@@ -131,7 +131,7 @@ class UserAssignments extends Equatable {
 
   List<TerritoryAssignment> get territories {
     final now = DateTime.now();
-    return sectorAssignments
+    return verticalAssignments
         .expand(
           (assignment) => assignment.territories.map(
             (territory) =>
@@ -141,13 +141,13 @@ class UserAssignments extends Equatable {
         .toList(growable: false);
   }
 
-  List<SectorAssignment> get sectors {
+  List<VerticalAssignment> get sectors {
     final now = DateTime.now();
-    return sectorAssignments
+    return verticalAssignments
         .map(
-          (assignment) => SectorAssignment(
-            sectorId: assignment.sectorId,
-            sectorName: assignment.sectorName,
+          (assignment) => VerticalAssignment(
+            verticalId: assignment.verticalId,
+            verticalName: assignment.verticalName,
             assignedAt: now,
           ),
         )
@@ -155,13 +155,13 @@ class UserAssignments extends Equatable {
   }
 
   factory UserAssignments.fromJson(Map<String, dynamic> json) {
-    final sectorRaw = json['sectorAssignments'] as List<dynamic>?;
+    final sectorRaw = json['verticalAssignments'] as List<dynamic>?;
     if (sectorRaw != null) {
-      final sectorAssignments = sectorRaw.map((raw) {
+      final verticalAssignments = sectorRaw.map((raw) {
         final map = raw as Map<String, dynamic>;
-        return InviteSectorAssignment(
-          sectorId: map['sectorId'] as String,
-          sectorName: map['sectorName'] as String,
+        return InviteVerticalAssignment(
+          verticalId: map['verticalId'] as String,
+          verticalName: map['verticalName'] as String,
           managerId: map['managerId'] as String?,
           managerName: map['managerName'] as String?,
           territories: (map['territories'] as List<dynamic>? ?? const [])
@@ -171,10 +171,10 @@ class UserAssignments extends Equatable {
       }).toList();
       return UserAssignments(
         userId: json['userId'] as String,
-        sectorAssignments: sectorAssignments,
+        verticalAssignments: verticalAssignments,
         isOperationallyActive:
             json['isOperationallyActive'] as bool? ??
-            sectorAssignments.any((a) => a.territories.isNotEmpty),
+            verticalAssignments.any((a) => a.territories.isNotEmpty),
       );
     }
 
@@ -186,44 +186,44 @@ class UserAssignments extends Equatable {
             .toList() ??
         const <TerritoryAssignment>[];
     final sectors =
-        (json['sectors'] as List<dynamic>?)
+        (json['verticals'] as List<dynamic>?)
             ?.cast<Map<String, dynamic>>()
-            .map(SectorAssignment.fromJson)
+            .map(VerticalAssignment.fromJson)
             .toList() ??
-        const <SectorAssignment>[];
+        const <VerticalAssignment>[];
     final managerId = json['managerId'] as String?;
     final managerName = json['managerName'] as String?;
 
-    final bySector = <String, InviteSectorAssignment>{};
+    final bySector = <String, InviteVerticalAssignment>{};
     for (final sector in sectors) {
-      bySector[sector.sectorId] = InviteSectorAssignment(
-        sectorId: sector.sectorId,
-        sectorName: sector.sectorName,
+      bySector[sector.verticalId] = InviteVerticalAssignment(
+        verticalId: sector.verticalId,
+        verticalName: sector.verticalName,
         managerId: managerId,
         managerName: managerName,
       );
     }
     for (final territory in territories) {
-      final sectorId = territory.sectorId ?? 'sector-unknown';
-      final existing = bySector[sectorId];
+      final verticalId = territory.verticalId ?? 'sector-unknown';
+      final existing = bySector[verticalId];
       final option = TerritoryOption(
         id: territory.territoryId,
         name: territory.territoryName,
-        sectorId: territory.sectorId,
-        sectorName: territory.sectorName,
+        verticalId: territory.verticalId,
+        verticalName: territory.verticalName,
         centroid: territory.centroid,
         boundary: territory.boundary,
       );
       if (existing == null) {
-        bySector[sectorId] = InviteSectorAssignment(
-          sectorId: sectorId,
-          sectorName: territory.sectorName ?? '—',
+        bySector[verticalId] = InviteVerticalAssignment(
+          verticalId: verticalId,
+          verticalName: territory.verticalName ?? '—',
           managerId: managerId,
           managerName: managerName,
           territories: [option],
         );
       } else {
-        bySector[sectorId] = existing.copyWith(
+        bySector[verticalId] = existing.copyWith(
           territories: [...existing.territories, option],
         );
       }
@@ -231,23 +231,27 @@ class UserAssignments extends Equatable {
 
     return UserAssignments(
       userId: json['userId'] as String,
-      sectorAssignments: bySector.values.toList(growable: false),
+      verticalAssignments: bySector.values.toList(growable: false),
       isOperationallyActive: json['isOperationallyActive'] as bool? ?? false,
     );
   }
 
   UserAssignments copyWith({
-    List<InviteSectorAssignment>? sectorAssignments,
+    List<InviteVerticalAssignment>? verticalAssignments,
     bool? isOperationallyActive,
   }) {
     return UserAssignments(
       userId: userId,
-      sectorAssignments: sectorAssignments ?? this.sectorAssignments,
+      verticalAssignments: verticalAssignments ?? this.verticalAssignments,
       isOperationallyActive:
           isOperationallyActive ?? this.isOperationallyActive,
     );
   }
 
   @override
-  List<Object?> get props => [userId, sectorAssignments, isOperationallyActive];
+  List<Object?> get props => [
+    userId,
+    verticalAssignments,
+    isOperationallyActive,
+  ];
 }

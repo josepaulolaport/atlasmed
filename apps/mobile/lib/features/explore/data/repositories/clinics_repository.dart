@@ -20,6 +20,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     this.commercialStatus,
     this.productIds,
     this.sort,
+    this.verticalId,
     super.resolveOnCreate = false,
   }) : super(
          endpoint: buildEndpoint(
@@ -37,6 +38,8 @@ class ClinicsRepository extends Repository<PaginatedClinics>
                'commercialStatus': commercialStatus.trim(),
              if (productIds != null && productIds.trim().isNotEmpty)
                'productIds': productIds.trim(),
+             if (verticalId != null && verticalId.trim().isNotEmpty)
+               'verticalId': verticalId.trim(),
              if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
            },
          ),
@@ -52,6 +55,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
   final String? commercialStatus;
   final String? productIds;
   final String? sort;
+  final String? verticalId;
 
   /// Build the endpoint URI for this repository.
   /// Calls the shared [buildEndpoint] from [query_builder.dart].
@@ -66,6 +70,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     String? commercialStatus,
     String? productIds,
     String? sort,
+    String? verticalId,
   }) {
     return buildEndpoint(
       baseUrl: baseUrl,
@@ -82,6 +87,8 @@ class ClinicsRepository extends Repository<PaginatedClinics>
           'commercialStatus': commercialStatus.trim(),
         if (productIds != null && productIds.trim().isNotEmpty)
           'productIds': productIds.trim(),
+        if (verticalId != null && verticalId.trim().isNotEmpty)
+          'verticalId': verticalId.trim(),
         if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
       },
     );

@@ -1,4 +1,3 @@
-import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
@@ -25,17 +24,6 @@ class TerritoryDetailSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sectorsAsync = ref.watch(sectorsProvider);
-    final sectorName = sectorsAsync.maybeWhen(
-      data: (sectors) => sectors
-          .firstWhere(
-            (sector) => sector.id == territory.sectorId,
-            orElse: () => const Sector(id: '', slug: '', name: '—'),
-          )
-          .name,
-      orElse: () => '—',
-    );
-
     final isManagerZone = territory.kind == TerritoryKind.managerZone;
     final kindColor = isManagerZone
         ? const Color(0xFF2563EB)
@@ -87,7 +75,6 @@ class TerritoryDetailSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
             _DetailRow(label: 'Código', value: territory.code),
-            _DetailRow(label: 'Setor', value: sectorName),
             if (territory.assignedUserId != null)
               _AssignedUserRow(
                 label: isManagerZone

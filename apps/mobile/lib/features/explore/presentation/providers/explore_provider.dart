@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
@@ -476,6 +477,9 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }) async {
     final p = page ?? _clinicPage;
     final origin = _origin;
+    final verticalId = await _ref.read(
+      effectiveFacilityVerticalIdProvider.future,
+    );
     final repo = ClinicsRepository(
       page: p,
       limit: 20,
@@ -486,6 +490,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       commercialStatus: _commercialStatus,
       productIds: _commaJoin(state.filters['products']),
       sort: origin != null && state.sort == 'distance' ? 'distance' : null,
+      verticalId: verticalId,
       resolveOnCreate: false,
     );
     try {

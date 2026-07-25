@@ -43,7 +43,6 @@ function mapTerritory(territory: {
   territoryType?: Parameters<typeof mapType>[0];
   managerTerritoryId: string | null;
   isActive: boolean;
-  sectorId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): TerritoryRecord {
@@ -56,7 +55,6 @@ function mapTerritory(territory: {
     territoryType: territory.territoryType ? mapType(territory.territoryType) : undefined,
     managerTerritoryId: territory.managerTerritoryId,
     isActive: territory.isActive,
-    sectorId: territory.sectorId,
     createdAt: territory.createdAt,
     updatedAt: territory.updatedAt,
   };
@@ -178,7 +176,6 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         code: input.code ?? input.slug.toUpperCase(),
         territoryTypeId: input.territoryTypeId,
         managerTerritoryId: input.managerTerritoryId ?? null,
-        sectorId: input.sectorId ?? null,
       })
       .returning({ id: territories.id });
     return (await this.findOneWithType(inserted!.id))!;
@@ -190,7 +187,6 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       name?: string;
       managerTerritoryId?: string | null;
       isActive?: boolean;
-      sectorId?: string | null;
     }
   ): Promise<TerritoryRecord> {
     await db

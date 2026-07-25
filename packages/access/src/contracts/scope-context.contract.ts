@@ -4,8 +4,17 @@ export interface ScopeContext {
   isGlobal: boolean;
   /** Direct territory assignments for this user (not expanded). */
   assignedTerritoryIds: string[];
-  /** Healthcare sectors this user is assigned to. Empty means no sector filter applied. */
-  assignedSectorIds?: string[];
+  /**
+   * Business verticals this user may operate in.
+   * ADMIN: typically all active vertical ids (or empty meaning “all”).
+   * OPS/MANAGER/REP: from user_vertical_assignments.
+   */
+  assignedVerticalIds?: string[];
+  /**
+   * Optional request filter narrowing assignedVerticalIds to one vertical.
+   * Set by VerticalAccess resolution from query/body `verticalId`.
+   */
+  activeVerticalId?: string | null;
   /**
    * Oversight territories (expanded): manager's own assignments, or all assignments for USER.
    * Used for facility/professional list visibility and territory read scope.

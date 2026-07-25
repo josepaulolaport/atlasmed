@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usersApi } from "@/lib/api/users";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import {
@@ -27,13 +27,13 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Trash2 } from "lucide-react";
 import type { User, UserAssignments } from "@/types/auth";
+import { getTerritoryAssignmentPickerConfig } from "@/lib/territory/assignment-picker-config";
 
-interface Sector {
+interface BusinessVertical {
   id: string;
-  slug: string;
+  code: string;
   name: string;
 }
-import { getTerritoryAssignmentPickerConfig } from "@/lib/territory/assignment-picker-config";
 
 interface ManageAssignmentsDialogProps {
   user: User | null;
@@ -48,13 +48,13 @@ export function ManageAssignmentsDialog({
 }: ManageAssignmentsDialogProps) {
   const [assignments, setAssignments] = useState<UserAssignments | null>(null);
   const [managers, setManagers] = useState<User[]>([]);
-  const [allSectors, setAllSectors] = useState<Sector[]>([]);
+  const [allVerticals, setAllVerticals] = useState<BusinessVertical[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingManager, setSavingManager] = useState(false);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState("");
-  const [selectedSectorId, setSelectedSectorId] = useState("");
+  const [selectedVerticalId, setSelectedVerticalId] = useState("");
   const [territoryBusy, setTerritoryBusy] = useState<string | null>(null);
-  const [sectorBusy, setSectorBusy] = useState<string | null>(null);
+  const [verticalBusy, setVerticalBusy] = useState<string | null>(null);
   const { getLabel } = useTerritoryLabels();
 
   const isTargetUser = user?.role.name === "REP";
@@ -66,19 +66,29 @@ export function ManageAssignmentsDialog({
       )
     : null;
 
+  const assignedTerritories = useMemo(
+    () =>
+      assignments?.verticalAssignments.flatMap((vertical) => vertical.territories) ??
+      [],
+    [assignments]
+  );
+
+  const primaryVerticalAssignment = assignments?.verticalAssignments[0];
+  const currentManagerId = primaryVerticalAssignment?.managerId ?? null;
+
   const loadData = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      const [assignmentsData, usersResponse, sectorsData] = await Promise.all([
+      const [assignmentsData, usersResponse, verticalsData] = await Promise.all([
         usersApi.getUserAssignments(user.id),
         usersApi.getUsers({ page: 1, limit: 100 }),
-        usersApi.getSectors(),
+        usersApi.getVerticals(),
       ]);
 
       setAssignments(assignmentsData);
-      setAllSectors(sectorsData);
+      setAllVerticals(verticalsData);
       setManagers(
         usersResponse.data.filter(
           (u) =>
@@ -101,7 +111,7 @@ export function ManageAssignmentsDialog({
   useEffect(() => {
     if (open && user) {
       setSelectedTerritoryId("");
-      setSelectedSectorId("");
+      setSelectedVerticalId("");
       loadData();
     } else {
       setAssignments(null);
@@ -181,42 +191,42 @@ export function ManageAssignmentsDialog({
     }
   };
 
-  const handleAddSector = async () => {
-    if (!user || !selectedSectorId) return;
+  const handleAddVertical = async () => {
+    if (!user || !selectedVerticalId) return;
 
-    setSectorBusy("add");
+    setVerticalBusy("add");
     try {
-      await usersApi.assignSector(user.id, selectedSectorId);
-      setSelectedSectorId("");
+      await usersApi.assignVertical(user.id, selectedVerticalId);
+      setSelectedVerticalId("");
       await loadData();
-      toast({ title: "Setor atribuído com sucesso", variant: "success" });
+      toast({ title: "Vertical atribuída com sucesso", variant: "success" });
     } catch (err) {
       toast({
         title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao atribuir setor"),
+        description: getApiErrorMessage(err, "Falha ao atribuir vertical"),
         variant: "destructive",
       });
     } finally {
-      setSectorBusy(null);
+      setVerticalBusy(null);
     }
   };
 
-  const handleRevokeSector = async (sectorId: string) => {
+  const handleRevokeVertical = async (verticalId: string) => {
     if (!user) return;
 
-    setSectorBusy(sectorId);
+    setVerticalBusy(verticalId);
     try {
-      await usersApi.revokeSector(user.id, sectorId);
+      await usersApi.revokeVertical(user.id, verticalId);
       await loadData();
-      toast({ title: "Setor removido com sucesso", variant: "success" });
+      toast({ title: "Vertical removida com sucesso", variant: "success" });
     } catch (err) {
       toast({
         title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao remover setor"),
+        description: getApiErrorMessage(err, "Falha ao remover vertical"),
         variant: "destructive",
       });
     } finally {
-      setSectorBusy(null);
+      setVerticalBusy(null);
     }
   };
 
@@ -259,7 +269,7 @@ export function ManageAssignmentsDialog({
               <div className="space-y-2">
                 <Label htmlFor="manager-select">Gerente</Label>
                 <Select
-                  value={assignments.managerId ?? "none"}
+                  value={currentManagerId ?? "none"}
                   onValueChange={handleManagerChange}
                   disabled={savingManager}
                 >
@@ -275,9 +285,9 @@ export function ManageAssignmentsDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                {assignments.manager && (
+                {primaryVerticalAssignment?.managerName && (
                   <p className="text-xs text-gray-500">
-                    Atual: {assignments.manager.username} ({assignments.manager.email})
+                    Atual: {primaryVerticalAssignment.managerName}
                   </p>
                 )}
               </div>
@@ -287,33 +297,30 @@ export function ManageAssignmentsDialog({
               <div className="space-y-3">
                 <Label>Territórios</Label>
                 <p className="text-xs text-gray-500">{territoryPickerConfig.helperText}</p>
-                {assignments.territories.length === 0 ? (
+                {assignedTerritories.length === 0 ? (
                   <p className="text-sm text-gray-500">
                     Nenhum território atribuído. Selecione um território abaixo.
                   </p>
                 ) : (
                   <ul className="divide-y rounded-md border">
-                    {assignments.territories.map((t) => (
+                    {assignedTerritories.map((territory) => (
                       <li
-                        key={t.territoryId}
+                        key={territory.id}
                         className="flex items-center justify-between gap-2 px-3 py-2"
                       >
                         <div>
                           <span className="text-sm font-medium">
-                            {getLabel(t.territoryId)}
+                            {territory.name || getLabel(territory.id)}
                           </span>
-                          <p className="text-xs text-gray-500">
-                            Atribuído {new Date(t.assignedAt).toLocaleString("pt-BR")}
-                          </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleRevokeTerritory(t.territoryId)}
+                          onClick={() => handleRevokeTerritory(territory.id)}
                           disabled={territoryBusy !== null}
-                          aria-label={`Remover ${t.territoryId}`}
+                          aria-label={`Remover ${territory.name || territory.id}`}
                         >
-                          {territoryBusy === t.territoryId ? (
+                          {territoryBusy === territory.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Trash2 className="h-4 w-4 text-red-600" />
@@ -346,82 +353,79 @@ export function ManageAssignmentsDialog({
 
             {canAssignTerritories && (
               <div className="space-y-3">
-                <Label>Setores</Label>
+                <Label>Verticais</Label>
                 <p className="text-xs text-gray-500">
-                  Setores determinam quais territórios este usuário pode visualizar.
-                  Sem setores atribuídos, todos os territórios são visíveis.
+                  Verticais determinam quais territórios este usuário pode visualizar.
+                  Sem verticais atribuídas, todos os territórios são visíveis.
                 </p>
-                {assignments.sectors.length === 0 ? (
+                {assignments.verticalAssignments.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    Nenhum setor atribuído. Todos os territórios são visíveis.
+                    Nenhuma vertical atribuída. Todos os territórios são visíveis.
                   </p>
                 ) : (
                   <ul className="divide-y rounded-md border">
-                    {assignments.sectors.map((s) => {
-                      const sector = allSectors.find((sec) => sec.id === s.sectorId);
-                      return (
-                        <li
-                          key={s.sectorId}
-                          className="flex items-center justify-between gap-2 px-3 py-2"
+                    {assignments.verticalAssignments.map((vertical) => (
+                      <li
+                        key={vertical.verticalId}
+                        className="flex items-center justify-between gap-2 px-3 py-2"
+                      >
+                        <div>
+                          <span className="text-sm font-medium">
+                            {vertical.verticalName}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRevokeVertical(vertical.verticalId)}
+                          disabled={verticalBusy !== null}
+                          aria-label={`Remover vertical ${vertical.verticalName}`}
                         >
-                          <div>
-                            <span className="text-sm font-medium">
-                              {sector?.name ?? s.sectorId}
-                            </span>
-                            <p className="text-xs text-gray-500">
-                              Atribuído {new Date(s.assignedAt).toLocaleString("pt-BR")}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRevokeSector(s.sectorId)}
-                            disabled={sectorBusy !== null}
-                            aria-label={`Remover setor ${sector?.name ?? s.sectorId}`}
-                          >
-                            {sectorBusy === s.sectorId ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            )}
-                          </Button>
-                        </li>
-                      );
-                    })}
+                          {verticalBusy === vertical.verticalId ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          )}
+                        </Button>
+                      </li>
+                    ))}
                   </ul>
                 )}
-                {allSectors.length > 0 && (
+                {allVerticals.length > 0 && (
                   <>
                     <Select
-                      value={selectedSectorId}
-                      onValueChange={setSelectedSectorId}
-                      disabled={sectorBusy !== null}
+                      value={selectedVerticalId}
+                      onValueChange={setSelectedVerticalId}
+                      disabled={verticalBusy !== null}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um setor" />
+                        <SelectValue placeholder="Selecione uma vertical" />
                       </SelectTrigger>
                       <SelectContent>
-                        {allSectors
+                        {allVerticals
                           .filter(
-                            (sec) =>
-                              !assignments.sectors.some((s) => s.sectorId === sec.id)
+                            (vertical) =>
+                              !assignments.verticalAssignments.some(
+                                (assignment) =>
+                                  assignment.verticalId === vertical.id
+                              )
                           )
-                          .map((sec) => (
-                            <SelectItem key={sec.id} value={sec.id}>
-                              {sec.name}
+                          .map((vertical) => (
+                            <SelectItem key={vertical.id} value={vertical.id}>
+                              {vertical.name}
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
                     <Button
-                      onClick={handleAddSector}
-                      disabled={sectorBusy !== null || !selectedSectorId}
+                      onClick={handleAddVertical}
+                      disabled={verticalBusy !== null || !selectedVerticalId}
                       className="w-full"
                     >
-                      {sectorBusy === "add" ? (
+                      {verticalBusy === "add" ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        "Adicionar setor"
+                        "Adicionar vertical"
                       )}
                     </Button>
                   </>

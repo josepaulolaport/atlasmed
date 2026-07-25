@@ -8,15 +8,15 @@ import {
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { invitations, users } from "./users";
-import { sectors } from "./sectors";
+import { businessVerticals } from "./business-verticals";
 import { territories } from "./territories";
 
 /**
- * Per-sector slice of a pending invite (manager for REP, territories listed
+ * Per-vertical slice of a pending invite (manager for REP, territories listed
  * separately in invitation_territory_assignments).
  */
-export const invitationSectorAssignments = pgTable(
-  "invitation_sector_assignments",
+export const invitationVerticalAssignments = pgTable(
+  "invitation_vertical_assignments",
   {
     id: text("id")
       .primaryKey()
@@ -24,9 +24,9 @@ export const invitationSectorAssignments = pgTable(
     invitationId: text("invitation_id")
       .notNull()
       .references(() => invitations.id, { onDelete: "cascade" }),
-    sectorId: text("sector_id")
+    verticalId: text("vertical_id")
       .notNull()
-      .references(() => sectors.id, { onDelete: "cascade" }),
+      .references(() => businessVerticals.id, { onDelete: "cascade" }),
     managerId: text("manager_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -34,17 +34,17 @@ export const invitationSectorAssignments = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("invitation_sector_assignments_invitation_id_sector_id_uidx").on(
+    uniqueIndex("invitation_vertical_assignments_invitation_id_vertical_id_uidx").on(
       t.invitationId,
-      t.sectorId,
+      t.verticalId
     ),
-    index("invitation_sector_assignments_invitation_id_idx").on(t.invitationId),
-    index("invitation_sector_assignments_sector_id_idx").on(t.sectorId),
-    index("invitation_sector_assignments_manager_id_idx").on(t.managerId),
-  ],
+    index("invitation_vertical_assignments_invitation_id_idx").on(t.invitationId),
+    index("invitation_vertical_assignments_vertical_id_idx").on(t.verticalId),
+    index("invitation_vertical_assignments_manager_id_idx").on(t.managerId),
+  ]
 );
 
-/** Territories staged on an invite, scoped to a healthcare sector. */
+/** Territories staged on an invite, scoped to a business vertical. */
 export const invitationTerritoryAssignments = pgTable(
   "invitation_territory_assignments",
   {
@@ -54,9 +54,9 @@ export const invitationTerritoryAssignments = pgTable(
     invitationId: text("invitation_id")
       .notNull()
       .references(() => invitations.id, { onDelete: "cascade" }),
-    sectorId: text("sector_id")
+    verticalId: text("vertical_id")
       .notNull()
-      .references(() => sectors.id, { onDelete: "cascade" }),
+      .references(() => businessVerticals.id, { onDelete: "cascade" }),
     territoryId: text("territory_id")
       .notNull()
       .references(() => territories.id, { onDelete: "restrict" }),
@@ -65,32 +65,32 @@ export const invitationTerritoryAssignments = pgTable(
   },
   (t) => [
     uniqueIndex(
-      "invitation_territory_assignments_invitation_id_territory_id_uidx",
+      "invitation_territory_assignments_invitation_id_territory_id_uidx"
     ).on(t.invitationId, t.territoryId),
     index("invitation_territory_assignments_invitation_id_idx").on(
-      t.invitationId,
+      t.invitationId
     ),
-    index("invitation_territory_assignments_sector_id_idx").on(t.sectorId),
+    index("invitation_territory_assignments_vertical_id_idx").on(t.verticalId),
     index("invitation_territory_assignments_territory_id_idx").on(t.territoryId),
-  ],
+  ]
 );
 
-export const invitationSectorAssignmentsRelations = relations(
-  invitationSectorAssignments,
+export const invitationVerticalAssignmentsRelations = relations(
+  invitationVerticalAssignments,
   ({ one }) => ({
     invitation: one(invitations, {
-      fields: [invitationSectorAssignments.invitationId],
+      fields: [invitationVerticalAssignments.invitationId],
       references: [invitations.id],
     }),
-    sector: one(sectors, {
-      fields: [invitationSectorAssignments.sectorId],
-      references: [sectors.id],
+    vertical: one(businessVerticals, {
+      fields: [invitationVerticalAssignments.verticalId],
+      references: [businessVerticals.id],
     }),
     manager: one(users, {
-      fields: [invitationSectorAssignments.managerId],
+      fields: [invitationVerticalAssignments.managerId],
       references: [users.id],
     }),
-  }),
+  })
 );
 
 export const invitationTerritoryAssignmentsRelations = relations(
@@ -100,13 +100,13 @@ export const invitationTerritoryAssignmentsRelations = relations(
       fields: [invitationTerritoryAssignments.invitationId],
       references: [invitations.id],
     }),
-    sector: one(sectors, {
-      fields: [invitationTerritoryAssignments.sectorId],
-      references: [sectors.id],
+    vertical: one(businessVerticals, {
+      fields: [invitationTerritoryAssignments.verticalId],
+      references: [businessVerticals.id],
     }),
     territory: one(territories, {
       fields: [invitationTerritoryAssignments.territoryId],
       references: [territories.id],
     }),
-  }),
+  })
 );

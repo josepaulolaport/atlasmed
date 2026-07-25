@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/mock_invitations_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,10 +35,10 @@ void main() {
         birthDate: DateTime(1994, 3, 21),
         phoneNumber: '+55 11 98888-0000',
         roleId: 'role-rep',
-        sectorAssignments: const [
-          InviteSectorAssignment(
-            sectorId: 'sector-oncologia',
-            sectorName: 'Oncologia',
+        verticalAssignments: const [
+          InviteVerticalAssignment(
+            verticalId: 'sector-oncologia',
+            verticalName: 'Oncologia',
             managerId: 'user-fernanda-duarte',
             managerName: 'Fernanda Duarte',
             territories: [],
@@ -80,8 +80,8 @@ void main() {
     final invitation = await repository.getInvitation('invite-1');
     expect(invitation.firstName, 'Rafael');
     expect(invitation.roleId, 'role-rep');
-    expect(invitation.sectorAssignments, isNotEmpty);
-    expect(invitation.sectorAssignments.first.territories, isNotEmpty);
+    expect(invitation.verticalAssignments, isNotEmpty);
+    expect(invitation.verticalAssignments.first.territories, isNotEmpty);
   });
 
   test('updateInvitation changes pending invite fields', () async {
@@ -93,10 +93,10 @@ void main() {
       birthDate: DateTime(1992, 4, 18),
       phoneNumber: '+55 11 90000-1111',
       roleId: 'role-rep',
-      sectorAssignments: const [
-        InviteSectorAssignment(
-          sectorId: 'sector-oncologia',
-          sectorName: 'Oncologia',
+      verticalAssignments: const [
+        InviteVerticalAssignment(
+          verticalId: 'sector-oncologia',
+          verticalName: 'Oncologia',
           managerId: 'user-fernanda-duarte',
           managerName: 'Fernanda Duarte',
           territories: [],

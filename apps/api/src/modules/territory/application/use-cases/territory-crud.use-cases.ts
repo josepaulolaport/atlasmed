@@ -4,7 +4,6 @@ import type { TerritoryRepository } from "../interfaces/territory.repository.int
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
-import type { SectorRepository } from "../../../catalog/application/interfaces/sector.repository.interface";
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
 import { isManagerZoneType } from "../constants/territory-roles.constants";
 import {
@@ -28,7 +27,6 @@ interface TerritoryCrudDependencies {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
-  sectorRepository?: SectorRepository;
   membershipService?: TerritoryDeletionMembershipPort;
   onTerritoryDeactivated?: (territoryId: string) => Promise<void>;
   onBoundaryChanged?: (territoryId: string) => Promise<void>;
@@ -60,7 +58,6 @@ function serializeTerritory(territory: {
   territoryType?: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>;
   managerTerritoryId: string | null;
   isActive: boolean;
-  sectorId?: string | null;
   createdAt: Date;
   updatedAt: Date;
   clinicCount?: number;
@@ -81,7 +78,6 @@ function serializeTerritory(territory: {
     territoryType: serializeTerritoryType(territory.territoryType),
     managerTerritoryId: territory.managerTerritoryId ?? undefined,
     isActive: territory.isActive,
-    sectorId: territory.sectorId ?? undefined,
     clinicCount: territory.clinicCount ?? 0,
     assignedUserCount: territory.assignedUserCount ?? 0,
     repPatchCount: territory.repPatchCount ?? 0,
@@ -99,7 +95,6 @@ export class TerritoryCrudUseCases {
     slug: string;
     territoryTypeId?: string;
     typeSlug?: string;
-    sectorId?: string;
     boundary?: GeoJsonGeometry;
   }) {
     const type = input.territoryTypeId
@@ -113,10 +108,6 @@ export class TerritoryCrudUseCases {
         "TerritoryType",
         input.territoryTypeId ?? input.typeSlug ?? "unknown"
       );
-    }
-
-    if (input.sectorId) {
-      await this.assertSectorValid(input.sectorId);
     }
 
     const slug = normalizeTerritorySlug(input.slug);
@@ -139,7 +130,6 @@ export class TerritoryCrudUseCases {
       slug,
       code: slug.toUpperCase(),
       territoryTypeId: type.id,
-      sectorId: input.sectorId ?? null,
     });
 
     let boundaryResolution:
@@ -184,7 +174,7 @@ export class TerritoryCrudUseCases {
   async listTerritories(
     format: "tree" | "flat" = "flat",
     scope?: ScopeContext,
-    filters?: { typeSlug?: string; managerTerritoryId?: string; sectorId?: string }
+    filters?: { typeSlug?: string; managerTerritoryId?: string }
   ) {
     const territories = await this.deps.territoryRepository.findAllActive();
 
@@ -207,10 +197,6 @@ export class TerritoryCrudUseCases {
       );
     }
 
-    if (filters?.sectorId) {
-      filtered = filtered.filter((t) => t.sectorId === filters.sectorId);
-    }
-
     const enriched = await Promise.all(
       filtered.map(async (t) =>
         serializeTerritory(await this.enrichTerritory(t.id))
@@ -229,7 +215,6 @@ export class TerritoryCrudUseCases {
     input: {
       name?: string;
       isActive?: boolean;
-      sectorId?: string | null;
     }
   ) {
     const territory = await this.deps.territoryRepository.findById(id);
@@ -248,14 +233,9 @@ export class TerritoryCrudUseCases {
       await this.validateDeactivate(id, territoryType);
     }
 
-    if (input.sectorId) {
-      await this.assertSectorValid(input.sectorId);
-    }
-
     const updated = await this.deps.territoryRepository.update(id, {
       name: input.name,
       isActive: input.isActive,
-      sectorId: input.sectorId,
     });
 
     if (input.isActive === false && territory.isActive) {
@@ -330,16 +310,6 @@ export class TerritoryCrudUseCases {
         "deactivate_territory",
         "Territory has assigned users"
       );
-    }
-  }
-
-  private async assertSectorValid(sectorId: string): Promise<void> {
-    if (!this.deps.sectorRepository) {
-      return;
-    }
-    const sector = await this.deps.sectorRepository.findById(sectorId);
-    if (!sector || !sector.isActive) {
-      throw new ResourceNotFoundError("Sector", sectorId);
     }
   }
 

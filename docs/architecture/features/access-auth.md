@@ -4,7 +4,9 @@
 
 The access/auth area is mature relative to the rest of the platform. It includes authentication, refresh-token sessions, invitation-based registration, password reset, verification, 2FA, RBAC, instance-level grants, user assignments, audit logging, rate limiting, and security hardening.
 
-Admin user management (list/detail/lifecycle, multi-sector assignments, invites, grants) is exposed under `/api/v1/access` and consumed by the Flutter Usuários screens via HTTP repositories.
+Admin user management (list/detail/lifecycle, multi-vertical assignments, invites, grants) is exposed under `/api/v1/access` and consumed by the Flutter Usuários screens via HTTP repositories.
+
+Business verticals (Ortopedia first) gate commercial facility visibility via `facility_vertical_profiles`. See [business-verticals.md](./business-verticals.md).
 
 ## Existing User Roles
 
@@ -17,13 +19,15 @@ Admin user management (list/detail/lifecycle, multi-sector assignments, invites,
 
 | Method | Path | Notes |
 |---|---|---|
-| `GET` | `/access/users` | Paginated list; query supports `status`, `role`, `search`, `sectorId`, `sortBy` (`name`\|`role`\|`status`\|`createdAt`), `sortDir` (`asc`\|`desc`). DTO includes `birthDate`, `lastLoginAt`, `suspendedAt`, `deactivatedAt`, `twoFactorEnabled` |
+| `GET` | `/access/users` | Paginated list; query supports `status`, `role`, `search`, `verticalId`, `sortBy` (`name`\|`role`\|`status`\|`createdAt`), `sortDir` (`asc`\|`desc`). DTO includes `birthDate`, `lastLoginAt`, `suspendedAt`, `deactivatedAt`, `twoFactorEnabled` |
 | `GET` | `/access/users/:id` | Admin single-user lookup |
 | `PATCH` | `/access/users/:id` | Admin identity update (name, email, phone, username, birthDate) |
-| `GET` | `/access/users/:id/assignments` | Invite-shaped `sectorAssignments[]` with territory boundaries |
-| `PUT` | `/access/users/:id/assignments` | Replace per-sector manager + territories |
-| `GET` | `/access/managers/:managerId/assignable-territories?sectorId=` | REP patch picker under a manager |
-| `GET` | `/access/invitations` | Enriched with invitee names + staged sector assignments |
+| `GET` | `/access/users/:id/assignments` | Invite-shaped `verticalAssignments[]` with territory boundaries |
+| `PUT` | `/access/users/:id/assignments` | Replace per-vertical manager + territories |
+| `GET` | `/access/business-verticals` | Active business verticals for selectors |
+| `POST` / `DELETE` | `/access/users/:id/verticals` | Assign / revoke a vertical |
+| `GET` | `/access/managers/:managerId/assignable-territories?verticalId=` | REP patch picker under a manager |
+| `GET` | `/access/invitations` | Enriched with invitee names + staged vertical assignments |
 | `GET` | `/access/invitations/:id` | Invitation detail |
 | `PATCH` | `/access/invites/:id` | Edit pending invitation |
 | `GET` | `/access/users/:id/capabilities` | Grants include `grantedAt` |
@@ -36,11 +40,14 @@ Registration identity: inviter sets `birthDate` + name on the invite; invitee mu
 
 ## Clinic visibility (ScopeContext)
 
-| Role | `facilityIds` |
+| Role | Scope |
 |---|---|
-| `ADMIN` / `OPS` | Global (`isGlobal`) |
-| `REP` | Territories (sector-filtered patches) **∪** active `facility_consultant_assignments` for self |
-| `MANAGER` | Own territory oversight (manager zones → patches; fallback to reports’ patches) **∪** own consultant assignments. Does **not** include peer managers’ zones. Analytics facility set remains report-territory based (no consultant union). |
+| `ADMIN` | Global (`isGlobal`); `assignedVerticalIds` = all active verticals. Optional request `verticalId` filter narrows lists. |
+| `OPS` / `MANAGER` / `REP` | **Not** global. Verticals from `user_vertical_assignments`. Facility lists = territory∪consultant scope **intersected** with active `facility_vertical_profiles` in resolved verticals. Unprofiled facilities are ADMIN-only. |
+| `REP` | Territories ∪ active `facility_consultant_assignments` for self (consultant rows filtered by resolved verticals). |
+| `MANAGER` | Own territory oversight ∪ own consultant assignments. Does **not** include peer managers’ zones. Analytics facility set remains report-territory based (no consultant union). |
+
+Optional query/body `verticalId` is validated against the caller’s allowed set (`ForbiddenError` if outside). Omit → union of assigned verticals (ADMIN without filter: all facilities including unprofiled).
 
 Scope cache is invalidated when consultant assignments change (assignee + previous assignee).
 
@@ -57,6 +64,8 @@ Orders: REP list/detail restricted to `sellerId = actor` within facility scope.
 
 REP must not see the Cadastros ops queue. OPS reviews without needing `update FACILITY`.
 
+Cadastro drafts persist `vertical_id`. Inference: one facility profile → use it; else one user vertical matching a facility profile → use it; else require `verticalId` in the ensure-draft body. Completion writes `commercial_status` on `facility_vertical_profiles` for that vertical.
+
 ## Known Follow-Ups
 
 - Align grant `conditions` semantics between API, CASL helpers, and UI.
@@ -65,3 +74,4 @@ REP must not see the Cadastros ops queue. OPS reviews without needing `update FA
 - Add SSO/OIDC support for Google, Microsoft Entra ID, and Okta readiness.
 - Add 2FA recovery codes and admin reset workflow.
 - WhatsApp invite delivery requires Twilio env (email path uses Resend).
+- Territory ownership redesign across verticals (P1+; `territories.sector_id` removed in P0).

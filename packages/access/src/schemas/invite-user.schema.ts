@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-const sectorAssignmentSchema = z.object({
-  sectorId: z.string().min(1),
+const verticalAssignmentSchema = z.object({
+  verticalId: z.string().min(1),
   managerId: z.string().min(1).optional(),
   territoryIds: z.array(z.string().min(1)).default([]),
 });
@@ -9,8 +9,8 @@ const sectorAssignmentSchema = z.object({
 /**
  * Invite payload.
  *
- * Prefer `sectorAssignments` (multi-sector). Legacy single-territory fields
- * remain for web clients; when both are sent, `sectorAssignments` wins.
+ * Prefer `verticalAssignments` (multi-vertical). Legacy single-territory fields
+ * remain for web clients; when both are sent, `verticalAssignments` wins.
  */
 export const inviteUserSchema = z
   .object({
@@ -25,7 +25,7 @@ export const inviteUserSchema = z
     managerId: z.string().optional(),
     managerTerritoryId: z.string().optional(),
     repTerritoryId: z.string().optional(),
-    sectorAssignments: z.array(sectorAssignmentSchema).optional(),
+    verticalAssignments: z.array(verticalAssignmentSchema).optional(),
   })
   .refine((data) => data.email || data.phoneNumber, {
     message: "Either email or phone number is required",
@@ -33,4 +33,4 @@ export const inviteUserSchema = z
   });
 
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
-export type InviteSectorAssignmentInput = z.infer<typeof sectorAssignmentSchema>;
+export type InviteVerticalAssignmentInput = z.infer<typeof verticalAssignmentSchema>;

@@ -84,41 +84,41 @@ export const userAssignmentsRoute = new Elysia({
     },
   )
   .post(
-    "/users/:id/sectors",
+    "/users/:id/verticals",
     async ({ params, body, getUserId }: any) => {
       const assignedByUserId = await getUserId();
 
-      await accessRepositories.scope.assignSector({
+      await accessRepositories.scope.assignVertical({
         userId: params.id,
-        sectorId: (body as any).sectorId,
+        verticalId: (body as any).verticalId,
         assignedByUserId,
         managerId: (body as any).managerId ?? null,
       });
 
-      return { message: "Sector assigned successfully" };
+      return { message: "Business vertical assigned successfully" };
     },
     {
       body: t.Object({
-        sectorId: t.String({ description: "Sector ID to assign to the user" }),
+        verticalId: t.String({ description: "Business vertical ID to assign to the user" }),
         managerId: t.Optional(
           t.Union([t.String(), t.Null()], {
-            description: "Per-sector reporting manager (REP)",
+            description: "Per-vertical reporting manager (REP)",
           }),
         ),
       }),
     },
   )
   .delete(
-    "/users/:id/sectors/:sectorId",
+    "/users/:id/verticals/:verticalId",
     async ({ params, getUserId }: any) => {
       await getUserId();
 
-      await accessRepositories.scope.revokeSector({
+      await accessRepositories.scope.revokeVertical({
         userId: params.id,
-        sectorId: params.sectorId,
+        verticalId: params.verticalId,
       });
 
-      return { message: "Sector revoked successfully" };
+      return { message: "Business vertical revoked successfully" };
     },
   )
   .get(
@@ -134,7 +134,7 @@ export const userAssignmentsRoute = new Elysia({
       detail: {
         summary: "Get assignments for a user (admin)",
         description:
-          "Returns invite-shaped per-sector manager + territory assignments with map boundaries.",
+          "Returns invite-shaped per-vertical manager + territory assignments with map boundaries.",
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
@@ -151,23 +151,23 @@ export const userAssignmentsRoute = new Elysia({
         targetUserId: params.id,
         actorUserId: assignedBy,
         actorRole: actor.role.name as Role,
-        sectorAssignments: parsed.sectorAssignments.map((s) => ({
-          sectorId: s.sectorId,
-          managerId: s.managerId,
-          territoryIds: s.territoryIds,
+        verticalAssignments: parsed.verticalAssignments.map((v) => ({
+          verticalId: v.verticalId,
+          managerId: v.managerId,
+          territoryIds: v.territoryIds,
         })),
       });
     },
     {
       detail: {
-        summary: "Replace user sector/territory assignments",
+        summary: "Replace user vertical/territory assignments",
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
-        sectorAssignments: t.Array(
+        verticalAssignments: t.Array(
           t.Object({
-            sectorId: t.String(),
+            verticalId: t.String(),
             managerId: t.Optional(t.String()),
             territoryIds: t.Array(t.String()),
           }),
@@ -181,7 +181,7 @@ export const userAssignmentsRoute = new Elysia({
       const actor = await getUser();
       return accessUseCases.getAssignableTerritoriesForManager().execute({
         managerId: params.managerId,
-        sectorId: query.sectorId,
+        verticalId: query.verticalId,
         actorRole: actor.role.name as Role,
       });
     },
@@ -192,7 +192,7 @@ export const userAssignmentsRoute = new Elysia({
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        sectorId: t.String({ description: "Healthcare sector ID" }),
+        verticalId: t.String({ description: "Business vertical ID" }),
       }),
     },
   )

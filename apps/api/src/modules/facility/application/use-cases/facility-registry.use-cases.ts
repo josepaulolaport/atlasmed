@@ -6,6 +6,7 @@ import type { FacilityRepresentativeRepository } from "../interfaces/facility-re
 import type { FacilityConsultantAssignmentRepository } from "../interfaces/facility-consultant-assignment.repository.interface";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import type { RegistryReadRepository } from "../../../registry-ingestion/application/interfaces/registry-read.repository.interface";
+import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 
 export class ConfirmRegistryProfessionalUseCase {
   constructor(
@@ -171,9 +172,26 @@ export class AssignFacilityConsultantUseCase {
     facilityId: string;
     userId: string;
     assignedByUserId: string;
+    verticalId?: string;
     scope: ScopeContext;
+    role: string;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
+
+    const resolvedVerticalIds = resolveVerticalIds({
+      role: input.role,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId,
+    });
+    if (resolvedVerticalIds.length !== 1) {
+      throw new ValidationError([
+        {
+          field: "verticalId",
+          message: "verticalId is required when multiple verticals apply",
+        },
+      ]);
+    }
+    const verticalId = resolvedVerticalIds[0]!;
 
     const previous =
       await this.deps.consultantAssignmentRepository.findCurrentByFacility(
@@ -183,6 +201,7 @@ export class AssignFacilityConsultantUseCase {
     const assignment = await this.deps.consultantAssignmentRepository.assign({
       facilityId: input.facilityId,
       userId: input.userId,
+      verticalId,
       assignedByUserId: input.assignedByUserId,
     });
 

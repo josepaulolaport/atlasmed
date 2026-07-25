@@ -12,7 +12,7 @@ import { access } from "../access/index";
 import { territory } from "../territory/index";
 import { AppError } from "../../shared/errors";
 import { eq } from "drizzle-orm";
-import { territories, facilities, sectors } from "@atlasmed/database";
+import { territories, facilities } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -191,64 +191,6 @@ describe("Territory HTTP scope integration", () => {
 
     expect(ids).toContain(fixtures.territoryId);
     expect(ids).toContain(fixtures.outOfScopeTerritoryId);
-  });
-
-  it("admin can set sectorId on create and update, and it round-trips in responses", async () => {
-    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
-
-    const [sector] = await db
-      .insert(sectors)
-      .values({
-        slug: `sector-${fixtures.uniqueId}`.toLowerCase(),
-        name: `Sector ${fixtures.uniqueId}`,
-      })
-      .returning();
-
-    try {
-      const adminToken = await loginToken(fixtures.admin.email);
-
-      const createResponse = await authRequest(
-        "http://localhost/api/v1/territory/territories",
-        adminToken,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            name: `Sectorized Zone ${fixtures.uniqueId}`,
-            slug: `sectorized-zone-${fixtures.uniqueId}`,
-            typeSlug: "manager_zone",
-            sectorId: sector!.id,
-            boundary: {
-              type: "Polygon",
-              coordinates: [
-                [
-                  [-47.95, -15.85],
-                  [-47.9, -15.85],
-                  [-47.9, -15.8],
-                  [-47.95, -15.8],
-                  [-47.95, -15.85],
-                ],
-              ],
-            },
-          }),
-        }
-      );
-
-      expect(createResponse.status).toBe(200);
-      const created = (await createResponse.json()) as { id: string; sectorId?: string };
-      expect(created.sectorId).toBe(sector!.id);
-
-      const listResponse = await authRequest(
-        `http://localhost/api/v1/territory/territories?sectorId=${sector!.id}`,
-        adminToken
-      );
-      const listBody = (await listResponse.json()) as { data: Array<{ id: string }> };
-      expect(listBody.data.map((t) => t.id)).toContain(created.id);
-
-      await db.delete(territories).where(eq(territories.id, created.id));
-    } finally {
-      await db.delete(sectors).where(eq(sectors.id, sector!.id));
-    }
   });
 
   it("admin delete auto-disassociates clinics but still blocks on assigned users", async () => {

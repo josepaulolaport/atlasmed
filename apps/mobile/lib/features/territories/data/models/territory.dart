@@ -21,7 +21,6 @@ class Territory {
   final String slug;
   final String code;
   final TerritoryType territoryType;
-  final String sectorId;
   final String? managerTerritoryId;
   final bool isActive;
   final int clinicCount;
@@ -43,7 +42,6 @@ class Territory {
     required this.slug,
     required this.code,
     required this.territoryType,
-    required this.sectorId,
     this.managerTerritoryId,
     this.isActive = true,
     this.clinicCount = 0,
@@ -54,11 +52,6 @@ class Territory {
     this.assignedUserId,
   });
 
-  /// Builds a [Territory] from a `territory-crud.use-cases.ts`
-  /// `serializeTerritory` row (as returned by
-  /// `GET/POST/PATCH /territory/territories[...]`) plus the boundary/
-  /// centroid/assignee, each fetched separately on the real API — see
-  /// `HttpTerritoryRepository`.
   factory Territory.fromApiRow(
     Map<String, dynamic> json, {
     required TerritoryGeometry boundary,
@@ -73,7 +66,6 @@ class Territory {
       territoryType: TerritoryType.fromJson(
         json['territoryType'] as Map<String, dynamic>,
       ),
-      sectorId: json['sectorId'] as String? ?? '',
       managerTerritoryId: json['managerTerritoryId'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       clinicCount: (json['clinicCount'] as num?)?.toInt() ?? 0,
@@ -89,7 +81,6 @@ class Territory {
 
   Territory copyWith({
     String? name,
-    String? sectorId,
     bool? isActive,
     TerritoryGeometry? boundary,
     MapCoordinate? centroid,
@@ -103,7 +94,6 @@ class Territory {
       slug: slug,
       code: code,
       territoryType: territoryType,
-      sectorId: sectorId ?? this.sectorId,
       managerTerritoryId: identical(managerTerritoryId, _unset)
           ? this.managerTerritoryId
           : managerTerritoryId as String?,

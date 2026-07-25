@@ -4,7 +4,7 @@ import {
   roles,
   sessions,
   passwordResets,
-  userSectorAssignments,
+  userVerticalAssignments,
   type Database,
   type AnyDatabase,
 } from "@atlasmed/database";
@@ -494,14 +494,14 @@ export class DrizzleUserRepository implements UserRepository {
       conditions.push(eq(roles.name, params.role as any));
     }
 
-    if (params.sectorId) {
+    if (params.verticalId) {
       conditions.push(
         inArray(
           users.id,
           db
-            .select({ userId: userSectorAssignments.userId })
-            .from(userSectorAssignments)
-            .where(eq(userSectorAssignments.sectorId, params.sectorId)),
+            .select({ userId: userVerticalAssignments.userId })
+            .from(userVerticalAssignments)
+            .where(eq(userVerticalAssignments.verticalId, params.verticalId)),
         ) as any,
       );
     }

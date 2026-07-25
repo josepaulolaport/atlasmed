@@ -25,16 +25,16 @@ class AppUser {
   ///
   /// `null` on the real API: `GET /access/users` doesn't return a
   /// per-user sector (it's a separate many-to-many assignment), so
-  /// sector-scoping there happens via the `sectorId` query param instead
+  /// sector-scoping there happens via the `verticalId` query param instead
   /// of this field.
-  final String? sectorId;
+  final String? verticalId;
   final bool isActive;
 
   const AppUser({
     required this.id,
     required this.name,
     required this.role,
-    this.sectorId,
+    this.verticalId,
     this.isActive = true,
   });
 

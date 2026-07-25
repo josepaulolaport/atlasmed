@@ -432,9 +432,9 @@ async function cleanOperationalData(adminUserId: string, dryRun: boolean) {
       },
     },
     {
-      label: "sectors",
+      label: "business_verticals",
       run: async () => {
-        const r = await db.$client.unsafe(`DELETE FROM public.sectors`);
+        const r = await db.$client.unsafe(`DELETE FROM public.business_verticals`);
         return { count: getRawCount(r) };
       },
     },

@@ -16,14 +16,17 @@ export function isBillingEmailComplete(billingEmail: string | null | undefined):
 
 /**
  * When every tax-type-applicable file doc is APPROVED/VALIDATED and billingEmail
- * is set, flip conformityStatus=COMPLETE and commercialStatus=ACTIVE.
- * Otherwise force conformityStatus=INCOMPLETE and commercialStatus=SUSPENDED
- * when it was ACTIVE (rejection / missing docs must revoke commercial activation).
+ * is set, flip conformityStatus=COMPLETE and commercialStatus=ACTIVE on the
+ * facility vertical profile. Otherwise force conformityStatus=INCOMPLETE and
+ * commercialStatus=SUSPENDED when it was ACTIVE.
  */
 export class FacilityCadastroCompletionService {
   constructor(private readonly deps: Dependencies) {}
 
-  async evaluateAndApply(facilityId: string): Promise<{
+  async evaluateAndApply(
+    facilityId: string,
+    verticalId: string,
+  ): Promise<{
     complete: boolean;
     conformityStatus: "INCOMPLETE" | "COMPLETE";
     commercialStatus: "ACTIVE" | "SUSPENDED" | null;
@@ -33,14 +36,24 @@ export class FacilityCadastroCompletionService {
       throw new ResourceNotFoundError("Facility", facilityId);
     }
 
+    await this.deps.facilityRepository.ensureVerticalProfile({
+      facilityId,
+      verticalId,
+    });
+
+    const profiles = await this.deps.facilityRepository.findVerticalProfilesByFacilityIds(
+      [facilityId],
+      [verticalId],
+    );
+    const profile = profiles.get(facilityId)?.[0];
+    const currentCommercialStatus = profile?.commercialStatus ?? null;
+
     const requirements = await this.deps.conformityRepository.findActiveRequirements({
       taxIdType: resolveFacilityTaxIdType(facility),
     });
 
     let docsComplete = false;
     if (this.deps.cadastroRepository) {
-      // Per-document submissions live in separate packages — require an
-      // APPROVED document for each catalog requirement across history.
       const approvedFlags = await Promise.all(
         requirements.map(async (requirement) => {
           const history =
@@ -73,6 +86,10 @@ export class FacilityCadastroCompletionService {
     if (complete) {
       await this.deps.facilityRepository.update(facilityId, {
         conformityStatus: "COMPLETE",
+      });
+      await this.deps.facilityRepository.updateVerticalProfileCommercialStatus({
+        facilityId,
+        verticalId,
         commercialStatus: "ACTIVE",
       });
       return {
@@ -84,24 +101,28 @@ export class FacilityCadastroCompletionService {
 
     const patch: {
       conformityStatus?: "INCOMPLETE";
-      commercialStatus?: "SUSPENDED";
     } = {};
     if (facility.conformityStatus !== "INCOMPLETE") {
       patch.conformityStatus = "INCOMPLETE";
     }
-    if (facility.commercialStatus === "ACTIVE") {
-      patch.commercialStatus = "SUSPENDED";
-    }
     if (Object.keys(patch).length > 0) {
       await this.deps.facilityRepository.update(facilityId, patch);
+    }
+
+    if (currentCommercialStatus === "ACTIVE") {
+      await this.deps.facilityRepository.updateVerticalProfileCommercialStatus({
+        facilityId,
+        verticalId,
+        commercialStatus: "SUSPENDED",
+      });
     }
 
     return {
       complete: false,
       conformityStatus: "INCOMPLETE",
       commercialStatus:
-        facility.commercialStatus === "ACTIVE" ||
-        facility.commercialStatus === "SUSPENDED"
+        currentCommercialStatus === "ACTIVE" ||
+        currentCommercialStatus === "SUSPENDED"
           ? "SUSPENDED"
           : null,
     };

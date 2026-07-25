@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import { sectors } from "./sectors";
+import { businessVerticals } from "./business-verticals";
 import { facilities } from "./facilities";
 
 export const products = pgTable(
@@ -63,18 +63,20 @@ export const products = pgTable(
   ]
 );
 
-export const productSectors = pgTable(
-  "product_sectors",
+export const productVerticals = pgTable(
+  "product_verticals",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-    sectorId: text("sector_id").notNull().references(() => sectors.id, { onDelete: "cascade" }),
+    verticalId: text("vertical_id")
+      .notNull()
+      .references(() => businessVerticals.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    index("product_sectors_product_id_idx").on(t.productId),
-    index("product_sectors_sector_id_idx").on(t.sectorId),
-    unique("product_sectors_unique").on(t.productId, t.sectorId),
+    index("product_verticals_product_id_idx").on(t.productId),
+    index("product_verticals_vertical_id_idx").on(t.verticalId),
+    unique("product_verticals_unique").on(t.productId, t.verticalId),
   ]
 );
 
@@ -103,18 +105,25 @@ export const competitorProducts = pgTable(
   ]
 );
 
-export const competitorProductSectors = pgTable(
-  "competitor_product_sectors",
+export const competitorProductVerticals = pgTable(
+  "competitor_product_verticals",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    competitorProductId: text("competitor_product_id").notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
-    sectorId: text("sector_id").notNull().references(() => sectors.id, { onDelete: "cascade" }),
+    competitorProductId: text("competitor_product_id")
+      .notNull()
+      .references(() => competitorProducts.id, { onDelete: "cascade" }),
+    verticalId: text("vertical_id")
+      .notNull()
+      .references(() => businessVerticals.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    index("competitor_product_sectors_cp_id_idx").on(t.competitorProductId),
-    index("competitor_product_sectors_sector_id_idx").on(t.sectorId),
-    unique("competitor_product_sectors_unique").on(t.competitorProductId, t.sectorId),
+    index("competitor_product_verticals_cp_id_idx").on(t.competitorProductId),
+    index("competitor_product_verticals_vertical_id_idx").on(t.verticalId),
+    unique("competitor_product_verticals_unique").on(
+      t.competitorProductId,
+      t.verticalId
+    ),
   ]
 );
 
@@ -135,25 +144,37 @@ export const productEquivalences = pgTable(
 );
 
 export const productsRelations = relations(products, ({ many }) => ({
-  productSectors: many(productSectors),
+  productVerticals: many(productVerticals),
   equivalences: many(productEquivalences),
 }));
 
-export const productSectorsRelations = relations(productSectors, ({ one }) => ({
-  product: one(products, { fields: [productSectors.productId], references: [products.id] }),
-  sector: one(sectors, { fields: [productSectors.sectorId], references: [sectors.id] }),
+export const productVerticalsRelations = relations(productVerticals, ({ one }) => ({
+  product: one(products, { fields: [productVerticals.productId], references: [products.id] }),
+  vertical: one(businessVerticals, {
+    fields: [productVerticals.verticalId],
+    references: [businessVerticals.id],
+  }),
 }));
 
 export const competitorProductsRelations = relations(competitorProducts, ({ many }) => ({
-  competitorProductSectors: many(competitorProductSectors),
+  competitorProductVerticals: many(competitorProductVerticals),
   equivalences: many(productEquivalences),
   facilityStandards: many(facilityCompetitorProductStandards),
 }));
 
-export const competitorProductSectorsRelations = relations(competitorProductSectors, ({ one }) => ({
-  competitorProduct: one(competitorProducts, { fields: [competitorProductSectors.competitorProductId], references: [competitorProducts.id] }),
-  sector: one(sectors, { fields: [competitorProductSectors.sectorId], references: [sectors.id] }),
-}));
+export const competitorProductVerticalsRelations = relations(
+  competitorProductVerticals,
+  ({ one }) => ({
+    competitorProduct: one(competitorProducts, {
+      fields: [competitorProductVerticals.competitorProductId],
+      references: [competitorProducts.id],
+    }),
+    vertical: one(businessVerticals, {
+      fields: [competitorProductVerticals.verticalId],
+      references: [businessVerticals.id],
+    }),
+  })
+);
 
 export const productEquivalencesRelations = relations(productEquivalences, ({ one }) => ({
   product: one(products, { fields: [productEquivalences.productId], references: [products.id] }),

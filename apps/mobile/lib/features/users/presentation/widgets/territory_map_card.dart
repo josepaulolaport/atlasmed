@@ -92,10 +92,10 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
               color: Color(0xFF0f1729),
             ),
           ),
-          if (widget.assignment.sectorName != null) ...[
+          if (widget.assignment.verticalName != null) ...[
             const SizedBox(height: 2),
             Text(
-              widget.assignment.sectorName!,
+              widget.assignment.verticalName!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),

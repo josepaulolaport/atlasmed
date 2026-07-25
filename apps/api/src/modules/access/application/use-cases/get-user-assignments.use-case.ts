@@ -18,14 +18,12 @@ interface GetUserAssignmentsDependencies {
 export interface AssignmentTerritoryDto {
   id: string;
   name: string;
-  sectorId?: string;
-  sectorName?: string;
   boundary?: unknown;
 }
 
-export interface SectorAssignmentDto {
-  sectorId: string;
-  sectorName: string;
+export interface VerticalAssignmentDto {
+  verticalId: string;
+  verticalName: string;
   managerId?: string;
   managerName?: string;
   territories: AssignmentTerritoryDto[];
@@ -34,7 +32,7 @@ export interface SectorAssignmentDto {
 export interface GetUserAssignmentsOutput {
   userId: string;
   isOperationallyActive: boolean;
-  sectorAssignments: SectorAssignmentDto[];
+  verticalAssignments: VerticalAssignmentDto[];
 }
 
 export class GetUserAssignmentsUseCase {
@@ -58,17 +56,17 @@ export class GetUserAssignmentsUseCase {
       throw new UserNotFoundError(params.targetUserId);
     }
 
-    const [sectorRows, territoryRows, sectors] = await Promise.all([
-      this.deps.scopeRepository.findSectorAssignmentsByUserId(
+    const [verticalRows, territoryRows, verticals] = await Promise.all([
+      this.deps.scopeRepository.findVerticalAssignmentsByUserId(
         params.targetUserId,
       ),
       this.deps.scopeRepository.findTerritoryAssignmentsByUserId(
         params.targetUserId,
       ),
-      this.deps.scopeRepository.listActiveSectors(),
+      this.deps.scopeRepository.listActiveVerticals(),
     ]);
 
-    const sectorNameById = new Map(sectors.map((s) => [s.id, s.name]));
+    const verticalNameById = new Map(verticals.map((v) => [v.id, v.name]));
     const territoryIds = territoryRows.map((t) => t.territoryId);
     const territories =
       territoryIds.length > 0
@@ -78,8 +76,8 @@ export class GetUserAssignmentsUseCase {
 
     const managerIds = [
       ...new Set(
-        sectorRows
-          .map((s) => s.managerId)
+        verticalRows
+          .map((v) => v.managerId)
           .filter((id): id is string => Boolean(id)),
       ),
     ];
@@ -98,54 +96,37 @@ export class GetUserAssignmentsUseCase {
         }),
     );
 
-    const territoriesBySector = new Map<string, AssignmentTerritoryDto[]>();
-
+    const territoryDtos: AssignmentTerritoryDto[] = [];
     for (const row of territoryRows) {
       const territory = territoryById.get(row.territoryId);
       if (!territory) continue;
-      const sectorId = territory.sectorId ?? "_unscoped";
       const boundary =
         await this.deps.spatialRepository.getBoundaryAsGeoJson(territory.id);
-      const dto: AssignmentTerritoryDto = {
+      territoryDtos.push({
         id: territory.id,
         name: territory.name,
-        ...(territory.sectorId
-          ? {
-              sectorId: territory.sectorId,
-              sectorName: sectorNameById.get(territory.sectorId),
-            }
-          : {}),
         ...(boundary ? { boundary } : {}),
-      };
-      const list = territoriesBySector.get(sectorId) ?? [];
-      list.push(dto);
-      territoriesBySector.set(sectorId, list);
+      });
     }
 
-    const sectorAssignments: SectorAssignmentDto[] = sectorRows.map((row) => {
+    const verticalAssignments: VerticalAssignmentDto[] = verticalRows.map((row) => {
       const managerId = row.managerId ?? undefined;
       return {
-        sectorId: row.sectorId,
-        sectorName: sectorNameById.get(row.sectorId) ?? "—",
+        verticalId: row.verticalId,
+        verticalName: verticalNameById.get(row.verticalId) ?? "—",
         ...(managerId
           ? {
               managerId,
               managerName: managerNameById.get(managerId),
             }
           : {}),
-        territories: territoriesBySector.get(row.sectorId) ?? [],
+        territories:
+          verticalRows.length === 1 ? territoryDtos : [],
       };
     });
 
-    // Territories whose sector was not in sectorRows still surface under a synthetic row.
-    for (const [sectorId, list] of territoriesBySector) {
-      if (sectorId === "_unscoped") continue;
-      if (sectorAssignments.some((s) => s.sectorId === sectorId)) continue;
-      sectorAssignments.push({
-        sectorId,
-        sectorName: sectorNameById.get(sectorId) ?? "—",
-        territories: list,
-      });
+    if (verticalRows.length > 1 && territoryDtos.length > 0 && verticalAssignments[0]) {
+      verticalAssignments[0].territories = territoryDtos;
     }
 
     const roleName = user.role?.name ?? Role.REP;
@@ -155,7 +136,7 @@ export class GetUserAssignmentsUseCase {
     return {
       userId: params.targetUserId,
       isOperationallyActive,
-      sectorAssignments,
+      verticalAssignments,
     };
   }
 }

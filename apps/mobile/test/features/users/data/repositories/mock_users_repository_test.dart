@@ -1,6 +1,6 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/mock_users_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -205,7 +205,7 @@ void main() {
           'user-bruno-castro',
         );
         final territory = assignments.territories.single;
-        expect(territory.sectorName, 'Oncologia');
+        expect(territory.verticalName, 'Oncologia');
         expect(territory.centroid, isNotNull);
         expect(territory.boundary, isNotNull);
       },
@@ -218,7 +218,7 @@ void main() {
         await repository.assignTerritory(userId, 'territory-centro-onco-d');
         final assignments = await repository.getUserAssignments(userId);
         final territory = assignments.territories.single;
-        expect(territory.sectorName, 'Oncologia');
+        expect(territory.verticalName, 'Oncologia');
         expect(territory.centroid, isNotNull);
         expect(territory.boundary, isNotNull);
       },
@@ -247,47 +247,50 @@ void main() {
     );
 
     test(
-      'getTerritoriesForManager filters by sector when sectorId is set',
+      'getTerritoriesForManager filters by sector when verticalId is set',
       () async {
         final scope = await repository.getTerritoriesForManager(
           'user-fernanda-duarte',
-          sectorId: 'sector-oncologia',
+          verticalId: 'sector-oncologia',
         );
         expect(scope.territories, isNotEmpty);
         expect(
-          scope.territories.every((t) => t.sectorId == 'sector-oncologia'),
+          scope.territories.every((t) => t.verticalId == 'sector-oncologia'),
           isTrue,
         );
       },
     );
 
-    test('getManagerOptions filters by sector when sectorId is set', () async {
-      final managers = await repository.getManagerOptions(
-        sectorId: 'sector-cardiologia',
-      );
-      expect(managers, isNotEmpty);
-      expect(
-        managers.every((m) => m.sectorIds.contains('sector-cardiologia')),
-        isTrue,
-      );
-      expect(managers.any((m) => m.id == 'user-eduardo-alves'), isTrue);
-      expect(managers.any((m) => m.id == 'user-renata-souza'), isFalse);
-    });
+    test(
+      'getManagerOptions filters by sector when verticalId is set',
+      () async {
+        final managers = await repository.getManagerOptions(
+          verticalId: 'sector-cardiologia',
+        );
+        expect(managers, isNotEmpty);
+        expect(
+          managers.every((m) => m.verticalIds.contains('sector-cardiologia')),
+          isTrue,
+        );
+        expect(managers.any((m) => m.id == 'user-eduardo-alves'), isTrue);
+        expect(managers.any((m) => m.id == 'user-renata-souza'), isFalse);
+      },
+    );
 
     test(
-      'replaceSectorAssignments replaces the full invite-shaped payload',
+      'replaceVerticalAssignments replaces the full invite-shaped payload',
       () async {
-        await repository.replaceSectorAssignments('user-bruno-castro', const [
-          InviteSectorAssignment(
-            sectorId: 'sector-oncologia',
-            sectorName: 'Oncologia',
+        await repository.replaceVerticalAssignments('user-bruno-castro', const [
+          InviteVerticalAssignment(
+            verticalId: 'sector-oncologia',
+            verticalName: 'Oncologia',
             managerId: 'user-fernanda-duarte',
             managerName: 'Fernanda Duarte',
             territories: [],
           ),
-          InviteSectorAssignment(
-            sectorId: 'sector-cardiologia',
-            sectorName: 'Cardiologia',
+          InviteVerticalAssignment(
+            verticalId: 'sector-cardiologia',
+            verticalName: 'Cardiologia',
             managerId: 'user-fernanda-duarte',
             managerName: 'Fernanda Duarte',
             territories: [],
@@ -296,7 +299,7 @@ void main() {
         final assignments = await repository.getUserAssignments(
           'user-bruno-castro',
         );
-        expect(assignments.sectorAssignments, hasLength(2));
+        expect(assignments.verticalAssignments, hasLength(2));
         expect(assignments.isOperationallyActive, isFalse);
       },
     );

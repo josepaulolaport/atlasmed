@@ -18,13 +18,10 @@ import type {
 } from "@/types/territory";
 
 export const territoriesApi = {
-  listTerritories: async (
-    typeSlug?: string,
-    sectorId?: string
-  ): Promise<{ data: Territory[] }> => {
+  listTerritories: async (typeSlug?: string): Promise<{ data: Territory[] }> => {
     const response = await apiClient.get<{ data: Territory[] }>(
       "/territory/territories",
-      { params: { format: "flat", type: typeSlug, sectorId } }
+      { params: { format: "flat", type: typeSlug } }
     );
     return response.data;
   },

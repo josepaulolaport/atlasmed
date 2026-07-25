@@ -12,7 +12,6 @@ import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_t
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/territory_info_form.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
-import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/sector_selector.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_detail_sheet.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_kind_switch.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_avatar.dart';
@@ -90,13 +89,9 @@ class _NewTerritoryButton extends ConsumerWidget {
       label: const Text('Novo território'),
       onPressed: () {
         final kind = ref.read(selectedTerritoryKindProvider);
-        final sectorId = ref.read(effectiveSectorIdProvider).valueOrNull;
         context.push(
           '/territorios/criar',
-          extra: TerritoryEditorTarget.creating(
-            initialKind: kind,
-            initialSectorId: sectorId,
-          ),
+          extra: TerritoryEditorTarget.creating(initialKind: kind),
         );
       },
     );
@@ -111,42 +106,19 @@ class _TerritoriesBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final kind = ref.watch(selectedTerritoryKindProvider);
-    final sectorsAsync = ref.watch(sectorsProvider);
-    final effectiveSectorId = ref.watch(effectiveSectorIdProvider).valueOrNull;
     final territoriesAsync = ref.watch(territoriesProvider);
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TerritoryKindSwitch(
-                value: kind,
-                onChanged: (newKind) {
-                  if (newKind == kind) return;
-                  ref.read(selectedTerritoryIdProvider.notifier).state = null;
-                  ref.read(selectedTerritoryKindProvider.notifier).state =
-                      newKind;
-                },
-              ),
-              const SizedBox(height: 10),
-              sectorsAsync.when(
-                data: (sectors) => SectorSelector(
-                  sectors: sectors,
-                  selectedSectorId: effectiveSectorId,
-                  onChanged: (sectorId) {
-                    if (sectorId == effectiveSectorId) return;
-                    ref.read(selectedTerritoryIdProvider.notifier).state = null;
-                    ref.read(selectedSectorIdProvider.notifier).state =
-                        sectorId;
-                  },
-                ),
-                loading: () => const SizedBox(height: 34),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
-            ],
+          child: TerritoryKindSwitch(
+            value: kind,
+            onChanged: (newKind) {
+              if (newKind == kind) return;
+              ref.read(selectedTerritoryIdProvider.notifier).state = null;
+              ref.read(selectedTerritoryKindProvider.notifier).state = newKind;
+            },
           ),
         ),
         Expanded(
@@ -171,7 +143,7 @@ class _TerritoriesBody extends ConsumerWidget {
                   icon: Icons.layers_clear_outlined,
                   title: 'Nenhum território encontrado',
                   message:
-                      'Não há territórios cadastrados para esse setor e tipo.',
+                      'Não há territórios cadastrados para esse vertical e tipo.',
                 );
               }
               return _TerritoriesMap(
@@ -455,7 +427,6 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     final result = await UserPickerSheet.pickAssignee(
       context,
       role: role,
-      sectorId: territory.sectorId,
       currentUserId: territory.assignedUserId,
     );
     if (result == null) return;

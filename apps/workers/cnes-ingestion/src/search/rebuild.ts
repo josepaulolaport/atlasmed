@@ -1,5 +1,11 @@
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
-import { facilities, facilityProfessionals, professionals } from "@atlasmed/database";
+import {
+  businessVerticals,
+  facilities,
+  facilityProfessionals,
+  facilityVerticalProfiles,
+  professionals,
+} from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
 import { Meilisearch } from "meilisearch";
 import { environment } from "@atlasmed/config";
@@ -243,6 +249,7 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
   let lastId: string | undefined;
 
   while (true) {
+    // Index Ortopedia profile commercial status (P0 single vertical).
     const rows = await db
       .select({
         id: facilities.id,
@@ -254,7 +261,7 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         cnesCode: facilities.cnesCode,
         city: facilities.city,
         state: facilities.state,
-        commercialStatus: facilities.commercialStatus,
+        commercialStatus: facilityVerticalProfiles.commercialStatus,
         territoryId: facilities.territoryId,
         territoryAssignmentStatus: facilities.territoryAssignmentStatus,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
@@ -263,6 +270,15 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         isActiveInRegistry: facilities.isActiveInRegistry,
       })
       .from(facilities)
+      .leftJoin(businessVerticals, eq(businessVerticals.code, "ORTOPEDIA"))
+      .leftJoin(
+        facilityVerticalProfiles,
+        and(
+          eq(facilityVerticalProfiles.facilityId, facilities.id),
+          eq(facilityVerticalProfiles.verticalId, businessVerticals.id),
+          eq(facilityVerticalProfiles.isActive, true)
+        )
+      )
       .where(and(isNull(facilities.deactivatedAt), lastId ? gt(facilities.id, lastId) : undefined))
       .orderBy(asc(facilities.id))
       .limit(PAGE_SIZE);

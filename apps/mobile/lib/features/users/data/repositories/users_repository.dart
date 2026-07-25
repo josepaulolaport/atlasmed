@@ -2,7 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
@@ -45,9 +45,9 @@ abstract interface class UsersRepository {
   Future<UserAssignments> getUserAssignments(String userId);
 
   /// Replace the full per-sector assignment set (invite-shaped payload).
-  Future<void> replaceSectorAssignments(
+  Future<void> replaceVerticalAssignments(
     String userId,
-    List<InviteSectorAssignment> sectorAssignments,
+    List<InviteVerticalAssignment> verticalAssignments,
   );
 
   /// `GET /access/users/:id/capabilities` (grants slice only — role is
@@ -78,11 +78,11 @@ abstract interface class UsersRepository {
   /// `DELETE /access/users/:id/territories/:territoryId`
   Future<void> revokeTerritory(String userId, String territoryId);
 
-  /// `POST /access/users/:id/sectors`
-  Future<void> assignSector(String userId, String sectorId);
+  /// `POST /access/users/:id/verticals`
+  Future<void> assignVertical(String userId, String verticalId);
 
-  /// `DELETE /access/users/:id/sectors/:sectorId`
-  Future<void> revokeSector(String userId, String sectorId);
+  /// `DELETE /access/users/:id/verticals/:verticalId`
+  Future<void> revokeVertical(String userId, String verticalId);
 
   /// `POST /access/users/:id/permissions`
   Future<void> grantPermission(
@@ -104,21 +104,21 @@ abstract interface class UsersRepository {
   /// `GET /access/roles`
   Future<List<UserRole>> getRoles();
 
-  /// `GET /access/sectors`
-  Future<List<SectorOption>> getSectors();
+  /// `GET /access/business-verticals`
+  Future<List<VerticalOption>> getVerticals();
 
-  /// `GET /access/users?role=MANAGER&sectorId=` — managers for a sector.
-  Future<List<ManagerOption>> getManagerOptions({String? sectorId});
+  /// `GET /access/users?role=MANAGER&verticalId=` — managers for a sector.
+  Future<List<ManagerOption>> getManagerOptions({String? verticalId});
 
-  /// `GET /territories?sectorId=` — assignable territories, optionally
+  /// `GET /territories?verticalId=` — assignable territories, optionally
   /// scoped to one sector (Manager invite).
-  Future<List<TerritoryOption>> getTerritoryOptions({String? sectorId});
+  Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId});
 
-  /// `GET /territories?managerId=&sectorId=` — **authoritative** server-side
+  /// `GET /territories?managerId=&verticalId=` — **authoritative** server-side
   /// filter of patches valid inside that manager's zone (and sector), plus
   /// the zone outline/name for the REP territory picker.
   Future<ManagerTerritoryScope> getTerritoriesForManager(
     String managerId, {
-    String? sectorId,
+    String? verticalId,
   });
 }

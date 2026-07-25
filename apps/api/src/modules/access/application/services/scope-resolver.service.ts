@@ -28,152 +28,144 @@ export class ScopeResolver {
 
   private async resolveScope(userId: string, roleName: string): Promise<ScopeContext> {
     if (roleName === Role.ADMIN) {
-      return createGlobalScopeContext();
-    }
-
-    if (roleName === Role.REP) {
-      const [assignedSectorIds, rawTerritoryIds] = await Promise.all([
-        this.deps.scopeRepository.findSectorIdsByUserId(userId),
-        this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
-      ]);
-
-      const assignedTerritoryIds = await this.applySectorFilter(
-        rawTerritoryIds,
-        assignedSectorIds
+      const assignedVerticalIds = (await this.deps.scopeRepository.listActiveVerticals()).map(
+        (v) => v.id
       );
-
-      const effectiveTerritoryIds =
-        await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
-          assignedTerritoryIds,
-          true
-        );
-      const territoryFacilityIds =
-        await this.deps.territoryScopePort.getFacilityIdsForTerritories(
-          effectiveTerritoryIds
-        );
-      const facilityIds = await this.mergeAssociatedFacilityIds(
-        userId,
-        territoryFacilityIds,
-      );
-
       return withTerritoryScopeAliases({
-        isGlobal: false,
-        assignedTerritoryIds,
-        effectiveTerritoryIds,
-        analyticsEffectiveTerritoryIds: effectiveTerritoryIds,
-        facilityIds,
-        analyticsFacilityIds: facilityIds,
-        managedUserIds: [],
-        assignedSectorIds,
-        isOperationallyActive:
-          effectiveTerritoryIds.length > 0 || facilityIds.length > 0,
+        ...createGlobalScopeContext(),
+        assignedVerticalIds,
       });
     }
 
     if (roleName === Role.MANAGER) {
-      const [assignedSectorIds, managedUserIds, rawOwnAssignments] = await Promise.all([
-        this.deps.scopeRepository.findSectorIdsByUserId(userId),
-        this.deps.scopeRepository.findManagedUserIds(userId),
-        this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
-      ]);
+      return this.resolveManagerScope(userId);
+    }
 
-      const ownAssignments = await this.applySectorFilter(rawOwnAssignments, assignedSectorIds);
+    if (roleName === Role.REP || roleName === Role.OPS) {
+      return this.resolveRepOrOpsScope(userId);
+    }
 
-      const reportAssignments =
-        managedUserIds.length > 0
-          ? await this.deps.scopeRepository.findTerritoryIdsByUserIds(managedUserIds)
-          : [];
+    return createEmptyScopeContext();
+  }
 
-      const oversightTerritoryIds =
-        ownAssignments.length > 0
-          ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
-              ownAssignments,
-              true
-            )
-          : reportAssignments.length > 0
-            ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
-                reportAssignments,
-                true
-              )
-            : [];
+  private async resolveRepOrOpsScope(userId: string): Promise<ScopeContext> {
+    const [assignedVerticalIds, rawTerritoryIds] = await Promise.all([
+      this.deps.scopeRepository.findVerticalIdsByUserId(userId),
+      this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
+    ]);
 
-      const analyticsEffectiveTerritoryIds =
-        reportAssignments.length > 0
+    const assignedTerritoryIds = rawTerritoryIds;
+
+    const effectiveTerritoryIds =
+      await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
+        assignedTerritoryIds,
+        true
+      );
+    const territoryFacilityIds =
+      await this.deps.territoryScopePort.getFacilityIdsForTerritories(
+        effectiveTerritoryIds
+      );
+    const facilityIds = await this.mergeAssociatedFacilityIds(
+      userId,
+      territoryFacilityIds,
+      assignedVerticalIds,
+    );
+
+    return withTerritoryScopeAliases({
+      isGlobal: false,
+      assignedTerritoryIds,
+      effectiveTerritoryIds,
+      analyticsEffectiveTerritoryIds: effectiveTerritoryIds,
+      facilityIds,
+      analyticsFacilityIds: facilityIds,
+      managedUserIds: [],
+      assignedVerticalIds,
+      isOperationallyActive:
+        effectiveTerritoryIds.length > 0 || facilityIds.length > 0,
+    });
+  }
+
+  private async resolveManagerScope(userId: string): Promise<ScopeContext> {
+    const [assignedVerticalIds, managedUserIds, ownAssignments] = await Promise.all([
+      this.deps.scopeRepository.findVerticalIdsByUserId(userId),
+      this.deps.scopeRepository.findManagedUserIds(userId),
+      this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
+    ]);
+
+    const reportAssignments =
+      managedUserIds.length > 0
+        ? await this.deps.scopeRepository.findTerritoryIdsByUserIds(managedUserIds)
+        : [];
+
+    const oversightTerritoryIds =
+      ownAssignments.length > 0
+        ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
+            ownAssignments,
+            true
+          )
+        : reportAssignments.length > 0
           ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
               reportAssignments,
               true
             )
           : [];
 
-      const oversightClinicIds =
-        oversightTerritoryIds.length > 0
-          ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
-              oversightTerritoryIds
-            )
-          : [];
-      const facilityIds = await this.mergeAssociatedFacilityIds(
-        userId,
-        oversightClinicIds,
-      );
+    const analyticsEffectiveTerritoryIds =
+      reportAssignments.length > 0
+        ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
+            reportAssignments,
+            true
+          )
+        : [];
 
-      const analyticsFacilityIds =
-        analyticsEffectiveTerritoryIds.length > 0
-          ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
-              analyticsEffectiveTerritoryIds
-            )
-          : [];
+    const oversightClinicIds =
+      oversightTerritoryIds.length > 0
+        ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
+            oversightTerritoryIds
+          )
+        : [];
+    const facilityIds = await this.mergeAssociatedFacilityIds(
+      userId,
+      oversightClinicIds,
+      assignedVerticalIds,
+    );
 
-      return withTerritoryScopeAliases({
-        isGlobal: false,
-        assignedTerritoryIds: ownAssignments,
-        effectiveTerritoryIds: oversightTerritoryIds,
-        analyticsEffectiveTerritoryIds,
-        facilityIds,
-        analyticsFacilityIds: [...new Set(analyticsFacilityIds)],
-        managedUserIds,
-        reportAssignedTerritoryIds: reportAssignments,
-        assignedSectorIds,
-        isOperationallyActive:
-          facilityIds.length > 0 ||
-          (managedUserIds.length > 0 &&
-            (oversightTerritoryIds.length > 0 ||
-              analyticsEffectiveTerritoryIds.length > 0)),
-      });
-    }
+    const analyticsFacilityIds =
+      analyticsEffectiveTerritoryIds.length > 0
+        ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
+            analyticsEffectiveTerritoryIds
+          )
+        : [];
 
-    if (roleName === Role.OPS) {
-      return createGlobalScopeContext();
-    }
-
-    return createEmptyScopeContext();
-  }
-
-  /**
-   * Intersects territory IDs with the user's assigned sectors.
-   * Falls back to all territory IDs when the user has no sector assignments,
-   * preserving backward-compatible behavior for users without sectors.
-   */
-  private async applySectorFilter(
-    territoryIds: string[],
-    sectorIds: string[]
-  ): Promise<string[]> {
-    if (sectorIds.length === 0 || territoryIds.length === 0) {
-      return territoryIds;
-    }
-
-    const sectorTerritoryIds =
-      await this.deps.scopeRepository.findTerritoryIdsBySectorIds(sectorIds);
-    const allowed = new Set(sectorTerritoryIds);
-    return territoryIds.filter((id) => allowed.has(id));
+    return withTerritoryScopeAliases({
+      isGlobal: false,
+      assignedTerritoryIds: ownAssignments,
+      effectiveTerritoryIds: oversightTerritoryIds,
+      analyticsEffectiveTerritoryIds,
+      facilityIds,
+      analyticsFacilityIds: [...new Set(analyticsFacilityIds)],
+      managedUserIds,
+      reportAssignedTerritoryIds: reportAssignments,
+      assignedVerticalIds,
+      isOperationallyActive:
+        facilityIds.length > 0 ||
+        (managedUserIds.length > 0 &&
+          (oversightTerritoryIds.length > 0 ||
+            analyticsEffectiveTerritoryIds.length > 0)),
+    });
   }
 
   /** Territory clinics ∪ active facility_consultant_assignments for the user. */
   private async mergeAssociatedFacilityIds(
     userId: string,
     territoryFacilityIds: string[],
+    verticalIds: string[],
   ): Promise<string[]> {
     const associated =
-      await this.deps.facilityAssociationPort.getAssociatedFacilityIds(userId);
+      await this.deps.facilityAssociationPort.getAssociatedFacilityIds(
+        userId,
+        verticalIds.length > 0 ? verticalIds : undefined,
+      );
     return [...new Set([...territoryFacilityIds, ...associated])];
   }
 }

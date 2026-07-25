@@ -11,7 +11,7 @@ interface ListUsersInput {
   status?: string;
   role?: string;
   search?: string;
-  sectorId?: string;
+  verticalId?: string;
   sortBy?: ListUsersSortBy;
   sortDir?: ListUsersSortDir;
   scope: ScopeContext;
@@ -88,7 +88,7 @@ export class ListUsersUseCase {
       status: input.status,
       role: input.role,
       search: input.search,
-      sectorId: input.sectorId,
+      verticalId: input.verticalId,
       sortBy: input.sortBy,
       sortDir: input.sortDir,
       scope: input.scope.isGlobal

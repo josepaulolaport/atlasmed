@@ -26,6 +26,7 @@ function mapSubmission(
   return {
     id: row.id,
     facilityId: row.facilityId,
+    verticalId: row.verticalId,
     submittedByUserId: row.submittedByUserId,
     status: row.status,
     version: row.version,
@@ -161,6 +162,7 @@ export class DrizzleCadastroSubmissionRepository
 
   async createSubmission(input: {
     facilityId: string;
+    verticalId: string;
     submittedByUserId?: string | null;
     version: number;
   }) {
@@ -168,6 +170,7 @@ export class DrizzleCadastroSubmissionRepository
       .insert(cadastroSubmissions)
       .values({
         facilityId: input.facilityId,
+        verticalId: input.verticalId,
         submittedByUserId: input.submittedByUserId ?? null,
         version: input.version,
         status: "DRAFT",

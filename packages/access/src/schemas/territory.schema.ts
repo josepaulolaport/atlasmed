@@ -36,7 +36,6 @@ export const createTerritorySchema = z.object({
   slug: z.string().trim().min(3).max(60),
   territoryTypeId: z.string().trim().min(1).optional(),
   typeSlug: z.string().trim().min(1).optional(),
-  sectorId: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
   boundary: territoryBoundarySchema.optional(),
 });
@@ -44,7 +43,6 @@ export const createTerritorySchema = z.object({
 export const updateTerritorySchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   isActive: z.boolean().optional(),
-  sectorId: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
 });
 

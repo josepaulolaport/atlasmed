@@ -1,7 +1,7 @@
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
@@ -39,7 +39,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
 
   /// Per-sector drafts keyed by sector id — populated when a sector chip is
   /// selected; each holds that sector's manager (REP) + territories.
-  final Map<String, InviteSectorAssignment> _sectorAssignments = {};
+  final Map<String, InviteVerticalAssignment> _verticalAssignments = {};
   bool _submitting = false;
   bool _loadingInvitation = false;
   Object? _loadError;
@@ -53,11 +53,11 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       _selectedRole?.name == UserRoleName.rep ||
       _selectedRole?.name == UserRoleName.manager;
 
-  bool get _needsSectors =>
+  bool get _needsVerticals =>
       _selectedRole != null && _selectedRole!.name != UserRoleName.admin;
 
-  List<InviteSectorAssignment> get _orderedAssignments =>
-      _sectorAssignments.values.toList(growable: false);
+  List<InviteVerticalAssignment> get _orderedAssignments =>
+      _verticalAssignments.values.toList(growable: false);
 
   @override
   void initState() {
@@ -92,10 +92,12 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
         _lastNameController.text = invitation.lastName ?? '';
         _phoneController.text = invitation.phoneNumber ?? '';
         _birthDate = invitation.birthDate;
-        _sectorAssignments
+        _verticalAssignments
           ..clear()
           ..addEntries(
-            invitation.sectorAssignments.map((a) => MapEntry(a.sectorId, a)),
+            invitation.verticalAssignments.map(
+              (a) => MapEntry(a.verticalId, a),
+            ),
           );
         _loadingInvitation = false;
         _loadError = null;
@@ -152,7 +154,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
   @override
   Widget build(BuildContext context) {
     final rolesAsync = ref.watch(rolesProvider);
-    final sectorsAsync = ref.watch(sectorOptionsProvider);
+    final sectorsAsync = ref.watch(verticalOptionsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -193,7 +195,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
 
   Widget _buildBody(
     AsyncValue<List<UserRole>> rolesAsync,
-    AsyncValue<List<SectorOption>> sectorsAsync,
+    AsyncValue<List<VerticalOption>> sectorsAsync,
   ) {
     if (_loadingInvitation) {
       return const Center(child: CircularProgressIndicator());
@@ -326,7 +328,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                   return GestureDetector(
                     onTap: () => setState(() {
                       _selectedRole = role;
-                      _sectorAssignments.clear();
+                      _verticalAssignments.clear();
                     }),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -360,32 +362,32 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
               );
             },
           ),
-          if (_needsSectors) ...[
+          if (_needsVerticals) ...[
             const SizedBox(height: 20),
-            _FieldLabel('Setores'),
+            _FieldLabel('Verticais'),
             const SizedBox(height: 8),
             sectorsAsync.when(
               loading: () => const CircularProgressIndicator(),
               error: (_, _) =>
-                  const Text('Não foi possível carregar os setores.'),
+                  const Text('Não foi possível carregar os verticais.'),
               data: (sectors) => Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: sectors.map((sector) {
-                  final selected = _sectorAssignments.containsKey(sector.id);
+                  final selected = _verticalAssignments.containsKey(sector.id);
                   return FilterChip(
                     label: Text(sector.name),
                     selected: selected,
                     onSelected: (value) {
                       setState(() {
                         if (value) {
-                          _sectorAssignments[sector.id] =
-                              InviteSectorAssignment(
-                                sectorId: sector.id,
-                                sectorName: sector.name,
+                          _verticalAssignments[sector.id] =
+                              InviteVerticalAssignment(
+                                verticalId: sector.id,
+                                verticalName: sector.name,
                               );
                         } else {
-                          _sectorAssignments.remove(sector.id);
+                          _verticalAssignments.remove(sector.id);
                         }
                       });
                     },
@@ -415,21 +417,19 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
             ),
             for (final assignment in _orderedAssignments) ...[
               const SizedBox(height: 20),
-              _SectorAssignmentBlock(
+              _VerticalAssignmentBlock(
                 assignment: assignment,
                 needsManager: _needsManager,
                 needsTerritory: _needsTerritory,
                 onPickManager: () => _pickManager(assignment),
                 onClearManager: () => setState(() {
-                  _sectorAssignments[assignment.sectorId] = assignment.copyWith(
-                    clearManager: true,
-                    territories: const [],
-                  );
+                  _verticalAssignments[assignment.verticalId] = assignment
+                      .copyWith(clearManager: true, territories: const []);
                 }),
                 onPickTerritories: () => _pickTerritories(assignment),
                 onRemoveTerritory: (territoryId) {
                   setState(() {
-                    _sectorAssignments[assignment.sectorId] = assignment
+                    _verticalAssignments[assignment.verticalId] = assignment
                         .copyWith(
                           territories: assignment.territories
                               .where((t) => t.id != territoryId)
@@ -466,9 +466,9 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
     );
   }
 
-  Future<void> _pickManager(InviteSectorAssignment assignment) async {
+  Future<void> _pickManager(InviteVerticalAssignment assignment) async {
     final managers = await ref.read(
-      managersForSectorProvider(assignment.sectorId).future,
+      managersForVerticalProvider(assignment.verticalId).future,
     );
     if (!mounted) return;
     final id = await ManagerPickerSheet.show(
@@ -485,7 +485,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       }
     }
     setState(() {
-      _sectorAssignments[assignment.sectorId] = assignment.copyWith(
+      _verticalAssignments[assignment.verticalId] = assignment.copyWith(
         managerId: id,
         managerName: manager?.name,
         // Manager change invalidates prior territory picks for this sector.
@@ -494,7 +494,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
     });
   }
 
-  Future<void> _pickTerritories(InviteSectorAssignment assignment) async {
+  Future<void> _pickTerritories(InviteVerticalAssignment assignment) async {
     final List<TerritoryOption>? picked;
     if (_needsManager) {
       final managerId = assignment.managerId;
@@ -502,19 +502,19 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       picked = await TerritoryPickerScreen.pickForManager(
         context,
         managerId: managerId,
-        sectorId: assignment.sectorId,
+        verticalId: assignment.verticalId,
         initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
       );
     } else {
-      picked = await TerritoryPickerScreen.pickForSector(
+      picked = await TerritoryPickerScreen.pickForVertical(
         context,
-        sectorId: assignment.sectorId,
+        verticalId: assignment.verticalId,
         initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
       );
     }
     if (picked == null || !mounted) return;
     setState(() {
-      _sectorAssignments[assignment.sectorId] = assignment.copyWith(
+      _verticalAssignments[assignment.verticalId] = assignment.copyWith(
         territories: picked,
       );
     });
@@ -548,20 +548,20 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       return;
     }
 
-    if (_needsSectors && _sectorAssignments.isEmpty) {
+    if (_needsVerticals && _verticalAssignments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione ao menos um setor.')),
+        const SnackBar(content: Text('Selecione ao menos um vertical.')),
       );
       return;
     }
 
-    if (_needsSectors) {
+    if (_needsVerticals) {
       for (final assignment in _orderedAssignments) {
         if (_needsManager && assignment.managerId == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Selecione o gerente para ${assignment.sectorName}.',
+                'Selecione o gerente para ${assignment.verticalName}.',
               ),
             ),
           );
@@ -572,7 +572,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
             SnackBar(
               content: Text(
                 'Selecione ao menos um território para '
-                '${assignment.sectorName}.',
+                '${assignment.verticalName}.',
               ),
             ),
           );
@@ -594,7 +594,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
               .read(usersRepositoryProvider)
               .getTerritoriesForManager(
                 managerId,
-                sectorId: assignment.sectorId,
+                verticalId: assignment.verticalId,
               );
           final validIds = scope.territories.map((t) => t.id).toSet();
           final stillValid = assignment.territories.every(
@@ -603,15 +603,14 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           if (!stillValid) {
             if (mounted) {
               setState(() {
-                _sectorAssignments[assignment.sectorId] = assignment.copyWith(
-                  territories: const [],
-                );
+                _verticalAssignments[assignment.verticalId] = assignment
+                    .copyWith(territories: const []);
                 _submitting = false;
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Territórios inválidos para ${assignment.sectorName}. '
+                    'Territórios inválidos para ${assignment.verticalName}. '
                     'Selecione novamente.',
                   ),
                 ),
@@ -627,9 +626,9 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
       final phoneNumber = _phoneController.text.trim();
-      final sectorAssignments = _needsSectors
+      final verticalAssignments = _needsVerticals
           ? _orderedAssignments
-          : const <InviteSectorAssignment>[];
+          : const <InviteVerticalAssignment>[];
 
       if (_isExisting) {
         await repo.updateInvitation(
@@ -640,7 +639,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           birthDate: _birthDate!,
           phoneNumber: phoneNumber,
           roleId: role.id,
-          sectorAssignments: sectorAssignments,
+          verticalAssignments: verticalAssignments,
         );
         ref.invalidate(invitationDetailProvider(widget.invitationId!));
       } else {
@@ -651,7 +650,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           birthDate: _birthDate!,
           phoneNumber: phoneNumber,
           roleId: role.id,
-          sectorAssignments: sectorAssignments,
+          verticalAssignments: verticalAssignments,
         );
       }
       ref.invalidate(invitationsListProvider);
@@ -685,8 +684,8 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
   }
 }
 
-class _SectorAssignmentBlock extends StatelessWidget {
-  const _SectorAssignmentBlock({
+class _VerticalAssignmentBlock extends StatelessWidget {
+  const _VerticalAssignmentBlock({
     required this.assignment,
     required this.needsManager,
     required this.needsTerritory,
@@ -696,7 +695,7 @@ class _SectorAssignmentBlock extends StatelessWidget {
     required this.onRemoveTerritory,
   });
 
-  final InviteSectorAssignment assignment;
+  final InviteVerticalAssignment assignment;
   final bool needsManager;
   final bool needsTerritory;
   final VoidCallback onPickManager;
@@ -717,7 +716,7 @@ class _SectorAssignmentBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            assignment.sectorName,
+            assignment.verticalName,
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -731,7 +730,7 @@ class _SectorAssignmentBlock extends StatelessWidget {
             _PickerButton(
               label: assignment.managerName ?? 'Selecionar gerente',
               subtitle: assignment.managerId == null
-                  ? 'Gerentes deste setor'
+                  ? 'Gerentes deste vertical'
                   : null,
               icon: Icons.person_outline_rounded,
               onTap: onPickManager,
@@ -786,8 +785,8 @@ class _SectorAssignmentBlock extends StatelessWidget {
                             territoryId: territory.id,
                             territoryName: territory.name,
                             assignedAt: DateTime.now(),
-                            sectorId: territory.sectorId,
-                            sectorName: territory.sectorName,
+                            verticalId: territory.verticalId,
+                            verticalName: territory.verticalName,
                             centroid: territory.centroid,
                             boundary: territory.boundary,
                           ),

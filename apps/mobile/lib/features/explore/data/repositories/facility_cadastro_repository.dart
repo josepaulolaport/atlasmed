@@ -307,11 +307,18 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     );
   }
 
-  Future<String> ensureDraftSubmission() async {
+  Future<String> ensureDraftSubmission({String? verticalId}) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions',
     );
-    final map = await _jsonCall(uri: uri, method: RepositoryHttpMethod.post);
+    final map = await _jsonCall(
+      uri: uri,
+      method: RepositoryHttpMethod.post,
+      body: {
+        if (verticalId != null && verticalId.isNotEmpty)
+          'verticalId': verticalId,
+      },
+    );
     final id = map['id'] as String?;
     if (id == null || id.isEmpty) {
       throw const FacilityCadastroException('Falha ao criar rascunho.');
@@ -490,6 +497,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
   Future<EstablishmentDocument> submitDocument({
     required String requirementId,
     required List<FacilityCadastroFile> files,
+    String? verticalId,
     void Function(int index, int total)? onFileStarted,
     void Function(int index, int total, double progress)? onFileProgress,
     FutureOr<void> Function(
@@ -503,7 +511,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     if (files.isEmpty) {
       throw const FacilityCadastroException('Nenhum arquivo para enviar.');
     }
-    final submissionId = await ensureDraftSubmission();
+    final submissionId = await ensureDraftSubmission(verticalId: verticalId);
     final documentId = await ensureDocument(
       submissionId: submissionId,
       requirementId: requirementId,

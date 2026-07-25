@@ -33,7 +33,7 @@ export const inviteUserRoute = new Elysia({
         managerId: parsed.managerId || undefined,
         managerTerritoryId: parsed.managerTerritoryId || undefined,
         repTerritoryId: parsed.repTerritoryId || undefined,
-        sectorAssignments: parsed.sectorAssignments,
+        verticalAssignments: parsed.verticalAssignments,
       });
 
       if (parsed.email) {
@@ -124,8 +124,8 @@ export const inviteUserRoute = new Elysia({
       managerId: t.Optional(t.String({ description: "Manager user ID (required for REP role)" })),
       managerTerritoryId: t.Optional(t.String({ description: "Manager zone territory ID (required for MANAGER role)" })),
       repTerritoryId: t.Optional(t.String({ description: "Rep patch territory ID (required for REP role)" })),
-      sectorAssignments: t.Optional(t.Array(t.Object({
-        sectorId: t.String(),
+      verticalAssignments: t.Optional(t.Array(t.Object({
+        verticalId: t.String(),
         managerId: t.Optional(t.String()),
         territoryIds: t.Array(t.String()),
       }))),

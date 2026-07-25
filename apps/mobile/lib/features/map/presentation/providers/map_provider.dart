@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
@@ -55,12 +56,15 @@ final liveMapClinicsProvider =
     FutureProvider.family<List<NearbyEstablishment>, LiveMapClinicsQuery>((
       ref,
       query,
-    ) {
+    ) async {
+      final verticalId = await ref.watch(
+        effectiveFacilityVerticalIdProvider.future,
+      );
       return fetchNearbyFacilities(
         latitude: query.latitude,
         longitude: query.longitude,
         radiusKm: query.radiusKm,
-        // API caps list pages at 100; viewport fetches want the full page.
         limit: 100,
+        verticalId: verticalId,
       );
     });

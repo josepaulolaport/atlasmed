@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const replaceUserAssignmentsSchema = z.object({
-  sectorAssignments: z
+  verticalAssignments: z
     .array(
       z.object({
-        sectorId: z.string().min(1),
+        verticalId: z.string().min(1),
         managerId: z.string().min(1).optional(),
         territoryIds: z.array(z.string().min(1)).default([]),
       }),

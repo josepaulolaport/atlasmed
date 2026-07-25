@@ -34,13 +34,13 @@ export class GetInvitationByIdUseCase {
       throw new ResourceNotFoundError("Invitation", params.inviteId);
     }
 
-    const [inviter, staged, sectors] = await Promise.all([
+    const [inviter, staged, verticals] = await Promise.all([
       this.deps.userRepository.findById(invite.invitedByUserId),
-      this.deps.inviteRepository.findStagedSectorAssignments([invite.id]),
-      this.deps.scopeRepository.listActiveSectors(),
+      this.deps.inviteRepository.findStagedVerticalAssignments([invite.id]),
+      this.deps.scopeRepository.listActiveVerticals(),
     ]);
 
-    const sectorNameById = new Map(sectors.map((s) => [s.id, s.name]));
+    const verticalNameById = new Map(verticals.map((v) => [v.id, v.name]));
     const territoryIds = [...new Set(staged.flatMap((s) => s.territoryIds))];
     const territories =
       territoryIds.length > 0
@@ -70,7 +70,7 @@ export class GetInvitationByIdUseCase {
         }),
     );
 
-    const sectorAssignments = await Promise.all(
+    const verticalAssignments = await Promise.all(
       staged.map(async (row) => {
         const territoriesDto = await Promise.all(
           row.territoryIds.map(async (id) => {
@@ -81,16 +81,16 @@ export class GetInvitationByIdUseCase {
             return {
               id,
               name: t?.name ?? id,
-              sectorId: row.sectorId,
-              sectorName: sectorNameById.get(row.sectorId),
+              verticalId: row.verticalId,
+              verticalName: verticalNameById.get(row.verticalId),
               ...(boundary ? { boundary } : {}),
             };
           }),
         );
 
         return {
-          sectorId: row.sectorId,
-          sectorName: sectorNameById.get(row.sectorId) ?? "—",
+          verticalId: row.verticalId,
+          verticalName: verticalNameById.get(row.verticalId) ?? "—",
           managerId: row.managerId,
           managerName: row.managerId
             ? managerNameById.get(row.managerId)
@@ -103,7 +103,7 @@ export class GetInvitationByIdUseCase {
     return serializeInvitation({
       invite,
       invitedBy: inviter,
-      sectorAssignments,
+      verticalAssignments,
     });
   }
 }

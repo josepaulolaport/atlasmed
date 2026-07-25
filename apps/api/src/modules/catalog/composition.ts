@@ -1,13 +1,13 @@
-import { DrizzleSectorRepository } from "./infrastructure/repositories/drizzle/drizzle-sector.repository";
+import { DrizzleBusinessVerticalRepository } from "./infrastructure/repositories/drizzle/drizzle-business-vertical.repository";
 import { DrizzleProductRepository } from "./infrastructure/repositories/drizzle/drizzle-product.repository";
 import { DrizzleHealthcareProviderRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-provider.repository";
 import { DrizzleFacilityHealthcareProviderShareRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-healthcare-provider-share.repository";
 import { DrizzleCompetitorProductRepository } from "./infrastructure/repositories/drizzle/drizzle-competitor-product.repository";
 import { DrizzleProductEquivalenceRepository } from "./infrastructure/repositories/drizzle/drizzle-product-equivalence.repository";
 import {
-  ListSectorsUseCase,
-  CreateSectorUseCase,
-  UpdateSectorUseCase,
+  ListBusinessVerticalsUseCase,
+  CreateBusinessVerticalUseCase,
+  UpdateBusinessVerticalUseCase,
   ListProductsUseCase,
   GetProductUseCase,
   CreateProductUseCase,
@@ -30,7 +30,7 @@ import {
 } from "./application/use-cases/catalog.use-cases";
 
 export const catalogRepositories = {
-  sector: new DrizzleSectorRepository(),
+  businessVertical: new DrizzleBusinessVerticalRepository(),
   product: new DrizzleProductRepository(),
   healthcareProvider: new DrizzleHealthcareProviderRepository(),
   facilityShare: new DrizzleFacilityHealthcareProviderShareRepository(),
@@ -39,9 +39,18 @@ export const catalogRepositories = {
 };
 
 export const catalogUseCases = {
-  listSectors: () => new ListSectorsUseCase({ sectorRepository: catalogRepositories.sector }),
-  createSector: () => new CreateSectorUseCase({ sectorRepository: catalogRepositories.sector }),
-  updateSector: () => new UpdateSectorUseCase({ sectorRepository: catalogRepositories.sector }),
+  listBusinessVerticals: () =>
+    new ListBusinessVerticalsUseCase({
+      businessVerticalRepository: catalogRepositories.businessVertical,
+    }),
+  createBusinessVertical: () =>
+    new CreateBusinessVerticalUseCase({
+      businessVerticalRepository: catalogRepositories.businessVertical,
+    }),
+  updateBusinessVertical: () =>
+    new UpdateBusinessVerticalUseCase({
+      businessVerticalRepository: catalogRepositories.businessVertical,
+    }),
   listProducts: () => new ListProductsUseCase({ productRepository: catalogRepositories.product }),
   getProduct: () => new GetProductUseCase({ productRepository: catalogRepositories.product }),
   createProduct: () => new CreateProductUseCase({ productRepository: catalogRepositories.product }),

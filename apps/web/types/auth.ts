@@ -142,29 +142,22 @@ export interface UpdateProfileRequest {
   avatarUrl?: string;
 }
 
-export interface UserAssignmentManager {
+export interface AssignmentTerritory {
   id: string;
-  username: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
+  name: string;
+  boundary?: unknown;
 }
 
-export interface UserTerritoryAssignment {
-  territoryId: string;
-  assignedAt: string;
-}
-
-export interface UserSectorAssignment {
-  sectorId: string;
-  assignedAt: string;
+export interface UserVerticalAssignment {
+  verticalId: string;
+  verticalName: string;
+  managerId?: string;
+  managerName?: string;
+  territories: AssignmentTerritory[];
 }
 
 export interface UserAssignments {
   userId: string;
-  managerId: string | null;
-  manager?: UserAssignmentManager | null;
-  territories: UserTerritoryAssignment[];
-  sectors: UserSectorAssignment[];
   isOperationallyActive: boolean;
+  verticalAssignments: UserVerticalAssignment[];
 }

@@ -5,18 +5,12 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/us
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Tappable field showing "Gerente: Fulano (Zona X)" that opens
-/// [UserPickerSheet.pickManagerForPatch] and resolves to a
-/// `managerTerritoryId`. Shared by the create form and the info-edit form
-/// so "which zone does this patch belong to" has one consistent codepath.
 class ManagerPickerField extends ConsumerStatefulWidget {
-  final String? sectorId;
   final String? managerTerritoryId;
   final ValueChanged<String?> onChanged;
 
   const ManagerPickerField({
     super.key,
-    required this.sectorId,
     required this.managerTerritoryId,
     required this.onChanged,
   });
@@ -39,16 +33,14 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
   @override
   void didUpdateWidget(ManagerPickerField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.managerTerritoryId != widget.managerTerritoryId ||
-        oldWidget.sectorId != widget.sectorId) {
+    if (oldWidget.managerTerritoryId != widget.managerTerritoryId) {
       _resolveManager();
     }
   }
 
   Future<void> _resolveManager() async {
-    final sectorId = widget.sectorId;
     final zoneId = widget.managerTerritoryId;
-    if (sectorId == null || zoneId == null) {
+    if (zoneId == null) {
       setState(() {
         _manager = null;
         _zoneName = null;
@@ -60,7 +52,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
     _resolvedForZoneId = zoneId;
     final candidates = await ref
         .read(territoryRepositoryProvider)
-        .getAssignableManagers(sectorId);
+        .getAssignableManagers();
     if (!mounted || _resolvedForZoneId != zoneId) return;
 
     AppUser? manager;
@@ -79,12 +71,8 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
   }
 
   Future<void> _openPicker() async {
-    final sectorId = widget.sectorId;
-    if (sectorId == null) return;
-
     final result = await UserPickerSheet.pickManagerForPatch(
       context,
-      sectorId: sectorId,
       currentManagerTerritoryId: widget.managerTerritoryId,
     );
     if (result == null) return;

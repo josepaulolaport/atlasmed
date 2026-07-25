@@ -6,9 +6,13 @@ export class DrizzleFacilityAssociationPort implements FacilityAssociationPort {
     private readonly consultantAssignmentRepository: FacilityConsultantAssignmentRepository,
   ) {}
 
-  async getAssociatedFacilityIds(userId: string): Promise<string[]> {
+  async getAssociatedFacilityIds(
+    userId: string,
+    verticalIds?: string[],
+  ): Promise<string[]> {
     return this.consultantAssignmentRepository.findActiveFacilityIdsByUserId(
       userId,
+      verticalIds,
     );
   }
 }

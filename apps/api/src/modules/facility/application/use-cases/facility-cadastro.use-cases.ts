@@ -14,6 +14,7 @@ import {
   FacilityCadastroCompletionService,
   isBillingEmailComplete,
 } from "../services/facility-cadastro-completion.service";
+import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
 import { resolveFacilityTaxIdType } from "../utils/facility-tax-id.utils";
 import { storageService } from "../../../../infrastructure/storage/storage.service";
 
@@ -349,6 +350,7 @@ export class UpdateFacilityBillingEmailUseCase {
     facilityId: string;
     scope: ScopeContext;
     email: string;
+    verticalId?: string;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -368,8 +370,16 @@ export class UpdateFacilityBillingEmailUseCase {
       billingEmail: email,
     });
 
+    const resolvedVerticalId = await resolveCadastroVerticalId({
+      facilityId: input.facilityId,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      facilityRepository: this.deps.facilityRepository,
+      verticalId: input.verticalId,
+    });
+
     const completion = await this.deps.completionService.evaluateAndApply(
-      input.facilityId
+      input.facilityId,
+      resolvedVerticalId,
     );
 
     return {
@@ -460,7 +470,16 @@ export class SubmitFacilityCadastroDocumentUseCase {
       fileName: safeName || `${requirement.slug}.${extension}`,
     });
 
-    await this.deps.completionService.evaluateAndApply(input.facilityId);
+    const resolvedVerticalId = await resolveCadastroVerticalId({
+      facilityId: input.facilityId,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      facilityRepository: this.deps.facilityRepository,
+    });
+
+    await this.deps.completionService.evaluateAndApply(
+      input.facilityId,
+      resolvedVerticalId,
+    );
 
     return serializeRecord(record);
   }
@@ -524,8 +543,15 @@ export class ApproveFacilityCadastroRecordUseCase {
       validatedByUserId: input.userId,
     });
 
+    const resolvedVerticalId = await resolveCadastroVerticalId({
+      facilityId: input.facilityId,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      facilityRepository: this.deps.facilityRepository,
+    });
+
     const completion = await this.deps.completionService.evaluateAndApply(
-      input.facilityId
+      input.facilityId,
+      resolvedVerticalId,
     );
 
     return { ...serializeRecord(approved), ...completion };
@@ -571,8 +597,15 @@ export class RejectFacilityCadastroRecordUseCase {
       reviewerNote: note,
     });
 
+    const resolvedVerticalId = await resolveCadastroVerticalId({
+      facilityId: input.facilityId,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      facilityRepository: this.deps.facilityRepository,
+    });
+
     const completion = await this.deps.completionService.evaluateAndApply(
-      input.facilityId
+      input.facilityId,
+      resolvedVerticalId,
     );
 
     return { ...serializeRecord(rejected), ...completion };

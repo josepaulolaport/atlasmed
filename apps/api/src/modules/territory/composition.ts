@@ -15,7 +15,6 @@ import { TerritoryApprovalUseCases } from "./application/use-cases/territory-app
 import { territoryMembershipQueue } from "../../infrastructure/jobs/territory-membership.queue";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 import { auditLogAdapter } from "../access/infrastructure/adapters/audit-log.adapter";
-import { catalogRepositories } from "../catalog/composition";
 
 export const territoryRepositories = {
   territory: new DrizzleTerritoryRepository(),
@@ -93,7 +92,6 @@ const territoryCrud = new TerritoryCrudUseCases({
   territoryTypeRepository: territoryRepositories.territoryType,
   spatialRepository: territoryRepositories.spatial,
   containmentService: territoryContainmentService,
-  sectorRepository: catalogRepositories.sector,
   membershipService: territoryMembershipService,
   onTerritoryDeactivated: enqueueMembershipRecompute,
   onBoundaryChanged: onTerritoryBoundaryChanged,

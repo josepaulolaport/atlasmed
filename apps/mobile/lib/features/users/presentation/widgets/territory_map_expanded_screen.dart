@@ -111,10 +111,10 @@ class _TerritoryMapExpandedScreenState
                               height: 1.2,
                             ),
                           ),
-                          if (widget.assignment.sectorName != null) ...[
+                          if (widget.assignment.verticalName != null) ...[
                             const SizedBox(height: 4),
                             Text(
-                              widget.assignment.sectorName!,
+                              widget.assignment.verticalName!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(

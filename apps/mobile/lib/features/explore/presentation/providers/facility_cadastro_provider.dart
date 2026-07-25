@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_upload_normalize.dart';
@@ -94,11 +95,15 @@ class FacilityCadastroController {
       );
     }
 
+    final verticalId = await _ref.read(
+      effectiveFacilityVerticalIdProvider.future,
+    );
     final repo = FacilityCadastroRepository(facilityId);
     try {
       final uploaded = await repo.submitDocument(
         requirementId: requirementId,
         files: normalized,
+        verticalId: verticalId,
         onFileStarted: onFileStarted,
         onFileProgress: onFileProgress,
         onFileCompleted: (index, total, {fileId, status}) async {

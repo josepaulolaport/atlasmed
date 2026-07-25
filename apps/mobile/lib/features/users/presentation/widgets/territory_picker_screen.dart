@@ -13,44 +13,44 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 /// Full-screen multi-select map picker for invite / assignment flows.
 ///
 /// Entry points:
-/// - [pickForSector] — `GET /territories?sectorId=` (Manager invite).
-/// - [pickForManager] — `GET /territories?managerId=&sectorId=` (REP),
+/// - [pickForVertical] — `GET /territories?verticalId=` (Manager invite).
+/// - [pickForManager] — `GET /territories?managerId=&verticalId=` (REP),
 ///   outlines the manager zone. Scope filtering is server-side.
 ///
 /// Tapping toggles selection; confirm returns the full selected list.
 class TerritoryPickerScreen extends ConsumerStatefulWidget {
   const TerritoryPickerScreen._({
-    this.sectorId,
+    this.verticalId,
     this.managerId,
     this.initiallySelectedIds = const {},
   });
 
-  final String? sectorId;
+  final String? verticalId;
   final String? managerId;
   final Set<String> initiallySelectedIds;
 
-  /// Manager invite — territories in [sectorId].
-  static Future<List<TerritoryOption>?> pickForSector(
+  /// Manager invite — territories in [verticalId].
+  static Future<List<TerritoryOption>?> pickForVertical(
     BuildContext context, {
-    required String sectorId,
+    required String verticalId,
     Set<String> initiallySelectedIds = const {},
   }) {
     return Navigator.of(context).push<List<TerritoryOption>>(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => TerritoryPickerScreen._(
-          sectorId: sectorId,
+          verticalId: verticalId,
           initiallySelectedIds: initiallySelectedIds,
         ),
       ),
     );
   }
 
-  /// REP picker — patches valid for [managerId] (and optional [sectorId]).
+  /// REP picker — patches valid for [managerId] (and optional [verticalId]).
   static Future<List<TerritoryOption>?> pickForManager(
     BuildContext context, {
     required String managerId,
-    String? sectorId,
+    String? verticalId,
     Set<String> initiallySelectedIds = const {},
   }) {
     return Navigator.of(context).push<List<TerritoryOption>>(
@@ -58,7 +58,7 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
         fullscreenDialog: true,
         builder: (_) => TerritoryPickerScreen._(
           managerId: managerId,
-          sectorId: sectorId,
+          verticalId: verticalId,
           initiallySelectedIds: initiallySelectedIds,
         ),
       ),
@@ -120,11 +120,11 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       if (managerId != null) {
         scope = await repo.getTerritoriesForManager(
           managerId,
-          sectorId: widget.sectorId,
+          verticalId: widget.verticalId,
         );
         list = scope.territories;
       } else {
-        list = await repo.getTerritoryOptions(sectorId: widget.sectorId);
+        list = await repo.getTerritoryOptions(verticalId: widget.verticalId);
       }
       if (!mounted) return;
       final occupiedIds = list
@@ -301,7 +301,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
 
     return MapWidget(
       key: ValueKey(
-        'mapa-selecao-${widget.managerId ?? 'sector'}-${widget.sectorId}',
+        'mapa-selecao-${widget.managerId ?? 'sector'}-${widget.verticalId}',
       ),
       styleUri: MapboxStyles.STANDARD,
       viewport: _viewportApplied

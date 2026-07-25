@@ -1,51 +1,51 @@
-import type { InviteSectorAssignmentInput } from "@atlasmed/access";
+import type { InviteVerticalAssignmentInput } from "@atlasmed/access";
 
 export type NormalizedInviteAssignments = {
   managerId?: string;
   managerTerritoryId?: string;
   repTerritoryId?: string;
-  sectorAssignments: Array<{
-    sectorId: string;
+  verticalAssignments: Array<{
+    verticalId: string;
     managerId?: string;
     territoryIds: string[];
   }>;
 };
 
 /**
- * Prefer multi-sector payload; otherwise keep legacy single-territory fields
- * (sectorAssignments empty — accept still reads legacy columns).
+ * Prefer multi-vertical payload; otherwise keep legacy single-territory fields
+ * (verticalAssignments empty — accept still reads legacy columns).
  */
 export function normalizeInviteAssignments(input: {
   roleName: string;
   managerId?: string;
   managerTerritoryId?: string;
   repTerritoryId?: string;
-  sectorAssignments?: InviteSectorAssignmentInput[];
+  verticalAssignments?: InviteVerticalAssignmentInput[];
 }): NormalizedInviteAssignments {
-  const sectors = (input.sectorAssignments ?? [])
-    .map((s) => ({
-      sectorId: s.sectorId,
-      ...(s.managerId ? { managerId: s.managerId } : {}),
-      territoryIds: [...new Set(s.territoryIds ?? [])],
+  const verticals = (input.verticalAssignments ?? [])
+    .map((v) => ({
+      verticalId: v.verticalId,
+      ...(v.managerId ? { managerId: v.managerId } : {}),
+      territoryIds: [...new Set(v.territoryIds ?? [])],
     }))
-    .filter((s) => s.sectorId);
+    .filter((v) => v.verticalId);
 
-  if (sectors.length === 0) {
+  if (verticals.length === 0) {
     return {
       ...(input.managerId ? { managerId: input.managerId } : {}),
       ...(input.managerTerritoryId
         ? { managerTerritoryId: input.managerTerritoryId }
         : {}),
       ...(input.repTerritoryId ? { repTerritoryId: input.repTerritoryId } : {}),
-      sectorAssignments: [],
+      verticalAssignments: [],
     };
   }
 
-  const first = sectors[0]!;
+  const first = verticals[0]!;
   const firstTerritory = first.territoryIds[0];
   const firstManager =
     first.managerId ??
-    sectors.map((s) => s.managerId).find((id): id is string => Boolean(id));
+    verticals.map((v) => v.managerId).find((id): id is string => Boolean(id));
 
   const managerTerritoryId =
     input.roleName === "MANAGER" ? firstTerritory : undefined;
@@ -55,6 +55,6 @@ export function normalizeInviteAssignments(input: {
     ...(firstManager ? { managerId: firstManager } : {}),
     ...(managerTerritoryId ? { managerTerritoryId } : {}),
     ...(repTerritoryId ? { repTerritoryId } : {}),
-    sectorAssignments: sectors,
+    verticalAssignments: verticals,
   };
 }

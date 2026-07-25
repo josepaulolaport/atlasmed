@@ -36,13 +36,12 @@ describe("ScopeResolver", () => {
       findTerritoryAssignmentsByUserId: mock(async () => []),
       findUserIdsByTerritoryId: mock(async () => []),
       findManagerIdByUserId: mock(async () => null),
-      findSectorIdsByUserId: mock(async () => []),
-      findTerritoryIdsBySectorIds: mock(async () => []),
-      assignSector: mock(async () => undefined),
-      revokeSector: mock(async () => undefined),
-      findSectorAssignmentsByUserId: mock(async () => []),
+      findVerticalIdsByUserId: mock(async () => []),
+      assignVertical: mock(async () => undefined),
+      revokeVertical: mock(async () => undefined),
+      findVerticalAssignmentsByUserId: mock(async () => []),
       replaceAssignments: mock(async () => undefined),
-      listActiveSectors: mock(async () => []),
+      listActiveVerticals: mock(async () => []),
       ...overrides,
     };
   }
@@ -61,16 +60,30 @@ describe("ScopeResolver", () => {
   }
 
   it("returns global scope for ADMIN", async () => {
-    const scope = await createResolver().resolve("admin-1", Role.ADMIN);
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        listActiveVerticals: mock(async () => [
+          { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopedia" },
+        ]),
+      }),
+    }).resolve("admin-1", Role.ADMIN);
 
     expect(scope.isGlobal).toBe(true);
     expect(scope.isOperationallyActive).toBe(true);
+    expect(scope.assignedVerticalIds).toEqual(["vertical-a"]);
   });
 
-  it("returns global read scope for OPS", async () => {
-    const scope = await createResolver().resolve("ops-1", Role.OPS);
+  it("returns scoped access for OPS (not global)", async () => {
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findVerticalIdsByUserId: mock(async () => ["vertical-a"]),
+        findTerritoryIdsByUserId: mock(async () => ["territory-1"]),
+      }),
+    }).resolve("ops-1", Role.OPS);
 
-    expect(scope.isGlobal).toBe(true);
+    expect(scope.isGlobal).toBe(false);
+    expect(scope.assignedVerticalIds).toEqual(["vertical-a"]);
+    expect(scope.assignedTerritoryIds).toEqual(["territory-1"]);
     expect(scope.isOperationallyActive).toBe(true);
   });
 
@@ -162,33 +175,18 @@ describe("ScopeResolver", () => {
     expect(scope.analyticsFacilityIds).not.toContain("clinic-associated-mgr");
   });
 
-  it("filters REP territory assignments to assigned sectors only", async () => {
-    const scope = await createResolver({
-      scopeRepository: emptyScopeRepository({
-        findTerritoryIdsByUserId: mock(async () => [
-          "territory-sector-a",
-          "territory-sector-b",
-        ]),
-        findSectorIdsByUserId: mock(async () => ["sector-a"]),
-        findTerritoryIdsBySectorIds: mock(async () => ["territory-sector-a"]),
-      }),
-    }).resolve("rep-1", Role.REP);
-
-    expect(scope.assignedTerritoryIds).toEqual(["territory-sector-a"]);
-    expect(scope.assignedSectorIds).toEqual(["sector-a"]);
-  });
-
-  it("falls back to all territory assignments when REP has no sectors", async () => {
+  it("includes assigned vertical IDs for REP", async () => {
     const scope = await createResolver({
       scopeRepository: emptyScopeRepository({
         findTerritoryIdsByUserId: mock(async () => [
           "territory-1",
           "territory-2",
         ]),
+        findVerticalIdsByUserId: mock(async () => ["vertical-a"]),
       }),
-    }).resolve("rep-2", Role.REP);
+    }).resolve("rep-1", Role.REP);
 
     expect(scope.assignedTerritoryIds).toEqual(["territory-1", "territory-2"]);
-    expect(scope.assignedSectorIds).toEqual([]);
+    expect(scope.assignedVerticalIds).toEqual(["vertical-a"]);
   });
 });
