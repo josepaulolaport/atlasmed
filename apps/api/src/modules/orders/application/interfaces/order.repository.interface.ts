@@ -25,6 +25,7 @@ export interface OrderListItemPreview {
 export interface OrderListRecord {
   id: string;
   legacyId: number | null;
+  verticalId: string;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
   seller: OrderIdentity | null;
@@ -42,6 +43,7 @@ export interface OrderListRecord {
 export interface OrderDetailRecord {
   id: string;
   legacyId: number | null;
+  verticalId: string;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
   seller: OrderIdentity | null;
@@ -89,6 +91,8 @@ export interface OrderRepository {
     limit: number;
     statuses?: OrderStatus[];
     facilityId?: string;
+    /** Restrict to orders in these verticals (empty ⇒ no rows). */
+    verticalIds: string[];
     /** When set (REP), only orders sold by this user. */
     sellerId?: string;
     /** Include up to 2 line-item previews per order. */

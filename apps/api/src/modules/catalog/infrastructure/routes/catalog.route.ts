@@ -71,14 +71,18 @@ const listProductsRoute = new Elysia()
   .use(requirePermission("read", "CATALOG"))
   .get(
     "/products",
-    async ({ query }) =>
-      catalogUseCases.listProducts().execute({
+    async ({ query, getScope, getAuthContext }) => {
+      const [scope, authContext] = await Promise.all([getScope(), getAuthContext()]);
+      return catalogUseCases.listProducts().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         verticalId: query.verticalId,
         search: query.search,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
-      }),
+        scope,
+        role: authContext.roleName,
+      });
+    },
     {
       detail: { summary: "List products", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       query: t.Object({
@@ -96,9 +100,20 @@ const getProductRoute = new Elysia()
   .use(requirePermission("read", "CATALOG"))
   .get(
     "/products/:id",
-    async ({ params }) => catalogUseCases.getProduct().execute({ productId: params.id }),
+    async ({ params, query, getScope, getAuthContext }) => {
+      const [scope, authContext] = await Promise.all([getScope(), getAuthContext()]);
+      return catalogUseCases.getProduct().execute({
+        productId: params.id,
+        scope,
+        role: authContext.roleName,
+        verticalId: query.verticalId,
+      });
+    },
     {
       detail: { summary: "Get product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
+      query: t.Object({
+        verticalId: t.Optional(t.String()),
+      }),
     }
   );
 

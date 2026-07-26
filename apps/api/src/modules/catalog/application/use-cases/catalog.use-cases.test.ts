@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { createGlobalScopeContext } from "@atlasmed/access";
+import { createGlobalScopeContext, type ScopeContext } from "@atlasmed/access";
 import {
   GetProductUseCase,
   ListProductsUseCase,
@@ -22,6 +22,10 @@ import type {
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
 import type { FacilityHealthcareProviderShareRepository } from "../interfaces/facility-healthcare-provider-share.repository.interface";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+
+function scopeWithVerticals(verticalIds: string[]): ScopeContext {
+  return { ...createGlobalScopeContext(), assignedVerticalIds: verticalIds };
+}
 
 const product: ProductRecord = {
   id: "product-1",
@@ -104,19 +108,23 @@ function productEquivalenceRepository(
 }
 
 describe("catalog product use cases", () => {
-  it("passes search and pagination to the product repository and maps mobile catalog fields", async () => {
+  const scope = scopeWithVerticals(["vertical-1"]);
+
+  it("passes resolved verticalIds with search and pagination to the product repository", async () => {
     const productRepository = repository();
     const result = await new ListProductsUseCase({ productRepository }).execute({
       page: 2,
       limit: 10,
       search: "atlas",
+      scope,
+      role: "REP",
     });
 
     expect(productRepository.findAll).toHaveBeenCalledWith({
       page: 2,
       limit: 10,
       search: "atlas",
-      verticalId: undefined,
+      verticalIds: ["vertical-1"],
       isActive: undefined,
     });
     expect(result).toEqual({
@@ -140,9 +148,25 @@ describe("catalog product use cases", () => {
     });
   });
 
-  it("returns a serialized product detail", async () => {
+  it("returns empty catalog when caller has no vertical assignments", async () => {
+    const productRepository = repository();
+    const result = await new ListProductsUseCase({ productRepository }).execute({
+      scope: scopeWithVerticals([]),
+      role: "REP",
+    });
+
+    expect(productRepository.findAll).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      data: [],
+      pagination: { page: 1, limit: 50, total: 0, totalPages: 1 },
+    });
+  });
+
+  it("returns a serialized product detail when product intersects caller verticals", async () => {
     const result = await new GetProductUseCase({ productRepository: repository() }).execute({
       productId: "product-1",
+      scope,
+      role: "REP",
     });
 
     expect(result).toEqual(expect.objectContaining({
@@ -238,7 +262,11 @@ describe("product comparison and price index use cases", () => {
     const result = await new GetProductComparisonUseCase({
       productRepository: repository(),
       productEquivalenceRepository: productEquivalenceRepo,
-    }).execute({ productId: "product-1" });
+    }).execute({
+      productId: "product-1",
+      scope: scopeWithVerticals(["vertical-1"]),
+      role: "REP",
+    });
 
     expect(result.productId).toBe("product-1");
     expect(result.rows[0]).toEqual(expect.objectContaining({ id: "competitor-2", isOwn: false }));
@@ -250,7 +278,11 @@ describe("product comparison and price index use cases", () => {
       new GetProductComparisonUseCase({
         productRepository: repository({ findById: mock(() => Promise.resolve(null)) }),
         productEquivalenceRepository: productEquivalenceRepository(),
-      }).execute({ productId: "missing" })
+      }).execute({
+        productId: "missing",
+        scope: scopeWithVerticals(["vertical-1"]),
+        role: "REP",
+      })
     ).rejects.toThrow(ResourceNotFoundError);
   });
 
@@ -301,11 +333,16 @@ describe("product comparison and price index use cases", () => {
   });
 
   it("builds the full price index from AtlasMed and competitor products", async () => {
+    const productRepository = repository();
     const result = await new GetPriceIndexUseCase({
-      productRepository: repository(),
+      productRepository,
       competitorProductRepository: competitorProductRepository(),
-    }).execute({});
+    }).execute({
+      scope: scopeWithVerticals(["vertical-1"]),
+      role: "REP",
+    });
 
+    expect(productRepository.findAllActive).toHaveBeenCalledWith({ verticalIds: ["vertical-1"] });
     expect(result.data).toHaveLength(2);
     expect(result.data.some((row) => row.isOwn)).toBe(true);
     expect(result.data.some((row) => !row.isOwn)).toBe(true);

@@ -4,6 +4,7 @@ import {
   Role,
   type ScopeContext,
 } from "@atlasmed/access";
+import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import type {
   OrderDetailRecord,
   OrderRepository,
@@ -18,6 +19,7 @@ function serializeListOrder(order: Awaited<ReturnType<OrderRepository["findAll"]
   return {
     id: order.id,
     legacyId: order.legacyId,
+    verticalId: order.verticalId,
     status: order.status,
     type: order.type,
     orderedAt: iso(order.orderedAt),
@@ -44,6 +46,7 @@ function serializeOrder(order: OrderDetailRecord) {
   return {
     id: order.id,
     legacyId: order.legacyId,
+    verticalId: order.verticalId,
     status: order.status,
     type: order.type,
     orderedAt: iso(order.orderedAt),
@@ -90,6 +93,7 @@ export class ListOrdersUseCase {
     limit?: number;
     statuses?: OrderStatus[];
     facilityId?: string;
+    verticalId?: string;
     /** Authenticated user — used for REP seller filter. */
     actor?: { userId: string; roleName: string };
     includeItemPreviews?: boolean;
@@ -102,6 +106,19 @@ export class ListOrdersUseCase {
       assertResourceInScope(input.scope, "facility", input.facilityId);
     }
 
+    const verticalIds = resolveVerticalIds({
+      role: input.actor?.roleName ?? "",
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId,
+    });
+
+    if (verticalIds.length === 0) {
+      return {
+        data: [],
+        pagination: { page, limit, total: 0, totalPages: 1 },
+      };
+    }
+
     const sellerId =
       input.actor?.roleName === Role.REP ? input.actor.userId : undefined;
 
@@ -110,6 +127,7 @@ export class ListOrdersUseCase {
       limit,
       statuses: input.statuses,
       facilityId: input.facilityId,
+      verticalIds,
       sellerId,
       includeItemPreviews: input.includeItemPreviews,
       scope: input.scope.isGlobal
@@ -131,11 +149,21 @@ export class GetOrderUseCase {
     orderId: string;
     scope: ScopeContext;
     actor?: { userId: string; roleName: string };
+    verticalId?: string;
   }) {
     const order = await this.deps.orderRepository.findById(input.orderId);
     if (!order) return null;
 
     assertResourceInScope(input.scope, "facility", order.facility.id);
+
+    const verticalIds = resolveVerticalIds({
+      role: input.actor?.roleName ?? "",
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId,
+    });
+    if (!verticalIds.includes(order.verticalId)) {
+      throw new ForbiddenError("Order vertical outside actor scope");
+    }
 
     if (
       input.actor?.roleName === Role.REP &&

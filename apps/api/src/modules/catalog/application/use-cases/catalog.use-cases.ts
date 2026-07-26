@@ -1,6 +1,7 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import type { BusinessVerticalRepository } from "../interfaces/business-vertical.repository.interface";
 import type { ProductRecord, ProductRepository } from "../interfaces/product.repository.interface";
 import type {
@@ -13,6 +14,10 @@ import type {
   CompetitorProductRepository,
 } from "../interfaces/competitor-product.repository.interface";
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
+
+function productVisibleInVerticals(product: ProductRecord, verticalIds: string[]): boolean {
+  return product.verticalIds.some((id) => verticalIds.includes(id));
+}
 
 function serializeBusinessVertical(row: {
   id: string;
@@ -159,13 +164,28 @@ export class ListProductsUseCase {
     verticalId?: string;
     search?: string;
     isActive?: boolean;
+    scope: ScopeContext;
+    role: string;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 50;
+    const verticalIds = resolveVerticalIds({
+      role: input.role,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId,
+    });
+
+    if (verticalIds.length === 0) {
+      return {
+        data: [],
+        pagination: { page, limit, total: 0, totalPages: 1 },
+      };
+    }
+
     const { products, total } = await this.deps.productRepository.findAll({
       page,
       limit,
-      verticalId: input.verticalId,
+      verticalIds,
       search: input.search,
       isActive: input.isActive,
     });
@@ -180,9 +200,24 @@ export class ListProductsUseCase {
 export class GetProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
-  async execute(input: { productId: string }) {
+  async execute(input: {
+    productId: string;
+    scope: ScopeContext;
+    role: string;
+    verticalId?: string;
+  }) {
     const product = await this.deps.productRepository.findById(input.productId);
     if (!product) throw new ResourceNotFoundError("Product", input.productId);
+
+    const verticalIds = resolveVerticalIds({
+      role: input.role,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId,
+    });
+    if (!productVisibleInVerticals(product, verticalIds)) {
+      throw new ForbiddenError();
+    }
+
     return serializeProduct(product);
   }
 }
@@ -642,9 +677,24 @@ export class GetProductComparisonUseCase {
     }
   ) {}
 
-  async execute(input: { productId: string; sortBy?: ComparisonSortColumn }) {
+  async execute(input: {
+    productId: string;
+    sortBy?: ComparisonSortColumn;
+    scope: ScopeContext;
+    role: string;
+    verticalId?: string;
+  }) {
     const product = await this.deps.productRepository.findById(input.productId);
     if (!product) throw new ResourceNotFoundError("Product", input.productId);
+
+    const verticalIds = resolveVerticalIds({
+      role: input.role,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId,
+    });
+    if (!productVisibleInVerticals(product, verticalIds)) {
+      throw new ForbiddenError();
+    }
 
     const competitors = await this.deps.productEquivalenceRepository.findLinkedByProduct(
       input.productId
@@ -756,9 +806,20 @@ export class GetPriceIndexUseCase {
     }
   ) {}
 
-  async execute(input: { sortBy?: ComparisonSortColumn }) {
+  async execute(input: {
+    sortBy?: ComparisonSortColumn;
+    scope: ScopeContext;
+    role: string;
+    verticalId?: string;
+  }) {
+    const verticalIds = resolveVerticalIds({
+      role: input.role,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId,
+    });
+
     const [products, competitors] = await Promise.all([
-      this.deps.productRepository.findAllActive(),
+      this.deps.productRepository.findAllActive({ verticalIds }),
       this.deps.competitorProductRepository.findAllActive(),
     ]);
 

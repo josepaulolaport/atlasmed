@@ -204,6 +204,20 @@
       "when": 1785046693924,
       "tag": "0028_territory_role_types",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1785048511904,
+      "tag": "0029_orders_vertical_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1785048515403,
+      "tag": "0030_orders_vertical_id_snapshot",
+      "breakpoints": true
     }
   ]
 }

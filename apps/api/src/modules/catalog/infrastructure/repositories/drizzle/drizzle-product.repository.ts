@@ -104,29 +104,31 @@ export class DrizzleProductRepository implements ProductRepository {
   async findAll(params: {
     page: number;
     limit: number;
-    verticalId?: string;
+    verticalIds: string[];
     search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }> {
+    if (params.verticalIds.length === 0) {
+      return { products: [], total: 0 };
+    }
+
     const skip = (params.page - 1) * params.limit;
 
-    const conditions = [];
+    const conditions = [
+      inArray(
+        products.id,
+        db
+          .select({ productId: productVerticals.productId })
+          .from(productVerticals)
+          .where(inArray(productVerticals.verticalId, params.verticalIds))
+      ),
+    ];
     if (params.isActive !== undefined) conditions.push(eq(products.isActive, params.isActive));
     if (params.search?.trim()) {
       const pattern = `%${params.search.trim()}%`;
-      conditions.push(or(ilike(products.name, pattern), ilike(products.code, pattern)));
+      conditions.push(or(ilike(products.name, pattern), ilike(products.code, pattern))!);
     }
-    if (params.verticalId) {
-      conditions.push(
-        inArray(
-          products.id,
-          db.select({ productId: productVerticals.productId })
-            .from(productVerticals)
-            .where(eq(productVerticals.verticalId, params.verticalId))
-        )
-      );
-    }
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const where = and(...conditions);
 
     const [rows, countRows] = await Promise.all([
       db.select(productColumns).from(products).where(where).orderBy(asc(products.name)).offset(skip).limit(params.limit),
@@ -149,11 +151,24 @@ export class DrizzleProductRepository implements ProductRepository {
     return mapProduct(rows[0], verticalMap.get(id) ?? []);
   }
 
-  async findAllActive(): Promise<ProductRecord[]> {
+  async findAllActive(params: { verticalIds: string[] }): Promise<ProductRecord[]> {
+    if (params.verticalIds.length === 0) return [];
+
     const rows = await db
       .select(productColumns)
       .from(products)
-      .where(eq(products.isActive, true))
+      .where(
+        and(
+          eq(products.isActive, true),
+          inArray(
+            products.id,
+            db
+              .select({ productId: productVerticals.productId })
+              .from(productVerticals)
+              .where(inArray(productVerticals.verticalId, params.verticalIds))
+          )
+        )
+      )
       .orderBy(asc(products.name));
     const verticalMap = await fetchVerticalIds(rows.map((r) => r.id));
     return rows.map((row) => mapProduct(row, verticalMap.get(row.id) ?? []));
