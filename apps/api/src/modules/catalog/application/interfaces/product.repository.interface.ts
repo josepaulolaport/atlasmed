@@ -29,15 +29,16 @@ export interface ProductRepository {
   findAll(params: {
     page: number;
     limit: number;
-    verticalId?: string;
+    /** Restrict to products linked to any of these verticals (empty ⇒ no rows). */
+    verticalIds: string[];
     search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }>;
 
   findById(id: string): Promise<ProductRecord | null>;
 
-  /** All active products, unpaginated — backs the price index. */
-  findAllActive(): Promise<ProductRecord[]>;
+  /** All active products in the given verticals, unpaginated — backs the price index. */
+  findAllActive(params: { verticalIds: string[] }): Promise<ProductRecord[]>;
 
   create(data: {
     code: string;

@@ -30,11 +30,19 @@ export class DrizzleOrderRepository implements OrderRepository {
     limit: number;
     statuses?: OrderStatus[];
     facilityId?: string;
+    verticalIds: string[];
     sellerId?: string;
     includeItemPreviews?: boolean;
     scope: OrderScopeFilter;
   }) {
-    const conditions = [scopeCondition(input.scope)];
+    if (input.verticalIds.length === 0) {
+      return { orders: [], total: 0 };
+    }
+
+    const conditions = [
+      scopeCondition(input.scope),
+      inArray(orders.verticalId, input.verticalIds),
+    ];
     if (input.statuses?.length) conditions.push(inArray(orders.status, input.statuses));
     if (input.facilityId) conditions.push(eq(orders.facilityId, input.facilityId));
     if (input.sellerId) conditions.push(eq(orders.sellerId, input.sellerId));
@@ -46,6 +54,7 @@ export class DrizzleOrderRepository implements OrderRepository {
         .select({
           id: orders.id,
           legacyId: orders.legacyId,
+          verticalId: orders.verticalId,
           status: orders.status,
           type: orders.type,
           orderedAt: orders.orderedAt,
@@ -89,6 +98,7 @@ export class DrizzleOrderRepository implements OrderRepository {
       orders: rows.map((row) => ({
         id: row.id,
         legacyId: row.legacyId,
+        verticalId: row.verticalId,
         status: row.status,
         type: row.type,
         orderedAt: row.orderedAt,

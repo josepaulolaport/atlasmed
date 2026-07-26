@@ -14,16 +14,18 @@ const scopedToFacilityOne: ScopeContext = {
   clinicIds: ["facility-1"],
   analyticsClinicIds: ["facility-1"],
   managedUserIds: [],
+  assignedVerticalIds: ["vertical-1"],
   isOperationallyActive: true,
 };
 
 function createRepository(): OrderRepository {
   return {
-    findAll: async (input) => ({
+    findAll: async () => ({
       orders: [
         {
           id: "order-1",
           legacyId: 42,
+          verticalId: "vertical-1",
           facility: { id: "facility-1", name: "Clínica Um" },
           professional: { id: "professional-1", name: "Dra. Ana" },
           seller: null,
@@ -43,6 +45,7 @@ function createRepository(): OrderRepository {
         ? {
             id,
             legacyId: null,
+            verticalId: "vertical-1",
             facility: { id: "facility-2", name: "Clínica Dois" },
             professional: null,
             seller: null,
@@ -100,6 +103,7 @@ describe("orders use cases", () => {
       limit: 10,
       statuses: ["PENDING", "APPROVED"],
       facilityId: "facility-1",
+      verticalIds: ["vertical-1"],
       sellerId: "rep-1",
       includeItemPreviews: true,
       scope: { isGlobal: false, facilityIds: ["facility-1"] },
@@ -108,6 +112,7 @@ describe("orders use cases", () => {
     expect(result.data[0]).toMatchObject({
       id: "order-1",
       legacyId: 42,
+      verticalId: "vertical-1",
       status: "PENDING",
       facility: { name: "Clínica Um" },
       total: 210,
@@ -131,6 +136,7 @@ describe("orders use cases", () => {
     repository.findById = async () => ({
       id: "order-1",
       legacyId: null,
+      verticalId: "vertical-1",
       facility: { id: "facility-1", name: "Clínica Um" },
       professional: null,
       seller: { id: "other-rep", name: "Outro" },

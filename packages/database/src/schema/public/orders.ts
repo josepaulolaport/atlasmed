@@ -11,6 +11,7 @@ import {
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { orderStatusEnum, orderTypeEnum } from "./enums";
+import { businessVerticals } from "./business-verticals";
 import { facilities, professionals } from "./facilities";
 import { products } from "./catalog";
 import { users } from "./users";
@@ -21,6 +22,10 @@ export const orders = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     legacyId: integer("legacy_id"),
     facilityId: text("facility_id").notNull().references(() => facilities.id),
+    /** Commercial vertical for this order (one vertical per order). */
+    verticalId: text("vertical_id")
+      .notNull()
+      .references(() => businessVerticals.id, { onDelete: "restrict" }),
     sellerId: text("seller_id").references(() => users.id),
     professionalId: text("professional_id").references(() => professionals.id),
     status: orderStatusEnum("status").notNull().default("DRAFT"),
@@ -48,6 +53,7 @@ export const orders = pgTable(
   },
   (t) => [
     index("orders_facility_id_idx").on(t.facilityId),
+    index("orders_vertical_id_idx").on(t.verticalId),
     index("orders_status_idx").on(t.status),
     index("orders_legacy_id_idx").on(t.legacyId),
     index("orders_ordered_at_idx").on(t.orderedAt),

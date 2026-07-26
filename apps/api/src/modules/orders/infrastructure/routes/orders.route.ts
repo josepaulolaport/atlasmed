@@ -40,6 +40,7 @@ const listOrdersRoute = new Elysia()
         limit: query.limit ? Number(query.limit) : undefined,
         statuses: parseStatuses(query.status),
         facilityId: query.facilityId,
+        verticalId: query.verticalId,
         includeItemPreviews: query.includeItemPreviews === "true",
         actor: { userId, roleName: authContext.roleName },
         scope,
@@ -55,6 +56,7 @@ const listOrdersRoute = new Elysia()
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         facilityId: t.Optional(t.String()),
+        verticalId: t.Optional(t.String()),
         includeItemPreviews: t.Optional(t.String({
           description: "When true, each order includes up to 2 item preview lines",
         })),
@@ -70,7 +72,7 @@ const getOrderRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/orders/:id",
-    async ({ params, getScope, getUserId, getAuthContext }) => {
+    async ({ params, query, getScope, getUserId, getAuthContext }) => {
       const [scope, userId, authContext] = await Promise.all([
         getScope(),
         getUserId(),
@@ -80,6 +82,7 @@ const getOrderRoute = new Elysia()
         orderId: params.id,
         scope,
         actor: { userId, roleName: authContext.roleName },
+        verticalId: query.verticalId,
       });
       if (!order) throw new ResourceNotFoundError("Order", params.id);
       return order;
@@ -90,6 +93,9 @@ const getOrderRoute = new Elysia()
         tags: ["Orders"],
         security: [{ bearerAuth: [] }],
       },
+      query: t.Object({
+        verticalId: t.Optional(t.String()),
+      }),
     }
   );
 

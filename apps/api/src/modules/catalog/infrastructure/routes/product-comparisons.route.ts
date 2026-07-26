@@ -12,14 +12,25 @@ const getPriceIndexRoute = new Elysia()
   .use(requirePermission("read", "CATALOG"))
   .get(
     "/price-index",
-    async ({ query }) => catalogUseCases.getPriceIndex().execute({ sortBy: query.sortBy }),
+    async ({ query, getScope, getAuthContext }) => {
+      const [scope, authContext] = await Promise.all([getScope(), getAuthContext()]);
+      return catalogUseCases.getPriceIndex().execute({
+        sortBy: query.sortBy,
+        scope,
+        role: authContext.roleName,
+        verticalId: query.verticalId,
+      });
+    },
     {
       detail: {
         summary: "Get the full Brasíndice/Simpro price index (AtlasMed + competitor products)",
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
-      query: t.Object({ sortBy: sortByQuery }),
+      query: t.Object({
+        sortBy: sortByQuery,
+        verticalId: t.Optional(t.String()),
+      }),
     }
   );
 
@@ -28,15 +39,26 @@ const getProductComparisonRoute = new Elysia()
   .use(requirePermission("read", "CATALOG"))
   .get(
     "/products/:id/comparison",
-    async ({ params, query }) =>
-      catalogUseCases.getProductComparison().execute({ productId: params.id, sortBy: query.sortBy }),
+    async ({ params, query, getScope, getAuthContext }) => {
+      const [scope, authContext] = await Promise.all([getScope(), getAuthContext()]);
+      return catalogUseCases.getProductComparison().execute({
+        productId: params.id,
+        sortBy: query.sortBy,
+        scope,
+        role: authContext.roleName,
+        verticalId: query.verticalId,
+      });
+    },
     {
       detail: {
         summary: "Get the price comparison ('comparativo') for a single product",
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
-      query: t.Object({ sortBy: sortByQuery }),
+      query: t.Object({
+        sortBy: sortByQuery,
+        verticalId: t.Optional(t.String()),
+      }),
     }
   );
 
