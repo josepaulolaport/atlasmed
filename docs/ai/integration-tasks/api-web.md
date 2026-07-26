@@ -22,7 +22,7 @@ Use when a task touches BOTH `apps/api` and `apps/web`.
 
 1. Define the API contract first. Name the endpoint, request shape, response shape.
 2. If a shared DTO is needed, place it in a shared location the web can import.
-3. Update Drizzle schema if persistence changes. Follow `AGENTS.md` § Migration workflow: `push` while iterating locally; `generate` once before PR; `bun run db:migrate` + `drizzle-kit check`.
+3. Update Drizzle schema if persistence changes. Follow `AGENTS.md` § Migration workflow / HARD SAFETY: `generate` + `bun run db:migrate` (never bare `drizzle-kit push` on valued DBs); `drizzle-kit check`.
 4. Implement backend: Zod validation → `requirePermission` → `getScope()` → use-case → DTO mapping → tests.
 5. Update web data-fetching client under `apps/web/lib/api/*`.
 6. Update web UI.

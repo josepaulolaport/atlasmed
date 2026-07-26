@@ -25,7 +25,7 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 1. Identify every affected app and package BEFORE editing. Announce the list.
 2. Define API contract first.
 3. Update shared types / place DTOs in a shared location.
-4. Schema change: `push` locally while iterating; `generate` once before PR; `migrate` + `drizzle-kit check` (see `AGENTS.md` § Migration workflow).
+4. Schema change: `generate` + `migrate` locally (gated `db:push` only on disposable empty DBs); `generate` once before PR if needed; `drizzle-kit check` (see `AGENTS.md` § Migration workflow / HARD SAFETY).
 5. Backend: validation → authorization → use-case → DTO mapping → tests.
 6. Permissions: helper in `packages/access` if reused; enforce at API boundary.
 7. Frontend: fetch → state → UI → loading/empty/error states.

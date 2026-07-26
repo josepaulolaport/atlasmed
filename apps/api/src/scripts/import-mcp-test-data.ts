@@ -943,6 +943,16 @@ async function main() {
   }
 
   if (options.clean) {
+    // Incident 2026-07-26: destructive CRM wipes must never be accidental.
+    if (process.env.ATLASMED_ALLOW_DATA_LOSS !== "1" && !options.dryRun) {
+      throw new Error(
+        [
+          "import-mcp-test --clean refused without ATLASMED_ALLOW_DATA_LOSS=1.",
+          "This deletes public.facilities and related CRM tables.",
+          "Dry-run without the flag: add --dry-run.",
+        ].join("\n"),
+      );
+    }
     await cleanOperationalData(admin.id, options.dryRun);
   }
 
