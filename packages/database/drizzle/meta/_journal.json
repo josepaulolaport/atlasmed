@@ -218,6 +218,20 @@
       "when": 1785048515403,
       "tag": "0030_orders_vertical_id_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1785051438742,
+      "tag": "0031_drop_facilities_territory_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1785051443243,
+      "tag": "0032_drop_facilities_territory_id_snapshot",
+      "breakpoints": true
     }
   ]
 }

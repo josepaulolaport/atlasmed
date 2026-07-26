@@ -97,8 +97,7 @@ export const facilities = pgTable(
     /** CNES subtype code from rlEstabSubTipo; scoped by unit_type_code (FK deferred). */
     unitSubtypeCode: text("unit_subtype_code"),
 
-    // --- Territory ---
-    territoryId: text("territory_id").references(() => territories.id, { onDelete: "set null" }),
+    // --- Territory (membership lives on facility_vertical_profiles.territory_id) ---
     territoryAssignmentStatus: territoryAssignmentStatusEnum("territory_assignment_status").notNull().default("unassigned"),
     territoryAssignmentSource: territoryAssignmentSourceEnum("territory_assignment_source").notNull().default("geo"),
 
@@ -120,7 +119,6 @@ export const facilities = pgTable(
   (t) => [
     uniqueIndex("facilities_source_provider_external_source_id_uidx").on(t.sourceProvider, t.externalSourceId),
     uniqueIndex("facilities_source_provider_cnes_code_uidx").on(t.sourceProvider, t.cnesCode),
-    index("facilities_territory_id_idx").on(t.territoryId),
     index("facilities_deactivated_at_idx").on(t.deactivatedAt),
     index("facilities_name_idx").on(t.displayName),
     index("facilities_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),
@@ -636,7 +634,6 @@ export const facilityServices = pgTable(
 // --- Relations ---
 
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
-  territory: one(territories, { fields: [facilities.territoryId], references: [territories.id] }),
   facilityType: one(facilityTypes, {
     fields: [facilities.facilityTypeCode],
     references: [facilityTypes.facilityTypeCode],

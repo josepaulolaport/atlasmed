@@ -86,8 +86,12 @@ export class TerritoryMembershipUseCases {
       );
     }
 
+    await this.deps.clinicWriter.setProfileTerritory(
+      input.facilityId,
+      territory.verticalId,
+      input.territoryId,
+    );
     await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
-      territoryId: input.territoryId,
       territoryAssignmentStatus: "assigned",
       territoryAssignmentSource: "manual",
     });
@@ -105,7 +109,6 @@ export class TerritoryMembershipUseCases {
     }
 
     await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
-      territoryId: clinic.territoryId,
       territoryAssignmentStatus: clinic.territoryAssignmentStatus ?? "unassigned",
       territoryAssignmentSource: "geo",
     });

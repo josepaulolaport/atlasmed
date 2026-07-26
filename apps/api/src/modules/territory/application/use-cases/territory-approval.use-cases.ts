@@ -186,8 +186,12 @@ export class TerritoryApprovalUseCases {
             "Target territory must be active"
           );
         }
+        await this.deps.clinicWriter.setProfileTerritory(
+          request.facilityId,
+          target.verticalId,
+          request.toTerritoryId,
+        );
         await this.deps.clinicWriter.updateTerritoryMembership(request.facilityId, {
-          territoryId: request.toTerritoryId,
           territoryAssignmentStatus: "assigned",
           territoryAssignmentSource: "manual",
         });

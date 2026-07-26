@@ -13,7 +13,7 @@ import { facility } from "../facility/index";
 import { registryIngestion } from "../registry-ingestion/index";
 import { AppError } from "../../shared/errors";
 import { eq } from "drizzle-orm";
-import { facilities, cnesRuns, cnesSuggestions } from "@atlasmed/database";
+import { facilities, facilityVerticalProfiles, cnesRuns, cnesSuggestions } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -26,6 +26,28 @@ import {
 } from "../access/test-helpers/scope-integration-fixtures";
 import { cleanupMockRegistryData } from "../registry-ingestion/test-helpers/registry-test-factory";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
+
+async function insertFacilityInTerritory(params: {
+  displayName: string;
+  territoryId: string;
+  verticalId: string;
+}) {
+  const facility = await db
+    .insert(facilities)
+    .values({
+      displayName: params.displayName,
+      territoryAssignmentStatus: "assigned",
+    })
+    .returning()
+    .then((r) => r[0]!);
+  await db.insert(facilityVerticalProfiles).values({
+    facilityId: facility.id,
+    verticalId: params.verticalId,
+    territoryId: params.territoryId,
+    isActive: true,
+  });
+  return facility;
+}
 
 function createRegistryHttpApp() {
   return new Elysia()
@@ -157,14 +179,11 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   it("scoped MANAGER can approve suggestion for facility in territory", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    const clinicRecord = await db
-      .insert(facilities)
-      .values({
-        displayName: `Registry Scope Facility ${fixtures.uniqueId}`,
-        territoryId: fixtures.territoryId,
-      })
-      .returning()
-      .then((r) => r[0]!);
+    const clinicRecord = await insertFacilityInTerritory({
+      displayName: `Registry Scope Facility ${fixtures.uniqueId}`,
+      territoryId: fixtures.territoryId,
+      verticalId: fixtures.verticalId,
+    });
 
     const run = await db
       .insert(cnesRuns)
@@ -204,23 +223,17 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   it("MANAGER list only returns suggestions for facilities in scope", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    const inScopeFacility = await db
-      .insert(facilities)
-      .values({
-        displayName: `In Scope Facility ${fixtures.uniqueId}`,
-        territoryId: fixtures.territoryId,
-      })
-      .returning()
-      .then((r) => r[0]!);
+    const inScopeFacility = await insertFacilityInTerritory({
+      displayName: `In Scope Facility ${fixtures.uniqueId}`,
+      territoryId: fixtures.territoryId,
+      verticalId: fixtures.verticalId,
+    });
 
-    const outOfScopeFacility = await db
-      .insert(facilities)
-      .values({
-        displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
-        territoryId: fixtures.outOfScopeTerritoryId,
-      })
-      .returning()
-      .then((r) => r[0]!);
+    const outOfScopeFacility = await insertFacilityInTerritory({
+      displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
+      territoryId: fixtures.outOfScopeTerritoryId,
+      verticalId: fixtures.verticalId,
+    });
 
     const run = await db
       .insert(cnesRuns)
@@ -273,14 +286,11 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   it("returns 403 when MANAGER approves suggestion outside scope", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    const clinicRecord = await db
-      .insert(facilities)
-      .values({
-        displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
-        territoryId: fixtures.outOfScopeTerritoryId,
-      })
-      .returning()
-      .then((r) => r[0]!);
+    const clinicRecord = await insertFacilityInTerritory({
+      displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
+      territoryId: fixtures.outOfScopeTerritoryId,
+      verticalId: fixtures.verticalId,
+    });
 
     const run = await db
       .insert(cnesRuns)
