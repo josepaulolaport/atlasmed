@@ -23,7 +23,7 @@ Use when a task touches BOTH `apps/api` and `apps/mobile`.
 
 1. Define the API contract with mobile version drift in mind.
 2. Prefer additive changes; version if breaking is required.
-3. Update Drizzle schema if persistence changes. Follow `AGENTS.md` § Migration workflow: `push` while iterating locally; `generate` once before PR; `bun run db:migrate` + `drizzle-kit check`.
+3. Update Drizzle schema if persistence changes. Follow `AGENTS.md` § Migration workflow / HARD SAFETY: `generate` + `bun run db:migrate` (never bare `drizzle-kit push` on valued DBs); `drizzle-kit check`.
 4. Implement backend per `apps/api/AGENTS.md` route + use-case conventions.
 5. Update mobile client + UI.
 6. Handle offline behavior: form must survive network failure mid-submission.

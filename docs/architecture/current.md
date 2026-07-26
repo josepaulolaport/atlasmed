@@ -54,7 +54,7 @@ Spatial queries use raw `sql` tagged templates via Drizzle's `db.execute()`.
 
 ### ORM
 
-Drizzle ORM with Drizzle Kit for migrations. Schema files live in `packages/database/src/schema/`. Generated migrations live in `packages/database/drizzle/`. Local iteration uses `drizzle-kit push`; shared environments use `generate` + `migrate` only — see root `AGENTS.md` § `packages/database`.
+Drizzle ORM with Drizzle Kit for migrations. Schema files live in `packages/database/src/schema/`. Generated migrations live in `packages/database/drizzle/`. Prefer `generate` + `migrate` always; gated `db:push` only on disposable local DB names — see root `AGENTS.md` § HARD SAFETY / `packages/database`.
 
 ## Cadastro documents
 

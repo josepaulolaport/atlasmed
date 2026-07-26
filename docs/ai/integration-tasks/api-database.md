@@ -20,7 +20,7 @@ Use when a task touches `apps/api` AND requires a schema change under `packages/
 ## Work order
 
 1. Edit `packages/database/src/schema/public/` or `packages/database/src/schema/registry/` — every table belongs to the correct pg schema.
-2. **While iterating locally:** `bunx drizzle-kit push` against a local (or Neon branch) DB — do **not** generate migrations yet. See root `AGENTS.md` § Migration workflow.
+2. **While iterating locally:** prefer `generate` + `bun run db:migrate`. Gated `bun run db:push` only on **empty disposable local** DBs (`ATLASMED_ALLOW_DB_PUSH=1`). **Never** `push --force` on populated DBs — see root `AGENTS.md` § HARD SAFETY.
 3. **When the schema is final** (branch rebased on `main`): `bunx drizzle-kit generate --name="<short_description>"` once. Review SQL.
 4. Apply locally with `bun run db:migrate` (never `push` toward shared envs).
 5. Run `bunx drizzle-kit check`. On conflict: drop this branch’s new migration artifacts, rebase `main`, regenerate.

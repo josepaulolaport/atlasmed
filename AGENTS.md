@@ -408,27 +408,55 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 ### Migration workflow (MANDATORY)
 
-AtlasMed uses Drizzle Kit with a **branch-friendly** flow: prototype with `push` locally, generate a single migration when the feature is ready to merge, keep `main` / staging / production on SQL migrations only.
+AtlasMed uses Drizzle Kit with a **branch-friendly** flow: prefer **generate + migrate** always for DBs that hold CRM data; optional `push` only on **empty disposable local** DBs. Shared environments use SQL migrations only.
 
-Commands run from `packages/database` unless noted. Prefer `bunx drizzle-kit …` and `bun run db:migrate` (repo scripts).
+Commands run from `packages/database` unless noted. Prefer `bun run db:migrate` and `bunx drizzle-kit generate` (repo scripts).
 
-#### 1. Local prototyping — do **not** generate early
+#### HARD SAFETY — data loss (incident 2026-07-26)
+
+**Cause:** `bunx drizzle-kit push --force` against populated local DB `atlasmed-3` auto-accepted destructive DDL and emptied `facilities` / `territories` / `facility_vertical_profiles` (relation files rewritten ~01:21). Orphan child rows (e.g. `facility_healthcare_provider_shares`) survived.
+
+**Never:**
+
+- Run `drizzle-kit push` (or `db:push`) against a DB that has facilities/users/professionals/territories data.
+- Pass `--force` to push (auto-truncates / accepts data-loss statements).
+- Point push at staging, production, or any non-local host.
+- AI agents: do **not** invent `push --force` workarounds. If schema must change on a populated DB → `generate` (custom if needed) + `db:migrate` only.
+
+**Enforced by** `packages/database/scripts/db-push.ts` (`bun run db:push` from `@atlasmed/database` or `@atlasmed/api`):
+
+| Gate | Requirement |
+|---|---|
+| Opt-in | `ATLASMED_ALLOW_DB_PUSH=1` |
+| Local host only | `localhost` / `127.0.0.1` / `::1` / `*.local` |
+| Disposable DB name only | `atlasmed_test` \| `atlasmed_scratch` \| `atlasmed_empty` — **no override** (blocks `atlasmed-3` forever) |
+| Populated CRM tables | refused unless `ATLASMED_ALLOW_DATA_LOSS=1` |
+| `--force` | refused unless `ATLASMED_ALLOW_DB_PUSH_FORCE=1` **and** `ATLASMED_ALLOW_DATA_LOSS=1` |
+
+Calling bare `bunx drizzle-kit push` bypasses the wrapper — **forbidden**. Always `bun run db:push`. Apps must not wire bare `drizzle-kit push` in package scripts.
+
+#### 1. Local prototyping — prefer migrate; push only on empty DBs
 
 Generating a `.sql` + snapshot on every schema tweak clutters `drizzle/`, worsens merge conflicts, and risks out-of-order journal `when` timestamps.
 
-While iterating on a feature branch:
+**Preferred on a DB with seed/CRM data:**
 
 ```bash
-# Edit TypeScript schema under src/schema/
 cd packages/database
-DATABASE_URL=<local-url> bunx drizzle-kit push
+# edit schema TS
+DATABASE_URL=<url> bunx drizzle-kit generate --name="<short>"   # or --custom when backfill needed
+DATABASE_URL=<url> bun run db:migrate
+bunx drizzle-kit check
 ```
 
-`push` maps the current TS schema onto the **local** DB only — no migration files, no journal entries.
+**Optional push** only when the target DB is empty/disposable:
 
-**Never** `drizzle-kit push` against staging or production.
+```bash
+cd packages/database
+ATLASMED_ALLOW_DB_PUSH=1 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_scratch bun run db:push
+```
 
-Optional but recommended: use a Neon (or similar) **database branch** per git feature branch and point local `DATABASE_URL` at it so schema experiments stay isolated.
+Optional but recommended: Neon (or similar) **database branch** per git feature branch so schema experiments stay isolated — still prefer migrate over push.
 
 #### 2. Before opening / merging the PR — generate **once**
 
@@ -495,7 +523,7 @@ DATABASE_URL=<url> bun run db:migrate
 ### Rules
 
 - Ship schema change + generated migration + meta in the same PR.
-- Local iteration: `push`. PR / shared environments: `generate` + `migrate`.
+- Local iteration on valued data: `generate` + `migrate`. Empty disposable local only: gated `db:push`.
 - Run `drizzle-kit check` before merge when the branch touches `packages/database/drizzle/`.
 - **Never manually edit** `packages/database/drizzle/*` (SQL, snapshots, `_journal.json`) except filling a `--custom` migration’s empty SQL file. Everything else is generated exclusively by `drizzle-kit generate`.
 - Never hand-edit journal `when` / hashes to unstick deploy — regenerate or follow §3 conflict resolution.
@@ -508,7 +536,10 @@ DATABASE_URL=<url> bun run db:migrate
 ### Anti-patterns
 
 - No Prisma — fully on Drizzle.
-- No `drizzle-kit push` to staging/production.
+- No `drizzle-kit push` / `db:push` to staging/production/non-local hosts.
+- No `drizzle-kit push` against non-disposable DB names (`atlasmed-3`, Neon branches used as CRM, etc.).
+- No `drizzle-kit push --force` (or any auto-accept data-loss flag) against populated DBs.
+- No bare `bunx drizzle-kit push` bypassing `bun run db:push` (including in app `package.json` scripts).
 - No generating a migration per tiny local schema tweak on a long-lived feature branch.
 - No raw unparameterized queries — always use `sql` tagged template.
 - No direct ORM type leakage into app DTOs.

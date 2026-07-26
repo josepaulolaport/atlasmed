@@ -15,16 +15,16 @@
     "test:watch": "NODE_ENV=test bun test --watch",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "cd ../../packages/database && bunx drizzle-kit migrate",
-    "db:push": "cd ../../packages/database && bunx drizzle-kit push",
-    "db:studio": "cd ../../packages/database && bunx drizzle-kit studio",
-    "db:generate": "cd ../../packages/database && bunx drizzle-kit generate",
+    "db:migrate": "cd ../../packages/database && bun run db:migrate",
+    "db:push": "cd ../../packages/database && bun run db:push",
+    "db:studio": "cd ../../packages/database && bun run db:studio",
+    "db:generate": "cd ../../packages/database && bun run db:generate",
     "db:seed": "bun src/infrastructure/database/seed.ts",
     "db:import:mcp-test": "bun src/scripts/import-mcp-test-data.ts",
-    "db:import:mcp-test:all": "bun src/scripts/import-mcp-test-data.ts --all --admin-email=admin@demo.atlasmed.local",
+    "db:import:mcp-test:all": "ATLASMED_ALLOW_DATA_LOSS=1 bun src/scripts/import-mcp-test-data.ts --all --admin-email=admin@demo.atlasmed.local",
     "db:geocode:facilities": "bash -lc 'set -a; source .env; set +a; bun src/scripts/geocode-facilities.ts \"$@\"' --",
     "db:geocode:facilities:apply": "bash -lc 'set -a; source .env; set +a; bun src/scripts/geocode-facilities.ts --apply \"$@\"' --",
-    "db:reset:test": "cd ../../packages/database && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bunx drizzle-kit push --force"
+    "db:reset:test": "cd ../../packages/database && ATLASMED_ALLOW_DB_PUSH=1 ATLASMED_ALLOW_DB_PUSH_FORCE=1 ATLASMED_ALLOW_DATA_LOSS=1 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun run db:push --force"
   },
   "dependencies": {
     "@atlasmed/access": "workspace:*",
