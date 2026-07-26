@@ -45,6 +45,7 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 | Business verticals (legacy: sectors) | `docs/architecture/features/business-verticals.md`, `docs/architecture/features/access-auth.md` |
 | Facilities / professionals / registry | `docs/architecture/features/clinic-doctor-registry.md` |
 | Territory management | `docs/specs/0003-territory-management/requirements.md` |
+| Territory × vertical ownership (P1 accepted) | `docs/specs/0003-territory-management/vertical-ownership-design.md` |
 | Multi-tenancy | `docs/specs/0001-multi-tenancy/design.md`, `docs/specs/0001-multi-tenancy/tasks.md` |
 | CRM baseline | `docs/specs/0002-clinic-doctor-crm/requirements.md` |
 | AI assistant / agent behavior | `docs/specs/0004-ai-assistant/requirements.md` |
