@@ -37,6 +37,20 @@ function locationPointSql(lat: number, lng: number) {
   return sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)`;
 }
 
+function deriveProfileTerritoryId(
+  profiles: Array<{ territoryId?: string | null }>,
+): string | null {
+  const ids = [
+    ...new Set(
+      profiles
+        .map((p) => p.territoryId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  ];
+  if (ids.length === 1) return ids[0]!;
+  return null;
+}
+
 function mapFacility(
   facility: FacilityRowWithCoords | FacilityRow,
   options: {
@@ -46,6 +60,7 @@ function mapFacility(
     consultantName?: string | null;
     consultantSince?: Date | null;
     managerName?: string | null;
+    territoryId?: string | null;
     territoryName?: string | null;
     commercialStatus?: FacilityCommercialStatus | null;
     purchaseStatus?: FacilityRecord["purchaseStatus"];
@@ -75,7 +90,12 @@ function mapFacility(
     cpf: facility.cpf,
     lat: options.lat !== undefined ? options.lat : (withCoords.lat ?? null),
     lng: options.lng !== undefined ? options.lng : (withCoords.lng ?? null),
-    territoryId: facility.territoryId,
+    territoryId:
+      options.territoryId !== undefined
+        ? options.territoryId
+        : options.verticalProfiles
+          ? deriveProfileTerritoryId(options.verticalProfiles)
+          : facility.territoryId,
     territoryName: options.territoryName ?? null,
     territoryAssignmentStatus: facility.territoryAssignmentStatus,
     territoryAssignmentSource: facility.territoryAssignmentSource,
@@ -149,6 +169,7 @@ async function loadVerticalProfiles(
       isActive: facilityVerticalProfiles.isActive,
       commercialStatus: facilityVerticalProfiles.commercialStatus,
       purchaseStatus: facilityVerticalProfiles.purchaseStatus,
+      territoryId: facilityVerticalProfiles.territoryId,
     })
     .from(facilityVerticalProfiles)
     .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))
@@ -164,6 +185,7 @@ async function loadVerticalProfiles(
       isActive: row.isActive,
       commercialStatus: row.commercialStatus,
       purchaseStatus: row.purchaseStatus,
+      territoryId: row.territoryId,
     });
     map.set(row.facilityId, list);
   }
@@ -381,7 +403,12 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     const ids = rows.map((r) => r.id);
 
-    const [profCounts, consultantMap, territoryNameById, profilesByFacility] = await Promise.all([
+    const profilesByFacility = await loadVerticalProfiles(ids, params.scope.verticalIds);
+    const derivedTerritoryIds = ids.map((id) =>
+      deriveProfileTerritoryId(profilesByFacility.get(id) ?? []),
+    );
+
+    const [profCounts, consultantMap, territoryNameById] = await Promise.all([
       db
         .select({
           facilityId: facilityProfessionals.facilityId,
@@ -396,8 +423,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         )
         .groupBy(facilityProfessionals.facilityId),
       loadConsultantInfo(ids),
-      loadTerritoryNames(rows.map((row) => row.territoryId)),
-      loadVerticalProfiles(ids, params.scope.verticalIds),
+      loadTerritoryNames(derivedTerritoryIds),
     ]);
 
     const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
@@ -407,6 +433,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         const consultant = consultantMap.get(row.id);
         const profiles = profilesByFacility.get(row.id) ?? [];
         const derived = deriveProfileCommercialFields(profiles);
+        const territoryId = deriveProfileTerritoryId(profiles);
         return {
           ...mapFacility(row, {
             lat: row.lat,
@@ -414,8 +441,9 @@ export class DrizzleFacilityRepository implements FacilityRepository {
             consultantName: consultant?.name ?? null,
             consultantSince: consultant?.since ?? null,
             managerName: consultant?.managerName ?? null,
-            territoryName: row.territoryId
-              ? (territoryNameById.get(row.territoryId) ?? null)
+            territoryId,
+            territoryName: territoryId
+              ? (territoryNameById.get(territoryId) ?? null)
               : null,
             commercialStatus: derived.commercialStatus,
             purchaseStatus: derived.purchaseStatus,
@@ -464,7 +492,11 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (!facility) return null;
 
-    const [services, consultantMap, territoryNameById, profilesByFacility] = await Promise.all([
+    const profilesByFacility = await loadVerticalProfiles([id]);
+    const profiles = profilesByFacility.get(id) ?? [];
+    const territoryId = deriveProfileTerritoryId(profiles);
+
+    const [services, consultantMap, territoryNameById] = await Promise.all([
       db
         .select({
           serviceCode: facilityServices.serviceCode,
@@ -473,12 +505,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         .from(facilityServices)
         .where(eq(facilityServices.facilityId, id)),
       loadConsultantInfo([id]),
-      loadTerritoryNames([facility.territoryId]),
-      loadVerticalProfiles([id]),
+      loadTerritoryNames([territoryId]),
     ]);
 
     const consultant = consultantMap.get(id);
-    const profiles = profilesByFacility.get(id) ?? [];
     const derived = deriveProfileCommercialFields(profiles);
     return mapFacility(facility, {
       lat: facility.lat,
@@ -487,8 +517,9 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       consultantName: consultant?.name ?? null,
       consultantSince: consultant?.since ?? null,
       managerName: consultant?.managerName ?? null,
-      territoryName: facility.territoryId
-        ? (territoryNameById.get(facility.territoryId) ?? null)
+      territoryId,
+      territoryName: territoryId
+        ? (territoryNameById.get(territoryId) ?? null)
         : null,
       commercialStatus: derived.commercialStatus,
       purchaseStatus: derived.purchaseStatus,
@@ -792,7 +823,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {
     if (territoryIds.length === 0) return [];
 
-    // Prefer per-vertical membership on profiles (Q6 C); union legacy facilities.territoryId bridge.
+    // Membership = facility_vertical_profiles.territory_id only (legacy facilities.territoryId cut over).
     const profileRows = await db
       .select({ id: facilities.id })
       .from(facilities)
@@ -808,14 +839,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         ),
       );
 
-    const legacyRows = await db
-      .select({ id: facilities.id })
-      .from(facilities)
-      .where(
-        and(isNull(facilities.deactivatedAt), inArray(facilities.territoryId, territoryIds)),
-      );
-
-    return [...new Set([...profileRows, ...legacyRows].map((r) => r.id))];
+    return [...new Set(profileRows.map((r) => r.id))];
   }
 
   async findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]> {

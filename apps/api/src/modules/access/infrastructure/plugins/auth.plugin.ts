@@ -16,6 +16,7 @@ import type { AccessGrantService } from "../../application/services/access-grant
 import type { Redis } from "ioredis";
 import { logger } from "../../../../infrastructure/logging/logger";
 import { getClientIp } from "../../../../shared/utils/client-ip";
+import { readVerticalIdHeader, resolveVerticalIds } from "../../application/services/vertical-access.service";
 
 const LAST_SEEN_THRESHOLD = 5 * 60 * 1000;
 
@@ -429,12 +430,29 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
       try {
         const authContext = await resolveAccessSessionFromToken(token, ipAddress, dependencies);
 
+        const headerVerticalId = readVerticalIdHeader(request.headers);
+
         return {
           getAuthContext: async () => authContext,
           getUserId: async () => authContext.userId,
           getSessionId: async () => authContext.sessionId,
-          getScope: async () =>
-            scopeService.resolve(authContext.userId, authContext.roleName),
+          getRequestVerticalId: async () => headerVerticalId,
+          getScope: async () => {
+            const scope = await scopeService.resolve(
+              authContext.userId,
+              authContext.roleName
+            );
+            if (!headerVerticalId) {
+              return { ...scope, activeVerticalId: null };
+            }
+            // Validate filter ⊆ token assigns (throws ForbiddenError).
+            resolveVerticalIds({
+              role: authContext.roleName,
+              assignedVerticalIds: scope.assignedVerticalIds ?? [],
+              headerVerticalId,
+            });
+            return { ...scope, activeVerticalId: headerVerticalId };
+          },
           getUser: async () => {
             const user = await userRepository.findById(authContext.userId);
             if (!user) {

@@ -1,6 +1,5 @@
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
-  businessVerticals,
   facilities,
   facilityProfessionals,
   facilityVerticalProfiles,
@@ -23,11 +22,10 @@ export type FacilitySearchDocument = {
   cnesCode: string | null;
   city: string | null;
   state: string | null;
-  /** Ortopedia profile status (legacy display filter). Prefer verticalIds for isolation. */
-  commercialStatus: string | null;
-  /** Active facility_vertical_profiles vertical ids (P1.6 catalog/search isolation). */
+  /** Active facility_vertical_profiles vertical ids. */
   verticalIds: string[];
-  territoryId: string | null;
+  /** Active profile territory ids (membership). */
+  territoryIds: string[];
   territoryAssignmentStatus: string;
   _geo?: { lat: number; lng: number };
 };
@@ -78,9 +76,8 @@ export function mapFacilitySearchDocument(row: {
   cnesCode: string | null;
   city: string | null;
   state: string | null;
-  commercialStatus: string | null;
   verticalIds?: string[];
-  territoryId: string | null;
+  territoryIds?: string[];
   territoryAssignmentStatus: string;
   latitude: number | null;
   longitude: number | null;
@@ -99,9 +96,8 @@ export function mapFacilitySearchDocument(row: {
     cnesCode: row.cnesCode,
     city: row.city,
     state: row.state,
-    commercialStatus: row.commercialStatus,
     verticalIds: row.verticalIds ?? [],
-    territoryId: row.territoryId,
+    territoryIds: row.territoryIds ?? [],
     territoryAssignmentStatus: row.territoryAssignmentStatus,
     ...(row.latitude !== null && row.longitude !== null
       ? { _geo: { lat: row.latitude, lng: row.longitude } }
@@ -246,23 +242,26 @@ export const FACILITY_SETTINGS = {
     "id",
     "state",
     "city",
-    "commercialStatus",
     "verticalIds",
-    "territoryId",
+    "territoryIds",
     "territoryAssignmentStatus",
     "_geo",
   ],
   sortableAttributes: ["_geo"],
 };
 
-async function loadActiveFacilityVerticalIds(
+async function loadActiveFacilityProfileIds(
   facilityIds: string[]
-): Promise<Map<string, string[]>> {
-  if (facilityIds.length === 0) return new Map();
+): Promise<{ verticalIds: Map<string, string[]>; territoryIds: Map<string, string[]> }> {
+  const verticalIds = new Map<string, string[]>();
+  const territoryIds = new Map<string, string[]>();
+  if (facilityIds.length === 0) return { verticalIds, territoryIds };
+
   const rows = await db
     .select({
       facilityId: facilityVerticalProfiles.facilityId,
       verticalId: facilityVerticalProfiles.verticalId,
+      territoryId: facilityVerticalProfiles.territoryId,
     })
     .from(facilityVerticalProfiles)
     .where(
@@ -272,13 +271,19 @@ async function loadActiveFacilityVerticalIds(
       )
     );
 
-  const map = new Map<string, string[]>();
   for (const row of rows) {
-    const current = map.get(row.facilityId) ?? [];
-    current.push(row.verticalId);
-    map.set(row.facilityId, current);
+    const verts = verticalIds.get(row.facilityId) ?? [];
+    verts.push(row.verticalId);
+    verticalIds.set(row.facilityId, verts);
+    if (row.territoryId) {
+      const territories = territoryIds.get(row.facilityId) ?? [];
+      if (!territories.includes(row.territoryId)) {
+        territories.push(row.territoryId);
+      }
+      territoryIds.set(row.facilityId, territories);
+    }
   }
-  return map;
+  return { verticalIds, territoryIds };
 }
 export const PROFESSIONAL_SETTINGS = {
   searchableAttributes: ["name", "socialName", "taxId", "specialty", "crmCouncil", "crmNumber", "crmState"],
@@ -289,7 +294,6 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
   let lastId: string | undefined;
 
   while (true) {
-    // Index Ortopedia profile commercial status (P0 single vertical).
     const rows = await db
       .select({
         id: facilities.id,
@@ -301,8 +305,6 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         cnesCode: facilities.cnesCode,
         city: facilities.city,
         state: facilities.state,
-        commercialStatus: facilityVerticalProfiles.commercialStatus,
-        territoryId: facilities.territoryId,
         territoryAssignmentStatus: facilities.territoryAssignmentStatus,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
@@ -310,27 +312,19 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         isActiveInRegistry: facilities.isActiveInRegistry,
       })
       .from(facilities)
-      .leftJoin(businessVerticals, eq(businessVerticals.code, "ORTOPEDIA"))
-      .leftJoin(
-        facilityVerticalProfiles,
-        and(
-          eq(facilityVerticalProfiles.facilityId, facilities.id),
-          eq(facilityVerticalProfiles.verticalId, businessVerticals.id),
-          eq(facilityVerticalProfiles.isActive, true)
-        )
-      )
       .where(and(isNull(facilities.deactivatedAt), lastId ? gt(facilities.id, lastId) : undefined))
       .orderBy(asc(facilities.id))
       .limit(PAGE_SIZE);
     if (rows.length === 0) return;
 
     lastId = rows.at(-1)!.id;
-    const verticalIdsByFacility = await loadActiveFacilityVerticalIds(rows.map((row) => row.id));
+    const profileIds = await loadActiveFacilityProfileIds(rows.map((row) => row.id));
     yield rows
       .map((row) =>
         mapFacilitySearchDocument({
           ...row,
-          verticalIds: verticalIdsByFacility.get(row.id) ?? [],
+          verticalIds: profileIds.verticalIds.get(row.id) ?? [],
+          territoryIds: profileIds.territoryIds.get(row.id) ?? [],
         })
       )
       .filter((row): row is FacilitySearchDocument => row !== null);
@@ -346,10 +340,17 @@ async function loadActiveProfessionalAssociations(
     .select({
       professionalId: facilityProfessionals.professionalId,
       facilityId: facilityProfessionals.facilityId,
-      territoryId: facilities.territoryId,
+      territoryId: facilityVerticalProfiles.territoryId,
     })
     .from(facilityProfessionals)
     .innerJoin(facilities, eq(facilityProfessionals.facilityId, facilities.id))
+    .leftJoin(
+      facilityVerticalProfiles,
+      and(
+        eq(facilityVerticalProfiles.facilityId, facilities.id),
+        eq(facilityVerticalProfiles.isActive, true)
+      )
+    )
     .where(and(
       inArray(facilityProfessionals.professionalId, professionalIds),
       isNull(facilityProfessionals.endedAt),
@@ -359,8 +360,13 @@ async function loadActiveProfessionalAssociations(
   const associations = new Map<string, Array<{ facilityId: string; territoryId: string | null }>>();
   for (const row of rows) {
     const current = associations.get(row.professionalId) ?? [];
-    current.push({ facilityId: row.facilityId, territoryId: row.territoryId });
-    associations.set(row.professionalId, current);
+    const already = current.some(
+      (entry) => entry.facilityId === row.facilityId && entry.territoryId === row.territoryId
+    );
+    if (!already) {
+      current.push({ facilityId: row.facilityId, territoryId: row.territoryId });
+      associations.set(row.professionalId, current);
+    }
   }
   return associations;
 }

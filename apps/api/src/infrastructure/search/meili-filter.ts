@@ -2,8 +2,7 @@ export const MEILI_FILTER_MAX_LENGTH = 8_000;
 
 const FILTER_FIELDS = [
   "id",
-  "commercialStatus",
-  "territoryId",
+  "territoryIds",
   "territoryAssignmentStatus",
   "verticalIds",
   "specialtyNormalized",
