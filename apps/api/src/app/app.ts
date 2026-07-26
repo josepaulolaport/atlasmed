@@ -15,6 +15,7 @@ import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
 import { orders } from "../modules/orders";
 import { visits } from "../modules/visits";
+import { dashboard } from "../modules/dashboard";
 import { user as avatarUser } from "../modules/user";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
@@ -97,7 +98,11 @@ const app = new Elysia()
       origin: [...configuredCorsOrigins, firebaseHostingOrigins],
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-AtlasMed-Vertical-Id",
+      ],
       exposeHeaders: ["Content-Type", "Authorization"],
       maxAge: 86400, // 24 hours
     }),
@@ -132,7 +137,8 @@ const app = new Elysia()
       .use(territory)
       .use(maps)
       .use(orders)
-      .use(visits),
+      .use(visits)
+      .use(dashboard),
   );
 
 export default app;
