@@ -9,7 +9,7 @@ import {
   users,
   roles,
 } from "@atlasmed/database";
-import { eq, and, ne, inArray, asc, isNull, sql, or } from "drizzle-orm";
+import { eq, and, ne, inArray, asc, isNull, sql } from "drizzle-orm";
 import type {
   CreateTerritoryInput,
   TerritoryRecord,
@@ -179,7 +179,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         count: sql<number>`count(DISTINCT ${facilities.id})`,
       })
       .from(facilities)
-      .leftJoin(
+      .innerJoin(
         facilityVerticalProfiles,
         and(
           eq(facilityVerticalProfiles.facilityId, facilities.id),
@@ -187,15 +187,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
           eq(facilityVerticalProfiles.isActive, true),
         ),
       )
-      .where(
-        and(
-          isNull(facilities.deactivatedAt),
-          or(
-            eq(facilities.territoryId, territoryId),
-            sql`${facilityVerticalProfiles.id} IS NOT NULL`,
-          ),
-        ),
-      );
+      .where(isNull(facilities.deactivatedAt));
     return Number(result?.count ?? 0);
   }
 

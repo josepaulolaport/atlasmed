@@ -23,13 +23,17 @@ export interface ClinicMembershipWriter {
   updateTerritoryMembership(
     facilityId: string,
     data: {
-      territoryId: string | null;
       territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
       territoryAssignmentSource: TerritoryAssignmentSource;
     }
   ): Promise<void>;
 
-  findOrtopediaVerticalId(): Promise<string | null>;
+  /** Set one vertical profile's territory without clearing other verticals. */
+  setProfileTerritory(
+    facilityId: string,
+    verticalId: string,
+    territoryId: string | null,
+  ): Promise<void>;
 
   findClinicsForMembership(params?: {
     facilityIds?: string[];
@@ -58,7 +62,6 @@ export class TerritoryMembershipService {
     if (clinic.lat === null || clinic.lng === null) {
       await this.deps.clinicWriter.updateProfileTerritoryMemberships(clinic.id, []);
       await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-        territoryId: null,
         territoryAssignmentStatus: "unassigned",
         territoryAssignmentSource: "geo",
       });
@@ -80,19 +83,9 @@ export class TerritoryMembershipService {
       }))
     );
 
-    const legacyTerritoryId = await this.resolveLegacyBridgeTerritoryId(singleMatches);
-    if (legacyTerritoryId) {
-      await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-        territoryId: legacyTerritoryId,
-        territoryAssignmentStatus: "assigned",
-        territoryAssignmentSource: "geo",
-      });
-      return;
-    }
-
     await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-      territoryId: null,
-      territoryAssignmentStatus: hasAmbiguousMatch ? "ambiguous" : "unassigned",
+      territoryAssignmentStatus:
+        singleMatches.length > 0 ? "assigned" : hasAmbiguousMatch ? "ambiguous" : "unassigned",
       territoryAssignmentSource: "geo",
     });
   }
@@ -201,20 +194,5 @@ export class TerritoryMembershipService {
     }
 
     return { singleMatches, hasAmbiguousMatch };
-  }
-
-  private async resolveLegacyBridgeTerritoryId(
-    singleMatches: ClinicAssignmentTerritoryMatch[]
-  ): Promise<string | null> {
-    if (singleMatches.length === 0) {
-      return null;
-    }
-
-    const ortopediaVerticalId = await this.deps.clinicWriter.findOrtopediaVerticalId();
-    const ortopediaMatch = ortopediaVerticalId
-      ? singleMatches.find((match) => match.verticalId === ortopediaVerticalId)
-      : undefined;
-
-    return (ortopediaMatch ?? singleMatches[0])?.id ?? null;
   }
 }

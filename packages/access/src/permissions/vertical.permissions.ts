@@ -16,8 +16,9 @@ export function canAccessVertical(input: {
   const { role, assignedVerticalIds, verticalId } = input;
   if (!verticalId) return false;
   if (role === Role.ADMIN) {
-    // Empty assign list should not happen for ADMIN (scope loads all active).
-    if (assignedVerticalIds.length === 0) return true;
+    // ADMIN assigns = all active verticals from scope. Empty list: deny filter
+    // (cannot authorize unknown ids; omit filter to see nothing until scope loads).
+    if (assignedVerticalIds.length === 0) return false;
     return assignedVerticalIds.includes(verticalId);
   }
   return assignedVerticalIds.includes(verticalId);

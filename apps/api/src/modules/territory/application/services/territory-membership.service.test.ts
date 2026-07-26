@@ -6,7 +6,7 @@ function createClinicWriter(overrides: Record<string, unknown> = {}) {
   return {
     updateProfileTerritoryMemberships: mock(async () => {}),
     updateTerritoryMembership: mock(async () => {}),
-    findOrtopediaVerticalId: mock(async () => "vertical-ortopedia"),
+    setProfileTerritory: mock(async () => {}),
     findClinicsForMembership: mock(async () => []),
     ...overrides,
   };
@@ -38,7 +38,6 @@ describe("TerritoryMembershipService", () => {
       { verticalId: "vertical-ortopedia", territoryId: "leaf-1" },
     ]);
     expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("clinic-1", {
-      territoryId: "leaf-1",
       territoryAssignmentStatus: "assigned",
       territoryAssignmentSource: "geo",
     });
@@ -71,7 +70,6 @@ describe("TerritoryMembershipService", () => {
       { verticalId: "vertical-derm", territoryId: "derm-1" },
     ]);
     expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("clinic-1", {
-      territoryId: "derm-1",
       territoryAssignmentStatus: "assigned",
       territoryAssignmentSource: "geo",
     });
@@ -150,7 +148,6 @@ describe("TerritoryMembershipService", () => {
       excludeTerritoryId: "removed-territory",
     });
     expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("clinic-1", {
-      territoryId: "other-leaf",
       territoryAssignmentStatus: "assigned",
       territoryAssignmentSource: "geo",
     });
@@ -179,7 +176,6 @@ describe("TerritoryMembershipService", () => {
     );
 
     expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("manual-clinic", {
-      territoryId: null,
       territoryAssignmentStatus: "unassigned",
       territoryAssignmentSource: "geo",
     });
@@ -235,12 +231,10 @@ describe("TerritoryMembershipService", () => {
       excludeTerritoryId: "zone-1",
     });
     expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("c1", {
-      territoryId: null,
       territoryAssignmentStatus: "unassigned",
       territoryAssignmentSource: "geo",
     });
     expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("c2", {
-      territoryId: null,
       territoryAssignmentStatus: "unassigned",
       territoryAssignmentSource: "geo",
     });

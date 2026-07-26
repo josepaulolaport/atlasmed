@@ -1,5 +1,5 @@
 import { db } from "../../../../infrastructure/database/db";
-import { businessVerticals, facilities, facilityVerticalProfiles } from "@atlasmed/database";
+import { facilities, facilityVerticalProfiles } from "@atlasmed/database";
 import { eq, isNull, and, inArray, sql } from "drizzle-orm";
 import type {
   ClinicMembershipTarget,
@@ -46,13 +46,10 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
   async updateTerritoryMembership(
     facilityId: string,
     data: {
-      territoryId: string | null;
       territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
       territoryAssignmentSource: "geo" | "manual";
     }
   ): Promise<void> {
-    // Membership lives on facility_vertical_profiles.territory_id.
-    // Keep assignment status flags on the facility row for legacy clients until dropped.
     await db
       .update(facilities)
       .set({
@@ -63,14 +60,24 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
       .where(eq(facilities.id, facilityId));
   }
 
-  async findOrtopediaVerticalId(): Promise<string | null> {
-    const rows = await db
-      .select({ id: businessVerticals.id })
-      .from(businessVerticals)
-      .where(and(eq(businessVerticals.code, "ORTOPEDIA"), eq(businessVerticals.isActive, true)))
-      .limit(1);
-
-    return rows[0]?.id ?? null;
+  async setProfileTerritory(
+    facilityId: string,
+    verticalId: string,
+    territoryId: string | null,
+  ): Promise<void> {
+    await db
+      .update(facilityVerticalProfiles)
+      .set({
+        territoryId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(facilityVerticalProfiles.facilityId, facilityId),
+          eq(facilityVerticalProfiles.verticalId, verticalId),
+          eq(facilityVerticalProfiles.isActive, true),
+        ),
+      );
   }
 
   async findClinicsForMembership(params?: {

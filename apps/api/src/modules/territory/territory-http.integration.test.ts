@@ -12,7 +12,7 @@ import { access } from "../access/index";
 import { territory } from "../territory/index";
 import { AppError } from "../../shared/errors";
 import { eq } from "drizzle-orm";
-import { territories, facilities } from "@atlasmed/database";
+import { territories, facilities, facilityVerticalProfiles } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -200,9 +200,15 @@ describe("Territory HTTP scope integration", () => {
       .insert(facilities)
       .values({
         displayName: `Delete Flow Facility ${fixtures.uniqueId}`,
-        territoryId: fixtures.extraTerritoryId,
+        territoryAssignmentStatus: "assigned",
       })
       .returning();
+    await db.insert(facilityVerticalProfiles).values({
+      facilityId: facility!.id,
+      verticalId: fixtures.verticalId,
+      territoryId: fixtures.extraTerritoryId,
+      isActive: true,
+    });
 
     const adminToken = await loginToken(fixtures.admin.email);
 
@@ -218,12 +224,15 @@ describe("Territory HTTP scope integration", () => {
 
     const [updatedFacility] = await db
       .select({
-        territoryId: facilities.territoryId,
         territoryAssignmentStatus: facilities.territoryAssignmentStatus,
       })
       .from(facilities)
       .where(eq(facilities.id, facility!.id));
-    expect(updatedFacility?.territoryId).toBeNull();
+    const [profile] = await db
+      .select({ territoryId: facilityVerticalProfiles.territoryId })
+      .from(facilityVerticalProfiles)
+      .where(eq(facilityVerticalProfiles.facilityId, facility!.id));
+    expect(profile?.territoryId).toBeNull();
     expect(updatedFacility?.territoryAssignmentStatus).toBe("unassigned");
 
     const blockedResponse = await authRequest(

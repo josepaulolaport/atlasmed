@@ -182,11 +182,6 @@ async function clearDemoTerritories(): Promise<void> {
     SET territory_id = NULL, updated_at = now()
     WHERE territory_id IN (${sqlInStrings(ids)})
   `);
-  await db.execute(sql`
-    UPDATE public.facilities
-    SET territory_id = NULL, updated_at = now()
-    WHERE territory_id IN (${sqlInStrings(ids)})
-  `);
   await db.delete(territories).where(inArray(territories.id, ids));
 }
 

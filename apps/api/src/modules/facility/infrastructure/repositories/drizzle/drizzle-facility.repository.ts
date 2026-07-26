@@ -95,7 +95,7 @@ function mapFacility(
         ? options.territoryId
         : options.verticalProfiles
           ? deriveProfileTerritoryId(options.verticalProfiles)
-          : facility.territoryId,
+          : null,
     territoryName: options.territoryName ?? null,
     territoryAssignmentStatus: facility.territoryAssignmentStatus,
     territoryAssignmentSource: facility.territoryAssignmentSource,

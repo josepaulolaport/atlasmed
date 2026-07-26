@@ -9,6 +9,7 @@ import {
   sessions,
   userTerritoryAssignments,
   facilities,
+  facilityVerticalProfiles,
   businessVerticals,
 } from "@atlasmed/database";
 import { db } from "../../../infrastructure/database/db";
@@ -18,6 +19,7 @@ const TEST_PASSWORD = "Password123!";
 
 export interface ScopeIntegrationFixtures {
   uniqueId: string;
+  verticalId: string;
   territoryId: string;
   extraTerritoryId: string;
   outOfScopeTerritoryId: string;
@@ -247,7 +249,6 @@ export async function seedScopeIntegrationFixtures(
     .insert(facilities)
     .values({
       displayName: `Scope Facility In ${uniqueId}`,
-      territoryId,
       streetAddress: "Rua Teste",
       streetNumber: "100",
       neighborhood: "Centro",
@@ -258,6 +259,7 @@ export async function seedScopeIntegrationFixtures(
       email: `facility.in.${uniqueId}@test.example.com`,
       websiteUrl: "https://example.com/facility",
       location: sql`ST_SetSRID(ST_MakePoint(${-46.6333}, ${-23.5505}), 4326)`,
+      territoryAssignmentStatus: "assigned",
     })
     .returning()
     .then((r) => r[0]!);
@@ -266,13 +268,29 @@ export async function seedScopeIntegrationFixtures(
     .insert(facilities)
     .values({
       displayName: `Scope Facility Out ${uniqueId}`,
-      territoryId: outOfScopeTerritoryId,
+      territoryAssignmentStatus: "assigned",
     })
     .returning()
     .then((r) => r[0]!);
 
+  await db.insert(facilityVerticalProfiles).values([
+    {
+      facilityId: inScopeFacility.id,
+      verticalId,
+      territoryId,
+      isActive: true,
+    },
+    {
+      facilityId: outOfScopeFacility.id,
+      verticalId,
+      territoryId: outOfScopeTerritoryId,
+      isActive: true,
+    },
+  ]);
+
   return {
     uniqueId,
+    verticalId,
     territoryId,
     extraTerritoryId,
     outOfScopeTerritoryId,

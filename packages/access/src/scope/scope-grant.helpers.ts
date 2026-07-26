@@ -32,6 +32,8 @@ export function mergeGrantsIntoScope(
   return withTerritoryScopeAliases({
     isGlobal: scope.isGlobal,
     assignedTerritoryIds: scope.assignedTerritoryIds,
+    assignedVerticalIds: scope.assignedVerticalIds,
+    activeVerticalId: scope.activeVerticalId,
     effectiveTerritoryIds: [...effectiveTerritoryIds],
     analyticsEffectiveTerritoryIds: [...analyticsEffectiveTerritoryIds],
     facilityIds: [...facilityIds],

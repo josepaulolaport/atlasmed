@@ -13,6 +13,26 @@ describe("canAccessVertical", () => {
     ).toBe(true);
   });
 
+  it("denies ADMIN filter when assigned list is empty", () => {
+    expect(
+      canAccessVertical({
+        role: Role.ADMIN,
+        assignedVerticalIds: [],
+        verticalId: "v1",
+      })
+    ).toBe(false);
+  });
+
+  it("denies ADMIN filter outside active assigns", () => {
+    expect(
+      canAccessVertical({
+        role: Role.ADMIN,
+        assignedVerticalIds: ["v1", "v2"],
+        verticalId: "bogus",
+      })
+    ).toBe(false);
+  });
+
   it("denies REP outside assignments", () => {
     expect(
       canAccessVertical({

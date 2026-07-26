@@ -89,13 +89,28 @@ export class InvitationTerritoryValidatorService {
       territoryIds: string[];
     }>,
   ): Promise<void> {
-    if (roleName === Role.ADMIN || roleName === Role.OPS) {
+    if (roleName === Role.ADMIN) {
       throw new ValidationError([
         {
           field: "verticalAssignments",
-          message: `${roleName} role does not support territory or manager assignments`,
+          message: "ADMIN role does not support territory or manager assignments",
         },
       ]);
+    }
+
+    // OPS: vertical-only assigns (no patch UTA / manager). Scope uses assignedVerticalIds.
+    if (roleName === Role.OPS) {
+      for (const [index, vertical] of verticalAssignments.entries()) {
+        if (vertical.territoryIds.length > 0 || vertical.managerId) {
+          throw new ValidationError([
+            {
+              field: `verticalAssignments.${index}`,
+              message: "OPS invitations support business verticals only (no territories or manager)",
+            },
+          ]);
+        }
+      }
+      return;
     }
 
     for (const [index, vertical] of verticalAssignments.entries()) {
