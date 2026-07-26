@@ -1,9 +1,10 @@
-# Spec 0003 addendum: Territory ownership × business verticals (P1 design draft)
+# Spec 0003 addendum: Territory ownership × business verticals (P1 design)
 
-**Status:** Draft — decisions open (see §8)  
+**Status:** Accepted (product decisions locked 2026-07-26)  
 **Created:** 2026-07-25  
 **Depends on:** Business Verticals P0 ([`business-verticals.md`](../../architecture/features/business-verticals.md)), Spec 0003 requirements, Spec 0006 (shared coverage — related but distinct)  
-**Out of this doc:** Dermatologia seed, product catalog filtering, assignment history windows (P2)
+**Out of this doc:** Dermatologia seed, product catalog filtering, assignment history windows (P2)  
+**Deferred to tasks PR (engineering):** membership column vs join table; exact recompute triggers; legacy `facilities.territoryId` drop timing
 
 ---
 
@@ -27,17 +28,17 @@ P0 scope = territory ∪ consultant facilities **∩** profiles in resolved vert
 
 ## 2. Goals
 
-1. Keep polygons / manager-zone → rep-patch tree as **global geo** (Spec 0003 structure).
-2. Make **who owns a patch for sales** an assignment **× vertical**.
-3. Define **override precedence** between geo-territory membership and per-vertical consultant assign (locked intent from verticals doc; needs precise rules).
+1. Keep Spec 0003 zone → patch tree shape, but **rows are per vertical** (Q5).
+2. Store clinic↔patch membership **per vertical** for cheap scope reads (Q6 C).
+3. Define precedence: consultant assign (REP) vs geo membership (MANAGER coverage).
 4. Align live APIs with invite-shaped **per-vertical territory lists**.
 5. Stay compatible with P0 facility visibility (unprofiled = ADMIN-only; one REP per facility×vertical).
 
 ## 3. Non-goals
 
-- Parallel territory tables / apps per vertical.
-- Putting a single `vertical_id` owner column back on `territories`.
-- Spec 0006 full “shared overlapping rep patches + clinic-only ownership” rewrite (related; sequence TBD — §8 Q7).
+- Parallel apps / separate map products per vertical.
+- Live point-in-polygon on every list/scope request (Q6 rejected D).
+- Spec 0006 full “shared overlapping rep patches + clinic-only ownership” rewrite (related; after this addendum).
 - Assignment history / validity windows (P2).
 - Redesigning IBGE grouping ingestion or map drawing tools.
 
@@ -45,79 +46,92 @@ P0 scope = territory ∪ consultant facilities **∩** profiles in resolved vert
 
 ## 4. Proposed model (working)
 
-### 4.1 Layers (unchanged vs P0)
+### 4.1 Layers (revised after Q3/Q5)
 
 | Layer | Role |
 |---|---|
-| `territories` + types | Global geometry; manager zone contains rep patch |
-| `facilities.territoryId` | Global geo membership (point-in-polygon); **not** commercial owner |
+| `territories` + types | Geometry **per vertical** — new vertical ⇒ **new zone/patch rows** (Q5 D), not one shared polygon with multi-vertical assigns |
+| Territory ↔ vertical | Territory belongs to **one** vertical (`territories.vertical_id` candidate) |
+| Clinic ↔ patch membership | **Per vertical** (Q6 **C**) — not a single global `facilities.territoryId` for access. Store membership (join / profile FK); PIP only on write/recompute |
 | `facility_vertical_profiles` | Clinic participates commercially in a vertical |
-| `facility_consultant_assignments` | Authoritative **clinic×vertical** REP (P0) |
-| `user_territory_assignments` | **Change:** which user covers which patch **for which vertical** |
+| `facility_consultant_assignments` | Authoritative **clinic×vertical** REP (manual; one per pair) |
+| `user_territory_assignments` | User ↔ territory row (territory already implies vertical). Q1: same user cannot hold same territory in two verticals — satisfied if territory has one vertical |
 
-### 4.2 Schema direction (candidate)
+### 4.2 Schema direction (candidate — revise vs early draft)
 
-Extend live assignments to match invite staging:
+Early draft put `vertical_id` only on UTA with shared geometry. **Q5 D rejects that** for zones.
 
-```text
-user_territory_assignments
-  user_id
-  territory_id
-  vertical_id          -- NEW, FK business_verticals, NOT NULL after backfill
-  assigned_by
-  timestamps
-
-UNIQUE (user_id, territory_id, vertical_id)
--- plus product rule: at most one REP assignee per (territory_id, vertical_id)?  → OPEN (§8 Q2)
-```
-
-Migration: existing rows → Ortopedia `vertical_id` (same pattern as P0 consultant/profile backfill).
-
-Invite/`replace` assignments already send `verticalAssignments[].territoryIds` — persist into the new unique key.
-
-### 4.3 Scope algorithm (candidate)
-
-For OPS / MANAGER / REP with `resolvedVerticalIds`:
+Candidate instead:
 
 ```text
-1. Load user_territory_assignments WHERE vertical_id IN resolvedVerticalIds
-2. Expand manager zones → patches (Spec 0003 effectiveTerritoryIds rules) per those rows
-3. facilityIds_geo = facilities in those patches (via territoryId / existing ports)
-4. facilityIds_direct = active consultant assigns WHERE vertical_id IN resolvedVerticalIds
-5. facilityIds_raw = union(geo, direct)
-6. facilityIds = intersect(facilityIds_raw, active profiles in resolvedVerticalIds)
+territories.vertical_id  NOT NULL  -- FK business_verticals; one vertical per territory row
+user_territory_assignments stays UNIQUE (user_id, territory_id)
+-- invite territory picks are already per-vertical; they select territory rows of that vertical
 ```
 
-ADMIN: unchanged global; optional `verticalId` filter on profiles (P0).
+Ortopedia backfill: existing territories → Ortopedia. New vertical → create new zone/patch rows (copy geometry optional later; product = recreate).
 
-### 4.4 Override precedence (candidate — needs product lock)
+### 4.2b Clinic membership (locked Q6 **C**)
 
-| Situation | Visibility (list/map) | “Responsible REP” display |
-|---|---|---|
-| Clinic in REP A’s patch (vertical V), no consultant row | A sees clinic (if profile V) | A (or “território”) |
-| Clinic in REP A’s patch, consultant = REP B for V | **B** sees clinic; A? → OPEN (§8 Q4) | B |
-| Clinic in no patch, consultant = B for V | B sees clinic | B |
-| Profile missing for V | Neither (ADMIN only) | n/a |
+Single `facilities.territoryId` cannot express “in Ortopedia patch A **and** Dermatologia patch B.”
 
-Intent from verticals testing bar: *direct assignment overrides territory only inside that vertical.*
+**Locked:** per-vertical membership stored for reads (FK / join). Candidates:
+
+- `facility_vertical_profiles.territory_id` (membership lives with commercial profile), or
+- `facility_territory_memberships (facility_id, territory_id)` with territory already carrying `vertical_id`
+
+PIP / polygon cover runs on **assign or recompute** (zone edit, facility move), **not** on every list/scope resolve. Manager geo scope stays `findIdsByTerritoryIds`-shaped (cheap).
+
+Legacy `facilities.territoryId` may remain display/migration bridge until cutover; access must not depend on it alone after dual-vertical.
+
+### 4.3 Scope algorithm (locked direction from Q4–Q4c)
+
+**REP** (`resolvedVerticalIds`):
+
+```text
+facilityIds = active consultant assigns for self
+              WHERE vertical_id IN resolvedVerticalIds
+              ∩ facilities with active profile in those verticals
+```
+
+Geo / `user_territory_assignments` **does not** add clinics for REPs.
+
+**MANAGER**:
+
+```text
+facilityIds_geo = clinics with stored membership in manager's zones
+                  (per-vertical membership — Q6 C)
+                  WHERE manager has that vertical
+facilityIds = (facilityIds_geo ∪ own consultant assigns)
+              ∩ active profiles in resolvedVerticalIds
+```
+
+Unassigned (no consultant): still visible to covering manager+vertical (Q4b).
+
+**OPS**:
+
+```text
+facilityIds = facilities with active profile in resolvedVerticalIds
+```
+
+(No zone cover required — Q4c.)
+
+**ADMIN:** global; optional `verticalId` profile filter (P0).
 
 ### 4.5 Manager zones
 
-**Candidate:** managers also get `user_territory_assignments` with `vertical_id` (zone ids). Oversight expansion stays Spec 0003, filtered by vertical.
+**Locked (Q3):** zones are **individual to their vertical**. Manager may own **one or more zones** across **one or more verticals** via UTA to those territory rows (vertical implied by `territories.vertical_id`). Oversight expansion stays Spec 0003, filtered to those zone rows.
 
-Alternative: managers stay vertical-agnostic on zones; only REP patches are vertical-scoped — weaker, probably wrong for multi-vertical managers.
+### 4.6 Same place, two verticals
 
-### 4.6 Same patch, two verticals
-
-Allowed and expected:
+**Q5 D:** two territory rows (may share similar drawn geometry). **Different users** across those rows — expected. Q1: same user cannot hold both if they were the “same” patch identity across verticals — enforced by separate rows + product rules on assign UI.
 
 ```text
-Patch Centro
-├── Ortopedia  → REP A (and/or Manager M1)
-└── Dermatologia → REP B (and/or Manager M2)
+Centro (Ortopedia territory)     → REP A / Manager M1
+Centro (Dermatologia territory)  → REP B / Manager M2
 ```
 
-Same as clinic×vertical multi-REP: different commercial ownership, shared geometry.
+Clinic may hold **two memberships** (Q6 C), one per vertical patch.
 
 ---
 
@@ -125,11 +139,11 @@ Same as clinic×vertical multi-REP: different commercial ownership, shared geome
 
 | Surface | Change |
 |---|---|
-| `PUT /access/users/:id/assignments` | Already `verticalAssignments[]` — write `vertical_id` on UTA |
-| Territory list for invite pickers | Keep `?verticalId=` (or manager+vertical) |
-| Scope cache | Invalidate on UTA change; key must include vertical set |
-| Mobile/web territory assign UI | Per-vertical patch lists (invite already close); live manage must match |
-| Facility detail “territory” label | Still geo patch name (global); commercial owner from consultant×vertical |
+| `PUT /access/users/:id/assignments` | `verticalAssignments[]` selects territory rows of that vertical (vertical via territory FK) |
+| Territory list for invite pickers | Keep `?verticalId=` — return only territories of that vertical |
+| Scope cache | Invalidate on UTA / membership recompute; key must include vertical set |
+| Mobile/web territory assign UI | Per-vertical zone/patch lists; groupings never assignable (Q8) |
+| Facility detail “territory” label | Per active vertical: membership patch name; commercial owner from consultant×vertical |
 
 No vertical id in URL paths (verticals P0 rule).
 
@@ -142,53 +156,75 @@ No vertical id in URL paths (verticals P0 rule).
 | Same **vertical**, overlapping geo, many clinics, many REPs | Same **geo**, **different verticals**, clear owners |
 | Questions exclusive sibling patches | Assumes Spec 0003 exclusive patches still OK for P1 |
 
-**Recommended sequence (proposal):** ship this vertical×assignment addendum **before** Spec 0006 overlap rewrite. Dermatologia can share polygons with Ortopedia under exclusive patches; Spec 0006 still needed if two Ortopedia REPs must share a bairro.
+**Recommended sequence (locked Q7 A):** this territory×vertical addendum **before** Dermatologia seed; Spec 0006 overlap rewrite still later / separate. Dermatologia gets its own zone/patch rows (Q5), not shared Ortopedia geometry.
 
 ---
 
 ## 7. Migration sketch
 
-1. Add nullable `vertical_id` on `user_territory_assignments`.
-2. Backfill Ortopedia.
-3. Set NOT NULL; drop old unique `(user_id, territory_id)`; add new unique.
-4. Deploy API that reads/writes vertical-aware UTA.
-5. Re-invite / admin audit: users with multiple verticals but patches only on Ortopedia — product decides copy vs blank Dermatologia (§8 Q5).
+1. Add `territories.vertical_id`; backfill existing → Ortopedia.
+2. Introduce per-vertical clinic membership (profile FK or membership table); backfill from `facilities.territoryId` for Ortopedia.
+3. Scope ports read membership, not sole reliance on `facilities.territoryId`.
+4. Create Dermatologia (etc.) zone/patch rows when that vertical ships; recompute membership for those polygons.
+5. Cut over / drop legacy single-FK access path when dual-vertical is live.
 
 ---
 
-## 8. Open questions (need answers)
+## 8. Product decisions (locked)
 
 | # | Question | Options / notes |
 |---|---|---|
-| **Q1** | May the **same user** hold the **same patch** in **multiple verticals**? | Default lean: **yes** |
-| **Q2** | At most **one REP** per `(territory_id, vertical_id)`? | Lean: **yes** for exclusive-patch world; Spec 0006 may relax later |
-| **Q3** | Managers: zone assignment **per vertical** or vertical-agnostic? | Lean: **per vertical** |
-| **Q4** | When consultant B overrides patch owned by A (same vertical): does A still **see** the clinic? | Lean: **no** (override removes geo visibility for A); or soft “coverage without ownership” |
-| **Q5** | Multi-vertical user with patches only backfilled to Ortopedia: auto-copy patches to new verticals on Dermatologia seed, or blank until assigned? | Lean: **blank** (explicit assign) |
-| **Q6** | Does `facilities.territoryId` stay **single global** geo FK forever in this design? | Lean: **yes** |
-| **Q7** | Ship Dermatologia **before** this territory addendum (rely on consultant + shared patches), or **block** Dermatologia until UTA has `vertical_id`? | Lean: territory addendum **before** or **with** Dermatologia — not after silent production dual-vertical |
-| **Q8** | Grouping territories (IBGE): assignable to users per vertical, or never? | Lean: **never** (assignment graph only) — confirm |
-| **Q9** | Analytics rollups: count clinic once per vertical when manager has multi-vertical zones? | Lean: **per active vertical filter / union rules** same as list APIs |
+| **Q1** | May the **same user** hold the **same patch** in **multiple verticals**? | **Locked: B — no.** A user may hold a given patch in only one vertical. |
+| **Q2** | How many REPs per `(patch, vertical)`? | **Locked: B — zero or more**, with product nuance: a **rep patch does not bind a REP to that area** as authoritative ownership. **Manager** assignment to a zone/patch **does** bind coverage. REPs are owned **manually** (clinic-level / consultant path). Full shared-coverage redesign (Spec 0006) **not in this P1 slice** — do not let exclusivity constraints block vertical×UTA work. |
+| **Q3** | Managers: zone assignment **per vertical** or vertical-agnostic? | **Locked: A + product wording.** Zones are **individual to their vertical**. A manager may own **one or more zones** in **one or more verticals**. Not vertical-agnostic (B). |
+| **Q4** | REP clinic visibility vs territory / consultant | **Locked: D (product).** REPs see a clinic **only** via **manual** `facility_consultant_assignments` for a vertical they have. **One REP per (clinic, vertical).** Geo patch assignment does **not** grant REP clinic visibility. |
+| **Q4b** | Clinic with profile, **no** consultant yet | **Locked: B + vertical.** **MANAGER** whose **zone covers** the clinic **and** who belongs to that clinic’s vertical; plus **ADMIN**. REPs still only via consultant. |
+| **Q4c** | OPS sees unassigned (no consultant) profiled clinic? | **Locked: B.** Yes if OPS has that vertical (no zone cover required). |
+| **Q5** | New vertical vs existing Ortopedia zones | **Locked: D.** Zones are **recreated per vertical** (new territory rows), not copied assigns onto shared geometry. Dermatologia gets its own zone/patch entities. |
+| **Q6** | Clinic geo membership when zones are per-vertical | **Locked: C.** Per-vertical membership stored (profile FK or membership table). PIP on write/recompute only — not live PIP for access (rejected D for hot path). |
+| **Q7** | Dermatologia vs territory addendum sequencing | **Locked: A.** Territory addendum first (per-vertical zones + membership); Dermatologia after. Not together (B); not Dermatologia-first on shared patches (C). |
+| **Q8** | Grouping territories (IBGE): assignable? | **Locked: A.** Never assignable — graph/org only. Only manager zones + rep patches get UTA. |
+| **Q9** | Analytics grain vs multi-vertical coverage | **Locked: A + anti false-positive.** Same vertical filter as list APIs. Fact grain = `(facility, vertical)`. Never imply coverage in V2 because clinic is covered in V1. |
+
+### Q9 — Analytics anti false-positive (how)
+
+**Unit of truth:** commercial coverage is `(facility F, vertical V)`, not building F alone.
+
+A clinic enters a vertical’s analytics **only if all** hold for that V:
+
+1. Active `facility_vertical_profiles` for V  
+2. In-scope for the viewer for V (MANAGER: stored membership in their V zones ∪ own consultant; REP: consultant only; OPS: profile in V; ADMIN: global + filter)  
+3. Metrics that need a consultant (e.g. “assigned”) use `facility_consultant_assignments` for **that same V** — not another vertical’s assign
+
+| Situation | Ortopedia filter | Dermatologia filter |
+|---|---|---|
+| Profile + membership only Ortopedia | counts | **must not** count |
+| Profile both; manager zone only Ortopedia | counts (if in scope) | **must not** (no Derm membership / zone) |
+| Profile both; zones both; consultant only Ortopedia | in geo KPIs; “has consultor” yes | in geo KPIs; “has consultor” **no** |
+
+**All-verticals view:** series **per vertical** (or labeled profile counts). No silent global clinic dedupe that hides “covered in one vertical, not the other.”
+
+**Implementation sketch:** analytics queries join/filter on `vertical_id` the same way list scope does; reuse scope facility ids **already resolved for the active vertical set** — do not start from bare `facilities.id` then attach any vertical.
 
 ---
 
-## 9. Acceptance criteria (draft — refine after §8)
+## 9. Acceptance criteria
 
-1. WHEN a user is assigned patch T only for vertical V1 THEN scope for V2 SHALL NOT include T’s geo clinics solely from that row.
-2. WHEN the same patch T is assigned to REP A for V1 and REP B for V2 THEN each SHALL see profiled clinics in T only for their vertical (modulo consultant override).
-3. WHEN an active consultant assign exists for (facility F, vertical V) THEN the responsible REP for (F,V) SHALL be that assignee; territory display MAY still show geo patch name.
-4. WHEN consultant override applies THEN visibility SHALL follow the locked override rule from §8 Q4.
-5. WHEN invite `verticalAssignments` are accepted THEN live UTA rows SHALL carry the same `vertical_id` as staged.
-6. WHEN Ortopedia-only historical UTA is migrated THEN every row SHALL receive Ortopedia `vertical_id` and users SHALL not lose Ortopedia geo scope.
+1. WHEN a user is assigned territory T of vertical V1 only THEN scope for V2 SHALL NOT include T’s geo clinics from that row.
+2. WHEN clinic F has membership/profile for V1 but not V2 THEN analytics/list for V2 SHALL NOT include F (no cross-vertical false positive).
+3. WHEN an active consultant assign exists for (F, V) THEN the responsible REP for (F,V) SHALL be that assignee; territory display uses per-vertical membership patch name.
+4. WHEN consultant rules apply THEN visibility SHALL follow §8 Q4–Q4c (REP consultant-only; MANAGER zone∪consultant; OPS profile-in-vertical).
+5. WHEN invite territory picks are accepted THEN live UTA points at territory rows of that vertical.
+6. WHEN Ortopedia historical territories/membership migrate THEN Ortopedia scope SHALL be preserved; new verticals start empty until zones + membership exist.
+7. WHEN analytics active vertical = V THEN rollups SHALL use only `(facility, V)` facts in scope for V (Q9).
 
 ---
 
 ## 10. Suggested next steps
 
-1. Answer §8 (product).
-2. Promote this draft → accepted design; update Spec 0003 requirements + context-map.
-3. Tasks PR: schema → ScopeResolver → invite accept path → mobile/web manage-assign → tests.
-4. Sequence vs Dermatologia seed per Q7.
+1. Tasks PR: `territories.vertical_id` → per-vertical membership → ScopeResolver → invite/manage-assign UI → analytics joins → tests.
+2. Align Spec 0003 requirements text with this addendum (FK membership after write-time PIP; per-vertical rows).
+3. Dermatologia seed only after this addendum ships (Q7 A).
 
 ---
 
