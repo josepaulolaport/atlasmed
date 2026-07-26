@@ -87,8 +87,8 @@ export class ListFacilitiesUseCase {
 
     let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
     try {
+      // commercialStatus filtered in Postgres hydrate (not indexed on Meili).
       const canonicalFilters = [
-        input.commercialStatus ? eqFilter("commercialStatus", input.commercialStatus) : undefined,
         input.radiusKm !== undefined && input.latitude !== undefined && input.longitude !== undefined
           ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
           : undefined,

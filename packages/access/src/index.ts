@@ -92,6 +92,11 @@ export {
   hasMinimumRole,
   isAdmin,
 } from "./permissions/ui.permissions";
+export {
+  VERTICAL_ID_HEADER,
+  canAccessVertical,
+  resolveAccessibleVerticalIds,
+} from "./permissions/vertical.permissions";
 
 export * from "./subjects/subjects";
 

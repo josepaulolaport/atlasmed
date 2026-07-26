@@ -56,8 +56,8 @@ describe("search rebuild", () => {
         cnesCode: "789",
         city: "São Paulo",
         state: "SP",
-        commercialStatus: "ACTIVE",
-        territoryId: "territory-1",
+        verticalIds: ["vertical-a"],
+        territoryIds: ["territory-1"],
         territoryAssignmentStatus: "assigned",
         latitude: -23.55,
         longitude: -46.63,
@@ -74,9 +74,8 @@ describe("search rebuild", () => {
       cnesCode: "789",
       city: "São Paulo",
       state: "SP",
-      commercialStatus: "ACTIVE",
-      verticalIds: [],
-      territoryId: "territory-1",
+      verticalIds: ["vertical-a"],
+      territoryIds: ["territory-1"],
       territoryAssignmentStatus: "assigned",
       _geo: { lat: -23.55, lng: -46.63 },
     });
@@ -85,9 +84,10 @@ describe("search rebuild", () => {
   test("maps registry-inactive facilities that remain visible in the canonical list", () => {
     expect(mapFacilitySearchDocument({
       id: "facility-1", displayName: "Clínica", legalName: null, tradeName: null,
-      cnpj: null, cpf: null, cnesCode: null, city: null, state: null, commercialStatus: null,
+      cnpj: null, cpf: null, cnesCode: null, city: null, state: null,
       verticalIds: ["vertical-a"],
-      territoryId: null, territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
+      territoryIds: [],
+      territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
       deactivatedAt: null, isActiveInRegistry: false,
     })).toEqual({
       id: "facility-1",
@@ -99,9 +99,8 @@ describe("search rebuild", () => {
       cnesCode: null,
       city: null,
       state: null,
-      commercialStatus: null,
       verticalIds: ["vertical-a"],
-      territoryId: null,
+      territoryIds: [],
       territoryAssignmentStatus: "unassigned",
     });
   });
@@ -109,8 +108,8 @@ describe("search rebuild", () => {
   test("excludes deactivated facilities", () => {
     expect(mapFacilitySearchDocument({
       id: "facility-1", displayName: "Clínica", legalName: null, tradeName: null,
-      cnpj: null, cpf: null, cnesCode: null, city: null, state: null, commercialStatus: null,
-      territoryId: null, territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
+      cnpj: null, cpf: null, cnesCode: null, city: null, state: null,
+      territoryIds: [], territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
       deactivatedAt: new Date(), isActiveInRegistry: true,
     })).toBeNull();
   });
@@ -151,20 +150,22 @@ describe("search rebuild", () => {
   });
 
   test("exposes hybrid filter and distance-sort index settings", () => {
-    expect(searchRebuild.FACILITY_SETTINGS).toMatchObject({
-      filterableAttributes: expect.arrayContaining([
+    const facilityFilterable = [...searchRebuild.FACILITY_SETTINGS.filterableAttributes];
+    expect(facilityFilterable).toEqual(
+      expect.arrayContaining([
         "id",
-        "commercialStatus",
         "verticalIds",
-        "territoryId",
+        "territoryIds",
         "territoryAssignmentStatus",
         "_geo",
-      ]),
-      sortableAttributes: ["_geo"],
-    });
-    expect(searchRebuild.PROFESSIONAL_SETTINGS).toMatchObject({
-      filterableAttributes: expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"]),
-    });
+      ])
+    );
+    expect(facilityFilterable).not.toContain("commercialStatus");
+    expect(facilityFilterable).not.toContain("territoryId");
+    expect(searchRebuild.FACILITY_SETTINGS.sortableAttributes).toEqual(["_geo"]);
+    expect(searchRebuild.PROFESSIONAL_SETTINGS.filterableAttributes).toEqual(
+      expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"])
+    );
   });
 
   test("publishes the completed temporary index when no stable index exists", async () => {

@@ -350,6 +350,28 @@ Still required for ship slice B (not territory redesign):
 - Cadastro inference rules above
 - UI “Vertical”
 
+### 11.3 Locked answers (follow-up, 2026-07-26)
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Under-called backlog | **Implement** in code (multi-PR), not docs-only |
+| 2 | Active vertical | Header `X-AtlasMed-Vertical-Id` = **optional filter** only. Token/`user_vertical_assignments` always authorizes. No forced picker; user sends header only when narrowing. Must be ⊆ assigned (ADMIN: ⊆ all active) |
+| 3 | ADMIN, no filter | **All active** verticals |
+| 4 | Spec 0006 | **Minimal:** many REPs may share a patch UTA; clinic list still **only** consultant assign |
+| 5 | Meili `commercialStatus` | **Drop** from index; status filter in Postgres hydrate |
+| 6 | Competitors × vertical | **Defer** |
+| 7 | `facilities.territoryId` | **Full cutover** → profile `territory_id` only; drop column |
+| 8 | OPS | **Enforce everywhere** — assigned verticals only |
+| 9 | Access grants × vertical | **Defer** schema; document gap |
+| 10 | Consolidated multi-vertical payload | **Never mix** commercial fields; client switches filter/header |
+| 11 | Vertical deactivate / CNES auto-profile | Soft `business_verticals.is_active` only; auto-suggest **deferred** |
+| 12 | CASL × vertical (P2.9) | Ability helpers + request vertical resolution; scope/query still enforce. Grants stay type-level until #9 |
+
+**Deploy notes (when shipping code for the above):**
+
+- After Meili document shape change (`verticalIds` / `territoryIds`, no `commercialStatus`), run a **full facilities search rebuild**.
+- `facilities.territory_id` column drop is a follow-up migration; membership write/read already uses `facility_vertical_profiles.territory_id`.
+
 ---
 
 ## 12. Source notes

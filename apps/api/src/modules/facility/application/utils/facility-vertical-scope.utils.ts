@@ -14,17 +14,21 @@ export function buildFacilityListScope(input: {
   verticalId?: string;
 }): FacilityListScopeFilter {
   const assignedVerticalIds = input.scope.assignedVerticalIds ?? [];
+  // Header already applied onto scope.activeVerticalId in auth plugin.
+  const filterVerticalId =
+    input.verticalId ?? input.scope.activeVerticalId ?? undefined;
   const resolvedVerticalIds = resolveVerticalIds({
     role: input.role,
     assignedVerticalIds,
-    queryVerticalId: input.verticalId,
+    queryVerticalId: filterVerticalId,
   });
 
   if (input.scope.isGlobal && input.role === Role.ADMIN) {
     return {
       isGlobal: true,
       verticalIds: resolvedVerticalIds,
-      restrictToVerticalProfiles: Boolean(input.verticalId),
+      // Unprofiled facilities: ADMIN only when not filtering to one vertical.
+      restrictToVerticalProfiles: Boolean(filterVerticalId),
     };
   }
 
@@ -45,6 +49,7 @@ export function applyVerticalProfileContext(
   verticalIds?: string[],
 ): {
   commercialStatus?: FacilityCommercialStatus;
+  purchaseStatus?: FacilityPurchaseStatus;
   verticalProfiles?: FacilityVerticalProfileRecord[];
 } {
   const profiles = facility.verticalProfiles ?? [];
@@ -56,14 +61,22 @@ export function applyVerticalProfileContext(
   if (matching.length === 1) {
     return {
       commercialStatus: matching[0]!.commercialStatus ?? undefined,
+      purchaseStatus: matching[0]!.purchaseStatus ?? undefined,
     };
   }
 
   if (matching.length > 1) {
+    // Never flatten multi-vertical commercial fields into one payload.
     return { verticalProfiles: matching };
+  }
+
+  // No matching profile in resolved verticals — do not leak legacy global commercial.
+  if (profiles.length > 0 || (verticalIds && verticalIds.length > 0)) {
+    return {};
   }
 
   return {
     commercialStatus: facility.commercialStatus ?? undefined,
+    purchaseStatus: facility.purchaseStatus ?? undefined,
   };
 }

@@ -1,33 +1,52 @@
-import { Role } from "@atlasmed/access";
+import {
+  Role,
+  VERTICAL_ID_HEADER,
+  resolveAccessibleVerticalIds,
+} from "@atlasmed/access";
 import { ForbiddenError } from "../../../../shared/errors";
+
+export { VERTICAL_ID_HEADER };
 
 export interface ResolveVerticalIdsInput {
   role: string;
   assignedVerticalIds: string[];
+  /** Optional query/body filter. */
   queryVerticalId?: string | null;
+  /** Optional header filter (wins over query when both set). */
+  headerVerticalId?: string | null;
 }
 
 /**
  * Returns the vertical IDs the caller may use for filtering.
- * Throws ForbiddenError when queryVerticalId is outside the user's assignments
- * (non-ADMIN).
+ * Filter source: header `X-AtlasMed-Vertical-Id` preferred, else query/body.
+ * Always ∩ token assignments (ADMIN assignments = all active verticals from scope).
  */
 export function resolveVerticalIds(input: ResolveVerticalIdsInput): string[] {
-  const { role, assignedVerticalIds, queryVerticalId } = input;
+  const filterVerticalId = input.headerVerticalId?.trim() || input.queryVerticalId?.trim() || null;
 
-  if (role === Role.ADMIN) {
-    if (queryVerticalId) {
-      return [queryVerticalId];
-    }
-    return assignedVerticalIds;
+  const result = resolveAccessibleVerticalIds({
+    role: input.role,
+    assignedVerticalIds: input.assignedVerticalIds,
+    filterVerticalId,
+  });
+
+  if (!result.ok) {
+    throw new ForbiddenError();
   }
 
-  if (queryVerticalId) {
-    if (!assignedVerticalIds.includes(queryVerticalId)) {
-      throw new ForbiddenError();
-    }
-    return [queryVerticalId];
+  // ADMIN with unknown filter id not in active list → forbid (except empty assign edge).
+  if (
+    input.role === Role.ADMIN &&
+    filterVerticalId &&
+    input.assignedVerticalIds.length > 0 &&
+    !input.assignedVerticalIds.includes(filterVerticalId)
+  ) {
+    throw new ForbiddenError();
   }
 
-  return assignedVerticalIds;
+  return result.verticalIds;
+}
+
+export function readVerticalIdHeader(headers: Headers | { get(name: string): string | null }): string | null {
+  return headers.get(VERTICAL_ID_HEADER) ?? headers.get("X-AtlasMed-Vertical-Id");
 }

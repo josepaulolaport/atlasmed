@@ -69,6 +69,7 @@ function serializeVerticalProfile(profile: FacilityVerticalProfileRecord) {
     isActive: profile.isActive,
     commercialStatus: profile.commercialStatus ?? undefined,
     purchaseStatus: profile.purchaseStatus ?? undefined,
+    territoryId: profile.territoryId ?? undefined,
   };
 }
 

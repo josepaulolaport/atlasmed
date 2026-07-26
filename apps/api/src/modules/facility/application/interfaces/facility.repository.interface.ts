@@ -28,6 +28,8 @@ export interface FacilityVerticalProfileRecord {
   isActive: boolean;
   commercialStatus: FacilityCommercialStatus | null;
   purchaseStatus: FacilityPurchaseStatus | null;
+  /** Profile membership territory (source of truth; not facilities.territory_id). */
+  territoryId?: string | null;
 }
 
 export interface FacilityRecord {

@@ -290,7 +290,7 @@ describe("ListFacilitiesUseCase", () => {
     ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE", statusCode: 503 });
   });
 
-  it("prefilters textual facility search by representable status, facility scope, radius, and distance sort", async () => {
+  it("prefilters textual facility search by facility scope, radius, and distance sort (status in Postgres)", async () => {
     let options: unknown;
     const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
     repository.findAllByIds = async () => [];
@@ -318,7 +318,7 @@ describe("ListFacilitiesUseCase", () => {
     expect(options).toEqual({
       limit: 20,
       offset: 0,
-      filter: "commercialStatus = 'ACTIVE' AND _geoRadius(-23.55, -46.63, 5000) AND id IN ['facility-1', 'facility-2']",
+      filter: "_geoRadius(-23.55, -46.63, 5000) AND id IN ['facility-1', 'facility-2']",
       sort: ["_geoPoint(-23.55, -46.63):asc"],
     });
   });
@@ -339,7 +339,7 @@ describe("ListFacilitiesUseCase", () => {
     expect(options?.filter).toBe("id = '__none__'");
   });
 
-  it("keeps representable facility filters when the scope expression exceeds the safe bound", async () => {
+  it("drops oversized scope filter and keeps geo/vertical Meili clauses when bound exceeded", async () => {
     let options: { filter?: string } | undefined;
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
@@ -358,7 +358,8 @@ describe("ListFacilitiesUseCase", () => {
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 1_000 }, (_, index) => `facility-${index}-${"x".repeat(20)}`), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
 
-    expect(options?.filter).toBe("commercialStatus = 'ACTIVE'");
+    // commercialStatus is applied in Postgres hydrate; oversized id IN is dropped.
+    expect(options?.filter).toBeUndefined();
   });
 
   it("does not call Meilisearch for blank facility searches", async () => {
