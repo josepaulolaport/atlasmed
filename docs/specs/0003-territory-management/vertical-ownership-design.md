@@ -225,9 +225,10 @@ A clinic enters a vertical’s analytics **only if all** hold for that V:
 
 ## 10. Suggested next steps
 
-1. Tasks PR: `territories.vertical_id` → per-vertical membership → ScopeResolver → invite/manage-assign UI → analytics joins → tests.
+1. ~~Tasks PR: schema + ScopeResolver + membership + UI~~ — in flight on `feature/territory-vertical-ownership-20260726` (migration `0025`/`0026`).
 2. Align Spec 0003 requirements text with this addendum (FK membership after write-time PIP; per-vertical rows).
-3. Dermatologia seed only after this addendum ships (Q7 A).
+3. Analytics joins audit for `(facility, vertical)` grain (Q9) where dashboards still use bare facility ids.
+4. Dermatologia seed only after this addendum ships (Q7 A).
 
 ---
 
