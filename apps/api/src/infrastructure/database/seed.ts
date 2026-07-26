@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { roles, users } from "@atlasmed/database";
+import { businessVerticals, roles, users } from "@atlasmed/database";
 import { eq, or } from "drizzle-orm";
 import { hash } from "argon2";
 import { ROLE_PRIORITY_BY_NAME } from "../../modules/access/application/constants/role-priority.constants";
@@ -18,6 +18,33 @@ interface OpsUserConfig {
   password: string;
   firstName?: string;
   lastName?: string;
+}
+
+/** Ensure catalog verticals exist on fresh local seeds (migrations are source of truth in shared envs). */
+async function ensureBusinessVerticals() {
+  console.log("\n🏷️  Ensuring business verticals...");
+
+  const defs = [
+    { id: "bv_ortopedia_p0", code: "ORTOPEDIA", name: "Ortopedia" },
+    { id: "bv_dermatologia_p1", code: "DERMATOLOGIA", name: "Dermatologia" },
+  ] as const;
+
+  for (const def of defs) {
+    const existing = await db.query.businessVerticals.findFirst({
+      where: eq(businessVerticals.code, def.code),
+    });
+    if (existing) {
+      console.log(`   ✓ Vertical "${def.code}" already present`);
+      continue;
+    }
+    await db.insert(businessVerticals).values({
+      id: def.id,
+      code: def.code,
+      name: def.name,
+      isActive: true,
+    });
+    console.log(`   ✓ Created vertical "${def.code}" (${def.name})`);
+  }
 }
 
 async function createRoles() {
@@ -153,6 +180,7 @@ async function seed() {
     console.log("\n🌱 Starting database seed...\n");
 
     await createRoles();
+    await ensureBusinessVerticals();
 
     const adminConfig: SeedConfig = {
       adminEmail: process.env.SEED_ADMIN_EMAIL || "admin@atlasmed.com",
