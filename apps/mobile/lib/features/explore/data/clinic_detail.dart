@@ -2,15 +2,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dar
 import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
-// ── Clinic detail model ───────────────────────────────────────
-//
-// Identity + contact fields for the establishment. Section-specific data
-// (payers, doctors, signals, products, notes, nearby establishments) lives
-// in `EstablishmentDetailSections` (see establishment_detail_models.dart)
-// instead of here — that model is the single source of truth for the
-// detail screen sections and is what gets wired to real endpoints in
-// Phase 2/3 of Spec 0005.
-
 class ClinicDetail {
   final String id;
   final String name;
@@ -24,7 +15,6 @@ class ClinicDetail {
   final List<String> products;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
-  // Additional detail fields
   final String? phone;
   final String? whatsapp;
   final String? consultantName;
@@ -39,7 +29,6 @@ class ClinicDetail {
   final double? lat;
   final double? lng;
 
-  // Admin info
   final String? taxIdType;
   final String? cnpj;
   final String? cpf;
