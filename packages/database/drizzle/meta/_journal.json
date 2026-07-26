@@ -176,6 +176,20 @@
       "when": 1785012690241,
       "tag": "0024_business_verticals_p0",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1785040608778,
+      "tag": "0025_territory_vertical_ownership",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1785040617485,
+      "tag": "0026_territory_vertical_ownership_snapshot",
+      "breakpoints": true
     }
   ]
 }

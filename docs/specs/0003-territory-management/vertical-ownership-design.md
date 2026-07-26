@@ -4,7 +4,7 @@
 **Created:** 2026-07-25  
 **Depends on:** Business Verticals P0 ([`business-verticals.md`](../../architecture/features/business-verticals.md)), Spec 0003 requirements, Spec 0006 (shared coverage — related but distinct)  
 **Out of this doc:** Dermatologia seed, product catalog filtering, assignment history windows (P2)  
-**Deferred to tasks PR (engineering):** membership column vs join table; exact recompute triggers; legacy `facilities.territoryId` drop timing  
+**Engineering locks (impl):** membership = `facility_vertical_profiles.territory_id`; `territories.vertical_id` NOT NULL; slug/code unique per vertical. Legacy `facilities.territoryId` kept as bridge (Ortopedia sync) until cutover.  
 **Clarified:** REP patch UTA kept; multi-REP per patch OK; clinic visibility still consultant-only (Q2/Q4)
 
 ---
@@ -225,9 +225,10 @@ A clinic enters a vertical’s analytics **only if all** hold for that V:
 
 ## 10. Suggested next steps
 
-1. Tasks PR: `territories.vertical_id` → per-vertical membership → ScopeResolver → invite/manage-assign UI → analytics joins → tests.
+1. ~~Tasks PR: schema + ScopeResolver + membership + UI~~ — in flight on `feature/territory-vertical-ownership-20260726` (migration `0025`/`0026`).
 2. Align Spec 0003 requirements text with this addendum (FK membership after write-time PIP; per-vertical rows).
-3. Dermatologia seed only after this addendum ships (Q7 A).
+3. Analytics joins audit for `(facility, vertical)` grain (Q9) where dashboards still use bare facility ids.
+4. Dermatologia seed only after this addendum ships (Q7 A).
 
 ---
 

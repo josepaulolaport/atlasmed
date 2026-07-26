@@ -16,6 +16,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/te
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_kind_switch.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_avatar.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/vertical_selector.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,9 +90,13 @@ class _NewTerritoryButton extends ConsumerWidget {
       label: const Text('Novo território'),
       onPressed: () {
         final kind = ref.read(selectedTerritoryKindProvider);
+        final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
         context.push(
           '/territorios/criar',
-          extra: TerritoryEditorTarget.creating(initialKind: kind),
+          extra: TerritoryEditorTarget.creating(
+            initialKind: kind,
+            initialVerticalId: verticalId,
+          ),
         );
       },
     );
@@ -106,19 +111,49 @@ class _TerritoriesBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final kind = ref.watch(selectedTerritoryKindProvider);
+    final selectedVerticalId = ref.watch(selectedTerritoryVerticalIdProvider);
+    final verticalsAsync = ref.watch(businessVerticalsProvider);
     final territoriesAsync = ref.watch(territoriesProvider);
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-          child: TerritoryKindSwitch(
-            value: kind,
-            onChanged: (newKind) {
-              if (newKind == kind) return;
-              ref.read(selectedTerritoryIdProvider.notifier).state = null;
-              ref.read(selectedTerritoryKindProvider.notifier).state = newKind;
-            },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TerritoryKindSwitch(
+                value: kind,
+                onChanged: (newKind) {
+                  if (newKind == kind) return;
+                  ref.read(selectedTerritoryIdProvider.notifier).state = null;
+                  ref.read(selectedTerritoryKindProvider.notifier).state =
+                      newKind;
+                },
+              ),
+              const SizedBox(height: 10),
+              verticalsAsync.when(
+                loading: () =>
+                    const _VerticalFilterStatus('Carregando verticais...'),
+                error: (_, _) => _VerticalFilterStatus(
+                  'Não foi possível carregar os verticais.',
+                  actionLabel: 'Tentar novamente',
+                  onAction: () => ref.invalidate(businessVerticalsProvider),
+                ),
+                data: (verticals) => VerticalSelector(
+                  verticals: verticals,
+                  selectedVerticalId: selectedVerticalId,
+                  allowAll: true,
+                  onChanged: (verticalId) {
+                    ref.read(selectedTerritoryIdProvider.notifier).state = null;
+                    ref
+                            .read(selectedTerritoryVerticalIdProvider.notifier)
+                            .state =
+                        verticalId;
+                  },
+                ),
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -154,6 +189,42 @@ class _TerritoriesBody extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _VerticalFilterStatus extends StatelessWidget {
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _VerticalFilterStatus(this.message, {this.actionLabel, this.onAction});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE1E4EA)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ),
+          if (actionLabel != null && onAction != null)
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+        ],
+      ),
     );
   }
 }
@@ -427,6 +498,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     final result = await UserPickerSheet.pickAssignee(
       context,
       role: role,
+      verticalId: territory.verticalId,
       currentUserId: territory.assignedUserId,
     );
     if (result == null) return;

@@ -26,6 +26,8 @@ export interface TerritoryPickerProps {
   filterAssignableToManagers?: boolean;
   filterAssignsClinics?: boolean;
   filterCanHaveBoundary?: boolean;
+  /** When set, only territories of this business vertical are listed. */
+  verticalId?: string;
   pickerConfig?: TerritoryAssignmentPickerConfig;
   excludeTerritoryIds?: string[];
   disabled?: boolean;
@@ -40,6 +42,7 @@ export function TerritoryPicker({
   filterAssignableToManagers = false,
   filterAssignsClinics = false,
   filterCanHaveBoundary = false,
+  verticalId,
   pickerConfig,
   excludeTerritoryIds = [],
   disabled = false,
@@ -57,14 +60,14 @@ export function TerritoryPicker({
     setLoading(true);
     setError(null);
     try {
-      const response = await territoriesApi.listTerritories();
+      const response = await territoriesApi.listTerritories(undefined, verticalId);
       setTerritories(response.data);
     } catch {
       setError("Falha ao carregar territórios");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [verticalId]);
 
   useEffect(() => {
     loadTerritories();
@@ -74,6 +77,7 @@ export function TerritoryPicker({
     const query = search.trim().toLowerCase();
     return territories.filter((t) => {
       if (excludedIds.has(t.id)) return false;
+      if (verticalId && t.verticalId !== verticalId) return false;
       if (pickerConfig && !territoryMatchesPickerFilters(t, pickerConfig)) {
         return false;
       }

@@ -2,16 +2,25 @@ import { describe, expect, it, mock } from "bun:test";
 import { TerritoryMembershipService } from "./territory-membership.service";
 import type { ClinicMembershipTarget } from "./territory-membership.service";
 
+function createClinicWriter(overrides: Record<string, unknown> = {}) {
+  return {
+    updateProfileTerritoryMemberships: mock(async () => {}),
+    updateTerritoryMembership: mock(async () => {}),
+    findOrtopediaVerticalId: mock(async () => "vertical-ortopedia"),
+    findClinicsForMembership: mock(async () => []),
+    ...overrides,
+  };
+}
+
 describe("TerritoryMembershipService", () => {
   it("assigns clinic to a single matching leaf territory", async () => {
-    const clinicWriter = {
-      updateTerritoryMembership: mock(async () => {}),
-      findClinicsForMembership: mock(async () => []),
-    };
+    const clinicWriter = createClinicWriter();
 
     const service = new TerritoryMembershipService({
       spatialRepository: {
-        findContainingClinicAssignmentTerritoryIds: mock(async () => ["leaf-1"]),
+        findContainingClinicAssignmentTerritoryIds: mock(async () => [
+          { id: "leaf-1", verticalId: "vertical-ortopedia" },
+        ]),
       } as never,
       territoryRepository: {} as never,
       clinicWriter,
@@ -25,8 +34,44 @@ describe("TerritoryMembershipService", () => {
       territoryAssignmentSource: "geo",
     });
 
+    expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith("clinic-1", [
+      { verticalId: "vertical-ortopedia", territoryId: "leaf-1" },
+    ]);
     expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("clinic-1", {
       territoryId: "leaf-1",
+      territoryAssignmentStatus: "assigned",
+      territoryAssignmentSource: "geo",
+    });
+  });
+
+  it("updates profiles per vertical and clears ambiguous vertical matches", async () => {
+    const clinicWriter = createClinicWriter();
+
+    const service = new TerritoryMembershipService({
+      spatialRepository: {
+        findContainingClinicAssignmentTerritoryIds: mock(async () => [
+          { id: "ortho-1", verticalId: "vertical-ortopedia" },
+          { id: "ortho-2", verticalId: "vertical-ortopedia" },
+          { id: "derm-1", verticalId: "vertical-derm" },
+        ]),
+      } as never,
+      territoryRepository: {} as never,
+      clinicWriter,
+    });
+
+    await service.assignClinicByGeo({
+      id: "clinic-1",
+      lat: -23.5,
+      lng: -46.6,
+      territoryId: null,
+      territoryAssignmentSource: "geo",
+    });
+
+    expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith("clinic-1", [
+      { verticalId: "vertical-derm", territoryId: "derm-1" },
+    ]);
+    expect(clinicWriter.updateTerritoryMembership).toHaveBeenCalledWith("clinic-1", {
+      territoryId: "derm-1",
       territoryAssignmentStatus: "assigned",
       territoryAssignmentSource: "geo",
     });
@@ -48,14 +93,13 @@ describe("TerritoryMembershipService", () => {
       territoryAssignmentSource: "geo",
     };
 
-    const clinicWriter = {
-      updateTerritoryMembership: mock(async () => {}),
+    const clinicWriter = createClinicWriter({
       findClinicsForMembership: mock(async (params?: { territoryIds?: string[]; boundingBox?: unknown }) => {
         if (params?.territoryIds) return [assignedClinic];
         if (params?.boundingBox) return [bboxClinic];
         return [];
       }),
-    };
+    });
 
     const service = new TerritoryMembershipService({
       spatialRepository: {
@@ -78,11 +122,10 @@ describe("TerritoryMembershipService", () => {
   });
 
   it("excludes the given territory when re-matching a clinic by geo", async () => {
-    const clinicWriter = {
-      updateTerritoryMembership: mock(async () => {}),
-      findClinicsForMembership: mock(async () => []),
-    };
-    const findContainingClinicAssignmentTerritoryIds = mock(async () => ["other-leaf"]);
+    const clinicWriter = createClinicWriter();
+    const findContainingClinicAssignmentTerritoryIds = mock(async () => [
+      { id: "other-leaf", verticalId: "vertical-ortopedia" },
+    ]);
 
     const service = new TerritoryMembershipService({
       spatialRepository: {
@@ -114,10 +157,7 @@ describe("TerritoryMembershipService", () => {
   });
 
   it("forces re-match of manually-pinned clinics when force is set", async () => {
-    const clinicWriter = {
-      updateTerritoryMembership: mock(async () => {}),
-      findClinicsForMembership: mock(async () => []),
-    };
+    const clinicWriter = createClinicWriter();
 
     const service = new TerritoryMembershipService({
       spatialRepository: {
@@ -146,10 +186,7 @@ describe("TerritoryMembershipService", () => {
   });
 
   it("does not touch manually-pinned clinics without force", async () => {
-    const clinicWriter = {
-      updateTerritoryMembership: mock(async () => {}),
-      findClinicsForMembership: mock(async () => []),
-    };
+    const clinicWriter = createClinicWriter();
 
     const service = new TerritoryMembershipService({
       spatialRepository: {
@@ -168,6 +205,7 @@ describe("TerritoryMembershipService", () => {
     });
 
     expect(clinicWriter.updateTerritoryMembership).not.toHaveBeenCalled();
+    expect(clinicWriter.updateProfileTerritoryMemberships).not.toHaveBeenCalled();
   });
 
   it("disassociateClinicsForTerritory re-matches every clinic currently on the territory", async () => {
@@ -176,12 +214,11 @@ describe("TerritoryMembershipService", () => {
       { id: "c2", lat: 2, lng: 2, territoryId: "zone-1", territoryAssignmentSource: "manual" },
     ];
 
-    const clinicWriter = {
-      updateTerritoryMembership: mock(async () => {}),
+    const clinicWriter = createClinicWriter({
       findClinicsForMembership: mock(async (params?: { territoryIds?: string[] }) =>
         params?.territoryIds?.includes("zone-1") ? clinics : []
       ),
-    };
+    });
     const findContainingClinicAssignmentTerritoryIds = mock(async () => []);
 
     const service = new TerritoryMembershipService({

@@ -59,7 +59,9 @@ export async function applyTerritoryBoundary(
   await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
 
   if (isRepPatchType(type)) {
-    const resolution = await deps.containmentService.resolveRepPatchManagerZone(boundary);
+    const resolution = await deps.containmentService.resolveRepPatchManagerZone(boundary, {
+      verticalId: territory.verticalId,
+    });
 
     await deps.spatialRepository.saveBoundary(territory.id, boundary);
     await deps.spatialRepository.updateBoundaryMetadata(territory.id);

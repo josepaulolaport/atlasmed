@@ -17,6 +17,7 @@ import {
   territoryApprovalStatusEnum,
 } from "./enums";
 import { users } from "./users";
+import { businessVerticals } from "./business-verticals";
 
 export const territoryTypes = pgTable(
   "territory_types",
@@ -44,7 +45,11 @@ export const territories = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
-    code: text("code").notNull().unique(),
+    code: text("code").notNull(),
+    /** Commercial vertical this territory row belongs to (zones/patches are per vertical). */
+    verticalId: text("vertical_id")
+      .notNull()
+      .references(() => businessVerticals.id, { onDelete: "restrict" }),
     territoryTypeId: text("territory_type_id").notNull().references(() => territoryTypes.id, { onDelete: "restrict" }),
     managerTerritoryId: text("manager_territory_id"),
     isActive: boolean("is_active").notNull().default(true),
@@ -58,7 +63,9 @@ export const territories = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("territories_slug_uidx").on(t.slug),
+    uniqueIndex("territories_vertical_id_slug_uidx").on(t.verticalId, t.slug),
+    uniqueIndex("territories_vertical_id_code_uidx").on(t.verticalId, t.code),
+    index("territories_vertical_id_idx").on(t.verticalId),
     index("territories_manager_territory_id_idx").on(t.managerTerritoryId),
     index("territories_is_active_idx").on(t.isActive),
     index("territories_territory_type_id_idx").on(t.territoryTypeId),
@@ -118,6 +125,10 @@ export const territoryTypesRelations = relations(territoryTypes, ({ many }) => (
 }));
 
 export const territoriesRelations = relations(territories, ({ one, many }) => ({
+  vertical: one(businessVerticals, {
+    fields: [territories.verticalId],
+    references: [businessVerticals.id],
+  }),
   territoryType: one(territoryTypes, {
     fields: [territories.territoryTypeId],
     references: [territoryTypes.id],

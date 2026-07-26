@@ -43,8 +43,10 @@ Registration identity: inviter sets `birthDate` + name on the invite; invitee mu
 | Role | Scope |
 |---|---|
 | `ADMIN` | Global (`isGlobal`); `assignedVerticalIds` = all active verticals. Optional request `verticalId` filter narrows lists. |
-| `OPS` / `MANAGER` / `REP` | **Not** global. Verticals from `user_vertical_assignments`. Facility lists = territory∪consultant scope **intersected** with active `facility_vertical_profiles` in resolved verticals. Unprofiled facilities are ADMIN-only. |
-| `REP` | Territories ∪ active `facility_consultant_assignments` for self (consultant rows filtered by resolved verticals). |
+| `OPS` / `MANAGER` / `REP` | **Not** global. Verticals from `user_vertical_assignments`. Unprofiled facilities are ADMIN-only. Facility visibility is role-specific (below) ∩ active `facility_vertical_profiles` in resolved verticals. |
+| `REP` | Patch UTA kept for org/map; clinic `facilityIds` = active `facility_consultant_assignments` only (filtered by resolved verticals). Geo patch does **not** grant clinic list access. |
+| `MANAGER` | Clinic `facilityIds` = per-vertical profile membership in oversight zones ∪ own consultant assigns ∩ profiles. |
+| `OPS` | Clinic `facilityIds` = all facilities with active profile in assigned verticals (no zone cover). |
 | `MANAGER` | Own territory oversight ∪ own consultant assignments. Does **not** include peer managers’ zones. Analytics facility set remains report-territory based (no consultant union). |
 
 Optional query/body `verticalId` is validated against the caller’s allowed set (`ForbiddenError` if outside). Omit → union of assigned verticals (ADMIN without filter: all facilities including unprofiled).
@@ -74,4 +76,4 @@ Cadastro drafts persist `vertical_id`. Inference: one facility profile → use i
 - Add SSO/OIDC support for Google, Microsoft Entra ID, and Okta readiness.
 - Add 2FA recovery codes and admin reset workflow.
 - WhatsApp invite delivery requires Twilio env (email path uses Resend).
-- Territory ownership redesign across verticals (P1+; `territories.sector_id` removed in P0).
+- Territory × vertical ownership — design accepted; implementation on `feature/territory-vertical-ownership-20260726` / PR #120 (see [vertical-ownership-design.md](../../specs/0003-territory-management/vertical-ownership-design.md)).

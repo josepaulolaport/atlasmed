@@ -10,7 +10,10 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/territory_d
 abstract interface class TerritoryRepository {
   Future<List<BusinessVertical>> getVerticals();
 
-  Future<List<Territory>> getTerritories({required String territoryTypeSlug});
+  Future<List<Territory>> getTerritories({
+    required String territoryTypeSlug,
+    String? verticalId,
+  });
 
   Future<Territory?> getTerritoryById(String id);
 
@@ -33,5 +36,5 @@ abstract interface class TerritoryRepository {
     String? managerTerritoryId,
   });
 
-  Future<List<AssignableManager>> getAssignableManagers();
+  Future<List<AssignableManager>> getAssignableManagers({String? verticalId});
 }

@@ -25,10 +25,15 @@ class MockTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
+    String? verticalId,
   }) async {
     await Future.delayed(const Duration(milliseconds: 350));
     return _territories
-        .where((territory) => territory.territoryType.slug == territoryTypeSlug)
+        .where(
+          (territory) =>
+              territory.territoryType.slug == territoryTypeSlug &&
+              (verticalId == null || territory.verticalId == verticalId),
+        )
         .toList();
   }
 
@@ -77,6 +82,7 @@ class MockTerritoryRepository implements TerritoryRepository {
       name: draft.name,
       slug: slug,
       code: id.toUpperCase(),
+      verticalId: draft.verticalId,
       territoryType: territoryType,
       managerTerritoryId: draft.managerTerritoryId,
       repPatchCount: draft.kind == TerritoryKind.managerZone ? 0 : null,
@@ -140,13 +146,16 @@ class MockTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<List<AssignableManager>> getAssignableManagers() async {
+  Future<List<AssignableManager>> getAssignableManagers({
+    String? verticalId,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 200));
     final zones = _territories.where(
       (t) =>
           t.kind == TerritoryKind.managerZone &&
           t.isActive &&
-          t.assignedUserId != null,
+          t.assignedUserId != null &&
+          (verticalId == null || t.verticalId == verticalId),
     );
 
     final result = <AssignableManager>[];

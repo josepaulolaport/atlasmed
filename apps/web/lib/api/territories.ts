@@ -18,30 +18,42 @@ import type {
 } from "@/types/territory";
 
 export const territoriesApi = {
-  listTerritories: async (typeSlug?: string): Promise<{ data: Territory[] }> => {
+  listTerritories: async (
+    typeSlug?: string,
+    verticalId?: string,
+  ): Promise<{ data: Territory[] }> => {
+    const params: Record<string, string> = { format: "flat" };
+    if (typeSlug) params.type = typeSlug;
+    if (verticalId) params.verticalId = verticalId;
     const response = await apiClient.get<{ data: Territory[] }>(
       "/territory/territories",
-      { params: { format: "flat", type: typeSlug } }
+      { params },
     );
     return response.data;
   },
 
-  listManagerZones: async (): Promise<{ data: Territory[] }> => {
+  listManagerZones: async (verticalId?: string): Promise<{ data: Territory[] }> => {
+    const params: Record<string, string> = { format: "flat", type: "manager_zone" };
+    if (verticalId) params.verticalId = verticalId;
     const response = await apiClient.get<{ data: Territory[] }>(
       "/territory/territories",
-      { params: { format: "flat", type: "manager_zone" } }
+      { params },
     );
     return response.data;
   },
 
-  listRepPatches: async (managerTerritoryId?: string): Promise<{ data: Territory[] }> => {
+  listRepPatches: async (
+    managerTerritoryId?: string,
+    verticalId?: string,
+  ): Promise<{ data: Territory[] }> => {
     const params: Record<string, string> = { format: "flat", type: "patch" };
     if (managerTerritoryId) {
       params.managerTerritoryId = managerTerritoryId;
     }
+    if (verticalId) params.verticalId = verticalId;
     const response = await apiClient.get<{ data: Territory[] }>(
       "/territory/territories",
-      { params }
+      { params },
     );
     return response.data;
   },

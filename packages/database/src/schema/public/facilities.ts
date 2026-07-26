@@ -478,6 +478,10 @@ export const facilityVerticalProfiles = pgTable(
     verticalId: text("vertical_id")
       .notNull()
       .references(() => businessVerticals.id, { onDelete: "restrict" }),
+    /** Per-vertical geo membership patch (Q6 C). Null = unassigned/ambiguous for this vertical. */
+    territoryId: text("territory_id").references(() => territories.id, {
+      onDelete: "set null",
+    }),
     isActive: boolean("is_active").notNull().default(true),
     commercialStatus: commercialStatusEnum("commercial_status"),
     purchaseStatus: purchaseStatusEnum("purchase_status"),
@@ -491,6 +495,7 @@ export const facilityVerticalProfiles = pgTable(
     ),
     index("facility_vertical_profiles_facility_id_idx").on(t.facilityId),
     index("facility_vertical_profiles_vertical_id_idx").on(t.verticalId),
+    index("facility_vertical_profiles_territory_id_idx").on(t.territoryId),
     index("facility_vertical_profiles_commercial_status_idx").on(t.commercialStatus),
   ]
 );
@@ -665,6 +670,10 @@ export const facilityVerticalProfilesRelations = relations(
     vertical: one(businessVerticals, {
       fields: [facilityVerticalProfiles.verticalId],
       references: [businessVerticals.id],
+    }),
+    territory: one(territories, {
+      fields: [facilityVerticalProfiles.territoryId],
+      references: [territories.id],
     }),
   })
 );

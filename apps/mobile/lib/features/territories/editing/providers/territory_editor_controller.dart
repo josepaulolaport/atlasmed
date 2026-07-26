@@ -58,6 +58,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       }
       final sameKind = await repository.getTerritories(
         territoryTypeSlug: territory.territoryType.slug,
+        verticalId: territory.verticalId,
       );
       final neighbors = sameKind
           .where((candidate) => candidate.id != territory.id)
@@ -85,13 +86,15 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
 
   /// Stores the metadata form's result. On the very first call, also
   /// defaults [TerritoryEditorState.mode] to [EditorMode.addArea] so the
-  /// user can start drawing right away. Whenever the kind/sector differ
-  /// from what they were, re-fetches [TerritoryEditorState.neighbors] for
-  /// the new kind+sector and re-validates the current shape against them.
+  /// user can start drawing right away. Whenever the kind/vertical differ
+  /// from what they were, re-fetches [TerritoryEditorState.neighbors] and
+  /// re-validates the current shape against them.
   Future<void> setDraft(TerritoryDraft draft) async {
     final previousDraft = state.draft;
     final isFirst = previousDraft == null;
     final kindChanged = isFirst || previousDraft.kind != draft.kind;
+    final verticalChanged =
+        isFirst || previousDraft.verticalId != draft.verticalId;
     final managerZoneChanged =
         isFirst || previousDraft.managerTerritoryId != draft.managerTerritoryId;
 
@@ -120,11 +123,12 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       );
     }
 
-    if (!kindChanged) return;
+    if (!kindChanged && !verticalChanged) return;
     try {
       final repository = _ref.read(territoryRepositoryProvider);
       final sameKind = await repository.getTerritories(
         territoryTypeSlug: draft.kind.slug,
+        verticalId: draft.verticalId,
       );
       state = state.copyWith(
         neighbors: sameKind,

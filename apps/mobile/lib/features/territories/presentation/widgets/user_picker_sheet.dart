@@ -67,6 +67,7 @@ class UserPickerSheet extends ConsumerStatefulWidget {
   static Future<String?> pickManagerForPatch(
     BuildContext context, {
     String? currentManagerTerritoryId,
+    String? verticalId,
   }) {
     return showModalBottomSheet<String>(
       context: context,
@@ -75,6 +76,7 @@ class UserPickerSheet extends ConsumerStatefulWidget {
       builder: (_) => UserPickerSheet(
         title: 'Zona de gerente',
         role: UserRole.manager,
+        verticalId: verticalId,
         currentSelectionId: currentManagerTerritoryId,
         pickingManagerZone: true,
       ),
@@ -237,7 +239,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   Widget _buildManagerZoneList(ScrollController scrollController) {
     final future = ref
         .read(territoryRepositoryProvider)
-        .getAssignableManagers();
+        .getAssignableManagers(verticalId: widget.verticalId);
 
     return FutureBuilder<List<AssignableManager>>(
       future: future,

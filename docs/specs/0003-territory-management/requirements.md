@@ -1,8 +1,9 @@
 # Spec 0003: Territory Management Requirements
 
-**Status:** Implemented (backend core)  
-**Last Updated:** 2026-07-07  
-**Authoritative detail:** [Spec 37 — Territory Management](../../../apps/api/specs/37-territory-management.md)
+**Status:** Implemented (backend core) + vertical ownership addendum in progress  
+**Last Updated:** 2026-07-26  
+**Authoritative detail:** [Spec 37 — Territory Management](../../../apps/api/specs/37-territory-management.md)  
+**Vertical ownership addendum (accepted):** [vertical-ownership-design.md](./vertical-ownership-design.md)
 
 ## User Story
 
@@ -12,10 +13,10 @@ As a sales manager, I want to define territories and assign users, clinics, and 
 
 The system uses a **dual-graph territory model**:
 
-1. **Assignment graph** — flat **manager zones** contain **rep patches** via `managerTerritoryId` (validated with `ST_CoveredBy` on boundary save). Drives user scope.
-2. **Grouping graph** — tree of region/state/municipality types (`participatesInGroupingHierarchy`) for filter navigation and analytics only. Does not drive scope.
+1. **Assignment graph** — flat **manager zones** contain **rep patches** via `managerTerritoryId` (validated with `ST_CoveredBy` on boundary save). Drives user scope. Each territory row belongs to **one** `business_verticals` (`territories.vertical_id`). New verticals get new zone/patch rows.
+2. **Grouping graph** — tree of region/state/municipality types (`participatesInGroupingHierarchy`) for filter navigation and analytics only. Does not drive scope. Groupings are **never** user-assignable.
 
-Clinics are assigned to rep patches via point-in-polygon on write. Scope resolves with FK lookups — no geo membership index or closure expansion for assignment.
+Clinics get per-vertical geo membership via point-in-polygon on write/recompute, stored on `facility_vertical_profiles.territory_id`. Scope resolves with FK lookups on that membership (plus legacy `facilities.territoryId` bridge) — not live PIP on every list.
 
 ## Acceptance Criteria
 
@@ -28,21 +29,24 @@ Clinics are assigned to rep patches via point-in-polygon on write. Scope resolve
 
 ### Boundaries & containment
 
-5. WHEN a rep patch boundary is saved THEN the system SHALL resolve exactly one containing active manager zone and set `managerTerritoryId`.
+5. WHEN a rep patch boundary is saved THEN the system SHALL resolve exactly one containing active manager zone **of the same vertical** and set `managerTerritoryId`.
 6. WHEN a rep patch is not fully inside any manager zone, or inside more than one THEN the system SHALL reject the save.
-7. WHEN a rep patch or manager zone boundary overlaps another active sibling of the same type THEN the system SHALL reject the save.
+7. WHEN a rep patch or manager zone boundary overlaps another active sibling of the same type **and same vertical** THEN the system SHALL reject the save.
 8. WHEN reference geography boundaries are saved from IBGE ingestion THEN invalid geometries MAY be repaired with `ST_MakeValid`.
 
 ### User assignment & scope
 
-9. WHEN a manager assigns a user to a territory THEN the system SHALL grant access according to role and assignment rules.
+9. WHEN a manager assigns a user to a territory THEN the system SHALL grant access according to role and assignment rules. Multiple REPs MAY share one patch; managers remain exclusive per zone.
 10. WHEN scope is resolved THEN `effectiveTerritoryIds` SHALL include directly assigned territories and rep patches linked via `managerTerritoryId` for manager zone assignments. Grouping closure SHALL NOT expand scope.
 11. WHEN a territory assignment or `managerTerritoryId` changes THEN the system SHALL invalidate affected Redis scope caches.
+11b. WHEN role is REP THEN clinic `facilityIds` SHALL come only from active `facility_consultant_assignments` (patch UTA does not grant clinic list access).
+11c. WHEN role is OPS THEN clinic `facilityIds` SHALL be facilities with an active profile in the user’s verticals (no zone cover required).
+11d. WHEN role is MANAGER THEN clinic `facilityIds` SHALL be profile membership in oversight zones ∪ own consultant assigns, intersected with active profiles in resolved verticals.
 
 ### Facility membership
 
-12. WHEN a clinic has coordinates and `territoryAssignmentSource = geo` THEN the system SHALL assign it to the containing active rep patch via `ST_Covers`.
-13. WHEN a clinic is assigned to a rep patch THEN access checks SHALL use `Clinic.territoryId`.
+12. WHEN a clinic has coordinates and `territoryAssignmentSource = geo` THEN the system SHALL, **per vertical**, assign `facility_vertical_profiles.territory_id` to the containing active rep patch of that vertical via `ST_Covers` (0 → clear; >1 in same vertical → ambiguous/clear).
+13. WHEN manager geo scope is resolved THEN access checks SHALL use per-vertical membership (`facility_vertical_profiles.territory_id`), not sole reliance on legacy `facilities.territoryId`.
 14. WHEN a clinic has `territoryAssignmentSource = manual` THEN automatic geo recompute SHALL NOT change its assignment until explicitly unlocked.
 15. WHEN a rep patch boundary changes THEN the system SHALL enqueue clinic membership re-evaluation for affected clinics.
 
@@ -50,6 +54,7 @@ Clinics are assigned to rep patches via point-in-polygon on write. Scope resolve
 
 16. WHEN `GET /territories/:id/analytics-view` is called for a grouping territory THEN the system SHALL return clinics in the caller's scoped rep patches whose coordinates fall inside the grouping boundary.
 17. WHEN a user lists clinics or doctors THEN the system SHALL filter results by territory scope at the data layer.
+17b. WHEN analytics or lists apply an active vertical filter THEN facts SHALL be grain `(facility, vertical)` — coverage in V1 MUST NOT imply coverage in V2 (see vertical-ownership-design Q9).
 
 ### Audit & approvals
 
@@ -60,7 +65,7 @@ Clinics are assigned to rep patches via point-in-polygon on write. Scope resolve
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET/POST /territories` | List / create |
+| `GET/POST /territories` | List / create (`verticalId` required on create; optional `?verticalId=` on list) |
 | `GET /territories/grouping-tree` | Grouping hierarchy for filter UI |
 | `PUT /territories/:id/boundary` | Save boundary (role-based post-save flow) |
 | `GET /territories/:id/analytics-view` | Scoped clinics inside grouping shape |

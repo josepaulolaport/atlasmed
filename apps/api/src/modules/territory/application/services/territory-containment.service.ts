@@ -63,10 +63,12 @@ export class TerritoryContainmentService {
   }
 
   async resolveRepPatchManagerZone(
-    geoJson: GeoJsonGeometry
+    geoJson: GeoJsonGeometry,
+    options?: { verticalId?: string }
   ): Promise<RepPatchContainmentResolution> {
     const candidates = await this.deps.spatialRepository.findContainingManagerZones({
       geoJson,
+      verticalId: options?.verticalId,
     });
 
     if (candidates.length === 0) {

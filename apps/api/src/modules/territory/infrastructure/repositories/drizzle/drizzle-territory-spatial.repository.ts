@@ -145,10 +145,10 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     lng: number,
     lat: number,
     options?: { excludeTerritoryId?: string }
-  ): Promise<string[]> {
+  ): Promise<Array<{ id: string; verticalId: string }>> {
     const excludeTerritoryId = options?.excludeTerritoryId ?? null;
     const rows = await db.execute(sql`
-      SELECT t.id
+      SELECT t.id, t.vertical_id
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       WHERE t.is_active = true
@@ -160,9 +160,12 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
           ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
         )
       ORDER BY ST_Area(t.boundary::geography) ASC
-    `) as Array<{ id: string }>;
+    `) as Array<{ id: string; vertical_id: string }>;
 
-    return rows.map((row) => row.id);
+    return rows.map((row) => ({
+      id: row.id,
+      verticalId: row.vertical_id,
+    }));
   }
 
   async findOverlappingSiblingTerritories(input: {
@@ -191,6 +194,11 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND t.is_active = true
         AND t.boundary IS NOT NULL
         AND t.territory_type_id = ${input.territoryTypeId}
+        AND t.vertical_id = (
+          SELECT source.vertical_id
+          FROM territories source
+          WHERE source.id = ${input.territoryId}
+        )
         AND tt.block_sibling_overlap = true
         AND ST_Intersects(t.boundary, child.geom)
         AND NOT ST_Touches(t.boundary, child.geom)
@@ -205,8 +213,10 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
 
   async findContainingManagerZones(input: {
     geoJson: GeoJsonGeometry;
+    verticalId?: string;
   }): Promise<Array<{ id: string; code: string; name: string }>> {
     const geoJsonString = JSON.stringify(input.geoJson);
+    const verticalId = input.verticalId ?? null;
 
     return db.execute(sql`
       WITH patch AS (
@@ -219,6 +229,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       WHERE t.is_active = true
         AND t.boundary IS NOT NULL
         AND tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
+        AND (${verticalId}::text IS NULL OR t.vertical_id = ${verticalId})
         AND ST_CoveredBy(patch.geom, t.boundary)
       ORDER BY ST_Area(t.boundary::geography) ASC
     `) as Promise<Array<{ id: string; code: string; name: string }>>;

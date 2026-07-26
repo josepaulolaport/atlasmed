@@ -4,12 +4,16 @@ import { Role } from "@atlasmed/access";
 import type {
   FacilityAssociationPort,
   ScopeRepository,
+  TerritoryScopePort,
 } from "../interfaces/scope.repository.interface";
 
 describe("ScopeResolver", () => {
-  const territoryScopePort = {
+  const territoryScopePort: TerritoryScopePort = {
     getFacilityIdsForTerritories: mock(async (territoryIds: string[]) =>
       territoryIds.map((id) => `clinic-for-${id}`),
+    ),
+    getFacilityIdsForVerticals: mock(async (verticalIds: string[]) =>
+      verticalIds.map((id) => `clinic-vertical-${id}`),
     ),
   };
 
@@ -49,10 +53,11 @@ describe("ScopeResolver", () => {
   function createResolver(params: {
     scopeRepository?: ScopeRepository;
     facilityAssociationPort?: FacilityAssociationPort;
+    territoryScopePort?: TerritoryScopePort;
   } = {}) {
     return new ScopeResolver({
       scopeRepository: params.scopeRepository ?? ({} as ScopeRepository),
-      territoryScopePort,
+      territoryScopePort: params.territoryScopePort ?? territoryScopePort,
       territoryHierarchyPort,
       facilityAssociationPort:
         params.facilityAssociationPort ?? emptyAssociationPort,
@@ -73,7 +78,7 @@ describe("ScopeResolver", () => {
     expect(scope.assignedVerticalIds).toEqual(["vertical-a"]);
   });
 
-  it("returns scoped access for OPS (not global)", async () => {
+  it("returns OPS profiled facilities for assigned verticals (not territory geo)", async () => {
     const scope = await createResolver({
       scopeRepository: emptyScopeRepository({
         findVerticalIdsByUserId: mock(async () => ["vertical-a"]),
@@ -84,10 +89,11 @@ describe("ScopeResolver", () => {
     expect(scope.isGlobal).toBe(false);
     expect(scope.assignedVerticalIds).toEqual(["vertical-a"]);
     expect(scope.assignedTerritoryIds).toEqual(["territory-1"]);
+    expect(scope.facilityIds).toEqual(["clinic-vertical-vertical-a"]);
     expect(scope.isOperationallyActive).toBe(true);
   });
 
-  it("expands user territory assignments via effective territory resolution", async () => {
+  it("keeps REP patch UTA for effective territories but not clinic geo scope", async () => {
     const scope = await createResolver({
       scopeRepository: emptyScopeRepository({
         findTerritoryIdsByUserId: mock(async () => ["territory-1"]),
@@ -99,13 +105,10 @@ describe("ScopeResolver", () => {
       "territory-1",
       "territory-1-patch",
     ]);
-    expect(scope.facilityIds).toEqual([
-      "clinic-for-territory-1",
-      "clinic-for-territory-1-patch",
-    ]);
+    expect(scope.facilityIds).toEqual([]);
   });
 
-  it("unions active consultant assignments into REP facilityIds", async () => {
+  it("uses consultant assignments only for REP facilityIds", async () => {
     const scope = await createResolver({
       scopeRepository: emptyScopeRepository({
         findTerritoryIdsByUserId: mock(async () => ["territory-1"]),
@@ -115,11 +118,7 @@ describe("ScopeResolver", () => {
       },
     }).resolve("rep-1", Role.REP);
 
-    expect(scope.facilityIds).toEqual([
-      "clinic-for-territory-1",
-      "clinic-for-territory-1-patch",
-      "clinic-associated-1",
-    ]);
+    expect(scope.facilityIds).toEqual(["clinic-associated-1"]);
     expect(scope.isOperationallyActive).toBe(true);
   });
 

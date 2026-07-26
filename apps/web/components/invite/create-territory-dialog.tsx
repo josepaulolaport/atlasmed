@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { territoriesApi } from "@/lib/api/territories";
+import { usersApi } from "@/lib/api/users";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,8 @@ interface CreateTerritoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   territoryType: "manager_zone" | "patch";
+  /** When set (invite flow), new territory is created under this vertical. */
+  verticalId?: string;
   onTerritoryCreated: (territory: Territory) => void;
 }
 
@@ -37,11 +40,13 @@ export function CreateTerritoryDialog({
   open,
   onOpenChange,
   territoryType,
+  verticalId: verticalIdProp,
   onTerritoryCreated,
 }: CreateTerritoryDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [territoryTypes, setTerritoryTypes] = useState<TerritoryType[]>([]);
+  const [resolvedVerticalId, setResolvedVerticalId] = useState(verticalIdProp ?? "");
   const [loadingTypes, setLoadingTypes] = useState(true);
 
   const {
@@ -57,11 +62,14 @@ export function CreateTerritoryDialog({
 
   useEffect(() => {
     if (open) {
-      // Load territory types
       const fetchTypes = async () => {
         try {
-          const { data } = await territoriesApi.listTerritoryTypes();
+          const [{ data }, verticals] = await Promise.all([
+            territoriesApi.listTerritoryTypes(),
+            usersApi.getVerticals(),
+          ]);
           setTerritoryTypes(data);
+          setResolvedVerticalId(verticalIdProp || verticals[0]?.id || "");
         } catch (err) {
           console.error("Failed to fetch territory types:", err);
         } finally {
@@ -71,11 +79,10 @@ export function CreateTerritoryDialog({
 
       fetchTypes();
     } else {
-      // Reset form when closed
       reset();
       setError(null);
     }
-  }, [open, reset]);
+  }, [open, reset, verticalIdProp]);
 
   const getTerritoryTypeId = (): string | undefined => {
     return territoryTypes.find((t) => t.slug === territoryType)?.id;
@@ -104,10 +111,14 @@ export function CreateTerritoryDialog({
       if (!territoryTypeId) {
         throw new Error("Tipo de território não encontrado");
       }
+      if (!resolvedVerticalId) {
+        throw new Error("Vertical de negócio não encontrada");
+      }
 
       const result = await territoriesApi.createTerritory({
         name: data.name,
         slug: data.code.toLowerCase(),
+        verticalId: resolvedVerticalId,
         territoryTypeId,
       });
 

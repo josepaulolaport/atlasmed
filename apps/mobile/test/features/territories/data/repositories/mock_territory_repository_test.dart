@@ -34,6 +34,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Nova',
           kind: TerritoryKind.managerZone,
+          verticalId: 'sector-oncologia',
         ),
         _square(),
         const MapCoordinate(longitude: 0.5, latitude: 0.5),
@@ -44,6 +45,7 @@ void main() {
       expect(created.code, isNotEmpty);
       expect(created.name, 'Zona Nova');
       expect(created.kind, TerritoryKind.managerZone);
+      expect(created.verticalId, 'sector-oncologia');
 
       final after = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
@@ -64,6 +66,7 @@ void main() {
         TerritoryDraft(
           name: 'Área Nova',
           kind: TerritoryKind.repPatch,
+          verticalId: zone.verticalId,
           managerTerritoryId: zone.id,
         ),
         _square(),
@@ -79,6 +82,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Sem Gerente',
           kind: TerritoryKind.managerZone,
+          verticalId: 'sector-oncologia',
         ),
         _square(offset: 2),
         const MapCoordinate(longitude: 2.5, latitude: 2.5),

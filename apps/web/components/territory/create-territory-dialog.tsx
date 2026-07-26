@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { TerritoryMapEditor } from "@/components/territory/map/territory-map-editor";
 import { territoriesApi } from "@/lib/api/territories";
+import { usersApi } from "@/lib/api/users";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { isValidGeoJsonPolygon, normalizeTerritoryBoundary, parseGeoJsonPolygon } from "@/lib/territory/geojson";
 import { slugifyTerritoryIdentifier } from "@/lib/territory/territory-identifier";
@@ -44,9 +45,11 @@ export function CreateTerritoryDialog({
   const [identifier, setIdentifier] = useState("");
   const [identifierTouched, setIdentifierTouched] = useState(false);
   const [territoryTypeId, setTerritoryTypeId] = useState("");
+  const [verticalId, setVerticalId] = useState("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [types, setTypes] = useState<TerritoryType[]>([]);
+  const [verticals, setVerticals] = useState<Array<{ id: string; code: string; name: string }>>([]);
   const [boundaryMode, setBoundaryMode] = useState<"map" | "json">("map");
   const [boundaryDraft, setBoundaryDraft] = useState<GeoJsonPolygon | null>(null);
   const [boundaryJson, setBoundaryJson] = useState("");
@@ -60,9 +63,14 @@ export function CreateTerritoryDialog({
   const isRepPatchType = selectedType?.slug === "patch";
 
   const loadFormData = useCallback(async () => {
-    const typesResponse = await territoriesApi.listTerritoryTypes();
+    const [typesResponse, verticalList] = await Promise.all([
+      territoriesApi.listTerritoryTypes(),
+      usersApi.getVerticals(),
+    ]);
     setTypes(typesResponse.data);
+    setVerticals(verticalList);
     setTerritoryTypeId((current) => current || typesResponse.data[0]?.id || "");
+    setVerticalId((current) => current || verticalList[0]?.id || "");
   }, []);
 
   useEffect(() => {
@@ -75,6 +83,7 @@ export function CreateTerritoryDialog({
     setIdentifier("");
     setIdentifierTouched(false);
     setTerritoryTypeId(types[0]?.id ?? "");
+    setVerticalId(verticals[0]?.id ?? "");
     setReason("");
     setBoundaryMode("map");
     setBoundaryDraft(null);
@@ -104,10 +113,10 @@ export function CreateTerritoryDialog({
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !territoryTypeId || !identifier.trim()) {
+    if (!name.trim() || !territoryTypeId || !identifier.trim() || !verticalId) {
       toast({
-        title: "Validation",
-        description: "Name, type and identifier are required",
+        title: "Validação",
+        description: "Nome, tipo, vertical e identificador são obrigatórios",
         variant: "destructive",
       });
       return;
@@ -128,6 +137,7 @@ export function CreateTerritoryDialog({
       const result = await territoriesApi.createTerritory({
         name: name.trim(),
         slug: identifier.trim().toLowerCase(),
+        verticalId,
         territoryTypeId,
         reason: reason.trim() || undefined,
         boundary: boundary ?? undefined,
@@ -183,7 +193,23 @@ export function CreateTerritoryDialog({
           </p>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2">
+            <div>
+              <Label htmlFor="territory-vertical">Vertical</Label>
+              <Select value={verticalId} onValueChange={setVerticalId}>
+                <SelectTrigger id="territory-vertical">
+                  <SelectValue placeholder="Selecionar vertical" />
+                </SelectTrigger>
+                <SelectContent>
+                  {verticals.map((vertical) => (
+                    <SelectItem key={vertical.id} value={vertical.id}>
+                      {vertical.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label htmlFor="territory-type">Tipo</Label>
               <Select value={territoryTypeId} onValueChange={setTerritoryTypeId}>
                 <SelectTrigger id="territory-type">

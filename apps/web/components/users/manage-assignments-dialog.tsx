@@ -53,6 +53,7 @@ export function ManageAssignmentsDialog({
   const [savingManager, setSavingManager] = useState(false);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState("");
   const [selectedVerticalId, setSelectedVerticalId] = useState("");
+  const [territoryFilterVerticalId, setTerritoryFilterVerticalId] = useState("");
   const [territoryBusy, setTerritoryBusy] = useState<string | null>(null);
   const [verticalBusy, setVerticalBusy] = useState<string | null>(null);
   const { getLabel } = useTerritoryLabels();
@@ -96,6 +97,11 @@ export function ManageAssignmentsDialog({
             u.id !== user.id
         )
       );
+      setTerritoryFilterVerticalId((current) => {
+        if (current && verticalsData.some((v) => v.id === current)) return current;
+        const assignedVerticalId = assignmentsData.verticalAssignments[0]?.verticalId;
+        return assignedVerticalId || verticalsData[0]?.id || "";
+      });
     } catch {
       toast({
         title: "Error",
@@ -112,6 +118,7 @@ export function ManageAssignmentsDialog({
     if (open && user) {
       setSelectedTerritoryId("");
       setSelectedVerticalId("");
+      setTerritoryFilterVerticalId("");
       loadData();
     } else {
       setAssignments(null);
@@ -330,16 +337,46 @@ export function ManageAssignmentsDialog({
                     ))}
                   </ul>
                 )}
+                <div className="space-y-1">
+                  <Label htmlFor="territory-vertical-filter">Vertical do território</Label>
+                  <Select
+                    value={territoryFilterVerticalId || undefined}
+                    onValueChange={(value) => {
+                      setTerritoryFilterVerticalId(value);
+                      setSelectedTerritoryId("");
+                    }}
+                  >
+                    <SelectTrigger id="territory-vertical-filter">
+                      <SelectValue placeholder="Selecionar vertical" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allVerticals.map((vertical) => (
+                        <SelectItem key={vertical.id} value={vertical.id}>
+                          {vertical.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <TerritoryPicker
                   value={selectedTerritoryId}
                   onChange={setSelectedTerritoryId}
-                  disabled={territoryBusy !== null}
+                  disabled={territoryBusy !== null || !territoryFilterVerticalId}
+                  verticalId={territoryFilterVerticalId || undefined}
                   pickerConfig={territoryPickerConfig}
-                  placeholder="Selecione um território elegível"
+                  placeholder={
+                    territoryFilterVerticalId
+                      ? "Selecione um território elegível"
+                      : "Selecione uma vertical primeiro"
+                  }
                 />
                 <Button
                   onClick={handleAddTerritory}
-                  disabled={territoryBusy !== null || !selectedTerritoryId}
+                  disabled={
+                    territoryBusy !== null ||
+                    !selectedTerritoryId ||
+                    !territoryFilterVerticalId
+                  }
                   className="w-full"
                 >
                   {territoryBusy === "add" ? (

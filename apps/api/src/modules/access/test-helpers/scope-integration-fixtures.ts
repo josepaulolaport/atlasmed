@@ -9,6 +9,7 @@ import {
   sessions,
   userTerritoryAssignments,
   facilities,
+  businessVerticals,
 } from "@atlasmed/database";
 import { db } from "../../../infrastructure/database/db";
 import { ROLE_PRIORITY_BY_NAME } from "../application/constants/role-priority.constants";
@@ -40,6 +41,16 @@ async function findTerritoryTypeIdBySlug(slug: string): Promise<string> {
   return type.id;
 }
 
+async function findBusinessVerticalIdByCode(code: string): Promise<string> {
+  const vertical = await db.query.businessVerticals.findFirst({
+    where: eq(businessVerticals.code, code),
+  });
+  if (!vertical) {
+    throw new Error(`Business vertical "${code}" not found — run migrations/seed first`);
+  }
+  return vertical.id;
+}
+
 export async function seedScopeIntegrationFixtures(
   uniqueId: string
 ): Promise<ScopeIntegrationFixtures> {
@@ -48,6 +59,7 @@ export async function seedScopeIntegrationFixtures(
 
   const managerZoneTypeId = await findTerritoryTypeIdBySlug("manager_zone");
   const patchTypeId = await findTerritoryTypeIdBySlug("patch");
+  const verticalId = await findBusinessVerticalIdByCode("ORTOPEDIA");
 
   const zone = await db
     .insert(territories)
@@ -55,6 +67,7 @@ export async function seedScopeIntegrationFixtures(
       name: `Zone ${uniqueId}`,
       slug: `zone-${codeSuffix.toLowerCase()}`,
       code: `${codeSuffix}-ZONE`,
+      verticalId,
       territoryTypeId: managerZoneTypeId,
     })
     .returning()
@@ -66,6 +79,7 @@ export async function seedScopeIntegrationFixtures(
       name: `Patch ${uniqueId}`,
       slug: `patch-01-${codeSuffix.toLowerCase()}`,
       code: `${codeSuffix}-01`,
+      verticalId,
       territoryTypeId: patchTypeId,
       managerTerritoryId: zone.id,
     })
@@ -78,6 +92,7 @@ export async function seedScopeIntegrationFixtures(
       name: `Patch Extra ${uniqueId}`,
       slug: `patch-02-${codeSuffix.toLowerCase()}`,
       code: `${codeSuffix}-02`,
+      verticalId,
       territoryTypeId: patchTypeId,
       managerTerritoryId: zone.id,
     })
@@ -90,6 +105,7 @@ export async function seedScopeIntegrationFixtures(
       name: `Zone North ${uniqueId}`,
       slug: `zone-n-${codeSuffix.toLowerCase()}`,
       code: `${codeSuffix}-N-ZONE`,
+      verticalId,
       territoryTypeId: managerZoneTypeId,
     })
     .returning()
@@ -101,6 +117,7 @@ export async function seedScopeIntegrationFixtures(
       name: `Patch North ${uniqueId}`,
       slug: `patch-n-01-${codeSuffix.toLowerCase()}`,
       code: `${codeSuffix}-N-01`,
+      verticalId,
       territoryTypeId: patchTypeId,
       managerTerritoryId: otherZone.id,
     })

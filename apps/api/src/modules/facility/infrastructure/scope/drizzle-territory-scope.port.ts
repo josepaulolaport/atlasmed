@@ -7,4 +7,8 @@ export class DrizzleTerritoryScopePort implements TerritoryScopePort {
   async getFacilityIdsForTerritories(territoryIds: string[]): Promise<string[]> {
     return this.facilityRepository.findIdsByTerritoryIds(territoryIds);
   }
+
+  async getFacilityIdsForVerticals(verticalIds: string[]): Promise<string[]> {
+    return this.facilityRepository.findActiveFacilityIdsByVerticalIds(verticalIds);
+  }
 }

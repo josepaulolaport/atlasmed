@@ -20,6 +20,7 @@ class Territory {
   final String name;
   final String slug;
   final String code;
+  final String verticalId;
   final TerritoryType territoryType;
   final String? managerTerritoryId;
   final bool isActive;
@@ -41,6 +42,7 @@ class Territory {
     required this.name,
     required this.slug,
     required this.code,
+    required this.verticalId,
     required this.territoryType,
     this.managerTerritoryId,
     this.isActive = true,
@@ -63,6 +65,7 @@ class Territory {
       name: json['name'] as String,
       slug: json['slug'] as String,
       code: json['code'] as String,
+      verticalId: json['verticalId'] as String,
       territoryType: TerritoryType.fromJson(
         json['territoryType'] as Map<String, dynamic>,
       ),
@@ -81,6 +84,7 @@ class Territory {
 
   Territory copyWith({
     String? name,
+    String? verticalId,
     bool? isActive,
     TerritoryGeometry? boundary,
     MapCoordinate? centroid,
@@ -93,6 +97,7 @@ class Territory {
       name: name ?? this.name,
       slug: slug,
       code: code,
+      verticalId: verticalId ?? this.verticalId,
       territoryType: territoryType,
       managerTerritoryId: identical(managerTerritoryId, _unset)
           ? this.managerTerritoryId

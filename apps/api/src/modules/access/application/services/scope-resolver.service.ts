@@ -41,33 +41,33 @@ export class ScopeResolver {
       return this.resolveManagerScope(userId);
     }
 
-    if (roleName === Role.REP || roleName === Role.OPS) {
-      return this.resolveRepOrOpsScope(userId);
+    if (roleName === Role.REP) {
+      return this.resolveRepScope(userId);
+    }
+
+    if (roleName === Role.OPS) {
+      return this.resolveOpsScope(userId);
     }
 
     return createEmptyScopeContext();
   }
 
-  private async resolveRepOrOpsScope(userId: string): Promise<ScopeContext> {
+  /** REP: patches for org/map; clinic list = consultant assigns only (Q4). */
+  private async resolveRepScope(userId: string): Promise<ScopeContext> {
     const [assignedVerticalIds, rawTerritoryIds] = await Promise.all([
       this.deps.scopeRepository.findVerticalIdsByUserId(userId),
       this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
     ]);
 
     const assignedTerritoryIds = rawTerritoryIds;
-
     const effectiveTerritoryIds =
       await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
         assignedTerritoryIds,
         true
       );
-    const territoryFacilityIds =
-      await this.deps.territoryScopePort.getFacilityIdsForTerritories(
-        effectiveTerritoryIds
-      );
     const facilityIds = await this.mergeAssociatedFacilityIds(
       userId,
-      territoryFacilityIds,
+      [],
       assignedVerticalIds,
     );
 
@@ -82,6 +82,40 @@ export class ScopeResolver {
       assignedVerticalIds,
       isOperationallyActive:
         effectiveTerritoryIds.length > 0 || facilityIds.length > 0,
+    });
+  }
+
+  /** OPS: all profiled facilities in assigned verticals; no zone cover (Q4c). */
+  private async resolveOpsScope(userId: string): Promise<ScopeContext> {
+    const [assignedVerticalIds, rawTerritoryIds] = await Promise.all([
+      this.deps.scopeRepository.findVerticalIdsByUserId(userId),
+      this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
+    ]);
+
+    const assignedTerritoryIds = rawTerritoryIds;
+    const effectiveTerritoryIds =
+      await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
+        assignedTerritoryIds,
+        true
+      );
+
+    const facilityIds =
+      assignedVerticalIds.length > 0
+        ? await this.deps.territoryScopePort.getFacilityIdsForVerticals(
+            assignedVerticalIds,
+          )
+        : [];
+
+    return withTerritoryScopeAliases({
+      isGlobal: false,
+      assignedTerritoryIds,
+      effectiveTerritoryIds,
+      analyticsEffectiveTerritoryIds: effectiveTerritoryIds,
+      facilityIds,
+      analyticsFacilityIds: facilityIds,
+      managedUserIds: [],
+      assignedVerticalIds,
+      isOperationallyActive: facilityIds.length > 0 || assignedVerticalIds.length > 0,
     });
   }
 
