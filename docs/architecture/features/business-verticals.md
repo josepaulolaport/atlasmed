@@ -200,7 +200,7 @@ Goal: Ortopedia runs through a vertical-aware model; ADMIN can filter; REP/MANAG
 | P1.1 | Product↔vertical membership as catalog visibility path |
 | P1.2 | Seed/configure Dermatologia + feature flag (**after** territory×vertical addendum — see design) — **catalog seed shipped** (`0027`); kill switch = `business_verticals.is_active`. Zones/patches, user assigns, profiles/consultants still open. |
 | P1.3 | Medical specialty catalog + M2M + vertical↔specialty (if needed for filtering) |
-| P1.4 | Territory×vertical ownership — design accepted: [`vertical-ownership-design.md`](../../specs/0003-territory-management/vertical-ownership-design.md). Types `manager_zone`/`patch` seeded in `0028`. Local demo SP zone/patches: `bun run db:seed:sp-territories` in `apps/api`. |
+| P1.4 | Territory×vertical ownership — design accepted: [`vertical-ownership-design.md`](../../specs/0003-territory-management/vertical-ownership-design.md). Types `manager_zone`/`patch` seeded in `0028`. Local territories from real consultant books: `bun run db:seed:sp-territories` in `apps/api` (hulls; no invented assigns). |
 | P1.5 | Orders store `vertical_id`; one vertical per order |
 | P1.6 | Search indexes include `vertical_ids` |
 | P1.7 | Vertical admin UX polish |

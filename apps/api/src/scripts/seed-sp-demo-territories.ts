@@ -1,22 +1,22 @@
 /**
- * Local/dev seed: SP manager zone + rep patches + manager + REP UTAs + membership recompute.
+ * Local seed: manager zone + REP patches from existing consultant clinic books
+ * (convex hull + buffer). No invented consultant assigns.
  *
- * Idempotent on territory codes DEMO-SP-*. Local DATABASE_URL only.
+ * Prefer Excel-book REPs (Adriana / Laudo / Luis / Raquel + others with books).
+ * Codes: DEMO-CLINIC-*. Local DATABASE_URL only.
  *
- * Usage (from apps/api):
- *   bun src/scripts/seed-sp-demo-territories.ts
+ *   bun run db:seed:sp-territories
  *
- * Optional env:
- *   SEED_MANAGER_EMAIL (default gerente.sp@atlasmed.com.br)
- *   SEED_MANAGER_PASSWORD (default ManagerSp123!)
+ * Env:
+ *   SEED_MANAGER_EMAIL (default manager@atlasmed.com.br)
+ *   SEED_MANAGER_PASSWORD (only if creating a new manager)
+ *   SEED_TERRITORY_REP_LIMIT (default 8)
  */
 import "dotenv/config";
 import { hash } from "argon2";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import {
   businessVerticals,
-  facilityConsultantAssignments,
-  facilityVerticalProfiles,
   roles,
   territories,
   territoryTypes,
@@ -29,10 +29,18 @@ import {
   territoryMembershipService,
   territoryRepositories,
 } from "../modules/territory/composition";
+import type { GeoJsonGeometry } from "../modules/territory/application/interfaces/territory-spatial.repository.interface";
 
-const CODE_PREFIX = "DEMO-SP";
+const CODE_PREFIX = "DEMO-CLINIC";
+const LEGACY_PREFIXES = ["DEMO-CLINIC-", "DEMO-SP-"] as const;
 
-type Rect = { minLng: number; minLat: number; maxLng: number; maxLat: number };
+/** Excel-book REPs first (filenames under atlasmed/excels). */
+const PREFERRED_REP_EMAILS = [
+  "adriana@atlasmed.com.br",
+  "laudo@atlasmed.com.br",
+  "luis.stelet@atlasmed.com.br",
+  "raquel@atlasmed.com.br",
+] as const;
 
 function assertLocalDatabaseUrl(url: string): void {
   let host = "";
@@ -48,27 +56,17 @@ function assertLocalDatabaseUrl(url: string): void {
     host.endsWith(".local");
   if (!isLocal) {
     throw new Error(
-      `seed-sp-demo-territories refused: host "${host}" is not local. Demo geometry must not hit shared/prod DBs.`,
+      `seed refused: host "${host}" is not local. Do not run demo territory geometry against shared/prod DBs.`,
     );
   }
 }
 
-function rectMultiPolygon(rect: Rect) {
-  const { minLng, minLat, maxLng, maxLat } = rect;
-  return {
-    type: "MultiPolygon" as const,
-    coordinates: [
-      [
-        [
-          [minLng, minLat],
-          [maxLng, minLat],
-          [maxLng, maxLat],
-          [minLng, maxLat],
-          [minLng, minLat],
-        ],
-      ],
-    ],
-  };
+function sqlInStrings(values: readonly string[]) {
+  if (values.length === 0) return sql`NULL`;
+  return sql.join(
+    values.map((value) => sql`${value}`),
+    sql`, `,
+  );
 }
 
 async function requireTypeId(slug: string): Promise<string> {
@@ -89,9 +87,7 @@ async function requireVerticalId(code: string): Promise<string> {
     .from(businessVerticals)
     .where(eq(businessVerticals.code, code))
     .limit(1);
-  if (!row) {
-    throw new Error(`Business vertical "${code}" missing`);
-  }
+  if (!row) throw new Error(`Business vertical "${code}" missing`);
   return row.id;
 }
 
@@ -120,8 +116,6 @@ async function ensureManager(params: {
         roleId: role.id,
         status: "ACTIVE",
         emailVerified: true,
-        firstName: "Gerente",
-        lastName: "SP Capital",
         updatedAt: new Date(),
       })
       .where(eq(users.id, existing.id));
@@ -154,7 +148,7 @@ async function ensureManager(params: {
       username,
       passwordHash,
       firstName: "Gerente",
-      lastName: "SP Capital",
+      lastName: "Territórios",
       roleId: role.id,
       status: "ACTIVE",
       emailVerified: true,
@@ -167,6 +161,33 @@ async function ensureManager(params: {
   });
 
   return { id: created!.id, email: created!.email, created: true };
+}
+
+async function clearDemoTerritories(): Promise<void> {
+  const legacy = await db
+    .select({ id: territories.id })
+    .from(territories)
+    .where(
+      sql`${territories.code} LIKE ${`${LEGACY_PREFIXES[0]}%`} OR ${territories.code} LIKE ${`${LEGACY_PREFIXES[1]}%`}`,
+    );
+  const ids = legacy.map((row) => row.id);
+  if (ids.length === 0) return;
+
+  await db
+    .delete(userTerritoryAssignments)
+    .where(inArray(userTerritoryAssignments.territoryId, ids));
+
+  await db.execute(sql`
+    UPDATE public.facility_vertical_profiles
+    SET territory_id = NULL, updated_at = now()
+    WHERE territory_id IN (${sqlInStrings(ids)})
+  `);
+  await db.execute(sql`
+    UPDATE public.facilities
+    SET territory_id = NULL, updated_at = now()
+    WHERE territory_id IN (${sqlInStrings(ids)})
+  `);
+  await db.delete(territories).where(inArray(territories.id, ids));
 }
 
 async function upsertTerritory(params: {
@@ -238,68 +259,6 @@ async function assignUserToTerritory(params: {
   });
 }
 
-/** REP clinic list is consultant-only — seed a sample of profiled clinics in each patch. */
-async function ensureConsultantSample(params: {
-  repUserId: string;
-  territoryId: string;
-  ortopediaId: string;
-  assignedBy: string;
-  limit: number;
-}): Promise<number> {
-  const candidates = await db
-    .select({ facilityId: facilityVerticalProfiles.facilityId })
-    .from(facilityVerticalProfiles)
-    .where(
-      and(
-        eq(facilityVerticalProfiles.verticalId, params.ortopediaId),
-        eq(facilityVerticalProfiles.territoryId, params.territoryId),
-        eq(facilityVerticalProfiles.isActive, true),
-      ),
-    )
-    .limit(params.limit);
-
-  let created = 0;
-  for (const row of candidates) {
-    const [active] = await db
-      .select({ id: facilityConsultantAssignments.id, userId: facilityConsultantAssignments.userId })
-      .from(facilityConsultantAssignments)
-      .where(
-        and(
-          eq(facilityConsultantAssignments.facilityId, row.facilityId),
-          eq(facilityConsultantAssignments.verticalId, params.ortopediaId),
-          sql`${facilityConsultantAssignments.endedAt} IS NULL`,
-        ),
-      )
-      .limit(1);
-
-    if (active?.userId === params.repUserId) {
-      created += 1;
-      continue;
-    }
-
-    if (active) {
-      // Demo seed only: reassign a sample so REPs see clinics (list = consultant-only).
-      await db
-        .update(facilityConsultantAssignments)
-        .set({
-          endedAt: new Date(),
-          endReason: "demo_sp_territory_seed_reassign",
-          updatedAt: new Date(),
-        })
-        .where(eq(facilityConsultantAssignments.id, active.id));
-    }
-
-    await db.insert(facilityConsultantAssignments).values({
-      facilityId: row.facilityId,
-      userId: params.repUserId,
-      verticalId: params.ortopediaId,
-      assignedByUserId: params.assignedBy,
-    });
-    created += 1;
-  }
-  return created;
-}
-
 async function linkRepToManager(params: {
   repUserId: string;
   managerId: string;
@@ -335,18 +294,195 @@ async function linkRepToManager(params: {
   }
 }
 
+type RepBook = {
+  userId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  clinicCount: number;
+  primaryState: string;
+  primaryCity: string;
+};
+
+async function loadRepBooks(limit: number): Promise<RepBook[]> {
+  const preferred = await db.execute<{
+    user_id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    clinic_count: number;
+    primary_state: string;
+    primary_city: string;
+  }>(sql`
+    SELECT
+      u.id AS user_id,
+      u.email,
+      u.first_name,
+      u.last_name,
+      count(*)::int AS clinic_count,
+      mode() WITHIN GROUP (ORDER BY f.state) AS primary_state,
+      mode() WITHIN GROUP (ORDER BY f.city) AS primary_city
+    FROM public.users u
+    JOIN public.roles r ON r.id = u.role_id AND r.name = 'REP'
+    JOIN public.facility_consultant_assignments fca
+      ON fca.user_id = u.id AND fca.ended_at IS NULL
+    JOIN public.facilities f ON f.id = fca.facility_id
+    WHERE u.status = 'ACTIVE'
+      AND f.location IS NOT NULL
+      AND f.state IS NOT NULL
+      AND u.email IN (${sqlInStrings(PREFERRED_REP_EMAILS)})
+    GROUP BY u.id
+    HAVING count(*) >= 10
+  `);
+
+  const byEmail = new Map(
+    (Array.isArray(preferred) ? preferred : []).map((row) => [row.email, row]),
+  );
+  const ordered: RepBook[] = [];
+  for (const email of PREFERRED_REP_EMAILS) {
+    const row = byEmail.get(email);
+    if (!row) continue;
+    ordered.push({
+      userId: row.user_id,
+      email: row.email,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      clinicCount: Number(row.clinic_count),
+      primaryState: row.primary_state,
+      primaryCity: row.primary_city,
+    });
+  }
+  // Larger books first so overlapping hulls (e.g. RJ) carve remaining space fairly.
+  ordered.sort((a, b) => b.clinicCount - a.clinicCount);
+
+  if (ordered.length >= limit) return ordered.slice(0, limit);
+
+  // Fill remaining slots with largest other REP books (still real consultants).
+  const extras = await db.execute<{
+    user_id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    clinic_count: number;
+    primary_state: string;
+    primary_city: string;
+  }>(sql`
+    SELECT
+      u.id AS user_id,
+      u.email,
+      u.first_name,
+      u.last_name,
+      count(*)::int AS clinic_count,
+      mode() WITHIN GROUP (ORDER BY f.state) AS primary_state,
+      mode() WITHIN GROUP (ORDER BY f.city) AS primary_city
+    FROM public.users u
+    JOIN public.roles r ON r.id = u.role_id AND r.name = 'REP'
+    JOIN public.facility_consultant_assignments fca
+      ON fca.user_id = u.id AND fca.ended_at IS NULL
+    JOIN public.facilities f ON f.id = fca.facility_id
+    WHERE u.status = 'ACTIVE'
+      AND f.location IS NOT NULL
+      AND f.state IS NOT NULL
+      AND u.email NOT IN (${sqlInStrings(PREFERRED_REP_EMAILS)})
+    GROUP BY u.id
+    HAVING count(*) >= 40
+    ORDER BY count(*) DESC
+    LIMIT ${Math.max(limit - ordered.length, 0)}
+  `);
+
+  for (const row of Array.isArray(extras) ? extras : []) {
+    ordered.push({
+      userId: row.user_id,
+      email: row.email,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      clinicCount: Number(row.clinic_count),
+      primaryState: row.primary_state,
+      primaryCity: row.primary_city,
+    });
+  }
+  return ordered.slice(0, limit);
+}
+
+async function buildRepPatchGeoJson(params: {
+  userId: string;
+  primaryState: string;
+}): Promise<{ geojson: GeoJsonGeometry; clinicCount: number } | null> {
+  // Overlapping hulls are OK — excel books share metros (RJ). REP clinic
+  // visibility stays consultant-based; patch geo is for manager coverage / map.
+  const rows = await db.execute<{
+    geojson: string;
+    clinic_count: number;
+  }>(sql`
+    WITH pts AS (
+      SELECT f.location::geometry AS geom
+      FROM public.facility_consultant_assignments fca
+      JOIN public.facilities f ON f.id = fca.facility_id
+      WHERE fca.user_id = ${params.userId}
+        AND fca.ended_at IS NULL
+        AND f.location IS NOT NULL
+        AND f.state = ${params.primaryState}
+    ),
+    hull AS (
+      SELECT
+        ST_Buffer(ST_ConvexHull(ST_Collect(geom))::geography, 5000)::geometry AS geom,
+        count(*)::int AS clinic_count
+      FROM pts
+    )
+    SELECT
+      ST_AsGeoJSON(ST_Multi(ST_CollectionExtract(ST_MakeValid(geom), 3)))::text AS geojson,
+      clinic_count
+    FROM hull
+    WHERE geom IS NOT NULL
+      AND NOT ST_IsEmpty(geom)
+      AND ST_Area(geom::geography) > 1
+  `);
+
+  const row = Array.isArray(rows) ? rows[0] : undefined;
+  if (!row?.geojson) return null;
+  return {
+    geojson: JSON.parse(row.geojson) as GeoJsonGeometry,
+    clinicCount: Number(row.clinic_count),
+  };
+}
+
+async function buildManagerZoneGeoJson(patchIds: string[]): Promise<GeoJsonGeometry> {
+  const rows = await db.execute<{ geojson: string }>(sql`
+    WITH unioned AS (
+      SELECT ST_Buffer(
+        ST_UnaryUnion(ST_Collect(boundary))::geography,
+        2000
+      )::geometry AS geom
+      FROM public.territories
+      WHERE id IN (${sqlInStrings(patchIds)})
+        AND boundary IS NOT NULL
+    )
+    SELECT ST_AsGeoJSON(ST_Multi(ST_CollectionExtract(ST_MakeValid(geom), 3)))::text AS geojson
+    FROM unioned
+    WHERE geom IS NOT NULL AND NOT ST_IsEmpty(geom)
+  `);
+  const row = Array.isArray(rows) ? rows[0] : undefined;
+  if (!row?.geojson) {
+    throw new Error("Failed to build manager zone from patch union");
+  }
+  return JSON.parse(row.geojson) as GeoJsonGeometry;
+}
+
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
   assertLocalDatabaseUrl(databaseUrl);
 
-  console.log("🌱 Seeding SP demo territories (Ortopedia)...");
+  console.log("🌱 Seeding territories from real consultant clinic books...");
 
   const managerZoneTypeId = await requireTypeId("manager_zone");
   const patchTypeId = await requireTypeId("patch");
   const ortopediaId = await requireVerticalId("ORTOPEDIA");
 
-  const managerEmail = process.env.SEED_MANAGER_EMAIL || "gerente.sp@atlasmed.com.br";
+  console.log("   Clearing previous DEMO-* territories (assigns untouched)...");
+  await clearDemoTerritories();
+
+  const managerEmail = process.env.SEED_MANAGER_EMAIL || "manager@atlasmed.com.br";
   const managerPassword = process.env.SEED_MANAGER_PASSWORD || "ManagerSp123!";
   const manager = await ensureManager({
     email: managerEmail,
@@ -354,147 +490,133 @@ async function main() {
     ortopediaId,
   });
   console.log(
-    `   ${manager.created ? "Created" : "Updated"} manager ${manager.email} (${manager.id})`,
+    `   ${manager.created ? "Created" : "Using"} manager ${manager.email} (${manager.id})`,
   );
 
-  // Manager zone covers dense SP capital + nearby metro west/south (approx).
-  const zoneRect: Rect = {
-    minLng: -46.82,
-    minLat: -23.78,
-    maxLng: -46.4,
-    maxLat: -23.4,
-  };
+  const limit = Number(process.env.SEED_TERRITORY_REP_LIMIT || "8");
+  const books = await loadRepBooks(Number.isFinite(limit) ? limit : 8);
+  if (books.length === 0) {
+    throw new Error("No REPs with enough geocoded consultant clinics");
+  }
+
+  console.log("   REP books:");
+  for (const book of books) {
+    console.log(
+      `     - ${book.email}: ${book.clinicCount} clinics → ${book.primaryState}/${book.primaryCity}`,
+    );
+  }
 
   const zoneId = await upsertTerritory({
     code: `${CODE_PREFIX}-ZONE`,
-    name: "SP Capital (gerente)",
-    slug: "demo-sp-capital-zone",
+    name: "Zona gerente (livros comerciais)",
+    slug: "demo-clinic-manager-zone",
     verticalId: ortopediaId,
     territoryTypeId: managerZoneTypeId,
   });
 
-  await territoryRepositories.spatial.saveBoundary(zoneId, rectMultiPolygon(zoneRect));
-  await territoryRepositories.spatial.updateBoundaryMetadata(zoneId);
-  console.log(`   Zone ${CODE_PREFIX}-ZONE → ${zoneId}`);
+  const patchIds: string[] = [];
+  const patchSummaries: Array<{ code: string; email: string; patchId: string }> = [];
 
+  for (const [index, book] of books.entries()) {
+    const shape = await buildRepPatchGeoJson({
+      userId: book.userId,
+      primaryState: book.primaryState,
+    });
+    if (!shape) {
+      console.warn(`   ⚠ Skip ${book.email}: no usable hull in ${book.primaryState}`);
+      continue;
+    }
+
+    const shortName =
+      [book.firstName, book.lastName].filter(Boolean).join(" ").trim() || book.email;
+    const code = `${CODE_PREFIX}-${String(index + 1).padStart(2, "0")}-${book.primaryState}`;
+    const slug = `demo-clinic-${index + 1}-${book.primaryState.toLowerCase()}-${book.email
+      .split("@")[0]!
+      .replace(/[^a-z0-9]+/gi, "-")
+      .toLowerCase()}`;
+
+    const patchId = await upsertTerritory({
+      code,
+      name: `${book.primaryState} — ${shortName}`,
+      slug: slug.slice(0, 80),
+      verticalId: ortopediaId,
+      territoryTypeId: patchTypeId,
+      managerTerritoryId: zoneId,
+    });
+
+    await territoryRepositories.spatial.saveBoundary(patchId, shape.geojson, {
+      repairInvalid: true,
+    });
+    await territoryRepositories.spatial.updateBoundaryMetadata(patchId);
+
+    await assignUserToTerritory({
+      userId: book.userId,
+      territoryId: patchId,
+      assignedBy: manager.id,
+    });
+    await linkRepToManager({
+      repUserId: book.userId,
+      managerId: manager.id,
+      ortopediaId,
+    });
+
+    patchIds.push(patchId);
+    patchSummaries.push({ code, email: book.email, patchId });
+    console.log(
+      `   Patch ${code}: ${book.email} — hull of ${shape.clinicCount} clinics (${book.primaryCity})`,
+    );
+  }
+
+  if (patchIds.length === 0) {
+    throw new Error("No patches created");
+  }
+
+  const zoneGeo = await buildManagerZoneGeoJson(patchIds);
+  await territoryRepositories.spatial.saveBoundary(zoneId, zoneGeo, { repairInvalid: true });
+  await territoryRepositories.spatial.updateBoundaryMetadata(zoneId);
   await assignUserToTerritory({
     userId: manager.id,
     territoryId: zoneId,
     assignedBy: manager.id,
   });
+  console.log(`   Zone ${CODE_PREFIX}-ZONE covers ${patchIds.length} patches`);
 
-  const patches: Array<{
-    code: string;
-    name: string;
-    slug: string;
-    rect: Rect;
-    repEmail: string;
-  }> = [
-    {
-      code: `${CODE_PREFIX}-CENTRO`,
-      name: "SP Centro",
-      slug: "demo-sp-centro",
-      rect: { minLng: -46.68, minLat: -23.58, maxLng: -46.6, maxLat: -23.52 },
-      repEmail: "rep@atlasmed.com.br",
-    },
-    {
-      code: `${CODE_PREFIX}-ZONA-SUL`,
-      name: "SP Zona Sul",
-      slug: "demo-sp-zona-sul",
-      rect: { minLng: -46.72, minLat: -23.72, maxLng: -46.6, maxLat: -23.58 },
-      repEmail: "adriana@atlasmed.com.br",
-    },
-    {
-      code: `${CODE_PREFIX}-ZONA-OESTE`,
-      name: "SP Zona Oeste",
-      slug: "demo-sp-zona-oeste",
-      rect: { minLng: -46.8, minLat: -23.62, maxLng: -46.68, maxLat: -23.5 },
-      repEmail: "laudo@atlasmed.com.br",
-    },
-    {
-      code: `${CODE_PREFIX}-ZONA-NORTE`,
-      name: "SP Zona Norte",
-      slug: "demo-sp-zona-norte",
-      rect: { minLng: -46.68, minLat: -23.52, maxLng: -46.52, maxLat: -23.42 },
-      repEmail: "raquel@atlasmed.com.br",
-    },
-    {
-      code: `${CODE_PREFIX}-ZONA-LESTE`,
-      name: "SP Zona Leste / ABC",
-      slug: "demo-sp-zona-leste",
-      rect: { minLng: -46.6, minLat: -23.7, maxLng: -46.45, maxLat: -23.55 },
-      repEmail: "luis.stelet@atlasmed.com.br",
-    },
-  ];
-
-  for (const patch of patches) {
-    const patchId = await upsertTerritory({
-      code: patch.code,
-      name: patch.name,
-      slug: patch.slug,
-      verticalId: ortopediaId,
-      territoryTypeId: patchTypeId,
-      managerTerritoryId: zoneId,
-    });
-    await territoryRepositories.spatial.saveBoundary(patchId, rectMultiPolygon(patch.rect));
-    await territoryRepositories.spatial.updateBoundaryMetadata(patchId);
-
-    const { processed } = await territoryMembershipService.recomputeForTerritoryBoundary(patchId);
-    console.log(`   Patch ${patch.code}: membership recompute ${processed} clinics in bbox`);
-
-    const [rep] = await db
-      .select({ id: users.id, email: users.email })
-      .from(users)
-      .where(eq(users.email, patch.repEmail))
-      .limit(1);
-
-    if (!rep) {
-      console.warn(`   ⚠ REP ${patch.repEmail} not found — patch ${patch.code} created without UTA`);
-      continue;
-    }
-
-    await assignUserToTerritory({
-      userId: rep.id,
-      territoryId: patchId,
-      assignedBy: manager.id,
-    });
-    await linkRepToManager({
-      repUserId: rep.id,
-      managerId: manager.id,
-      ortopediaId,
-    });
-    const consultants = await ensureConsultantSample({
-      repUserId: rep.id,
-      territoryId: patchId,
-      ortopediaId,
-      assignedBy: manager.id,
-      limit: 40,
-    });
-    console.log(`      → ${rep.email} (UTA + ${consultants} consultant assigns)`);
+  for (const patch of patchSummaries) {
+    const { processed } = await territoryMembershipService.recomputeForTerritoryBoundary(
+      patch.patchId,
+    );
+    console.log(`      recompute ${patch.code}: ${processed} clinics in bbox`);
   }
 
-  const summary = await db.execute<{
-    territories: string;
-    utas: string;
-    profiles_with_territory: string;
+  const coverage = await db.execute<{
+    email: string;
+    consultant_clinics: number;
+    in_own_patch: number;
   }>(sql`
     SELECT
-      (SELECT count(*)::text FROM public.territories WHERE code LIKE ${`${CODE_PREFIX}-%`}) AS territories,
-      (SELECT count(*)::text FROM public.user_territory_assignments uta
-        JOIN public.territories t ON t.id = uta.territory_id
-        WHERE t.code LIKE ${`${CODE_PREFIX}-%`}) AS utas,
-      (SELECT count(*)::text FROM public.facility_vertical_profiles
-        WHERE territory_id IS NOT NULL) AS profiles_with_territory
+      u.email,
+      count(*)::int AS consultant_clinics,
+      count(*) FILTER (WHERE fvp.territory_id = uta.territory_id)::int AS in_own_patch
+    FROM public.users u
+    JOIN public.user_territory_assignments uta ON uta.user_id = u.id
+    JOIN public.territories t ON t.id = uta.territory_id AND t.code LIKE ${`${CODE_PREFIX}-%`}
+    JOIN public.territory_types tt ON tt.id = t.territory_type_id AND tt.slug = 'patch'
+    JOIN public.facility_consultant_assignments fca
+      ON fca.user_id = u.id AND fca.ended_at IS NULL
+    JOIN public.facility_vertical_profiles fvp
+      ON fvp.facility_id = fca.facility_id
+     AND fvp.vertical_id = ${ortopediaId}
+    GROUP BY u.email
+    ORDER BY u.email
   `);
 
-  const row = Array.isArray(summary) ? summary[0] : (summary as { rows?: unknown[] }).rows?.[0];
   console.log("\n✅ Done");
-  console.log(`   Manager login: ${manager.email} / ${managerPassword}`);
-  console.log(`   Demo territories: ${(row as { territories?: string })?.territories ?? "?"}`);
-  console.log(`   UTAs on demo territories: ${(row as { utas?: string })?.utas ?? "?"}`);
-  console.log(
-    `   Profiles with territory_id: ${(row as { profiles_with_territory?: string })?.profiles_with_territory ?? "?"}`,
-  );
+  console.log(`   Manager: ${manager.email}`);
+  for (const row of Array.isArray(coverage) ? coverage : []) {
+    console.log(
+      `   ${row.email}: ${row.in_own_patch}/${row.consultant_clinics} consultant clinics inside own patch`,
+    );
+  }
 }
 
 main()
