@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import { ForbiddenError, type ScopeContext } from "@atlasmed/access";
-import { GetOrderUseCase, ListOrdersUseCase } from "./orders.use-cases";
+import { ValidationError } from "../../../../shared/errors";
+import {
+  CreateOrderUseCase,
+  GetOrderUseCase,
+  ListOrdersUseCase,
+} from "./orders.use-cases";
 import type { OrderRepository } from "../interfaces/order.repository.interface";
 
 const scopedToFacilityOne: ScopeContext = {
@@ -18,7 +23,7 @@ const scopedToFacilityOne: ScopeContext = {
   isOperationallyActive: true,
 };
 
-function createRepository(): OrderRepository {
+function createRepository(overrides: Partial<OrderRepository> = {}): OrderRepository {
   return {
     findAll: async () => ({
       orders: [
@@ -74,6 +79,14 @@ function createRepository(): OrderRepository {
             items: [],
           }
         : null,
+    create: async () => {
+      throw new Error("unused");
+    },
+    hasActiveFacilityVerticalProfile: async () => true,
+    findProductIdsInVertical: async (productIds) => productIds,
+    findProductUnitPrices: async (productIds) =>
+      new Map(productIds.map((id) => [id, 100])),
+    ...overrides,
   };
 }
 
@@ -172,5 +185,93 @@ describe("orders use cases", () => {
         actor: { userId: "rep-1", roleName: "REP" },
       }),
     ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("creates an order when facility profile and products match the vertical", async () => {
+    let created: Parameters<OrderRepository["create"]>[0] | null = null;
+    const repository = createRepository({
+      create: async (input) => {
+        created = input;
+        return {
+          id: "order-new",
+          legacyId: null,
+          verticalId: input.verticalId,
+          facility: { id: input.facilityId, name: "Clínica Um" },
+          professional: null,
+          seller: { id: input.sellerId!, name: "Rep" },
+          status: input.status ?? "PENDING",
+          type: input.type ?? "SALE",
+          orderedAt: input.orderedAt ?? new Date(),
+          createdAt: new Date("2026-01-01T10:00:00Z"),
+          updatedAt: new Date("2026-01-01T10:00:00Z"),
+          surgeryType: null,
+          surgerySubtype: null,
+          notes: input.notes ?? null,
+          freight: input.freight ?? 0,
+          grossWeight: 0,
+          netWeight: 0,
+          currency: "BRL",
+          usdExchangeRate: null,
+          finalizedById: null,
+          finalizedAt: null,
+          rejectedById: null,
+          rejectionReason: null,
+          noBillingById: null,
+          noBillingAt: null,
+          noBillingNotes: null,
+          expenseAuthorizedById: null,
+          expenseAuthorizedAt: null,
+          items: input.items.map((item, index) => ({
+            id: `item-${index}`,
+            legacyId: null,
+            lineNumber: index + 1,
+            product: { id: item.productId, name: "Produto", code: "P1" },
+            legacyProductId: null,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice ?? 100,
+            usdPrice: null,
+            batchNumber: null,
+            writtenOff: false,
+            createdAt: new Date("2026-01-01T10:00:00Z"),
+            updatedAt: new Date("2026-01-01T10:00:00Z"),
+          })),
+        };
+      },
+    });
+
+    const result = await new CreateOrderUseCase({ orderRepository: repository }).execute({
+      facilityId: "facility-1",
+      items: [{ productId: "product-1", quantity: 2 }],
+      scope: scopedToFacilityOne,
+      actor: { userId: "rep-1", roleName: "REP" },
+    });
+
+    expect(created).toMatchObject({
+      facilityId: "facility-1",
+      verticalId: "vertical-1",
+      sellerId: "rep-1",
+      items: [{ productId: "product-1", quantity: 2, unitPrice: 100 }],
+    });
+    expect(result).toMatchObject({
+      id: "order-new",
+      verticalId: "vertical-1",
+      itemCount: 1,
+      total: 200,
+    });
+  });
+
+  it("rejects create when facility has no profile for the vertical", async () => {
+    const repository = createRepository({
+      hasActiveFacilityVerticalProfile: async () => false,
+    });
+
+    await expect(
+      new CreateOrderUseCase({ orderRepository: repository }).execute({
+        facilityId: "facility-1",
+        items: [{ productId: "product-1", quantity: 1 }],
+        scope: scopedToFacilityOne,
+        actor: { userId: "rep-1", roleName: "REP" },
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 });

@@ -99,4 +99,66 @@ const getOrderRoute = new Elysia()
     }
   );
 
-export const ordersRoute = new Elysia().use(listOrdersRoute).use(getOrderRoute);
+const createOrderRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY"))
+  .post(
+    "/orders",
+    async ({ body, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
+      return ordersUseCases.createOrder().execute({
+        facilityId: body.facilityId,
+        verticalId: body.verticalId,
+        professionalId: body.professionalId,
+        status: body.status,
+        type: body.type,
+        notes: body.notes,
+        freight: body.freight,
+        orderedAt: body.orderedAt,
+        items: body.items,
+        scope,
+        actor: { userId, roleName: authContext.roleName },
+      });
+    },
+    {
+      detail: {
+        summary: "Create order",
+        tags: ["Orders"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        facilityId: t.String(),
+        verticalId: t.Optional(t.String()),
+        professionalId: t.Optional(t.Nullable(t.String())),
+        status: t.Optional(t.Union([t.Literal("DRAFT"), t.Literal("PENDING")])),
+        type: t.Optional(
+          t.Union([
+            t.Literal("SALE"),
+            t.Literal("CONSIGNMENT"),
+            t.Literal("DONATION"),
+            t.Literal("OTHER"),
+          ])
+        ),
+        notes: t.Optional(t.Nullable(t.String())),
+        freight: t.Optional(t.Number()),
+        orderedAt: t.Optional(t.String()),
+        items: t.Array(
+          t.Object({
+            productId: t.String(),
+            quantity: t.Number(),
+            unitPrice: t.Optional(t.Number()),
+          }),
+          { minItems: 1 }
+        ),
+      }),
+    }
+  );
+
+export const ordersRoute = new Elysia()
+  .use(listOrdersRoute)
+  .use(createOrderRoute)
+  .use(getOrderRoute);

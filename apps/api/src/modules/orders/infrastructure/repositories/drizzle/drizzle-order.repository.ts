@@ -1,7 +1,9 @@
 import {
   facilities,
+  facilityVerticalProfiles,
   orderItems,
   orders,
+  productVerticals,
   products,
   professionals,
   users,
@@ -9,6 +11,7 @@ import {
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
+  CreateOrderInput,
   OrderDetailRecord,
   OrderRepository,
   OrderScopeFilter,
@@ -225,5 +228,86 @@ export class DrizzleOrderRepository implements OrderRepository {
         usdPrice: item.usdPrice == null ? null : Number(item.usdPrice),
       })),
     };
+  }
+
+  async hasActiveFacilityVerticalProfile(
+    facilityId: string,
+    verticalId: string
+  ): Promise<boolean> {
+    const [row] = await db
+      .select({ id: facilityVerticalProfiles.id })
+      .from(facilityVerticalProfiles)
+      .where(
+        and(
+          eq(facilityVerticalProfiles.facilityId, facilityId),
+          eq(facilityVerticalProfiles.verticalId, verticalId),
+          eq(facilityVerticalProfiles.isActive, true)
+        )
+      )
+      .limit(1);
+    return Boolean(row);
+  }
+
+  async findProductIdsInVertical(
+    productIds: string[],
+    verticalId: string
+  ): Promise<string[]> {
+    if (productIds.length === 0) return [];
+    const rows = await db
+      .select({ productId: productVerticals.productId })
+      .from(productVerticals)
+      .where(
+        and(
+          inArray(productVerticals.productId, productIds),
+          eq(productVerticals.verticalId, verticalId)
+        )
+      );
+    return rows.map((row) => row.productId);
+  }
+
+  async findProductUnitPrices(productIds: string[]): Promise<Map<string, number>> {
+    if (productIds.length === 0) return new Map();
+    const rows = await db
+      .select({ id: products.id, price: products.price })
+      .from(products)
+      .where(inArray(products.id, productIds));
+    return new Map(rows.map((row) => [row.id, Number(row.price)]));
+  }
+
+  async create(input: CreateOrderInput): Promise<OrderDetailRecord> {
+    const orderId = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(orders)
+        .values({
+          facilityId: input.facilityId,
+          verticalId: input.verticalId,
+          sellerId: input.sellerId,
+          professionalId: input.professionalId ?? null,
+          status: (input.status ?? "PENDING") as OrderStatus,
+          type: (input.type ?? "SALE") as "SALE" | "CONSIGNMENT" | "DONATION" | "OTHER",
+          notes: input.notes ?? null,
+          freight: String(input.freight ?? 0),
+          orderedAt: input.orderedAt ?? new Date(),
+        })
+        .returning({ id: orders.id });
+
+      if (!created) throw new Error("Failed to insert order");
+
+      await tx.insert(orderItems).values(
+        input.items.map((item, index) => ({
+          orderId: created.id,
+          productId: item.productId,
+          lineNumber: index + 1,
+          quantity: String(item.quantity),
+          unitPrice: String(item.unitPrice ?? 0),
+        }))
+      );
+
+      return created.id;
+    });
+
+    const detail = await this.findById(orderId);
+    if (!detail) throw new Error("Order created but not found");
+    return detail;
   }
 }

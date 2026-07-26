@@ -85,6 +85,25 @@ export interface OrderDetailRecord {
   }>;
 }
 
+export interface CreateOrderItemInput {
+  productId: string;
+  quantity: number;
+  unitPrice?: number;
+}
+
+export interface CreateOrderInput {
+  facilityId: string;
+  verticalId: string;
+  sellerId: string | null;
+  professionalId?: string | null;
+  status?: OrderStatus;
+  type?: string;
+  notes?: string | null;
+  freight?: number;
+  orderedAt?: Date;
+  items: CreateOrderItemInput[];
+}
+
 export interface OrderRepository {
   findAll(input: {
     page: number;
@@ -100,4 +119,17 @@ export interface OrderRepository {
     scope: OrderScopeFilter;
   }): Promise<{ orders: OrderListRecord[]; total: number }>;
   findById(id: string): Promise<OrderDetailRecord | null>;
+  create(input: CreateOrderInput): Promise<OrderDetailRecord>;
+  hasActiveFacilityVerticalProfile(
+    facilityId: string,
+    verticalId: string
+  ): Promise<boolean>;
+  /** Product ids among `productIds` that belong to the vertical. */
+  findProductIdsInVertical(
+    productIds: string[],
+    verticalId: string
+  ): Promise<string[]>;
+  findProductUnitPrices(
+    productIds: string[]
+  ): Promise<Map<string, number>>;
 }
