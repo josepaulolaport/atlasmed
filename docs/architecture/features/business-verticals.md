@@ -147,7 +147,7 @@ User → verticals they can access (from assignments; ADMIN = all)
 | 9 | Assignment history | **Current assignee only** for now. A clinic **may have multiple verticals** ⇒ one REP per vertical ⇒ multiple REPs on the same clinic across verticals (see §4.1) |
 | 10 | `territories.sector_id` | **Drop** if it does not break P0 (ownership moves off the territory row) |
 | 11 | Commercial fields | **Move** onto facility vertical profile; redesign dependent flows (incl. **cadastro**) around `verticalId` |
-| 12 | Seed | **Only Ortopedia** — code `ORTOPEDIA`, display name `Ortopedia` |
+| 12 | Seed | **Ortopedia** (`ORTOPEDIA`) in P0; **Dermatologia** (`DERMATOLOGIA`) catalog row in P1.2 (`0027_seed_dermatologia`). Zones/profiles/assigns still ops follow-up. |
 | 13 | Product catalog by vertical | **Defer to P1** |
 | 14 | First ship slice | **(B)** rename + facility profiles + vertical-aware access together |
 | 15 | P0 exclusions | None beyond what’s already deferred above |
@@ -198,7 +198,7 @@ Goal: Ortopedia runs through a vertical-aware model; ADMIN can filter; REP/MANAG
 | # | Work item |
 |---|---|
 | P1.1 | Product↔vertical membership as catalog visibility path |
-| P1.2 | Seed/configure Dermatologia + feature flag (**after** territory×vertical addendum — see design) |
+| P1.2 | Seed/configure Dermatologia + feature flag (**after** territory×vertical addendum — see design) — **catalog seed shipped** (`0027`); kill switch = `business_verticals.is_active`. Zones/patches, user assigns, profiles/consultants still open. |
 | P1.3 | Medical specialty catalog + M2M + vertical↔specialty (if needed for filtering) |
 | P1.4 | Territory×vertical ownership — design accepted: [`vertical-ownership-design.md`](../../specs/0003-territory-management/vertical-ownership-design.md) |
 | P1.5 | Orders store `vertical_id`; one vertical per order |
@@ -259,7 +259,7 @@ Goal: Ortopedia runs through a vertical-aware model; ADMIN can filter; REP/MANAG
 | API | list/filter `verticalId` (optional); routes stay resource-centric (no `/verticals/{id}/…` nesting); DTO `sectorId` → `verticalId` |
 | packages/access | `assignedSectorIds` → `assignedVerticalIds` |
 | Mobile / web | models, providers, “Vertical” copy |
-| Seed | code `ORTOPEDIA`, name `Ortopedia` |
+| Seed | codes `ORTOPEDIA`, `DERMATOLOGIA` |
 
 ---
 
