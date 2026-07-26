@@ -64,9 +64,26 @@ describe("ScopeResolver", () => {
     });
   }
 
-  it("returns global scope for ADMIN", async () => {
+  it("returns global scope for ADMIN using user_vertical_assignments when present", async () => {
     const scope = await createResolver({
       scopeRepository: emptyScopeRepository({
+        findVerticalIdsByUserId: mock(async () => ["vertical-derm"]),
+        listActiveVerticals: mock(async () => [
+          { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopedia" },
+          { id: "vertical-derm", code: "DERMATOLOGIA", name: "Dermatologia" },
+        ]),
+      }),
+    }).resolve("admin-1", Role.ADMIN);
+
+    expect(scope.isGlobal).toBe(true);
+    expect(scope.isOperationallyActive).toBe(true);
+    expect(scope.assignedVerticalIds).toEqual(["vertical-derm"]);
+  });
+
+  it("falls back to all active verticals when ADMIN has no UVA rows", async () => {
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findVerticalIdsByUserId: mock(async () => []),
         listActiveVerticals: mock(async () => [
           { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopedia" },
         ]),
@@ -74,7 +91,6 @@ describe("ScopeResolver", () => {
     }).resolve("admin-1", Role.ADMIN);
 
     expect(scope.isGlobal).toBe(true);
-    expect(scope.isOperationallyActive).toBe(true);
     expect(scope.assignedVerticalIds).toEqual(["vertical-a"]);
   });
 

@@ -27,8 +27,9 @@ export function buildFacilityListScope(input: {
     return {
       isGlobal: true,
       verticalIds: resolvedVerticalIds,
-      // Unprofiled facilities: ADMIN only when not filtering to one vertical.
-      restrictToVerticalProfiles: Boolean(filterVerticalId),
+      // Always profile-bound when verticals resolve — ADMIN UVA (or header
+      // narrow) must not leak facilities outside those verticals.
+      restrictToVerticalProfiles: resolvedVerticalIds.length > 0,
     };
   }
 

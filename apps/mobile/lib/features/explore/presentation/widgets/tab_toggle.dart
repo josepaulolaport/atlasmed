@@ -22,23 +22,32 @@ class TabToggle extends StatelessWidget {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          _Tab(
-            label: 'Clínicas',
-            count: clinicCount,
-            selected: value == 'clinic',
-            onTap: () => onChanged('clinic'),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _Tab(
+                    label: 'Clínicas',
+                    count: clinicCount,
+                    selected: value == 'clinic',
+                    onTap: () => onChanged('clinic'),
+                  ),
+                  const SizedBox(width: 16),
+                  _Tab(
+                    label: 'Médicos',
+                    count: doctorCount,
+                    selected: value == 'doctor',
+                    onTap: () => onChanged('doctor'),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(width: 24),
-          _Tab(
-            label: 'Médicos',
-            count: doctorCount,
-            selected: value == 'doctor',
-            onTap: () => onChanged('doctor'),
-          ),
-          if (trailing != null) ...[const Spacer(), trailing!],
+          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ],
       ),
     );

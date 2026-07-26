@@ -1,5 +1,4 @@
 import {
-  Role,
   VERTICAL_ID_HEADER,
   resolveAccessibleVerticalIds,
 } from "@atlasmed/access";
@@ -19,7 +18,7 @@ export interface ResolveVerticalIdsInput {
 /**
  * Returns the vertical IDs the caller may use for filtering.
  * Filter source: header `X-AtlasMed-Vertical-Id` preferred, else query/body.
- * Always ∩ token assignments (ADMIN assignments = all active verticals from scope).
+ * Always ∩ token assignments (`user_vertical_assignments` via scope).
  */
 export function resolveVerticalIds(input: ResolveVerticalIdsInput): string[] {
   const filterVerticalId = input.headerVerticalId?.trim() || input.queryVerticalId?.trim() || null;
@@ -31,16 +30,6 @@ export function resolveVerticalIds(input: ResolveVerticalIdsInput): string[] {
   });
 
   if (!result.ok) {
-    throw new ForbiddenError();
-  }
-
-  // ADMIN with unknown filter id not in active list → forbid (except empty assign edge).
-  if (
-    input.role === Role.ADMIN &&
-    filterVerticalId &&
-    input.assignedVerticalIds.length > 0 &&
-    !input.assignedVerticalIds.includes(filterVerticalId)
-  ) {
     throw new ForbiddenError();
   }
 
