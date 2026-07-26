@@ -7,11 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ManagerPickerField extends ConsumerStatefulWidget {
   final String? managerTerritoryId;
+  final String? verticalId;
   final ValueChanged<String?> onChanged;
 
   const ManagerPickerField({
     super.key,
     required this.managerTerritoryId,
+    this.verticalId,
     required this.onChanged,
   });
 
@@ -33,7 +35,8 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
   @override
   void didUpdateWidget(ManagerPickerField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.managerTerritoryId != widget.managerTerritoryId) {
+    if (oldWidget.managerTerritoryId != widget.managerTerritoryId ||
+        oldWidget.verticalId != widget.verticalId) {
       _resolveManager();
     }
   }
@@ -52,7 +55,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
     _resolvedForZoneId = zoneId;
     final candidates = await ref
         .read(territoryRepositoryProvider)
-        .getAssignableManagers();
+        .getAssignableManagers(verticalId: widget.verticalId);
     if (!mounted || _resolvedForZoneId != zoneId) return;
 
     AppUser? manager;
@@ -74,6 +77,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
     final result = await UserPickerSheet.pickManagerForPatch(
       context,
       currentManagerTerritoryId: widget.managerTerritoryId,
+      verticalId: widget.verticalId,
     );
     if (result == null) return;
     widget.onChanged(result);
@@ -84,7 +88,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
     final hasSelection = widget.managerTerritoryId != null;
 
     return InkWell(
-      onTap: _openPicker,
+      onTap: widget.verticalId == null ? null : _openPicker,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -111,6 +115,8 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
               child: Text(
                 hasSelection
                     ? '${_manager?.name ?? 'Carregando...'}${_zoneName != null ? ' ($_zoneName)' : ''}'
+                    : widget.verticalId == null
+                    ? 'Escolha o vertical primeiro'
                     : 'Selecionar gerente',
                 style: TextStyle(
                   fontSize: 14,

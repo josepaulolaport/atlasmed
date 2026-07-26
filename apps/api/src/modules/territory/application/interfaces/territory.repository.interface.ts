@@ -6,6 +6,7 @@ export interface TerritoryRecord {
   name: string;
   slug: string;
   code: string;
+  verticalId: string;
   territoryTypeId: string;
   territoryType?: TerritoryTypeRecord;
   managerTerritoryId: string | null;
@@ -22,6 +23,7 @@ export interface CreateTerritoryInput {
   name: string;
   slug: string;
   code?: string;
+  verticalId: string;
   territoryTypeId: string;
   managerTerritoryId?: string | null;
 }
@@ -29,13 +31,13 @@ export interface CreateTerritoryInput {
 export interface TerritoryRepository {
   findById(id: string): Promise<TerritoryRecord | null>;
 
-  findBySlug(slug: string): Promise<TerritoryRecord | null>;
+  findBySlug(slug: string, verticalId?: string): Promise<TerritoryRecord | null>;
 
-  findByCode(code: string): Promise<TerritoryRecord | null>;
+  findByCode(code: string, verticalId?: string): Promise<TerritoryRecord | null>;
 
-  findAllActive(): Promise<TerritoryRecord[]>;
+  findAllActive(verticalId?: string): Promise<TerritoryRecord[]>;
 
-  findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]>;
+  findActiveByTypeSlug(typeSlug: string, verticalId?: string): Promise<TerritoryRecord[]>;
 
   countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number>;
 

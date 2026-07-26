@@ -22,6 +22,7 @@ export const territoriesRoute = new Elysia()
         {
           typeSlug: query.type,
           managerTerritoryId: query.managerTerritoryId,
+          verticalId: query.verticalId,
         }
       );
     },
@@ -30,6 +31,7 @@ export const territoriesRoute = new Elysia()
         format: t.Optional(t.Union([t.Literal("tree"), t.Literal("flat")])),
         type: t.Optional(t.String({ description: "Filter by territory type slug (e.g. manager_zone, patch)" })),
         managerTerritoryId: t.Optional(t.String({ description: "Filter patches by manager zone territory ID" })),
+        verticalId: t.Optional(t.String({ description: "Filter territories by business vertical" })),
       }),
     }
   )
@@ -113,6 +115,7 @@ export const territoriesRoute = new Elysia()
       body: t.Object({
         name: t.String(),
         slug: t.String(),
+        verticalId: t.String(),
         territoryTypeId: t.Optional(t.String()),
         typeSlug: t.Optional(t.String()),
         boundary: t.Optional(

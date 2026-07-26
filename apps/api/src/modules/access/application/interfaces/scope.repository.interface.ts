@@ -75,6 +75,8 @@ export interface ScopeRepository {
 
 export interface TerritoryScopePort {
   getFacilityIdsForTerritories(territoryIds: string[]): Promise<string[]>;
+  /** Active profiled facilities for the given verticals (OPS scope). */
+  getFacilityIdsForVerticals(verticalIds: string[]): Promise<string[]>;
 }
 
 /**

@@ -1,5 +1,8 @@
 import type { TerritoryAssignmentSource } from "@atlasmed/database";
-import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
+import type {
+  ClinicAssignmentTerritoryMatch,
+  TerritorySpatialRepository,
+} from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 
 export interface ClinicMembershipTarget {
@@ -12,6 +15,11 @@ export interface ClinicMembershipTarget {
 }
 
 export interface ClinicMembershipWriter {
+  updateProfileTerritoryMemberships(
+    facilityId: string,
+    memberships: Array<{ verticalId: string; territoryId: string | null }>
+  ): Promise<void>;
+
   updateTerritoryMembership(
     facilityId: string,
     data: {
@@ -20,6 +28,8 @@ export interface ClinicMembershipWriter {
       territoryAssignmentSource: TerritoryAssignmentSource;
     }
   ): Promise<void>;
+
+  findOrtopediaVerticalId(): Promise<string | null>;
 
   findClinicsForMembership(params?: {
     facilityIds?: string[];
@@ -46,6 +56,7 @@ export class TerritoryMembershipService {
     }
 
     if (clinic.lat === null || clinic.lng === null) {
+      await this.deps.clinicWriter.updateProfileTerritoryMemberships(clinic.id, []);
       await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
         territoryId: null,
         territoryAssignmentStatus: "unassigned",
@@ -60,9 +71,19 @@ export class TerritoryMembershipService {
       { excludeTerritoryId: options?.excludeTerritoryId }
     );
 
-    if (matches.length === 1) {
+    const { singleMatches, hasAmbiguousMatch } = this.resolveVerticalMatches(matches);
+    await this.deps.clinicWriter.updateProfileTerritoryMemberships(
+      clinic.id,
+      singleMatches.map((match) => ({
+        verticalId: match.verticalId,
+        territoryId: match.id,
+      }))
+    );
+
+    const legacyTerritoryId = await this.resolveLegacyBridgeTerritoryId(singleMatches);
+    if (legacyTerritoryId) {
       await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-        territoryId: matches[0]!,
+        territoryId: legacyTerritoryId,
         territoryAssignmentStatus: "assigned",
         territoryAssignmentSource: "geo",
       });
@@ -71,7 +92,7 @@ export class TerritoryMembershipService {
 
     await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
       territoryId: null,
-      territoryAssignmentStatus: matches.length > 1 ? "ambiguous" : "unassigned",
+      territoryAssignmentStatus: hasAmbiguousMatch ? "ambiguous" : "unassigned",
       territoryAssignmentSource: "geo",
     });
   }
@@ -156,5 +177,44 @@ export class TerritoryMembershipService {
     }
 
     return { processed };
+  }
+
+  private resolveVerticalMatches(matches: ClinicAssignmentTerritoryMatch[]): {
+    singleMatches: ClinicAssignmentTerritoryMatch[];
+    hasAmbiguousMatch: boolean;
+  } {
+    const matchesByVerticalId = new Map<string, ClinicAssignmentTerritoryMatch[]>();
+    for (const match of matches) {
+      const verticalMatches = matchesByVerticalId.get(match.verticalId) ?? [];
+      verticalMatches.push(match);
+      matchesByVerticalId.set(match.verticalId, verticalMatches);
+    }
+
+    const singleMatches: ClinicAssignmentTerritoryMatch[] = [];
+    let hasAmbiguousMatch = false;
+    for (const verticalMatches of matchesByVerticalId.values()) {
+      if (verticalMatches.length === 1) {
+        singleMatches.push(verticalMatches[0]!);
+      } else {
+        hasAmbiguousMatch = true;
+      }
+    }
+
+    return { singleMatches, hasAmbiguousMatch };
+  }
+
+  private async resolveLegacyBridgeTerritoryId(
+    singleMatches: ClinicAssignmentTerritoryMatch[]
+  ): Promise<string | null> {
+    if (singleMatches.length === 0) {
+      return null;
+    }
+
+    const ortopediaVerticalId = await this.deps.clinicWriter.findOrtopediaVerticalId();
+    const ortopediaMatch = ortopediaVerticalId
+      ? singleMatches.find((match) => match.verticalId === ortopediaVerticalId)
+      : undefined;
+
+    return (ortopediaMatch ?? singleMatches[0])?.id ?? null;
   }
 }

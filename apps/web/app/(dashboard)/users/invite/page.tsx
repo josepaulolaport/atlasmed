@@ -27,6 +27,8 @@ export default function InviteUserPage() {
   const [roles, setRoles] = useState<RoleInfo[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(true);
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
+  const [verticals, setVerticals] = useState<Array<{ id: string; code: string; name: string }>>([]);
+  const [inviteVerticalId, setInviteVerticalId] = useState("");
 
   const {
     register,
@@ -49,8 +51,13 @@ export default function InviteUserPage() {
 
     const fetchRoles = async () => {
       try {
-        const rolesData = await usersApi.getRoles();
+        const [rolesData, verticalList] = await Promise.all([
+          usersApi.getRoles(),
+          usersApi.getVerticals(),
+        ]);
         setRoles(rolesData);
+        setVerticals(verticalList);
+        setInviteVerticalId((current) => current || verticalList[0]?.id || "");
       } catch (err) {
         toast({
           title: "Erro",
@@ -284,6 +291,32 @@ export default function InviteUserPage() {
             </div>
 
             {/* Manager-specific fields */}
+            {(showManagerFields || showRepFields) && verticals.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="invite-vertical">Vertical</Label>
+                <select
+                  id="invite-vertical"
+                  value={inviteVerticalId}
+                  onChange={(e) => {
+                    setInviteVerticalId(e.target.value);
+                    setValue("managerTerritoryId", undefined);
+                    setValue("repTerritoryId", undefined);
+                  }}
+                  disabled={isLoading}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {verticals.map((vertical) => (
+                    <option key={vertical.id} value={vertical.id}>
+                      {vertical.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500">
+                  Territórios listados abaixo pertencem a esta vertical.
+                </p>
+              </div>
+            )}
+
             {showManagerFields && (
               <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <h3 className="text-lg font-medium text-blue-900">
@@ -293,7 +326,8 @@ export default function InviteUserPage() {
                   value={watch("managerTerritoryId")}
                   onChange={(id) => setValue("managerTerritoryId", id)}
                   territoryType="manager_zone"
-                  disabled={isLoading}
+                  verticalId={inviteVerticalId}
+                  disabled={isLoading || !inviteVerticalId}
                   error={errors.managerTerritoryId?.message}
                   required
                 />
@@ -320,7 +354,8 @@ export default function InviteUserPage() {
                   onChange={(id) => setValue("repTerritoryId", id)}
                   territoryType="patch"
                   managerTerritoryId={watchedManagerId}
-                  disabled={isLoading || !watchedManagerId}
+                  verticalId={inviteVerticalId}
+                  disabled={isLoading || !watchedManagerId || !inviteVerticalId}
                   error={errors.repTerritoryId?.message}
                   required
                 />

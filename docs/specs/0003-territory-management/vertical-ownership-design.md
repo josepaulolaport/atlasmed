@@ -4,7 +4,7 @@
 **Created:** 2026-07-25  
 **Depends on:** Business Verticals P0 ([`business-verticals.md`](../../architecture/features/business-verticals.md)), Spec 0003 requirements, Spec 0006 (shared coverage — related but distinct)  
 **Out of this doc:** Dermatologia seed, product catalog filtering, assignment history windows (P2)  
-**Deferred to tasks PR (engineering):** membership column vs join table; exact recompute triggers; legacy `facilities.territoryId` drop timing  
+**Engineering locks (impl):** membership = `facility_vertical_profiles.territory_id`; `territories.vertical_id` NOT NULL; slug/code unique per vertical. Legacy `facilities.territoryId` kept as bridge (Ortopedia sync) until cutover.  
 **Clarified:** REP patch UTA kept; multi-REP per patch OK; clinic visibility still consultant-only (Q2/Q4)
 
 ---

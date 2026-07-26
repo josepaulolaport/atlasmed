@@ -24,6 +24,7 @@ interface TerritorySelectorProps {
   onChange: (territoryId: string | undefined) => void;
   territoryType: "manager_zone" | "patch";
   managerTerritoryId?: string;
+  verticalId?: string;
   disabled?: boolean;
   error?: string;
   required?: boolean;
@@ -34,6 +35,7 @@ export function TerritorySelector({
   onChange,
   territoryType,
   managerTerritoryId,
+  verticalId,
   disabled = false,
   error,
   required = false,
@@ -60,10 +62,13 @@ export function TerritorySelector({
       try {
         let data: Territory[];
         if (isRepPatch) {
-          const response = await territoriesApi.listRepPatches(managerTerritoryId);
+          const response = await territoriesApi.listRepPatches(
+            managerTerritoryId,
+            verticalId,
+          );
           data = response.data;
         } else {
-          const response = await territoriesApi.listManagerZones();
+          const response = await territoriesApi.listManagerZones(verticalId);
           data = response.data;
         }
         setTerritories(data);
@@ -82,7 +87,7 @@ export function TerritorySelector({
       setTerritories([]);
       setLoading(false);
     }
-  }, [territoryType, managerTerritoryId, disabled, isRepPatch]);
+  }, [territoryType, managerTerritoryId, verticalId, disabled, isRepPatch]);
 
   const filteredTerritories = territories.filter((territory) =>
     territory.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -262,6 +267,7 @@ export function TerritorySelector({
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         territoryType={territoryType}
+        verticalId={verticalId}
         onTerritoryCreated={handleTerritoryCreated}
       />
     </div>

@@ -125,6 +125,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                     const SizedBox(height: 6),
                     ManagerPickerField(
                       managerTerritoryId: _managerTerritoryId,
+                      verticalId: widget.territory.verticalId,
                       onChanged: (zoneId) =>
                           setState(() => _managerTerritoryId = zoneId),
                     ),

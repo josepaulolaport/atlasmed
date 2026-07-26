@@ -9,6 +9,11 @@ export interface OverlappingTerritory {
   code: string;
 }
 
+export interface ClinicAssignmentTerritoryMatch {
+  id: string;
+  verticalId: string;
+}
+
 export interface TerritoryBoundingBox {
   minLng: number;
   minLat: number;
@@ -51,7 +56,7 @@ export interface TerritorySpatialRepository {
     lng: number,
     lat: number,
     options?: { excludeTerritoryId?: string }
-  ): Promise<string[]>;
+  ): Promise<ClinicAssignmentTerritoryMatch[]>;
 
   findOverlappingSiblingTerritories(input: {
     territoryId: string;
@@ -61,6 +66,7 @@ export interface TerritorySpatialRepository {
 
   findContainingManagerZones(input: {
     geoJson: GeoJsonGeometry;
+    verticalId?: string;
   }): Promise<ManagerZoneCandidate[]>;
 
   findRepPatchesOutsideManagerZone(input: {

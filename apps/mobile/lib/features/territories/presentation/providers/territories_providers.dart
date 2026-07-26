@@ -28,10 +28,18 @@ final selectedTerritoryKindProvider = StateProvider<TerritoryKind>((ref) {
   return TerritoryKind.managerZone;
 });
 
+final selectedTerritoryVerticalIdProvider = StateProvider<String?>((ref) {
+  return null;
+});
+
 final territoriesProvider = FutureProvider<List<Territory>>((ref) async {
   final repository = ref.watch(territoryRepositoryProvider);
   final kind = ref.watch(selectedTerritoryKindProvider);
-  return repository.getTerritories(territoryTypeSlug: kind.slug);
+  final verticalId = ref.watch(selectedTerritoryVerticalIdProvider);
+  return repository.getTerritories(
+    territoryTypeSlug: kind.slug,
+    verticalId: verticalId,
+  );
 });
 
 final selectedTerritoryIdProvider = StateProvider<String?>((ref) => null);

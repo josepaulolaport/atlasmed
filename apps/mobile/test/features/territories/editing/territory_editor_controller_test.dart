@@ -44,6 +44,7 @@ Territory _territory({required String id, required List<MapCoordinate> ring}) {
     name: 'Território $id',
     slug: id,
     code: id,
+    verticalId: 'vertical-oncologia',
     territoryType: _managerZoneType,
     boundary: geometry,
     centroid: ring.first,
@@ -74,9 +75,14 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
+    String? verticalId,
   }) async {
     return territories
-        .where((t) => t.territoryType.slug == territoryTypeSlug)
+        .where(
+          (t) =>
+              t.territoryType.slug == territoryTypeSlug &&
+              (verticalId == null || t.verticalId == verticalId),
+        )
         .toList();
   }
 
@@ -105,6 +111,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
       name: draft.name,
       slug: draft.name,
       code: draft.name,
+      verticalId: draft.verticalId,
       territoryType: draft.kind == TerritoryKind.managerZone
           ? _managerZoneType
           : _repPatchType,
@@ -146,7 +153,9 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<List<AssignableManager>> getAssignableManagers() async {
+  Future<List<AssignableManager>> getAssignableManagers({
+    String? verticalId,
+  }) async {
     return const [];
   }
 }
@@ -450,6 +459,7 @@ void main() {
         name: 'Território legado',
         slug: 'legacy',
         code: 'legacy',
+        verticalId: 'vertical-oncologia',
         territoryType: _managerZoneType,
         boundary: TerritoryGeometry.multiPolygon([
           [
@@ -621,6 +631,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
+          verticalId: 'vertical-oncologia',
         ),
       );
 
@@ -655,6 +666,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
+          verticalId: 'vertical-oncologia',
         ),
       );
 
@@ -673,6 +685,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
+          verticalId: 'vertical-oncologia',
         ),
       );
       controller.addDrawingPoint(_c(20, 20));

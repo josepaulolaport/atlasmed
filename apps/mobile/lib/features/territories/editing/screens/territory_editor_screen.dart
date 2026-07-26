@@ -238,6 +238,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       initial: initial,
       initialKind:
           initial?.kind ?? target.initialKind ?? TerritoryKind.managerZone,
+      initialVerticalId: initial?.verticalId ?? target.initialVerticalId,
     );
     if (!mounted) return;
     if (draft == null) {

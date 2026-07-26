@@ -23,6 +23,7 @@ function buildService(options: {
       name: "Territory 1",
       slug: "territory-1",
       code: "T1",
+      verticalId: "vertical-1",
       territoryTypeId: "type-1",
       isActive: true,
       createdAt: new Date(),
@@ -74,7 +75,7 @@ describe("TerritoryAssignmentPolicyService", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("rejects assigning a REP when another REP already holds the territory", async () => {
+  it("allows assigning a REP when another REP already holds the territory", async () => {
     const { service, territoryRepository } = buildService({
       conflictingAssignments: [{ userId: "other-user" }],
     });
@@ -85,13 +86,9 @@ describe("TerritoryAssignmentPolicyService", () => {
         targetRole: Role.REP,
         territoryId: TERRITORY_ID,
       })
-    ).rejects.toBeInstanceOf(OperationNotAllowedError);
+    ).resolves.toBeUndefined();
 
-    expect(territoryRepository.findConflictingAssignments).toHaveBeenCalledWith({
-      territoryId: TERRITORY_ID,
-      excludeUserId: TARGET_USER_ID,
-      roles: [Role.REP],
-    });
+    expect(territoryRepository.findConflictingAssignments).not.toHaveBeenCalled();
   });
 
   it("allows the same user to re-take a territory they already hold — self-overlap is not blocked", async () => {

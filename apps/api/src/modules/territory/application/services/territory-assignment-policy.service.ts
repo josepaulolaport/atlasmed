@@ -52,20 +52,21 @@ export class TerritoryAssignmentPolicyService {
       );
     }
 
-    const exclusionRoles =
-      params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.REP];
+    // Multi-REP per patch is allowed (vertical-ownership Q2). Managers stay exclusive per zone.
+    if (params.targetRole === Role.MANAGER) {
+      const conflictingAssignments =
+        await this.deps.territoryRepository.findConflictingAssignments({
+          territoryId: params.territoryId,
+          excludeUserId: params.targetUserId,
+          roles: [Role.MANAGER],
+        });
 
-    const conflictingAssignments = await this.deps.territoryRepository.findConflictingAssignments({
-      territoryId: params.territoryId,
-      excludeUserId: params.targetUserId,
-      roles: exclusionRoles,
-    });
-
-    if (conflictingAssignments.length > 0) {
-      throw new OperationNotAllowedError(
-        "assign_territory",
-        "Territory is already assigned to another user in the same role group"
-      );
+      if (conflictingAssignments.length > 0) {
+        throw new OperationNotAllowedError(
+          "assign_territory",
+          "Territory is already assigned to another manager",
+        );
+      }
     }
   }
 }

@@ -54,6 +54,7 @@ function serializeTerritory(territory: {
   name: string;
   slug: string;
   code: string;
+  verticalId: string;
   territoryTypeId: string;
   territoryType?: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>;
   managerTerritoryId: string | null;
@@ -74,6 +75,7 @@ function serializeTerritory(territory: {
     name: territory.name,
     slug: territory.slug,
     code: territory.code,
+    verticalId: territory.verticalId,
     territoryTypeId: territory.territoryTypeId,
     territoryType: serializeTerritoryType(territory.territoryType),
     managerTerritoryId: territory.managerTerritoryId ?? undefined,
@@ -93,6 +95,7 @@ export class TerritoryCrudUseCases {
   async createTerritory(input: {
     name: string;
     slug: string;
+    verticalId: string;
     territoryTypeId?: string;
     typeSlug?: string;
     boundary?: GeoJsonGeometry;
@@ -112,7 +115,7 @@ export class TerritoryCrudUseCases {
 
     const slug = normalizeTerritorySlug(input.slug);
 
-    const existingSlug = await this.deps.territoryRepository.findBySlug(slug);
+    const existingSlug = await this.deps.territoryRepository.findBySlug(slug, input.verticalId);
     if (existingSlug) {
       throw new OperationNotAllowedError(
         "create_territory",
@@ -129,6 +132,7 @@ export class TerritoryCrudUseCases {
       name: input.name.trim(),
       slug,
       code: slug.toUpperCase(),
+      verticalId: input.verticalId,
       territoryTypeId: type.id,
     });
 
@@ -174,9 +178,11 @@ export class TerritoryCrudUseCases {
   async listTerritories(
     format: "tree" | "flat" = "flat",
     scope?: ScopeContext,
-    filters?: { typeSlug?: string; managerTerritoryId?: string }
+    filters?: { typeSlug?: string; managerTerritoryId?: string; verticalId?: string }
   ) {
-    const territories = await this.deps.territoryRepository.findAllActive();
+    const territories = await this.deps.territoryRepository.findAllActive(
+      filters?.verticalId,
+    );
 
     let filtered = territories;
     if (scope && !scope.isGlobal) {

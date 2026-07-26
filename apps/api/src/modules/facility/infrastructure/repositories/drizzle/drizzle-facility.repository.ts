@@ -792,14 +792,30 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {
     if (territoryIds.length === 0) return [];
 
-    const rows = await db
+    // Prefer per-vertical membership on profiles (Q6 C); union legacy facilities.territoryId bridge.
+    const profileRows = await db
+      .select({ id: facilities.id })
+      .from(facilities)
+      .innerJoin(
+        facilityVerticalProfiles,
+        eq(facilityVerticalProfiles.facilityId, facilities.id),
+      )
+      .where(
+        and(
+          isNull(facilities.deactivatedAt),
+          eq(facilityVerticalProfiles.isActive, true),
+          inArray(facilityVerticalProfiles.territoryId, territoryIds),
+        ),
+      );
+
+    const legacyRows = await db
       .select({ id: facilities.id })
       .from(facilities)
       .where(
-        and(isNull(facilities.deactivatedAt), inArray(facilities.territoryId, territoryIds))
+        and(isNull(facilities.deactivatedAt), inArray(facilities.territoryId, territoryIds)),
       );
 
-    return rows.map((r) => r.id);
+    return [...new Set([...profileRows, ...legacyRows].map((r) => r.id))];
   }
 
   async findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]> {

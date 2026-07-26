@@ -69,11 +69,13 @@ class HttpTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
+    String? verticalId,
   }) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': territoryTypeSlug,
         'format': 'flat',
+        'verticalId': ?verticalId,
       }),
     );
     _throwIfError(response);
@@ -154,6 +156,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
         await _send(_territoryUri('/territories'), RepositoryHttpMethod.post, {
           'name': draft.name,
           'slug': _generateSlug(draft.name),
+          'verticalId': draft.verticalId,
           'typeSlug': draft.kind.slug,
           'boundary': boundary.toGeoJson(),
         });
@@ -219,9 +222,15 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<List<AssignableManager>> getAssignableManagers() async {
+  Future<List<AssignableManager>> getAssignableManagers({
+    String? verticalId,
+  }) async {
     final zonesResponse = await _get(
-      _territoryUri('/territories', {'type': 'manager_zone', 'format': 'flat'}),
+      _territoryUri('/territories', {
+        'type': 'manager_zone',
+        'format': 'flat',
+        'verticalId': ?verticalId,
+      }),
     );
     _throwIfError(zonesResponse);
     final decoded = jsonDecode(zonesResponse.body) as Map<String, dynamic>;

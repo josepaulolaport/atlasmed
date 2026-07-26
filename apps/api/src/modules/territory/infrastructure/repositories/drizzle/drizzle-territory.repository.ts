@@ -5,10 +5,11 @@ import {
   territoryTypes,
   userTerritoryAssignments,
   facilities,
+  facilityVerticalProfiles,
   users,
   roles,
 } from "@atlasmed/database";
-import { eq, and, ne, inArray, asc, isNull, sql } from "drizzle-orm";
+import { eq, and, ne, inArray, asc, isNull, sql, or } from "drizzle-orm";
 import type {
   CreateTerritoryInput,
   TerritoryRecord,
@@ -39,6 +40,7 @@ function mapTerritory(territory: {
   name: string;
   slug: string;
   code: string;
+  verticalId: string;
   territoryTypeId: string;
   territoryType?: Parameters<typeof mapType>[0];
   managerTerritoryId: string | null;
@@ -51,6 +53,7 @@ function mapTerritory(territory: {
     name: territory.name,
     slug: territory.slug,
     code: territory.code,
+    verticalId: territory.verticalId,
     territoryTypeId: territory.territoryTypeId,
     territoryType: territory.territoryType ? mapType(territory.territoryType) : undefined,
     managerTerritoryId: territory.managerTerritoryId,
@@ -86,21 +89,29 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return this.findOneWithType(id);
   }
 
-  async findBySlug(slug: string): Promise<TerritoryRecord | null> {
+  async findBySlug(slug: string, verticalId?: string): Promise<TerritoryRecord | null> {
+    const conditions = [eq(territories.slug, slug.toLowerCase())];
+    if (verticalId) {
+      conditions.push(eq(territories.verticalId, verticalId));
+    }
     const rows = await db
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
-      .where(eq(territories.slug, slug.toLowerCase()));
+      .where(and(...conditions));
     return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
-  async findByCode(code: string): Promise<TerritoryRecord | null> {
+  async findByCode(code: string, verticalId?: string): Promise<TerritoryRecord | null> {
+    const conditions = [eq(territories.code, code)];
+    if (verticalId) {
+      conditions.push(eq(territories.verticalId, verticalId));
+    }
     const rows = await db
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
-      .where(eq(territories.code, code));
+      .where(and(...conditions));
     return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
@@ -116,22 +127,33 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows.map(fromJoinedRow);
   }
 
-  async findAllActive(): Promise<TerritoryRecord[]> {
+  async findAllActive(verticalId?: string): Promise<TerritoryRecord[]> {
+    const conditions = [eq(territories.isActive, true)];
+    if (verticalId) {
+      conditions.push(eq(territories.verticalId, verticalId));
+    }
     const rows = await db
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
-      .where(eq(territories.isActive, true))
+      .where(and(...conditions))
       .orderBy(asc(territories.code));
     return rows.map(fromJoinedRow);
   }
 
-  async findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]> {
+  async findActiveByTypeSlug(typeSlug: string, verticalId?: string): Promise<TerritoryRecord[]> {
+    const conditions = [
+      eq(territories.isActive, true),
+      eq(territoryTypes.slug, typeSlug),
+    ];
+    if (verticalId) {
+      conditions.push(eq(territories.verticalId, verticalId));
+    }
     const rows = await db
       .select({ territories, territoryTypes })
       .from(territories)
       .innerJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
-      .where(and(eq(territories.isActive, true), eq(territoryTypes.slug, typeSlug)))
+      .where(and(...conditions))
       .orderBy(asc(territories.name));
     return rows.map(fromJoinedRow);
   }
@@ -153,9 +175,27 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
 
   async countClinics(territoryId: string): Promise<number> {
     const [result] = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({
+        count: sql<number>`count(DISTINCT ${facilities.id})`,
+      })
       .from(facilities)
-      .where(and(isNull(facilities.deactivatedAt), eq(facilities.territoryId, territoryId)));
+      .leftJoin(
+        facilityVerticalProfiles,
+        and(
+          eq(facilityVerticalProfiles.facilityId, facilities.id),
+          eq(facilityVerticalProfiles.territoryId, territoryId),
+          eq(facilityVerticalProfiles.isActive, true),
+        ),
+      )
+      .where(
+        and(
+          isNull(facilities.deactivatedAt),
+          or(
+            eq(facilities.territoryId, territoryId),
+            sql`${facilityVerticalProfiles.id} IS NOT NULL`,
+          ),
+        ),
+      );
     return Number(result?.count ?? 0);
   }
 
@@ -174,6 +214,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         name: input.name,
         slug: input.slug,
         code: input.code ?? input.slug.toUpperCase(),
+        verticalId: input.verticalId,
         territoryTypeId: input.territoryTypeId,
         managerTerritoryId: input.managerTerritoryId ?? null,
       })

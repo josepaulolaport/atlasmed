@@ -110,7 +110,10 @@ export class InvitationTerritoryValidatorService {
 
       if (roleName === Role.MANAGER) {
         for (const territoryId of vertical.territoryIds) {
-          await this.validateManagerInvitation({ managerTerritoryId: territoryId });
+          await this.validateManagerInvitation({
+            managerTerritoryId: territoryId,
+            verticalId: vertical.verticalId,
+          });
         }
         continue;
       }
@@ -128,6 +131,7 @@ export class InvitationTerritoryValidatorService {
           await this.validateRepInvitation({
             managerId: vertical.managerId,
             repTerritoryId: territoryId,
+            verticalId: vertical.verticalId,
           });
         }
       }
@@ -136,6 +140,7 @@ export class InvitationTerritoryValidatorService {
 
   private async validateManagerInvitation(params: {
     managerTerritoryId?: string;
+    verticalId?: string;
   }): Promise<void> {
     if (!params.managerTerritoryId) {
       throw new ValidationError([
@@ -159,6 +164,15 @@ export class InvitationTerritoryValidatorService {
         {
           field: "managerTerritoryId",
           message: "Territory does not exist or is inactive",
+        },
+      ]);
+    }
+
+    if (params.verticalId && territory.verticalId !== params.verticalId) {
+      throw new ValidationError([
+        {
+          field: "managerTerritoryId",
+          message: "Territory does not belong to the selected business vertical",
         },
       ]);
     }
@@ -200,6 +214,7 @@ export class InvitationTerritoryValidatorService {
   private async validateRepInvitation(params: {
     managerId?: string;
     repTerritoryId?: string;
+    verticalId?: string;
   }): Promise<void> {
     const errors: Array<{ field: string; message: string }> = [];
 
@@ -249,6 +264,15 @@ export class InvitationTerritoryValidatorService {
         {
           field: "repTerritoryId",
           message: "Territory does not exist or is inactive",
+        },
+      ]);
+    }
+
+    if (params.verticalId && repTerritory.verticalId !== params.verticalId) {
+      throw new ValidationError([
+        {
+          field: "repTerritoryId",
+          message: "Territory does not belong to the selected business vertical",
         },
       ]);
     }

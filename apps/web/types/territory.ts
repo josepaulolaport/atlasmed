@@ -17,6 +17,7 @@ export interface Territory {
   name: string;
   slug: string;
   code: string;
+  verticalId: string;
   territoryTypeId: string;
   territoryType: TerritoryType;
   managerTerritoryId?: string;
@@ -36,6 +37,7 @@ export interface GeoJsonPolygon {
 
 export interface CreateTerritoryRequest {
   name: string;
+  verticalId: string;
   code?: string;
   slug?: string;
   territoryTypeId?: string;
