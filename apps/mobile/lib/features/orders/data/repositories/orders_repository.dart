@@ -18,6 +18,7 @@ class ApiOrderListItem {
   const ApiOrderListItem({
     required this.id,
     required this.legacyId,
+    required this.verticalId,
     required this.status,
     required this.type,
     required this.orderedAt,
@@ -33,6 +34,7 @@ class ApiOrderListItem {
 
   final String id;
   final int? legacyId;
+  final String? verticalId;
   final String status;
   final String type;
   final DateTime? orderedAt;
@@ -51,6 +53,7 @@ class ApiOrderListItem {
       ApiOrderListItem(
         id: json['id'] as String,
         legacyId: json['legacyId'] as int?,
+        verticalId: json['verticalId'] as String?,
         status: json['status'] as String,
         type: json['type'] as String,
         orderedAt: _dateOrNull(json['orderedAt']),
@@ -65,6 +68,24 @@ class ApiOrderListItem {
         freight: _number(json['freight']),
         total: _number(json['total']),
       );
+}
+
+class CreateOrderItemInput {
+  const CreateOrderItemInput({
+    required this.productId,
+    required this.quantity,
+    this.unitPrice,
+  });
+
+  final String productId;
+  final double quantity;
+  final double? unitPrice;
+
+  Map<String, dynamic> toJson() => {
+    'productId': productId,
+    'quantity': quantity,
+    if (unitPrice != null) 'unitPrice': unitPrice,
+  };
 }
 
 class ApiOrderItem {
@@ -117,6 +138,7 @@ class ApiOrderDetail extends ApiOrderListItem {
   const ApiOrderDetail({
     required super.id,
     required super.legacyId,
+    required super.verticalId,
     required super.status,
     required super.type,
     required super.orderedAt,
@@ -142,6 +164,7 @@ class ApiOrderDetail extends ApiOrderListItem {
   factory ApiOrderDetail.fromJson(Map<String, dynamic> json) => ApiOrderDetail(
     id: json['id'] as String,
     legacyId: json['legacyId'] as int?,
+    verticalId: json['verticalId'] as String?,
     status: json['status'] as String,
     type: json['type'] as String,
     orderedAt: _dateOrNull(json['orderedAt']),
@@ -245,6 +268,36 @@ class OrdersRepository extends Repository<OrdersPage>
     );
     if (response.statusCode != 200) {
       throw StateError('Não foi possível carregar o pedido.');
+    }
+    return ApiOrderDetail.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
+  Future<ApiOrderDetail> createOrder({
+    required String facilityId,
+    required List<CreateOrderItemInput> items,
+    String? verticalId,
+    String? professionalId,
+    String? notes,
+    double? freight,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/orders'),
+        method: RepositoryHttpMethod.post,
+        body: {
+          'facilityId': facilityId,
+          'verticalId': ?verticalId,
+          'professionalId': ?professionalId,
+          'notes': ?notes,
+          'freight': ?freight,
+          'items': items.map((item) => item.toJson()).toList(growable: false),
+        },
+      ),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw StateError('Não foi possível criar o pedido.');
     }
     return ApiOrderDetail.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,

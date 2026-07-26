@@ -93,15 +93,17 @@ export class ListFacilitiesUseCase {
           ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
           : undefined,
       ];
+      const verticalFilter =
+        listScope.restrictToVerticalProfiles && listScope.verticalIds?.length
+          ? inFilter("verticalIds", listScope.verticalIds)
+          : undefined;
       const scopeFilter = listScope.isGlobal
-        ? listScope.restrictToVerticalProfiles && listScope.verticalIds?.length
-          ? inFilter("id", await this.deps.facilityRepository.findActiveFacilityIdsByVerticalIds(listScope.verticalIds))
-          : undefined
+        ? undefined
         : input.scope.facilityIds.length > 0
           ? inFilter("id", input.scope.facilityIds)
           : eqFilter("id", "__none__");
-      const filter = buildMeiliFilter([...canonicalFilters, scopeFilter])
-        ?? buildMeiliFilter(canonicalFilters);
+      const filter = buildMeiliFilter([...canonicalFilters, verticalFilter, scopeFilter])
+        ?? buildMeiliFilter([...canonicalFilters, verticalFilter]);
       const sort = input.sort === "distance" && input.latitude !== undefined && input.longitude !== undefined
         ? [`_geoPoint(${input.latitude}, ${input.longitude}):asc`]
         : undefined;

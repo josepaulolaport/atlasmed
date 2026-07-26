@@ -22,4 +22,10 @@ describe("Meilisearch filter builder", () => {
   it("returns undefined when the bounded expression would be too large", () => {
     expect(buildMeiliFilter([inFilter("id", ["one", "two"])], 10)).toBeUndefined();
   });
+
+  it("supports verticalIds array filter field", () => {
+    expect(buildMeiliFilter([inFilter("verticalIds", ["v2", "v1"])])).toBe(
+      "verticalIds IN ['v1', 'v2']"
+    );
+  });
 });

@@ -5,6 +5,7 @@ const FILTER_FIELDS = [
   "commercialStatus",
   "territoryId",
   "territoryAssignmentStatus",
+  "verticalIds",
   "specialtyNormalized",
   "activeFacilityIds",
   "activeTerritoryIds",

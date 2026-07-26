@@ -23,7 +23,10 @@ export type FacilitySearchDocument = {
   cnesCode: string | null;
   city: string | null;
   state: string | null;
+  /** Ortopedia profile status (legacy display filter). Prefer verticalIds for isolation. */
   commercialStatus: string | null;
+  /** Active facility_vertical_profiles vertical ids (P1.6 catalog/search isolation). */
+  verticalIds: string[];
   territoryId: string | null;
   territoryAssignmentStatus: string;
   _geo?: { lat: number; lng: number };
@@ -76,6 +79,7 @@ export function mapFacilitySearchDocument(row: {
   city: string | null;
   state: string | null;
   commercialStatus: string | null;
+  verticalIds?: string[];
   territoryId: string | null;
   territoryAssignmentStatus: string;
   latitude: number | null;
@@ -96,6 +100,7 @@ export function mapFacilitySearchDocument(row: {
     city: row.city,
     state: row.state,
     commercialStatus: row.commercialStatus,
+    verticalIds: row.verticalIds ?? [],
     territoryId: row.territoryId,
     territoryAssignmentStatus: row.territoryAssignmentStatus,
     ...(row.latitude !== null && row.longitude !== null
@@ -237,9 +242,44 @@ function createSearchClient(): SearchIndexClient {
 
 export const FACILITY_SETTINGS = {
   searchableAttributes: ["name", "legalName", "tradeName", "cnpj", "cpf", "cnesCode", "city", "state"],
-  filterableAttributes: ["id", "state", "city", "commercialStatus", "territoryId", "territoryAssignmentStatus", "_geo"],
+  filterableAttributes: [
+    "id",
+    "state",
+    "city",
+    "commercialStatus",
+    "verticalIds",
+    "territoryId",
+    "territoryAssignmentStatus",
+    "_geo",
+  ],
   sortableAttributes: ["_geo"],
 };
+
+async function loadActiveFacilityVerticalIds(
+  facilityIds: string[]
+): Promise<Map<string, string[]>> {
+  if (facilityIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      facilityId: facilityVerticalProfiles.facilityId,
+      verticalId: facilityVerticalProfiles.verticalId,
+    })
+    .from(facilityVerticalProfiles)
+    .where(
+      and(
+        inArray(facilityVerticalProfiles.facilityId, facilityIds),
+        eq(facilityVerticalProfiles.isActive, true)
+      )
+    );
+
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    const current = map.get(row.facilityId) ?? [];
+    current.push(row.verticalId);
+    map.set(row.facilityId, current);
+  }
+  return map;
+}
 export const PROFESSIONAL_SETTINGS = {
   searchableAttributes: ["name", "socialName", "taxId", "specialty", "crmCouncil", "crmNumber", "crmState"],
   filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds", "crmState"],
@@ -285,8 +325,14 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
     if (rows.length === 0) return;
 
     lastId = rows.at(-1)!.id;
+    const verticalIdsByFacility = await loadActiveFacilityVerticalIds(rows.map((row) => row.id));
     yield rows
-      .map(mapFacilitySearchDocument)
+      .map((row) =>
+        mapFacilitySearchDocument({
+          ...row,
+          verticalIds: verticalIdsByFacility.get(row.id) ?? [],
+        })
+      )
       .filter((row): row is FacilitySearchDocument => row !== null);
   }
 }

@@ -75,6 +75,7 @@ describe("search rebuild", () => {
       city: "São Paulo",
       state: "SP",
       commercialStatus: "ACTIVE",
+      verticalIds: [],
       territoryId: "territory-1",
       territoryAssignmentStatus: "assigned",
       _geo: { lat: -23.55, lng: -46.63 },
@@ -85,6 +86,7 @@ describe("search rebuild", () => {
     expect(mapFacilitySearchDocument({
       id: "facility-1", displayName: "Clínica", legalName: null, tradeName: null,
       cnpj: null, cpf: null, cnesCode: null, city: null, state: null, commercialStatus: null,
+      verticalIds: ["vertical-a"],
       territoryId: null, territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
       deactivatedAt: null, isActiveInRegistry: false,
     })).toEqual({
@@ -98,6 +100,7 @@ describe("search rebuild", () => {
       city: null,
       state: null,
       commercialStatus: null,
+      verticalIds: ["vertical-a"],
       territoryId: null,
       territoryAssignmentStatus: "unassigned",
     });
@@ -149,7 +152,14 @@ describe("search rebuild", () => {
 
   test("exposes hybrid filter and distance-sort index settings", () => {
     expect(searchRebuild.FACILITY_SETTINGS).toMatchObject({
-      filterableAttributes: expect.arrayContaining(["id", "commercialStatus", "territoryId", "territoryAssignmentStatus", "_geo"]),
+      filterableAttributes: expect.arrayContaining([
+        "id",
+        "commercialStatus",
+        "verticalIds",
+        "territoryId",
+        "territoryAssignmentStatus",
+        "_geo",
+      ]),
       sortableAttributes: ["_geo"],
     });
     expect(searchRebuild.PROFESSIONAL_SETTINGS).toMatchObject({
