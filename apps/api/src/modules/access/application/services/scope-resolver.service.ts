@@ -28,9 +28,14 @@ export class ScopeResolver {
 
   private async resolveScope(userId: string, roleName: string): Promise<ScopeContext> {
     if (roleName === Role.ADMIN) {
-      const assignedVerticalIds = (await this.deps.scopeRepository.listActiveVerticals()).map(
-        (v) => v.id
-      );
+      // Prefer explicit user_vertical_assignments (derm-only admin, etc.).
+      // Fallback: all active verticals when admin has no UVA rows yet.
+      const fromAssignments =
+        await this.deps.scopeRepository.findVerticalIdsByUserId(userId);
+      const assignedVerticalIds =
+        fromAssignments.length > 0
+          ? fromAssignments
+          : (await this.deps.scopeRepository.listActiveVerticals()).map((v) => v.id);
       return withTerritoryScopeAliases({
         ...createGlobalScopeContext(),
         assignedVerticalIds,

@@ -355,8 +355,8 @@ Still required for ship slice B (not territory redesign):
 | # | Topic | Decision |
 |---|---|---|
 | 1 | Under-called backlog | **Implement** in code (multi-PR), not docs-only |
-| 2 | Active vertical | Header `X-AtlasMed-Vertical-Id` = **optional filter** only. Token/`user_vertical_assignments` always authorizes. No forced picker; user sends header only when narrowing. Must be ⊆ assigned (ADMIN: ⊆ all active) |
-| 3 | ADMIN, no filter | **All active** verticals |
+| 2 | Active vertical | Header `X-AtlasMed-Vertical-Id` = **optional filter** only. Token/`user_vertical_assignments` always authorizes (incl. ADMIN). No forced picker; user sends header only when narrowing. Must be ⊆ assigned |
+| 3 | ADMIN, no filter | **UVA verticals**; if admin has **no** UVA rows → fallback **all active**. Facility lists are profile-bound to those verticals |
 | 4 | Spec 0006 | **Minimal:** many REPs may share a patch UTA; clinic list still **only** consultant assign |
 | 5 | Meili `commercialStatus` | **Drop** from index; status filter in Postgres hydrate |
 | 6 | Competitors × vertical | **Defer** |
