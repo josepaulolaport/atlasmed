@@ -30,10 +30,12 @@ async function ensureBusinessVerticals() {
   ] as const;
 
   for (const def of defs) {
-    const existing = await db.query.businessVerticals.findFirst({
-      where: eq(businessVerticals.code, def.code),
-    });
-    if (existing) {
+    const existing = await db
+      .select({ id: businessVerticals.id })
+      .from(businessVerticals)
+      .where(eq(businessVerticals.code, def.code))
+      .limit(1);
+    if (existing[0]) {
       console.log(`   ✓ Vertical "${def.code}" already present`);
       continue;
     }
