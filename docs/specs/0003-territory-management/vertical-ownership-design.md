@@ -4,7 +4,8 @@
 **Created:** 2026-07-25  
 **Depends on:** Business Verticals P0 ([`business-verticals.md`](../../architecture/features/business-verticals.md)), Spec 0003 requirements, Spec 0006 (shared coverage — related but distinct)  
 **Out of this doc:** Dermatologia seed, product catalog filtering, assignment history windows (P2)  
-**Deferred to tasks PR (engineering):** membership column vs join table; exact recompute triggers; legacy `facilities.territoryId` drop timing
+**Deferred to tasks PR (engineering):** membership column vs join table; exact recompute triggers; legacy `facilities.territoryId` drop timing  
+**Clarified:** REP patch UTA kept; multi-REP per patch OK; clinic visibility still consultant-only (Q2/Q4)
 
 ---
 
@@ -55,7 +56,7 @@ P0 scope = territory ∪ consultant facilities **∩** profiles in resolved vert
 | Clinic ↔ patch membership | **Per vertical** (Q6 **C**) — not a single global `facilities.territoryId` for access. Store membership (join / profile FK); PIP only on write/recompute |
 | `facility_vertical_profiles` | Clinic participates commercially in a vertical |
 | `facility_consultant_assignments` | Authoritative **clinic×vertical** REP (manual; one per pair) |
-| `user_territory_assignments` | User ↔ territory row (territory already implies vertical). Q1: same user cannot hold same territory in two verticals — satisfied if territory has one vertical |
+| `user_territory_assignments` | User ↔ territory row (territory already implies vertical). **MANAGER and REP** both get UTA. **Many REPs per patch** allowed (Q2). Q1: same user cannot hold same territory in two verticals — satisfied if territory has one vertical |
 
 ### 4.2 Schema direction (candidate — revise vs early draft)
 
@@ -94,7 +95,7 @@ facilityIds = active consultant assigns for self
               ∩ facilities with active profile in those verticals
 ```
 
-Geo / `user_territory_assignments` **does not** add clinics for REPs.
+**REP patch UTA still exists** (org / map / routing / “my patches”) and **multiple REPs may share a patch**. Geo UTA **does not** add clinics to REP facility scope — clinics only via consultant (Q4).
 
 **MANAGER**:
 
@@ -175,7 +176,7 @@ No vertical id in URL paths (verticals P0 rule).
 | # | Question | Options / notes |
 |---|---|---|
 | **Q1** | May the **same user** hold the **same patch** in **multiple verticals**? | **Locked: B — no.** A user may hold a given patch in only one vertical. |
-| **Q2** | How many REPs per `(patch, vertical)`? | **Locked: B — zero or more**, with product nuance: a **rep patch does not bind a REP to that area** as authoritative ownership. **Manager** assignment to a zone/patch **does** bind coverage. REPs are owned **manually** (clinic-level / consultant path). Full shared-coverage redesign (Spec 0006) **not in this P1 slice** — do not let exclusivity constraints block vertical×UTA work. |
+| **Q2** | How many REPs per `(patch, vertical)`? | **Locked: B — zero or more.** REPs **still receive patch UTA** (patches remain assignable). Many REPs on same patch OK. Patch UTA does **not** grant REP clinic list access — clinics via **manual consultant** only (Q4). **Manager** zone UTA **does** bind geo coverage for manager scope. Spec 0006 (richer shared-coverage) still later. |
 | **Q3** | Managers: zone assignment **per vertical** or vertical-agnostic? | **Locked: A + product wording.** Zones are **individual to their vertical**. A manager may own **one or more zones** in **one or more verticals**. Not vertical-agnostic (B). |
 | **Q4** | REP clinic visibility vs territory / consultant | **Locked: D (product).** REPs see a clinic **only** via **manual** `facility_consultant_assignments` for a vertical they have. **One REP per (clinic, vertical).** Geo patch assignment does **not** grant REP clinic visibility. |
 | **Q4b** | Clinic with profile, **no** consultant yet | **Locked: B + vertical.** **MANAGER** whose **zone covers** the clinic **and** who belongs to that clinic’s vertical; plus **ADMIN**. REPs still only via consultant. |
@@ -217,6 +218,8 @@ A clinic enters a vertical’s analytics **only if all** hold for that V:
 5. WHEN invite territory picks are accepted THEN live UTA points at territory rows of that vertical.
 6. WHEN Ortopedia historical territories/membership migrate THEN Ortopedia scope SHALL be preserved; new verticals start empty until zones + membership exist.
 7. WHEN analytics active vertical = V THEN rollups SHALL use only `(facility, V)` facts in scope for V (Q9).
+8. WHEN two REPs share the same patch UTA THEN both MAY keep that assignment; neither SHALL gain clinic list access from the patch alone.
+9. WHEN a REP has patch UTA but no consultant row for clinic F THEN F SHALL NOT appear in that REP’s facility scope.
 
 ---
 
