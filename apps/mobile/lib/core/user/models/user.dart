@@ -38,6 +38,7 @@ class User extends Equatable {
     this.firstName,
     this.lastName,
     this.avatarUrl,
+    this.avatarBlurhash,
     required this.status,
     required this.emailVerified,
     required this.phoneVerified,
@@ -60,6 +61,7 @@ class User extends Equatable {
   final String? firstName;
   final String? lastName;
   final String? avatarUrl;
+  final String? avatarBlurhash;
   final UserStatus status;
   final bool emailVerified;
   final bool phoneVerified;
@@ -102,6 +104,7 @@ class User extends Equatable {
     String? firstName,
     String? lastName,
     String? avatarUrl,
+    String? avatarBlurhash,
     UserStatus? status,
     bool? emailVerified,
     bool? phoneVerified,
@@ -128,6 +131,7 @@ class User extends Equatable {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      avatarBlurhash: avatarBlurhash ?? this.avatarBlurhash,
       status: status ?? this.status,
       emailVerified: emailVerified ?? this.emailVerified,
       phoneVerified: phoneVerified ?? this.phoneVerified,
@@ -159,6 +163,7 @@ class User extends Equatable {
       firstName: userJson['firstName'] as String?,
       lastName: userJson['lastName'] as String?,
       avatarUrl: userJson['avatarUrl'] as String?,
+      avatarBlurhash: userJson['avatarBlurhash'] as String?,
       status: UserStatus.values.firstWhere(
         (e) =>
             e.name.toUpperCase() ==
@@ -188,6 +193,7 @@ class User extends Equatable {
     if (firstName != null) 'firstName': firstName,
     if (lastName != null) 'lastName': lastName,
     if (avatarUrl != null) 'avatarUrl': avatarUrl,
+    if (avatarBlurhash != null) 'avatarBlurhash': avatarBlurhash,
     'status': status.name.toUpperCase(),
     'emailVerified': emailVerified,
     'phoneVerified': phoneVerified,
@@ -215,6 +221,7 @@ class User extends Equatable {
     firstName,
     lastName,
     avatarUrl,
+    avatarBlurhash,
     status,
     emailVerified,
     phoneVerified,

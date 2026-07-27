@@ -23,6 +23,7 @@ const listFacilitiesRoute = new Elysia()
         search: query.search,
         ...filters,
         scope,
+        userId: actor.id,
         role: actor.role.name,
         verticalId: query.verticalId,
       });

@@ -54,7 +54,7 @@ All 3 screens and 10 widgets are wired via `ClinicsRepository`, `DoctorsReposito
 | `clinic_detail_screen.dart` | Facility detail + notes | `_ClinicDetailRepository` → `GET /api/v1/facilities/:id` | ✅ | None needed |
 | `doctor_detail_screen.dart` | Professional detail + notes | `_DoctorDetailRepository` → `GET /api/v1/professionals/:id` | ✅ | None needed |
 
-**Note:** The `fromApi()` mappers in `clinic.dart` and `doctor.dart` default some fields (`neighborhood`, `status`, `lastVisitDays`, `isPriority`, `products`, `initials`, `hue`, `primaryClinic`) to empty/zero values because the paginated list API doesn't return them. This is an API completeness gap, not mock data.
+**Note:** The paginated professional endpoint now returns user-scoped `relationshipLevel`/`isPriority` plus a deterministic visible `displayFacility`; `ProfessionalEntry` maps all three. Facility `lastVisitAt` is also returned per authenticated user and mapped to `lastVisitDays`. Remaining gaps are explicit: facility priority has no persisted source or domain rule, product summaries are not part of `FacilityEntry`, and its professional color `hue` remains a local default.
 
 ---
 
@@ -186,4 +186,4 @@ All 3 screens and 10 widgets are wired via `ClinicsRepository`, `DoctorsReposito
 
 7. **Dead models `activity.dart` and `support.dart`** exist in the profile feature but are not imported anywhere. They should be removed or wired to future API endpoints.
 
-8. **Data mapping gaps** in the Explore `fromApi()` mappers default several fields (`neighborhood`, `status`, `lastVisitDays`, `isPriority`, `products`, `initials`, `hue`, `primaryClinic`) to empty/zero because the paginated API responses don't include them. These are API completeness gaps, not mock data.
+8. **Remaining Explore mapping gaps:** facility priority still has no persisted source or domain rule, product summaries are not represented by `FacilityEntry`, and `ProfessionalEntry.hue` remains a local default. Professional `relationshipLevel`/`isPriority`/`displayFacility` and facility visit recency are live through user-scoped API contracts.

@@ -7,6 +7,7 @@ import {
   businessVerticals,
   territories,
   users,
+  visits,
   orders,
   orderItems,
 } from "@atlasmed/database";
@@ -115,6 +116,7 @@ export function mapFacility(
     consultantSince: options.consultantSince ?? null,
     managerName: options.managerName ?? null,
     imageUrl: facility.imageUrl ?? null,
+    imageBlurhash: facility.imageBlurhash ?? null,
     sourceProvider: facility.sourceProvider,
     externalSourceId: facility.externalSourceId,
     sourceContentHash: facility.sourceContentHash,
@@ -307,6 +309,29 @@ async function loadTerritoryNames(
   return new Map(rows.map((row) => [row.id, row.name]));
 }
 
+async function loadLastVisitAt(
+  facilityIds: string[],
+  userId: string,
+): Promise<Map<string, Date>> {
+  if (facilityIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      facilityId: visits.facilityId,
+      lastVisitAt: sql<Date>`max(${visits.visitedAt})`,
+    })
+    .from(visits)
+    .where(
+      and(
+        inArray(visits.facilityId, facilityIds),
+        eq(visits.userId, userId),
+      ),
+    )
+    .groupBy(visits.facilityId);
+
+  return new Map(rows.map((row) => [row.facilityId, row.lastVisitAt]));
+}
+
 
 export function buildFacilityListConditions(params: {
   scope: FacilityListScopeFilter;
@@ -391,6 +416,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     purchaseIntervalMaxDays?: number;
     sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
     order?: "asc" | "desc";
+    userId: string;
     scope: FacilityListScopeFilter;
     candidateIds?: string[];
   }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
@@ -453,7 +479,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       deriveProfileTerritoryId(profilesByFacility.get(id) ?? []),
     );
 
-    const [profCounts, consultantMap, territoryNameById] = await Promise.all([
+    const [profCounts, consultantMap, territoryNameById, lastVisitAtByFacility] = await Promise.all([
       db
         .select({
           facilityId: facilityProfessionals.facilityId,
@@ -469,6 +495,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         .groupBy(facilityProfessionals.facilityId),
       loadConsultantInfo(ids),
       loadTerritoryNames(derivedTerritoryIds),
+      loadLastVisitAt(ids, params.userId),
     ]);
 
     const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
@@ -496,6 +523,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           }),
           distanceKm: row.distanceKm ?? null,
           professionalCount: countMap.get(row.id) ?? 0,
+          lastVisitAt: lastVisitAtByFacility.get(row.id) ?? null,
         };
       }),
       total: countRows[0]?.count ?? 0,
@@ -515,6 +543,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     purchaseIntervalMaxDays?: number;
     sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
     order?: "asc" | "desc";
+    userId: string;
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]> {
     if (params.ids.length === 0) {
@@ -651,6 +680,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       lat?: number | null;
       lng?: number | null;
       imageUrl?: string | null;
+      imageBlurhash?: string | null;
       billingEmail?: string | null;
       taxIdType?: "PJ" | "PF";
       conformityStatus?: FacilityRecord["conformityStatus"];
@@ -668,6 +698,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (data.imageUrl !== undefined) {
       setData.imageUrl = data.imageUrl;
+    }
+
+    if (data.imageBlurhash !== undefined) {
+      setData.imageBlurhash = data.imageBlurhash;
     }
 
     if (data.billingEmail !== undefined) {

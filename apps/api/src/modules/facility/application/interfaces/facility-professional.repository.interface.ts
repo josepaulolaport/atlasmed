@@ -57,6 +57,7 @@ export interface FacilityProfessionalContextRecord {
     email: string | null;
     websiteUrl: string | null;
     imageUrl: string | null;
+    imageBlurhash: string | null;
     primarySpecialtyLabel: string | null;
     crmCouncil: string | null;
     crmNumber: string | null;

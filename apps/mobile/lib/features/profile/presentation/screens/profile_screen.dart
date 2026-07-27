@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
@@ -115,6 +116,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         : _buildHeader(
                             profile,
                             avatarUrl: currentUser.valueOrNull?.avatarUrl,
+                            avatarBlurhash:
+                                currentUser.valueOrNull?.avatarBlurhash,
                             avatarToken: avatarToken,
                             updating: avatarUpdating,
                           ),
@@ -174,6 +177,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildHeader(
     UserProfile profile, {
     String? avatarUrl,
+    String? avatarBlurhash,
     String? avatarToken,
     bool updating = false,
   }) {
@@ -194,6 +198,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               _AvatarEditor(
                 initials: profile.initials,
                 avatarUrl: avatarUrl,
+                avatarBlurhash: avatarBlurhash,
                 avatarToken: avatarToken,
                 updating: updating,
                 onTap: () => _showAvatarActions(
@@ -792,6 +797,7 @@ class _AvatarEditor extends StatelessWidget {
   const _AvatarEditor({
     required this.initials,
     required this.avatarUrl,
+    required this.avatarBlurhash,
     required this.avatarToken,
     required this.updating,
     required this.onTap,
@@ -799,6 +805,7 @@ class _AvatarEditor extends StatelessWidget {
 
   final String initials;
   final String? avatarUrl;
+  final String? avatarBlurhash;
   final String? avatarToken;
   final bool updating;
   final VoidCallback onTap;
@@ -819,6 +826,7 @@ class _AvatarEditor extends StatelessWidget {
           _ProfileAvatar(
             initials: initials,
             imageUrl: _absoluteAvatarUrl(avatarUrl),
+            blurhash: avatarBlurhash,
             authorization: avatarToken == null ? null : "Bearer $avatarToken",
             size: 66,
           ),
@@ -860,17 +868,22 @@ class _AvatarEditor extends StatelessWidget {
 class _ProfileAvatar extends StatelessWidget {
   final String initials;
   final String? imageUrl;
+  final String? blurhash;
   final String? authorization;
   final double size;
   const _ProfileAvatar({
     required this.initials,
     this.imageUrl,
+    this.blurhash,
     this.authorization,
     this.size = 72,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hash = blurhash?.trim();
+    final hasBlurhash = hash != null && hash.isNotEmpty;
+
     return Container(
       width: size,
       height: size,
@@ -902,6 +915,8 @@ class _ProfileAvatar extends StatelessWidget {
                   ? null
                   : {"Authorization": authorization!},
               fit: BoxFit.cover,
+              placeholder: (_, _) =>
+                  hasBlurhash ? BlurHash(hash: hash) : _initials(),
               errorWidget: (_, _, _) => _initials(),
             )
           : _initials(),

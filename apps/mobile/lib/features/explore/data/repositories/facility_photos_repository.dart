@@ -32,7 +32,11 @@ class FacilityPhotoFile {
 }
 
 class FacilityPhotosResponse {
-  const FacilityPhotosResponse({required this.imageUrl, required this.photos});
+  const FacilityPhotosResponse({
+    required this.imageUrl,
+    required this.photos,
+    this.imageBlurhash,
+  });
 
   factory FacilityPhotosResponse.fromJson(String json) {
     final map = jsonDecode(json) as Map<String, dynamic>;
@@ -40,21 +44,36 @@ class FacilityPhotosResponse {
         .cast<Map<String, dynamic>>();
     return FacilityPhotosResponse(
       imageUrl: map['imageUrl'] as String?,
+      imageBlurhash: map['imageBlurhash'] as String?,
       photos: data
-          .map((item) => (id: item['id'] as String, url: item['url'] as String))
+          .map(
+            (item) => (
+              id: item['id'] as String,
+              url: item['url'] as String,
+              blurhash: item['blurhash'] as String?,
+            ),
+          )
           .toList(growable: false),
     );
   }
 
   final String? imageUrl;
-  final List<({String id, String url})> photos;
+  final String? imageBlurhash;
+  final List<({String id, String url, String? blurhash})> photos;
 
   PhotoGallerySummary toSummary() {
     final urls = photos.map((p) => p.url).toList(growable: false);
     return PhotoGallerySummary(
       count: urls.length,
       imageUrls: urls,
+      imageBlurhashes: photos.map((p) => p.blurhash).toList(growable: false),
       profileImageUrl: imageUrl ?? (urls.isEmpty ? null : urls.first),
+      profileImageBlurhash:
+          imageBlurhash ??
+          (photos.isNotEmpty &&
+                  (imageUrl == null || imageUrl == photos.first.url)
+              ? photos.first.blurhash
+              : null),
     );
   }
 }

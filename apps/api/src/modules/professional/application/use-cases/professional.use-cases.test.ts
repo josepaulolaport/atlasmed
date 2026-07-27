@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
+import { RELATIONSHIP_LEVEL_MAX } from "@atlasmed/database";
 import {
   ListProfessionalSpecialtiesUseCase,
   ListProfessionalsUseCase,
@@ -25,6 +26,7 @@ function professionalRecord(id: string): ProfessionalRecord {
     email: null,
     websiteUrl: null,
     imageUrl: null,
+    imageBlurhash: null,
     favoriteTeam: null,
     favoriteSport: null,
     languages: null,
@@ -75,6 +77,12 @@ function fakeRepository(
   };
 }
 
+function relationshipRepository(levels: Map<string, number>) {
+  return {
+    findLevelsByUserAndProfessionals: mock(async () => levels),
+  } as never;
+}
+
 describe("ListProfessionalSpecialtiesUseCase", () => {
   it("returns distinct specialties under the caller's facility scope", async () => {
     const repository = fakeRepository(async () => ({ professionals: [], total: 0 }));
@@ -107,6 +115,53 @@ describe("ListProfessionalSpecialtiesUseCase", () => {
 });
 
 describe("ListProfessionalsUseCase", () => {
+  it("enriches summaries with a display facility and marks only level 10 as priority", async () => {
+    const priority = {
+      ...professionalRecord("doctor-priority"),
+      displayFacility: { id: "facility-1", name: "Clínica Central" },
+    };
+    const regular = professionalRecord("doctor-regular");
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: fakeRepository(async () => ({
+        professionals: [priority, regular],
+        total: 2,
+      })),
+      userProfessionalRelationshipRepository: relationshipRepository(
+        new Map([
+          [priority.id, RELATIONSHIP_LEVEL_MAX],
+          [regular.id, RELATIONSHIP_LEVEL_MAX - 1],
+        ])
+      ),
+    });
+
+    const result = await useCase.execute({
+      userId: "user-1",
+      scope: {
+        isGlobal: true,
+        assignedTerritoryIds: [],
+        effectiveTerritoryIds: [],
+        analyticsEffectiveTerritoryIds: [],
+        territoryIds: [],
+        facilityIds: [],
+        analyticsFacilityIds: [],
+        clinicIds: [],
+        analyticsClinicIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true,
+      },
+    });
+
+    expect(result.data[0]).toMatchObject({
+      displayFacility: { id: "facility-1", name: "Clínica Central" },
+      relationshipLevel: RELATIONSHIP_LEVEL_MAX,
+      isPriority: true,
+    });
+    expect(result.data[1]).toMatchObject({
+      relationshipLevel: RELATIONSHIP_LEVEL_MAX - 1,
+      isPriority: false,
+    });
+  });
+
   it("returns pagination totals from the repository", async () => {
     const useCase = new ListProfessionalsUseCase({
       doctorRepository: fakeRepository(async () => ({

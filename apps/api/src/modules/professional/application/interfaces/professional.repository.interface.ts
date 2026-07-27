@@ -27,6 +27,7 @@ export interface ProfessionalRecord {
   email: string | null;
   websiteUrl: string | null;
   imageUrl: string | null;
+  imageBlurhash: string | null;
   favoriteTeam: string | null;
   favoriteSport: string | null;
   languages: string | null;
@@ -45,6 +46,11 @@ export interface ProfessionalRecord {
   sourceTracked: boolean;
   manuallyEditedAt: Date | null;
   facilityIds: string[];
+  /**
+   * Deterministic display facility for list surfaces: the first active,
+   * visible association ordered by facility name.
+   */
+  displayFacility?: ProfessionalFacilitySummary | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -85,6 +91,7 @@ export interface ProfessionalCreateInput {
   email?: string | null;
   websiteUrl?: string | null;
   imageUrl?: string | null;
+  imageBlurhash?: string | null;
   favoriteTeam?: string | null;
   favoriteSport?: string | null;
   languages?: string | null;
@@ -110,6 +117,7 @@ export interface ProfessionalUpdateInput {
   email?: string | null;
   websiteUrl?: string | null;
   imageUrl?: string | null;
+  imageBlurhash?: string | null;
   favoriteTeam?: string | null;
   favoriteSport?: string | null;
   languages?: string | null;

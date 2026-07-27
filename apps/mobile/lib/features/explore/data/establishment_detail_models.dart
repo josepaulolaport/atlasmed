@@ -425,14 +425,18 @@ class PhotoGallerySummary {
     required this.count,
     this.thumbnailColors = const [],
     this.imageUrls = const [],
+    this.imageBlurhashes = const [],
     this.profileImageUrl,
+    this.profileImageBlurhash,
     this.lastUpdatedAt,
   });
 
   final int count;
   final List<Color> thumbnailColors;
   final List<String> imageUrls;
+  final List<String?> imageBlurhashes;
   final String? profileImageUrl;
+  final String? profileImageBlurhash;
   final DateTime? lastUpdatedAt;
 
   bool get hasRealImages => imageUrls.isNotEmpty;

@@ -1,6 +1,7 @@
 import type { ScopeContext } from "@atlasmed/access";
 import type { ProfessionalProfile } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
+import { RELATIONSHIP_LEVEL_MAX } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
 import { buildMeiliFilter, eqFilter, inFilter } from "../../../../infrastructure/search/meili-filter";
 import {
@@ -32,6 +33,7 @@ import type {
   ProfessionalRepository,
   ProfessionalUpdateInput,
 } from "../interfaces/professional.repository.interface";
+import type { UserProfessionalRelationshipRepository } from "../interfaces/user-professional-relationship.repository.interface";
 
 function formatDate(value: Date | null): string | undefined {
   if (!value) {
@@ -74,6 +76,7 @@ async function serializeProfessionalProfile(
     email: professional.email ?? undefined,
     websiteUrl: professional.websiteUrl ?? undefined,
     imageUrl: professional.imageUrl ?? undefined,
+    imageBlurhash: professional.imageBlurhash ?? undefined,
     primarySpecialtyLabel: professional.specialty ?? undefined,
     specialty: professional.specialty ?? undefined,
     crmCouncil: professional.crmCouncil ?? undefined,
@@ -91,7 +94,10 @@ async function serializeProfessionalProfile(
   };
 }
 
-function serializeProfessionalSummary(professional: ProfessionalRecord) {
+function serializeProfessionalSummary(
+  professional: ProfessionalRecord,
+  relationshipLevel?: number
+) {
   return {
     id: professional.id,
     firstName: professional.firstName,
@@ -102,6 +108,9 @@ function serializeProfessionalSummary(professional: ProfessionalRecord) {
     crmNumber: professional.crmNumber ?? undefined,
     crmState: professional.crmState ?? undefined,
     facilityIds: professional.facilityIds,
+    displayFacility: professional.displayFacility ?? undefined,
+    relationshipLevel,
+    isPriority: relationshipLevel === RELATIONSHIP_LEVEL_MAX,
     distanceKm: professional.distanceKm ?? undefined,
     createdAt: professional.createdAt.toISOString(),
     updatedAt: professional.updatedAt.toISOString(),
@@ -273,6 +282,10 @@ interface Dependencies {
   searchService?: SearchService;
 }
 
+interface ListProfessionalsDependencies extends Dependencies {
+  userProfessionalRelationshipRepository?: UserProfessionalRelationshipRepository;
+}
+
 export class ListProfessionalSpecialtiesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
@@ -287,7 +300,7 @@ export class ListProfessionalSpecialtiesUseCase {
 }
 
 export class ListProfessionalsUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(private readonly deps: ListProfessionalsDependencies) {}
 
   async execute(input: {
     page?: number;
@@ -300,6 +313,7 @@ export class ListProfessionalsUseCase {
     radiusKm?: number;
     sort?: string;
     order?: "asc" | "desc";
+    userId?: string;
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
@@ -331,8 +345,21 @@ export class ListProfessionalsUseCase {
         scope,
       });
 
+      const relationshipLevels =
+        input.userId && this.deps.userProfessionalRelationshipRepository
+          ? await this.deps.userProfessionalRelationshipRepository.findLevelsByUserAndProfessionals(
+              input.userId,
+              professionals.map((professional) => professional.id)
+            )
+          : new Map<string, number>();
+
       return {
-        data: professionals.map(serializeProfessionalSummary),
+        data: professionals.map((professional) =>
+          serializeProfessionalSummary(
+            professional,
+            relationshipLevels.get(professional.id)
+          )
+        ),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
       };
     }
@@ -382,9 +409,21 @@ export class ListProfessionalsUseCase {
         )
       : [];
     const total = result.estimatedTotalHits ?? 0;
+    const relationshipLevels =
+      input.userId && this.deps.userProfessionalRelationshipRepository
+        ? await this.deps.userProfessionalRelationshipRepository.findLevelsByUserAndProfessionals(
+            input.userId,
+            professionals.map((professional) => professional.id)
+          )
+        : new Map<string, number>();
 
     return {
-      data: professionals.map(serializeProfessionalSummary),
+      data: professionals.map((professional) =>
+        serializeProfessionalSummary(
+          professional,
+          relationshipLevels.get(professional.id)
+        )
+      ),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
     };
   }

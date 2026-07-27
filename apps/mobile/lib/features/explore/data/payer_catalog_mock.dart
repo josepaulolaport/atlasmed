@@ -43,7 +43,12 @@ const mockPayerCatalog = <PayerCatalogEntry>[
 ];
 
 /// Builds the donut callout summary from the current share list.
-PayerMixSummary? buildPayerMixSummary(List<PayerShare> payers) {
+///
+/// [updatedAt] stays absent when the data source does not expose a timestamp.
+PayerMixSummary? buildPayerMixSummary(
+  List<PayerShare> payers, {
+  DateTime? updatedAt,
+}) {
   if (payers.isEmpty) return null;
   final sorted = [...payers]
     ..sort((a, b) => b.sharePercent.compareTo(a.sharePercent));
@@ -52,6 +57,6 @@ PayerMixSummary? buildPayerMixSummary(List<PayerShare> payers) {
     principalSourceName: principal.name,
     principalSourcePercent: principal.sharePercent,
     registeredSourceCount: payers.length,
-    updatedAt: DateTime.now(),
+    updatedAt: updatedAt,
   );
 }

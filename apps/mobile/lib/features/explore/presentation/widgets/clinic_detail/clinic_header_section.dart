@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
@@ -21,9 +22,11 @@ class ClinicHeaderSection extends ConsumerWidget {
     super.key,
     required this.detail,
     required this.sections,
+    required this.photos,
   });
 
   final Facility detail;
+  final PhotoGallerySummary? photos;
 
   /// Nullable while the mocked sections provider is still loading — the
   /// header degrades gracefully to identity + address only in that case.
@@ -32,9 +35,6 @@ class ClinicHeaderSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final top = MediaQuery.of(context).padding.top;
-    final photos =
-        ref.watch(facilityPhotosProvider(detail.id)).valueOrNull ??
-        sections?.photos;
     final uploading = ref
         .watch(facilityPhotoUploadProvider(detail.id))
         .isLoading;
@@ -131,7 +131,9 @@ class ClinicHeaderSection extends ConsumerWidget {
                           photos?.profileImageUrl ??
                           (photos?.imageUrls.isNotEmpty == true
                               ? photos!.imageUrls.first
-                              : null),
+                              : detail.imageUrl),
+                      blurhash:
+                          photos?.profileImageBlurhash ?? detail.imageBlurhash,
                       uploading: uploading,
                       onTap: () => _showPhotoActions(context, ref, photos),
                     ),
@@ -197,8 +199,12 @@ class ClinicHeaderSection extends ConsumerWidget {
                     ] else
                       _SignalChip(
                         category: 'Status',
-                        label: detail.commercial?.statusLabel.label ?? 'Sem status',
-                        dotColor: detail.commercial?.statusLabel.color ?? const Color(0xFF9ca3af),
+                        label:
+                            detail.commercial?.statusLabel.label ??
+                            'Sem status',
+                        dotColor:
+                            detail.commercial?.statusLabel.color ??
+                            const Color(0xFF9ca3af),
                       ),
                   ],
                 ),
@@ -347,6 +353,7 @@ class _Avatar extends StatelessWidget {
     required this.name,
     this.taxIdType,
     this.imageUrl,
+    this.blurhash,
     this.uploading = false,
     this.onTap,
   });
@@ -354,6 +361,7 @@ class _Avatar extends StatelessWidget {
   final String name;
   final FacilityTaxIdType? taxIdType;
   final String? imageUrl;
+  final String? blurhash;
   final bool uploading;
   final VoidCallback? onTap;
 
@@ -365,6 +373,8 @@ class _Avatar extends StatelessWidget {
     final token = SessionEnvironment.instance.currentValue?.token;
     final url = imageUrl?.trim();
     final hasImage = url != null && url.isNotEmpty;
+    final hash = blurhash?.trim();
+    final hasBlurhash = hash != null && hash.isNotEmpty;
 
     return Semantics(
       button: true,
@@ -397,6 +407,9 @@ class _Avatar extends StatelessWidget {
                         fit: BoxFit.cover,
                         width: 52,
                         height: 52,
+                        placeholder: (_, _) => hasBlurhash
+                            ? BlurHash(hash: hash)
+                            : _Initials(name: name),
                         errorWidget: (_, _, _) => _Initials(name: name),
                       )
                     : _Initials(name: name),

@@ -55,6 +55,7 @@ export class ListFacilitiesUseCase {
     purchaseIntervalMaxDays?: number;
     sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
     order?: "asc" | "desc";
+    userId: string;
     scope: ScopeContext;
     role: string;
     verticalId?: string;
@@ -87,6 +88,7 @@ export class ListFacilitiesUseCase {
         purchaseIntervalMaxDays: input.purchaseIntervalMaxDays,
         sort,
         order,
+        userId: input.userId,
         scope: listScope,
       });
 
@@ -141,6 +143,7 @@ export class ListFacilitiesUseCase {
           productIds: input.productIds, purchaseFunnelStages: input.purchaseFunnelStages,
           purchaseProfile: input.purchaseProfile, purchaseIntervalMinDays: input.purchaseIntervalMinDays,
           purchaseIntervalMaxDays: input.purchaseIntervalMaxDays, sort, order,
+          userId: input.userId,
           scope: listScope,
         });
         return {
@@ -185,6 +188,7 @@ export class ListFacilitiesUseCase {
             purchaseIntervalMaxDays: input.purchaseIntervalMaxDays,
             sort: input.sort,
             order: input.order,
+            userId: input.userId,
             scope: listScope,
           }),
           ids

@@ -15,6 +15,7 @@ export interface UserRecord {
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
   avatarUrl: string | null;
+  avatarBlurhash: string | null;
   tokenVersion: number;
   managerId: string | null;
   passwordHistory: string[];
@@ -120,6 +121,7 @@ export interface UpdateProfileParams {
   firstName?: string;
   lastName?: string;
   avatarUrl?: string | null;
+  avatarBlurhash?: string | null;
 }
 
 export interface UpdateUserAsAdminParams {

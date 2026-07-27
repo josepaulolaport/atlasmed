@@ -22,6 +22,8 @@ export const professionalUseCases = {
   listProfessionals: () =>
     new ListProfessionalsUseCase({
       doctorRepository: professionalRepositories.professional,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
       searchService,
     }),
   listProfessionalSpecialties: () =>

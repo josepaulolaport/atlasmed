@@ -22,6 +22,7 @@ class Facility {
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
   final int professionalCount;
   final String? imageUrl;
+  final String? imageBlurhash;
   final List<ClinicService> services;
   final String? createdAt;
   final String? updatedAt;
@@ -38,6 +39,7 @@ class Facility {
     this.purchaseRecurrence,
     this.professionalCount = 0,
     this.imageUrl,
+    this.imageBlurhash,
     this.services = const [],
     this.createdAt,
     this.updatedAt,
@@ -104,6 +106,7 @@ class Facility {
       purchaseRecurrence: dto.purchaseRecurrence,
       professionalCount: dto.professionalCount,
       imageUrl: dto.imageUrl,
+      imageBlurhash: dto.imageBlurhash,
       services: dto.services,
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt,

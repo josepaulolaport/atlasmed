@@ -5,6 +5,7 @@ import type { FacilityPhotoRepository } from "../interfaces/facility-photo.repos
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type { AvatarStoragePort } from "../../../access/application/use-cases/update-avatar.use-case";
+import { calculateBlurhash } from "../../../../infrastructure/images/blurhash";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const imageExtensions: Record<string, string> = {
@@ -23,12 +24,14 @@ function serializePhoto(photo: {
   id: string;
   url: string;
   contentType: string;
+  blurhash: string | null;
   createdAt: Date;
 }) {
   return {
     id: photo.id,
     url: photo.url,
     contentType: photo.contentType,
+    blurhash: photo.blurhash ?? undefined,
     createdAt: photo.createdAt.toISOString(),
   };
 }
@@ -54,6 +57,7 @@ export class ListFacilityPhotosUseCase {
 
     return {
       imageUrl: facility.imageUrl ?? null,
+      imageBlurhash: facility.imageBlurhash ?? null,
       data: photos.map(serializePhoto),
     };
   }
@@ -89,17 +93,16 @@ export class UploadFacilityPhotoUseCase {
     }
 
     const key = `facilities/${input.facilityId}/${randomUUID()}.${extension}`;
-    await this.deps.storage.upload(
-      key,
-      new Uint8Array(await input.file.arrayBuffer()),
-      input.file.type
-    );
+    const bytes = new Uint8Array(await input.file.arrayBuffer());
+    await this.deps.storage.upload(key, bytes, input.file.type);
 
+    const blurhash = await calculateBlurhash(bytes);
     const url = photoUrl(key);
     const created = await this.deps.facilityPhotoRepository.create({
       facilityId: input.facilityId,
       storageKey: key,
       url,
+      blurhash,
       contentType: input.file.type,
       uploadedByUserId: input.userId,
     });
@@ -107,6 +110,7 @@ export class UploadFacilityPhotoUseCase {
     if (!facility.imageUrl) {
       await this.deps.facilityRepository.update(input.facilityId, {
         imageUrl: url,
+        imageBlurhash: blurhash,
       });
     }
 

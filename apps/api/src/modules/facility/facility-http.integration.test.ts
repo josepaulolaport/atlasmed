@@ -18,6 +18,7 @@ import {
   documentFiles,
   businessVerticals,
   facilityVerticalProfiles,
+  visits,
 } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
@@ -268,6 +269,55 @@ describe("Facility HTTP auth integration", () => {
     const ids = body.data.map((row) => row.id);
     expect(ids).toContain(fixtures.inScopeFacilityId);
     expect(ids).not.toContain(fixtures.outOfScopeFacilityId);
+  });
+
+  it("returns the requesting user's latest facility visit in list results", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const earlier = new Date("2026-07-20T12:00:00.000Z");
+    const latest = new Date("2026-07-26T18:30:00.000Z");
+    const inserted = await db
+      .insert(visits)
+      .values([
+        {
+          userId: fixtures.fieldUser.id,
+          facilityId: fixtures.inScopeFacilityId,
+          visitedAt: earlier,
+        },
+        {
+          userId: fixtures.fieldUser.id,
+          facilityId: fixtures.inScopeFacilityId,
+          visitedAt: latest,
+        },
+        {
+          userId: fixtures.admin.id,
+          facilityId: fixtures.inScopeFacilityId,
+          visitedAt: new Date("2026-07-27T20:00:00.000Z"),
+        },
+      ])
+      .returning({ id: visits.id });
+
+    try {
+      const token = await loginToken(fixtures.fieldUser.email);
+      const response = await authRequest(
+        app,
+        "http://localhost/api/v1/facilities",
+        token,
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        data: Array<{ id: string; lastVisitAt?: string }>;
+      };
+      const facility = body.data.find(
+        (row) => row.id === fixtures.inScopeFacilityId,
+      );
+      expect(facility?.lastVisitAt).toBe(latest.toISOString());
+    } finally {
+      await db.delete(visits).where(
+        inArray(visits.id, inserted.map((row) => row.id)),
+      );
+    }
   });
 
   it("scoped field USER can read facility professional context", async () => {

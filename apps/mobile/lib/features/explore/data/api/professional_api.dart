@@ -44,12 +44,16 @@ class ProfessionalDTO {
   final String? hobbies;
   final String? languages;
   final List<String> facilityIds;
+  final ProfessionalFacilityRef? displayFacility;
+  final int? relationshipLevel;
+  final bool isPriority;
 
   // Detail-only
   final String? socialName;
   final String? taxId;
   final String? websiteUrl;
   final String? imageUrl;
+  final String? imageBlurhash;
   final String? crmCouncil;
   final String? favoriteSport;
   final String? notes;
@@ -66,6 +70,9 @@ class ProfessionalDTO {
     required this.lastName,
     required this.facilityIds,
     this.facilities = const [],
+    this.displayFacility,
+    this.relationshipLevel,
+    this.isPriority = false,
     this.fullName,
     this.specialty,
     this.crmNumber,
@@ -82,6 +89,7 @@ class ProfessionalDTO {
     this.taxId,
     this.websiteUrl,
     this.imageUrl,
+    this.imageBlurhash,
     this.crmCouncil,
     this.notes,
     this.distanceKm,
@@ -109,6 +117,15 @@ class ProfessionalDTO {
       hobbies: readNullableString(map['hobbies']),
       languages: readNullableString(map['languages']),
       facilityIds: readStringList(map['facilityIds']),
+      displayFacility: map['displayFacility'] is Map
+          ? ProfessionalFacilityRef.fromMap(
+              (map['displayFacility'] as Map).cast<String, dynamic>(),
+            )
+          : null,
+      relationshipLevel: map['relationshipLevel'] is num
+          ? (map['relationshipLevel'] as num).toInt()
+          : null,
+      isPriority: map['isPriority'] == true,
       facilities: readObjectList(
         map['facilities'],
       ).map(ProfessionalFacilityRef.fromMap).toList(growable: false),
@@ -116,6 +133,7 @@ class ProfessionalDTO {
       taxId: readNullableString(map['taxId']),
       websiteUrl: readNullableString(map['websiteUrl']),
       imageUrl: readNullableString(map['imageUrl']),
+      imageBlurhash: readNullableString(map['imageBlurhash']),
       crmCouncil: readNullableString(map['crmCouncil']),
       notes: readNullableString(map['notes']),
       distanceKm: readNullableDouble(map['distanceKm']),
@@ -125,9 +143,7 @@ class ProfessionalDTO {
   }
 
   factory ProfessionalDTO.fromJson(String json) {
-    return ProfessionalDTO.fromMap(
-      jsonDecode(json) as Map<String, dynamic>,
-    );
+    return ProfessionalDTO.fromMap(jsonDecode(json) as Map<String, dynamic>);
   }
 
   String get displayName {
@@ -160,10 +176,7 @@ class ProfessionalDTO {
 // ── PaginatedProfessionals ───────────────────────────────────
 
 class PaginatedProfessionals {
-  const PaginatedProfessionals({
-    required this.items,
-    required this.pagination,
-  });
+  const PaginatedProfessionals({required this.items, required this.pagination});
 
   factory PaginatedProfessionals.fromJson(String json) {
     final decoded = jsonDecode(json) as Map<String, dynamic>;

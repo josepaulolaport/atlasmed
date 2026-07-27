@@ -4,6 +4,7 @@ export interface FacilityPhotoRecord {
   storageKey: string;
   url: string;
   contentType: string;
+  blurhash: string | null;
   uploadedByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -17,6 +18,7 @@ export interface FacilityPhotoRepository {
     storageKey: string;
     url: string;
     contentType: string;
+    blurhash?: string | null;
     uploadedByUserId: string;
   }): Promise<FacilityPhotoRecord>;
 

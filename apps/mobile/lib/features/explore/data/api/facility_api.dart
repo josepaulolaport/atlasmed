@@ -60,7 +60,9 @@ class FacilityDTO {
   final String? consultantSince;
   final String? managerName;
   final String? imageUrl;
+  final String? imageBlurhash;
   final double? distanceKm;
+  final String? lastVisitAt;
   final List<ClinicService> services;
   final String? createdAt;
   final String? updatedAt;
@@ -99,7 +101,9 @@ class FacilityDTO {
     this.consultantSince,
     this.managerName,
     this.imageUrl,
+    this.imageBlurhash,
     this.distanceKm,
+    this.lastVisitAt,
     this.services = const [],
     this.createdAt,
     this.updatedAt,
@@ -152,7 +156,9 @@ class FacilityDTO {
       consultantSince: readNullableString(map['consultantSince']),
       managerName: readNullableString(map['managerName']),
       imageUrl: readNullableString(map['imageUrl'] ?? map['profileImageUrl']),
+      imageBlurhash: readNullableString(map['imageBlurhash']),
       distanceKm: readNullableDouble(map['distanceKm']),
+      lastVisitAt: readNullableString(map['lastVisitAt']),
       services: readObjectList(
         map['services'],
       ).map(ClinicService.fromMap).toList(growable: false),

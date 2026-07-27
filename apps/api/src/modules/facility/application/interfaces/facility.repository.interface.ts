@@ -83,6 +83,7 @@ export interface FacilityRecord {
   managerName: string | null;
   /** Profile / header image URL (`facilities.image_url`). */
   imageUrl: string | null;
+  imageBlurhash: string | null;
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -102,6 +103,8 @@ export interface FacilityRecord {
 
 export interface FacilityListRecord extends FacilityRecord {
   professionalCount: number;
+  /** Latest visit to this facility by the requesting user. */
+  lastVisitAt: Date | null;
   /** Present only when a coordinate query was supplied. */
   distanceKm?: number | null;
 }
@@ -147,6 +150,7 @@ export interface FacilityRepository {
     purchaseIntervalMaxDays?: number;
     sort?: FacilityListSort;
     order?: FacilityListOrder;
+    userId: string;
     scope: FacilityListScopeFilter;
     /** Internal canonical hydration constraint for a Meilisearch result page. */
     candidateIds?: string[];
@@ -166,6 +170,7 @@ export interface FacilityRepository {
     purchaseIntervalMaxDays?: number;
     sort?: FacilityListSort;
     order?: FacilityListOrder;
+    userId: string;
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]>;
 
@@ -191,6 +196,7 @@ export interface FacilityRepository {
       lat?: number | null;
       lng?: number | null;
       imageUrl?: string | null;
+      imageBlurhash?: string | null;
       billingEmail?: string | null;
       taxIdType?: "PJ" | "PF";
       conformityStatus?: FacilityConformityStatus;

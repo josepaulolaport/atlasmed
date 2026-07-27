@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Circular avatar for a managed [User] — shows the real `avatarUrl` when
@@ -51,6 +52,8 @@ class UserAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarUrl = user.avatarUrl;
     final token = SessionEnvironment.instance.currentValue?.token;
+    final hash = user.avatarBlurhash?.trim();
+    final hasBlurhash = hash != null && hash.isNotEmpty;
 
     return Container(
       width: size,
@@ -70,6 +73,9 @@ class UserAvatar extends StatelessWidget {
               fit: BoxFit.cover,
               width: size,
               height: size,
+              placeholder: (_, _) => hasBlurhash
+                  ? BlurHash(hash: hash)
+                  : _InitialsLabel(initials: _initials, size: size),
               errorWidget: (_, _, _) =>
                   _InitialsLabel(initials: _initials, size: size),
             )

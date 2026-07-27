@@ -49,6 +49,7 @@ function baseFacility(
     consultantSince: new Date("2023-03-01T00:00:00.000Z"),
     managerName: "Roberto Mendes",
     imageUrl: null,
+    imageBlurhash: null,
     sourceProvider: null,
     externalSourceId: null,
     sourceContentHash: null,
@@ -62,6 +63,7 @@ function baseFacility(
     updatedAt: now,
     services: [{ serviceCode: "123", classificationCode: "01" }],
     professionalCount: 4,
+    lastVisitAt: null,
     distanceKm: 1.2,
     ...overrides,
   };
@@ -112,5 +114,13 @@ describe("serializeFacility", () => {
 
     expect(dto.lat).toBeUndefined();
     expect(dto.lng).toBeUndefined();
+  });
+
+  it("serializes the requesting user's latest visit when present", () => {
+    const lastVisitAt = new Date("2025-12-20T14:30:00.000Z");
+
+    const dto = serializeFacility(baseFacility({ lastVisitAt }));
+
+    expect(dto.lastVisitAt).toBe(lastVisitAt.toISOString());
   });
 });

@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -394,6 +395,7 @@ class AtlasDrawer extends ConsumerWidget {
                       displayName: displayName,
                       email: email,
                       avatarUrl: user?.avatarUrl,
+                      avatarBlurhash: user?.avatarBlurhash,
                       avatarToken: session.token,
                     ),
                     Expanded(
@@ -430,11 +432,31 @@ class AtlasDrawer extends ConsumerWidget {
 
 // ── Drawer subcomponents ───────────────────────────────────
 
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Text(
+      initials,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.5,
+        color: Colors.white,
+      ),
+    ),
+  );
+}
+
 class _DrawerHeader extends StatelessWidget {
   final String initials;
   final String displayName;
   final String email;
   final String? avatarUrl;
+  final String? avatarBlurhash;
   final String? avatarToken;
 
   const _DrawerHeader({
@@ -442,6 +464,7 @@ class _DrawerHeader extends StatelessWidget {
     required this.displayName,
     required this.email,
     this.avatarUrl,
+    this.avatarBlurhash,
     this.avatarToken,
   });
 
@@ -451,6 +474,9 @@ class _DrawerHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hash = avatarBlurhash?.trim();
+    final hasBlurhash = hash != null && hash.isNotEmpty;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(22, 52, 22, 24),
@@ -485,29 +511,13 @@ class _DrawerHeader extends StatelessWidget {
                             ? null
                             : {"Authorization": "Bearer $avatarToken"},
                         fit: BoxFit.cover,
-                        errorWidget: (_, _, _) => Center(
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                        placeholder: (_, _) => hasBlurhash
+                            ? BlurHash(hash: hash)
+                            : _InitialsAvatar(initials: initials),
+                        errorWidget: (_, _, _) =>
+                            _InitialsAvatar(initials: initials),
                       )
-                    : Center(
-                        child: Text(
-                          initials,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                    : _InitialsAvatar(initials: initials),
               ),
               const SizedBox(height: 12),
               Text(

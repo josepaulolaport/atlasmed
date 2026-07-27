@@ -38,6 +38,7 @@ export function serializeUser(user: {
   firstName?: string | null;
   lastName?: string | null;
   avatarUrl?: string | null;
+  avatarBlurhash?: string | null;
   status: string;
   emailVerified: boolean;
   phoneVerified: boolean;
@@ -61,6 +62,7 @@ export function serializeUser(user: {
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,
     avatarUrl: user.avatarUrl ?? undefined,
+    avatarBlurhash: user.avatarBlurhash ?? undefined,
     status: user.status,
     emailVerified: user.emailVerified,
     phoneVerified: user.phoneVerified,

@@ -11,6 +11,7 @@ class ManagerOption extends Equatable {
     required this.id,
     required this.name,
     this.avatarUrl,
+    this.avatarBlurhash,
     this.territoryId,
     this.territoryName,
     this.territoryCentroid,
@@ -23,6 +24,7 @@ class ManagerOption extends Equatable {
 
   /// Optional avatar URL — when null the picker falls back to initials.
   final String? avatarUrl;
+  final String? avatarBlurhash;
 
   /// Manager-zone territory this manager owns, if any. Used to filter
   /// selectable REP patches to those nested under this zone.
@@ -44,6 +46,7 @@ class ManagerOption extends Equatable {
     id: json['id'] as String,
     name: json['name'] as String,
     avatarUrl: json['avatarUrl'] as String?,
+    avatarBlurhash: json['avatarBlurhash'] as String?,
     territoryId: json['territoryId'] as String?,
     territoryName: json['territoryName'] as String?,
     territoryCentroid: json['territoryCentroid'] == null
@@ -70,6 +73,7 @@ class ManagerOption extends Equatable {
     id,
     name,
     avatarUrl,
+    avatarBlurhash,
     territoryId,
     territoryName,
     territoryCentroid,
