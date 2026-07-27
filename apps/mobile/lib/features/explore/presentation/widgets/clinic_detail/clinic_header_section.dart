@@ -22,9 +22,11 @@ class ClinicHeaderSection extends ConsumerWidget {
     super.key,
     required this.detail,
     required this.sections,
+    required this.photos,
   });
 
   final Facility detail;
+  final PhotoGallerySummary? photos;
 
   /// Nullable while the mocked sections provider is still loading — the
   /// header degrades gracefully to identity + address only in that case.
@@ -33,9 +35,6 @@ class ClinicHeaderSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final top = MediaQuery.of(context).padding.top;
-    final photos =
-        ref.watch(facilityPhotosProvider(detail.id)).valueOrNull ??
-        sections?.photos;
     final uploading = ref
         .watch(facilityPhotoUploadProvider(detail.id))
         .isLoading;

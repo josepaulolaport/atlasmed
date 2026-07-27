@@ -63,6 +63,7 @@ function baseFacility(
     updatedAt: now,
     services: [{ serviceCode: "123", classificationCode: "01" }],
     professionalCount: 4,
+    lastVisitAt: null,
     distanceKm: 1.2,
     ...overrides,
   };
@@ -113,5 +114,13 @@ describe("serializeFacility", () => {
 
     expect(dto.lat).toBeUndefined();
     expect(dto.lng).toBeUndefined();
+  });
+
+  it("serializes the requesting user's latest visit when present", () => {
+    const lastVisitAt = new Date("2025-12-20T14:30:00.000Z");
+
+    const dto = serializeFacility(baseFacility({ lastVisitAt }));
+
+    expect(dto.lastVisitAt).toBe(lastVisitAt.toISOString());
   });
 });

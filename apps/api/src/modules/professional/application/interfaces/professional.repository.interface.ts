@@ -46,6 +46,11 @@ export interface ProfessionalRecord {
   sourceTracked: boolean;
   manuallyEditedAt: Date | null;
   facilityIds: string[];
+  /**
+   * Deterministic display facility for list surfaces: the first active,
+   * visible association ordered by facility name.
+   */
+  displayFacility?: ProfessionalFacilitySummary | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;

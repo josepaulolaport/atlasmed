@@ -44,6 +44,9 @@ class ProfessionalDTO {
   final String? hobbies;
   final String? languages;
   final List<String> facilityIds;
+  final ProfessionalFacilityRef? displayFacility;
+  final int? relationshipLevel;
+  final bool isPriority;
 
   // Detail-only
   final String? socialName;
@@ -67,6 +70,9 @@ class ProfessionalDTO {
     required this.lastName,
     required this.facilityIds,
     this.facilities = const [],
+    this.displayFacility,
+    this.relationshipLevel,
+    this.isPriority = false,
     this.fullName,
     this.specialty,
     this.crmNumber,
@@ -111,6 +117,15 @@ class ProfessionalDTO {
       hobbies: readNullableString(map['hobbies']),
       languages: readNullableString(map['languages']),
       facilityIds: readStringList(map['facilityIds']),
+      displayFacility: map['displayFacility'] is Map
+          ? ProfessionalFacilityRef.fromMap(
+              (map['displayFacility'] as Map).cast<String, dynamic>(),
+            )
+          : null,
+      relationshipLevel: map['relationshipLevel'] is num
+          ? (map['relationshipLevel'] as num).toInt()
+          : null,
+      isPriority: map['isPriority'] == true,
       facilities: readObjectList(
         map['facilities'],
       ).map(ProfessionalFacilityRef.fromMap).toList(growable: false),

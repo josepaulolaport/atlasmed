@@ -66,6 +66,54 @@ void main() {
     expect(find.text('Suspensa'), findsOneWidget);
   });
 
+  testWidgets('shows Hoje for a visit on the current local date', (
+    tester,
+  ) async {
+    final clinic = FacilityEntry.fromDTO(
+      const api.FacilityDTO(
+        id: 'clinic-visited-today',
+        name: 'Clínica visitada hoje',
+        professionalCount: 1,
+        lastVisitAt: '2026-07-27T14:00:00.000-03:00',
+      ),
+      now: DateTime.parse('2026-07-27T20:00:00.000-03:00'),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClinicRow(clinic: clinic, onTap: () {}),
+        ),
+      ),
+    );
+
+    expect(find.text('Hoje'), findsOneWidget);
+  });
+
+  testWidgets('shows the elapsed calendar days since the latest visit', (
+    tester,
+  ) async {
+    final clinic = FacilityEntry.fromDTO(
+      api.FacilityDTO.fromMap(const {
+        'id': 'clinic-visited-before',
+        'name': 'Clínica visitada antes',
+        'professionalCount': 1,
+        'lastVisitAt': '2026-07-24T23:30:00.000-03:00',
+      }),
+      now: DateTime.parse('2026-07-27T08:00:00.000-03:00'),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClinicRow(clinic: clinic, onTap: () {}),
+        ),
+      ),
+    );
+
+    expect(find.text('Há 3 dias'), findsOneWidget);
+  });
+
   testWidgets('shows a compact purchase funnel stage when available', (
     tester,
   ) async {

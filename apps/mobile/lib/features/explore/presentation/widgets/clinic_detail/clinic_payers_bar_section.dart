@@ -29,6 +29,7 @@ class ClinicPayersBarSection extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
                 'Nenhuma fonte pagadora cadastrada',
@@ -37,12 +38,17 @@ class ClinicPayersBarSection extends StatelessWidget {
               ),
               if (onEdit != null) ...[
                 const SizedBox(height: 12),
-                TextButton.icon(
+                OutlinedButton.icon(
                   onPressed: onEdit,
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text('Adicionar fonte'),
-                  style: TextButton.styleFrom(
+                  style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.navyBright,
+                    side: const BorderSide(color: AppColors.blue100),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -159,15 +165,16 @@ class ClinicPayersBarSection extends StatelessWidget {
             const SizedBox(height: 4),
             const Divider(height: 1, color: AppColors.gray100),
             const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Adicionar fonte'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.navyBright,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+            OutlinedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Adicionar fonte'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.navyBright,
+                side: const BorderSide(color: AppColors.blue100),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),

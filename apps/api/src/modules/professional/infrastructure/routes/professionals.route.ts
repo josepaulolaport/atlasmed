@@ -52,7 +52,8 @@ const listProfessionalsRoute = new Elysia()
   .use(requirePermission("read", "PROFESSIONAL"))
   .get(
     "/professionals",
-    async ({ query, getScope }) => {
+    async ({ query, getScope, getUser }) => {
+      const user = await getUser();
       const scope = await getScope();
       const filters = parseListProfessionalsQuery(query);
       return doctorUseCases.listProfessionals().execute({
@@ -60,6 +61,7 @@ const listProfessionalsRoute = new Elysia()
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
         facilityId: query.facilityId,
+        userId: user.id,
         ...filters,
         scope,
       });

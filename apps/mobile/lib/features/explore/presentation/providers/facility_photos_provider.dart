@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_photos_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 
 final facilityPhotosProvider = FutureProvider.autoDispose
     .family<PhotoGallerySummary, String>((ref, facilityId) async {
@@ -87,9 +88,9 @@ class FacilityPhotoUploadController extends StateNotifier<AsyncValue<void>> {
         repo.dispose();
       }
 
-      _ref.invalidate(facilityPhotosProvider(facilityId));
-      // Await refetch so the header avatar/gallery update before success UI.
-      await _ref.read(facilityPhotosProvider(facilityId).future);
+      // Refresh the same ZIP repository consumed by the clinic header so the
+      // uploaded photo is reflected before the success UI is shown.
+      await _ref.read(facilityZipRepositoryProvider(facilityId)).refresh();
       state = const AsyncData(null);
     } on FacilityPhotosException catch (error, stackTrace) {
       state = AsyncError(error.toString(), stackTrace);

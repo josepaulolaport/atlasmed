@@ -138,7 +138,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       ),
       body: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
         repository: repo,
-        builder: (context, data, _) {
+        builder: (context, data, repository) {
           if (data == null) {
             return _loadingSkeleton(context);
           }
@@ -146,6 +146,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
             detail: data.facility,
             clinicId: clinicId,
             integrations: data,
+            repository: repository,
           );
         },
       ),
@@ -385,11 +386,13 @@ class _ClinicDetailBody extends ConsumerWidget {
   const _ClinicDetailBody({
     required this.detail,
     required this.clinicId,
+    required this.repository,
     this.integrations,
   });
 
   final Facility detail;
   final String clinicId;
+  final FacilityZipRepository repository;
   final FacilityWithIntegrations? integrations;
 
   @override
@@ -427,6 +430,7 @@ class _ClinicDetailBody extends ConsumerWidget {
         clinicId: clinicId,
         sections: sections,
         integrations: integrations,
+        repository: repository,
       ),
     );
   }
@@ -440,9 +444,11 @@ class _ClinicDetailContent extends ConsumerWidget {
   final String clinicId;
   final EstablishmentDetailSections? sections;
   final FacilityWithIntegrations? integrations;
+  final FacilityZipRepository repository;
   const _ClinicDetailContent({
     required this.detail,
     required this.clinicId,
+    required this.repository,
     this.sections,
     this.integrations,
   });
@@ -459,12 +465,14 @@ class _ClinicDetailContent extends ConsumerWidget {
     final payersState = ref.watch(facilityPayersProvider(clinicId));
     final ordersState = ref.watch(facilityOrdersProvider(clinicId));
     // Prefer zipped data (from FacilityZipRepository) over individual providers.
-    final effectivePayers = (integrations?.payerShares != null &&
+    final effectivePayers =
+        (integrations?.payerShares != null &&
             integrations!.payerShares.isNotEmpty)
         ? integrations!.payerShares
         : payersState.payers;
-    final effectiveOrders = (integrations?.orders != null &&
-            integrations!.orders.isNotEmpty)
+    final effectivePayersSummary = buildPayerMixSummary(effectivePayers);
+    final effectiveOrders =
+        (integrations?.orders != null && integrations!.orders.isNotEmpty)
         ? integrations!.orders
         : ordersState.orders;
     final location = establishmentLocationFromDetail(detail);
@@ -486,7 +494,23 @@ class _ClinicDetailContent extends ConsumerWidget {
             color: AppColors.surfaceTertiary,
             child: Column(
               children: [
-                ClinicHeaderSection(detail: detail, sections: sections),
+                RepositoryBuilder<
+                  FacilityZipRepository,
+                  FacilityWithIntegrations
+                >(
+                  repository: repository,
+                  builder: (context, data, _) {
+                    final zipPhotos = data?.photos;
+                    final photos = zipPhotos != null && zipPhotos.isNotEmpty
+                        ? zipPhotos.first
+                        : sections?.photos;
+                    return ClinicHeaderSection(
+                      detail: detail,
+                      sections: sections,
+                      photos: photos,
+                    );
+                  },
+                ),
                 const SizedBox(height: 16),
                 _QuickActions(detail: detail),
                 ClinicTopShortcutsSection(
@@ -653,10 +677,9 @@ class _ClinicDetailContent extends ConsumerWidget {
                           ),
                         ),
                 ),
-                if (payersState.loading && payersState.payers.isEmpty)
+                if (payersState.loading && effectivePayers.isEmpty)
                   const _SectionLoadingCard()
-                else if (payersState.error != null &&
-                    payersState.payers.isEmpty)
+                else if (payersState.error != null && effectivePayers.isEmpty)
                   _SectionErrorCard(
                     message: _friendlyLoadError(payersState.error!),
                     onRetry: () => ref
@@ -666,7 +689,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                 else
                   ClinicPayersBarSection(
                     payers: effectivePayers,
-                    summary: payersState.summary,
+                    summary: effectivePayersSummary,
                     onEdit: canMutate
                         ? () => _openPayerSourcesEditor(
                             context,
@@ -713,10 +736,9 @@ class _ClinicDetailContent extends ConsumerWidget {
                           onTap: () => context.push('/orders'),
                         ),
                 ),
-                if (ordersState.loading && ordersState.orders.isEmpty)
+                if (ordersState.loading && effectiveOrders.isEmpty)
                   const _SectionLoadingCard()
-                else if (ordersState.error != null &&
-                    ordersState.orders.isEmpty)
+                else if (ordersState.error != null && effectiveOrders.isEmpty)
                   _SectionErrorCard(
                     message: _friendlyLoadError(ordersState.error!),
                     onRetry: () => ref

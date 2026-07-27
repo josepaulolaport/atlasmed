@@ -103,6 +103,8 @@ export interface FacilityRecord {
 
 export interface FacilityListRecord extends FacilityRecord {
   professionalCount: number;
+  /** Latest visit to this facility by the requesting user. */
+  lastVisitAt: Date | null;
   /** Present only when a coordinate query was supplied. */
   distanceKm?: number | null;
 }
@@ -148,6 +150,7 @@ export interface FacilityRepository {
     purchaseIntervalMaxDays?: number;
     sort?: FacilityListSort;
     order?: FacilityListOrder;
+    userId: string;
     scope: FacilityListScopeFilter;
     /** Internal canonical hydration constraint for a Meilisearch result page. */
     candidateIds?: string[];
@@ -167,6 +170,7 @@ export interface FacilityRepository {
     purchaseIntervalMaxDays?: number;
     sort?: FacilityListSort;
     order?: FacilityListOrder;
+    userId: string;
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]>;
 
