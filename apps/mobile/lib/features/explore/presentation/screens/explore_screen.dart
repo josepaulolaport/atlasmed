@@ -182,9 +182,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 : displayedList.isEmpty
                 ? EmptyState(query: state.query, kind: state.activeTab)
                 : RefreshIndicator(
-                    onRefresh: () => ref
-                        .read(exploreProvider.notifier)
-                        .refreshGpsAndList(),
+                    onRefresh: () =>
+                        ref.read(exploreProvider.notifier).refreshGpsAndList(),
                     child: ExploreResultsList(
                       items: displayedList,
                       hasMore: hasMore,

@@ -241,9 +241,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
             child: Text(
-              filtered.length == 1
-                  ? '1 médico'
-                  : '${filtered.length} médicos',
+              filtered.length == 1 ? '1 médico' : '${filtered.length} médicos',
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
@@ -275,14 +273,12 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                           distanceKm: 0,
                           isPriority: d.isDecisionMaker || d.isPrescriber,
                         ),
-                        onEditRoles:
-                            ref.watch(canMutateProfessionalProvider)
+                        onEditRoles: ref.watch(canMutateProfessionalProvider)
                             ? () => _editRoles(d)
                             : null,
                         onTap: () {
                           final facilityId = widget.facilityId;
-                          final uri =
-                              facilityId == null || facilityId.isEmpty
+                          final uri = facilityId == null || facilityId.isEmpty
                               ? '/explore/doctor/${d.id}'
                               : '/explore/doctor/${d.id}?facilityId=$facilityId';
                           context.push(uri);

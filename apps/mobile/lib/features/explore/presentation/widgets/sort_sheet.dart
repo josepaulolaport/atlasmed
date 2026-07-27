@@ -101,9 +101,7 @@ class SortSheet extends StatelessWidget {
                   ),
                   margin: const EdgeInsets.only(bottom: 4),
                   decoration: BoxDecoration(
-                    color: on
-                        ? const Color(0xFFeef2ff)
-                        : Colors.transparent,
+                    color: on ? const Color(0xFFeef2ff) : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -119,9 +117,7 @@ class SortSheet extends StatelessWidget {
                                 : const Color(0xFFd1d5db),
                             width: 2,
                           ),
-                          color: on
-                              ? const Color(0xFF1e40af)
-                              : Colors.white,
+                          color: on ? const Color(0xFF1e40af) : Colors.white,
                         ),
                         child: on
                             ? const Center(
