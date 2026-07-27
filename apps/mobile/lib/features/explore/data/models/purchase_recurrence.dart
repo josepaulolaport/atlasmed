@@ -128,17 +128,6 @@ extension PurchaseFunnelStageX on PurchaseFunnelStage {
   Color get backgroundColor => color.withValues(alpha: 0.1);
 }
 
-extension FacilitySortX on FacilitySort {
-  String get apiValue => switch (this) {
-    FacilitySort.relevance => 'relevance',
-    FacilitySort.distance => 'distance',
-    FacilitySort.name => 'name',
-    FacilitySort.purchaseFunnelStage => 'purchaseFunnelStage',
-    FacilitySort.purchaseIntervalDays => 'purchaseIntervalDays',
-    FacilitySort.lastPurchaseDate => 'lastPurchaseDate',
-  };
-}
-
 PurchaseRecurrenceSource? purchaseRecurrenceSourceFromApi(Object? value) =>
     switch (value) {
       'DEFAULT' => PurchaseRecurrenceSource.defaultValue,
