@@ -153,8 +153,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FB),
-      body: SafeArea(
-        child: Column(
+      body: Column(
           children: [
             const AtlasTopBar(page: 'Mapa'),
             const FacilityVerticalFilterBar(
@@ -261,7 +260,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
             ),
           ],
-        ),
       ),
     );
   }
