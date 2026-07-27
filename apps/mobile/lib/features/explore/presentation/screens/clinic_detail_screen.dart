@@ -427,64 +427,45 @@ class _ClinicDetailBody extends ConsumerWidget {
         .watch(establishmentDetailSectionsProvider(clinicId))
         .valueOrNull;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Column(
-          children: [
-            Expanded(child: Container(color: const Color(0xFF1e40af))),
-            Expanded(child: Container(color: const Color(0xFFf8f9fb))),
-          ],
-        ),
-        Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                color: const Color(0xFF1e40af),
-                backgroundColor: Colors.white,
-                onRefresh: () async {
-                  ref.invalidate(clinicDetailProvider(clinicId));
-                  ref.invalidate(establishmentDetailSectionsProvider(clinicId));
-                  ref.invalidate(clinicVisitsProvider(clinicId));
-                  ref.invalidate(facilityPhotosProvider(clinicId));
-                  ref.invalidate(facilityNotesProvider(clinicId));
-                  ref.invalidate(facilityNearbyPreviewProvider(clinicId));
-                  final doctorsNotifier = ref.read(
-                    facilityDoctorsRosterProvider(clinicId).notifier,
-                  );
-                  final adminsNotifier = ref.read(
-                    facilityAdministratorsRosterProvider(clinicId).notifier,
-                  );
-                  final payersNotifier = ref.read(
-                    facilityPayersProvider(clinicId).notifier,
-                  );
-                  final ordersNotifier = ref.read(
-                    facilityOrdersProvider(clinicId).notifier,
-                  );
-                  await Future.wait([
-                    ref.read(clinicDetailProvider(clinicId).future),
-                    ref.read(
-                      establishmentDetailSectionsProvider(clinicId).future,
-                    ),
-                    ref.read(facilityNearbyPreviewProvider(clinicId).future),
-                    ref.read(facilityPhotosProvider(clinicId).future),
-                    ref.read(facilityNotesProvider(clinicId).future),
-                    doctorsNotifier.retry(),
-                    adminsNotifier.retry(),
-                    payersNotifier.retry(),
-                    ordersNotifier.retry(),
-                  ]);
-                },
-                child: _ClinicDetailContent(
-                  detail: detail,
-                  clinicId: clinicId,
-                  sections: sections,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+    return RefreshIndicator(
+      color: const Color(0xFF1e40af),
+      backgroundColor: Colors.white,
+      onRefresh: () async {
+        ref.invalidate(clinicDetailProvider(clinicId));
+        ref.invalidate(establishmentDetailSectionsProvider(clinicId));
+        ref.invalidate(clinicVisitsProvider(clinicId));
+        ref.invalidate(facilityPhotosProvider(clinicId));
+        ref.invalidate(facilityNotesProvider(clinicId));
+        ref.invalidate(facilityNearbyPreviewProvider(clinicId));
+        final doctorsNotifier = ref.read(
+          facilityDoctorsRosterProvider(clinicId).notifier,
+        );
+        final adminsNotifier = ref.read(
+          facilityAdministratorsRosterProvider(clinicId).notifier,
+        );
+        final payersNotifier = ref.read(
+          facilityPayersProvider(clinicId).notifier,
+        );
+        final ordersNotifier = ref.read(
+          facilityOrdersProvider(clinicId).notifier,
+        );
+        await Future.wait([
+          ref.read(clinicDetailProvider(clinicId).future),
+          ref.read(establishmentDetailSectionsProvider(clinicId).future),
+          ref.read(facilityNearbyPreviewProvider(clinicId).future),
+          ref.read(facilityPhotosProvider(clinicId).future),
+          ref.read(facilityNotesProvider(clinicId).future),
+          doctorsNotifier.retry(),
+          adminsNotifier.retry(),
+          payersNotifier.retry(),
+          ordersNotifier.retry(),
+        ]);
+      },
+      child: _ClinicDetailContent(
+        detail: detail,
+        clinicId: clinicId,
+        sections: sections,
+      ),
     );
   }
 }
@@ -518,239 +499,281 @@ class _ClinicDetailContent extends ConsumerWidget {
     final canMutate = ref.watch(canMutateFacilityProvider);
     final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        ClinicHeaderSection(detail: detail, sections: sections),
-        // const SizedBox(height: 16),
-        _QuickActions(detail: detail),
-        ClinicTopShortcutsSection(
-          facilityId: clinicId,
-          facilityName: detail.name,
-          detail: detail,
+        Column(
+          children: [
+            Expanded(child: Container(color: const Color(0xFF1e40af))),
+            Expanded(child: Container(color: const Color(0xFFf8f9fb))),
+          ],
         ),
-        const ClinicSectionHeader(title: 'Compras'),
-        PurchaseRecurrenceSection(
-          value: detail.purchaseRecurrence,
-          onEdit: canMutate
-              ? () => _openPurchaseRecurrenceEditor(context, ref, detail)
-              : null,
-        ),
-        ClinicSectionHeader(
-          title: 'Profissionais administrativos',
-          badge: adminsRoster.total == 0
-              ? null
-              : _CountBadge(count: adminsRoster.total),
-          trailing: _HeaderLinkButton(
-            label: 'Ver todos',
-            icon: Icons.chevron_right_rounded,
-            onTap: () => _openAdministratorsList(
-              context,
-              ref,
-              clinicId: clinicId,
-              facilityName: detail.name,
-              rosterFallback: adminsRoster.items,
-            ),
-          ),
-        ),
-        if (adminsRoster.loading && adminsRoster.items.isEmpty)
-          const _SectionLoadingCard()
-        else if (adminsRoster.error != null && adminsRoster.items.isEmpty)
-          _SectionErrorCard(
-            message: _friendlyLoadError(adminsRoster.error!),
-            onRetry: () => ref
-                .read(facilityAdministratorsRosterProvider(clinicId).notifier)
-                .retry(),
-          )
-        else
-          ClinicAdminProfessionalsSection(
-            professionals: adminsRoster.items,
-            facilityName: detail.name,
-            facilityId: clinicId,
-            hasMore: adminsRoster.hasMore,
-            onLoadMore: () => ref
-                .read(facilityAdministratorsRosterProvider(clinicId).notifier)
-                .loadMore(),
-            onAssociate: canMutate
-                ? () => _openAdministratorsList(
-                    context,
-                    ref,
-                    clinicId: clinicId,
-                    facilityName: detail.name,
-                    rosterFallback: adminsRoster.items,
-                  )
-                : null,
-          ),
-        ClinicSectionHeader(
-          title: 'Médicos',
-          badge: doctorsRoster.total == 0
-              ? null
-              : _CountBadge(count: doctorsRoster.total),
-          trailing: _HeaderLinkButton(
-            label: 'Ver todos',
-            icon: Icons.chevron_right_rounded,
-            onTap: () => _openDoctorsList(
-              context,
-              ref,
-              clinicId: clinicId,
-              facilityName: detail.name,
-              rosterFallback: doctorsRoster.items,
-            ),
-          ),
-        ),
-        if (doctorsRoster.loading && doctorsRoster.items.isEmpty)
-          const _SectionLoadingCard()
-        else if (doctorsRoster.error != null && doctorsRoster.items.isEmpty)
-          _SectionErrorCard(
-            message: _friendlyLoadError(doctorsRoster.error!),
-            onRetry: () => ref
-                .read(facilityDoctorsRosterProvider(clinicId).notifier)
-                .retry(),
-          )
-        else
-          ClinicCrmDoctorsSection(
-            doctors: doctorsRoster.items,
-            facilityId: clinicId,
-            hasMore: doctorsRoster.hasMore,
-            onLoadMore: () => ref
-                .read(facilityDoctorsRosterProvider(clinicId).notifier)
-                .loadMore(),
-            onAssociate: canMutate
-                ? () => _openDoctorsList(
-                    context,
-                    ref,
-                    clinicId: clinicId,
-                    facilityName: detail.name,
-                    rosterFallback: doctorsRoster.items,
-                  )
-                : null,
-            onDoctorUpdated: canMutate
-                ? (updated) {
-                    ref
-                        .read(facilityDoctorsRosterProvider(clinicId).notifier)
-                        .replaceWhere(
-                          (d) => d.id == updated.id,
-                          (_) => updated,
-                        );
-                  }
-                : null,
-          ),
-        ClinicSectionHeader(
-          title: 'Fontes Pagadoras',
-          trailing:
-              !canMutate || (payersState.loading && payersState.payers.isEmpty)
-              ? null
-              : _HeaderLinkButton(
-                  label: 'Editar',
-                  onTap: () => _openPayerSourcesEditor(
-                    context,
-                    ref,
-                    clinicId: clinicId,
-                    facilityName: detail.name,
-                    payers: payersState.payers,
+        SingleChildScrollView(
+          child: ColoredBox(
+            color: const Color(0xFFf8f9fb),
+            child: Column(
+              children: [
+                ClinicHeaderSection(detail: detail, sections: sections),
+                _QuickActions(detail: detail),
+                ClinicTopShortcutsSection(
+                  facilityId: clinicId,
+                  facilityName: detail.name,
+                  detail: detail,
+                ),
+                const ClinicSectionHeader(title: 'Compras'),
+                PurchaseRecurrenceSection(
+                  value: detail.purchaseRecurrence,
+                  onEdit: canMutate
+                      ? () =>
+                            _openPurchaseRecurrenceEditor(context, ref, detail)
+                      : null,
+                ),
+                ClinicSectionHeader(
+                  title: 'Profissionais administrativos',
+                  badge: adminsRoster.total == 0
+                      ? null
+                      : _CountBadge(count: adminsRoster.total),
+                  trailing: _HeaderLinkButton(
+                    label: 'Ver todos',
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => _openAdministratorsList(
+                      context,
+                      ref,
+                      clinicId: clinicId,
+                      facilityName: detail.name,
+                      rosterFallback: adminsRoster.items,
+                    ),
                   ),
                 ),
-        ),
-        if (payersState.loading && payersState.payers.isEmpty)
-          const _SectionLoadingCard()
-        else if (payersState.error != null && payersState.payers.isEmpty)
-          _SectionErrorCard(
-            message: _friendlyLoadError(payersState.error!),
-            onRetry: () =>
-                ref.read(facilityPayersProvider(clinicId).notifier).retry(),
-          )
-        else
-          ClinicPayersBarSection(
-            payers: payersState.payers,
-            summary: payersState.summary,
-            onEdit: canMutate
-                ? () => _openPayerSourcesEditor(
-                    context,
-                    ref,
-                    clinicId: clinicId,
-                    facilityName: detail.name,
-                    payers: payersState.payers,
+                if (adminsRoster.loading && adminsRoster.items.isEmpty)
+                  const _SectionLoadingCard()
+                else if (adminsRoster.error != null &&
+                    adminsRoster.items.isEmpty)
+                  _SectionErrorCard(
+                    message: _friendlyLoadError(adminsRoster.error!),
+                    onRetry: () => ref
+                        .read(
+                          facilityAdministratorsRosterProvider(
+                            clinicId,
+                          ).notifier,
+                        )
+                        .retry(),
                   )
-                : null,
-          ),
-        const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
-        if (location == null)
-          const ClinicDetailCard(
-            child: Text(
-              'Localização não disponível para este estabelecimento',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-            ),
-          )
-        else
-          nearbyAsync.when(
-            loading: () => const _SectionLoadingCard(),
-            error: (err, _) => _SectionErrorCard(
-              message: _friendlyLoadError(err),
-              onRetry: () =>
-                  ref.invalidate(facilityNearbyPreviewProvider(clinicId)),
-            ),
-            data: (nearby) => ClinicLocationSection(
-              facilityId: clinicId,
-              facilityName: detail.name,
-              location: location,
-              nearbyEstablishments: nearby,
-            ),
-          ),
-        ClinicSectionHeader(
-          title: 'Pedidos recentes',
-          badge: ordersState.orders.isEmpty
-              ? null
-              : _CountBadge(count: ordersState.orders.length),
-          trailing: ordersState.orders.isEmpty
-              ? null
-              : _HeaderLinkButton(
-                  label: 'Ver todos',
-                  icon: Icons.chevron_right_rounded,
-                  onTap: () => context.push('/orders'),
+                else
+                  ClinicAdminProfessionalsSection(
+                    professionals: adminsRoster.items,
+                    facilityName: detail.name,
+                    facilityId: clinicId,
+                    hasMore: adminsRoster.hasMore,
+                    onLoadMore: () => ref
+                        .read(
+                          facilityAdministratorsRosterProvider(
+                            clinicId,
+                          ).notifier,
+                        )
+                        .loadMore(),
+                    onAssociate: canMutate
+                        ? () => _openAdministratorsList(
+                            context,
+                            ref,
+                            clinicId: clinicId,
+                            facilityName: detail.name,
+                            rosterFallback: adminsRoster.items,
+                          )
+                        : null,
+                  ),
+                ClinicSectionHeader(
+                  title: 'Médicos',
+                  badge: doctorsRoster.total == 0
+                      ? null
+                      : _CountBadge(count: doctorsRoster.total),
+                  trailing: _HeaderLinkButton(
+                    label: 'Ver todos',
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => _openDoctorsList(
+                      context,
+                      ref,
+                      clinicId: clinicId,
+                      facilityName: detail.name,
+                      rosterFallback: doctorsRoster.items,
+                    ),
+                  ),
                 ),
+                if (doctorsRoster.loading && doctorsRoster.items.isEmpty)
+                  const _SectionLoadingCard()
+                else if (doctorsRoster.error != null &&
+                    doctorsRoster.items.isEmpty)
+                  _SectionErrorCard(
+                    message: _friendlyLoadError(doctorsRoster.error!),
+                    onRetry: () => ref
+                        .read(facilityDoctorsRosterProvider(clinicId).notifier)
+                        .retry(),
+                  )
+                else
+                  ClinicCrmDoctorsSection(
+                    doctors: doctorsRoster.items,
+                    facilityId: clinicId,
+                    hasMore: doctorsRoster.hasMore,
+                    onLoadMore: () => ref
+                        .read(facilityDoctorsRosterProvider(clinicId).notifier)
+                        .loadMore(),
+                    onAssociate: canMutate
+                        ? () => _openDoctorsList(
+                            context,
+                            ref,
+                            clinicId: clinicId,
+                            facilityName: detail.name,
+                            rosterFallback: doctorsRoster.items,
+                          )
+                        : null,
+                    onDoctorUpdated: canMutate
+                        ? (updated) {
+                            ref
+                                .read(
+                                  facilityDoctorsRosterProvider(
+                                    clinicId,
+                                  ).notifier,
+                                )
+                                .replaceWhere(
+                                  (d) => d.id == updated.id,
+                                  (_) => updated,
+                                );
+                          }
+                        : null,
+                  ),
+                ClinicSectionHeader(
+                  title: 'Fontes Pagadoras',
+                  trailing:
+                      !canMutate ||
+                          (payersState.loading && payersState.payers.isEmpty)
+                      ? null
+                      : _HeaderLinkButton(
+                          label: 'Editar',
+                          onTap: () => _openPayerSourcesEditor(
+                            context,
+                            ref,
+                            clinicId: clinicId,
+                            facilityName: detail.name,
+                            payers: payersState.payers,
+                          ),
+                        ),
+                ),
+                if (payersState.loading && payersState.payers.isEmpty)
+                  const _SectionLoadingCard()
+                else if (payersState.error != null &&
+                    payersState.payers.isEmpty)
+                  _SectionErrorCard(
+                    message: _friendlyLoadError(payersState.error!),
+                    onRetry: () => ref
+                        .read(facilityPayersProvider(clinicId).notifier)
+                        .retry(),
+                  )
+                else
+                  ClinicPayersBarSection(
+                    payers: payersState.payers,
+                    summary: payersState.summary,
+                    onEdit: canMutate
+                        ? () => _openPayerSourcesEditor(
+                            context,
+                            ref,
+                            clinicId: clinicId,
+                            facilityName: detail.name,
+                            payers: payersState.payers,
+                          )
+                        : null,
+                  ),
+                const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
+                if (location == null)
+                  const ClinicDetailCard(
+                    child: Text(
+                      'Localização não disponível para este estabelecimento',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                    ),
+                  )
+                else
+                  nearbyAsync.when(
+                    loading: () => const _SectionLoadingCard(),
+                    error: (err, _) => _SectionErrorCard(
+                      message: _friendlyLoadError(err),
+                      onRetry: () => ref.invalidate(
+                        facilityNearbyPreviewProvider(clinicId),
+                      ),
+                    ),
+                    data: (nearby) => ClinicLocationSection(
+                      facilityId: clinicId,
+                      facilityName: detail.name,
+                      location: location,
+                      nearbyEstablishments: nearby,
+                    ),
+                  ),
+                ClinicSectionHeader(
+                  title: 'Pedidos recentes',
+                  badge: ordersState.orders.isEmpty
+                      ? null
+                      : _CountBadge(count: ordersState.orders.length),
+                  trailing: ordersState.orders.isEmpty
+                      ? null
+                      : _HeaderLinkButton(
+                          label: 'Ver todos',
+                          icon: Icons.chevron_right_rounded,
+                          onTap: () => context.push('/orders'),
+                        ),
+                ),
+                if (ordersState.loading && ordersState.orders.isEmpty)
+                  const _SectionLoadingCard()
+                else if (ordersState.error != null &&
+                    ordersState.orders.isEmpty)
+                  _SectionErrorCard(
+                    message: _friendlyLoadError(ordersState.error!),
+                    onRetry: () => ref
+                        .read(facilityOrdersProvider(clinicId).notifier)
+                        .retry(),
+                  )
+                else
+                  ClinicOrdersSection(
+                    orders: ordersState.orders,
+                    facilityId: clinicId,
+                  ),
+                const ClinicSectionHeader(title: 'Notas de campo'),
+                ClinicFieldNotesSection(facilityId: clinicId),
+                const ClinicSectionHeader(title: 'Equipe responsável'),
+                sectionsAsync.when(
+                  loading: () => const _SectionLoadingCard(),
+                  error: (err, _) => _SectionErrorCard(
+                    message: _friendlyLoadError(err),
+                    onRetry: () => ref.invalidate(
+                      establishmentDetailSectionsProvider(clinicId),
+                    ),
+                  ),
+                  data: (sections) => ClinicContextSection(
+                    consultantName:
+                        detail.consultantName ?? sections.consultantName,
+                    consultantSince:
+                        detail.consultantSince ?? sections.consultantSince,
+                    // Manager is derived from the consultor's users.manager_id — no
+                    // facility tenure. Prefer live; no mock fallback (would invent a manager).
+                    managerName: detail.managerName,
+                    managerSince: null,
+                    regionZoneLabel:
+                        detail.territoryName ?? sections.regionZoneLabel,
+                    city: detail.city.isNotEmpty ? detail.city : null,
+                  ),
+                ),
+                if (canSuggest) const _SuggestEditBanner(),
+                if (canSuggest)
+                  _ClinicDeactivateButton(
+                    clinicId: clinicId,
+                    clinicName: detail.name,
+                    commercialStatus: sectionsAsync
+                        .valueOrNull
+                        ?.statusSignals
+                        ?.commercialStatus,
+                  ),
+                SizedBox(height: MediaQuery.of(context).padding.bottom),
+              ],
+            ),
+          ),
         ),
-        if (ordersState.loading && ordersState.orders.isEmpty)
-          const _SectionLoadingCard()
-        else if (ordersState.error != null && ordersState.orders.isEmpty)
-          _SectionErrorCard(
-            message: _friendlyLoadError(ordersState.error!),
-            onRetry: () =>
-                ref.read(facilityOrdersProvider(clinicId).notifier).retry(),
-          )
-        else
-          ClinicOrdersSection(orders: ordersState.orders, facilityId: clinicId),
-        const ClinicSectionHeader(title: 'Notas de campo'),
-        ClinicFieldNotesSection(facilityId: clinicId),
-        const ClinicSectionHeader(title: 'Equipe responsável'),
-        sectionsAsync.when(
-          loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(
-            message: _friendlyLoadError(err),
-            onRetry: () =>
-                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
-          ),
-          data: (sections) => ClinicContextSection(
-            consultantName: detail.consultantName ?? sections.consultantName,
-            consultantSince: detail.consultantSince ?? sections.consultantSince,
-            // Manager is derived from the consultor's users.manager_id — no
-            // facility tenure. Prefer live; no mock fallback (would invent a manager).
-            managerName: detail.managerName,
-            managerSince: null,
-            regionZoneLabel: detail.territoryName ?? sections.regionZoneLabel,
-            city: detail.city.isNotEmpty ? detail.city : null,
-          ),
-        ),
-        if (canSuggest) const _SuggestEditBanner(),
-        if (canSuggest)
-          _ClinicDeactivateButton(
-            clinicId: clinicId,
-            clinicName: detail.name,
-            commercialStatus:
-                sectionsAsync.valueOrNull?.statusSignals?.commercialStatus,
-          ),
       ],
     );
   }
