@@ -47,9 +47,9 @@ class _ClinicDetailRepository extends Repository<api.Clinic>
 }
 
 // ── Doctor detail repository ────────────────────────────────
-class _DoctorDetailRepository extends Repository<ApiDoctor>
+class DoctorDetailRepository extends Repository<ApiDoctor>
     with SessionEnvironmentMixin<ApiDoctor> {
-  _DoctorDetailRepository({required String id})
+  DoctorDetailRepository({required String id})
     : super(
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
         resolveOnCreate: false,
@@ -131,19 +131,6 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
   }
 }
 
-Future<DoctorDetail> _fetchDoctorDetail(String id) async {
-  final repo = _DoctorDetailRepository(id: id);
-  try {
-    final apiDoctor = await repo.refresh();
-    if (apiDoctor == null) {
-      throw Exception('Doctor not found: $id');
-    }
-    return doctorDetailFromApi(apiDoctor);
-  } finally {
-    repo.dispose();
-  }
-}
-
 /// Maps a professional API profile into the doctor detail UI model.
 DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
   final name = apiDoctor.displayName;
@@ -157,7 +144,6 @@ DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
     id: apiDoctor.id,
     name: name,
     initials: initials.toUpperCase(),
-    hue: 0,
     specialty: apiDoctor.specialty ?? '',
     crm: apiDoctor.crm,
     role: apiDoctor.specialty ?? '',
@@ -198,12 +184,12 @@ final clinicDetailProvider = FutureProvider.family<ClinicDetail, String>((
 });
 
 // ── Doctor detail provider ──────────────────────────────────
-final doctorDetailProvider = FutureProvider.family<DoctorDetail, String>((
-  ref,
-  id,
-) {
-  return _fetchDoctorDetail(id);
-});
+final doctorProvider = Provider.autoDispose
+    .family<DoctorDetailRepository, String>((ref, id) {
+      final repository = DoctorDetailRepository(id: id);
+      ref.onDispose(repository.dispose);
+      return repository;
+    });
 
 // ── Professional notes ──────────────────────────────────────
 final professionalNotesRepositoryProvider =

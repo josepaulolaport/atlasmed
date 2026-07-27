@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
@@ -475,7 +474,7 @@ class _ClinicDetailContent extends ConsumerWidget {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       children: [
         ClinicHeaderSection(detail: detail, sections: sections),
-        const SizedBox(height: 16),
+        // const SizedBox(height: 16),
         _QuickActions(detail: detail),
         ClinicTopShortcutsSection(
           facilityId: clinicId,
