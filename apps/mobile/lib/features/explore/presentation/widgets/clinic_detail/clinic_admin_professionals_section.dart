@@ -14,6 +14,7 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
     required this.facilityName,
     this.facilityId,
     this.hasMore = false,
+    this.isLoadingMore = false,
     this.onLoadMore,
     this.onAssociate,
   });
@@ -22,9 +23,11 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
   final String facilityName;
   final String? facilityId;
 
-  /// When true, a trailing spinner page is shown and [onLoadMore] is called
-  /// as the user reaches the end of the loaded cards.
+  /// When true, [onLoadMore] is called as the user reaches the loaded cards.
   final bool hasMore;
+
+  /// Shows the trailing shimmer only for an active next-page request.
+  final bool isLoadingMore;
   final VoidCallback? onLoadMore;
 
   /// Opens the full list / associate flow when the roster is empty.
@@ -64,6 +67,7 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
       height: 220,
       itemCount: professionals.length,
       hasMore: hasMore,
+      isLoadingMore: isLoadingMore,
       onLoadMore: onLoadMore,
       itemBuilder: (_, i) => _ProfessionalCard(
         professional: professionals[i],

@@ -167,6 +167,7 @@ class _UsersListState extends ConsumerState<_UsersList> {
                   onNotification: (notification) {
                     if (notification is ScrollEndNotification &&
                         state.hasMore &&
+                        !state.loadingMore &&
                         notification.metrics.pixels >=
                             notification.metrics.maxScrollExtent - 200) {
                       notifier.loadMore();
@@ -177,22 +178,11 @@ class _UsersListState extends ConsumerState<_UsersList> {
                     onRefresh: notifier.load,
                     child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                      itemCount:
+                          state.items.length + (state.loadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index >= state.items.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF9ca3af),
-                                ),
-                              ),
-                            ),
-                          );
+                          return const UsersPaginationSkeletonRow();
                         }
                         final user = state.items[index];
                         return UserRow(

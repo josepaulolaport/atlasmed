@@ -565,6 +565,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                     facilityName: detail.name,
                     facilityId: clinicId,
                     hasMore: adminsRoster.hasMore,
+                    isLoadingMore: adminsRoster.loadingMore,
                     onLoadMore: () => ref
                         .read(
                           facilityAdministratorsRosterProvider(
@@ -614,6 +615,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                     doctors: doctorsRoster.items,
                     facilityId: clinicId,
                     hasMore: doctorsRoster.hasMore,
+                    isLoadingMore: doctorsRoster.loadingMore,
                     onLoadMore: () => ref
                         .read(facilityDoctorsRosterProvider(clinicId).notifier)
                         .loadMore(),

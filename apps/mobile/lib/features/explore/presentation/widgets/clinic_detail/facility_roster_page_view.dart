@@ -1,7 +1,8 @@
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 
-/// Horizontal snapping roster strip with a compact trailing load-more indicator
-/// placed after the last card (not inside a card).
+/// Horizontal snapping roster strip with a trailing shimmer card only while a
+/// next page is being requested.
 class FacilityRosterPageView extends StatefulWidget {
   const FacilityRosterPageView({
     super.key,
@@ -9,6 +10,7 @@ class FacilityRosterPageView extends StatefulWidget {
     required this.itemBuilder,
     required this.height,
     this.hasMore = false,
+    this.isLoadingMore = false,
     this.onLoadMore,
   });
 
@@ -16,6 +18,7 @@ class FacilityRosterPageView extends StatefulWidget {
   final IndexedWidgetBuilder itemBuilder;
   final double height;
   final bool hasMore;
+  final bool isLoadingMore;
   final VoidCallback? onLoadMore;
 
   @override
@@ -40,8 +43,12 @@ class _FacilityRosterPageViewState extends State<FacilityRosterPageView> {
   }
 
   void _onScroll() {
-    if (!widget.hasMore || widget.onLoadMore == null) return;
-    if (!_controller.hasClients) return;
+    if (!widget.hasMore ||
+        widget.isLoadingMore ||
+        widget.onLoadMore == null ||
+        !_controller.hasClients) {
+      return;
+    }
     final position = _controller.position;
     if (position.pixels >= position.maxScrollExtent - 48) {
       widget.onLoadMore!();
@@ -65,21 +72,13 @@ class _FacilityRosterPageViewState extends State<FacilityRosterPageView> {
         itemCount: widget.itemCount + trailing,
         itemBuilder: (context, index) {
           if (index >= widget.itemCount) {
-            // Compact spinner after the last card — not a card itself.
-            return const Padding(
-              padding: EdgeInsets.only(right: 16),
+            return Padding(
+              padding: const EdgeInsets.only(right: 20, left: 6),
               child: SizedBox(
-                width: 48,
-                child: Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF1e40af),
-                    ),
-                  ),
-                ),
+                width: cardWidth,
+                child: widget.isLoadingMore
+                    ? const FacilityRosterPaginationSkeleton()
+                    : const SizedBox.shrink(),
               ),
             );
           }
@@ -95,6 +94,78 @@ class _FacilityRosterPageViewState extends State<FacilityRosterPageView> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class FacilityRosterPaginationSkeleton extends StatelessWidget {
+  const FacilityRosterPaginationSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Shimmer(
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFeef0f3),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _RosterSkeletonBlock(width: 42, height: 42, radius: 10),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _RosterSkeletonBlock(width: 120, height: 12),
+                      SizedBox(height: 6),
+                      _RosterSkeletonBlock(width: 88, height: 10),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            _RosterSkeletonBlock(width: double.infinity, height: 1),
+            SizedBox(height: 12),
+            _RosterSkeletonBlock(width: 156, height: 10),
+            SizedBox(height: 10),
+            _RosterSkeletonBlock(width: 128, height: 10),
+            Spacer(),
+            _RosterSkeletonBlock(width: double.infinity, height: 1),
+            SizedBox(height: 10),
+            _RosterSkeletonBlock(width: 104, height: 11),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _RosterSkeletonBlock extends StatelessWidget {
+  const _RosterSkeletonBlock({
+    required this.width,
+    required this.height,
+    this.radius = 4,
+  });
+
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        color: const Color(0xFFeef0f3),
       ),
     );
   }

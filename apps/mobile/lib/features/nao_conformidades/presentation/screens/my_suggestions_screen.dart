@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformi
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidade_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/widgets/suggestion_change_summary.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// Dedicated list of the current user’s clinic suggestions.
 class MySuggestionsScreen extends ConsumerWidget {
@@ -34,8 +35,9 @@ class MySuggestionsScreen extends ConsumerWidget {
         ),
       ),
       body: asyncItems.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF1e40af)),
+        loading: () => const Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 32),
+          child: SuggestionListSkeleton(),
         ),
         error: (error, _) => Center(
           child: Padding(
