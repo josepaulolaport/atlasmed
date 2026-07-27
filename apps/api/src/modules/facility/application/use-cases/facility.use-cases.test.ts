@@ -65,6 +65,7 @@ function facilityRecord(id: string): FacilityListRecord {
     consultantSince: null,
     managerName: null,
     imageUrl: null,
+    imageBlurhash: null,
   };
 }
 

@@ -49,8 +49,9 @@ class DoctorsQuery {
   );
 }
 
-final doctorsRepositoryFlatProvider =
-    Provider.autoDispose<DoctorsRepository>((ref) {
+final doctorsRepositoryFlatProvider = Provider.autoDispose<DoctorsRepository>((
+  ref,
+) {
   final repository = DoctorsRepository();
   ref.onDispose(repository.dispose);
   return repository;

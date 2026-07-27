@@ -556,13 +556,19 @@ export class DrizzleUserRepository implements UserRepository {
 
   async updateProfile(
     userId: string,
-    data: { firstName?: string; lastName?: string; avatarUrl?: string | null },
+    data: {
+      firstName?: string;
+      lastName?: string;
+      avatarUrl?: string | null;
+      avatarBlurhash?: string | null;
+    },
   ) {
     const updates: Record<string, unknown> = { updatedAt: new Date() };
 
     if (data.firstName !== undefined) updates.firstName = data.firstName;
     if (data.lastName !== undefined) updates.lastName = data.lastName;
     if (data.avatarUrl !== undefined) updates.avatarUrl = data.avatarUrl;
+    if (data.avatarBlurhash !== undefined) updates.avatarBlurhash = data.avatarBlurhash;
 
     await db.update(users).set(updates).where(eq(users.id, userId));
 

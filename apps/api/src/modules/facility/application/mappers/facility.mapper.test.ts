@@ -49,6 +49,7 @@ function baseFacility(
     consultantSince: new Date("2023-03-01T00:00:00.000Z"),
     managerName: "Roberto Mendes",
     imageUrl: null,
+    imageBlurhash: null,
     sourceProvider: null,
     externalSourceId: null,
     sourceContentHash: null,

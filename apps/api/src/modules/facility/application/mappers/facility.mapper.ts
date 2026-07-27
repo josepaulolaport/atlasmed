@@ -65,6 +65,7 @@ export function serializeFacility(
     consultantSince: clinic.consultantSince?.toISOString() ?? undefined,
     managerName: clinic.managerName,
     imageUrl: clinic.imageUrl ?? undefined,
+    imageBlurhash: clinic.imageBlurhash ?? undefined,
     distanceKm: list.distanceKm ?? undefined,
     services: clinic.services ?? [],
     createdAt: clinic.createdAt.toISOString(),

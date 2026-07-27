@@ -49,6 +49,7 @@ export const users = pgTable(
     /** Optional profile birth date (admin/mobile user edit). */
     birthDate: timestamp("birth_date"),
     avatarUrl: text("avatar_url"),
+    avatarBlurhash: text("avatar_blurhash"),
     status: userStatusEnum("status").notNull().default("PENDING"),
     tokenVersion: integer("token_version").notNull().default(1),
     lastLoginAt: timestamp("last_login_at"),

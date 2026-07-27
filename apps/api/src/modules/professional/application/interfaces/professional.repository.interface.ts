@@ -27,6 +27,7 @@ export interface ProfessionalRecord {
   email: string | null;
   websiteUrl: string | null;
   imageUrl: string | null;
+  imageBlurhash: string | null;
   favoriteTeam: string | null;
   favoriteSport: string | null;
   languages: string | null;
@@ -85,6 +86,7 @@ export interface ProfessionalCreateInput {
   email?: string | null;
   websiteUrl?: string | null;
   imageUrl?: string | null;
+  imageBlurhash?: string | null;
   favoriteTeam?: string | null;
   favoriteSport?: string | null;
   languages?: string | null;
@@ -110,6 +112,7 @@ export interface ProfessionalUpdateInput {
   email?: string | null;
   websiteUrl?: string | null;
   imageUrl?: string | null;
+  imageBlurhash?: string | null;
   favoriteTeam?: string | null;
   favoriteSport?: string | null;
   languages?: string | null;

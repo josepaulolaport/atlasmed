@@ -115,6 +115,7 @@ export function mapFacility(
     consultantSince: options.consultantSince ?? null,
     managerName: options.managerName ?? null,
     imageUrl: facility.imageUrl ?? null,
+    imageBlurhash: facility.imageBlurhash ?? null,
     sourceProvider: facility.sourceProvider,
     externalSourceId: facility.externalSourceId,
     sourceContentHash: facility.sourceContentHash,
@@ -640,6 +641,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       lat?: number | null;
       lng?: number | null;
       imageUrl?: string | null;
+      imageBlurhash?: string | null;
       billingEmail?: string | null;
       taxIdType?: "PJ" | "PF";
       conformityStatus?: FacilityRecord["conformityStatus"];
@@ -657,6 +659,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (data.imageUrl !== undefined) {
       setData.imageUrl = data.imageUrl;
+    }
+
+    if (data.imageBlurhash !== undefined) {
+      setData.imageBlurhash = data.imageBlurhash;
     }
 
     if (data.billingEmail !== undefined) {

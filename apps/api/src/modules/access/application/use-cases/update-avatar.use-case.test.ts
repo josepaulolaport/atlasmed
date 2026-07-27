@@ -58,7 +58,7 @@ describe("UpdateAvatarUseCase", () => {
     const result = await useCase.remove({ userId: user.id });
 
     expect(storage.delete).toHaveBeenCalledWith("avatars/user-123/current.png");
-    expect(repository.updateProfile).toHaveBeenCalledWith(user.id, { avatarUrl: null });
+    expect(repository.updateProfile).toHaveBeenCalledWith(user.id, { avatarUrl: null, avatarBlurhash: null });
     expect(result.avatarUrl).toBeNull();
   });
 });
