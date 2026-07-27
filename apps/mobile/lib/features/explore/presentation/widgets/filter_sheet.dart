@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
@@ -419,12 +420,10 @@ class _SpecialtiesContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<List<String>?>(
-      future: specialtiesRepo.currentValueOrResolve(),
-      builder: (context, snapshot) {
-        final data = snapshot.data;
-
-        if (snapshot.connectionState != ConnectionState.done) {
+    return RepositoryBuilder<ProfessionalSpecialtiesRepository, List<String>>(
+      repository: specialtiesRepo,
+      builder: (context, snapshot, repository) {
+        if (snapshot == null) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Text(
@@ -434,32 +433,7 @@ class _SpecialtiesContent extends ConsumerWidget {
           );
         }
 
-        if (data == null || snapshot.hasError) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Não foi possível carregar as especialidades.',
-                style: TextStyle(fontSize: 13, color: AppColors.gray500),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () =>
-                    ref.invalidate(professionalSpecialtiesRepositoryProvider),
-                child: const Text(
-                  'Tentar novamente',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.blue600,
-                  ),
-                ),
-              ),
-            ],
-          );
-        }
-
-        final options = <String>{...data, ...selected}.toList()
+        final options = <String>{...snapshot, ...selected}.toList()
           ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
         if (options.isEmpty) {

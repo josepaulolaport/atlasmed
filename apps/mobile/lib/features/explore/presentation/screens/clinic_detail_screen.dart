@@ -12,8 +12,10 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/contact_action
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
-import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purchase_recurrence_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
@@ -138,43 +140,17 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       ),
       body: ColoredBox(
         color: AppColors.surfaceTertiary,
-        child: FutureBuilder<api.Clinic?>(
-          future: repository.currentValueOrResolve(),
-          builder: (context, initialSnapshot) {
-            if (initialSnapshot.connectionState != ConnectionState.done &&
-                repository.currentValue == null) {
+        child: RepositoryBuilder<ClinicDetailRepository, api.Clinic>(
+          repository: repository,
+          builder: (context, snapshot, repository) {
+            if (snapshot == null) {
               return _loadingSkeleton(context);
             }
-
-            return StreamBuilder<RepositoryState<api.Clinic>>(
-              stream: repository.stream,
-              initialData: repository.currentState,
-              builder: (context, snapshot) {
-                final detail = _clinicDetailFromRepository(
-                  snapshot.data ?? repository.currentState,
-                );
-
-                if (detail == null) {
-                  final error = initialSnapshot.error ?? snapshot.error;
-                  if (error != null) {
-                    return _errorView(context, clinicId, error);
-                  }
-                  return _loadingSkeleton(context);
-                }
-
-                return _ClinicDetailBody(detail: detail, clinicId: clinicId);
-              },
-            );
+            final detail = ClinicDetail.fromApi(snapshot);
+            return _ClinicDetailBody(detail: detail, clinicId: clinicId);
           },
         ),
       ),
-    );
-  }
-
-  ClinicDetail? _clinicDetailFromRepository(RepositoryState<api.Clinic> state) {
-    return state.map(
-      empty: (_) => null,
-      ready: (ready) => ClinicDetail.fromApi(ready.data),
     );
   }
 
@@ -213,54 +189,6 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       ),
       child: const Center(
         child: CircularProgressIndicator(color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _errorView(BuildContext context, String clinicId, Object error) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.wifi_off_rounded,
-                size: 48,
-                color: AppColors.red,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Não foi possível carregar o estabelecimento',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _friendlyLoadError(error),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.gray500, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.invalidate(clinicDetailRepositoryProvider(clinicId)),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Tentar novamente'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => context.pop(),
-                child: const Text('Voltar'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
