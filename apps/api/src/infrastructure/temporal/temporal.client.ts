@@ -69,6 +69,7 @@ export async function describeCnesIngestionWorkflow(workflowId: string) {
 
 
 export type SearchSyncEntity = "facilities" | "professionals";
+type StartWorkflowResult = { workflowId: string; runId: string; existing: boolean };
 
 type SearchSyncWorkflowDescriptionHandle = {
   describe(): Promise<{ runId: string; status: { name: string } }>;
@@ -81,11 +82,11 @@ type SearchSyncWorkflowStartHandle = SearchSyncWorkflowDescriptionHandle & {
 type SearchSyncTemporalClient = {
   workflow: {
     start(
-      workflowType: "fullSearchSyncWorkflow",
+      workflowType: "fullSearchSyncWorkflow" | "purchaseRecurrenceWorkflow",
       options: {
         taskQueue: string;
         workflowId: string;
-        args: [{ target: SearchSyncEntity }];
+        args: [{ target: SearchSyncEntity }] | [{ mode: "BACKFILL" }];
       }
     ): Promise<SearchSyncWorkflowStartHandle>;
     getHandle(workflowId: string): SearchSyncWorkflowDescriptionHandle;
@@ -120,12 +121,43 @@ export async function startFullSearchSyncWorkflowWithClient(
 
 export async function startFullSearchSyncWorkflow(
   entity: SearchSyncEntity
-): Promise<{ workflowId: string; runId: string; existing: boolean }> {
+): Promise<StartWorkflowResult> {
   return startFullSearchSyncWorkflowWithClient(await getTemporalClient(), entity);
 }
 
+export function purchaseRecurrenceBackfillWorkflowId(): string {
+  return "purchase-recurrence-backfill";
+}
+
+export async function startPurchaseRecurrenceBackfillWorkflowWithClient(
+  client: SearchSyncTemporalClient
+): Promise<StartWorkflowResult> {
+  const workflowId = purchaseRecurrenceBackfillWorkflowId();
+
+  try {
+    const handle = await client.workflow.start("purchaseRecurrenceWorkflow", {
+      taskQueue: environment.TEMPORAL_TASK_QUEUE,
+      workflowId,
+      args: [{ mode: "BACKFILL" }],
+    });
+    return { workflowId, runId: handle.firstExecutionRunId, existing: false };
+  } catch (error) {
+    if (error instanceof WorkflowExecutionAlreadyStartedError) {
+      const description = await client.workflow.getHandle(workflowId).describe();
+      return { workflowId, runId: description.runId, existing: true };
+    }
+    throw error;
+  }
+}
+
+export async function startPurchaseRecurrenceBackfillWorkflow(): Promise<StartWorkflowResult> {
+  return startPurchaseRecurrenceBackfillWorkflowWithClient(await getTemporalClient());
+}
+
 export function isFullSearchSyncWorkflowId(workflowId: string): boolean {
-  return workflowId === fullSearchSyncWorkflowId("facilities") || workflowId === fullSearchSyncWorkflowId("professionals");
+  return workflowId === fullSearchSyncWorkflowId("facilities")
+    || workflowId === fullSearchSyncWorkflowId("professionals")
+    || workflowId === purchaseRecurrenceBackfillWorkflowId();
 }
 
 export async function describeSearchSyncWorkflow(workflowId: string): Promise<{

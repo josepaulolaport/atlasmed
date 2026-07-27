@@ -2,10 +2,12 @@ import { z } from "zod";
 import { isFullSearchSyncWorkflowId } from "../../../../infrastructure/temporal/temporal.client";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 
-export type SearchSyncEntity = "facilities" | "professionals";
+export type SearchSyncEntity = "facilities" | "professionals" | "orders";
+type SearchSyncTarget = Exclude<SearchSyncEntity, "orders">;
+type StartResult = { workflowId: string; runId: string; existing: boolean };
 
 const searchSyncRequestSchema = z.object({
-  entity: z.enum(["facilities", "professionals"]),
+  entity: z.enum(["facilities", "professionals", "orders"]),
 }).strict();
 
 export function parseSearchSyncRequest(input: Record<string, unknown>): { entity: SearchSyncEntity } {
@@ -22,13 +24,16 @@ export function parseSearchSyncRequest(input: Record<string, unknown>): { entity
 }
 
 type StartDependencies = {
-  start: (entity: SearchSyncEntity) => Promise<{ workflowId: string; runId: string; existing: boolean }>;
+  start: (entity: SearchSyncTarget) => Promise<StartResult>;
+  startOrdersBackfill: () => Promise<StartResult>;
 };
 
 export class StartSearchSyncUseCase {
   constructor(private readonly deps: StartDependencies) {}
   execute(input: { entity: SearchSyncEntity }) {
-    return this.deps.start(input.entity);
+    return input.entity === "orders"
+      ? this.deps.startOrdersBackfill()
+      : this.deps.start(input.entity);
   }
 }
 

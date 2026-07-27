@@ -88,25 +88,29 @@ bun run --cwd apps/workers/cnes-ingestion schedule:purchase-recurrence
 
 The schedule runs `RECONCILE` at minute zero each hour with overlap policy `SKIP`. It reads an overlapping two-hour order-update window and due stage transitions. The `00:00 UTC` run additionally performs a complete active-facility sweep. The freshness objective is the next successful hourly reconciliation for external order changes and UTC date transitions.
 
-Start the initial backfill through the Temporal client or UI using workflow type `purchaseRecurrenceWorkflow`, a unique workflow ID, the configured CNES worker task queue, and input:
-
-```json
-{ "mode": "BACKFILL" }
-```
-
-Do not reuse the deterministic hourly workflow ID. Backfill is resumable through `continueAsNew`, emits lifecycle counters/logs, and finishes by rebuilding the facilities search index.
-
-For an explicit full repair, call the existing authorized endpoint:
+Start the initial purchase-recurrence backfill through the authorized endpoint:
 
 ```http
-POST /search-sync
+POST /sync
+Content-Type: application/json
+Authorization: Bearer $ATLASMED_TOKEN
+
+{ "entity": "orders" }
+```
+
+The returned stable workflow ID is `purchase-recurrence-backfill`; a repeated request while it is running returns that same execution. Inspect it with `GET /sync/purchase-recurrence-backfill`. The backfill is resumable through `continueAsNew`, emits lifecycle counters/logs, and finishes by rebuilding the facilities search index.
+
+For an explicit full search repair, call the same authorized endpoint:
+
+```http
+POST /sync
 Content-Type: application/json
 Authorization: Bearer $ATLASMED_TOKEN
 
 { "entity": "facilities" }
 ```
 
-The returned workflow ID is normally `search-sync-facilities-full`; inspect it with `GET /search-sync/:workflowId`. The rebuild uses a temporary index and atomic swap.
+The returned workflow ID is normally `search-sync-facilities-full`; inspect it with `GET /sync/:workflowId`. The rebuild uses a temporary index and atomic swap.
 
 Use this aggregate to compare distributions before and after backfill or a rebuild:
 
