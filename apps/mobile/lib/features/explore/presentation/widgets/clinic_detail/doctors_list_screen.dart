@@ -371,6 +371,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     final added = await showAssociateDoctorsSheet(
       context,
       alreadyAssociatedIds: _doctors.map((d) => d.id).toSet(),
+      alreadyAssociatedDoctors: _doctors,
       facilityId: widget.facilityId,
     );
     if (added == null || added.isEmpty || !mounted) return;
