@@ -1,3 +1,5 @@
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -195,7 +197,9 @@ class _DoctorDetailContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notesAsync = ref.watch(professionalNotesProvider(doctorId));
+    final notesRepository = ref.watch(
+      professionalNotesRepositoryProvider(doctorId),
+    );
 
     return Stack(
       fit: StackFit.expand,
@@ -209,7 +213,7 @@ class _DoctorDetailContent extends ConsumerWidget {
         RefreshIndicator(
           onRefresh: () async {
             await repository.refresh();
-            ref.invalidate(professionalNotesProvider(doctorId));
+            notesRepository.refresh();
           },
           child: SingleChildScrollView(
             child: ColoredBox(
@@ -252,10 +256,16 @@ class _DoctorDetailContent extends ConsumerWidget {
                     _DoctorVisits(visits: detail.visits),
                     const SizedBox(height: 16),
                   ],
-                  _DoctorNotes(
-                    notes: notesAsync.valueOrNull ?? const [],
-                    isLoading: notesAsync.isLoading,
-                    onAddNote: () => _showAddNoteSheet(context, ref, doctorId),
+                  RepositoryBuilder(
+                    repository: notesRepository,
+                    builder: (context, notes, repository) {
+                      return _DoctorNotes(
+                        notes: notes ?? const [],
+                        isLoading: true,
+                        onAddNote: () =>
+                            _showAddNoteSheet(context, ref, repository),
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -402,23 +412,22 @@ class _DoctorRelationshipCardState extends State<_DoctorRelationshipCard> {
 Future<void> _showAddNoteSheet(
   BuildContext context,
   WidgetRef ref,
-  String professionalId,
+  ProfessionalNotesRepository repository,
 ) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
-    builder: (_) =>
-        _AddDoctorNoteSheet(professionalId: professionalId, ref: ref),
+    builder: (_) => _AddDoctorNoteSheet(repository: repository, ref: ref),
   );
 }
 
 /// Owns its controllers so dismissing an empty sheet cannot race
 /// InheritedWidget teardown (`_dependents.isEmpty`).
 class _AddDoctorNoteSheet extends StatefulWidget {
-  const _AddDoctorNoteSheet({required this.professionalId, required this.ref});
+  const _AddDoctorNoteSheet({required this.repository, required this.ref});
 
-  final String professionalId;
+  final ProfessionalNotesRepository repository;
   final WidgetRef ref;
 
   @override
@@ -450,10 +459,7 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
       _errorMessage = null;
     });
     try {
-      await widget.ref
-          .read(professionalNotesRepositoryProvider(widget.professionalId))
-          .createNote(_controller.text.trim());
-      widget.ref.invalidate(professionalNotesProvider(widget.professionalId));
+      await widget.repository.createNote(_controller.text.trim());
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (!mounted) return;
@@ -691,10 +697,10 @@ class _DoctorQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
+      fit: .loose,
       children: [
         Positioned.fill(
           child: Column(
-            mainAxisSize: MainAxisSize.max,
             children: [
               Expanded(child: Container(color: const Color(0xFF1e40af))),
               Expanded(child: Container(color: const Color(0xFFf8f9fb))),

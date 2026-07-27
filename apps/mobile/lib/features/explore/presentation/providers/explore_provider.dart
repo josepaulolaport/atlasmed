@@ -11,7 +11,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_t
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
@@ -192,20 +191,11 @@ final doctorProvider = Provider.autoDispose
     });
 
 // ── Professional notes ──────────────────────────────────────
-final professionalNotesRepositoryProvider =
-    Provider.family<ProfessionalNotesRepository, String>((ref, professionalId) {
-      return ProfessionalNotesRepository(professionalId);
-    });
-
-final professionalNotesProvider =
-    FutureProvider.family<List<ProfessionalNote>, String>((
-      ref,
-      professionalId,
-    ) {
-      return ref
-          .watch(professionalNotesRepositoryProvider(professionalId))
-          .currentValueOrResolve()
-          .then((notes) => notes ?? const []);
+final professionalNotesRepositoryProvider = Provider.autoDispose
+    .family<ProfessionalNotesRepository, String>((ref, professionalId) {
+      final repository = ProfessionalNotesRepository(professionalId);
+      ref.onDispose(repository.dispose);
+      return repository;
     });
 
 // ── Clinic visits ──────────────────────────────────────────
