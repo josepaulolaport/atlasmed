@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
-    as api;
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
@@ -15,6 +15,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clin
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purchase_recurrence_providers.dart';
@@ -138,18 +139,17 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
           const SizedBox(width: 6),
         ],
       ),
-      body: ColoredBox(
-        color: AppColors.surfaceTertiary,
-        child: RepositoryBuilder<ClinicDetailRepository, api.Clinic>(
-          repository: repository,
-          builder: (context, snapshot, repository) {
-            if (snapshot == null) {
-              return _loadingSkeleton(context);
-            }
-            final detail = ClinicDetail.fromApi(snapshot);
-            return _ClinicDetailBody(detail: detail, clinicId: clinicId);
-          },
-        ),
+      body: RepositoryBuilder<ClinicDetailRepository, FacilityDTO>(
+        repository: repo,
+        builder: (context, data, _) {
+          if (data == null) {
+            return _loadingSkeleton(context);
+          }
+          return _ClinicDetailBody(
+            detail: Facility.fromDTO(data),
+            clinicId: clinicId,
+          );
+        },
       ),
     );
   }
@@ -336,7 +336,7 @@ Future<void> _openPayerSourcesEditor(
 Future<void> _openPurchaseRecurrenceEditor(
   BuildContext context,
   WidgetRef ref,
-  ClinicDetail detail,
+  Facility detail,
 ) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -386,7 +386,7 @@ Future<void> _openPurchaseRecurrenceEditor(
 class _ClinicDetailBody extends ConsumerWidget {
   const _ClinicDetailBody({required this.detail, required this.clinicId});
 
-  final ClinicDetail detail;
+  final Facility detail;
   final String clinicId;
 
   @override
@@ -442,7 +442,7 @@ class _ClinicDetailBody extends ConsumerWidget {
 // Scrollable content body — section order per Spec 0005 redesign
 // ===============================================================
 class _ClinicDetailContent extends ConsumerWidget {
-  final ClinicDetail detail;
+  final Facility detail;
   final String clinicId;
   final EstablishmentDetailSections? sections;
   const _ClinicDetailContent({
@@ -736,16 +736,21 @@ class _ClinicDetailContent extends ConsumerWidget {
                   ),
                   data: (sections) => ClinicContextSection(
                     consultantName:
-                        detail.consultantName ?? sections.consultantName,
+                        detail.territory?.consultantName ??
+                        sections.consultantName,
                     consultantSince:
-                        detail.consultantSince ?? sections.consultantSince,
+                        detail.territory?.consultantSince ??
+                        sections.consultantSince,
                     // Manager is derived from the consultor's users.manager_id — no
                     // facility tenure. Prefer live; no mock fallback (would invent a manager).
-                    managerName: detail.managerName,
+                    managerName: detail.territory?.managerName,
                     managerSince: null,
                     regionZoneLabel:
-                        detail.territoryName ?? sections.regionZoneLabel,
-                    city: detail.city.isNotEmpty ? detail.city : null,
+                        detail.territory?.territoryName ??
+                        sections.regionZoneLabel,
+                    city: (detail.address?.city.isNotEmpty ?? false)
+                        ? detail.address!.city
+                        : null,
                   ),
                 ),
                 if (canSuggest) const _SuggestEditBanner(),
@@ -895,7 +900,7 @@ class _SectionErrorCard extends StatelessWidget {
 // QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
 // ===============================================================
 class _QuickActions extends ConsumerWidget {
-  final ClinicDetail detail;
+  final Facility detail;
   const _QuickActions({required this.detail});
 
   @override
@@ -923,7 +928,7 @@ class _QuickActions extends ConsumerWidget {
             label: 'Ligar',
             onTap: () => launchContactUrl(
               context,
-              url: callUrl(detail.phone),
+              url: callUrl(detail.contact?.phone),
               contactLabel: 'telefone',
             ),
           ),
@@ -932,7 +937,9 @@ class _QuickActions extends ConsumerWidget {
             label: 'WhatsApp',
             onTap: () => launchContactUrl(
               context,
-              url: whatsappUrl(detail.whatsapp ?? detail.phone),
+              url: whatsappUrl(
+                detail.contact?.whatsapp ?? detail.contact?.phone,
+              ),
               contactLabel: 'WhatsApp',
             ),
           ),
@@ -941,9 +948,9 @@ class _QuickActions extends ConsumerWidget {
             label: 'Rota',
             onTap: () => launchMapsRoute(
               context,
-              latitude: detail.lat,
-              longitude: detail.lng,
-              address: detail.formattedAddress,
+              latitude: detail.address?.lat,
+              longitude: detail.address?.lng,
+              address: detail.address?.formattedAddress,
             ),
           ),
           if (canVisit)

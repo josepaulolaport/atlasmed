@@ -1,19 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 
 /// Builds map center from live facility detail coordinates.
-EstablishmentLocation? establishmentLocationFromDetail(ClinicDetail detail) {
-  final lat = detail.lat;
-  final lng = detail.lng;
+EstablishmentLocation? establishmentLocationFromDetail(Facility facility) {
+  final lat = facility.address?.lat;
+  final lng = facility.address?.lng;
   if (lat == null || lng == null) return null;
 
   return EstablishmentLocation(
     latitude: lat,
     longitude: lng,
-    formattedAddress: detail.formattedAddress,
+    formattedAddress: facility.address?.formattedAddress,
   );
 }
 
@@ -55,10 +56,10 @@ final facilityNearbyPreviewProvider =
       }
 
       final repo = ref.watch(clinicDetailRepositoryProvider(facilityId));
-      final apiClinic = await repo.currentValueOrResolve();
-      if (apiClinic == null) return const [];
-      final lat = apiClinic.lat;
-      final lng = apiClinic.lng;
+      final dto = await repo.currentValueOrResolve();
+      if (dto == null) return const [];
+      final lat = dto.lat;
+      final lng = dto.lng;
       if (lat == null || lng == null) return const [];
 
       return fetchNearbyFacilities(

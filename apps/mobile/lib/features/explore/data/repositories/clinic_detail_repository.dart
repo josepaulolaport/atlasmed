@@ -1,12 +1,11 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
-    as api;
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
-/// Repository for fetching a single clinic's detail from the API.
-class ClinicDetailRepository extends Repository<api.Clinic>
-    with SessionEnvironmentMixin<api.Clinic> {
+/// Repository for fetching a single facility's detail from the API.
+class ClinicDetailRepository extends Repository<FacilityDTO>
+    with SessionEnvironmentMixin<FacilityDTO> {
   ClinicDetailRepository({required String id, String? verticalId})
     : super(
         endpoint: Uri.parse(
@@ -17,5 +16,5 @@ class ClinicDetailRepository extends Repository<api.Clinic>
       );
 
   @override
-  api.Clinic fromJson(String json) => api.Clinic.fromJson(json);
+  FacilityDTO fromJson(String json) => FacilityDTO.fromJson(json);
 }
