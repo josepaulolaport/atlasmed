@@ -469,13 +469,21 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }
 
   /// Open Explorar clinic tab with a Desempenho purchase-status bucket.
+  /// Maps legacy bucket names to purchaseFunnelStage filter values.
   void applyPurchaseBucket(String bucket) {
+    final funnelStages = switch (bucket) {
+      'active' => ['PURCHASE_WINDOW', 'OUTSIDE_WINDOW'],
+      'inactive' => ['CHURN'],
+      'neverBought' => ['NEVER_PURCHASED', 'INACTIVE'],
+      _ => <String>[],
+    };
     state = state.copyWith(
       activeTab: 'clinic',
       filters: {
         ...state.filters,
         'status': const <String>[],
-        'purchaseBucket': [bucket],
+        'purchaseFunnelStage': funnelStages,
+        'purchaseBucket': const <String>[],
       },
       resetVisible: true,
     );
