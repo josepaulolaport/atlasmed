@@ -1,5 +1,4 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 // ═══════════════════════════════════════════════════════════════
@@ -26,15 +25,6 @@ class Facility {
   final String? createdAt;
   final String? updatedAt;
 
-  // Integrações (vazias na versão básica, preenchidas via ZipRepository)
-  final List<PhotoGallerySummary> photos;
-  final List<FacilityOrderSummary> orders;
-  final List<PayerShare> payerShares;
-  final List<AdministrativeProfessional> representatives;
-  final List<EstablishmentDocument> documents;
-  final VisitTimeline visitHistory;
-  final List<FacilityFieldNote> fieldNotes;
-
   const Facility({
     required this.id,
     required this.name,
@@ -50,13 +40,6 @@ class Facility {
     this.services = const [],
     this.createdAt,
     this.updatedAt,
-    this.photos = const [],
-    this.orders = const [],
-    this.payerShares = const [],
-    this.representatives = const [],
-    this.documents = const [],
-    this.visitHistory = const VisitTimeline(),
-    this.fieldNotes = const [],
   });
 
   /// Apenas o básico — a partir do DTO do detail.
@@ -249,13 +232,4 @@ class FacilityRegistration {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Modelos auxiliares para integrações
-// ═══════════════════════════════════════════════════════════════
-
-class VisitTimeline {
-  final List<VisitTimelineEntry> entries;
-  final VisitStats? stats;
-
-  const VisitTimeline({this.entries = const [], this.stats});
-}
+// VisitTimeline mantido em establishment_detail_models.dart (integração)
