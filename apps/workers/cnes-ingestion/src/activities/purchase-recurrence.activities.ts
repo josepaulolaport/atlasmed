@@ -1,5 +1,5 @@
 import { environment } from "@atlasmed/config";
-import { facilities, orders, type Database } from "@atlasmed/database";
+import { facilities, facilityVerticalProfiles, orders, type Database } from "@atlasmed/database";
 import { ApplicationFailure } from "@temporalio/activity";
 import {
   calculatePurchaseRecurrenceSnapshot,
@@ -176,11 +176,12 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         purchase_recurrence_sample_size: number;
         purchase_funnel_stage: string;
         next_purchase_funnel_transition_date: string | Date | null;
+        purchase_recurrence_calculated_at: Date | null;
       }>`
         select id, observed_purchase_interval_days, purchase_interval_days,
           purchase_interval_source, manual_purchase_profile, manual_purchase_interval_days,
           last_valid_purchase_date, purchase_recurrence_sample_size, purchase_funnel_stage,
-          next_purchase_funnel_transition_date
+          next_purchase_funnel_transition_date, purchase_recurrence_calculated_at
         from ${facilities}
         where ${facilities.id} = ${facilityId} and ${facilities.deactivatedAt} is null
         for update
@@ -196,6 +197,7 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         purchase_recurrence_sample_size: number;
         purchase_funnel_stage: string;
         next_purchase_funnel_transition_date: string | Date | null;
+        purchase_recurrence_calculated_at: Date | null;
       } | undefined;
       if (!locked) return { facilityId, changed: false, document: null };
 
@@ -229,7 +231,9 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         purchaseFunnelStage: locked.purchase_funnel_stage,
         nextPurchaseFunnelTransitionDate: locked.next_purchase_funnel_transition_date,
       };
-      const changed = !snapshotEquals(current, snapshot);
+      // Persist the first calculation even when defaults already match so
+      // reconciliation freshness is observable and backfill is resumable.
+      const changed = locked.purchase_recurrence_calculated_at === null || !snapshotEquals(current, snapshot);
       if (changed) {
         await tx.update(facilities).set({
           observedPurchaseIntervalDays: snapshot.observedPurchaseIntervalDays,
@@ -256,8 +260,6 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         cnesCode: facilities.cnesCode,
         city: facilities.city,
         state: facilities.state,
-        commercialStatus: facilities.commercialStatus,
-        territoryId: facilities.territoryId,
         territoryAssignmentStatus: facilities.territoryAssignmentStatus,
         purchaseFunnelStage: facilities.purchaseFunnelStage,
         purchaseIntervalDays: facilities.purchaseIntervalDays,
@@ -269,11 +271,23 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         deactivatedAt: facilities.deactivatedAt,
         isActiveInRegistry: facilities.isActiveInRegistry,
       }).from(facilities).where(eq(facilities.id, facilityId)).limit(1);
+      const profiles = await tx
+        .select({
+          verticalId: facilityVerticalProfiles.verticalId,
+          territoryId: facilityVerticalProfiles.territoryId,
+        })
+        .from(facilityVerticalProfiles)
+        .where(and(
+          eq(facilityVerticalProfiles.facilityId, facilityId),
+          eq(facilityVerticalProfiles.isActive, true),
+        ));
       return {
         facilityId,
         changed,
         document: row ? mapFacilitySearchDocument({
           ...row,
+          verticalIds: profiles.map((profile) => profile.verticalId),
+          territoryIds: [...new Set(profiles.flatMap((profile) => profile.territoryId ? [profile.territoryId] : []))],
           lastValidPurchaseDate: normalizePostgresDate(row.lastValidPurchaseDate),
         }) : null,
       };

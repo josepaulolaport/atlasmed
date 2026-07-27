@@ -32,6 +32,7 @@ export interface FacilityVerticalProfileRecord {
   purchaseIntervalDays: number;
   purchaseIntervalSource: "DEFAULT" | "CALCULATED" | "MANUAL";
   manualPurchaseProfile: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM" | null;
+  manualPurchaseIntervalDays: number | null;
   lastValidPurchaseDate: string | null;
   purchaseRecurrenceSampleSize: number;
   purchaseFunnelStage: "NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE";
@@ -70,6 +71,15 @@ export interface FacilityRecord {
   territoryAssignmentSource: "geo" | "manual";
   commercialStatus: FacilityCommercialStatus | null;
   purchaseStatus: FacilityPurchaseStatus | null;
+  observedPurchaseIntervalDays: number | null;
+  purchaseIntervalDays: number;
+  purchaseIntervalSource: "DEFAULT" | "CALCULATED" | "MANUAL";
+  manualPurchaseProfile: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM" | null;
+  manualPurchaseIntervalDays: number | null;
+  lastValidPurchaseDate: string | null;
+  purchaseRecurrenceSampleSize: number;
+  purchaseFunnelStage: FacilityPurchaseFunnelStage;
+  nextPurchaseFunnelTransitionDate: string | null;
   conformityStatus: FacilityConformityStatus;
   /** Active consultant display name when loaded (list + detail). */
   consultantName: string | null;

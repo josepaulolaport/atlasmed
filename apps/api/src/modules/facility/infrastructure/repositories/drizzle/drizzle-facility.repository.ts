@@ -105,6 +105,7 @@ export function mapFacility(
     purchaseIntervalDays: facility.purchaseIntervalDays,
     purchaseIntervalSource: facility.purchaseIntervalSource,
     manualPurchaseProfile: facility.manualPurchaseProfile ?? null,
+    manualPurchaseIntervalDays: facility.manualPurchaseIntervalDays ?? null,
     lastValidPurchaseDate: facility.lastValidPurchaseDate ?? null,
     purchaseRecurrenceSampleSize: facility.purchaseRecurrenceSampleSize,
     purchaseFunnelStage: facility.purchaseFunnelStage,

@@ -6,6 +6,12 @@ import {
   professionals,
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
+import {
+  PURCHASE_FUNNEL_STAGES,
+  type PurchaseFunnelStage,
+  type PurchaseIntervalSource,
+  type PurchaseProfile,
+} from "@atlasmed/facility-insights";
 import { Meilisearch } from "meilisearch";
 import { environment } from "@atlasmed/config";
 import { db } from "../infrastructure/db";
@@ -27,6 +33,13 @@ export type FacilitySearchDocument = {
   /** Active profile territory ids (membership). */
   territoryIds: string[];
   territoryAssignmentStatus: string;
+  purchaseFunnelStage: PurchaseFunnelStage;
+  purchaseFunnelStageRank: number;
+  purchaseIntervalDays: number;
+  purchaseIntervalSource: PurchaseIntervalSource;
+  manualPurchaseProfile: PurchaseProfile | null;
+  hasLastValidPurchase: 0 | 1;
+  lastValidPurchaseSortAt: number;
   _geo?: { lat: number; lng: number };
 };
 
@@ -79,6 +92,11 @@ export function mapFacilitySearchDocument(row: {
   verticalIds?: string[];
   territoryIds?: string[];
   territoryAssignmentStatus: string;
+  purchaseFunnelStage: PurchaseFunnelStage;
+  purchaseIntervalDays: number;
+  purchaseIntervalSource: PurchaseIntervalSource;
+  manualPurchaseProfile: PurchaseProfile | null;
+  lastValidPurchaseDate: string | null;
   latitude: number | null;
   longitude: number | null;
   deactivatedAt: Date | null;
@@ -99,6 +117,15 @@ export function mapFacilitySearchDocument(row: {
     verticalIds: row.verticalIds ?? [],
     territoryIds: row.territoryIds ?? [],
     territoryAssignmentStatus: row.territoryAssignmentStatus,
+    purchaseFunnelStage: row.purchaseFunnelStage,
+    purchaseFunnelStageRank: PURCHASE_FUNNEL_STAGES.indexOf(row.purchaseFunnelStage),
+    purchaseIntervalDays: row.purchaseIntervalDays,
+    purchaseIntervalSource: row.purchaseIntervalSource,
+    manualPurchaseProfile: row.manualPurchaseProfile,
+    hasLastValidPurchase: row.lastValidPurchaseDate === null ? 0 : 1,
+    lastValidPurchaseSortAt: row.lastValidPurchaseDate === null
+      ? 0
+      : Date.parse(`${row.lastValidPurchaseDate}T00:00:00.000Z`),
     ...(row.latitude !== null && row.longitude !== null
       ? { _geo: { lat: row.latitude, lng: row.longitude } }
       : {}),
@@ -245,9 +272,14 @@ export const FACILITY_SETTINGS = {
     "verticalIds",
     "territoryIds",
     "territoryAssignmentStatus",
+    "purchaseFunnelStage",
+    "purchaseIntervalSource",
+    "manualPurchaseProfile",
+    "purchaseIntervalDays",
     "_geo",
   ],
-  sortableAttributes: ["_geo"],
+  sortableAttributes: ["_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDays", "hasLastValidPurchase", "lastValidPurchaseSortAt", "id"],
+  rankingRules: ["sort", "words", "typo", "proximity", "attribute", "exactness"],
 };
 
 async function loadActiveFacilityProfileIds(
@@ -306,6 +338,11 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         city: facilities.city,
         state: facilities.state,
         territoryAssignmentStatus: facilities.territoryAssignmentStatus,
+        purchaseFunnelStage: facilities.purchaseFunnelStage,
+        purchaseIntervalDays: facilities.purchaseIntervalDays,
+        purchaseIntervalSource: facilities.purchaseIntervalSource,
+        manualPurchaseProfile: facilities.manualPurchaseProfile,
+        lastValidPurchaseDate: facilities.lastValidPurchaseDate,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
@@ -325,6 +362,9 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
           ...row,
           verticalIds: profileIds.verticalIds.get(row.id) ?? [],
           territoryIds: profileIds.territoryIds.get(row.id) ?? [],
+          lastValidPurchaseDate: row.lastValidPurchaseDate === null
+            ? null
+            : String(row.lastValidPurchaseDate).slice(0, 10),
         })
       )
       .filter((row): row is FacilitySearchDocument => row !== null);

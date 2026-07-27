@@ -54,6 +54,7 @@ export function serializeFacility(
       intervalDays: clinic.purchaseIntervalDays,
       source: clinic.purchaseIntervalSource,
       profile: clinic.manualPurchaseProfile,
+      manualIntervalDays: clinic.manualPurchaseIntervalDays,
       lastPurchaseDate: clinic.lastValidPurchaseDate,
       sampleSize: clinic.purchaseRecurrenceSampleSize,
       funnelStage: clinic.purchaseFunnelStage,
