@@ -15,7 +15,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 MANIFEST="${MANIFEST:-$PROJECT_DIR/shorebird-patches.json}"
-FLAGS="--no-confirm --allow-asset-diffs --allow-native-diffs"
+FLAGS=(--no-confirm --allow-asset-diffs --allow-native-diffs)
+if [[ "${SHOREBIRD_DRY_RUN:-false}" == "true" ]]; then
+  FLAGS+=(--dry-run)
+fi
 
 # ── Help ───────────────────────────────────────────────────────────
 if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
@@ -45,8 +48,11 @@ validate() {
     exit 1
   fi
 
-  jq -e '.patches | type == "array"' "$MANIFEST" >/dev/null 2>&1 || {
-    echo "❌ Invalid manifest: expected .patches to be an array" >&2
+  jq -e '
+    .patches | type == "array" and
+    all(.[]; (.platform == "android" or .platform == "ios") and (.releaseVersion | type == "string" and length > 0))
+  ' "$MANIFEST" >/dev/null 2>&1 || {
+    echo "❌ Invalid manifest: expected android/ios patches with a releaseVersion" >&2
     exit 1
   }
 }
@@ -99,7 +105,7 @@ run_patches() {
     if shorebird patch \
       --platforms="$platform" \
       --release-version="$releaseVersion" \
-      $FLAGS \
+      "${FLAGS[@]}" \
       -- --dart-define-from-file=config.production.json --no-tree-shake-icons; then
       echo "  ✅ $platform @ $releaseVersion patched successfully"
       echo "| $platform | $releaseVersion | ✅ |" >> "$STEP_SUMMARY"

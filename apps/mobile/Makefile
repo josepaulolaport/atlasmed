@@ -14,7 +14,7 @@
 #   make bump-patch           # Cider bump patch + CHANGELOG
 #   make patch-plan           # Executa patches do manifest
 #   make patch-release        # Bump patch + patches
-#   make store-release        # Bump minor + release iOS (Android temporariamente desativado no CD)
+#   make store-release        # Bump minor + releases Android e iOS
 #   make web                  # Flutter build web + Firebase deploy
 # ──────────────────────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ bump-patch:
 	$(CIDER) release
 
 ########################################################################
-# 📱 Shorebird Releases (Store — CD temporariamente iOS-only)
+# 📱 Shorebird Releases (Store)
 ########################################################################
 
 .PHONY: android
@@ -70,7 +70,7 @@ ios:
 		-- $(FLUTTER_BUILD_FLAGS)
 
 .PHONY: store-release
-store-release: bump-minor ios
+store-release: bump-minor android ios
 
 ########################################################################
 # 🩹 Shorebird Patches (OTA)

@@ -327,27 +327,28 @@ Do not resurrect it, and do not plan work against it.
 | **Shorebird** | Over-the-air updates + release builds (Android AAB, iOS IPA) | `shorebird.yaml` (app ID), `shorebird-patches.json` (patch manifest) |
 | **Cider** | Version management (semver + build number) + CHANGELOG | CLI-only, ativado on-demand no CI |
 | **Makefile** | Orchestração de build: `make android`, `make ios`, `make patch-release`, `make web` | `apps/mobile/Makefile` — targets documentados |
-| **Fastlane** | Upload de artefatos ao TestFlight; Android temporariamente desativado no CD | `fastlane/Fastfile`, `fastlane/Appfile`, `Gemfile` |
+| **Fastlane** | Upload de artefatos ao Google Play internal e TestFlight | `fastlane/Fastfile`, `fastlane/Appfile`, `Gemfile` |
 | **FVM** | Flutter SDK version pinning | `.fvmrc` — `3.44.1` |
 
 ### Release workflow (GitHub Actions — `deploy-mobile-main.yml`)
 
-Cada push ao `main` com mudanças em `apps/mobile/` dispara:
+Cada push ao `main` com mudanças em `apps/mobile/` dispara; também é possível executar manualmente com `workflow_dispatch` (`store|patch`, `dry_run=true` por padrão):
 
 1. **Resolve mode** — decide se é `store` (release completa) ou `patch` (OTA)
-   - `store` se: PR label `release/store`, ou arquivos sensíveis iOS mudaram (ios/, pubspec.yaml, shorebird.yaml, config.production.json)
-   - `patch` se: `shorebird-patches.json` tem entradas
-   - Fallback: `store` (seguro)
+   - execução manual usa o modo escolhido
+   - push usa `store` se houver label `release/store` ou mudanças em android/, ios/, pubspec.yaml, shorebird.yaml ou config.production.json
+   - fallback seguro para `store` quando o manifest está vazio
 2. **Setup** — Flutter analyze + test (compartilhado entre os modos)
-3. **Store mode** (macOS, temporariamente iOS-only):
-   - `cider bump minor --bump-build` → version bump
-   - Instala certificado Apple Distribution e provisioning profile em keychain temporário
-   - `shorebird release ios` → IPA → Fastlane com App Store Connect API Key → TestFlight
-   - Commit version bump com `[skip ci]`
-4. **Patch mode** (Linux, iOS-only):
-   - `cider bump patch --bump-build` → version bump
-   - `shorebird patch` (OTA) para cada entrada iOS no manifest
-   - Commit version bump com `[skip ci]`
+3. **Store mode** (macOS):
+   - `cider bump minor --bump-build` apenas em deploy real
+   - instala upload keystore Android, service account Google Play, certificado Apple Distribution e provisioning profile
+   - `shorebird release android` → AAB → Fastlane → Google Play internal
+   - `shorebird release ios` → IPA → Fastlane → TestFlight
+   - dry-run compila sem publicar, alterar versão ou fazer commit
+4. **Patch mode** (macOS):
+   - `cider bump patch --bump-build` apenas em deploy real
+   - `shorebird patch` para cada entrada Android/iOS no manifest
+   - dry-run adiciona `--dry-run` e não altera versão
 5. **Web deploy** (Firebase Hosting) continua em paralelo via `deploy-production.yml`
 
 ### Conventions

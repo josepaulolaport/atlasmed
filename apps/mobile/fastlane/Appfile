@@ -1,6 +1,6 @@
 # ── Fastlane Appfile ─────────────────────────────────────────────────
 # Identidade do app iOS publicado no TestFlight.
-# Android está temporariamente desativado no CD.
+# O upload Android usa a service account materializada pelo workflow.
 # ──────────────────────────────────────────────────────────────────────
 
 app_identifier "br.com.atlasmed.app"

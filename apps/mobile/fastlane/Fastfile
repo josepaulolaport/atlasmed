@@ -1,12 +1,29 @@
 # ── Fastlane Fastfile ─────────────────────────────────────────────────
-# Upload do IPA gerado pelo Shorebird para o TestFlight.
-# Android está temporariamente desativado no CD.
+# Upload dos artefatos gerados pelo Shorebird para as lojas.
 #
 # Uso:
+#   bundle exec fastlane android upload_internal
 #   bundle exec fastlane ios upload_testflight
 # ──────────────────────────────────────────────────────────────────────
 
 default_platform(:ios)
+
+platform :android do
+  desc "Upload AAB para o Google Play (internal track)"
+  lane :upload_internal do |options|
+    aab_path = options[:aab] || ENV.fetch("SHOREBIRD_ARTIFACT_PATH")
+
+    upload_to_play_store(
+      track: "internal",
+      aab: aab_path,
+      release_status: "draft",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      json_key: ENV.fetch("PLAY_STORE_SERVICE_ACCOUNT_JSON_PATH")
+    )
+  end
+end
 
 platform :ios do
   desc "Upload IPA para o App Store Connect (TestFlight)"
