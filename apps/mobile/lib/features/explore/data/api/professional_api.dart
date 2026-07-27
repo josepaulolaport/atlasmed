@@ -2,13 +2,13 @@ import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 
-// ── FacilitySummary ──────────────────────────────────────────
+// ── ProfessionalFacilityRef ─────────────────────────────────
 
-class FacilitySummary {
-  const FacilitySummary({required this.id, required this.name});
+class ProfessionalFacilityRef {
+  const ProfessionalFacilityRef({required this.id, required this.name});
 
-  factory FacilitySummary.fromMap(Map<String, dynamic> map) {
-    return FacilitySummary(
+  factory ProfessionalFacilityRef.fromMap(Map<String, dynamic> map) {
+    return ProfessionalFacilityRef(
       id: readString(map['id']),
       name: readString(map['name']),
     );
@@ -53,7 +53,7 @@ class ProfessionalDTO {
   final String? crmCouncil;
   final String? favoriteSport;
   final String? notes;
-  final List<FacilitySummary> facilities;
+  final List<ProfessionalFacilityRef> facilities;
 
   /// Active clinics in the caller's scope (`GET /professionals/:id`).
   final double? distanceKm;
@@ -111,7 +111,7 @@ class ProfessionalDTO {
       facilityIds: readStringList(map['facilityIds']),
       facilities: readObjectList(
         map['facilities'],
-      ).map(FacilitySummary.fromMap).toList(growable: false),
+      ).map(ProfessionalFacilityRef.fromMap).toList(growable: false),
       socialName: readNullableString(map['socialName']),
       taxId: readNullableString(map['taxId']),
       websiteUrl: readNullableString(map['websiteUrl']),
