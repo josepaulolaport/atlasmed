@@ -146,6 +146,8 @@ export interface ProfessionalRepository {
     longitude?: number;
     radiusKm?: number;
     scope: ProfessionalListScopeFilter;
+    sort?: string;
+    order?: "asc" | "desc";
     /** Internal canonical hydration constraint for a Meilisearch result page. */
     candidateIds?: string[];
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }>;

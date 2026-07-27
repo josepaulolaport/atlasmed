@@ -311,11 +311,15 @@ export class ListProfessionalsUseCase {
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
+    sort?: string;
+    order?: "asc" | "desc";
     userId?: string;
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
+    const sort = input.sort ?? "name";
+    const order = input.order ?? "asc";
 
     if (input.facilityId) {
       assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -336,6 +340,8 @@ export class ListProfessionalsUseCase {
         latitude: input.latitude,
         longitude: input.longitude,
         radiusKm: input.radiusKm,
+        sort,
+        order,
         scope,
       });
 

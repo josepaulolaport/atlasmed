@@ -81,6 +81,8 @@ const listProfessionalsRoute = new Elysia()
         longitude: t.Optional(t.String()),
         radiusKm: t.Optional(t.String()),
         specialty: t.Optional(t.String()),
+        sort: t.Optional(t.String()),
+        order: t.Optional(t.String()),
       }),
     }
   );
