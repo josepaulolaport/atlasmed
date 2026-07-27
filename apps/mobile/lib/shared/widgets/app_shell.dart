@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
@@ -47,12 +48,34 @@ class AppShellScreenState extends State<AppShellScreen> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final activeSection = _sectionFromRoute(location);
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: const Color(0xFFf7f8fb),
-      drawer: AtlasDrawer(activeSection: activeSection),
-      body: widget.child,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFFF7F8FB),
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: const Color(0xFFF7F8FB),
+        drawer: AtlasDrawer(activeSection: activeSection),
+        body: Stack(
+          children: [
+            widget.child,
+            if (statusBarHeight > 0)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: statusBarHeight,
+                child: const IgnorePointer(
+                  child: ColoredBox(color: Color(0xFFF7F8FB)),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -78,10 +101,35 @@ void openAppDrawer(BuildContext context) =>
     AppShellScreenState.of(context)?.openDrawer();
 
 // ======================================================================
-// AtlasTopBar — slim sticky bar with hamburger + breadcrumb
+// AtlasTopBar — legacy inline bar with hamburger + breadcrumb
 //   page    — current page label ("Explorar", "Perfil", etc.)
 //   compact — drop breadcrumb for detail/sub screens
 // ======================================================================
+
+class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String page;
+  final bool compact;
+
+  const AtlasAppBar({super.key, this.page = '', this.compact = false});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(48);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      backgroundColor: const Color(0xFFF7F8FB),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: preferredSize.height,
+      shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
+      titleSpacing: 0,
+      title: _AtlasTopBarContent(page: page, compact: compact),
+    );
+  }
+}
 
 class AtlasTopBar extends StatelessWidget {
   final String page;
@@ -93,26 +141,35 @@ class AtlasTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xF2f7f8fb),
+        color: Color(0xFFF7F8FB),
         border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
       ),
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
-          child: SizedBox(
-            height: 40,
-            child: Row(
-              children: [
-                _hamburgerButton(context),
-                if (!compact) ...[
-                  const SizedBox(width: 8),
-                  _breadcrumb(context),
-                ],
-                if (compact) const Spacer(),
-              ],
-            ),
-          ),
+        child: _AtlasTopBarContent(page: page, compact: compact),
+      ),
+    );
+  }
+}
+
+class _AtlasTopBarContent extends StatelessWidget {
+  final String page;
+  final bool compact;
+
+  const _AtlasTopBarContent({required this.page, required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
+      child: SizedBox(
+        height: 40,
+        child: Row(
+          children: [
+            _hamburgerButton(context),
+            if (!compact) ...[const SizedBox(width: 8), _breadcrumb(context)],
+            if (compact) const Spacer(),
+          ],
         ),
       ),
     );

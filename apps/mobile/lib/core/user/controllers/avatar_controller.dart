@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
@@ -89,9 +90,15 @@ class AvatarController extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> recoverLostData() async {
-    final response = await _picker.retrieveLostData();
-    if (response.isEmpty || response.file == null) return;
-    await _uploadRecovered(response.file!);
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+
+    try {
+      final response = await _picker.retrieveLostData();
+      if (response.isEmpty || response.file == null) return;
+      await _uploadRecovered(response.file!);
+    } catch (_) {
+      // Recovery is Android-only and must not block the app when unavailable.
+    }
   }
 
   Future<void> _uploadRecovered(XFile picked) async {

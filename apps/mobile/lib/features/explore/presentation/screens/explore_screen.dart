@@ -74,12 +74,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: const AtlasAppBar(page: 'Explorar'),
       body: SafeArea(
+        top: false,
         child: Stack(
           children: [
             Column(
               children: [
-                const AtlasTopBar(page: 'Explorar'),
                 const SizedBox(height: 16),
                 _buildSearchBar(state, notifier, filterCount, isClinic),
                 const FacilityVerticalFilterBar(
