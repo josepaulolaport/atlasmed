@@ -61,6 +61,7 @@ function facilityRecord(id: string): FacilityListRecord {
     updatedAt: now,
     services: [],
     professionalCount: 3,
+    lastVisitAt: null,
     consultantName: null,
     consultantSince: null,
     managerName: null,
@@ -105,7 +106,7 @@ function fakeRepository(
 const adminRole = Role.ADMIN;
 
 function withRole<T extends Record<string, unknown>>(input: T) {
-  return { ...input, role: adminRole };
+  return { ...input, role: adminRole, userId: "user-1" };
 }
 
 describe("ListFacilitiesUseCase", () => {

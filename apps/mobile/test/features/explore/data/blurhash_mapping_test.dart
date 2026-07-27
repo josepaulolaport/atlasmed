@@ -32,7 +32,7 @@ void main() {
       'avatarBlurhash': 'L6Pj0^tl0f%g~qIURjIU00IU%Mxu',
     });
     final photos = FacilityPhotosResponse.fromJson('''
-      {"imageUrl":"/facility.png","data":[
+      {"imageUrl":"/facility.png","imageBlurhash":"L5H2EC=PM+yV0g-mq.wG9c010J}I","data":[
         {"id":"photo-1","url":"/photo-1.png","blurhash":"LKO2?U%2Tw=w]~RBVZRi};RPxuwH"}
       ]}
     ''');
@@ -42,6 +42,10 @@ void main() {
     expect(user.avatarBlurhash, 'L9AS#?t7I=%2^+Rj00M{Rj?bxuM{');
     expect(manager.avatarBlurhash, 'L6Pj0^tl0f%g~qIURjIU00IU%Mxu');
     expect(photos.photos.single.blurhash, 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH');
+    expect(
+      photos.toSummary().profileImageBlurhash,
+      'L5H2EC=PM+yV0g-mq.wG9c010J}I',
+    );
   });
 
   test('accepts API responses that do not yet contain blurhash fields', () {
@@ -56,6 +60,19 @@ void main() {
     expect(facility.imageBlurhash, isNull);
     expect(user.avatarBlurhash, isNull);
     expect(photos.photos, isEmpty);
+  });
+
+  test('keeps the first photo blurhash fallback for legacy responses', () {
+    final photos = FacilityPhotosResponse.fromJson('''
+      {"imageUrl":"/photo-1.png","data":[
+        {"id":"photo-1","url":"/photo-1.png","blurhash":"LKO2?U%2Tw=w]~RBVZRi};RPxuwH"}
+      ]}
+    ''');
+
+    expect(
+      photos.toSummary().profileImageBlurhash,
+      'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
+    );
   });
 }
 

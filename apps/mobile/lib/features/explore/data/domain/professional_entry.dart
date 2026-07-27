@@ -10,6 +10,9 @@ class ProfessionalEntry {
   final double hue;
   final String? specialty;
   final String? crm;
+  final String? displayFacilityName;
+  final int? relationshipLevel;
+  final bool isPriority;
   final double? distanceKm;
 
   const ProfessionalEntry({
@@ -19,6 +22,9 @@ class ProfessionalEntry {
     required this.hue,
     this.specialty,
     this.crm,
+    this.displayFacilityName,
+    this.relationshipLevel,
+    this.isPriority = false,
     this.distanceKm,
   });
 
@@ -37,6 +43,9 @@ class ProfessionalEntry {
       hue: 0,
       specialty: dto.specialty,
       crm: dto.crm,
+      displayFacilityName: dto.displayFacility?.name,
+      relationshipLevel: dto.relationshipLevel,
+      isPriority: dto.isPriority,
       distanceKm: dto.distanceKm,
     );
   }

@@ -29,28 +29,31 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (doctors.isEmpty && !hasMore) {
       return ClinicDetailCard(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Column(
-            children: [
-              const Text(
-                'Nenhum médico associado a este estabelecimento',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.gray400),
-              ),
-              if (onAssociate != null) ...[
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: onAssociate,
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: const Text('Associar médicos'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.navyBright,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Nenhum médico associado a este estabelecimento',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.gray400),
+            ),
+            if (onAssociate != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onAssociate,
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                label: const Text('Associar médicos'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.navyBright,
+                  side: const BorderSide(color: AppColors.blue100),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       );
     }

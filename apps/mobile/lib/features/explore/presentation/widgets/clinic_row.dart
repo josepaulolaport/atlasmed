@@ -43,7 +43,6 @@ class ClinicRow extends StatelessWidget {
                     color: AppColors.navyBright,
                   ),
                 ),
-                // Removed: isPriority flag no longer present on FacilityEntry
               ],
             ),
             const SizedBox(width: 12),
@@ -124,7 +123,13 @@ class ClinicRow extends StatelessWidget {
                           stage: clinic.purchaseRecurrence!.funnelStage!,
                           intervalDays: clinic.purchaseRecurrence!.intervalDays,
                         ),
-                      // Removed: lastVisitDays no longer present on FacilityEntry
+                      if (clinic.lastVisitDays != null)
+                        _MetaItem(
+                          icon: Icons.access_time_rounded,
+                          text: clinic.lastVisitDays == 0
+                              ? 'Hoje'
+                              : 'Há ${clinic.lastVisitDays} dia${clinic.lastVisitDays == 1 ? '' : 's'}',
+                        ),
                       _MetaItem(
                         icon: Icons.person_outline_rounded,
                         text:

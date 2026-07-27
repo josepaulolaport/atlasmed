@@ -111,8 +111,11 @@ class ExploreState {
           (a, b) => _compareNullableDistance(a.distanceKm, b.distanceKm),
         );
       case 'oldest-visit':
-        // lastVisitDays não existe mais em FacilityEntry — ordena por nome.
-        list.sort((a, b) => a.name.compareTo(b.name));
+        list.sort((a, b) {
+          final aDays = a.lastVisitDays ?? 999999;
+          final bDays = b.lastVisitDays ?? 999999;
+          return bDays.compareTo(aDays);
+        });
       case 'purchase-funnel-asc':
       case 'purchase-funnel-desc':
       case 'purchase-interval-asc':

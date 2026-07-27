@@ -103,7 +103,9 @@ describe("DrizzleProfessionalRepository.findAll active facility associations", (
     });
 
     const sql = normalizedSql();
-    expect(sql).toContain("select facility_professionals.professional_id, facility_professionals.facility_id, facility_professionals.ended_at from facility_professionals inner join facilities");
+    expect(sql).toContain(
+      "from facility_professionals inner join facilities"
+    );
     expect(sql.match(/facilities\.deactivated_at is null/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -116,7 +118,9 @@ describe("DrizzleProfessionalRepository.findAll active facility associations", (
     });
 
     const sql = normalizedSql();
-    expect(sql).toContain("select facility_professionals.professional_id, facility_professionals.facility_id, facility_professionals.ended_at from facility_professionals inner join facilities");
+    expect(sql).toContain(
+      "from facility_professionals inner join facilities"
+    );
     expect(sql.match(/facilities\.deactivated_at is null/g)?.length).toBeGreaterThanOrEqual(3);
   });
 

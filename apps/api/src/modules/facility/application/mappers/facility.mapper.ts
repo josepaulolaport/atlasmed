@@ -61,6 +61,7 @@ export function serializeFacility(
       nextTransitionDate: clinic.nextPurchaseFunnelTransitionDate,
     },
     professionalCount: list.professionalCount ?? 0,
+    lastVisitAt: list.lastVisitAt?.toISOString() ?? undefined,
     consultantName: clinic.consultantName,
     consultantSince: clinic.consultantSince?.toISOString() ?? undefined,
     managerName: clinic.managerName,

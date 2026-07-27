@@ -14,6 +14,7 @@ class FacilityEntry {
 
   /// API `commercialStatus` (`REGISTERED` / `ACTIVE` / `SUSPENDED` / `INACTIVE`).
   final String? commercialStatus;
+  final int? lastVisitDays;
   final int doctorCount;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
@@ -24,6 +25,7 @@ class FacilityEntry {
     this.neighborhood,
     this.distanceKm,
     this.commercialStatus,
+    this.lastVisitDays,
     required this.doctorCount,
     this.purchaseRecurrence,
   });
@@ -42,12 +44,23 @@ class FacilityEntry {
 
   /// Maps a [FacilityDTO] from the paginated API response to a [FacilityEntry].
   /// MESMA lógica do antigo [Clinic.fromApi].
-  factory FacilityEntry.fromDTO(FacilityDTO dto) {
+  factory FacilityEntry.fromDTO(FacilityDTO dto, {DateTime? now}) {
     final cityParts = <String>[
       if (dto.city?.trim().isNotEmpty ?? false) dto.city!.trim(),
       if (dto.state?.trim().isNotEmpty ?? false) dto.state!.trim(),
     ];
     final status = dto.commercialStatus?.trim();
+    final lastVisitAt = DateTime.tryParse(dto.lastVisitAt ?? '')?.toLocal();
+    final reference = (now ?? DateTime.now()).toLocal();
+    final lastVisitDays = lastVisitAt == null
+        ? null
+        : DateTime(reference.year, reference.month, reference.day)
+              .difference(
+                DateTime(lastVisitAt.year, lastVisitAt.month, lastVisitAt.day),
+              )
+              .inDays
+              .clamp(0, 1 << 31)
+              .toInt();
     return FacilityEntry(
       id: dto.id,
       name: dto.name,
@@ -55,6 +68,7 @@ class FacilityEntry {
       neighborhood: dto.neighborhood ?? '',
       distanceKm: dto.distanceKm,
       commercialStatus: (status == null || status.isEmpty) ? null : status,
+      lastVisitDays: lastVisitDays,
       doctorCount: dto.professionalCount,
       purchaseRecurrence: dto.purchaseRecurrence,
     );

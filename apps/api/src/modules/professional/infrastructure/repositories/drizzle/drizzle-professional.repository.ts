@@ -20,6 +20,25 @@ import type {
 } from "../../../application/interfaces/professional.repository.interface";
 
 type ProfessionalRow = typeof professionals.$inferSelect;
+type ProfessionalFacilityAssociation = {
+  facilityId: string;
+  facilityName: string;
+  endedAt: Date | null;
+};
+
+function resolveFacilityName(row: {
+  id: string;
+  displayName: string | null;
+  legalName: string | null;
+  tradeName: string | null;
+}): string {
+  return (
+    row.displayName?.trim() ||
+    row.tradeName?.trim() ||
+    row.legalName?.trim() ||
+    row.id
+  );
+}
 
 function resolveFullName(
   firstName: string,
@@ -31,8 +50,15 @@ function resolveFullName(
 
 function mapProfessional(
   professional: ProfessionalRow,
-  facilityAssociations: Array<{ facilityId: string; endedAt: Date | null }>
+  facilityAssociations: ProfessionalFacilityAssociation[]
 ): ProfessionalRecord {
+  const activeFacilities = facilityAssociations
+    .filter((association) => association.endedAt === null)
+    .sort((left, right) =>
+      left.facilityName.localeCompare(right.facilityName, "pt-BR")
+    );
+  const displayFacility = activeFacilities[0];
+
   return {
     id: professional.id,
     firstName: professional.firstName,
@@ -64,9 +90,10 @@ function mapProfessional(
     sourcePresent: professional.sourcePresent,
     sourceTracked: professional.sourceTracked,
     manuallyEditedAt: professional.manuallyEditedAt,
-    facilityIds: facilityAssociations
-      .filter((a) => a.endedAt === null)
-      .map((a) => a.facilityId),
+    facilityIds: [...new Set(activeFacilities.map((association) => association.facilityId))],
+    displayFacility: displayFacility
+      ? { id: displayFacility.facilityId, name: displayFacility.facilityName }
+      : null,
     createdAt: professional.createdAt,
     updatedAt: professional.updatedAt,
     deletedAt: professional.deletedAt,
@@ -74,8 +101,9 @@ function mapProfessional(
 }
 
 async function loadAssociationsMap(
-  professionalIds: string[]
-): Promise<Map<string, Array<{ facilityId: string; endedAt: Date | null }>>> {
+  professionalIds: string[],
+  visibleFacilityIds?: string[]
+): Promise<Map<string, ProfessionalFacilityAssociation[]>> {
   if (professionalIds.length === 0) {
     return new Map();
   }
@@ -84,6 +112,9 @@ async function loadAssociationsMap(
     .select({
       professionalId: facilityProfessionals.professionalId,
       facilityId: facilityProfessionals.facilityId,
+      displayName: facilities.displayName,
+      legalName: facilities.legalName,
+      tradeName: facilities.tradeName,
       endedAt: facilityProfessionals.endedAt,
     })
     .from(facilityProfessionals)
@@ -91,21 +122,33 @@ async function loadAssociationsMap(
     .where(
       and(
         inArray(facilityProfessionals.professionalId, professionalIds),
-        isNull(facilities.deactivatedAt)
+        isNull(facilities.deactivatedAt),
+        ...(visibleFacilityIds
+          ? [inArray(facilityProfessionals.facilityId, visibleFacilityIds)]
+          : [])
       )
     );
 
-  const map = new Map<string, Array<{ facilityId: string; endedAt: Date | null }>>();
+  const map = new Map<string, ProfessionalFacilityAssociation[]>();
   for (const row of rows) {
     if (!map.has(row.professionalId)) map.set(row.professionalId, []);
-    map.get(row.professionalId)!.push({ facilityId: row.facilityId, endedAt: row.endedAt });
+    map.get(row.professionalId)!.push({
+      facilityId: row.facilityId,
+      facilityName: resolveFacilityName({
+        id: row.facilityId,
+        displayName: row.displayName,
+        legalName: row.legalName,
+        tradeName: row.tradeName,
+      }),
+      endedAt: row.endedAt,
+    });
   }
   return map;
 }
 
 async function loadAssociationsForOne(
   professionalId: string
-): Promise<Array<{ facilityId: string; endedAt: Date | null }>> {
+): Promise<ProfessionalFacilityAssociation[]> {
   const map = await loadAssociationsMap([professionalId]);
   return map.get(professionalId) ?? [];
 }
@@ -293,7 +336,13 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       db.select({ count: sql<number>`count(*)::int` }).from(professionals).where(where),
     ]);
 
-    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id));
+    const visibleFacilityIds = params.scope.isGlobal
+      ? undefined
+      : (params.scope.facilityIds?.length ? params.scope.facilityIds : ["__none__"]);
+    const associationsMap = await loadAssociationsMap(
+      rows.map((p) => p.id),
+      visibleFacilityIds
+    );
 
     return {
       professionals: rows.map((p) => ({
@@ -437,11 +486,12 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
 
     return rows.map((row) => ({
       id: row.id,
-      name:
-        row.displayName?.trim() ||
-        row.tradeName?.trim() ||
-        row.legalName?.trim() ||
-        row.id,
+      name: resolveFacilityName({
+        id: row.id,
+        displayName: row.displayName,
+        legalName: row.legalName,
+        tradeName: row.tradeName,
+      }),
     }));
   }
 
