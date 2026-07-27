@@ -136,15 +136,9 @@ class ExploreState {
 
     switch (sort) {
       case 'name-asc':
-        list.sort((a, b) => a.name.compareTo(b.name));
-      case 'distance':
-        list.sort(
-          (a, b) => _compareNullableDistance(a.distanceKm, b.distanceKm),
-        );
-      case 'last-contact':
-        list.sort(
-          (a, b) => _compareNullableDistance(b.distanceKm, a.distanceKm),
-        );
+      case 'name-desc':
+        // Server handles name sort; preserve API pagination order.
+        break;
       default:
         break;
     }
@@ -258,6 +252,13 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
           sort: FacilitySort.lastPurchaseDate,
           order: SortOrder.desc,
         ),
+        _ => (sort: null, order: null),
+      };
+
+  ({FacilitySort? sort, SortOrder? order}) get _doctorSort =>
+      switch (state.sort) {
+        'name-asc' => (sort: FacilitySort.name, order: SortOrder.asc),
+        'name-desc' => (sort: FacilitySort.name, order: SortOrder.desc),
         _ => (sort: null, order: null),
       };
 
@@ -387,6 +388,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }) async {
     final p = page ?? _doctorPage;
     final origin = _origin;
+    final doctorSort = _doctorSort;
     final query = DoctorsQuery(
       page: p,
       limit: 20,
@@ -395,6 +397,8 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       longitude: origin?.longitude,
       radiusKm: null,
       specialty: _commaJoin(state.filters['specialties']),
+      sort: doctorSort.sort,
+      order: doctorSort.order,
     );
     final repo = _ref.read(doctorsRepositoryProvider(query));
     try {

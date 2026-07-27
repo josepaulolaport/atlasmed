@@ -426,7 +426,14 @@ export function buildFacilityListOrderBy(params: {
   switch (params.sort) {
     case "purchaseFunnelStage": return [direction(purchaseFunnelStageRank), asc(facilities.displayName), asc(facilities.id)];
     case "purchaseIntervalDays": return [direction(facilities.purchaseIntervalDays), asc(facilities.displayName), asc(facilities.id)];
-    case "lastPurchaseDate": return [sql`${facilities.lastValidPurchaseDate} ${sql.raw(params.order === "desc" ? "desc" : "asc")} nulls last`, asc(facilities.displayName), asc(facilities.id)];
+    case "lastPurchaseDate": return [
+      isNull(facilities.lastValidPurchaseDate),
+      params.order === "desc"
+        ? desc(facilities.lastValidPurchaseDate)
+        : asc(facilities.lastValidPurchaseDate),
+      asc(facilities.displayName),
+      asc(facilities.id),
+    ];
     default: return [asc(facilities.displayName), asc(facilities.id)];
   }
 }
@@ -473,6 +480,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     const skip = (params.page - 1) * params.limit;
 
+    const isSpecificSort = params.sort === "purchaseFunnelStage"
+      || params.sort === "purchaseIntervalDays"
+      || params.sort === "lastPurchaseDate";
+
     const [rows, countRows] = await Promise.all([
       db
         .select({
@@ -484,7 +495,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         .from(facilities)
         .where(where)
         .orderBy(
-          ...(distanceKm
+          ...(distanceKm && !isSpecificSort
             ? [asc(distanceKm), asc(facilities.displayName), asc(facilities.id)]
             : buildFacilityListOrderBy(params))
         )

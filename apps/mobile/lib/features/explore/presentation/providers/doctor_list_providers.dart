@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 
 class DoctorsQuery {
@@ -12,6 +13,8 @@ class DoctorsQuery {
     this.longitude,
     this.radiusKm,
     this.specialty,
+    this.sort,
+    this.order,
   });
 
   final int page;
@@ -22,6 +25,8 @@ class DoctorsQuery {
   final double? longitude;
   final double? radiusKm;
   final String? specialty;
+  final FacilitySort? sort;
+  final SortOrder? order;
 
   @override
   bool operator ==(Object other) {
@@ -33,7 +38,9 @@ class DoctorsQuery {
         other.latitude == latitude &&
         other.longitude == longitude &&
         other.radiusKm == radiusKm &&
-        other.specialty == specialty;
+        other.specialty == specialty &&
+        other.sort == sort &&
+        other.order == order;
   }
 
   @override
@@ -46,6 +53,8 @@ class DoctorsQuery {
     longitude,
     radiusKm,
     specialty,
+    sort,
+    order,
   );
 }
 
@@ -69,6 +78,8 @@ final doctorsRepositoryProvider = Provider.autoDispose
         longitude: query.longitude,
         radiusKm: query.radiusKm,
         specialty: query.specialty,
+        sort: query.sort,
+        order: query.order,
       );
       ref.onDispose(repository.dispose);
       return repository;
