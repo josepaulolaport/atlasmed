@@ -2,20 +2,6 @@ import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Thin wrapper around [AtlasShimmer] that also respects system-level
-/// [MediaQuery.disableAnimations].
-class Shimmer extends StatelessWidget {
-  const Shimmer({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => AtlasShimmer(
-    enabled: !MediaQuery.disableAnimationsOf(context),
-    child: child,
-  );
-}
-
 class _SkeletonBar extends StatelessWidget {
   const _SkeletonBar({required this.width, required this.height});
 
@@ -40,7 +26,7 @@ class _ListPlaceholder extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   @override
-  Widget build(BuildContext context) => Shimmer(
+  Widget build(BuildContext context) => AtlasShimmer(
     child: Padding(
       padding: padding ?? EdgeInsets.zero,
       child: Column(children: children),
