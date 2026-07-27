@@ -1,228 +1,20 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
     as api;
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_visits_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/api_repository_providers.dart';
-
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
+
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
-import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 export 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart'
     show locationServiceProvider;
-
-// ── Helper: parse a single Clinic from a detail endpoint response ──
-api.Clinic _parseClinicDetail(String json) {
-  final map = jsonDecode(json) as Map<String, dynamic>;
-  return api.Clinic.fromMap(map);
-}
-
-// ── Clinic detail repository ────────────────────────────────
-class _ClinicDetailRepository extends Repository<api.Clinic>
-    with SessionEnvironmentMixin<api.Clinic> {
-  _ClinicDetailRepository({required String id, String? verticalId})
-    : super(
-        endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$id'
-          '${verticalId == null || verticalId.isEmpty ? '' : '?verticalId=${Uri.encodeQueryComponent(verticalId)}'}',
-        ),
-        resolveOnCreate: false,
-        name: 'ClinicDetailRepository',
-      );
-
-  @override
-  api.Clinic fromJson(String json) => _parseClinicDetail(json);
-}
-
-// ── Doctor detail repository ────────────────────────────────
-class DoctorDetailRepository extends Repository<ApiDoctor>
-    with SessionEnvironmentMixin<ApiDoctor> {
-  DoctorDetailRepository({required String id})
-    : super(
-        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
-        resolveOnCreate: false,
-        name: 'DoctorDetailRepository',
-      );
-
-  @override
-  ApiDoctor fromJson(String json) {
-    final map = jsonDecode(json) as Map<String, dynamic>;
-    return ApiDoctor.fromMap(map);
-  }
-}
-
-// ── Detail fetch helpers (no Riverpod family; called per request) ──
-Future<ClinicDetail> _fetchClinicDetail(String id, {String? verticalId}) async {
-  // Mock nearby pins (`near-*` / `:empty`) are disabled on the real API.
-  if (id.startsWith('near-') || id.endsWith(':empty')) {
-    throw Exception('Clinic not found: $id');
-  }
-
-  final repo = _ClinicDetailRepository(id: id, verticalId: verticalId);
-  try {
-    // Always hit the network — currentValueOrResolve() returns hydrated cache
-    // and skips refresh, which leaves stale admin fields after NC approve.
-    // (Constructor hydratate may still race dispose; BaseRepository.emit ignores
-    // closed controllers.)
-    final apiClinic = await repo.refresh();
-    if (apiClinic == null) {
-      throw Exception('Clinic not found: $id');
-    }
-    // Map DTO Clinic → ClinicDetail. Prefer API values; Phase-1 mock-fill
-    // gaps (list/detail DTO still omits number/complement/CEP) so Dados
-    // administrativos can show Estado / Cidade / CEP / Endereço.
-    String? nonEmpty(String? value) {
-      final trimmed = value?.trim();
-      return trimmed == null || trimmed.isEmpty ? null : trimmed;
-    }
-
-    // Prefer API values as-is. Do not invent fake address/phone when missing.
-    // commercial/conformity come from the facility DTO; purchase stays mocked.
-    return ClinicDetail(
-      id: apiClinic.id,
-      name: apiClinic.name,
-      city: nonEmpty(apiClinic.city) ?? '',
-      state: nonEmpty(apiClinic.state),
-      neighborhood: nonEmpty(apiClinic.neighborhood) ?? '',
-      distanceKm: apiClinic.distanceKm ?? 0,
-      status: ClinicStatus.active,
-      lastVisitDays: null,
-      doctorCount: apiClinic.professionalCount,
-      isPriority: false,
-      products: [],
-      phone: nonEmpty(apiClinic.phone),
-      whatsapp: nonEmpty(apiClinic.whatsapp),
-      consultantName: apiClinic.consultantName,
-      consultantSince: apiClinic.consultantSince,
-      managerName: apiClinic.managerName,
-      territoryName: apiClinic.territoryName,
-      email: nonEmpty(apiClinic.email),
-      billingEmail: nonEmpty(apiClinic.billingEmail),
-      website: nonEmpty(apiClinic.website),
-      responsibleDoctor: nonEmpty(apiClinic.responsibleName),
-      openingHours: nonEmpty(apiClinic.openingHours),
-      registeredSince: apiClinic.registeredSince ?? apiClinic.createdAt,
-      streetAddress: nonEmpty(apiClinic.streetAddress),
-      streetNumber: nonEmpty(apiClinic.streetNumber),
-      addressComplement: nonEmpty(apiClinic.addressComplement),
-      postalCode: nonEmpty(apiClinic.postalCode),
-      lat: apiClinic.lat,
-      lng: apiClinic.lng,
-      taxIdType: apiClinic.taxIdType,
-      cnpj: apiClinic.cnpj,
-      cpf: apiClinic.cpf,
-      commercialStatus: apiClinic.commercialStatus,
-      conformityStatus: apiClinic.conformityStatus,
-      purchaseRecurrence: apiClinic.purchaseRecurrence,
-    );
-  } finally {
-    repo.dispose();
-  }
-}
-
-/// Maps a professional API profile into the doctor detail UI model.
-DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
-  final name = apiDoctor.displayName;
-  final nameParts = name.split(' ');
-  final initials = nameParts.length >= 2
-      ? '${nameParts.first[0]}${nameParts.last[0]}'
-      : name.isNotEmpty
-      ? name[0]
-      : '?';
-  return DoctorDetail(
-    id: apiDoctor.id,
-    name: name,
-    initials: initials.toUpperCase(),
-    specialty: apiDoctor.specialty ?? '',
-    crm: apiDoctor.crm,
-    role: apiDoctor.specialty ?? '',
-    distanceKm: apiDoctor.distanceKm ?? 0,
-    phone: apiDoctor.phone,
-    email: apiDoctor.email,
-    whatsapp: null,
-    // ISO `YYYY-MM-DD` for edit round-trip; UI formats for display.
-    birthday: apiDoctor.birthDate == null
-        ? null
-        : '${apiDoctor.birthDate!.year.toString().padLeft(4, '0')}-'
-              '${apiDoctor.birthDate!.month.toString().padLeft(2, '0')}-'
-              '${apiDoctor.birthDate!.day.toString().padLeft(2, '0')}',
-    faculty: null,
-    residency: null,
-    team: apiDoctor.favoriteTeam,
-    interests: apiDoctor.hobbies,
-    language: apiDoctor.languages,
-    statusLabel: '',
-    relationshipLabel: '',
-    notes: const [],
-    clinics: apiDoctor.facilities
-        .map((f) => DoctorClinic(id: f.id, name: f.name, role: '', days: ''))
-        .toList(growable: false),
-    gallery: const [],
-    signals: const [],
-    prescribing: const [],
-    visits: const [],
-  );
-}
-
-// ── Clinic detail provider ──────────────────────────────────
-final clinicDetailProvider = FutureProvider.family<ClinicDetail, String>((
-  ref,
-  id,
-) async {
-  final verticalId = await ref.watch(
-    effectiveFacilityVerticalIdProvider.future,
-  );
-  return _fetchClinicDetail(id, verticalId: verticalId);
-});
-
-// ── Doctor detail provider ──────────────────────────────────
-final doctorProvider = Provider.autoDispose
-    .family<DoctorDetailRepository, String>((ref, id) {
-      final repository = DoctorDetailRepository(id: id);
-      ref.onDispose(repository.dispose);
-      return repository;
-    });
-
-// ── Professional notes ──────────────────────────────────────
-final professionalNotesRepositoryProvider = Provider.autoDispose
-    .family<ProfessionalNotesRepository, String>((ref, professionalId) {
-      final repository = ProfessionalNotesRepository(professionalId);
-      ref.onDispose(repository.dispose);
-      return repository;
-    });
-
-// ── Clinic visits ──────────────────────────────────────────
-final clinicVisitsRepositoryProvider =
-    Provider.family<ClinicVisitsRepository, String>((ref, facilityId) {
-      final repository = ClinicVisitsRepository(facilityId);
-      ref.onDispose(repository.dispose);
-      return repository;
-    });
-
-final clinicVisitsProvider = FutureProvider.family<List<ClinicVisit>, String>((
-  ref,
-  facilityId,
-) {
-  return ref
-      .watch(clinicVisitsRepositoryProvider(facilityId))
-      .currentValueOrResolve()
-      .then((visits) => visits ?? const []);
-});
 
 // ── Explore state ───────────────────────────────────────────
 class ExploreState {
@@ -588,17 +380,16 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }) async {
     final p = page ?? _doctorPage;
     final origin = _origin;
-    final repo = DoctorsRepository(
+    final query = DoctorsQuery(
       page: p,
       limit: 20,
       searchQuery: state.query.isNotEmpty ? state.query : null,
       latitude: origin?.latitude,
       longitude: origin?.longitude,
-      // Spec: doctors never send radiusKm
       radiusKm: null,
       specialty: _commaJoin(state.filters['specialties']),
-      resolveOnCreate: false,
     );
+    final repo = _ref.read(doctorsRepositoryProvider(query));
     try {
       final result = await repo.currentValueOrResolve();
       if (generation != null && generation != _refreshGeneration) return;
@@ -619,7 +410,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         _doctorHasMore = result.pagination.page < result.pagination.totalPages;
       }
     } finally {
-      repo.dispose();
+      // The Riverpod repository provider owns this repository's lifecycle.
     }
   }
 

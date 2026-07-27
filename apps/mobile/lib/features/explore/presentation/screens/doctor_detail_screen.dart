@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctor_detail_repository.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_detail_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/professional_notes_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_profile_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
@@ -34,12 +37,12 @@ class DoctorDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(doctorProvider(doctorId));
+    final repository = ref.watch(doctorDetailRepositoryProvider(doctorId));
 
     // Compute AppBar color from cached data if available.
     final currentValue = repository.currentValue;
     final appBarColor = currentValue != null
-        ? doctorDetailFromApi(currentValue).primaryColor
+        ? DoctorDetail.fromApi(currentValue).primaryColor
         : null;
 
     return Scaffold(
@@ -88,7 +91,7 @@ class DoctorDetailScreen extends ConsumerWidget {
   DoctorDetail? _doctorDetailFromRepository(RepositoryState<ApiDoctor> state) {
     return state.map(
       empty: (_) => null,
-      ready: (ready) => doctorDetailFromApi(ready.data),
+      ready: (ready) => DoctorDetail.fromApi(ready.data),
     );
   }
 

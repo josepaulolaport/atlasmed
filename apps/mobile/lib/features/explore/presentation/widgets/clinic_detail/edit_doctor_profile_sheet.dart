@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
 /// API keys on `PATCH /api/v1/professionals/:id` that the doctor detail UI can edit.
 enum DoctorEditableField {
@@ -217,7 +216,7 @@ class _EditDoctorFieldSheetState extends State<_EditDoctorFieldSheet> {
         value: raw.isEmpty ? null : raw,
       );
       if (!mounted) return;
-      Navigator.of(context).pop(doctorDetailFromApi(updated));
+      Navigator.of(context).pop(DoctorDetail.fromApi(updated));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/repositories/field_suggestions_repository.dart';
 
@@ -114,10 +114,10 @@ class NaoConformidadeActions {
       _ref.invalidate(mySuggestionsForClinicProvider(updated.targetId));
       // Facility was mutated on approve — refresh open/cached clinic detail.
       final facilityId = updated.targetId;
-      _ref.invalidate(clinicDetailProvider(facilityId));
+      _ref.invalidate(clinicDetailRepositoryProvider(facilityId));
       // Warm the provider so popping back to the clinic already has fresh data.
       // ignore: unused_result
-      _ref.read(clinicDetailProvider(facilityId).future);
+      _ref.read(clinicDetailRepositoryProvider(facilityId)).refresh();
     }
     return updated;
   }

@@ -1205,7 +1205,7 @@ class EstablishmentDetailSections {
   final List<ProductUsage> products;
   final List<FacilityFieldNote> fieldNotes;
 
-  /// Mock-only rich visit timeline (distinct from the real `clinicVisitsProvider`).
+  /// Mock-only rich visit timeline (distinct from the real `clinicVisitsRepositoryProvider`).
   final List<VisitTimelineEntry> visitTimeline;
   final VisitStats? visitStats;
 

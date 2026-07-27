@@ -4,12 +4,19 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
+    as api;
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/api_repository_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
+
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purchase_recurrence_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
@@ -95,16 +102,16 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     _lastVisibilityRefreshAt = now;
 
     final clinicId = widget.clinicId;
-    ref.invalidate(clinicDetailProvider(clinicId));
+    ref.invalidate(clinicDetailRepositoryProvider(clinicId));
     // Warm so skipLoadingOnReload can swap in fresh data without a skeleton.
     // ignore: unused_result
-    ref.read(clinicDetailProvider(clinicId).future);
+    ref.read(clinicDetailRepositoryProvider(clinicId)).refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     final clinicId = widget.clinicId;
-    final detailAsync = ref.watch(clinicDetailProvider(clinicId));
+    final repo = ref.watch(clinicDetailRepositoryProvider(clinicId));
 
     return Scaffold(
       backgroundColor: const Color(0xFF1e40af),
@@ -126,15 +133,17 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
           ),
         ],
       ),
-      body: ColoredBox(
-        color: const Color(0xFFf8f9fb),
-        child: detailAsync.when(
-          skipLoadingOnReload: true,
-          loading: () => _loadingSkeleton(context),
-          error: (err, _) => _errorView(context, clinicId, err),
-          data: (detail) =>
-              _ClinicDetailBody(detail: detail, clinicId: clinicId),
-        ),
+      body: RepositoryBuilder<ClinicDetailRepository, api.Clinic>(
+        repository: repo,
+        builder: (context, data, _) {
+          if (data == null) {
+            return _loadingSkeleton(context);
+          }
+          return _ClinicDetailBody(
+            detail: ClinicDetail.fromApi(data),
+            clinicId: clinicId,
+          );
+        },
       ),
     );
   }
@@ -174,53 +183,6 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       ),
       child: const Center(
         child: CircularProgressIndicator(color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _errorView(BuildContext context, String clinicId, Object error) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.wifi_off_rounded,
-                size: 48,
-                color: Color(0xFFb84545),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Não foi possível carregar o estabelecimento',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _friendlyLoadError(error),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF6b7280), height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => ref.invalidate(clinicDetailProvider(clinicId)),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Tentar novamente'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => context.pop(),
-                child: const Text('Voltar'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -392,7 +354,7 @@ Future<void> _openPurchaseRecurrenceEditor(
                 if (sheetContext.mounted) Navigator.of(sheetContext).pop();
               },
               refreshDetail: () {
-                ref.invalidate(clinicDetailProvider(detail.id));
+                ref.invalidate(clinicDetailRepositoryProvider(detail.id));
               },
               refreshExplore: ref
                   .read(exploreProvider.notifier)
@@ -431,9 +393,9 @@ class _ClinicDetailBody extends ConsumerWidget {
       color: const Color(0xFF1e40af),
       backgroundColor: Colors.white,
       onRefresh: () async {
-        ref.invalidate(clinicDetailProvider(clinicId));
+        ref.invalidate(clinicDetailRepositoryProvider(clinicId));
         ref.invalidate(establishmentDetailSectionsProvider(clinicId));
-        ref.invalidate(clinicVisitsProvider(clinicId));
+        ref.invalidate(clinicVisitsRepositoryProvider(clinicId));
         ref.invalidate(facilityPhotosProvider(clinicId));
         ref.invalidate(facilityNotesProvider(clinicId));
         ref.invalidate(facilityNearbyPreviewProvider(clinicId));
@@ -450,7 +412,7 @@ class _ClinicDetailBody extends ConsumerWidget {
           facilityOrdersProvider(clinicId).notifier,
         );
         await Future.wait([
-          ref.read(clinicDetailProvider(clinicId).future),
+          ref.read(clinicDetailRepositoryProvider(clinicId)).refresh(),
           ref.read(establishmentDetailSectionsProvider(clinicId).future),
           ref.read(facilityNearbyPreviewProvider(clinicId).future),
           ref.read(facilityPhotosProvider(clinicId).future),
@@ -981,7 +943,7 @@ class _QuickActions extends ConsumerWidget {
                     clinicVisitsRepositoryProvider(detail.id),
                   );
                   await repo.createVisit();
-                  ref.invalidate(clinicVisitsProvider(detail.id));
+                  ref.invalidate(clinicVisitsRepositoryProvider(detail.id));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
