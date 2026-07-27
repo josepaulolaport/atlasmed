@@ -5,7 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 /// "Histórico de visitas" — stats row, sentiment filter pills and a rich
 /// visit timeline (attendees, sample given, linked order, summary).
 ///
-/// Mock-only in V1: the real `clinicVisitsProvider` (visitedAt/type/summary)
+/// Mock-only in V1: the real `clinicVisitsRepositoryProvider` (visitedAt/type/summary)
 /// still backs "Nova visita" registration elsewhere on the screen; this
 /// section renders `EstablishmentDetailSections.visitTimeline`, which will
 /// be replaced by real, richer visit data once the backend model is

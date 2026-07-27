@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/api_repository_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_specialties_repository.dart';
+
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/specialties_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
@@ -126,12 +129,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                     else
                       _DoctorFilters(
                         local: _local,
-                        specialtiesAsync: ref.watch(
-                          professionalSpecialtiesProvider,
-                        ),
                         onToggle: (v) => _toggleMulti('specialties', v),
-                        onRetry: () =>
-                            ref.invalidate(professionalSpecialtiesProvider),
                       ),
                   ],
                 ),
@@ -377,21 +375,14 @@ class _ClinicFilters extends StatelessWidget {
   }
 }
 
-class _DoctorFilters extends StatelessWidget {
+class _DoctorFilters extends ConsumerWidget {
   final Map<String, List<String>> local;
-  final AsyncValue<List<String>> specialtiesAsync;
   final ValueChanged<String> onToggle;
-  final VoidCallback onRetry;
 
-  const _DoctorFilters({
-    required this.local,
-    required this.specialtiesAsync,
-    required this.onToggle,
-    required this.onRetry,
-  });
+  const _DoctorFilters({required this.local, required this.onToggle});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selected = local['specialties'] ?? const <String>[];
 
     return Column(
@@ -401,60 +392,41 @@ class _DoctorFilters extends StatelessWidget {
         const _SectionHeader(title: 'Especialidade'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: specialtiesAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Carregando especialidades…',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
-              ),
-            ),
-            error: (_, _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Não foi possível carregar as especialidades.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+          child:
+              RepositoryBuilder<
+                ProfessionalSpecialtiesRepository,
+                List<String>
+              >(
+                repository: ref.watch(
+                  professionalSpecialtiesRepositoryProvider,
                 ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: onRetry,
-                  child: const Text(
-                    'Tentar novamente',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2563eb),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            data: (specialties) {
-              final options = <String>{...specialties, ...selected}.toList()
-                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+                builder: (context, specialties, repository) {
+                  final options =
+                      <String>{...?specialties, ...selected}.toList()..sort(
+                        (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
+                      );
 
-              if (options.isEmpty) {
-                return const Text(
-                  'Nenhuma especialidade disponível no seu escopo.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
-                );
-              }
+                  if (options.isEmpty) {
+                    return const Text(
+                      'Nenhuma especialidade disponível no seu escopo.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+                    );
+                  }
 
-              return Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: options.map((s) {
-                  final on = selected.contains(s);
-                  return _SimpleChip(
-                    label: s,
-                    selected: on,
-                    onTap: () => onToggle(s),
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: options.map((s) {
+                      final on = selected.contains(s);
+                      return _SimpleChip(
+                        label: s,
+                        selected: on,
+                        onTap: () => onToggle(s),
+                      );
+                    }).toList(),
                   );
-                }).toList(),
-              );
-            },
-          ),
+                },
+              ),
         ),
       ],
     );

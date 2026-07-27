@@ -1,6 +1,7 @@
 // ── Doctor detail model ───────────────────────────────────────
 
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 
 class DoctorDetail {
   final String id;
@@ -49,6 +50,49 @@ class DoctorDetail {
 
   // Field notes
   final List<String> notes;
+
+  /// Maps an [ApiDoctor] from the detail endpoint into a [DoctorDetail].
+  factory DoctorDetail.fromApi(ApiDoctor apiDoctor) {
+    final name = apiDoctor.displayName;
+    final nameParts = name.split(' ');
+    final initials = nameParts.length >= 2
+        ? '${nameParts.first[0]}${nameParts.last[0]}'
+        : name.isNotEmpty
+        ? name[0]
+        : '?';
+    return DoctorDetail(
+      id: apiDoctor.id,
+      name: name,
+      initials: initials.toUpperCase(),
+      specialty: apiDoctor.specialty ?? '',
+      crm: apiDoctor.crm,
+      role: apiDoctor.specialty ?? '',
+      distanceKm: apiDoctor.distanceKm ?? 0,
+      phone: apiDoctor.phone,
+      email: apiDoctor.email,
+      whatsapp: null,
+      birthday: apiDoctor.birthDate == null
+          ? null
+          : '${apiDoctor.birthDate!.year.toString().padLeft(4, '0')}-'
+                '${apiDoctor.birthDate!.month.toString().padLeft(2, '0')}-'
+                '${apiDoctor.birthDate!.day.toString().padLeft(2, '0')}',
+      faculty: null,
+      residency: null,
+      team: apiDoctor.favoriteTeam,
+      interests: apiDoctor.hobbies,
+      language: apiDoctor.languages,
+      statusLabel: '',
+      relationshipLabel: '',
+      notes: const [],
+      clinics: apiDoctor.facilities
+          .map((f) => DoctorClinic(id: f.id, name: f.name, role: '', days: ''))
+          .toList(growable: false),
+      gallery: const [],
+      signals: const [],
+      prescribing: const [],
+      visits: const [],
+    );
+  }
 
   /// Hue (0-360) derived from the doctor's name for personalized colors.
   double get hue => (name.hashCode.abs() % 360).toDouble();

@@ -19,6 +19,10 @@ class ApiDoctorFacility {
 }
 
 class ApiDoctor {
+  factory ApiDoctor.fromJson(String json) {
+    return ApiDoctor.fromMap(jsonDecode(json) as Map<String, dynamic>);
+  }
+
   const ApiDoctor({
     required this.id,
     required this.firstName,

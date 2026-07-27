@@ -1,6 +1,8 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
+    as api;
 
 class ClinicDetail {
   final String id;
@@ -78,6 +80,52 @@ class ClinicDetail {
     this.commercialStatus,
     this.conformityStatus,
   });
+
+  /// Maps an [api.Clinic] from the detail endpoint into a [ClinicDetail].
+  factory ClinicDetail.fromApi(api.Clinic apiClinic) {
+    String? nonEmpty(String? value) {
+      final trimmed = value?.trim();
+      return trimmed == null || trimmed.isEmpty ? null : trimmed;
+    }
+
+    return ClinicDetail(
+      id: apiClinic.id,
+      name: apiClinic.name,
+      city: nonEmpty(apiClinic.city) ?? '',
+      state: nonEmpty(apiClinic.state),
+      neighborhood: nonEmpty(apiClinic.neighborhood) ?? '',
+      distanceKm: apiClinic.distanceKm ?? 0,
+      status: ClinicStatus.active,
+      lastVisitDays: null,
+      doctorCount: apiClinic.professionalCount,
+      isPriority: false,
+      products: [],
+      phone: nonEmpty(apiClinic.phone),
+      whatsapp: nonEmpty(apiClinic.whatsapp),
+      consultantName: apiClinic.consultantName,
+      consultantSince: apiClinic.consultantSince,
+      managerName: apiClinic.managerName,
+      territoryName: apiClinic.territoryName,
+      email: nonEmpty(apiClinic.email),
+      billingEmail: nonEmpty(apiClinic.billingEmail),
+      website: nonEmpty(apiClinic.website),
+      responsibleDoctor: nonEmpty(apiClinic.responsibleName),
+      openingHours: nonEmpty(apiClinic.openingHours),
+      registeredSince: apiClinic.registeredSince ?? apiClinic.createdAt,
+      streetAddress: nonEmpty(apiClinic.streetAddress),
+      streetNumber: nonEmpty(apiClinic.streetNumber),
+      addressComplement: nonEmpty(apiClinic.addressComplement),
+      postalCode: nonEmpty(apiClinic.postalCode),
+      lat: apiClinic.lat,
+      lng: apiClinic.lng,
+      taxIdType: apiClinic.taxIdType,
+      cnpj: apiClinic.cnpj,
+      cpf: apiClinic.cpf,
+      commercialStatus: apiClinic.commercialStatus,
+      conformityStatus: apiClinic.conformityStatus,
+      purchaseRecurrence: apiClinic.purchaseRecurrence,
+    );
+  }
 
   /// Neighbourhood + street + number + complement as one line for "Endereço".
   String? get composedAddressLine {
