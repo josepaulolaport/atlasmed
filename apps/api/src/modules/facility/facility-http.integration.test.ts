@@ -185,6 +185,23 @@ describe("Facility HTTP auth integration", () => {
     expect(valid.status).toBe(200);
   });
 
+  it("uses TypeBox to reject invalid facility note and professional role bodies", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.admin.email);
+    const [invalidNote, invalidRole] = await Promise.all([
+      authRequest(app, `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/notes`, token, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ note: "" }),
+      }),
+      authRequest(app, `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`, token, {
+        method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ relationshipLevel: 11 }),
+      }),
+    ]);
+
+    expect(invalidNote.status).toBe(422);
+    expect(invalidRole.status).toBe(422);
+  });
+
   it("scoped field USER can read in-territory facility", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 

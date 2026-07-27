@@ -1,11 +1,10 @@
 import { Elysia, t } from "elysia";
-import { updateFacilityProfessionalSchema } from "@atlasmed/access";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { facilityUseCases } from "../../composition";
 import { ordersUseCases } from "../../../orders/composition";
 import { registryReadService } from "../../../registry-ingestion/composition";
-import { ResourceNotFoundError } from "../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
 
@@ -43,7 +42,12 @@ const listFacilitiesRoute = new Elysia()
         radiusKm: t.Optional(t.String()),
         commercialStatus: t.Optional(t.String()),
         productIds: t.Optional(t.String()),
+        purchaseFunnelStage: t.Optional(t.String()),
+        purchaseProfile: t.Optional(t.String()),
+        purchaseIntervalMinDays: t.Optional(t.String()),
+        purchaseIntervalMaxDays: t.Optional(t.String()),
         sort: t.Optional(t.String()),
+        order: t.Optional(t.String()),
         verticalId: t.Optional(t.String()),
       }),
     }
@@ -365,10 +369,6 @@ const updateFacilityRepresentativeRoute = new Elysia()
 
 const MAX_FACILITY_NOTE_LENGTH = 2_000;
 
-const facilityNoteSchema = z.object({
-  note: z.string().trim().min(1).max(MAX_FACILITY_NOTE_LENGTH),
-});
-
 const listFacilityNotesRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
@@ -397,12 +397,11 @@ const createFacilityNoteRoute = new Elysia()
   .post(
     "/facilities/:id/notes",
     async ({ params, body, getScope, getUserId }) => {
-      const parsed = parseSchema(facilityNoteSchema, body);
       const [scope, userId] = await Promise.all([getScope(), getUserId()]);
       return facilityUseCases.createFacilityNote().execute({
         facilityId: params.id,
         userId,
-        note: parsed.note,
+        note: body.note,
         scope,
       });
     },
@@ -584,13 +583,12 @@ const updateFacilityProfessionalRoleRoute = new Elysia()
     async ({ params, body, getScope, getUserId }) => {
       const scope = await getScope();
       const userId = await getUserId();
-      const parsed = parseSchema(updateFacilityProfessionalSchema, body);
       const association = await facilityUseCases.updateFacilityProfessionalRole().execute({
         facilityId: params.id,
         professionalId: params.professionalId,
         userId,
         scope,
-        ...parsed,
+        ...body,
       });
 
       if (!association) {

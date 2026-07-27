@@ -5,7 +5,7 @@ import type { PurchaseRecurrenceCommand, PurchaseRecurrenceService } from "../se
 import { ValidationError } from "../../../../shared/errors";
 import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
-import { buildMeiliFilter, eqFilter, geoRadiusFilter, inFilter } from "../../../../infrastructure/search/meili-filter";
+import { buildMeiliFilter, eqFilter, geoRadiusFilter, gteFilter, inFilter, isNullFilter, lteFilter } from "../../../../infrastructure/search/meili-filter";
 import { serializeFacility } from "../mappers/facility.mapper";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
 
@@ -49,13 +49,20 @@ export class ListFacilitiesUseCase {
     radiusKm?: number;
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
     productIds?: string[];
-    sort?: "relevance" | "distance";
+    purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
+    purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
+    purchaseIntervalMinDays?: number;
+    purchaseIntervalMaxDays?: number;
+    sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
+    order?: "asc" | "desc";
     scope: ScopeContext;
     role: string;
     verticalId?: string;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
+    const sort = input.sort ?? (input.search?.trim() ? "relevance" : "name");
+    const order = input.order ?? (sort === "relevance" ? "desc" : "asc");
 
     const listScope = buildFacilityListScope({
       scope: input.scope,
@@ -74,6 +81,12 @@ export class ListFacilitiesUseCase {
         radiusKm: input.radiusKm,
         commercialStatus: input.commercialStatus,
         productIds: input.productIds,
+        purchaseFunnelStages: input.purchaseFunnelStages,
+        purchaseProfile: input.purchaseProfile,
+        purchaseIntervalMinDays: input.purchaseIntervalMinDays,
+        purchaseIntervalMaxDays: input.purchaseIntervalMaxDays,
+        sort,
+        order,
         scope: listScope,
       });
 
@@ -90,10 +103,24 @@ export class ListFacilitiesUseCase {
 
     let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
     try {
-      // commercialStatus filtered in Postgres hydrate (not indexed on Meili).
+      // commercialStatus remains canonical-Postgres-only; recurrence filters are indexed.
       const canonicalFilters = [
         input.radiusKm !== undefined && input.latitude !== undefined && input.longitude !== undefined
           ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
+          : undefined,
+        input.purchaseFunnelStages?.length
+          ? inFilter("purchaseFunnelStage", input.purchaseFunnelStages)
+          : undefined,
+        input.purchaseProfile === "AUTOMATIC"
+          ? isNullFilter("manualPurchaseProfile")
+          : input.purchaseProfile
+            ? eqFilter("manualPurchaseProfile", input.purchaseProfile)
+            : undefined,
+        input.purchaseIntervalMinDays !== undefined
+          ? gteFilter("purchaseIntervalDays", input.purchaseIntervalMinDays)
+          : undefined,
+        input.purchaseIntervalMaxDays !== undefined
+          ? lteFilter("purchaseIntervalDays", input.purchaseIntervalMaxDays)
           : undefined,
       ];
       const verticalFilter =
@@ -105,16 +132,38 @@ export class ListFacilitiesUseCase {
         : input.scope.facilityIds.length > 0
           ? inFilter("id", input.scope.facilityIds)
           : eqFilter("id", "__none__");
-      const filter = buildMeiliFilter([...canonicalFilters, verticalFilter, scopeFilter])
-        ?? buildMeiliFilter([...canonicalFilters, verticalFilter]);
-      const sort = input.sort === "distance" && input.latitude !== undefined && input.longitude !== undefined
-        ? [`_geoPoint(${input.latitude}, ${input.longitude}):asc`]
-        : undefined;
+      const filterClauses = [...canonicalFilters, verticalFilter, scopeFilter];
+      const filter = buildMeiliFilter(filterClauses);
+      if (filterClauses.some(Boolean) && !filter) {
+        const { facilities, total } = await this.deps.facilityRepository.findAll({
+          page, limit, search, latitude: input.latitude, longitude: input.longitude,
+          radiusKm: input.radiusKm, commercialStatus: input.commercialStatus,
+          productIds: input.productIds, purchaseFunnelStages: input.purchaseFunnelStages,
+          purchaseProfile: input.purchaseProfile, purchaseIntervalMinDays: input.purchaseIntervalMinDays,
+          purchaseIntervalMaxDays: input.purchaseIntervalMaxDays, sort, order,
+          scope: listScope,
+        });
+        return {
+          data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
+          pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+        };
+      }
+      const searchSort = sort === "distance" && input.latitude !== undefined && input.longitude !== undefined
+        ? [`_geoPoint(${input.latitude}, ${input.longitude}):${order}`]
+        : sort === "purchaseFunnelStage"
+          ? [`purchaseFunnelStageRank:${order}`, "name:asc", "id:asc"]
+          : sort === "purchaseIntervalDays"
+            ? [`purchaseIntervalDays:${order}`, "name:asc", "id:asc"]
+            : sort === "lastPurchaseDate"
+              ? ["hasLastValidPurchase:desc", `lastValidPurchaseSortAt:${order}`, "name:asc", "id:asc"]
+              : sort === "name"
+                ? [`name:${order}`, "id:asc"]
+                : undefined;
       result = await searchService.search<{ id: string }>("facilities", search, {
         limit,
         offset: (page - 1) * limit,
         ...(filter ? { filter } : {}),
-        ...(sort ? { sort } : {}),
+        ...(searchSort ? { sort: searchSort } : {}),
       });
     } catch (error) {
       throw new ServiceUnavailableError("Search", error instanceof Error ? error : undefined);
@@ -130,6 +179,12 @@ export class ListFacilitiesUseCase {
             radiusKm: input.radiusKm,
             commercialStatus: input.commercialStatus,
             productIds: input.productIds,
+            purchaseFunnelStages: input.purchaseFunnelStages,
+            purchaseProfile: input.purchaseProfile,
+            purchaseIntervalMinDays: input.purchaseIntervalMinDays,
+            purchaseIntervalMaxDays: input.purchaseIntervalMaxDays,
+            sort: input.sort,
+            order: input.order,
             scope: listScope,
           }),
           ids

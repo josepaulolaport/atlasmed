@@ -30,14 +30,22 @@ describe("ListFacilitiesUseCase filters", () => {
     const result = await new ListFacilitiesUseCase({ facilityRepository: repository }).execute({
       page: 2, limit: 10, latitude: -23.55, longitude: -46.63, radiusKm: 5,
       commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"],
+      purchaseFunnelStages: ["PURCHASE_WINDOW", "CHURN"], purchaseProfile: "AUTOMATIC",
+      purchaseIntervalMinDays: 15, purchaseIntervalMaxDays: 90,
+      sort: "purchaseFunnelStage", order: "desc",
       role: Role.ADMIN,
       scope: { isGlobal: false, facilityIds: ["facility-1"] } as ScopeContext,
     });
 
     expect(repository.findAll).toHaveBeenCalledWith(expect.objectContaining({
       page: 2, limit: 10, latitude: -23.55, longitude: -46.63, radiusKm: 5,
-      commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"], sort: "name", order: "asc",
-      scope: { isGlobal: false, facilityIds: ["facility-1"] },
+      commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"], sort: "purchaseFunnelStage", order: "desc",
+      purchaseFunnelStages: ["PURCHASE_WINDOW", "CHURN"], purchaseProfile: "AUTOMATIC",
+      purchaseIntervalMinDays: 15, purchaseIntervalMaxDays: 90,
+      scope: {
+        isGlobal: false, facilityIds: ["facility-1"],
+        restrictToVerticalProfiles: true, verticalIds: [],
+      },
     }));
     expect(result.data[0]?.distanceKm).toBe(1.25);
     expect(result.pagination).toMatchObject({ page: 2, limit: 10, total: 1 });

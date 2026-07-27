@@ -120,10 +120,10 @@ describe("DrizzleFacilityPurchaseRecurrenceRepository integration", () => {
     ids.push(facility.id);
     const validDates = Array.from({ length: 15 }, (_, index) => new Date(Date.UTC(2026, 0, index + 1, 23, 0)));
     const orderRows: Array<typeof orders.$inferInsert> = [
-      ...validDates.map((orderedAt, index) => ({ facilityId: facility.id, orderedAt, status: index % 2 ? "APPROVED" as const : "INVOICED" as const, type: index % 2 ? "SALE" as const : "CONSIGNMENT" as const })),
-      { facilityId: facility.id, orderedAt: new Date("2026-01-15T01:00:00Z"), status: "APPROVED", type: "SALE" },
-      { facilityId: facility.id, orderedAt: new Date("2026-02-01T00:00:00Z"), status: "DRAFT", type: "SALE" },
-      { facilityId: facility.id, orderedAt: new Date("2026-02-02T00:00:00Z"), status: "APPROVED", type: "DONATION" },
+      ...validDates.map((orderedAt, index) => ({ facilityId: facility.id, verticalId: "vertical-1", orderedAt, status: index % 2 ? "APPROVED" as const : "INVOICED" as const, type: index % 2 ? "SALE" as const : "CONSIGNMENT" as const })),
+      { facilityId: facility.id, verticalId: "vertical-1", orderedAt: new Date("2026-01-15T01:00:00Z"), status: "APPROVED", type: "SALE" },
+      { facilityId: facility.id, verticalId: "vertical-1", orderedAt: new Date("2026-02-01T00:00:00Z"), status: "DRAFT", type: "SALE" },
+      { facilityId: facility.id, verticalId: "vertical-1", orderedAt: new Date("2026-02-02T00:00:00Z"), status: "APPROVED", type: "DONATION" },
     ];
     await db.insert(orders).values(orderRows);
 
