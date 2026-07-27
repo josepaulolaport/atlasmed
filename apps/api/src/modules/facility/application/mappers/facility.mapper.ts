@@ -6,6 +6,24 @@ import { applyVerticalProfileContext } from "../utils/facility-vertical-scope.ut
  * Keeps serialization out of use-cases (SRP) and is the single place that
  * shapes the public facility contract for list + detail.
  */
+
+/**
+ * Calcula a próxima data estimada de compra com base na última compra e o intervalo.
+ * Retorna null quando não há data de última compra.
+ */
+function calculateNextEstimatedPurchaseDate(
+  lastPurchaseDate: string | null,
+  intervalDays: number,
+): string | null {
+  if (!lastPurchaseDate) return null;
+
+  const lastDate = new Date(lastPurchaseDate);
+  if (isNaN(lastDate.getTime())) return null;
+
+  const nextDate = new Date(lastDate.getTime() + intervalDays * 86_400_000);
+  return nextDate.toISOString();
+}
+
 export function serializeFacility(
   clinic: FacilityRecord | FacilityListRecord,
   verticalIds?: string[],
@@ -56,6 +74,10 @@ export function serializeFacility(
       profile: clinic.manualPurchaseProfile,
       manualIntervalDays: clinic.manualPurchaseIntervalDays,
       lastPurchaseDate: clinic.lastValidPurchaseDate,
+      nextEstimatedPurchaseDate: calculateNextEstimatedPurchaseDate(
+        clinic.lastValidPurchaseDate,
+        clinic.purchaseIntervalDays,
+      ),
       sampleSize: clinic.purchaseRecurrenceSampleSize,
       funnelStage: clinic.purchaseFunnelStage,
       nextTransitionDate: clinic.nextPurchaseFunnelTransitionDate,
