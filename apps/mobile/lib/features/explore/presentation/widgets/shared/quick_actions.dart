@@ -27,7 +27,7 @@ class DetailQuickActions extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            clipBehavior: .antiAlias,
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border.all(color: AppColors.surfaceSecondary),
@@ -40,9 +40,12 @@ class DetailQuickActions extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: actions,
+            child: Material(
+              color: Colors.transparent,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: actions.map((a) => Expanded(child: a)).toList(),
+              ),
             ),
           ),
         ),
@@ -69,9 +72,8 @@ class QuickActionItem extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: isDisabled ? null : onTap,
-        borderRadius: BorderRadius.circular(28),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: .all(12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
