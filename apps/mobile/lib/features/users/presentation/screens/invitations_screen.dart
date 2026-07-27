@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,7 +42,7 @@ class InvitationsScreen extends ConsumerWidget {
             ),
             Expanded(
               child: invitationsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const InvitationListSkeleton(),
                 error: (_, _) => const Center(
                   child: Text(
                     'Não foi possível carregar os convites.',

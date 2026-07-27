@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 
 class UsersEmptyState extends StatelessWidget {
@@ -71,21 +72,21 @@ class UsersSkeletonRow extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFeef0f3),
+              color: Color(0xFFeef0f3),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _bar(width: 160, height: 12),
-                const SizedBox(height: 8),
-                _bar(width: 120, height: 10),
-                const SizedBox(height: 8),
-                _bar(width: 90, height: 10),
+              children: const [
+                _UsersSkeletonBar(width: 160, height: 12),
+                SizedBox(height: 8),
+                _UsersSkeletonBar(width: 120, height: 10),
+                SizedBox(height: 8),
+                _UsersSkeletonBar(width: 90, height: 10),
               ],
             ),
           ),
@@ -93,8 +94,25 @@ class UsersSkeletonRow extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _bar({required double width, required double height}) {
+/// A user-row-shaped shimmer shown only while the following page is loading.
+class UsersPaginationSkeletonRow extends StatelessWidget {
+  const UsersPaginationSkeletonRow({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const ExcludeSemantics(child: Shimmer(child: UsersSkeletonRow()));
+}
+
+class _UsersSkeletonBar extends StatelessWidget {
+  const _UsersSkeletonBar({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: width,
       height: height,

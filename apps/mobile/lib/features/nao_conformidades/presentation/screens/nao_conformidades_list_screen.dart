@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformi
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/widgets/suggestion_change_summary.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// Ops queue: field-change suggestions from reps/managers + accepted history.
 class NaoConformidadesListScreen extends ConsumerStatefulWidget {
@@ -154,12 +155,8 @@ class _NaoConformidadesListScreenState
                     asyncQueue.when(
                       skipLoadingOnReload: true,
                       loading: () => const Padding(
-                        padding: EdgeInsets.only(top: 48),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF1e40af),
-                          ),
-                        ),
+                        padding: EdgeInsets.only(top: 8),
+                        child: SuggestionListSkeleton(),
                       ),
                       error: (error, _) => Padding(
                         padding: const EdgeInsets.only(top: 24),

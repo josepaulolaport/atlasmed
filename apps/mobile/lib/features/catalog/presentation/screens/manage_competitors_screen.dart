@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/cata
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/competitor_form_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// Admin-only screen for managing which competitor products are linked to
 /// one AtlasMed variant's "comparativo" (`product_equivalences`). Linking
@@ -101,7 +102,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
             ),
             Expanded(
               child: comparisonAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const CompetitorListSkeleton(),
                 error: (error, _) => CatalogErrorState(
                   onRetry: () =>
                       ref.invalidate(catalogComparisonProvider(variantId)),
@@ -366,10 +367,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
             ),
             Flexible(
               child: unlinkedAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+                loading: () => const CompetitorPickerListSkeleton(),
                 error: (_, _) => const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(

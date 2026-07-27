@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dar
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 class MyOrdersScreen extends ConsumerStatefulWidget {
   const MyOrdersScreen({super.key});
@@ -100,12 +101,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                       ),
                       const SizedBox(height: 16),
                       ...ordersAsync.when(
-                        loading: () => const [
-                          Padding(
-                            padding: EdgeInsets.symmetric(vertical: 32),
-                            child: Center(child: CircularProgressIndicator()),
-                          ),
-                        ],
+                        loading: () => const [OrderListSkeleton()],
                         error: (_, _) => const [
                           Padding(
                             padding: EdgeInsets.symmetric(vertical: 32),
@@ -126,9 +122,8 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                                       ),
                                       child: _OrderCard(
                                         order: order,
-                                        onTap: () => context.push(
-                                          '/orders/${order.id}',
-                                        ),
+                                        onTap: () =>
+                                            context.push('/orders/${order.id}'),
                                       ),
                                     ),
                                   )

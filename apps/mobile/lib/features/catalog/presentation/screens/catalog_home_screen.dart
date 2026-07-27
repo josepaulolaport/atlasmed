@@ -13,6 +13,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart'
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
     show isAdminProvider;
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// Entry point for the Catálogo de Produtos section, designed like a store
 /// catalog rather than a filing cabinet: a search box and a family filter
@@ -167,7 +168,7 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
             ),
             Expanded(
               child: familiesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const ProductListSkeleton(),
                 error: (error, _) => CatalogErrorState(
                   onRetry: () => ref.invalidate(catalogFamiliesProvider),
                 ),
