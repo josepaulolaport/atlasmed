@@ -156,9 +156,7 @@ class _TypeChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected
-                  ? AppColors.navyBright
-                  : AppColors.gray200,
+              color: selected ? AppColors.navyBright : AppColors.gray200,
             ),
           ),
           child: Column(
@@ -166,9 +164,7 @@ class _TypeChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 22,
-                color: selected
-                    ? AppColors.navyBright
-                    : AppColors.gray500,
+                color: selected ? AppColors.navyBright : AppColors.gray500,
               ),
               const SizedBox(height: 8),
               Text(
@@ -177,9 +173,7 @@ class _TypeChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: selected
-                      ? AppColors.navyBright
-                      : AppColors.gray600,
+                  color: selected ? AppColors.navyBright : AppColors.gray600,
                 ),
               ),
             ],

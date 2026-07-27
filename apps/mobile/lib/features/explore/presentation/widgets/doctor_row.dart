@@ -216,9 +216,7 @@ class _RowBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final emphasized = label.toUpperCase().contains('DECISOR');
-    final color = emphasized
-        ? AppColors.purple
-        : AppColors.navyBright;
+    final color = emphasized ? AppColors.purple : AppColors.navyBright;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(

@@ -25,9 +25,7 @@ class SuggestionChangeSummary extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: isDeactivation
-                    ? AppColors.red50
-                    : AppColors.blueLight,
+                color: isDeactivation ? AppColors.red50 : AppColors.blueLight,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDeactivation

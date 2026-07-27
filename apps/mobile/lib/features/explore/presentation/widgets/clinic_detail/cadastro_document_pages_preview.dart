@@ -633,9 +633,7 @@ class _CarouselPager extends StatelessWidget {
             width: i == index ? 14 : 5,
             height: 5,
             decoration: BoxDecoration(
-              color: i == index
-                  ? AppColors.navyBright
-                  : AppColors.gray300,
+              color: i == index ? AppColors.navyBright : AppColors.gray300,
               borderRadius: BorderRadius.circular(99),
             ),
           ),

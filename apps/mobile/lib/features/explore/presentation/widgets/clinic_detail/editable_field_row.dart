@@ -217,9 +217,7 @@ class _EmptyValueChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.amber50,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.amber.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,

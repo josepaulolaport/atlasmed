@@ -140,7 +140,11 @@ class VariantInfoCard extends StatelessWidget {
         _CodesPanel(variant: variant),
         if (onViewComparison != null || onManageCompetitors != null) ...[
           const SizedBox(height: 12),
-          const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.surfaceSecondary,
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Wrap(

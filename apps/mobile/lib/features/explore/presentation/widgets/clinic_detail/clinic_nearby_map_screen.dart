@@ -1465,9 +1465,7 @@ class _NearbyEstablishmentCard extends StatelessWidget {
           color: isSelected ? AppColors.blueLight : AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? AppColors.navyBright
-                : AppColors.gray200,
+            color: isSelected ? AppColors.navyBright : AppColors.gray200,
             width: isSelected ? 1.4 : 1,
           ),
         ),

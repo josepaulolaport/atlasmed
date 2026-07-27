@@ -105,11 +105,15 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                   fillColor: AppColors.background,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.surfaceSecondary),
+                    borderSide: const BorderSide(
+                      color: AppColors.surfaceSecondary,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.surfaceSecondary),
+                    borderSide: const BorderSide(
+                      color: AppColors.surfaceSecondary,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),

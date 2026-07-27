@@ -113,7 +113,9 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
           Container(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+              border: Border(
+                bottom: BorderSide(color: AppColors.surfaceSecondary),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,9 +317,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                       : AppColors.surfaceSecondary,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
-                                color: active
-                                    ? AppColors.blue50
-                                    : Colors.white,
+                                color: active ? AppColors.blue50 : Colors.white,
                               ),
                               child: Text(
                                 '$preset×',
@@ -489,7 +489,10 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                           ),
                         ),
                         children: [
-                          const Divider(height: 1, color: AppColors.surfaceSecondary),
+                          const Divider(
+                            height: 1,
+                            color: AppColors.surfaceSecondary,
+                          ),
                           ...suggestion.history.asMap().entries.map((entry) {
                             final h = entry.value;
                             final isFirst = entry.key == 0;
@@ -576,7 +579,9 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
           Container(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
+              border: Border(
+                top: BorderSide(color: AppColors.surfaceSecondary),
+              ),
             ),
             child: Column(
               children: [
@@ -676,9 +681,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: enabled
-                  ? AppColors.navyDeep
-                  : AppColors.gray300,
+              color: enabled ? AppColors.navyDeep : AppColors.gray300,
             ),
           ),
         ),
@@ -734,9 +737,7 @@ class _PriceRow extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: active
-                      ? AppColors.navyDeep
-                      : AppColors.gray300,
+                  color: active ? AppColors.navyDeep : AppColors.gray300,
                 ),
                 color: Colors.white,
               ),
@@ -802,9 +803,7 @@ class _PriceRow extends StatelessWidget {
                     hint,
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: hintWarn
-                          ? AppColors.amber
-                          : AppColors.gray500,
+                      color: hintWarn ? AppColors.amber : AppColors.gray500,
                       height: 1.4,
                     ),
                   ),
@@ -830,9 +829,7 @@ class _PriceRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: active
-                          ? AppColors.navyDeep
-                          : AppColors.gray900,
+                      color: active ? AppColors.navyDeep : AppColors.gray900,
                     ),
                   ),
                 ],

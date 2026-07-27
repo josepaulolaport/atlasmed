@@ -83,9 +83,7 @@ class PrimaryButton extends StatelessWidget {
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.2,
-                              color: white
-                                  ? AppColors.navyDeep
-                                  : Colors.white,
+                              color: white ? AppColors.navyDeep : Colors.white,
                             ),
                           ),
                           if (trailingIcon != null) ...[
@@ -93,9 +91,7 @@ class PrimaryButton extends StatelessWidget {
                             Icon(
                               trailingIcon,
                               size: 18,
-                              color: white
-                                  ? AppColors.navyDeep
-                                  : Colors.white,
+                              color: white ? AppColors.navyDeep : Colors.white,
                             ),
                           ],
                         ],

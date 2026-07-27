@@ -385,9 +385,7 @@ class _UnsupportedCanvas extends StatelessWidget {
                           ? Icons.picture_as_pdf_rounded
                           : Icons.insert_drive_file_rounded,
                       size: 48,
-                      color: isPdf
-                          ? AppColors.red
-                          : AppColors.blueLight,
+                      color: isPdf ? AppColors.red : AppColors.blueLight,
                     ),
                     const SizedBox(height: 16),
                     Padding(

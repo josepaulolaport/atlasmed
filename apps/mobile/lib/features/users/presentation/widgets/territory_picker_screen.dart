@@ -608,9 +608,7 @@ class _ManagerScopeBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.blue600.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.blue600.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppColors.blue600.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [

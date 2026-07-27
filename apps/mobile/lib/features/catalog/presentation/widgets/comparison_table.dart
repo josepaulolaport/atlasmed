@@ -194,9 +194,7 @@ class PriceIndexTable extends StatelessWidget {
                     final row = rows[index];
                     return Container(
                       decoration: BoxDecoration(
-                        color: row.isOwn
-                            ? AppColors.blue50
-                            : Colors.white,
+                        color: row.isOwn ? AppColors.blue50 : Colors.white,
                         border: const Border(
                           bottom: BorderSide(color: AppColors.gray100),
                         ),
@@ -350,9 +348,7 @@ class _ColumnHeaderRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: active
-                    ? AppColors.navyDeep
-                    : AppColors.gray400,
+                color: active ? AppColors.navyDeep : AppColors.gray400,
               ),
             ),
             Padding(

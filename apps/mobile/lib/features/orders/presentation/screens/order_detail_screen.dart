@@ -271,7 +271,10 @@ class _TimelineRow extends StatelessWidget {
                 ),
                 if (!last)
                   Expanded(
-                    child: Container(width: 2, color: AppColors.surfaceSecondary),
+                    child: Container(
+                      width: 2,
+                      color: AppColors.surfaceSecondary,
+                    ),
                   ),
               ],
             ),
@@ -685,9 +688,7 @@ class _ActionButton extends StatelessWidget {
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
         backgroundColor: filled ? Colors.white : Colors.white,
-        foregroundColor: filled
-            ? AppColors.gray950
-            : AppColors.navyDeep,
+        foregroundColor: filled ? AppColors.gray950 : AppColors.navyDeep,
         side: const BorderSide(color: AppColors.surfaceSecondary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),

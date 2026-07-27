@@ -663,9 +663,7 @@ class _FilterOptionRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected
-                        ? AppColors.navyDeep
-                        : AppColors.gray700,
+                    color: selected ? AppColors.navyDeep : AppColors.gray700,
                   ),
                 ),
               ),
@@ -750,9 +748,7 @@ class CatalogTabBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: selected
-                    ? AppColors.navyDeep
-                    : AppColors.gray500,
+                color: selected ? AppColors.navyDeep : AppColors.gray500,
               ),
             ),
           ),

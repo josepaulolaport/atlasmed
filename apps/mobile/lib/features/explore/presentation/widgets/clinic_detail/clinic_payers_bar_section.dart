@@ -45,9 +45,9 @@ class ClinicPayersBarSection extends StatelessWidget {
                     foregroundColor: AppColors.navyBright,
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       );
     }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
@@ -384,7 +383,10 @@ class _DoctorFilters extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = local['specialties'] ?? const <String>[];
+    final selected = Set<String>.from(local['specialties'] ?? const <String>[]);
+    final specialtiesRepo = ref.watch(
+      professionalSpecialtiesRepositoryProvider,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -393,62 +395,93 @@ class _DoctorFilters extends ConsumerWidget {
         const _SectionHeader(title: 'Especialidade'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: specialtiesAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Carregando especialidades…',
-                style: TextStyle(fontSize: 13, color: AppColors.gray500),
-              ),
-            ),
-            error: (_, _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Não foi possível carregar as especialidades.',
-                  style: TextStyle(fontSize: 13, color: AppColors.gray500),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: onRetry,
-                  child: const Text(
-                    'Tentar novamente',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.blue600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            data: (specialties) {
-              final options = <String>{...specialties, ...selected}.toList()
-                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-              if (options.isEmpty) {
-                return const Text(
-                  'Nenhuma especialidade disponível no seu escopo.',
-                  style: TextStyle(fontSize: 13, color: AppColors.gray500),
-                );
-              }
-
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: options.map((s) {
-                      final on = selected.contains(s);
-                      return _SimpleChip(
-                        label: s,
-                        selected: on,
-                        onTap: () => onToggle(s),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
+          child: _SpecialtiesContent(
+            selected: selected,
+            onToggle: onToggle,
+            specialtiesRepo: specialtiesRepo,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _SpecialtiesContent extends ConsumerWidget {
+  const _SpecialtiesContent({
+    required this.selected,
+    required this.onToggle,
+    required this.specialtiesRepo,
+  });
+
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+  final ProfessionalSpecialtiesRepository specialtiesRepo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<List<String>?>(
+      future: specialtiesRepo.currentValueOrResolve(),
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Carregando especialidades…',
+              style: TextStyle(fontSize: 13, color: AppColors.gray500),
+            ),
+          );
+        }
+
+        if (data == null || snapshot.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Não foi possível carregar as especialidades.',
+                style: TextStyle(fontSize: 13, color: AppColors.gray500),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () =>
+                    ref.invalidate(professionalSpecialtiesRepositoryProvider),
+                child: const Text(
+                  'Tentar novamente',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.blue600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        final options = <String>{...data, ...selected}.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+        if (options.isEmpty) {
+          return const Text(
+            'Nenhuma especialidade disponível no seu escopo.',
+            style: TextStyle(fontSize: 13, color: AppColors.gray500),
+          );
+        }
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((s) {
+            final on = selected.contains(s);
+            return _SimpleChip(
+              label: s,
+              selected: on,
+              onTap: () => onToggle(s),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }
@@ -494,9 +527,7 @@ class _ToggleChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? dotColor.withValues(alpha: 0.1)
-              : AppColors.gray100,
+          color: selected ? dotColor.withValues(alpha: 0.1) : AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: selected ? dotColor : Colors.transparent),
         ),

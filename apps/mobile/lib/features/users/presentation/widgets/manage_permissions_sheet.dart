@@ -264,7 +264,9 @@ class _ManagePermissionsSheetState
                           decoration: BoxDecoration(
                             color: AppColors.surfaceTertiary,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.surfaceSecondary),
+                            border: Border.all(
+                              color: AppColors.surfaceSecondary,
+                            ),
                           ),
                           child: Row(
                             children: [

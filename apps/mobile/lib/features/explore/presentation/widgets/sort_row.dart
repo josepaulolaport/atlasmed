@@ -146,7 +146,11 @@ class _FilterChip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(Icons.close_rounded, size: 9, color: AppColors.blueDarker),
+            const Icon(
+              Icons.close_rounded,
+              size: 9,
+              color: AppColors.blueDarker,
+            ),
           ],
         ),
       ),

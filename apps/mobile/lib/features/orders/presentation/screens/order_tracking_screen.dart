@@ -109,10 +109,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                 color: Color(0x1Fb84545),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.warning_rounded,
-                color: AppColors.red,
-              ),
+              child: const Icon(Icons.warning_rounded, color: AppColors.red),
             ),
             const SizedBox(height: 14),
             const Text('Cancelar pedido?', textAlign: TextAlign.center),
@@ -290,7 +287,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.surfaceSecondary),
+                            border: Border.all(
+                              color: AppColors.surfaceSecondary,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                             color: Colors.white,
                           ),

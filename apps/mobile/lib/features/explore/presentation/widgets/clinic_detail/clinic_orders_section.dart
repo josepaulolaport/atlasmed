@@ -225,11 +225,7 @@ class _OrderCard extends StatelessWidget {
       case 'SALE':
         return ('Venda', AppColors.gray600, AppColors.gray100);
       case 'CONSIGNMENT':
-        return (
-          'Consignação',
-          AppColors.gray600,
-          AppColors.gray100,
-        );
+        return ('Consignação', AppColors.gray600, AppColors.gray100);
       case 'DONATION':
         return ('Doação', AppColors.gray600, AppColors.gray100);
       default:

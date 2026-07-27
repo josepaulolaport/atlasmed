@@ -79,72 +79,85 @@ class _NewOrderProductsScreenState
       body: SafeArea(
         child: Column(
           children: [
-            Text(
-              'NOVO PEDIDO',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF6b7280),
-                letterSpacing: 0.8,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'NOVO PEDIDO',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF6b7280),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Produtos',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0a2f7f),
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  CartBadge(
+                    totalQty: cart.totalQty,
+                    totalValue: cart.subtotal,
+                    onTap: () => context.push('/orders/new/cart'),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 2),
-            Text(
-              'Produtos',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF0a2f7f),
-                letterSpacing: -0.2,
-              ),
+            Column(
+              children: [
+                if (cart.clinic != null) _buildClinicStrip(cart),
+                _buildSearchBar(),
+                _buildCategoryChips(),
+                Expanded(
+                  child: catalog.loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : catalog.error != null
+                      ? _CatalogErrorState(
+                          onRetry: () =>
+                              ref.read(catalogProductsProvider.notifier).load(),
+                        )
+                      : products.isEmpty
+                      ? const _EmptyState()
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                          itemCount: products.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final product = products[index];
+                            final cartIndex = cart.items.indexWhere(
+                              (item) => item.productId == product.id,
+                            );
+                            final cartItem = cartIndex >= 0
+                                ? cart.items[cartIndex]
+                                : null;
+                            return _ProductCard(
+                              product: product,
+                              cartItem: cartItem,
+                              onTap: () => _openProductSheet(product, cart),
+                              onAdd: () => _openProductSheet(product, cart),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
           ],
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: CartBadge(
-              totalQty: cart.totalQty,
-              totalValue: cart.subtotal,
-              onTap: () => context.push('/orders/new/cart'),
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (cart.clinic != null) _buildClinicStrip(cart),
-          _buildSearchBar(),
-          _buildCategoryChips(),
-          Expanded(
-            child: catalog.loading
-                ? const Center(child: CircularProgressIndicator())
-                : catalog.error != null
-                ? _CatalogErrorState(
-                    onRetry: () => ref.read(catalogProductsProvider.notifier).load(),
-                  )
-                : products.isEmpty
-                ? const _EmptyState()
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                    itemCount: products.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      final cartIndex = cart.items.indexWhere(
-                        (item) => item.productId == product.id,
-                      );
-                      final cartItem = cartIndex >= 0 ? cart.items[cartIndex] : null;
-                      return _ProductCard(
-                        product: product,
-                        cartItem: cartItem,
-                        onTap: () => _openProductSheet(product, cart),
-                        onAdd: () => _openProductSheet(product, cart),
-                      );
-                    },
-                  ),
-          ),
-        ],
       ),
       floatingActionButton: cart.totalQty > 0
           ? Padding(
@@ -162,49 +175,6 @@ class _NewOrderProductsScreenState
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
-  }
-
-  Widget _buildHeader(CartState cart) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Row(
-        children: [
-          const BackChevron(),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'NOVO PEDIDO',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.gray500,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Produtos',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navyDeep,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          CartBadge(
-            totalQty: cart.totalQty,
-            totalValue: cart.subtotal,
-            onTap: () => context.push('/orders/new/cart'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -261,9 +231,7 @@ class _NewOrderProductsScreenState
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: focused
-                  ? AppColors.navyDeep
-                  : AppColors.gray200,
+              color: focused ? AppColors.navyDeep : AppColors.gray200,
               width: 1.5,
             ),
           ),

@@ -95,8 +95,7 @@ class _ActionChip extends StatelessWidget {
     final enabled = onTap != null;
     final tint = !enabled
         ? AppColors.gray300
-        : (color ??
-              (selected ? AppColors.navyDeep : AppColors.gray700));
+        : (color ?? (selected ? AppColors.navyDeep : AppColors.gray700));
     return Material(
       color: selected ? AppColors.blue50 : Colors.transparent,
       borderRadius: BorderRadius.circular(12),

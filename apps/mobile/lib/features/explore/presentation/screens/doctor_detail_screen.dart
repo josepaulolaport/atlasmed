@@ -42,12 +42,6 @@ class DoctorDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(doctorDetailRepositoryProvider(doctorId));
 
-    // Compute AppBar color from cached data if available.
-    final currentValue = repository.currentValue;
-    final appBarColor = currentValue != null
-        ? DoctorDetail.fromApi(currentValue).primaryColor
-        : null;
-
     return Scaffold(
       backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(

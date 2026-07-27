@@ -57,9 +57,9 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
                     foregroundColor: AppColors.navyBright,
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       );
     }
@@ -267,9 +267,7 @@ class _ContactRow extends StatelessWidget {
           Icon(
             icon,
             size: 15,
-            color: value != null
-                ? AppColors.navyBright
-                : AppColors.gray300,
+            color: value != null ? AppColors.navyBright : AppColors.gray300,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -278,9 +276,7 @@ class _ContactRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: value != null ? FontWeight.w500 : FontWeight.w400,
-                color: value != null
-                    ? AppColors.gray900
-                    : AppColors.gray400,
+                color: value != null ? AppColors.gray900 : AppColors.gray400,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

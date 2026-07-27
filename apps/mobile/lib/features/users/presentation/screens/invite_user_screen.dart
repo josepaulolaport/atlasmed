@@ -342,9 +342,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                             : Colors.white,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color: selected
-                              ? role.name.color
-                              : AppColors.gray200,
+                          color: selected ? role.name.color : AppColors.gray200,
                         ),
                       ),
                       child: Text(
@@ -352,9 +350,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: selected
-                              ? role.name.color
-                              : AppColors.gray700,
+                          color: selected ? role.name.color : AppColors.gray700,
                         ),
                       ),
                     ),
@@ -399,14 +395,10 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                     labelStyle: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: selected
-                          ? AppColors.navyDeep
-                          : AppColors.gray700,
+                      color: selected ? AppColors.navyDeep : AppColors.gray700,
                     ),
                     side: BorderSide(
-                      color: selected
-                          ? AppColors.navyDeep
-                          : AppColors.gray200,
+                      color: selected ? AppColors.navyDeep : AppColors.gray200,
                     ),
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(

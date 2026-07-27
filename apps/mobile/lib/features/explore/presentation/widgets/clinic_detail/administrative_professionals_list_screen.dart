@@ -221,7 +221,7 @@ class _AdministrativeProfessionalsListScreenState
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                 child: SortRow(
                   sort: _sort,
-                  onSortTap: () => setState(() => _sortOpen = true),
+                  onSortTap: _showSortSheet,
                   filterChips: _filterChips,
                 ),
               ),
@@ -479,9 +479,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                       Icon(
                         Icons.phone_outlined,
                         size: 13,
-                        color: hasPhone
-                            ? AppColors.gray500
-                            : AppColors.gray300,
+                        color: hasPhone ? AppColors.gray500 : AppColors.gray300,
                       ),
                       const SizedBox(width: 5),
                       Expanded(
@@ -525,9 +523,7 @@ class _RowBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final emphasized = label.toUpperCase().contains('DECISOR');
-    final color = emphasized
-        ? AppColors.purple
-        : AppColors.navyBright;
+    final color = emphasized ? AppColors.purple : AppColors.navyBright;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(

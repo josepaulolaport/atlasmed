@@ -217,9 +217,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.greenDark,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.greenDark),
             child: const Text('Aprovar'),
           ),
         ],
@@ -387,9 +385,7 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
                     if (text.isEmpty) return;
                     Navigator.of(context).pop(text);
                   },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.red,
-                  ),
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.red),
                   child: const Text('Rejeitar'),
                 ),
               ),

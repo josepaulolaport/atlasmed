@@ -228,14 +228,10 @@ class _EditUserAssignmentsScreenState
                 labelStyle: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: selected
-                      ? AppColors.navyDeep
-                      : AppColors.gray700,
+                  color: selected ? AppColors.navyDeep : AppColors.gray700,
                 ),
                 side: BorderSide(
-                  color: selected
-                      ? AppColors.navyDeep
-                      : AppColors.gray200,
+                  color: selected ? AppColors.navyDeep : AppColors.gray200,
                 ),
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(

@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -412,10 +413,7 @@ class _Avatar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.navyBright,
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppColors.navyBright, width: 2),
                   ),
                   child: Center(
                     child: Icon(

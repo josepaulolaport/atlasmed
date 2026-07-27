@@ -238,7 +238,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                 child: SortRow(
                   sort: _sort,
-                  onSortTap: () => setState(() => _sortOpen = true),
+                  onSortTap: _showSortSheet,
                   filterChips: _filterChips,
                 ),
               ),

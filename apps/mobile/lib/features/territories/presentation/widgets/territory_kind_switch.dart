@@ -49,9 +49,7 @@ class TerritoryKindSwitch extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: selected
-                        ? AppColors.navyDeep
-                        : AppColors.gray500,
+                    color: selected ? AppColors.navyDeep : AppColors.gray500,
                   ),
                 ),
               ),

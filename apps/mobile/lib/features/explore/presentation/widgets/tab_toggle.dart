@@ -84,9 +84,7 @@ class _Tab extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: selected
-                        ? AppColors.navyDeep
-                        : AppColors.gray400,
+                    color: selected ? AppColors.navyDeep : AppColors.gray400,
                   ),
                 ),
                 const SizedBox(width: 7),
@@ -94,9 +92,7 @@ class _Tab extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   height: 18,
                   decoration: BoxDecoration(
-                    color: selected
-                        ? AppColors.blue50
-                        : AppColors.gray100,
+                    color: selected ? AppColors.blue50 : AppColors.gray100,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Center(

@@ -190,9 +190,7 @@ class _FilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected
-                  ? AppColors.navyDeep
-                  : AppColors.gray200,
+              color: selected ? AppColors.navyDeep : AppColors.gray200,
             ),
           ),
           child: Text(

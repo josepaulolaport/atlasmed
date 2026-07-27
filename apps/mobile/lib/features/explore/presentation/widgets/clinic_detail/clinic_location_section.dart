@@ -182,46 +182,6 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
   }
 }
 
-class _ExpandButton extends StatelessWidget {
-  const _ExpandButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.blueLight,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.open_in_full_rounded,
-              size: 12,
-              color: AppColors.navyBright,
-            ),
-            SizedBox(width: 4),
-            Text(
-              'Expandir',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.navyBright,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Compact card for one nearby establishment, shown in the inline
 /// "Clínicas no raio" horizontal strip — same card language as the radius
 /// map's own nearby-clinic strip. Tapping it (the "Ver mais" affordance)

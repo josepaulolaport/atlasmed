@@ -155,112 +155,112 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
-          children: [
-            const AtlasTopBar(page: 'Mapa'),
-            const FacilityVerticalFilterBar(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-            ),
-            Expanded(
-              child: token.isEmpty
-                  ? const _MapMessage(
-                      icon: Icons.key_off_outlined,
-                      title: 'Mapa indisponível',
-                      message: 'A configuração do mapa não foi encontrada.',
-                    )
-                  : location == null
-                  ? const _MapMessage(
-                      icon: Icons.location_searching,
-                      title: 'Obtendo sua localização',
-                      message: 'Ative o GPS para ver as clínicas ao redor.',
-                      loading: true,
-                    )
-                  : _mapUnavailable
-                  ? _MapMessage(
-                      icon: Icons.map_outlined,
-                      title: 'Mapa indisponível',
-                      message:
-                          'Não foi possível carregar o mapa agora. Tente novamente.',
-                      actionLabel: 'Tentar novamente',
-                      onAction: () {
-                        setState(() {
-                          _mapUnavailable = false;
-                          _mapGeneration += 1;
-                          _mapboxMap = null;
+        children: [
+          const AtlasTopBar(page: 'Mapa'),
+          const FacilityVerticalFilterBar(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+          ),
+          Expanded(
+            child: token.isEmpty
+                ? const _MapMessage(
+                    icon: Icons.key_off_outlined,
+                    title: 'Mapa indisponível',
+                    message: 'A configuração do mapa não foi encontrada.',
+                  )
+                : location == null
+                ? const _MapMessage(
+                    icon: Icons.location_searching,
+                    title: 'Obtendo sua localização',
+                    message: 'Ative o GPS para ver as clínicas ao redor.',
+                    loading: true,
+                  )
+                : _mapUnavailable
+                ? _MapMessage(
+                    icon: Icons.map_outlined,
+                    title: 'Mapa indisponível',
+                    message:
+                        'Não foi possível carregar o mapa agora. Tente novamente.',
+                    actionLabel: 'Tentar novamente',
+                    onAction: () {
+                      setState(() {
+                        _mapUnavailable = false;
+                        _mapGeneration += 1;
+                        _mapboxMap = null;
+                        _calloutManager = null;
+                        _calloutAnnotation = null;
+                        _calloutCloseAnnotation = null;
+                        _calloutTapListenerRegistered = false;
+                        _clinicLayersReady = false;
+                        _clinicInteractionsRegistered = false;
+                        _selected = null;
+                        _pendingCapture = null;
+                        _following = true;
+                        _viewport = _followViewport;
+                      });
+                    },
+                  )
+                : Stack(
+                    children: [
+                      MapWidget(
+                        key: ValueKey('mapa-ao-vivo-$_mapGeneration'),
+                        styleUri: MapboxStyles.STANDARD,
+                        viewport: _viewport,
+                        onMapCreated: _onMapCreated,
+                        onStyleLoadedListener: (_) async {
+                          _clinicLayersReady = false;
+                          _clinicInteractionsRegistered = false;
                           _calloutManager = null;
                           _calloutAnnotation = null;
                           _calloutCloseAnnotation = null;
                           _calloutTapListenerRegistered = false;
-                          _clinicLayersReady = false;
-                          _clinicInteractionsRegistered = false;
-                          _selected = null;
-                          _pendingCapture = null;
-                          _following = true;
-                          _viewport = _followViewport;
-                        });
-                      },
-                    )
-                  : Stack(
-                      children: [
-                        MapWidget(
-                          key: ValueKey('mapa-ao-vivo-$_mapGeneration'),
-                          styleUri: MapboxStyles.STANDARD,
-                          viewport: _viewport,
-                          onMapCreated: _onMapCreated,
-                          onStyleLoadedListener: (_) async {
-                            _clinicLayersReady = false;
-                            _clinicInteractionsRegistered = false;
-                            _calloutManager = null;
-                            _calloutAnnotation = null;
-                            _calloutCloseAnnotation = null;
-                            _calloutTapListenerRegistered = false;
-                            await _enableLocationPuck();
-                            await _drawTerritory(
-                              ref.read(mapTerritoryProvider).valueOrNull,
-                            );
-                            await _ensureClinicLayers();
-                            await _refreshViewportClinics();
-                          },
-                          onMapLoadErrorListener: _onMapLoadError,
-                          onScrollListener: (_) => _stopFollowing(),
-                          onMapIdleListener: (_) => _scheduleViewportRefresh(),
-                          onCameraChangeListener: (_) {
-                            // While following, camera moves continuously —
-                            // refresh on idle is enough; debounce here too
-                            // so pans without a clean idle still update.
-                            if (!_following) _scheduleViewportRefresh();
-                          },
-                        ),
-                        if (_pendingCapture != null)
-                          Positioned(
-                            left: -1000,
-                            top: 0,
-                            child: RepaintBoundary(
-                              key: _calloutCaptureKey,
-                              child: ClinicPinCalloutContent(
-                                establishment: _pendingCapture!,
-                              ),
-                            ),
-                          ),
+                          await _enableLocationPuck();
+                          await _drawTerritory(
+                            ref.read(mapTerritoryProvider).valueOrNull,
+                          );
+                          await _ensureClinicLayers();
+                          await _refreshViewportClinics();
+                        },
+                        onMapLoadErrorListener: _onMapLoadError,
+                        onScrollListener: (_) => _stopFollowing(),
+                        onMapIdleListener: (_) => _scheduleViewportRefresh(),
+                        onCameraChangeListener: (_) {
+                          // While following, camera moves continuously —
+                          // refresh on idle is enough; debounce here too
+                          // so pans without a clean idle still update.
+                          if (!_following) _scheduleViewportRefresh();
+                        },
+                      ),
+                      if (_pendingCapture != null)
                         Positioned(
                           left: -1000,
                           top: 0,
                           child: RepaintBoundary(
-                            key: _closeButtonCaptureKey,
-                            child: const ClinicPinCalloutCloseButton(),
+                            key: _calloutCaptureKey,
+                            child: ClinicPinCalloutContent(
+                              establishment: _pendingCapture!,
+                            ),
                           ),
                         ),
-                        Positioned(
-                          right: 16,
-                          bottom: 16,
-                          child: _RecenterButton(
-                            following: _following,
-                            onPressed: _resumeFollowing,
-                          ),
+                      Positioned(
+                        left: -1000,
+                        top: 0,
+                        child: RepaintBoundary(
+                          key: _closeButtonCaptureKey,
+                          child: const ClinicPinCalloutCloseButton(),
                         ),
-                      ],
-                    ),
-            ),
-          ],
+                      ),
+                      Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: _RecenterButton(
+                          following: _following,
+                          onPressed: _resumeFollowing,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -1108,9 +1108,7 @@ class _RecenterButton extends StatelessWidget {
           height: 48,
           child: Icon(
             following ? Icons.my_location_rounded : Icons.navigation_rounded,
-            color: following
-                ? AppColors.navyBright
-                : AppColors.gray900,
+            color: following ? AppColors.navyBright : AppColors.gray900,
             size: 22,
           ),
         ),

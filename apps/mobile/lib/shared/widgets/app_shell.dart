@@ -117,7 +117,9 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       toolbarHeight: preferredSize.height,
-      shape: const Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+      shape: const Border(
+        bottom: BorderSide(color: AppColors.surfaceSecondary),
+      ),
       titleSpacing: 0,
       title: _AtlasTopBarContent(page: page, compact: compact),
       systemOverlayStyle: .dark,

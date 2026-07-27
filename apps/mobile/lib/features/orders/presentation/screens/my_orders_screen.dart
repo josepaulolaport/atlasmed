@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
@@ -358,7 +357,11 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 10),
             PStatusChip(status: order.status),
             const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary),
+            const Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColors.surfaceSecondary,
+            ),
             const SizedBox(height: 10),
             Row(
               children: [

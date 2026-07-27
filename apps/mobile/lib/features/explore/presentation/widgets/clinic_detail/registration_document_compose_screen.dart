@@ -713,9 +713,7 @@ class _ActionChip extends StatelessWidget {
               Icon(
                 icon,
                 size: 18,
-                color: onTap == null
-                    ? AppColors.gray400
-                    : AppColors.navyBright,
+                color: onTap == null ? AppColors.gray400 : AppColors.navyBright,
               ),
               const SizedBox(width: 6),
               Text(
