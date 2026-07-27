@@ -123,4 +123,38 @@ describe("serializeFacility", () => {
 
     expect(dto.lastVisitAt).toBe(lastVisitAt.toISOString());
   });
+  it("returns null nextEstimatedPurchaseDate when there is no last purchase", () => {
+    const dto = serializeFacility(
+      baseFacility({ lastValidPurchaseDate: null, purchaseIntervalDays: 30 }),
+    );
+
+    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBeNull();
+  });
+
+  it("calculates nextEstimatedPurchaseDate from last purchase date + interval", () => {
+    const dto = serializeFacility(
+      baseFacility({
+        lastValidPurchaseDate: "2025-12-15",
+        purchaseIntervalDays: 30,
+      }),
+    );
+
+    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBe(
+      "2026-01-14T00:00:00.000Z",
+    );
+  });
+
+  it("calculates nextEstimatedPurchaseDate with a 7-day interval", () => {
+    const dto = serializeFacility(
+      baseFacility({
+        lastValidPurchaseDate: "2026-01-10",
+        purchaseIntervalDays: 7,
+      }),
+    );
+
+    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBe(
+      "2026-01-17T00:00:00.000Z",
+    );
+  });
+
 });
