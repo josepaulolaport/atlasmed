@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builde
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
     show facilityRosterPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';

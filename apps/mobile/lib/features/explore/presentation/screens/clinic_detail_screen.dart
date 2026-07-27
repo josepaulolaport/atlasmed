@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
@@ -136,15 +137,16 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
           const SizedBox(width: 6),
         ],
       ),
-      body: RepositoryBuilder<FacilityZipRepository, Facility>(
+      body: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
         repository: repo,
         builder: (context, data, _) {
           if (data == null) {
             return _loadingSkeleton(context);
           }
           return _ClinicDetailBody(
-            detail: data,
+            detail: data.facility,
             clinicId: clinicId,
+            integrations: data,
           );
         },
       ),
@@ -381,10 +383,15 @@ Future<void> _openPurchaseRecurrenceEditor(
 // Body — fixed blue header (outside the scroll) + scrollable sections
 // ===============================================================
 class _ClinicDetailBody extends ConsumerWidget {
-  const _ClinicDetailBody({required this.detail, required this.clinicId});
+  const _ClinicDetailBody({
+    required this.detail,
+    required this.clinicId,
+    this.integrations,
+  });
 
   final Facility detail;
   final String clinicId;
+  final FacilityWithIntegrations? integrations;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -420,6 +427,7 @@ class _ClinicDetailBody extends ConsumerWidget {
         detail: detail,
         clinicId: clinicId,
         sections: sections,
+        integrations: integrations,
       ),
     );
   }
@@ -432,10 +440,12 @@ class _ClinicDetailContent extends ConsumerWidget {
   final Facility detail;
   final String clinicId;
   final EstablishmentDetailSections? sections;
+  final FacilityWithIntegrations? integrations;
   const _ClinicDetailContent({
     required this.detail,
     required this.clinicId,
     this.sections,
+    this.integrations,
   });
 
   @override
@@ -450,11 +460,13 @@ class _ClinicDetailContent extends ConsumerWidget {
     final payersState = ref.watch(facilityPayersProvider(clinicId));
     final ordersState = ref.watch(facilityOrdersProvider(clinicId));
     // Prefer zipped data (from FacilityZipRepository) over individual providers.
-    final effectivePayers = detail.payerShares.isNotEmpty
-        ? detail.payerShares
+    final effectivePayers = (integrations?.payerShares != null &&
+            integrations!.payerShares.isNotEmpty)
+        ? integrations!.payerShares
         : payersState.payers;
-    final effectiveOrders = detail.orders.isNotEmpty
-        ? detail.orders
+    final effectiveOrders = (integrations?.orders != null &&
+            integrations!.orders.isNotEmpty)
+        ? integrations!.orders
         : ordersState.orders;
     final location = establishmentLocationFromDetail(detail);
     final nearbyAsync = ref.watch(facilityNearbyPreviewProvider(clinicId));

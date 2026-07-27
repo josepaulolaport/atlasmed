@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
+import 'package:flutter/painting.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // Facility — modelo completo para o detail screen
@@ -198,6 +199,25 @@ class FacilityCommercial {
     this.conformityStatus,
     this.doctorCount = 0,
   });
+
+  /// Parsed status label from the raw [commercialStatus] string.
+  /// Falls back to a default label when null.
+  StatusLabel get statusLabel {
+    return switch (commercialStatus?.toUpperCase()) {
+      'ACTIVE' => StatusLabel('Ativa', const Color(0xFF16a373)),
+      'REGISTERED' => StatusLabel('Registrada', const Color(0xFF3b82f6)),
+      'SUSPENDED' => StatusLabel('Suspensa', const Color(0xFFc6861b)),
+      'INACTIVE' => StatusLabel('Inativa', const Color(0xFF6b7280)),
+      _ => StatusLabel('Sem status', const Color(0xFF9ca3af)),
+    };
+  }
+}
+
+/// Small value class for status label + color pairs.
+class StatusLabel {
+  final String label;
+  final Color color;
+  const StatusLabel(this.label, this.color);
 }
 
 class FacilityTerritory {

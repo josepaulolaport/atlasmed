@@ -198,8 +198,8 @@ class ClinicHeaderSection extends ConsumerWidget {
                     ] else
                       _SignalChip(
                         category: 'Status',
-                        label: detail.commercial?.statusLabel.label,
-                        dotColor: detail.commercial?.statusLabel.color,
+                        label: detail.commercial?.statusLabel.label ?? 'Sem status',
+                        dotColor: detail.commercial?.statusLabel.color ?? const Color(0xFF9ca3af),
                       ),
                   ],
                 ),

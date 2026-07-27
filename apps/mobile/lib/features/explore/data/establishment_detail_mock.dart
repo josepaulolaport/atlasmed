@@ -678,30 +678,26 @@ Facility? mockClinicDetailForNearbyId(String id) {
     distanceKm: 0,
     professionalCount: 8,
     address: FacilityAddress(
+      streetAddress: seed.streetAddress,
+      streetNumber: seed.streetNumber,
+      addressComplement: seed.addressComplement,
+      neighborhood: seed.neighborhood,
       city: 'São Paulo',
       state: 'SP',
-      neighborhood: seed.neighborhood,
+      postalCode: '01310-100',
     ),
     contact: FacilityContact(
       phone: seed.phone,
       whatsapp: seed.whatsapp,
+      email: seed.email ?? 'contato@clinica.example',
     ),
     territory: FacilityTerritory(
       consultantName: 'Ana Silva',
       consultantSince: DateTime(2023, 3, 1),
     ),
-    contact: FacilityContact(
-      email: seed.email ?? 'contato@clinica.example',
-    ),
     registration: FacilityRegistration(
       taxIdType: 'CNPJ',
       cnpj: seed.cnpj,
-    ),
-    address: FacilityAddress(
-      streetAddress: seed.streetAddress,
-      streetNumber: seed.streetNumber,
-      addressComplement: seed.addressComplement,
-      postalCode: '01310-100',
     ),
   );
 }

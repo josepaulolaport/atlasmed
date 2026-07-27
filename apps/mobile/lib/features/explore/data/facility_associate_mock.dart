@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
 /// Mock CRM pool of doctors that can be associated to a facility.
 /// Phase 1 — no search API yet.

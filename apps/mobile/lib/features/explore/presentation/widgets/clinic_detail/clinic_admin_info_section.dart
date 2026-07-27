@@ -137,7 +137,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           if (detail.registration?.registeredSince != null)
             (
               label: 'Cliente desde',
-              value: _formatDate(detail.registration?.registeredSince!),
+              value: _formatDate(detail.registration!.registeredSince!),
               icon: Icons.date_range_outlined,
               onEdit: null,
               fieldKey: null,
@@ -153,7 +153,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'Cidade',
-            value: detail.address?.city.trim().isEmpty
+            value: (detail.address?.city ?? '').trim().isEmpty
                 ? null
                 : detail.address?.city,
             icon: Icons.location_city_outlined,

@@ -39,10 +39,8 @@ class DoctorRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final hslBg = HSLColor.fromAHSL(1.0, doctor.hue, 0.48, 0.88);
     final hslText = HSLColor.fromAHSL(1.0, doctor.hue, 0.55, 0.32);
-    final clinic = doctor.primaryClinic.trim();
-    final crm = doctor.crm.trim();
+    final crm = doctor.crm ?? '';
     final meta = [
-      if (clinic.isNotEmpty) clinic,
       if (crm.isNotEmpty) crm,
     ].join(' · ');
     final phoneLabel = phone?.trim();
@@ -78,20 +76,7 @@ class DoctorRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (doctor.isPriority)
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppColors.rose,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
+
               ],
             ),
             const SizedBox(width: 12),
@@ -109,10 +94,10 @@ class DoctorRow extends StatelessWidget {
                       letterSpacing: -0.15,
                     ),
                   ),
-                  if (doctor.specialty.trim().isNotEmpty) ...[
+                  if ((doctor.specialty ?? '').trim().isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      doctor.specialty,
+                      doctor.specialty ?? '',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12.5,
