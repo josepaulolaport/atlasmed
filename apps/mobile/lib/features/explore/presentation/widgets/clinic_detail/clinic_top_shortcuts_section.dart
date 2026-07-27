@@ -47,13 +47,10 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
           _ShortcutCard(
             icon: Icons.assignment_outlined,
             title: 'Cadastro',
-            badge: pendingDocs == null
-                ? const _ShortcutBadge.neutral('…')
-                : pendingDocs == 0
-                ? const _ShortcutBadge.complete('Completo')
-                : _ShortcutBadge.pending(
-                    '$pendingDocs pendente${pendingDocs == 1 ? '' : 's'}',
-                  ),
+            badge: switch (pendingDocs) {
+              null => const _ShortcutBadge.neutral('…'),
+              final count => _pendingCountBadge(count, 'Completo'),
+            },
             onTap: () async {
               await Navigator.of(context).push<void>(
                 MaterialPageRoute(
@@ -70,11 +67,7 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
           _ShortcutCard(
             icon: Icons.admin_panel_settings_outlined,
             title: 'Dados administrativos',
-            badge: adminPending == 0
-                ? const _ShortcutBadge.complete('Completo')
-                : _ShortcutBadge.pending(
-                    '$adminPending pendente${adminPending == 1 ? '' : 's'}',
-                  ),
+            badge: _pendingCountBadge(adminPending, 'Completo'),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => ClinicAdminInfoScreen(detail: detail),
@@ -85,11 +78,7 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
           _ShortcutCard(
             icon: Icons.rate_review_outlined,
             title: 'Não Conformidades',
-            badge: pendingSuggestions == 0
-                ? const _ShortcutBadge.complete('Em dia')
-                : _ShortcutBadge.pending(
-                    '$pendingSuggestions pendente${pendingSuggestions == 1 ? '' : 's'}',
-                  ),
+            badge: _pendingCountBadge(pendingSuggestions, 'Em dia'),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => MySuggestionsScreen.clinic(
@@ -104,6 +93,12 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
     );
   }
 }
+
+_ShortcutBadge _pendingCountBadge(int count, String completeLabel) =>
+    switch (count) {
+      0 => _ShortcutBadge.complete(completeLabel),
+      final n => _ShortcutBadge.pending('$n pendente${n == 1 ? '' : 's'}'),
+    };
 
 int _adminInfoPendingCount(Facility detail) {
   bool empty(String? v) => v == null || v.trim().isEmpty;
@@ -142,47 +137,52 @@ class _ShortcutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        decoration: BoxDecoration(
-          color: Colors.white,
+    return Container(
+      clipBehavior: .antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.white,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 19, color: AppColors.navyBright),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(
+              children: [
+                Icon(icon, size: 19, color: AppColors.navyBright),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gray900,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                badge,
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray400,
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            badge,
-            const SizedBox(width: 6),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: AppColors.gray400,
-            ),
-          ],
+          ),
         ),
       ),
     );
