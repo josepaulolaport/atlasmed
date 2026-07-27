@@ -168,11 +168,7 @@ class _Slice {
 }
 
 class _LegendRow extends StatelessWidget {
-  const _LegendRow({
-    required this.slice,
-    required this.total,
-    this.onTap,
-  });
+  const _LegendRow({required this.slice, required this.total, this.onTap});
 
   final _Slice slice;
   final int total;
