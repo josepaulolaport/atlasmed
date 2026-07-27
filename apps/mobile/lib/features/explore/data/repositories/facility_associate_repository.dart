@@ -34,7 +34,8 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   RepositoryHttpClient get client => _client ?? super.client;
 
   @override
-  PaginatedProfessionals fromJson(String json) => PaginatedProfessionals.fromJson(json);
+  PaginatedProfessionals fromJson(String json) =>
+      PaginatedProfessionals.fromJson(json);
 
   Future<List<ProfessionalRoster>> searchDoctors({
     String? search,

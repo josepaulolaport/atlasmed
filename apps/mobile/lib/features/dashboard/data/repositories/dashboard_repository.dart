@@ -12,7 +12,7 @@ class DashboardRepository extends Repository<DashboardSummary>
     : _verticalId = verticalId,
       super(
         endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/dashboard/summary'
+          '${AppConfig.apiBaseUrl}/api/v1/dashboard/summary',
         ).replace(queryParameters: {'verticalId': verticalId}),
         resolveOnCreate: false,
       );

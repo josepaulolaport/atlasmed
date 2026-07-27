@@ -51,7 +51,8 @@ enum TerritoryMode {
   assigned,
   empty;
 
-  bool get showMap => this == TerritoryMode.overview || this == TerritoryMode.assigned;
+  bool get showMap =>
+      this == TerritoryMode.overview || this == TerritoryMode.assigned;
 
   static TerritoryMode fromJson(String value) {
     return switch (value) {

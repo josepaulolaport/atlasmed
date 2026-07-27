@@ -82,7 +82,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   }
 
   @override
-  PaginatedProfessionals fromJson(String json) => PaginatedProfessionals.fromJson(json);
+  PaginatedProfessionals fromJson(String json) =>
+      PaginatedProfessionals.fromJson(json);
 
   /// Patches a single person-level field via `PATCH /api/v1/professionals/:id`.
   /// Pass [value] `null` to clear a nullable column.

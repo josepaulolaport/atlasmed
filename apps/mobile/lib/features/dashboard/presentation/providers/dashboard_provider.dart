@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Repository provider — each [verticalId] gets its own repository instance.
 /// Caches are isolated per vertical; `.autoDispose` discards the repository
 /// when the vertical is no longer watched (e.g. after a switch).
-final dashboardRepositoryProvider =
-    Provider.autoDispose.family<DashboardRepository, String>((ref, verticalId) {
-  return DashboardRepository(verticalId: verticalId);
-});
+final dashboardRepositoryProvider = Provider.autoDispose
+    .family<DashboardRepository, String>((ref, verticalId) {
+      return DashboardRepository(verticalId: verticalId);
+    });
 
 /// Currently selected vertical. `null` means "not yet resolved".
 final dashboardSelectedVerticalIdProvider = StateProvider<String?>(

@@ -695,10 +695,7 @@ Facility? mockClinicDetailForNearbyId(String id) {
       consultantName: 'Ana Silva',
       consultantSince: DateTime(2023, 3, 1),
     ),
-    registration: FacilityRegistration(
-      taxIdType: 'CNPJ',
-      cnpj: seed.cnpj,
-    ),
+    registration: FacilityRegistration(taxIdType: 'CNPJ', cnpj: seed.cnpj),
   );
 }
 

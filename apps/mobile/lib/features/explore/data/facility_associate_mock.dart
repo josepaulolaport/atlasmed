@@ -96,5 +96,3 @@ List<AdministrativeProfessional> mockAssociableProfessionals() => const [
     isPartner: true,
   ),
 ];
-
-

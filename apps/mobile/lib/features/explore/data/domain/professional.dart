@@ -85,7 +85,10 @@ class Professional {
       relationshipLabel: '',
       notes: const [],
       clinics: dto.facilities
-          .map((f) => ProfessionalClinic(id: f.id, name: f.name, role: '', days: ''))
+          .map(
+            (f) =>
+                ProfessionalClinic(id: f.id, name: f.name, role: '', days: ''),
+          )
           .toList(growable: false),
       gallery: const [],
       signals: const [],

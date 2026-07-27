@@ -32,8 +32,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// creates a new repo via family, and [build] also calls [ref.listen] to
   /// auto-trigger the first fetch.
   Future<void> _initVertical() async {
-    final options =
-        await ref.read(dashboardVerticalOptionsProvider.future);
+    final options = await ref.read(dashboardVerticalOptionsProvider.future);
     if (options.isEmpty) return;
     ref.read(dashboardSelectedVerticalIdProvider.notifier).state =
         options.first.id;
@@ -62,7 +61,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     // Once a vertical is selected, get its dedicated repository.
     // Build falls through to the "waiting" state when still null.
-    final String? effectiveVerticalId = selectedVerticalId ??
+    final String? effectiveVerticalId =
+        selectedVerticalId ??
         optionsAsync.maybeWhen(
           data: (o) => o.isNotEmpty ? o.first.id : null,
           orElse: () => null,
@@ -70,12 +70,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     // Trigger a fetch whenever the repository instance changes
     // (first creation or vertical switch).
-    ref.listen<String?>(
-      dashboardSelectedVerticalIdProvider,
-      (prev, next) {
-        if (next != null && next != prev) _triggerFetch(next);
-      },
-    );
+    ref.listen<String?>(dashboardSelectedVerticalIdProvider, (prev, next) {
+      if (next != null && next != prev) _triggerFetch(next);
+    });
 
     final repository = effectiveVerticalId != null
         ? ref.watch(dashboardRepositoryProvider(effectiveVerticalId))
@@ -96,8 +93,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: VerticalSelector(
                     verticals: options,
-                    selectedVerticalId:
-                        selectedVerticalId ?? options.first.id,
+                    selectedVerticalId: selectedVerticalId ?? options.first.id,
                     allowAll: false,
                     onChanged: _onVerticalChanged,
                   ),
@@ -125,9 +121,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           );
                           if (verticalId != null) {
                             ref
-                                .read(
-                                    selectedFacilityVerticalIdProvider.notifier)
-                                .state = verticalId;
+                                    .read(
+                                      selectedFacilityVerticalIdProvider
+                                          .notifier,
+                                    )
+                                    .state =
+                                verticalId;
                           }
                           ref
                               .read(exploreProvider.notifier)
