@@ -7,10 +7,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_doctor_profile_sheet.dart';
 
 /// Search + multi-select doctors to associate with a facility.
-/// Returns the newly associated doctors (not already on the facility).
+/// Returns the selected doctors (already-associated + newly picked).
 Future<List<FacilityCrmDoctor>?> showAssociateDoctorsSheet(
   BuildContext context, {
   required Set<String> alreadyAssociatedIds,
+  required List<FacilityCrmDoctor> alreadyAssociatedDoctors,
   String? facilityId,
 }) {
   return showModalBottomSheet<List<FacilityCrmDoctor>>(
@@ -23,6 +24,7 @@ Future<List<FacilityCrmDoctor>?> showAssociateDoctorsSheet(
     ),
     builder: (_) => _AssociateDoctorsSheet(
       alreadyAssociatedIds: alreadyAssociatedIds,
+      alreadyAssociatedDoctors: alreadyAssociatedDoctors,
       facilityId: facilityId,
     ),
   );
@@ -31,10 +33,12 @@ Future<List<FacilityCrmDoctor>?> showAssociateDoctorsSheet(
 class _AssociateDoctorsSheet extends StatefulWidget {
   const _AssociateDoctorsSheet({
     required this.alreadyAssociatedIds,
+    required this.alreadyAssociatedDoctors,
     this.facilityId,
   });
 
   final Set<String> alreadyAssociatedIds;
+  final List<FacilityCrmDoctor> alreadyAssociatedDoctors;
   final String? facilityId;
 
   @override
@@ -50,6 +54,9 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   String? _error;
   Timer? _debounce;
 
+  /// Cached copy of already-associated doctors for pinning at the top.
+  List<FacilityCrmDoctor> get _associated => widget.alreadyAssociatedDoctors;
+
   bool get _useApi {
     final id = widget.facilityId;
     if (id == null || id.isEmpty) return false;
@@ -59,6 +66,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   @override
   void initState() {
     super.initState();
+    _selected.addAll(widget.alreadyAssociatedIds);
     _loadPool();
   }
 
@@ -76,12 +84,17 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
 
     try {
       if (!_useApi) {
-        final pool = mockAssociableDoctors()
-            .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
-            .toList();
+        // Merge mock pool with already-associated doctors (for pinning).
+        final base = mockAssociableDoctors();
+        final merged = <FacilityCrmDoctor>[...base];
+        for (final d in _associated) {
+          if (!merged.any((m) => m.id == d.id)) {
+            merged.add(d);
+          }
+        }
         if (!mounted) return;
         setState(() {
-          _pool = pool;
+          _pool = merged;
           _loading = false;
         });
         return;
@@ -90,12 +103,17 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
       final repo = FacilityAssociateRepository(widget.facilityId!);
       try {
         final pool = await repo.searchDoctors(search: search);
-        final filtered = pool
-            .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
-            .toList();
+        // Merge pool with already-associated doctors (search may not
+        // return them since they're already linked to this facility).
+        final merged = <FacilityCrmDoctor>[...pool];
+        for (final d in _associated) {
+          if (!merged.any((m) => m.id == d.id)) {
+            merged.add(d);
+          }
+        }
         if (!mounted) return;
         setState(() {
-          _pool = filtered;
+          _pool = merged;
           _loading = false;
         });
       } finally {
@@ -132,6 +150,49 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               (d.crm?.toLowerCase().contains(q) ?? false),
         )
         .toList();
+  }
+
+  /// Combined items list with section headers for the list view.
+  /// Items are either [String] section headers or [FacilityCrmDoctor] rows.
+  List<Object> get _sectionedItems {
+    final fd = _filtered;
+    if (fd.isEmpty) return const [];
+
+    final associated = fd
+        .where((d) => widget.alreadyAssociatedIds.contains(d.id))
+        .toList();
+    final available = fd
+        .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
+        .toList();
+
+    final items = <Object>[];
+    if (associated.isNotEmpty) {
+      items.add('_section_header_associated');
+      items.addAll(associated);
+    }
+    if (available.isNotEmpty) {
+      if (associated.isNotEmpty) {
+        items.add('_section_divider');
+      }
+      items.add('_section_header_available');
+      items.addAll(available);
+    }
+    return items;
+  }
+
+  Widget _buildSectionHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF6b7280),
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
   }
 
   @override
@@ -231,76 +292,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                       ),
                     ),
                   )
-                : ListView.separated(
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, _) => const Divider(
-                      height: 1,
-                      indent: 72,
-                      color: Color(0xFFeef0f3),
-                    ),
-                    itemBuilder: (_, i) {
-                      final d = filtered[i];
-                      final selected = _selected.contains(d.id);
-                      return CheckboxListTile(
-                        value: selected,
-                        onChanged: _saving
-                            ? null
-                            : (v) {
-                                setState(() {
-                                  if (v == true) {
-                                    _selected.add(d.id);
-                                  } else {
-                                    _selected.remove(d.id);
-                                  }
-                                });
-                              },
-                        controlAffinity: ListTileControlAffinity.trailing,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                        ),
-                        secondary: CircleAvatar(
-                          backgroundColor: HSLColor.fromAHSL(
-                            1,
-                            d.hue,
-                            0.48,
-                            0.88,
-                          ).toColor(),
-                          child: Text(
-                            d.initials,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: HSLColor.fromAHSL(
-                                1,
-                                d.hue,
-                                0.55,
-                                0.32,
-                              ).toColor(),
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          d.name,
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF0f1729),
-                          ),
-                        ),
-                        subtitle: Text(
-                          [
-                            if (d.specialty != null) d.specialty!,
-                            if (d.crm != null) d.crm!,
-                          ].join(' · '),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6b7280),
-                          ),
-                        ),
-                        activeColor: const Color(0xFF1e40af),
-                      );
-                    },
-                  ),
+                : _buildDoctorList(filtered, _sectionedItems),
           ),
           Container(
             padding: EdgeInsets.fromLTRB(
@@ -368,6 +360,100 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     );
   }
 
+  Widget _buildDoctorList(
+    List<FacilityCrmDoctor> filtered,
+    List<Object> sectioned,
+  ) {
+    return ListView.builder(
+      itemCount: sectioned.length,
+      itemBuilder: (_, i) {
+        final item = sectioned[i];
+        // Section header
+        if (item is String) {
+          switch (item) {
+            case '_section_header_associated':
+              return _buildSectionHeader('Já associados');
+            case '_section_header_available':
+              return _buildSectionHeader('Disponíveis');
+            case '_section_divider':
+              return const Divider(
+                height: 12,
+                indent: 20,
+                endIndent: 20,
+                color: Color(0xFFe5e7eb),
+              );
+          }
+          return const SizedBox.shrink();
+        }
+
+        // Doctor row
+        final d = item as FacilityCrmDoctor;
+        final selected = _selected.contains(d.id);
+        final isAssociated = widget.alreadyAssociatedIds.contains(d.id);
+        return CheckboxListTile(
+          value: selected,
+          onChanged: _saving
+              ? null
+              : (v) {
+                  if (v == false && isAssociated) {
+                    setState(() => _selected.remove(d.id));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        duration: const Duration(seconds: 4),
+                        content: Text('${d.name} removido'),
+                        action: SnackBarAction(
+                          label: 'Desfazer',
+                          onPressed: () {
+                            setState(() => _selected.add(d.id));
+                          },
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  } else {
+                    setState(() {
+                      if (v == true) {
+                        _selected.add(d.id);
+                      } else {
+                        _selected.remove(d.id);
+                      }
+                    });
+                  }
+                },
+          controlAffinity: ListTileControlAffinity.trailing,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          secondary: CircleAvatar(
+            backgroundColor: HSLColor.fromAHSL(1, d.hue, 0.48, 0.88).toColor(),
+            child: Text(
+              d.initials,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: HSLColor.fromAHSL(1, d.hue, 0.55, 0.32).toColor(),
+              ),
+            ),
+          ),
+          title: Text(
+            d.name,
+            style: const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0f1729),
+            ),
+          ),
+          subtitle: Text(
+            [
+              if (d.specialty != null) d.specialty!,
+              if (d.crm != null) d.crm!,
+            ].join(' · '),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
+          ),
+          activeColor: const Color(0xFF1e40af),
+        );
+      },
+    );
+  }
+
   Future<void> _createProfile() async {
     final created = await showCreateDoctorProfileSheet(
       context,
@@ -402,10 +488,13 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     setState(() => _saving = true);
     final repo = FacilityAssociateRepository(widget.facilityId!);
     try {
+      // Only call associate for doctors not already linked — already-
+      // associated ones are pre-checked and don't need an API call.
+      final newlySelected = chosen
+          .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
+          .toList();
       final associated = <FacilityCrmDoctor>[];
-      for (final doctor in chosen) {
-        // Re-associating is idempotent enough for UX; create-with-facility
-        // already linked — associate again is fine / may no-op or refresh.
+      for (final doctor in newlySelected) {
         await repo.associateDoctor(doctor.id);
         associated.add(doctor);
       }
