@@ -6,7 +6,6 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/cata
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/comparison_table.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Tabela Brasíndice/Simpro" screen — the complete price index: every
 /// AtlasMed product and every competitor product in the catalog, flattened
@@ -65,40 +64,38 @@ class _CatalogPriceIndexScreenState
     final indexAsync = ref.watch(catalogPriceIndexProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AtlasTopBar(page: 'Catálogo'),
-            const CatalogTabBar(active: CatalogTab.tabelaCompleta),
-            CatalogSearchBar(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              hintText: 'Buscar produto…',
-              onFilter: () => showSortFilterSheet(
-                context,
-                current: _sortColumn,
-                onSelect: _onSortChanged,
-              ),
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Catálogo'),
+      body: Column(
+        children: [
+          const CatalogTabBar(active: CatalogTab.tabelaCompleta),
+          CatalogSearchBar(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            hintText: 'Buscar produto…',
+            onFilter: () => showSortFilterSheet(
+              context,
+              current: _sortColumn,
+              onSelect: _onSortChanged,
             ),
-            Expanded(
-              child: indexAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => CatalogErrorState(
-                  onRetry: () => ref.invalidate(catalogPriceIndexProvider),
-                ),
-                data: (rows) {
-                  final prepared = _prepared(rows);
-                  return PriceIndexTable(
-                    rows: prepared,
-                    sortColumn: _sortColumn,
-                    onSortChanged: _onSortChanged,
-                  );
-                },
+          ),
+          Expanded(
+            child: indexAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => CatalogErrorState(
+                onRetry: () => ref.invalidate(catalogPriceIndexProvider),
               ),
+              data: (rows) {
+                final prepared = _prepared(rows);
+                return PriceIndexTable(
+                  rows: prepared,
+                  sortColumn: _sortColumn,
+                  onSortChanged: _onSortChanged,
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

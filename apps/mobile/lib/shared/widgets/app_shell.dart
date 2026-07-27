@@ -13,7 +13,6 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capabilities.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ======================================================================
 // AppShellScreen — Scaffold wrapper with shared navigation drawer.
@@ -36,7 +35,7 @@ class AppShellScreen extends StatefulWidget {
 class AppShellScreenState extends State<AppShellScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  static const Color _defaultShellChromeColor = AppColors.background;
+  static const Color _defaultShellChromeColor = Color(0xFFF7F8FB);
 
   /// Finds the nearest ancestor AppShellScreenState from the given context.
   static AppShellScreenState? of(BuildContext context) =>
@@ -93,17 +92,12 @@ class AppShellScreenState extends State<AppShellScreen> {
 void openAppDrawer(BuildContext context) =>
     AppShellScreenState.of(context)?.openDrawer();
 
-// ======================================================================
-// AtlasTopBar — legacy inline bar with hamburger + breadcrumb
-//   page    — current page label ("Explorar", "Perfil", etc.)
-//   compact — drop breadcrumb for detail/sub screens
-// ======================================================================
-
 class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String page;
   final bool compact;
+  final List<Widget>? actions;
 
-  const AtlasAppBar({super.key, this.page = '', this.compact = false});
+  const AtlasAppBar({super.key, this.page = '', this.compact = false, this.actions});
 
   @override
   Size get preferredSize => const Size.fromHeight(48);
@@ -112,38 +106,16 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF7F8FB),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       toolbarHeight: preferredSize.height,
-      shape: const Border(
-        bottom: BorderSide(color: AppColors.surfaceSecondary),
-      ),
+      shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
       titleSpacing: 0,
       title: _AtlasTopBarContent(page: page, compact: compact),
-      systemOverlayStyle: .dark,
-    );
-  }
-}
-
-class AtlasTopBar extends StatelessWidget {
-  final String page;
-  final bool compact;
-
-  const AtlasTopBar({super.key, this.page = '', this.compact = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: _AtlasTopBarContent(page: page, compact: compact),
-      ),
+      actions: actions,
+      systemOverlayStyle: SystemUiOverlayStyle.dark,
     );
   }
 }
@@ -184,7 +156,7 @@ class _AtlasTopBarContent extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: AppColors.surfaceSecondary),
+          border: Border.all(color: const Color(0xFFeef0f3)),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0A0f1729),
@@ -201,7 +173,7 @@ class _AtlasTopBarContent extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.menu_rounded, color: AppColors.navyDeep, size: 15),
+            const Icon(Icons.menu_rounded, color: Color(0xFF0a2f7f), size: 15),
             // Green dot accent
             Positioned(
               top: 6,
@@ -210,7 +182,7 @@ class _AtlasTopBarContent extends StatelessWidget {
                 width: 5,
                 height: 5,
                 decoration: const BoxDecoration(
-                  color: AppColors.green,
+                  color: Color(0xFF16a373),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -238,7 +210,7 @@ class _AtlasTopBarContent extends StatelessWidget {
               fontSize: 9.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.4,
-              color: AppColors.gray400,
+              color: Color(0xFF8a94a6),
             ),
           ),
           if (page.isNotEmpty) ...[
@@ -246,7 +218,7 @@ class _AtlasTopBarContent extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 6),
               child: CircleAvatar(
                 radius: 1.5,
-                backgroundColor: AppColors.gray300,
+                backgroundColor: Color(0xFFc8cdd5),
               ),
             ),
             Flexible(
@@ -257,7 +229,7 @@ class _AtlasTopBarContent extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.1,
-                  color: AppColors.gray900,
+                  color: Color(0xFF0f1729),
                 ),
               ),
             ),
@@ -458,7 +430,7 @@ class _DrawerHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.navyDeep, AppColors.navyBright],
+          colors: [Color(0xFF0a2f7f), Color(0xFF1e40af)],
         ),
       ),
       child: Stack(
@@ -572,11 +544,11 @@ class _NavItems extends StatelessWidget {
     bool isActive,
     BuildContext context,
   ) {
-    final color = isActive ? AppColors.navyDeep : AppColors.gray700;
+    final color = isActive ? const Color(0xFF0a2f7f) : const Color(0xFF374151);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color: isActive ? AppColors.blue50 : Colors.transparent,
+        color: isActive ? const Color(0xFFeef2ff) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -605,7 +577,7 @@ class _NavItems extends StatelessWidget {
                   const Text(
                     '•',
                     style: TextStyle(
-                      color: AppColors.green,
+                      color: Color(0xFF16a373),
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -629,7 +601,7 @@ class _DrawerFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
+        border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
       ),
       child: Column(
         children: [
@@ -648,7 +620,7 @@ class _DrawerFooter extends StatelessWidget {
                       Icon(
                         Icons.logout_rounded,
                         size: 18,
-                        color: AppColors.red,
+                        color: Color(0xFFb84545),
                       ),
                       SizedBox(width: 12),
                       Text(
@@ -656,7 +628,7 @@ class _DrawerFooter extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.red,
+                          color: Color(0xFFb84545),
                         ),
                       ),
                     ],
@@ -670,7 +642,7 @@ class _DrawerFooter extends StatelessWidget {
             'Atlasmed · v0.1.0',
             style: TextStyle(
               fontSize: 10.5,
-              color: AppColors.gray400,
+              color: Color(0xFF9ca3af),
               fontWeight: FontWeight.w500,
               letterSpacing: 0.3,
             ),

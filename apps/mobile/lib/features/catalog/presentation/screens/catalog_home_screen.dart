@@ -14,7 +14,6 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
     show isAdminProvider;
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Entry point for the Catálogo de Produtos section, designed like a store
 /// catalog rather than a filing cabinet: a search box and a family filter
@@ -146,64 +145,60 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
     final families = familiesAsync.valueOrNull ?? const [];
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Catálogo'),
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
-              backgroundColor: AppColors.navyDeep,
+              backgroundColor: const Color(0xFF0a2f7f),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Novo produto'),
               onPressed: () => _openNewProductForm(families),
             )
           : null,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AtlasTopBar(page: 'Catálogo'),
-            const CatalogTabBar(active: CatalogTab.produtos),
-            CatalogSearchBar(
-              controller: _searchController,
-              onChanged: (value) => setState(() => _query = value),
-              filterCount: _filter.activeCount,
-              onFilter: () =>
-                  _openFilterSheet(familiesAsync.valueOrNull ?? const []),
-            ),
-            Expanded(
-              child: familiesAsync.when(
-                loading: () => const ProductListSkeleton(),
-                error: (error, _) => CatalogErrorState(
-                  onRetry: () => ref.invalidate(catalogFamiliesProvider),
-                ),
-                data: (families) {
-                  final entries = _filtered(families);
-                  return entries.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Nenhum produto encontrado',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: AppColors.gray400,
-                            ),
-                          ),
-                        )
-                      : ListView.separated(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                          itemCount: entries.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final (variant, family) = entries[index];
-                            return _ProductRow(
-                              variant: variant,
-                              onTap: () =>
-                                  _openQuickView(variant, family, families),
-                            );
-                          },
-                        );
-                },
+      body: Column(
+        children: [
+          const CatalogTabBar(active: CatalogTab.produtos),
+          CatalogSearchBar(
+            controller: _searchController,
+            onChanged: (value) => setState(() => _query = value),
+            filterCount: _filter.activeCount,
+            onFilter: () => _openFilterSheet(familiesAsync.valueOrNull ?? const []),
+          ),
+          Expanded(
+            child: familiesAsync.when(
+              loading: () => const ProductListSkeleton(),
+              error: (error, _) => CatalogErrorState(
+                onRetry: () => ref.invalidate(catalogFamiliesProvider),
               ),
+              data: (families) {
+                final entries = _filtered(families);
+                return entries.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Nenhum produto encontrado',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF9ca3af),
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                        itemCount: entries.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final (variant, family) = entries[index];
+                          return _ProductRow(
+                            variant: variant,
+                            onTap: () => _openQuickView(variant, family, families),
+                          );
+                        },
+                      );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -230,7 +225,7 @@ class _ProductRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.surfaceSecondary),
+            border: Border.all(color: const Color(0xFFeef0f3)),
           ),
           child: Row(
             children: [
@@ -238,13 +233,13 @@ class _ProductRow extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.blue50,
+                  color: const Color(0xFFeef2ff),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.medication_liquid_outlined,
                   size: 20,
-                  color: AppColors.navyDeep,
+                  color: Color(0xFF0a2f7f),
                 ),
               ),
               const SizedBox(width: 12),
@@ -260,7 +255,7 @@ class _ProductRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
+                        color: Color(0xFF0f1729),
                         letterSpacing: -0.1,
                       ),
                     ),
@@ -272,7 +267,7 @@ class _ProductRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11.5,
-                          color: AppColors.gray400,
+                          color: Color(0xFF9ca3af),
                         ),
                       ),
                     ],
@@ -285,14 +280,14 @@ class _ProductRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.navyDeep,
+                  color: Color(0xFF0a2f7f),
                 ),
               ),
               const SizedBox(width: 2),
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
-                color: AppColors.gray400,
+                color: Color(0xFF9ca3af),
               ),
             ],
           ),
@@ -343,7 +338,7 @@ class _VariantQuickView extends StatelessWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.gray200,
+                    color: const Color(0xFFe5e7eb),
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
@@ -387,9 +382,9 @@ class _PublicationFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: const Color(0xFFf7f8fb),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceSecondary),
+        border: Border.all(color: const Color(0xFFeef0f3)),
       ),
       child: Row(
         children: [
@@ -402,7 +397,7 @@ class _PublicationFooter extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.gray400,
+                    color: Color(0xFF9ca3af),
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -411,14 +406,14 @@ class _PublicationFooter extends StatelessWidget {
                   'Brasíndice: ${formatDate(brasindiceDate)}',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: AppColors.gray500,
+                    color: Color(0xFF6b7280),
                   ),
                 ),
                 Text(
                   'Simpro: ${formatDate(simproDate)}',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: AppColors.gray500,
+                    color: Color(0xFF6b7280),
                   ),
                 ),
               ],
@@ -429,7 +424,7 @@ class _PublicationFooter extends StatelessWidget {
             icon: const Icon(
               Icons.edit_outlined,
               size: 16,
-              color: AppColors.gray400,
+              color: Color(0xFF9ca3af),
             ),
           ),
         ],

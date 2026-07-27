@@ -7,7 +7,6 @@ import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/ca
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/cadastro_document_pages_preview.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Review one Cadastro submission: clinic snapshot + document + decide.
 class CadastroReviewDetailScreen extends ConsumerWidget {
@@ -21,25 +20,23 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
 
     if (submission == null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              const AtlasTopBar(page: 'Cadastros', compact: true),
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    'Submissão não encontrada',
-                    style: TextStyle(color: AppColors.gray500),
-                  ),
+        backgroundColor: const Color(0xFFf7f8fb),
+        appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
+        body: Column(
+          children: [
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'Submissão não encontrada',
+                  style: TextStyle(color: Color(0xFF6b7280)),
                 ),
               ),
-              TextButton(
-                onPressed: () => context.pop(),
-                child: const Text('Voltar'),
-              ),
-            ],
-          ),
+            ),
+            TextButton(
+              onPressed: () => context.pop(),
+              child: const Text('Voltar'),
+            ),
+          ],
         ),
       );
     }
@@ -49,15 +46,14 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
         submission.isPending && ref.watch(canReviewCadastroProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AtlasTopBar(page: 'Cadastros', compact: true),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
@@ -65,7 +61,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       label: const Text('Fila'),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.navyBright,
+                        foregroundColor: const Color(0xFF1e40af),
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -79,7 +75,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.navyDeep,
+                            color: Color(0xFF0a2f7f),
                           ),
                         ),
                       ),
@@ -92,7 +88,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                     '${_formatDateTime(submission.submittedAt)}',
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: AppColors.gray500,
+                      color: Color(0xFF6b7280),
                     ),
                   ),
                   if (submission.reviewedAt != null) ...[
@@ -103,7 +99,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                       '${_formatDateTime(submission.reviewedAt!)}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppColors.gray400,
+                        color: Color(0xFF9ca3af),
                       ),
                     ),
                   ],
@@ -124,7 +120,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       height: 1.35,
-                      color: AppColors.gray600,
+                      color: Color(0xFF4b5563),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -133,16 +129,15 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                     height: 240,
                     emptyLabel: 'Nenhum arquivo disponível para visualização',
                   ),
-                ],
-              ),
+              ],
             ),
-            if (pending)
-              _DecisionBar(
-                onApprove: () => _approve(context, ref, submission),
-                onReject: () => _reject(context, ref, submission),
-              ),
-          ],
-        ),
+          ),
+          if (pending)
+            _DecisionBar(
+              onApprove: () => _approve(context, ref, submission),
+              onReject: () => _reject(context, ref, submission),
+            ),
+        ],
       ),
     );
   }
@@ -217,7 +212,9 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.greenDark),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF1f9254),
+            ),
             child: const Text('Aprovar'),
           ),
         ],
@@ -330,7 +327,7 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: AppColors.gray200,
+                color: const Color(0xFFe5e7eb),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -340,14 +337,14 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.gray900,
+              color: Color(0xFF0f1729),
             ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Explique o motivo para o representante poder corrigir '
             'e reenviar.',
-            style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
+            style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -357,14 +354,14 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
             decoration: InputDecoration(
               hintText: 'Ex.: Documento ilegível, envie nova foto…',
               filled: true,
-              fillColor: AppColors.surfaceTertiary,
+              fillColor: const Color(0xFFf8f9fb),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.gray200),
+                borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.gray200),
+                borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
               ),
             ),
           ),
@@ -385,7 +382,9 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
                     if (text.isEmpty) return;
                     Navigator.of(context).pop(text);
                   },
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFb84545),
+                  ),
                   child: const Text('Rejeitar'),
                 ),
               ),
@@ -410,7 +409,7 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.4,
-        color: AppColors.gray400,
+        color: Color(0xFF9ca3af),
       ),
     );
   }
@@ -458,7 +457,7 @@ class _ClinicSnapshotCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.surfaceSecondary),
+        border: Border.all(color: const Color(0xFFeef0f3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -468,14 +467,14 @@ class _ClinicSnapshotCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: AppColors.gray900,
+              color: Color(0xFF0f1729),
             ),
           ),
           if (submission.specialtyLabel != null) ...[
             const SizedBox(height: 2),
             Text(
               submission.specialtyLabel!,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.gray500),
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
             ),
           ],
           const SizedBox(height: 12),
@@ -538,7 +537,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: AppColors.gray400),
+          Icon(icon, size: 16, color: const Color(0xFF9ca3af)),
           const SizedBox(width: 8),
           SizedBox(
             width: 78,
@@ -547,14 +546,14 @@ class _InfoRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.gray500,
+                color: Color(0xFF6b7280),
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.gray900),
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF0f1729)),
             ),
           ),
         ],
@@ -574,7 +573,7 @@ class _RejectNoteBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.red50,
+        color: const Color(0xFFfde8e8),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -583,7 +582,7 @@ class _RejectNoteBanner extends StatelessWidget {
           const Icon(
             Icons.info_outline_rounded,
             size: 18,
-            color: AppColors.red,
+            color: Color(0xFFb84545),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -592,7 +591,7 @@ class _RejectNoteBanner extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12.5,
                 height: 1.35,
-                color: AppColors.red,
+                color: Color(0xFFb84545),
               ),
             ),
           ),
@@ -615,7 +614,7 @@ class _DecisionBar extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottom),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.gray200)),
+        border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
       ),
       child: Row(
         children: [
@@ -623,8 +622,8 @@ class _DecisionBar extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.red,
-                side: const BorderSide(color: AppColors.red100),
+                foregroundColor: const Color(0xFFb84545),
+                side: const BorderSide(color: Color(0xFFf5c2c2)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -638,7 +637,7 @@ class _DecisionBar extends StatelessWidget {
             child: FilledButton(
               onPressed: onApprove,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.greenDark,
+                backgroundColor: const Color(0xFF1f9254),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(

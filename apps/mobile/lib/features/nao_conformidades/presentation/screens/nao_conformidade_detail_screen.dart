@@ -6,7 +6,6 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformi
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Detail for one field-change suggestion.
 ///
@@ -35,18 +34,16 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
 
     return asyncSuggestion.when(
       loading: () => Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              const AtlasTopBar(page: 'Não Conformidades', compact: true),
-              const Expanded(
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.navyBright),
-                ),
+        backgroundColor: const Color(0xFFf7f8fb),
+        appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+        body: const Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFF1e40af)),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       error: (_, _) => _NotFound(onBack: () => context.pop()),
@@ -79,22 +76,20 @@ class _NotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AtlasTopBar(page: 'Não Conformidades', compact: true),
-            const Expanded(
-              child: Center(
-                child: Text(
-                  'Sugestão não encontrada',
-                  style: TextStyle(color: AppColors.gray500),
-                ),
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+      body: Column(
+        children: [
+          const Expanded(
+            child: Center(
+              child: Text(
+                'Sugestão não encontrada',
+                style: TextStyle(color: Color(0xFF6b7280)),
               ),
             ),
-            TextButton(onPressed: onBack, child: const Text('Voltar')),
-          ],
-        ),
+          ),
+          TextButton(onPressed: onBack, child: const Text('Voltar')),
+        ],
       ),
     );
   }
@@ -112,15 +107,14 @@ class _DetailBody extends ConsumerWidget {
     final showDecisionBar = canReview && suggestion.isPending;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AtlasTopBar(page: 'Não Conformidades', compact: true),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
@@ -128,7 +122,7 @@ class _DetailBody extends ConsumerWidget {
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       label: Text(canReview ? 'Fila' : 'Voltar'),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.navyBright,
+                        foregroundColor: const Color(0xFF1e40af),
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -142,7 +136,7 @@ class _DetailBody extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.navyDeep,
+                            color: Color(0xFF0a2f7f),
                           ),
                         ),
                       ),
@@ -160,7 +154,7 @@ class _DetailBody extends ConsumerWidget {
                     '${_formatDateTime(suggestion.submittedAt)}',
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: AppColors.gray500,
+                      color: Color(0xFF6b7280),
                     ),
                   ),
                   if (suggestion.reviewedAt != null) ...[
@@ -171,7 +165,7 @@ class _DetailBody extends ConsumerWidget {
                       '${_formatDateTime(suggestion.reviewedAt!)}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: AppColors.gray400,
+                        color: Color(0xFF9ca3af),
                       ),
                     ),
                   ],
@@ -203,16 +197,15 @@ class _DetailBody extends ConsumerWidget {
                     const SizedBox(height: 8),
                     _ReasonCard(reason: suggestion.reason!),
                   ],
-                ],
-              ),
+              ],
             ),
-            if (showDecisionBar)
-              _DecisionBar(
-                onAccept: () => _accept(context, ref, suggestion),
-                onReject: () => _showRejectDialog(context, ref, suggestion),
-              ),
-          ],
-        ),
+          ),
+          if (showDecisionBar)
+            _DecisionBar(
+              onAccept: () => _accept(context, ref, suggestion),
+              onReject: () => _showRejectDialog(context, ref, suggestion),
+            ),
+        ],
       ),
     );
   }
@@ -343,16 +336,16 @@ class _FieldChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.blueLight,
+          color: const Color(0xFFeff6ff),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.blueLight),
+          border: Border.all(color: const Color(0xFFbfdbfe)),
         ),
         child: Text(
           'Campo: $label',
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: AppColors.navyBright,
+            color: Color(0xFF1e40af),
           ),
         ),
       ),
@@ -398,7 +391,7 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.6,
-        color: AppColors.gray400,
+        color: Color(0xFF9ca3af),
       ),
     );
   }
@@ -426,7 +419,7 @@ class _TargetCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.surfaceSecondary),
+            border: Border.all(color: const Color(0xFFeef0f3)),
           ),
           child: Row(
             children: [
@@ -434,13 +427,13 @@ class _TargetCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.blueLight,
+                  color: const Color(0xFFeff6ff),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   suggestion.targetType.icon,
                   size: 20,
-                  color: AppColors.navyBright,
+                  color: const Color(0xFF1e40af),
                 ),
               ),
               const SizedBox(width: 12),
@@ -453,7 +446,7 @@ class _TargetCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
+                        color: Color(0xFF0f1729),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -461,7 +454,7 @@ class _TargetCard extends StatelessWidget {
                       suggestion.contextSubtitle,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: AppColors.gray500,
+                        color: Color(0xFF6b7280),
                       ),
                     ),
                   ],
@@ -470,7 +463,7 @@ class _TargetCard extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 22,
-                color: AppColors.navyBright,
+                color: Color(0xFF1e40af),
               ),
             ],
           ),
@@ -491,9 +484,9 @@ class _DiffCard extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.red50,
+          color: const Color(0xFFfef2f2),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.red100),
+          border: Border.all(color: const Color(0xFFfecaca)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -503,7 +496,7 @@ class _DiffCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: AppColors.gray400,
+                color: Color(0xFF9ca3af),
               ),
             ),
             const SizedBox(height: 4),
@@ -512,7 +505,7 @@ class _DiffCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: AppColors.gray900,
+                color: Color(0xFF0f1729),
               ),
             ),
             const SizedBox(height: 14),
@@ -521,7 +514,7 @@ class _DiffCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: AppColors.gray400,
+                color: Color(0xFF9ca3af),
               ),
             ),
             const SizedBox(height: 4),
@@ -529,9 +522,9 @@ class _DiffCard extends StatelessWidget {
               suggestion.currentValue,
               style: const TextStyle(
                 fontSize: 14,
-                color: AppColors.gray600,
+                color: Color(0xFF4b5563),
                 decoration: TextDecoration.lineThrough,
-                decorationColor: AppColors.error,
+                decorationColor: Color(0xFFdc2626),
               ),
             ),
             const SizedBox(height: 14),
@@ -540,7 +533,7 @@ class _DiffCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: AppColors.gray400,
+                color: Color(0xFF9ca3af),
               ),
             ),
             const SizedBox(height: 4),
@@ -549,7 +542,7 @@ class _DiffCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: AppColors.error,
+                color: Color(0xFFdc2626),
               ),
             ),
           ],
@@ -562,7 +555,7 @@ class _DiffCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceSecondary),
+        border: Border.all(color: const Color(0xFFeef0f3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -572,7 +565,7 @@ class _DiffCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: AppColors.gray400,
+              color: Color(0xFF9ca3af),
             ),
           ),
           const SizedBox(height: 4),
@@ -581,7 +574,7 @@ class _DiffCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: AppColors.navyBright,
+              color: Color(0xFF1e40af),
             ),
           ),
           const SizedBox(height: 14),
@@ -590,7 +583,7 @@ class _DiffCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: AppColors.gray400,
+              color: Color(0xFF9ca3af),
             ),
           ),
           const SizedBox(height: 4),
@@ -598,9 +591,9 @@ class _DiffCard extends StatelessWidget {
             suggestion.currentValue,
             style: const TextStyle(
               fontSize: 14,
-              color: AppColors.gray600,
+              color: Color(0xFF4b5563),
               decoration: TextDecoration.lineThrough,
-              decorationColor: AppColors.error,
+              decorationColor: Color(0xFFdc2626),
             ),
           ),
           const SizedBox(height: 14),
@@ -609,7 +602,7 @@ class _DiffCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: AppColors.gray400,
+              color: Color(0xFF9ca3af),
             ),
           ),
           const SizedBox(height: 4),
@@ -618,7 +611,7 @@ class _DiffCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: AppColors.green600,
+              color: Color(0xFF059669),
             ),
           ),
         ],
@@ -640,14 +633,14 @@ class _ReasonCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceSecondary),
+        border: Border.all(color: const Color(0xFFeef0f3)),
       ),
       child: Text(
         reason,
         style: const TextStyle(
           fontSize: 13.5,
           height: 1.4,
-          color: AppColors.gray700,
+          color: Color(0xFF374151),
         ),
       ),
     );
@@ -663,20 +656,20 @@ class _AwaitingReviewBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.amber50,
+        color: const Color(0xFFfefce8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.amber50),
+        border: Border.all(color: const Color(0xFFfde68a)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.hourglass_top_rounded, size: 18, color: AppColors.amber),
+          Icon(Icons.hourglass_top_rounded, size: 18, color: Color(0xFFa16207)),
           SizedBox(width: 8),
           Expanded(
             child: Text(
               'Aguardando análise. Aceite e rejeição ficam na fila de '
               'Não Conformidades.',
-              style: TextStyle(fontSize: 12.5, color: AppColors.amber),
+              style: TextStyle(fontSize: 12.5, color: Color(0xFF854d0e)),
             ),
           ),
         ],
@@ -696,9 +689,9 @@ class _RejectNoteBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.red50,
+        color: const Color(0xFFfef2f2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.red100),
+        border: Border.all(color: const Color(0xFFfecaca)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,7 +701,7 @@ class _RejectNoteBanner extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: AppColors.error,
+              color: Color(0xFFdc2626),
             ),
           ),
           const SizedBox(height: 4),
@@ -734,7 +727,7 @@ class _DecisionBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
+        border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
       ),
       child: Row(
         children: [
@@ -742,8 +735,8 @@ class _DecisionBar extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.red100),
+                foregroundColor: const Color(0xFFdc2626),
+                side: const BorderSide(color: Color(0xFFfecaca)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -760,7 +753,7 @@ class _DecisionBar extends StatelessWidget {
             child: FilledButton(
               onPressed: onAccept,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.green600,
+                backgroundColor: const Color(0xFF059669),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

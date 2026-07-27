@@ -18,18 +18,13 @@ class SortRow extends StatelessWidget {
   });
 
   static String labelFor(String key) {
-    switch (key) {
-      case 'name-asc':
-        return 'Nome A–Z';
-      case 'distance':
-        return 'Mais próximos';
-      case 'oldest-visit':
-        return 'Sem visita há mais tempo';
-      case 'last-contact':
-        return 'Sem contato há mais tempo';
-      default:
-        return key;
-    }
+    return switch (key) {
+      'name-asc' => 'Nome A–Z',
+      'distance' => 'Mais próximos',
+      'oldest-visit' => 'Sem visita há mais tempo',
+      'last-contact' => 'Sem contato há mais tempo',
+      _ => key,
+    };
   }
 
   @override

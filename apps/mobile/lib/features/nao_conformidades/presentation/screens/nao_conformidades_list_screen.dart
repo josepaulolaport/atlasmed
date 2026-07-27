@@ -6,7 +6,6 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/prov
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/widgets/suggestion_change_summary.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Ops queue: field-change suggestions from reps/managers + accepted history.
 class NaoConformidadesListScreen extends ConsumerStatefulWidget {
@@ -76,32 +75,31 @@ class _NaoConformidadesListScreenState
         0;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const AtlasTopBar(page: 'Não Conformidades'),
-            Expanded(
-              child: RefreshIndicator(
-                color: AppColors.navyBright,
-                backgroundColor: Colors.white,
-                strokeWidth: 2.6,
-                displacement: 48,
-                edgeOffset: 8,
-                onRefresh: _refreshQueue,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                  children: [
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Não Conformidades'),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: RefreshIndicator(
+              color: const Color(0xFF1e40af),
+              backgroundColor: Colors.white,
+              strokeWidth: 2.6,
+              displacement: 48,
+              edgeOffset: 8,
+              onRefresh: _refreshQueue,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
                     const Text(
                       'Não Conformidades',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.navyDeep,
+                        color: Color(0xFF0a2f7f),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -116,7 +114,7 @@ class _NaoConformidadesListScreenState
                                 : '$pendingCount aguardando análise',
                             style: const TextStyle(
                               fontSize: 13,
-                              color: AppColors.gray500,
+                              color: Color(0xFF6b7280),
                             ),
                           ),
                         ),
@@ -186,12 +184,11 @@ class _NaoConformidadesListScreenState
                         );
                       },
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -212,14 +209,14 @@ class _UpdatedHint extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_rounded, size: 14, color: AppColors.green600),
+          Icon(Icons.check_rounded, size: 14, color: Color(0xFF059669)),
           SizedBox(width: 4),
           Text(
             'Atualizado',
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: AppColors.green600,
+              color: Color(0xFF059669),
             ),
           ),
         ],
@@ -241,13 +238,13 @@ class _EmptyFilterState extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.blueLight,
+              color: const Color(0xFFeff6ff),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
               Icons.inbox_outlined,
               size: 26,
-              color: AppColors.navyBright,
+              color: Color(0xFF1e40af),
             ),
           ),
           const SizedBox(height: 14),
@@ -256,13 +253,13 @@ class _EmptyFilterState extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.gray700,
+              color: Color(0xFF374151),
             ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Puxe para baixo para atualizar',
-            style: TextStyle(fontSize: 12.5, color: AppColors.gray400),
+            style: TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af)),
           ),
         ],
       ),
@@ -290,20 +287,20 @@ class _ErrorState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: AppColors.gray900,
+                color: Color(0xFF0f1729),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.gray500),
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: onRetry,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.navyBright,
+                backgroundColor: const Color(0xFF1e40af),
               ),
               child: const Text('Tentar novamente'),
             ),
@@ -328,7 +325,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.navyBright : Colors.white,
+      color: selected ? const Color(0xFF1e40af) : Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -338,7 +335,9 @@ class _FilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? AppColors.navyBright : AppColors.gray200,
+              color: selected
+                  ? const Color(0xFF1e40af)
+                  : const Color(0xFFe5e7eb),
             ),
           ),
           child: Text(
@@ -346,7 +345,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.gray700,
+              color: selected ? Colors.white : const Color(0xFF374151),
             ),
           ),
         ),
@@ -374,7 +373,7 @@ class _SuggestionListCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.surfaceSecondary),
+            border: Border.all(color: const Color(0xFFeef0f3)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,7 +387,7 @@ class _SuggestionListCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
+                        color: Color(0xFF0f1729),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -398,7 +397,7 @@ class _SuggestionListCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.gray500,
+                        color: Color(0xFF6b7280),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -435,7 +434,7 @@ class _SuggestionListCard extends StatelessWidget {
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: AppColors.gray400,
+                    color: Color(0xFF9ca3af),
                   ),
                 ],
               ),

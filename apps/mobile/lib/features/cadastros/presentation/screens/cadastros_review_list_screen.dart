@@ -6,7 +6,6 @@ import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/ca
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Ops queue: documents submitted by reps awaiting approve/reject.
 class CadastrosReviewListScreen extends ConsumerStatefulWidget {
@@ -34,27 +33,26 @@ class _CadastrosReviewListScreenState
         .$1;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const AtlasTopBar(page: 'Cadastros'),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  ref.invalidate(cadastroReviewQueueProvider);
-                  await ref.read(cadastroReviewQueueProvider.future);
-                },
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                  children: [
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Cadastros'),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(cadastroReviewQueueProvider);
+                await ref.read(cadastroReviewQueueProvider.future);
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
                     const Text(
                       'Cadastros',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.navyDeep,
+                        color: Color(0xFF0a2f7f),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -68,7 +66,7 @@ class _CadastrosReviewListScreenState
                       ),
                       style: const TextStyle(
                         fontSize: 13,
-                        color: AppColors.gray500,
+                        color: Color(0xFF6b7280),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -114,7 +112,7 @@ class _CadastrosReviewListScreenState
                                 error.toString(),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                  color: AppColors.gray500,
+                                  color: Color(0xFF6b7280),
                                 ),
                               ),
                               TextButton(
@@ -136,7 +134,7 @@ class _CadastrosReviewListScreenState
                                   'Nenhum cadastro neste filtro',
                                   style: TextStyle(
                                     fontSize: 13.5,
-                                    color: AppColors.gray400,
+                                    color: Color(0xFF9ca3af),
                                   ),
                                 ),
                               ),
@@ -155,12 +153,11 @@ class _CadastrosReviewListScreenState
                         ];
                       },
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -180,7 +177,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.navyDeep : Colors.white,
+      color: selected ? const Color(0xFF0a2f7f) : Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -190,7 +187,9 @@ class _FilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? AppColors.navyDeep : AppColors.gray200,
+              color: selected
+                  ? const Color(0xFF0a2f7f)
+                  : const Color(0xFFe5e7eb),
             ),
           ),
           child: Text(
@@ -198,7 +197,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppColors.gray600,
+              color: selected ? Colors.white : const Color(0xFF4b5563),
             ),
           ),
         ),
@@ -226,7 +225,7 @@ class _ReviewListCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.surfaceSecondary),
+            border: Border.all(color: const Color(0xFFeef0f3)),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +257,7 @@ class _ReviewListCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
+                        color: Color(0xFF0f1729),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -268,7 +267,7 @@ class _ReviewListCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: AppColors.gray600,
+                        color: Color(0xFF4b5563),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -277,7 +276,7 @@ class _ReviewListCard extends StatelessWidget {
                       '${_relative(submission.submittedAt)}',
                       style: const TextStyle(
                         fontSize: 11.5,
-                        color: AppColors.gray400,
+                        color: Color(0xFF9ca3af),
                       ),
                     ),
                   ],
@@ -309,7 +308,7 @@ class _ReviewListCard extends StatelessWidget {
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 20,
-                    color: AppColors.gray400,
+                    color: Color(0xFF9ca3af),
                   ),
                 ],
               ),

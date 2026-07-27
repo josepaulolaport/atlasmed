@@ -6,7 +6,6 @@ import 'package:atlasmed_mobile_app/features/catalog/data/mock/mock_products_dat
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/products_product_card.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Revamped Produtos list (`/produtos`) — one card per family. Concentrations
 /// are chosen on the detail screen.
@@ -47,16 +46,15 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
     final families = _filtered;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const AtlasTopBar(page: 'Produtos'),
-            Expanded(
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Produtos'),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -65,7 +63,7 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.navyDeep,
+                          color: Color(0xFF0a2f7f),
                           letterSpacing: -0.6,
                           height: 1.1,
                         ),
@@ -91,7 +89,7 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
                           'Nenhum produto encontrado',
                           style: TextStyle(
                             fontSize: 12.5,
-                            color: AppColors.gray400,
+                            color: Color(0xFF9ca3af),
                           ),
                         ),
                       ),
@@ -111,11 +109,10 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
                         },
                       ),
                     ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

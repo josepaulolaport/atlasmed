@@ -63,16 +63,11 @@ class _TerritoriesPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: floatingActionButton,
-      body: SafeArea(
-        // The map should bleed all the way to the bottom edge — only the
-        // top inset (status bar) is reserved, via AtlasTopBar itself.
-        bottom: false,
-        child: Column(
-          children: [
-            const AtlasTopBar(page: 'Territórios'),
-            Expanded(child: child),
-          ],
-        ),
+      appBar: const AtlasAppBar(page: 'Territórios'),
+      body: Column(
+        children: [
+          Expanded(child: child),
+        ],
       ),
     );
   }

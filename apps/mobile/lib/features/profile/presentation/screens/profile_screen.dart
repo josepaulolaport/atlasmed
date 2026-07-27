@@ -9,8 +9,6 @@ import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart'
 import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 // ======================================================================
 // ProfileScreen — representative's personal overview
@@ -44,10 +42,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             if (hasAvatar)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.red),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: Color(0xFFb84545),
+                ),
                 title: const Text(
                   "Remover foto",
-                  style: TextStyle(color: AppColors.red),
+                  style: TextStyle(color: Color(0xFFb84545)),
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -83,83 +84,79 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final avatarToken = ref.watch(sessionProvider).currentValue?.token;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Perfil'),
       body: Stack(
         children: [
-          SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Top bar ──────────────────────────────────
-                  const AtlasTopBar(page: 'Perfil'),
-
-                  // ── Header · identity ────────────────────────
-                  sessionProfile.when(
-                    loading: _buildHeaderSkeleton,
-                    error: (_, _) => profileAsync.when(
-                      loading: _buildHeaderSkeleton,
-                      error: (_, _) => const SizedBox.shrink(),
-                      data: (profile) =>
-                          _buildHeader(profile, updating: avatarUpdating),
-                    ),
-                    data: (profile) => profile == null
-                        ? profileAsync.when(
-                            loading: _buildHeaderSkeleton,
-                            error: (_, _) => const SizedBox.shrink(),
-                            data: (fallback) => _buildHeader(
-                              fallback,
-                              updating: avatarUpdating,
-                            ),
-                          )
-                        : _buildHeader(
-                            profile,
-                            avatarUrl: currentUser.valueOrNull?.avatarUrl,
-                            avatarToken: avatarToken,
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header · identity ────────────────────────
+                sessionProfile.when(
+                  loading: _buildHeaderShimmer,
+                  error: (_, _) => profileAsync.when(
+                    loading: _buildHeaderShimmer,
+                    error: (_, _) => const SizedBox.shrink(),
+                    data: (profile) =>
+                        _buildHeader(profile, updating: avatarUpdating),
+                  ),
+                  data: (profile) => profile == null
+                      ? profileAsync.when(
+                          loading: _buildHeaderShimmer,
+                          error: (_, _) => const SizedBox.shrink(),
+                          data: (fallback) => _buildHeader(
+                            fallback,
                             updating: avatarUpdating,
                           ),
+                        )
+                      : _buildHeader(
+                          profile,
+                          avatarUrl: currentUser.valueOrNull?.avatarUrl,
+                          avatarToken: avatarToken,
+                          updating: avatarUpdating,
+                        ),
+                ),
+
+                // ── Body ─────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Território
+                      territoryAsync.when(
+                        loading: () => _buildSectionShimmer(height: 260),
+                        error: (_, _) => const SizedBox.shrink(),
+                        data: (stats) => _buildTerritory(stats),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Resumo rápido
+                      summaryAsync.when(
+                        loading: () => _buildSummaryShimmer(),
+                        error: (_, _) => const SizedBox.shrink(),
+                        data: (items) => _buildQuickSummary(items),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Preferências
+                      prefsAsync.when(
+                        loading: () => _buildSectionShimmer(height: 250),
+                        error: (_, _) => const SizedBox.shrink(),
+                        data: (items) => _buildPreferences(items),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Logout
+                      _buildLogoutButton(),
+
+                      // Footer
+                      _buildFooter(sessionProfile.valueOrNull?.since ?? ''),
+                    ],
                   ),
-
-                  // ── Body ─────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Território
-                        territoryAsync.when(
-                          loading: () => _buildSectionSkeleton(height: 260),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (stats) => _buildTerritory(stats),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Resumo rápido
-                        summaryAsync.when(
-                          loading: () => _buildSummarySkeleton(),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildQuickSummary(items),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Preferências
-                        prefsAsync.when(
-                          loading: () => _buildSectionSkeleton(height: 250),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildPreferences(items),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Logout
-                        _buildLogoutButton(),
-
-                        // Footer
-                        _buildFooter(sessionProfile.valueOrNull?.since ?? ''),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
@@ -211,7 +208,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         fontSize: 19,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.4,
-                        color: AppColors.gray800,
+                        color: Color(0xFF1f2937),
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -219,7 +216,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       profile.role,
                       style: const TextStyle(
                         fontSize: 13,
-                        color: AppColors.gray500,
+                        color: Color(0xFF6b7280),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -239,7 +236,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           Icon(
                             Icons.location_on_outlined,
                             size: 10,
-                            color: AppColors.navyDeep,
+                            color: const Color(0xFF0a2f7f),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -248,7 +245,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.2,
-                              color: AppColors.navyDeep,
+                              color: Color(0xFF0a2f7f),
                             ),
                           ),
                         ],
@@ -264,56 +261,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildHeaderSkeleton() {
-    return AtlasShimmer(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x120a2f7f), Color(0x050a2f7f), Colors.transparent],
-          ),
+  Widget _buildHeaderShimmer() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x120a2f7f), Color(0x050a2f7f), Colors.transparent],
         ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 66,
-                  height: 66,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.surfaceSecondary,
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 66,
+                height: 66,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFeef0f3),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 150,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFeef0f3),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 150,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 100,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFeef0f3),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 100,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -329,7 +324,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: AppColors.surfaceSecondary),
+            border: Border.all(color: const Color(0xFFeef0f3)),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -342,9 +337,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Row(
                   children: [
                     _StatCell(value: '${stats.clinics}', label: 'clínicas'),
-                    Container(width: 1, height: 28, color: AppColors.gray100),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: const Color(0xFFf1f3f6),
+                    ),
                     _StatCell(value: '${stats.doctors}', label: 'médicos'),
-                    Container(width: 1, height: 28, color: AppColors.gray100),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      color: const Color(0xFFf1f3f6),
+                    ),
                     _StatCell(
                       value: '${stats.coveragePct}%',
                       label: 'cobertura',
@@ -366,7 +369,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           text: TextSpan(
                             style: const TextStyle(
                               fontSize: 12,
-                              color: AppColors.gray700,
+                              color: Color(0xFF374151),
                             ),
                             children: [
                               const TextSpan(text: 'Você cobriu '),
@@ -374,7 +377,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 text: '${stats.coveragePct}%',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.green,
+                                  color: Color(0xFF16a373),
                                 ),
                               ),
                               const TextSpan(text: ' da sua região'),
@@ -385,7 +388,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           stats.coverageWeek,
                           style: const TextStyle(
                             fontSize: 10.5,
-                            color: AppColors.gray400,
+                            color: Color(0xFF9ca3af),
                           ),
                         ),
                       ],
@@ -394,7 +397,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Container(
                       height: 5,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceSecondary,
+                        color: const Color(0xFFeef0f3),
                         borderRadius: BorderRadius.circular(3),
                       ),
                       child: FractionallySizedBox(
@@ -402,7 +405,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.green, AppColors.green600],
+                              colors: [Color(0xFF16a373), Color(0xFF14b680)],
                             ),
                             borderRadius: BorderRadius.circular(3),
                           ),
@@ -435,7 +438,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: AppColors.surfaceSecondary),
+                      border: Border.all(color: const Color(0xFFeef0f3)),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
@@ -457,7 +460,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.gray800,
+                            color: Color(0xFF1f2937),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -465,7 +468,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           item.sub,
                           style: const TextStyle(
                             fontSize: 10.5,
-                            color: AppColors.gray400,
+                            color: Color(0xFF9ca3af),
                           ),
                         ),
                       ],
@@ -479,49 +482,47 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildSummarySkeleton() {
+  Widget _buildSummaryShimmer() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(title: 'Resumo rápido'),
         const SizedBox(height: 8),
-        AtlasShimmer(
-          child: Row(
-            children: List.generate(
-              3,
-              (i) => Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
-                  height: 88,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: AppColors.surfaceSecondary),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+        Row(
+          children: List.generate(
+            3,
+            (i) => Expanded(
+              child: Container(
+                margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                height: 88,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFeef0f3)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFeef0f3),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        const SizedBox(height: 20),
-                        Container(
-                          width: 50,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceSecondary,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                      ),
+                      const SizedBox(height: 20),
+                      Container(
+                        width: 50,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFeef0f3),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -541,7 +542,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: AppColors.surfaceSecondary),
+            border: Border.all(color: const Color(0xFFeef0f3)),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -554,7 +555,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 trailing: item.kind == 'toggle'
                     ? _ProfileToggle(
                         value: item.value,
-                        accent: AppColors.navyDeep,
+                        accent: const Color(0xFF0a2f7f),
                       )
                     : _ProfileChevron(),
                 showTopBorder: i > 0,
@@ -575,7 +576,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.circular(9),
       ),
       child: Center(
-        child: Icon(_prefIconData(label), size: 14, color: AppColors.navyDeep),
+        child: Icon(
+          _prefIconData(label),
+          size: 14,
+          color: const Color(0xFF0a2f7f),
+        ),
       ),
     );
   }
@@ -608,13 +613,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           backgroundColor: Colors.white,
         ),
-        icon: const Icon(Icons.logout_rounded, size: 15, color: AppColors.red),
+        icon: const Icon(
+          Icons.logout_rounded,
+          size: 15,
+          color: Color(0xFFb84545),
+        ),
         label: const Text(
           'Sair da conta',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppColors.red,
+            color: Color(0xFFb84545),
           ),
         ),
       ),
@@ -656,7 +665,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.gray200,
+                        color: const Color(0xFFe5e7eb),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -672,7 +681,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: const Icon(
                         Icons.logout_rounded,
                         size: 22,
-                        color: AppColors.red,
+                        color: Color(0xFFb84545),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -681,7 +690,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.gray800,
+                        color: Color(0xFF1f2937),
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -691,7 +700,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.gray500,
+                        color: Color(0xFF6b7280),
                         height: 1.5,
                       ),
                     ),
@@ -703,7 +712,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ref.read(sessionProvider).delete();
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.red,
+                          backgroundColor: const Color(0xFFb84545),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -725,9 +734,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         onPressed: () => setState(() => _logoutConfirm = false),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(
-                            color: AppColors.surfaceSecondary,
-                          ),
+                          side: const BorderSide(color: Color(0xFFeef0f3)),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -737,7 +744,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.gray700,
+                            color: Color(0xFF374151),
                           ),
                         ),
                       ),
@@ -761,7 +768,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           since.isEmpty ? 'Atlasmed · v0.1.0' : 'Atlasmed · v0.1.0 · $since',
           style: const TextStyle(
             fontSize: 10.5,
-            color: AppColors.gray300,
+            color: Color(0xFFc4c9d2),
             letterSpacing: 0.3,
           ),
         ),
@@ -769,16 +776,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Skeleton placeholder for sections ────────────────────────
-  Widget _buildSectionSkeleton({double height = 200}) {
-    return AtlasShimmer(
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: AppColors.surfaceSecondary),
-          borderRadius: BorderRadius.circular(14),
-        ),
+  // ── Shimmer placeholder for sections ────────────────────────
+  Widget _buildSectionShimmer({double height = 200}) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFeef0f3)),
+        borderRadius: BorderRadius.circular(14),
       ),
     );
   }
@@ -826,7 +831,7 @@ class _AvatarEditor extends StatelessWidget {
             right: -2,
             bottom: -2,
             child: Material(
-              color: AppColors.navyDeep,
+              color: const Color(0xFF0a2f7f),
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -879,11 +884,11 @@ class _ProfileAvatar extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.navyDeep, AppColors.navyBright, AppColors.green],
+          colors: [Color(0xFF0a2f7f), Color(0xFF1e40af), Color(0xFF16a373)],
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navyDeep.withValues(alpha: 0.22),
+            color: const Color(0xFF0a2f7f).withValues(alpha: 0.22),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -950,7 +955,7 @@ class _ProfileToggleState extends State<_ProfileToggle> {
         width: 38,
         height: 22,
         decoration: BoxDecoration(
-          color: _value ? widget.accent : AppColors.gray200,
+          color: _value ? widget.accent : const Color(0xFFd9dde4),
           borderRadius: BorderRadius.circular(11),
         ),
         child: AnimatedAlign(
@@ -980,7 +985,7 @@ class _ProfileChevron extends StatelessWidget {
     return const Icon(
       Icons.chevron_right_rounded,
       size: 18,
-      color: AppColors.gray300,
+      color: Color(0xFFc4c9d2),
     );
   }
 }
@@ -1003,7 +1008,7 @@ class _SectionHeader extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
-              color: AppColors.gray700,
+              color: Color(0xFF374151),
             ),
           ),
           if (action != null)
@@ -1017,13 +1022,13 @@ class _SectionHeader extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.navyDeep,
+                      color: Color(0xFF0a2f7f),
                     ),
                   ),
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 14,
-                    color: AppColors.navyDeep,
+                    color: Color(0xFF0a2f7f),
                   ),
                 ],
               ),
@@ -1054,13 +1059,15 @@ class _StatCell extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: highlight ? AppColors.green : AppColors.gray800,
+              color: highlight
+                  ? const Color(0xFF16a373)
+                  : const Color(0xFF1f2937),
             ),
           ),
           const SizedBox(height: 1),
           Text(
             label,
-            style: const TextStyle(fontSize: 10.5, color: AppColors.gray400),
+            style: const TextStyle(fontSize: 10.5, color: Color(0xFF9ca3af)),
           ),
         ],
       ),
@@ -1078,9 +1085,9 @@ class _TerritoryMapPreview extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
+        color: const Color(0xFFe9eef1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceSecondary),
+        border: Border.all(color: const Color(0xFFeef0f3)),
       ),
       child: Stack(
         children: [
@@ -1107,7 +1114,7 @@ class _TerritoryMapPreview extends StatelessWidget {
                     height: 6,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.navyDeep,
+                      color: Color(0xFF0a2f7f),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -1116,7 +1123,7 @@ class _TerritoryMapPreview extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.navyDeep,
+                      color: Color(0xFF0a2f7f),
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -1134,7 +1141,7 @@ class _TerritoryMapPreview extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: AppColors.surfaceSecondary),
+                border: Border.all(color: const Color(0xFFeef0f3)),
                 boxShadow: const [
                   BoxShadow(color: Color(0x14000000), blurRadius: 4),
                 ],
@@ -1142,7 +1149,7 @@ class _TerritoryMapPreview extends StatelessWidget {
               child: const Icon(
                 Icons.open_in_full_rounded,
                 size: 13,
-                color: AppColors.gray700,
+                color: Color(0xFF374151),
               ),
             ),
           ),
@@ -1172,7 +1179,7 @@ class _MapPainter extends CustomPainter {
 
     paint.color = const Color(0x2E0a2f7f);
     canvas.drawPath(path, paint);
-    paint.color = AppColors.navyDeep;
+    paint.color = const Color(0xFF0a2f7f);
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = 2;
     canvas.drawPath(path, paint);
@@ -1198,7 +1205,7 @@ class _MapPainter extends CustomPainter {
     final repPos = Offset(size.width * 0.39, size.height * 0.45);
     paint.color = const Color(0x2E16a373);
     canvas.drawCircle(repPos, 14, paint);
-    paint.color = AppColors.green;
+    paint.color = const Color(0xFF16a373);
     canvas.drawCircle(repPos, 7, paint);
   }
 
@@ -1228,7 +1235,7 @@ class _PrefRow extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         border: showTopBorder
-            ? const Border(top: BorderSide(color: AppColors.gray100))
+            ? const Border(top: BorderSide(color: Color(0xFFf1f3f6)))
             : null,
       ),
       child: Row(
@@ -1244,7 +1251,7 @@ class _PrefRow extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.gray800,
+                    color: Color(0xFF1f2937),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1252,7 +1259,7 @@ class _PrefRow extends StatelessWidget {
                   sub,
                   style: const TextStyle(
                     fontSize: 11.5,
-                    color: AppColors.gray400,
+                    color: Color(0xFF9ca3af),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

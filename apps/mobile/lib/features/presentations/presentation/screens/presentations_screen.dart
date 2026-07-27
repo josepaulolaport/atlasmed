@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Stub screen for Apresentações section.
 class PresentationsScreen extends ConsumerWidget {
@@ -10,20 +9,19 @@ class PresentationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AtlasTopBar(page: 'Apresentações'),
-            const Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+      backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Apresentações'),
+      body: Column(
+        children: [
+          const Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                     Icon(
                       Icons.slideshow_outlined,
                       size: 48,
-                      color: AppColors.gray300,
+                      color: Color(0xFFc8cdd5),
                     ),
                     SizedBox(height: 16),
                     Text(
@@ -31,20 +29,19 @@ class PresentationsScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.gray500,
+                        color: Color(0xFF6b7280),
                       ),
                     ),
                     SizedBox(height: 4),
                     Text(
                       'Em breve',
-                      style: TextStyle(fontSize: 13, color: AppColors.gray400),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

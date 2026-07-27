@@ -21,7 +21,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Live map tab: clinics as pins in the current camera view, Waze-style follow.
 class MapScreen extends ConsumerStatefulWidget {
@@ -153,52 +152,52 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF7F8FB),
+      appBar: const AtlasAppBar(page: 'Mapa'),
       body: Column(
         children: [
-          const AtlasTopBar(page: 'Mapa'),
           const FacilityVerticalFilterBar(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
           ),
           Expanded(
             child: token.isEmpty
                 ? const _MapMessage(
-                    icon: Icons.key_off_outlined,
-                    title: 'Mapa indisponível',
-                    message: 'A configuração do mapa não foi encontrada.',
-                  )
-                : location == null
-                ? const _MapMessage(
-                    icon: Icons.location_searching,
-                    title: 'Obtendo sua localização',
-                    message: 'Ative o GPS para ver as clínicas ao redor.',
-                    loading: true,
-                  )
+                      icon: Icons.key_off_outlined,
+                      title: 'Mapa indisponível',
+                      message: 'A configuração do mapa não foi encontrada.',
+                    )
+                  : location == null
+                  ? const _MapMessage(
+                      icon: Icons.location_searching,
+                      title: 'Obtendo sua localização',
+                      message: 'Ative o GPS para ver as clínicas ao redor.',
+                      loading: true,
+                    )
                 : _mapUnavailable
                 ? _MapMessage(
-                    icon: Icons.map_outlined,
-                    title: 'Mapa indisponível',
-                    message:
-                        'Não foi possível carregar o mapa agora. Tente novamente.',
-                    actionLabel: 'Tentar novamente',
-                    onAction: () {
-                      setState(() {
-                        _mapUnavailable = false;
-                        _mapGeneration += 1;
-                        _mapboxMap = null;
-                        _calloutManager = null;
-                        _calloutAnnotation = null;
-                        _calloutCloseAnnotation = null;
-                        _calloutTapListenerRegistered = false;
-                        _clinicLayersReady = false;
-                        _clinicInteractionsRegistered = false;
-                        _selected = null;
-                        _pendingCapture = null;
-                        _following = true;
-                        _viewport = _followViewport;
-                      });
-                    },
-                  )
+                      icon: Icons.map_outlined,
+                      title: 'Mapa indisponível',
+                      message:
+                          'Não foi possível carregar o mapa agora. Tente novamente.',
+                      actionLabel: 'Tentar novamente',
+                      onAction: () {
+                        setState(() {
+                          _mapUnavailable = false;
+                          _mapGeneration += 1;
+                          _mapboxMap = null;
+                          _calloutManager = null;
+                          _calloutAnnotation = null;
+                          _calloutCloseAnnotation = null;
+                          _calloutTapListenerRegistered = false;
+                          _clinicLayersReady = false;
+                          _clinicInteractionsRegistered = false;
+                          _selected = null;
+                          _pendingCapture = null;
+                          _following = true;
+                          _viewport = _followViewport;
+                        });
+                      },
+                    )
                 : Stack(
                     children: [
                       MapWidget(
@@ -207,55 +206,55 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         viewport: _viewport,
                         onMapCreated: _onMapCreated,
                         onStyleLoadedListener: (_) async {
-                          _clinicLayersReady = false;
-                          _clinicInteractionsRegistered = false;
-                          _calloutManager = null;
-                          _calloutAnnotation = null;
-                          _calloutCloseAnnotation = null;
-                          _calloutTapListenerRegistered = false;
-                          await _enableLocationPuck();
-                          await _drawTerritory(
-                            ref.read(mapTerritoryProvider).valueOrNull,
-                          );
-                          await _ensureClinicLayers();
-                          await _refreshViewportClinics();
-                        },
-                        onMapLoadErrorListener: _onMapLoadError,
-                        onScrollListener: (_) => _stopFollowing(),
-                        onMapIdleListener: (_) => _scheduleViewportRefresh(),
-                        onCameraChangeListener: (_) {
-                          // While following, camera moves continuously —
-                          // refresh on idle is enough; debounce here too
-                          // so pans without a clean idle still update.
-                          if (!_following) _scheduleViewportRefresh();
-                        },
+                            _clinicLayersReady = false;
+                            _clinicInteractionsRegistered = false;
+                            _calloutManager = null;
+                            _calloutAnnotation = null;
+                            _calloutCloseAnnotation = null;
+                            _calloutTapListenerRegistered = false;
+                            await _enableLocationPuck();
+                            await _drawTerritory(
+                              ref.read(mapTerritoryProvider).valueOrNull,
+                            );
+                            await _ensureClinicLayers();
+                            await _refreshViewportClinics();
+                          },
+                          onMapLoadErrorListener: _onMapLoadError,
+                          onScrollListener: (_) => _stopFollowing(),
+                          onMapIdleListener: (_) => _scheduleViewportRefresh(),
+                          onCameraChangeListener: (_) {
+                            // While following, camera moves continuously —
+                            // refresh on idle is enough; debounce here too
+                            // so pans without a clean idle still update.
+                            if (!_following) _scheduleViewportRefresh();
+                          },
                       ),
                       if (_pendingCapture != null)
+                        Positioned(
+                            left: -1000,
+                            top: 0,
+                            child: RepaintBoundary(
+                              key: _calloutCaptureKey,
+                              child: ClinicPinCalloutContent(
+                                establishment: _pendingCapture!,
+                              ),
+                            ),
+                          ),
                         Positioned(
                           left: -1000,
                           top: 0,
                           child: RepaintBoundary(
-                            key: _calloutCaptureKey,
-                            child: ClinicPinCalloutContent(
-                              establishment: _pendingCapture!,
-                            ),
+                            key: _closeButtonCaptureKey,
+                            child: const ClinicPinCalloutCloseButton(),
                           ),
                         ),
-                      Positioned(
-                        left: -1000,
-                        top: 0,
-                        child: RepaintBoundary(
-                          key: _closeButtonCaptureKey,
-                          child: const ClinicPinCalloutCloseButton(),
-                        ),
-                      ),
-                      Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: _RecenterButton(
-                          following: _following,
-                          onPressed: _resumeFollowing,
-                        ),
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: _RecenterButton(
+                            following: _following,
+                            onPressed: _resumeFollowing,
+                          ),
                       ),
                     ],
                   ),
@@ -357,7 +356,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryFillLayerId,
           sourceId: _territorySourceId,
           slot: 'bottom',
-          fillColor: AppColors.blue600.toARGB32(),
+          fillColor: const Color(0xFF2563EB).toARGB32(),
           fillOpacity: 0.10,
         ),
       );
@@ -366,7 +365,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryLineLayerId,
           sourceId: _territorySourceId,
           slot: 'middle',
-          lineColor: AppColors.blueDark.toARGB32(),
+          lineColor: const Color(0xFF1D4ED8).toARGB32(),
           lineWidth: 2,
           lineOpacity: 0.85,
           lineJoin: LineJoin.ROUND,
@@ -999,7 +998,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.gray300,
+                      color: const Color(0xFFd1d5db),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -1010,13 +1009,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.gray900,
+                    color: Color(0xFF0f1729),
                   ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Escolha qual estabelecimento deseja abrir',
-                  style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
+                  style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
                 ),
                 const SizedBox(height: 12),
                 ConstrainedBox(
@@ -1108,7 +1107,9 @@ class _RecenterButton extends StatelessWidget {
           height: 48,
           child: Icon(
             following ? Icons.my_location_rounded : Icons.navigation_rounded,
-            color: following ? AppColors.navyBright : AppColors.gray900,
+            color: following
+                ? const Color(0xFF1e40af)
+                : const Color(0xFF0f1729),
             size: 22,
           ),
         ),
@@ -1131,9 +1132,9 @@ class _StackedClinicTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceTertiary,
+          color: const Color(0xFFf8f9fb),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.gray200),
+          border: Border.all(color: const Color(0xFFe5e7eb)),
         ),
         child: Row(
           children: [
@@ -1157,7 +1158,7 @@ class _StackedClinicTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.gray900,
+                      color: Color(0xFF0f1729),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1166,7 +1167,7 @@ class _StackedClinicTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.gray500,
+                      color: Color(0xFF6b7280),
                     ),
                   ),
                 ],
@@ -1175,7 +1176,7 @@ class _StackedClinicTile extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: AppColors.navyBright,
+              color: Color(0xFF1e40af),
             ),
           ],
         ),
@@ -1216,7 +1217,7 @@ class _MapMessage extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 3),
               )
             else
-              Icon(icon, size: 42, color: AppColors.gray500),
+              Icon(icon, size: 42, color: const Color(0xFF6B7280)),
             const SizedBox(height: 16),
             Text(
               title,
@@ -1226,7 +1227,7 @@ class _MapMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: AppColors.gray500),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),
