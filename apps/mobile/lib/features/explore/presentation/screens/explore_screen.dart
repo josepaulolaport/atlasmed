@@ -28,6 +28,72 @@ class ExploreScreen extends ConsumerStatefulWidget {
   ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
 }
 
+class ExploreResultsList extends StatelessWidget {
+  final List<Object> items;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final bool isClinic;
+  final VoidCallback onLoadMore;
+  final double bottomInset;
+
+  const ExploreResultsList({
+    super.key,
+    required this.items,
+    required this.hasMore,
+    required this.isLoadingMore,
+    required this.isClinic,
+    required this.onLoadMore,
+    required this.bottomInset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollEndNotification &&
+            hasMore &&
+            !isLoadingMore &&
+            notification.metrics.pixels >=
+                notification.metrics.maxScrollExtent - 200) {
+          onLoadMore();
+        }
+        return false;
+      },
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        itemCount: items.length + (hasMore ? 1 : 0) + 1,
+        itemBuilder: (context, index) {
+          if (index == items.length + (hasMore ? 1 : 0)) {
+            return SizedBox(height: bottomInset);
+          }
+
+          if (index >= items.length) {
+            return isLoadingMore
+                ? SkeletonRow(isDoctor: !isClinic)
+                : const SizedBox.shrink();
+          }
+
+          if (isClinic) {
+            final clinic = items[index] as Clinic;
+            return ClinicRow(
+              clinic: clinic,
+              onTap: () => context.push('/workspace/clinic/${clinic.id}'),
+            );
+          }
+
+          final doctor = items[index] as Doctor;
+          return DoctorRow(
+            doctor: doctor,
+            onTap: () => context.push('/workspace/doctor/${doctor.id}'),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   bool _sortOpen = false;
   Timer? _gpsTimer;
@@ -117,12 +183,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         onRefresh: () => ref
                             .read(exploreProvider.notifier)
                             .refreshGpsAndList(),
-                        child: _buildResultsList(
-                          displayedList,
-                          hasMore,
-                          isClinic,
-                          notifier,
-                          bottomInset,
+                        child: ExploreResultsList(
+                          items: displayedList,
+                          hasMore: hasMore,
+                          isLoadingMore: state.loadingMore,
+                          isClinic: isClinic,
+                          onLoadMore: notifier.loadMore,
+                          bottomInset: bottomInset,
                         ),
                       ),
               ),
@@ -180,68 +247,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         hintText: isClinic
             ? 'Buscar clínica, bairro…'
             : 'Buscar médico, especialidade…',
-      ),
-    );
-  }
-
-  Widget _buildResultsList(
-    List<Object> items,
-    bool hasMore,
-    bool isClinic,
-    ExploreNotifier notifier,
-    double bottomInset,
-  ) {
-    final bottomSpacerIndex = items.length + (hasMore ? 1 : 0);
-
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollEndNotification &&
-            hasMore &&
-            notification.metrics.pixels >=
-                notification.metrics.maxScrollExtent - 200) {
-          notifier.loadMore();
-        }
-        return false;
-      },
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
-        itemCount: bottomSpacerIndex + 1,
-        itemBuilder: (context, index) {
-          if (index == bottomSpacerIndex) {
-            return SizedBox(height: bottomInset);
-          }
-
-          if (index == items.length && hasMore) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFF9ca3af),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          if (isClinic) {
-            final clinic = items[index] as Clinic;
-            return ClinicRow(
-              clinic: clinic,
-              onTap: () => context.push('/explore/clinic/${clinic.id}'),
-            );
-          }
-          final doctor = items[index] as Doctor;
-          return DoctorRow(
-            doctor: doctor,
-            onTap: () => context.push('/explore/doctor/${doctor.id}'),
-          );
-        },
       ),
     );
   }
