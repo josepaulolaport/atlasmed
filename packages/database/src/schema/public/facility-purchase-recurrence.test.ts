@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { getTableConfig, type IndexedColumn } from "drizzle-orm/pg-core";
 import {
   facilities,
@@ -68,10 +69,16 @@ describe("facility purchase recurrence schema", () => {
   });
 
   test("the generated migration preserves exact recurrence checks and indexes", () => {
-    const migration = readFileSync(
-      new URL("../../../drizzle/0006_facility_purchase_recurrence.sql", import.meta.url),
-      "utf8",
+    const drizzleDir = new URL("../../../drizzle", import.meta.url).pathname;
+    const migrationFiles = readdirSync(drizzleDir).filter(
+      (f) => f.endsWith(".sql") && /_facility_purchase_recurrence\.sql$/.test(f),
     );
+    if (migrationFiles.length !== 1) {
+      throw new Error(
+        `Expected exactly one facility_purchase_recurrence migration, found ${migrationFiles.length}: [${migrationFiles.join(", ")}]`,
+      );
+    }
+    const migration = readFileSync(join(drizzleDir, migrationFiles[0]!), "utf8");
 
     for (const sql of [
       'CHECK ("facilities"."observed_purchase_interval_days" is null or "facilities"."observed_purchase_interval_days" between 1 and 3650)',
