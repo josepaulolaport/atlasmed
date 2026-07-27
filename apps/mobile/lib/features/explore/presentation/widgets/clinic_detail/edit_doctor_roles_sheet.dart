@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Edit facility-scoped doctor role flags (`PATCH …/professionals/:id`).
-Future<FacilityCrmDoctor?> showEditDoctorRolesSheet(
+Future<ProfessionalRoster?> showEditDoctorRolesSheet(
   BuildContext context, {
-  required FacilityCrmDoctor doctor,
+  required ProfessionalRoster doctor,
   String? facilityId,
 }) {
-  return showModalBottomSheet<FacilityCrmDoctor>(
+  return showModalBottomSheet<ProfessionalRoster>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -25,7 +25,7 @@ Future<FacilityCrmDoctor?> showEditDoctorRolesSheet(
 class _EditDoctorRolesSheet extends StatefulWidget {
   const _EditDoctorRolesSheet({required this.doctor, this.facilityId});
 
-  final FacilityCrmDoctor doctor;
+  final ProfessionalRoster doctor;
   final String? facilityId;
 
   @override
@@ -139,7 +139,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      FacilityCrmDoctor updated;
+      ProfessionalRoster updated;
       if (_useApi) {
         final repo = FacilityAssociateRepository(widget.facilityId!);
         try {

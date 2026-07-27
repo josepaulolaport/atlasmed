@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Create a doctor profile. When [facilityId] is a real facility, persists via
 /// `POST /professionals` (with facility link) + optional role PATCH.
-Future<FacilityCrmDoctor?> showCreateDoctorProfileSheet(
+Future<ProfessionalRoster?> showCreateDoctorProfileSheet(
   BuildContext context, {
   String? facilityId,
 }) {
-  return showModalBottomSheet<FacilityCrmDoctor>(
+  return showModalBottomSheet<ProfessionalRoster>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -211,7 +211,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
         await Future<void>.delayed(const Duration(milliseconds: 450));
         if (!mounted) return;
         Navigator.of(context).pop(
-          FacilityCrmDoctor(
+          ProfessionalRoster(
             id: 'new-doc-${DateTime.now().millisecondsSinceEpoch}',
             name: name,
             initials: initialsFromName(name),

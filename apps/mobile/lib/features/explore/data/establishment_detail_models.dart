@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -117,116 +118,6 @@ class AdministrativeProfessional {
       relationshipScore: clearRelationshipScore
           ? null
           : (relationshipScore ?? this.relationshipScore),
-    );
-  }
-}
-
-/// Confirmed CRM doctor at the establishment.
-class FacilityCrmDoctor {
-  const FacilityCrmDoctor({
-    required this.id,
-    required this.name,
-    required this.initials,
-    required this.hue,
-    this.specialty,
-    this.crm,
-    this.phone,
-    this.email,
-    this.isPartner = false,
-    this.isPrescriber = false,
-    this.isBuyer = false,
-    this.isDecisionMaker = false,
-    this.roleBadge,
-    this.education,
-    this.birthdayLabel,
-    this.favoriteTeam,
-    this.interests,
-    this.noteText,
-    this.relationshipScore,
-  });
-
-  final String id;
-  final String name;
-  final String initials;
-  final double hue;
-  final String? specialty;
-  final String? crm;
-
-  /// Essential contact fields — mirrors `professionals.phone`/`email`.
-  final String? phone;
-  final String? email;
-
-  /// Facility-association role flags (`facility_professionals`).
-  final bool isPartner;
-  final bool isPrescriber;
-  final bool isBuyer;
-  final bool isDecisionMaker;
-
-  /// Small highlight badge, e.g. "DECISORA", "NOVA".
-  final String? roleBadge;
-
-  /// "Formação" — no backing field on `professionals` yet.
-  final String? education;
-
-  /// "Aniversário" — mirrors `professionals.birthDate` once wired.
-  final String? birthdayLabel;
-
-  /// "Time" — mirrors `professionals.favoriteTeam` once wired.
-  final String? favoriteTeam;
-
-  /// "Interesses" — mirrors `professionals.hobbies` once wired.
-  final String? interests;
-
-  /// Most recent note from `professional_notes`, shown as an amber chip.
-  final String? noteText;
-
-  /// Authenticated user's relationship with this professional (1–10),
-  /// from `user_professional_relationships`. Null = not yet assessed.
-  /// Drives Relacionamento stars in the UI.
-  final int? relationshipScore;
-
-  FacilityCrmDoctor copyWith({
-    String? id,
-    String? name,
-    String? initials,
-    double? hue,
-    String? specialty,
-    String? crm,
-    String? phone,
-    String? email,
-    bool? isPartner,
-    bool? isPrescriber,
-    bool? isBuyer,
-    bool? isDecisionMaker,
-    String? roleBadge,
-    bool clearRoleBadge = false,
-    String? education,
-    String? birthdayLabel,
-    String? favoriteTeam,
-    String? interests,
-    String? noteText,
-    int? relationshipScore,
-  }) {
-    return FacilityCrmDoctor(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      initials: initials ?? this.initials,
-      hue: hue ?? this.hue,
-      specialty: specialty ?? this.specialty,
-      crm: crm ?? this.crm,
-      phone: phone ?? this.phone,
-      email: email ?? this.email,
-      isPartner: isPartner ?? this.isPartner,
-      isPrescriber: isPrescriber ?? this.isPrescriber,
-      isBuyer: isBuyer ?? this.isBuyer,
-      isDecisionMaker: isDecisionMaker ?? this.isDecisionMaker,
-      roleBadge: clearRoleBadge ? null : (roleBadge ?? this.roleBadge),
-      education: education ?? this.education,
-      birthdayLabel: birthdayLabel ?? this.birthdayLabel,
-      favoriteTeam: favoriteTeam ?? this.favoriteTeam,
-      interests: interests ?? this.interests,
-      noteText: noteText ?? this.noteText,
-      relationshipScore: relationshipScore ?? this.relationshipScore,
     );
   }
 }
@@ -1191,7 +1082,7 @@ class EstablishmentDetailSections {
   /// e.g. "Z. Sul" — sub-territory / commercial zone label.
   final String? regionZoneLabel;
   final List<AdministrativeProfessional> administrators;
-  final List<FacilityCrmDoctor> doctors;
+  final List<ProfessionalRoster> doctors;
   final List<PayerShare> payers;
   final PayerMixSummary? payerMixSummary;
   final List<FacilityOrderSummary> orders;

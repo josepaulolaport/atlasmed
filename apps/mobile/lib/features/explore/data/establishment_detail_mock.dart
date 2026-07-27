@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -289,7 +290,7 @@ List<AdministrativeProfessional> mockAllFacilityAdministrators(
 }
 
 /// Full doctor roster catalog for a facility (Phase 1 mock).
-List<FacilityCrmDoctor> mockAllFacilityDoctors(String facilityId) {
+List<ProfessionalRoster> mockAllFacilityDoctors(String facilityId) {
   if (facilityId.endsWith(':empty')) return const [];
 
   const specialties = [
@@ -315,10 +316,10 @@ List<FacilityCrmDoctor> mockAllFacilityDoctors(String facilityId) {
     ('Dra. Sofia Mendes', 'SM', 330.0),
   ];
 
-  return List<FacilityCrmDoctor>.generate(names.length, (i) {
+  return List<ProfessionalRoster>.generate(names.length, (i) {
     final n = i + 1;
     final (name, initials, hue) = names[i];
-    return FacilityCrmDoctor(
+    return ProfessionalRoster(
       id: 'doc-$n',
       name: name,
       initials: initials,
@@ -362,7 +363,7 @@ mockFacilityAdministratorsPage({
 }
 
 /// One page of doctors for the side-scroll strip.
-Future<FacilityRosterPage<FacilityCrmDoctor>> mockFacilityDoctorsPage({
+Future<FacilityRosterPage<ProfessionalRoster>> mockFacilityDoctorsPage({
   required String facilityId,
   required int page,
   int limit = facilityRosterPageSize,

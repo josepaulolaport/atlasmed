@@ -1,9 +1,9 @@
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 
 /// Mock CRM pool of doctors that can be associated to a facility.
 /// Phase 1 — no search API yet.
-List<FacilityCrmDoctor> mockAssociableDoctors() => const [
-  FacilityCrmDoctor(
+List<ProfessionalRoster> mockAssociableDoctors() => const [
+  ProfessionalRoster(
     id: 'pool-doc-1',
     name: 'Dr. Ricardo Abdalla Bittar',
     initials: 'RB',
@@ -14,7 +14,7 @@ List<FacilityCrmDoctor> mockAssociableDoctors() => const [
     email: 'ricardo.bittar@exemplo.com',
     isPrescriber: true,
   ),
-  FacilityCrmDoctor(
+  ProfessionalRoster(
     id: 'pool-doc-2',
     name: 'Dra. Camila Nogueira',
     initials: 'CN',
@@ -25,7 +25,7 @@ List<FacilityCrmDoctor> mockAssociableDoctors() => const [
     isPrescriber: true,
     isDecisionMaker: true,
   ),
-  FacilityCrmDoctor(
+  ProfessionalRoster(
     id: 'pool-doc-3',
     name: 'Dr. André Luiz Campos',
     initials: 'AC',
@@ -35,7 +35,7 @@ List<FacilityCrmDoctor> mockAssociableDoctors() => const [
     phone: '11990003333',
     isBuyer: true,
   ),
-  FacilityCrmDoctor(
+  ProfessionalRoster(
     id: 'pool-doc-4',
     name: 'Dra. Beatriz Moura',
     initials: 'BM',
@@ -45,7 +45,7 @@ List<FacilityCrmDoctor> mockAssociableDoctors() => const [
     email: 'beatriz.moura@exemplo.com',
     isPrescriber: true,
   ),
-  FacilityCrmDoctor(
+  ProfessionalRoster(
     id: 'pool-doc-5',
     name: 'Dr. Felipe Santos',
     initials: 'FS',
@@ -96,12 +96,4 @@ List<AdministrativeProfessional> mockAssociableProfessionals() => const [
   ),
 ];
 
-String initialsFromName(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.length >= 2) {
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-  }
-  return name.isNotEmpty ? name[0].toUpperCase() : '?';
-}
 
-double hueFromName(String name) => (name.hashCode.abs() % 360).toDouble();

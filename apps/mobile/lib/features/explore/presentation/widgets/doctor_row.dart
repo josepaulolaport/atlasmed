@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class DoctorRow extends StatelessWidget {
-  final Doctor doctor;
+  final ProfessionalEntry doctor;
   final VoidCallback onTap;
 
   /// When false, hides the trailing "X.X km" (e.g. facility-scoped lists

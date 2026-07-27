@@ -6,9 +6,9 @@ import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctor_detail_repository.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
@@ -48,7 +48,7 @@ class DoctorDetailScreen extends ConsumerWidget {
         backgroundColor: AppColors.navyBright,
         foregroundColor: Colors.white,
       ),
-      body: FutureBuilder<ApiDoctor?>(
+      body: FutureBuilder<ProfessionalDTO?>(
         future: repository.currentValueOrResolve(),
         builder: (context, initialSnapshot) {
           if (initialSnapshot.connectionState != ConnectionState.done &&
@@ -56,7 +56,7 @@ class DoctorDetailScreen extends ConsumerWidget {
             return _loadingSkeleton(context);
           }
 
-          return StreamBuilder<RepositoryState<ApiDoctor>>(
+          return StreamBuilder<RepositoryState<ProfessionalDTO>>(
             stream: repository.stream,
             initialData: repository.currentState,
             builder: (context, snapshot) {
@@ -85,10 +85,10 @@ class DoctorDetailScreen extends ConsumerWidget {
     );
   }
 
-  DoctorDetail? _doctorDetailFromRepository(RepositoryState<ApiDoctor> state) {
+  Professional? _doctorDetailFromRepository(RepositoryState<ProfessionalDTO> state) {
     return state.map(
       empty: (_) => null,
-      ready: (ready) => DoctorDetail.fromApi(ready.data),
+      ready: (ready) => Professional.fromDTO(ready.data),
     );
   }
 
@@ -175,7 +175,7 @@ class DoctorDetailScreen extends ConsumerWidget {
 // ======================================================================
 
 class _DoctorDetailContent extends ConsumerWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   final DoctorDetailRepository repository;
   final String doctorId;
   final String? facilityId;
@@ -246,7 +246,7 @@ class _DoctorDetailContent extends ConsumerWidget {
                     const SizedBox(height: 16),
                   ],
                   if (detail.signals.isNotEmpty) ...[
-                    _DoctorSignals(detail: detail, signals: detail.signals),
+                    _ProfessionalSignals(detail: detail, signals: detail.signals),
                     const SizedBox(height: 16),
                   ],
                   _DoctorPersonalCard(
@@ -261,10 +261,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  _DoctorClinics(detail: detail, clinics: detail.clinics),
+                  _ProfessionalClinics(detail: detail, clinics: detail.clinics),
                   const SizedBox(height: 16),
                   if (detail.visits.isNotEmpty) ...[
-                    _DoctorVisits(visits: detail.visits),
+                    _ProfessionalVisits(visits: detail.visits),
                     const SizedBox(height: 16),
                   ],
                   RepositoryBuilder(
@@ -565,7 +565,7 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
 // ======================================================================
 
 class _DoctorHeader extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   const _DoctorHeader({required this.detail});
 
   @override
@@ -702,7 +702,7 @@ class _DoctorHeader extends StatelessWidget {
 // ======================================================================
 
 class _DoctorQuickActions extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   const _DoctorQuickActions({required this.detail});
 
   @override
@@ -833,13 +833,13 @@ class _QuickAction extends StatelessWidget {
 }
 
 // ======================================================================
-// 3. DoctorSignals — info/warning/success cards
+// 3. ProfessionalSignals — info/warning/success cards
 // ======================================================================
 
-class _DoctorSignals extends StatelessWidget {
-  final DoctorDetail detail;
-  final List<DoctorSignal> signals;
-  const _DoctorSignals({required this.detail, required this.signals});
+class _ProfessionalSignals extends StatelessWidget {
+  final Professional detail;
+  final List<ProfessionalSignal> signals;
+  const _ProfessionalSignals({required this.detail, required this.signals});
 
   @override
   Widget build(BuildContext context) {
@@ -861,8 +861,8 @@ class _DoctorSignals extends StatelessWidget {
 }
 
 class _SignalCard extends StatelessWidget {
-  final DoctorDetail detail;
-  final DoctorSignal signal;
+  final Professional detail;
+  final ProfessionalSignal signal;
   const _SignalCard({required this.detail, required this.signal});
 
   @override
@@ -930,7 +930,7 @@ class _SignalCard extends StatelessWidget {
 // ======================================================================
 
 class _DoctorPersonalCard extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   final ValueChanged<DoctorEditableField>? onEditField;
   const _DoctorPersonalCard({required this.detail, this.onEditField});
 
@@ -1081,8 +1081,8 @@ class _DoctorPersonalCard extends StatelessWidget {
 // ======================================================================
 
 class _DoctorPrescribing extends StatelessWidget {
-  final DoctorDetail detail;
-  final List<DoctorPrescribingItem> items;
+  final Professional detail;
+  final List<PrescribingItem> items;
   const _DoctorPrescribing({required this.detail, required this.items});
 
   @override
@@ -1273,13 +1273,13 @@ class _DoctorPrescribing extends StatelessWidget {
 }
 
 // ======================================================================
-// 6. DoctorClinics — clinics where they work
+// 6. ProfessionalClinics — clinics where they work
 // ======================================================================
 
-class _DoctorClinics extends StatelessWidget {
-  final DoctorDetail detail;
-  final List<DoctorClinic> clinics;
-  const _DoctorClinics({required this.detail, required this.clinics});
+class _ProfessionalClinics extends StatelessWidget {
+  final Professional detail;
+  final List<ProfessionalClinic> clinics;
+  const _ProfessionalClinics({required this.detail, required this.clinics});
 
   @override
   Widget build(BuildContext context) {
@@ -1438,12 +1438,12 @@ class _DoctorClinics extends StatelessWidget {
 }
 
 // ======================================================================
-// 7. DoctorVisits — visit history
+// 7. ProfessionalVisits — visit history
 // ======================================================================
 
-class _DoctorVisits extends StatelessWidget {
-  final List<DoctorVisit> visits;
-  const _DoctorVisits({required this.visits});
+class _ProfessionalVisits extends StatelessWidget {
+  final List<ProfessionalVisit> visits;
+  const _ProfessionalVisits({required this.visits});
 
   @override
   Widget build(BuildContext context) {
@@ -1668,7 +1668,7 @@ class _DoctorVisits extends StatelessWidget {
 // ======================================================================
 
 class _DoctorNotes extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   final List<ProfessionalNote>? notes;
   final VoidCallback onAddNote;
 

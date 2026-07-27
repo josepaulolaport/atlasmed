@@ -5,7 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_t
     as api;
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
@@ -19,7 +19,7 @@ export 'package:atlasmed_mobile_app/features/location/presentation/providers/loc
 // ── Explore state ───────────────────────────────────────────
 class ExploreState {
   final List<Clinic> clinics;
-  final List<Doctor> doctors;
+  final List<ProfessionalEntry> doctors;
 
   /// API pagination totals (not loaded-page length).
   final int clinicTotal;
@@ -59,7 +59,7 @@ class ExploreState {
 
   ExploreState copyWith({
     List<Clinic>? clinics,
-    List<Doctor>? doctors,
+    List<ProfessionalEntry>? doctors,
     int? clinicTotal,
     int? doctorTotal,
     bool? loading,
@@ -132,8 +132,8 @@ class ExploreState {
     return list;
   }
 
-  List<Doctor> get filteredDoctors {
-    var list = List<Doctor>.from(doctors);
+  List<ProfessionalEntry> get filteredDoctors {
+    var list = List<ProfessionalEntry>.from(doctors);
 
     switch (sort) {
       case 'name-asc':
@@ -394,7 +394,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       final result = await repo.currentValueOrResolve();
       if (generation != null && generation != _refreshGeneration) return;
       if (result != null) {
-        final items = result.items.map(Doctor.fromApi).toList();
+        final items = result.items.map(ProfessionalEntry.fromDTO).toList();
         if (append) {
           state = state.copyWith(
             doctors: [...state.doctors, ...items],

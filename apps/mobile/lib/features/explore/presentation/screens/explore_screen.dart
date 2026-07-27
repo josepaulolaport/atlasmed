@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
@@ -30,7 +30,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 }
 
 class ExploreResultsList extends StatelessWidget {
-  final List<Either<Clinic, Doctor>> items;
+  final List<Either<Clinic, ProfessionalEntry>> items;
   final bool hasMore;
   final bool isLoadingMore;
   final VoidCallback onLoadMore;
@@ -127,11 +127,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final displayedList = isClinic
         ? state.filteredClinics
               .take(state.visibleCount)
-              .map((clinic) => Left<Clinic, Doctor>(clinic))
+              .map((clinic) => Left<Clinic, ProfessionalEntry>(clinic))
               .toList()
         : state.filteredDoctors
               .take(state.visibleCount)
-              .map((doctor) => Right<Clinic, Doctor>(doctor))
+              .map((doctor) => Right<Clinic, ProfessionalEntry>(doctor))
               .toList();
     final hasMore =
         state.visibleCount <

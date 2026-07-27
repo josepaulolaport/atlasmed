@@ -244,7 +244,7 @@ Future<void> _openDoctorsList(
   WidgetRef ref, {
   required String clinicId,
   required String facilityName,
-  required List<FacilityCrmDoctor> rosterFallback,
+  required List<ProfessionalRoster> rosterFallback,
 }) async {
   await Navigator.of(context).push<void>(
     MaterialPageRoute(
