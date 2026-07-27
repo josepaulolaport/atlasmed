@@ -99,16 +99,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                   // ── Header · identity ────────────────────────
                   sessionProfile.when(
-                    loading: _buildHeaderShimmer,
+                    loading: _buildHeaderSkeleton,
                     error: (_, _) => profileAsync.when(
-                      loading: _buildHeaderShimmer,
+                      loading: _buildHeaderSkeleton,
                       error: (_, _) => const SizedBox.shrink(),
                       data: (profile) =>
                           _buildHeader(profile, updating: avatarUpdating),
                     ),
                     data: (profile) => profile == null
                         ? profileAsync.when(
-                            loading: _buildHeaderShimmer,
+                            loading: _buildHeaderSkeleton,
                             error: (_, _) => const SizedBox.shrink(),
                             data: (fallback) => _buildHeader(
                               fallback,
@@ -131,7 +131,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         // Território
                         territoryAsync.when(
-                          loading: () => _buildSectionShimmer(height: 260),
+                          loading: () => _buildSectionSkeleton(height: 260),
                           error: (_, _) => const SizedBox.shrink(),
                           data: (stats) => _buildTerritory(stats),
                         ),
@@ -139,7 +139,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                         // Resumo rápido
                         summaryAsync.when(
-                          loading: () => _buildSummaryShimmer(),
+                          loading: () => _buildSummarySkeleton(),
                           error: (_, _) => const SizedBox.shrink(),
                           data: (items) => _buildQuickSummary(items),
                         ),
@@ -147,7 +147,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                         // Preferências
                         prefsAsync.when(
-                          loading: () => _buildSectionShimmer(height: 250),
+                          loading: () => _buildSectionSkeleton(height: 250),
                           error: (_, _) => const SizedBox.shrink(),
                           data: (items) => _buildPreferences(items),
                         ),
@@ -267,7 +267,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildHeaderShimmer() {
+  Widget _buildHeaderSkeleton() {
     return AtlasShimmer(
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
@@ -490,7 +490,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildSummaryShimmer() {
+  Widget _buildSummarySkeleton() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -786,8 +786,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Shimmer placeholder for sections ────────────────────────
-  Widget _buildSectionShimmer({double height = 200}) {
+  // ── Skeleton placeholder for sections ────────────────────────
+  Widget _buildSectionSkeleton({double height = 200}) {
     return AtlasShimmer(
       child: Container(
         height: height,

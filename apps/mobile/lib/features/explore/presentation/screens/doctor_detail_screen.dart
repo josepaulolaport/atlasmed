@@ -102,7 +102,7 @@ class DoctorDetailScreen extends ConsumerWidget {
     return SafeArea(
       child: Column(
         children: [
-          _buildHeaderShimmer(),
+          _buildHeaderSkeleton(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -128,7 +128,7 @@ class DoctorDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderShimmer() {
+  Widget _buildHeaderSkeleton() {
     return Container(
       height: 200,
       decoration: BoxDecoration(

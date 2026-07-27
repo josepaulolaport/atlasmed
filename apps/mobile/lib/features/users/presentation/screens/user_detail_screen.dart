@@ -273,7 +273,7 @@ class _UserDetailBody extends ConsumerWidget {
         if (showsAssignments) ...[
           const SizedBox(height: 16),
           assignmentsAsync.when(
-            loading: () => const _SectionShimmer(height: 220),
+            loading: () => const _SectionSkeleton(height: 220),
             error: (_, _) => const SizedBox.shrink(),
             data: (assignments) => _AssignmentsSection(
               user: user,
@@ -902,8 +902,8 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _SectionShimmer extends StatelessWidget {
-  const _SectionShimmer({required this.height});
+class _SectionSkeleton extends StatelessWidget {
+  const _SectionSkeleton({required this.height});
 
   final double height;
 

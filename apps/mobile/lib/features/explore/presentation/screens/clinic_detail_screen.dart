@@ -154,7 +154,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     return SafeArea(
       child: Column(
         children: [
-          _buildHeaderShimmer(context),
+          _buildHeaderSkeleton(context),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -162,7 +162,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
                 6,
                 (_) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: _ShimmerBlock(height: 100),
+                  child: _SkeletonBlock(height: 100),
                 ),
               ),
             ),
@@ -172,7 +172,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     );
   }
 
-  Widget _buildHeaderShimmer(BuildContext context) {
+  Widget _buildHeaderSkeleton(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return Container(
       height: 180 + top,
@@ -1187,9 +1187,9 @@ class _ClinicDeactivateButton extends ConsumerWidget {
 // for the old implementation. `ClinicAdminInfoSection` should use
 // `displayTaxIdentifier` (from `tax_identifier.dart`) for its CNPJ/CPF row.
 // ===============================================================
-class _ShimmerBlock extends StatelessWidget {
+class _SkeletonBlock extends StatelessWidget {
   final double height;
-  const _ShimmerBlock({required this.height});
+  const _SkeletonBlock({required this.height});
 
   @override
   Widget build(BuildContext context) {
