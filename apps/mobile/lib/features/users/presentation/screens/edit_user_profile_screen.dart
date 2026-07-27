@@ -147,10 +147,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                         TextFormField(
                           controller: _firstNameController,
                           textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(
-                            hintText: 'Nome',
-                            isDense: true,
-                          ),
+                          decoration: const InputDecoration(hintText: 'Nome'),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Informe o nome.';
@@ -166,7 +163,6 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                           textCapitalization: TextCapitalization.words,
                           decoration: const InputDecoration(
                             hintText: 'Sobrenome',
-                            isDense: true,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -183,7 +179,6 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                           keyboardType: TextInputType.emailAddress,
                           decoration: const InputDecoration(
                             hintText: 'nome@empresa.com.br',
-                            isDense: true,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -201,7 +196,6 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                           keyboardType: TextInputType.phone,
                           decoration: const InputDecoration(
                             hintText: '+55 11 99999-0000',
-                            isDense: true,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -221,7 +215,6 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                           controller: _usernameController,
                           decoration: const InputDecoration(
                             hintText: 'usuario.sobrenome',
-                            isDense: true,
                             prefixText: '@',
                           ),
                           validator: (value) {

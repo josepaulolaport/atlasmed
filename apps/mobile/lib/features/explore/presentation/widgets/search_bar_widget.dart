@@ -22,72 +22,57 @@ class SearchBarWidget extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Container(
+          child: SizedBox(
             height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.gray200),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
+            child: TextField(
+              controller: TextEditingController.fromValue(
+                TextEditingValue(
+                  text: value,
+                  selection: TextSelection.collapsed(offset: value.length),
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                const Icon(
-                  Icons.search_rounded,
-                  size: 16,
-                  color: AppColors.gray500,
+              ),
+              onChanged: onChanged,
+              style: const TextStyle(fontSize: 14, color: AppColors.gray900),
+              decoration: InputDecoration(
+                hintText: hintText,
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 12, right: 8),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 16,
+                    color: AppColors.gray500,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: TextEditingController.fromValue(
-                      TextEditingValue(
-                        text: value,
-                        selection: TextSelection.collapsed(
-                          offset: value.length,
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
+                ),
+                suffixIcon: value.isNotEmpty
+                    ? GestureDetector(
+                        onTap: () => onChanged(''),
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: const BoxDecoration(
+                            color: AppColors.gray200,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 10,
+                            color: AppColors.gray500,
+                          ),
                         ),
-                      ),
-                    ),
-                    onChanged: onChanged,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.gray900,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: hintText,
-                      hintStyle: const TextStyle(color: AppColors.gray400),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
+                      )
+                    : null,
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 0,
+                  minHeight: 0,
                 ),
-                if (value.isNotEmpty)
-                  GestureDetector(
-                    onTap: () => onChanged(''),
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.gray200,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 10,
-                        color: AppColors.gray500,
-                      ),
-                    ),
-                  ),
-              ],
+                isDense: true,
+                contentPadding: const EdgeInsets.only(right: 12),
+              ),
             ),
           ),
         ),
@@ -98,16 +83,9 @@ class SearchBarWidget extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: filterCount > 0 ? AppColors.navyBright : Colors.white,
+              color: filterCount > 0 ? AppColors.navyBright : AppColors.cardBg,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.gray200),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                ),
-              ],
             ),
             child: Stack(
               children: [
@@ -128,7 +106,7 @@ class SearchBarWidget extends StatelessWidget {
                       constraints: const BoxConstraints(minWidth: 16),
                       height: 16,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: AppColors.rose,
                         shape: BoxShape.circle,
                       ),
