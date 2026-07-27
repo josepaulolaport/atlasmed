@@ -346,9 +346,9 @@ Cada push ao `main` com mudanças em `apps/mobile/` dispara; também é possíve
    - `shorebird release ios` → IPA → Fastlane → TestFlight
    - dry-run compila sem publicar, alterar versão ou fazer commit
 4. **Patch mode** (macOS):
-   - `cider bump patch --bump-build` apenas em deploy real
+   - não altera a versão: cada entrada do manifest aponta para uma release Shorebird existente
    - `shorebird patch` para cada entrada Android/iOS no manifest
-   - dry-run adiciona `--dry-run` e não altera versão
+   - dry-run adiciona `--dry-run` e não publica patches
 5. **Web deploy** (Firebase Hosting) continua em paralelo via `deploy-production.yml`
 
 ### Conventions

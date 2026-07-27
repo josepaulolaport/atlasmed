@@ -33,7 +33,7 @@
 - [ ] Restore the Android `upload_internal` lane using `PLAY_STORE_SERVICE_ACCOUNT_JSON_PATH`.
 - [ ] Decode `PLAY_STORE_SERVICE_ACCOUNT_JSON_BASE64` into `$RUNNER_TEMP`.
 - [ ] Build a signed AAB through `shorebird release android`.
-- [ ] Resolve the generated AAB path and upload it to the internal track.
+- [ ] Resolve the generated AAB path and upload package `br.com.atlasmed.app` as a completed release on the internal track.
 - [ ] Run Android and iOS store releases sequentially in the macOS store job so both share one Cider version bump.
 
 ### Task 3: Add safe workflow dispatch
@@ -45,7 +45,8 @@
 - [ ] Make manual mode override automatic mode resolution.
 - [ ] Skip Cider version bumps and git commits for every dry run.
 - [ ] For store dry runs, use `shorebird release android --dry-run` and `shorebird release ios --dry-run`, and skip Google Play/TestFlight uploads.
-- [ ] For patch dry runs, add `--dry-run` to each manifest patch and skip commits.
+- [ ] Patch mode never bumps the package version; each manifest entry targets an existing Shorebird release.
+- [ ] For patch dry runs, add `--dry-run` to each manifest patch.
 - [ ] Keep push-to-main behavior as a real deployment.
 
 ### Task 4: Restore dual-platform patch configuration and docs

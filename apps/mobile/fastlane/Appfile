@@ -4,4 +4,5 @@
 # ──────────────────────────────────────────────────────────────────────
 
 app_identifier "br.com.atlasmed.app"
+package_name "br.com.atlasmed.app"
 team_id ENV.fetch("APPLE_TEAM_ID", "GNT83DZ768")

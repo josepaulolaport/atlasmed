@@ -13,7 +13,7 @@
 #   make bump-minor           # Cider bump minor + CHANGELOG
 #   make bump-patch           # Cider bump patch + CHANGELOG
 #   make patch-plan           # Executa patches do manifest
-#   make patch-release        # Bump patch + patches
+#   make patch-release        # Executa patches das releases declaradas no manifest
 #   make store-release        # Bump minor + releases Android e iOS
 #   make web                  # Flutter build web + Firebase deploy
 # ──────────────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ patch-target:
 patch: patch-plan
 
 .PHONY: patch-release
-patch-release: bump-patch patch-plan
+patch-release: patch-plan
 
 ########################################################################
 # 🌐 Web (Firebase Hosting)

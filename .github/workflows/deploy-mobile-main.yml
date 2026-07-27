@@ -2,14 +2,12 @@
 # Executado em todo push ao main com mudanças em apps/mobile/.
 #
 # Modos:
-#   store — Bump minor, Shorebird release iOS e upload ao TestFlight.
-#   patch — Bump patch, Shorebird patch OTA iOS via manifest.
-#
-# Android está temporariamente desativado no CD.
+#   store — Bump minor, releases Shorebird Android/iOS e upload às lojas.
+#   patch — Patches OTA Android/iOS para releases existentes no manifest.
 #
 # Resolução do modo (resolve_mode):
 #   1. Se o PR associado tem label "release/store" → store
-#   2. Se arquivos sensíveis iOS mudaram (ios/, pubspec.yaml,
+#   2. Se arquivos sensíveis mudaram (android/, ios/, pubspec.yaml,
 #      shorebird.yaml, config.production.json) → store
 #   3. Se shorebird-patches.json tem entradas → patch
 #   4. Fallback → store (seguro)
@@ -480,35 +478,11 @@ jobs:
 
       # SHOREBIRD_TOKEN está definido no env do job.
       # O Shorebird CLI lê essa variável automaticamente — não precisa de login --ci.
-      # Ativar Cider
-      - name: Ativar Cider
-        run: dart pub global activate cider
-
-      # Bump patch version + CHANGELOG (apenas em deploy real)
-      - name: Bump patch version
-        if: env.DRY_RUN != 'true'
-        run: |
-          cider bump patch --bump-build
-          cider release
-        working-directory: ${{ env.MOBILE_DIR }}
-
+      # Patches usam a releaseVersion existente declarada no manifest.
+      # Não alteramos pubspec.yaml/CHANGELOG no patch mode.
       # Executar patches do manifest
       - name: Executar patches Shorebird
         env:
           SHOREBIRD_DRY_RUN: ${{ env.DRY_RUN }}
         run: make patch-plan
         working-directory: ${{ env.MOBILE_DIR }}
-
-      # Persistir version bump (apenas em deploy real)
-      - name: Commitar version bump
-        if: env.DRY_RUN != 'true'
-        run: |
-          git config user.name "atlasmed-bot"
-          git config user.email "bot@atlasmed.com.br"
-          git add ${{ env.MOBILE_DIR }}/pubspec.yaml ${{ env.MOBILE_DIR }}/CHANGELOG.md
-          if git diff --cached --quiet; then
-            echo "ℹ️  No changes to commit"
-          else
-            git commit -m "chore: bump mobile patch to $(grep '^version:' ${{ env.MOBILE_DIR }}/pubspec.yaml | awk '{print $2}') [skip ci]"
-            git push
-          fi
