@@ -4,7 +4,6 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';

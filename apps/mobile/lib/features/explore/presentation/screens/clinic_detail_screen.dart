@@ -12,7 +12,6 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/contact_action
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';

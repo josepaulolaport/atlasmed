@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 
@@ -21,7 +21,7 @@ void main() {
     });
 
     test('parses paginated clinic responses with total metadata', () {
-      final result = PaginatedClinics.fromJson('''
+      final result = PaginatedFacilities.fromJson('''
 {
   "data": [
     {
@@ -52,7 +52,7 @@ void main() {
 
   group('Clinic location mapping', () {
     test('maps neighborhood, city, and state from list responses', () {
-      final clinic = Clinic.fromMap({
+      final clinic = FacilityDTO.fromMap({
         'id': 'clinic-1',
         'name': 'Clínica Central',
         'professionalCount': 7,
@@ -87,7 +87,7 @@ void main() {
     );
 
     test('parses paginated doctor responses with total metadata', () {
-      final result = PaginatedDoctors.fromJson('''
+      final result = PaginatedProfessionals.fromJson('''
 {
   "data": [
     {

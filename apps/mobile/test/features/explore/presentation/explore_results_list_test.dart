@@ -1,5 +1,5 @@
-import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
@@ -10,17 +10,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  const clinic = Clinic(
+  const clinic = FacilityEntry(
     id: 'clinic-1',
     name: 'Clínica Central',
     city: 'São Paulo',
     neighborhood: 'Centro',
     distanceKm: 1,
     commercialStatus: 'ACTIVE',
-    lastVisitDays: null,
     doctorCount: 1,
-    isPriority: false,
-    products: [],
   );
 
   Widget buildSubject({required bool loadingMore}) {
@@ -51,16 +48,14 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
-  const doctor = Doctor(
+  const doctor = ProfessionalEntry(
     id: 'doctor-1',
     name: 'Dra. Ana',
     initials: 'DA',
     hue: 0,
     specialty: 'Cardiologia',
-    primaryClinic: '',
     crm: '12345',
     distanceKm: null,
-    isPriority: false,
   );
 
   testWidgets('opens a clinic through the explore route', (tester) async {
