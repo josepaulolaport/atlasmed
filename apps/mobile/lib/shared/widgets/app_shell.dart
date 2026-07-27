@@ -78,10 +78,35 @@ void openAppDrawer(BuildContext context) =>
     AppShellScreenState.of(context)?.openDrawer();
 
 // ======================================================================
-// AtlasTopBar — slim sticky bar with hamburger + breadcrumb
+// AtlasTopBar — legacy inline bar with hamburger + breadcrumb
 //   page    — current page label ("Explorar", "Perfil", etc.)
 //   compact — drop breadcrumb for detail/sub screens
 // ======================================================================
+
+class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String page;
+  final bool compact;
+
+  const AtlasAppBar({super.key, this.page = '', this.compact = false});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(48);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      backgroundColor: const Color(0xF2F7F8FB),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: preferredSize.height,
+      shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
+      titleSpacing: 0,
+      title: _AtlasTopBarContent(page: page, compact: compact),
+    );
+  }
+}
 
 class AtlasTopBar extends StatelessWidget {
   final String page;
@@ -98,21 +123,30 @@ class AtlasTopBar extends StatelessWidget {
       ),
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
-          child: SizedBox(
-            height: 40,
-            child: Row(
-              children: [
-                _hamburgerButton(context),
-                if (!compact) ...[
-                  const SizedBox(width: 8),
-                  _breadcrumb(context),
-                ],
-                if (compact) const Spacer(),
-              ],
-            ),
-          ),
+        child: _AtlasTopBarContent(page: page, compact: compact),
+      ),
+    );
+  }
+}
+
+class _AtlasTopBarContent extends StatelessWidget {
+  final String page;
+  final bool compact;
+
+  const _AtlasTopBarContent({required this.page, required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
+      child: SizedBox(
+        height: 40,
+        child: Row(
+          children: [
+            _hamburgerButton(context),
+            if (!compact) ...[const SizedBox(width: 8), _breadcrumb(context)],
+            if (compact) const Spacer(),
+          ],
         ),
       ),
     );
