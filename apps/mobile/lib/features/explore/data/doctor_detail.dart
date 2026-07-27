@@ -1,5 +1,7 @@
 // ── Doctor detail model ───────────────────────────────────────
 
+import 'package:flutter/material.dart';
+
 class DoctorDetail {
   final String id;
   final String name;
@@ -47,6 +49,9 @@ class DoctorDetail {
 
   // Field notes
   final List<String> notes;
+
+  /// Hue (0-360) derived from the doctor's name for personalized colors.
+  double get hue => (name.hashCode.abs() % 360).toDouble();
 
   const DoctorDetail({
     required this.id,
@@ -240,4 +245,17 @@ class DoctorVisit {
     this.orderValue,
     this.samples,
   });
+}
+
+/// Color helpers derived from [DoctorDetail.hue].
+extension DoctorDetailColors on DoctorDetail {
+  /// Primary color derived from the doctor's name (for avatar backgrounds,
+  /// headers, accents).
+  Color get primaryColor => HSLColor.fromAHSL(1, hue, 0.55, 0.32).toColor();
+
+  /// Lighter tint for backgrounds.
+  Color get primaryBg => HSLColor.fromAHSL(1, hue, 0.48, 0.88).toColor();
+
+  /// Semi-transparent version for subtle UI accents.
+  Color get primaryAccent => primaryColor.withValues(alpha: 0.10);
 }

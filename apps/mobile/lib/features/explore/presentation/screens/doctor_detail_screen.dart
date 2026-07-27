@@ -36,10 +36,16 @@ class DoctorDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(doctorProvider(doctorId));
 
+    // Compute AppBar color from cached data if available.
+    final currentValue = repository.currentValue;
+    final appBarColor = currentValue != null
+        ? doctorDetailFromApi(currentValue).primaryColor
+        : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFf8f9fb),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1e40af),
+        backgroundColor: appBarColor ?? const Color(0xFF1e40af),
         foregroundColor: Colors.white,
       ),
       body: FutureBuilder<ApiDoctor?>(
@@ -207,7 +213,7 @@ class _DoctorDetailContent extends ConsumerWidget {
       children: [
         Column(
           children: [
-            Expanded(child: Container(color: const Color(0xFF1e40af))),
+            Expanded(child: Container(color: detail.primaryColor)),
             Expanded(child: Container(color: const Color(0xFFf8f9fb))),
           ],
         ),
@@ -239,7 +245,7 @@ class _DoctorDetailContent extends ConsumerWidget {
                     const SizedBox(height: 16),
                   ],
                   if (detail.signals.isNotEmpty) ...[
-                    _DoctorSignals(signals: detail.signals),
+                    _DoctorSignals(detail: detail, signals: detail.signals),
                     const SizedBox(height: 16),
                   ],
                   _DoctorPersonalCard(
@@ -248,10 +254,13 @@ class _DoctorDetailContent extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   if (detail.prescribing.isNotEmpty) ...[
-                    _DoctorPrescribing(items: detail.prescribing),
+                    _DoctorPrescribing(
+                      detail: detail,
+                      items: detail.prescribing,
+                    ),
                     const SizedBox(height: 16),
                   ],
-                  _DoctorClinics(clinics: detail.clinics),
+                  _DoctorClinics(detail: detail, clinics: detail.clinics),
                   const SizedBox(height: 16),
                   if (detail.visits.isNotEmpty) ...[
                     _DoctorVisits(visits: detail.visits),
@@ -261,6 +270,7 @@ class _DoctorDetailContent extends ConsumerWidget {
                     repository: notesRepository,
                     builder: (context, notes, repository) {
                       return _DoctorNotes(
+                        detail: detail,
                         notes: notes,
                         onAddNote: () =>
                             _showAddNoteSheet(context, ref, repository),
@@ -560,7 +570,7 @@ class _DoctorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF1e40af),
+      color: detail.primaryColor,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,7 +597,7 @@ class _DoctorHeader extends StatelessWidget {
                           offset: const Offset(0, 6),
                         ),
                       ],
-                      color: const Color(0xFF1e40af),
+                      color: detail.primaryColor,
                     ),
                     child: Center(
                       child: Text(
@@ -702,7 +712,7 @@ class _DoctorQuickActions extends StatelessWidget {
         Positioned.fill(
           child: Column(
             children: [
-              Expanded(child: Container(color: const Color(0xFF1e40af))),
+              Expanded(child: Container(color: detail.primaryColor)),
               Expanded(child: Container(color: const Color(0xFFf8f9fb))),
             ],
           ),
@@ -727,7 +737,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'Ligar',
                 icon: Icons.phone_rounded,
-                color: const Color(0xFF1e40af),
+                color: detail.primaryColor,
                 onTap: () => launchContactUrl(
                   context,
                   url: callUrl(detail.phone),
@@ -737,7 +747,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'WhatsApp',
                 icon: Icons.chat_rounded,
-                color: const Color(0xFF1e40af).withValues(alpha: 0.7),
+                color: detail.primaryColor.withValues(alpha: 0.7),
                 onTap: () => launchContactUrl(
                   context,
                   url: whatsappUrl(detail.whatsapp),
@@ -747,7 +757,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'E-mail',
                 icon: Icons.email_rounded,
-                color: const Color(0xFF1e40af).withValues(alpha: 0.7),
+                color: detail.primaryColor.withValues(alpha: 0.7),
                 onTap: () => launchContactUrl(
                   context,
                   url: emailUrl(detail.email),
@@ -757,7 +767,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'Nova visita',
                 icon: Icons.event_rounded,
-                color: const Color(0xFF1e40af).withValues(alpha: 0.7),
+                color: detail.primaryColor.withValues(alpha: 0.7),
                 onTap: () {},
               ),
             ],
@@ -830,8 +840,9 @@ class _QuickAction extends StatelessWidget {
 // ======================================================================
 
 class _DoctorSignals extends StatelessWidget {
+  final DoctorDetail detail;
   final List<DoctorSignal> signals;
-  const _DoctorSignals({required this.signals});
+  const _DoctorSignals({required this.detail, required this.signals});
 
   @override
   Widget build(BuildContext context) {
@@ -843,7 +854,7 @@ class _DoctorSignals extends StatelessWidget {
             .map(
               (s) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: _SignalCard(signal: s),
+                child: _SignalCard(detail: detail, signal: s),
               ),
             )
             .toList(),
@@ -853,8 +864,9 @@ class _DoctorSignals extends StatelessWidget {
 }
 
 class _SignalCard extends StatelessWidget {
+  final DoctorDetail detail;
   final DoctorSignal signal;
-  const _SignalCard({required this.signal});
+  const _SignalCard({required this.detail, required this.signal});
 
   @override
   Widget build(BuildContext context) {
@@ -870,8 +882,8 @@ class _SignalCard extends StatelessWidget {
         Icons.info_outline_rounded,
       ),
       _ => (
-        const Color(0xFF1e40af),
-        const Color(0xFFeef4ff),
+        detail.primaryColor,
+        detail.primaryBg,
         Icons.lightbulb_outline_rounded,
       ),
     };
@@ -1076,8 +1088,9 @@ class _DoctorPersonalCard extends StatelessWidget {
 // ======================================================================
 
 class _DoctorPrescribing extends StatelessWidget {
+  final DoctorDetail detail;
   final List<DoctorPrescribingItem> items;
-  const _DoctorPrescribing({required this.items});
+  const _DoctorPrescribing({required this.detail, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -1193,7 +1206,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                       height: pct * 28,
                                       decoration: BoxDecoration(
                                         color: v == item.trend.last
-                                            ? const Color(0xFF1e40af)
+                                            ? detail.primaryColor
                                             : const Color(0xFFc7d2fe),
                                         borderRadius: BorderRadius.circular(2),
                                       ),
@@ -1239,7 +1252,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                         widthFactor: item.share / 100,
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF1e40af),
+                                            color: detail.primaryColor,
                                             borderRadius: BorderRadius.circular(
                                               3,
                                             ),
@@ -1271,8 +1284,9 @@ class _DoctorPrescribing extends StatelessWidget {
 // ======================================================================
 
 class _DoctorClinics extends StatelessWidget {
+  final DoctorDetail detail;
   final List<DoctorClinic> clinics;
-  const _DoctorClinics({required this.clinics});
+  const _DoctorClinics({required this.detail, required this.clinics});
 
   @override
   Widget build(BuildContext context) {
@@ -1347,7 +1361,7 @@ class _DoctorClinics extends StatelessWidget {
                                   Icons.local_hospital_rounded,
                                   size: 16,
                                   color: c.isMain
-                                      ? const Color(0xFF1e40af)
+                                      ? detail.primaryColor
                                       : const Color(0xFF6b7280),
                                 ),
                               ),
@@ -1378,19 +1392,17 @@ class _DoctorClinics extends StatelessWidget {
                                               vertical: 1,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: const Color(
-                                                0xFF1e40af,
-                                              ).withValues(alpha: 0.10),
+                                              color: detail.primaryAccent,
                                               borderRadius:
                                                   BorderRadius.circular(999),
                                             ),
-                                            child: const Text(
+                                            child: Text(
                                               'principal',
                                               style: TextStyle(
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.w700,
                                                 letterSpacing: 0.3,
-                                                color: Color(0xFF1e40af),
+                                                color: detail.primaryColor,
                                               ),
                                             ),
                                           ),
@@ -1661,10 +1673,15 @@ class _DoctorVisits extends StatelessWidget {
 // ======================================================================
 
 class _DoctorNotes extends StatelessWidget {
+  final DoctorDetail detail;
   final List<ProfessionalNote>? notes;
   final VoidCallback onAddNote;
 
-  const _DoctorNotes({required this.notes, required this.onAddNote});
+  const _DoctorNotes({
+    required this.detail,
+    required this.notes,
+    required this.onAddNote,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1725,16 +1742,16 @@ class _DoctorNotes extends StatelessWidget {
                               width: 18,
                               height: 18,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFeef2ff),
+                                color: detail.primaryBg,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Center(
                                 child: Text(
                                   '${i + 1}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1e40af),
+                                    color: detail.primaryColor,
                                   ),
                                 ),
                               ),
@@ -1768,14 +1785,14 @@ class _DoctorNotes extends StatelessWidget {
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.add_rounded,
                                 size: 14,
-                                color: Color(0xFF1e40af),
+                                color: detail.primaryColor,
                               ),
                               SizedBox(width: 4),
                               Text(
@@ -1783,7 +1800,7 @@ class _DoctorNotes extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1e40af),
+                                  color: detail.primaryColor,
                                 ),
                               ),
                             ],
