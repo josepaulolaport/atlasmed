@@ -25,6 +25,7 @@ function professionalRecord(id: string): ProfessionalRecord {
     email: null,
     websiteUrl: null,
     imageUrl: null,
+    imageBlurhash: null,
     favoriteTeam: null,
     favoriteSport: null,
     languages: null,

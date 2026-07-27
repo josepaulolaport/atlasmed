@@ -107,6 +107,8 @@ export const facilities = pgTable(
     nextPurchaseFunnelTransitionDate: date("next_purchase_funnel_transition_date"),
     purchaseRecurrenceCalculatedAt: timestamp("purchase_recurrence_calculated_at", { withTimezone: true }),
     imageUrl: text("image_url"),
+    /** BlurHash for the facility header image. */
+    imageBlurhash: text("image_blurhash"),
     /** Legacy free-text unit type (Excel); keep alongside CNES codes in v1. */
     unitType: text("unit_type"),
     /** Legacy free-text unit subtype (Excel); keep alongside CNES codes in v1. */
@@ -209,6 +211,7 @@ export const professionals = pgTable(
     websiteUrl: text("website_url"),
     imageUrl: text("image_url"),
     favoriteTeam: text("favorite_team"),
+    imageBlurhash: text("image_blurhash"),
     favoriteSport: text("favorite_sport"),
     /** Free-text languages spoken, e.g. "Português, Inglês". */
     languages: text("languages"),
@@ -314,6 +317,7 @@ export const facilityPhotos = pgTable(
       .references(() => facilities.id, { onDelete: "cascade" }),
     storageKey: text("storage_key").notNull(),
     url: text("url").notNull(),
+    blurhash: text("blurhash"),
     contentType: text("content_type").notNull(),
     uploadedByUserId: text("uploaded_by_user_id").references(() => users.id, {
       onDelete: "set null",

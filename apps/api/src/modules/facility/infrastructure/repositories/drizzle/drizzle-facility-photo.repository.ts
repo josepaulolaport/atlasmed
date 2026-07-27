@@ -15,6 +15,7 @@ function mapPhoto(row: PhotoRow): FacilityPhotoRecord {
     storageKey: row.storageKey,
     url: row.url,
     contentType: row.contentType,
+    blurhash: row.blurhash ?? null,
     uploadedByUserId: row.uploadedByUserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -37,6 +38,7 @@ export class DrizzleFacilityPhotoRepository implements FacilityPhotoRepository {
     storageKey: string;
     url: string;
     contentType: string;
+    blurhash?: string | null;
     uploadedByUserId: string;
   }): Promise<FacilityPhotoRecord> {
     const [row] = await db.insert(facilityPhotos).values(input).returning();

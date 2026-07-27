@@ -40,6 +40,7 @@ describe("Facility photo use cases", () => {
         storageKey: "facilities/facility-1/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg",
         url: "/api/v1/facilities/photos/facilities/facility-1/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg",
         contentType: "image/jpeg",
+        blurhash: null,
         uploadedByUserId: "user-1",
         createdAt: now,
         updatedAt: now,
@@ -78,10 +79,12 @@ describe("Facility photo use cases", () => {
       storageKey: string;
       url: string;
       contentType: string;
+      blurhash?: string | null;
       uploadedByUserId: string;
     }) => ({
       id: "photo-2",
       ...input,
+      blurhash: input.blurhash ?? null,
       createdAt: now,
       updatedAt: now,
     }));
@@ -138,6 +141,7 @@ describe("Facility photo use cases", () => {
           storageKey: key,
           url: `/api/v1/facilities/photos/${key}`,
           contentType: "image/jpeg",
+          blurhash: null,
           uploadedByUserId: "user-1",
           createdAt: now,
           updatedAt: now,

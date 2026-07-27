@@ -187,6 +187,7 @@ export class DrizzleFacilityProfessionalRepository
           email: professionals.email,
           websiteUrl: professionals.websiteUrl,
           imageUrl: professionals.imageUrl,
+          imageBlurhash: professionals.imageBlurhash ?? null,
           primarySpecialtyLabel: professionals.primarySpecialtyLabel,
           crmCouncil: professionals.crmCouncil,
           crmNumber: professionals.crmNumber,

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { IAuthCache } from "../interfaces/auth-cache.interface";
 import type { UserRepository, UserRecord } from "../interfaces/user.repository.interface";
 import { UserNotFoundError, ValidationError } from "../../../../shared/errors";
+import { calculateBlurhash } from "../../../../infrastructure/images/blurhash";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const imageExtensions: Record<string, string> = {
@@ -46,10 +47,14 @@ export class UpdateAvatarUseCase {
     }
 
     const key = `avatars/${input.userId}/${randomUUID()}.${extension}`;
-    await this.dependencies.storage.upload(key, new Uint8Array(await input.file.arrayBuffer()), input.file.type);
+    const bytes = new Uint8Array(await input.file.arrayBuffer());
+    await this.dependencies.storage.upload(key, bytes, input.file.type);
+
+    const blurhash = await calculateBlurhash(bytes);
 
     const updatedUser = await this.dependencies.userRepository.updateProfile(input.userId, {
       avatarUrl: this.avatarUrl(key),
+      avatarBlurhash: blurhash,
     });
 
     await this.deletePreviousAvatar(user.avatarUrl, key);
@@ -59,7 +64,10 @@ export class UpdateAvatarUseCase {
 
   async remove(input: RemoveAvatarInput): Promise<UserRecord> {
     const user = await this.findUser(input.userId);
-    const updatedUser = await this.dependencies.userRepository.updateProfile(input.userId, { avatarUrl: null });
+    const updatedUser = await this.dependencies.userRepository.updateProfile(input.userId, {
+      avatarUrl: null,
+      avatarBlurhash: null,
+    });
     await this.deletePreviousAvatar(user.avatarUrl);
     await this.dependencies.authCache.invalidate(input.userId);
     return updatedUser;
