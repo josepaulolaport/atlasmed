@@ -129,6 +129,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
     title: 'AtlasMed',
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
+    themeMode: ThemeMode.light,
     routerConfig: _router,
   );
 
