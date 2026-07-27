@@ -147,6 +147,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       builder: (context) => FilterSheet(
         kind: state.activeTab,
         filters: state.filters,
