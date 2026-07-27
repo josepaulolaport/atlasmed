@@ -1,34 +1,79 @@
 import 'dart:math' as math;
 
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:flutter/material.dart';
 
 class PurchaseStatusDonutCard extends StatelessWidget {
-  const PurchaseStatusDonutCard({super.key, required this.data});
+  const PurchaseStatusDonutCard({
+    super.key,
+    required this.data,
+    this.onBucketTap,
+  });
 
   final DashboardPurchaseStatus data;
 
+  /// Opens Explorar with the matching purchase-status bucket filter.
+  final ValueChanged<String>? onBucketTap;
+
   static const _activeColor = Color(0xFF16a373);
   static const _inactiveColor = Color(0xFFc6861b);
-  static const _neverColor = Color(0xFF6b7280);
+  static const _neverColor = Color(0xFFdc2626);
 
   @override
   Widget build(BuildContext context) {
     final slices = [
-      _Slice('Ativas', data.active, _activeColor),
-      _Slice('Inativas', data.inactive, _inactiveColor),
-      _Slice('Nunca compraram', data.neverBought, _neverColor),
+      _Slice(
+        PurchaseBucketFilter.label(PurchaseBucketFilter.active),
+        PurchaseBucketFilter.active,
+        data.active,
+        _activeColor,
+      ),
+      _Slice(
+        PurchaseBucketFilter.label(PurchaseBucketFilter.inactive),
+        PurchaseBucketFilter.inactive,
+        data.inactive,
+        _inactiveColor,
+      ),
+      _Slice(
+        PurchaseBucketFilter.label(PurchaseBucketFilter.neverBought),
+        PurchaseBucketFilter.neverBought,
+        data.neverBought,
+        _neverColor,
+      ),
     ].where((s) => s.count > 0 || data.total == 0).toList();
 
     // Always show all three legend rows even when zero.
     final legend = [
-      _Slice('Ativas', data.active, _activeColor),
-      _Slice('Inativas', data.inactive, _inactiveColor),
-      _Slice('Nunca compraram', data.neverBought, _neverColor),
+      _Slice(
+        PurchaseBucketFilter.label(PurchaseBucketFilter.active),
+        PurchaseBucketFilter.active,
+        data.active,
+        _activeColor,
+      ),
+      _Slice(
+        PurchaseBucketFilter.label(PurchaseBucketFilter.inactive),
+        PurchaseBucketFilter.inactive,
+        data.inactive,
+        _inactiveColor,
+      ),
+      _Slice(
+        PurchaseBucketFilter.label(PurchaseBucketFilter.neverBought),
+        PurchaseBucketFilter.neverBought,
+        data.neverBought,
+        _neverColor,
+      ),
     ];
 
     final paintSlices = data.total == 0
-        ? [_Slice('Nunca compraram', 1, _neverColor)]
+        ? [
+            _Slice(
+              PurchaseBucketFilter.label(PurchaseBucketFilter.neverBought),
+              PurchaseBucketFilter.neverBought,
+              1,
+              _neverColor,
+            ),
+          ]
         : slices;
 
     return Container(
@@ -100,7 +145,13 @@ class PurchaseStatusDonutCard extends StatelessWidget {
           const SizedBox(height: 8),
           for (final slice in legend) ...[
             const Divider(height: 1, color: Color(0xFFf3f4f6)),
-            _LegendRow(slice: slice, total: data.total),
+            _LegendRow(
+              slice: slice,
+              total: data.total,
+              onTap: onBucketTap == null
+                  ? null
+                  : () => onBucketTap!(slice.bucket),
+            ),
           ],
         ],
       ),
@@ -109,62 +160,79 @@ class PurchaseStatusDonutCard extends StatelessWidget {
 }
 
 class _Slice {
-  const _Slice(this.label, this.count, this.color);
+  const _Slice(this.label, this.bucket, this.count, this.color);
   final String label;
+  final String bucket;
   final int count;
   final Color color;
 }
 
 class _LegendRow extends StatelessWidget {
-  const _LegendRow({required this.slice, required this.total});
+  const _LegendRow({
+    required this.slice,
+    required this.total,
+    this.onTap,
+  });
 
   final _Slice slice;
   final int total;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final pct = total > 0 ? ((slice.count / total) * 100).round() : 0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: slice.color,
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: slice.color,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              slice.label,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                slice.label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0f1729),
+                ),
+              ),
+            ),
+            Text(
+              '${slice.count}',
               style: const TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: Color(0xFF0f1729),
               ),
             ),
-          ),
-          Text(
-            '${slice.count}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: 36,
+              child: Text(
+                '$pct%',
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 36,
-            child: Text(
-              '$pct%',
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-            ),
-          ),
-        ],
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: Color(0xFF9ca3af),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

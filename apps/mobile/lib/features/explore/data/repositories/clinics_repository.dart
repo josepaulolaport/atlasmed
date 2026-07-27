@@ -21,6 +21,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     this.longitude,
     this.radiusKm,
     this.commercialStatus,
+    this.purchaseBucket,
     this.productIds,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
@@ -43,6 +44,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
              if (radiusKm != null) 'radiusKm': radiusKm.toString(),
              if (commercialStatus != null && commercialStatus.trim().isNotEmpty)
                'commercialStatus': commercialStatus.trim(),
+             if (purchaseBucket != null && purchaseBucket.trim().isNotEmpty)
+               'purchaseBucket': purchaseBucket.trim(),
              if (productIds != null && productIds.trim().isNotEmpty)
                'productIds': productIds.trim(),
              if (purchaseFunnelStages.isNotEmpty)
@@ -71,6 +74,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
   final double? longitude;
   final double? radiusKm;
   final String? commercialStatus;
+  final String? purchaseBucket;
   final String? productIds;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
@@ -91,6 +95,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     double? longitude,
     double? radiusKm,
     String? commercialStatus,
+    String? purchaseBucket,
     String? productIds,
     List<PurchaseFunnelStage> purchaseFunnelStages = const [],
     PurchaseProfile? purchaseProfile,
@@ -113,6 +118,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
         if (radiusKm != null) 'radiusKm': radiusKm.toString(),
         if (commercialStatus != null && commercialStatus.trim().isNotEmpty)
           'commercialStatus': commercialStatus.trim(),
+        if (purchaseBucket != null && purchaseBucket.trim().isNotEmpty)
+          'purchaseBucket': purchaseBucket.trim(),
         if (productIds != null && productIds.trim().isNotEmpty)
           'productIds': productIds.trim(),
         if (purchaseFunnelStages.isNotEmpty)

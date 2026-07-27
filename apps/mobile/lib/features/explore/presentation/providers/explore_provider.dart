@@ -28,8 +28,8 @@ class ExploreState {
   final String activeTab; // 'clinic' | 'doctor'
   final String query;
 
-  /// Clinic: `status` (single commercialStatus), `products` (product UUIDs).
-  /// Doctor: `specialties`.
+  /// Clinic: `status` (commercialStatus), `purchaseBucket` (Desempenho),
+  /// `products` (product UUIDs). Doctor: `specialties`.
   final Map<String, List<String>> filters;
   final String sort;
   final int visibleCount;
@@ -219,6 +219,13 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   int? _purchaseIntervalBound(String key) =>
       int.tryParse(state.filters[key]?.first ?? '');
 
+  /// Desempenho purchase bucket (`active` | `inactive` | `neverBought`).
+  String? get _purchaseBucket {
+    final list = state.filters['purchaseBucket'];
+    if (list == null || list.isEmpty) return null;
+    return list.first;
+  }
+
   ({FacilitySort? sort, SortOrder? order}) get _facilitySort =>
       switch (state.sort) {
         'distance' => (
@@ -334,6 +341,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       longitude: origin?.longitude,
       radiusKm: state.radiusKm,
       commercialStatus: _commercialStatus,
+      purchaseBucket: _purchaseBucket,
       productIds: _commaJoin(state.filters['products']),
       purchaseFunnelStages: _purchaseFunnelStages,
       purchaseProfile: _purchaseProfile,
@@ -455,6 +463,20 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       filters: filters,
       radiusKm: radiusKm,
       clearRadiusKm: clearRadius,
+      resetVisible: true,
+    );
+    unawaited(_refreshCurrentTab());
+  }
+
+  /// Open Explorar clinic tab with a Desempenho purchase-status bucket.
+  void applyPurchaseBucket(String bucket) {
+    state = state.copyWith(
+      activeTab: 'clinic',
+      filters: {
+        ...state.filters,
+        'status': const <String>[],
+        'purchaseBucket': [bucket],
+      },
       resetVisible: true,
     );
     unawaited(_refreshCurrentTab());

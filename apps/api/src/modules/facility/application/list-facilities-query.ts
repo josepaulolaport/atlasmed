@@ -6,9 +6,13 @@ const PURCHASE_PROFILES = ["AUTOMATIC", "WEEKLY", "BIWEEKLY", "MONTHLY", "BIMONT
 const SORTS = ["relevance", "distance", "name", "purchaseFunnelStage", "purchaseIntervalDays", "lastPurchaseDate"] as const;
 const ORDERS = ["asc", "desc"] as const;
 
+/** Dashboard / Desempenho purchase buckets (matches countPurchaseBuckets SQL). */
+const PURCHASE_BUCKETS = ["active", "inactive", "neverBought"] as const;
+
 export type FacilityCommercialStatus = (typeof COMMERCIAL_STATUSES)[number];
 export type FacilityPurchaseFunnelStage = (typeof PURCHASE_FUNNEL_STAGES)[number];
 export type FacilityPurchaseProfileFilter = (typeof PURCHASE_PROFILES)[number];
+export type FacilityPurchaseBucket = (typeof PURCHASE_BUCKETS)[number];
 export type FacilitySearchSort = (typeof SORTS)[number];
 export type FacilitySearchOrder = (typeof ORDERS)[number];
 
@@ -17,6 +21,8 @@ export interface ListFacilitiesQuery {
   longitude?: number;
   radiusKm?: number;
   commercialStatus?: FacilityCommercialStatus;
+  /** Purchase-status bucket from Desempenho donut drill-down. */
+  purchaseBucket?: FacilityPurchaseBucket;
   productIds?: string[];
   purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
   purchaseProfile?: FacilityPurchaseProfileFilter;
@@ -45,6 +51,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
   const purchaseIntervalMinDays = parseInteger(query.purchaseIntervalMinDays);
   const purchaseIntervalMaxDays = parseInteger(query.purchaseIntervalMaxDays);
   const commercialStatus = query.commercialStatus;
+  const purchaseBucket = query.purchaseBucket;
   const purchaseProfile = query.purchaseProfile;
   const requestedSort = query.sort;
   const requestedOrder = query.order;
@@ -59,6 +66,16 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
   if (radiusKm !== undefined && (!Number.isFinite(radiusKm) || radiusKm <= 0 || radiusKm > 500)) issues.push({ field: "radiusKm", message: "radiusKm must be greater than 0 and at most 500" });
   if (radiusKm !== undefined && latitude === undefined) issues.push({ field: "radiusKm", message: "latitude and longitude are required when radiusKm is provided" });
   if (commercialStatus !== undefined && (typeof commercialStatus !== "string" || !COMMERCIAL_STATUSES.includes(commercialStatus as FacilityCommercialStatus))) issues.push({ field: "commercialStatus", message: "commercialStatus is invalid" });
+  if (
+    purchaseBucket !== undefined &&
+    (typeof purchaseBucket !== "string" ||
+      !PURCHASE_BUCKETS.includes(purchaseBucket as FacilityPurchaseBucket))
+  ) {
+    issues.push({
+      field: "purchaseBucket",
+      message: "purchaseBucket must be active, inactive, or neverBought",
+    });
+  }
   if (query.productIds !== undefined && (!productIds || productIds.length === 0)) issues.push({ field: "productIds", message: "productIds must be a comma-separated list of product IDs" });
   if (query.purchaseFunnelStage !== undefined && (!purchaseFunnelStages?.length || purchaseFunnelStages.some((stage) => !PURCHASE_FUNNEL_STAGES.includes(stage as FacilityPurchaseFunnelStage)))) issues.push({ field: "purchaseFunnelStage", message: "purchaseFunnelStage is invalid" });
   if (purchaseProfile !== undefined && (typeof purchaseProfile !== "string" || !PURCHASE_PROFILES.includes(purchaseProfile as FacilityPurchaseProfileFilter))) issues.push({ field: "purchaseProfile", message: "purchaseProfile is invalid" });
@@ -76,6 +93,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     longitude,
     radiusKm,
     commercialStatus: commercialStatus as FacilityCommercialStatus | undefined,
+    purchaseBucket: purchaseBucket as FacilityPurchaseBucket | undefined,
     productIds,
     purchaseFunnelStages: purchaseFunnelStages as FacilityPurchaseFunnelStage[] | undefined,
     purchaseProfile: purchaseProfile as FacilityPurchaseProfileFilter | undefined,

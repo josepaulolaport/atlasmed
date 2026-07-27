@@ -1,11 +1,14 @@
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dashboard_territory_card.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/purchase_status_donut_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/vertical_selector.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Desempenho / Dashboard — purchase-status donut + territory card.
 class DashboardScreen extends ConsumerWidget {
@@ -103,6 +106,24 @@ class DashboardScreen extends ConsumerWidget {
                           children: [
                             PurchaseStatusDonutCard(
                               data: summary.purchaseStatus,
+                              onBucketTap: (bucket) {
+                                final verticalId = ref.read(
+                                  dashboardSelectedVerticalIdProvider,
+                                );
+                                if (verticalId != null) {
+                                  ref
+                                          .read(
+                                            selectedFacilityVerticalIdProvider
+                                                .notifier,
+                                          )
+                                          .state =
+                                      verticalId;
+                                }
+                                ref
+                                    .read(exploreProvider.notifier)
+                                    .applyPurchaseBucket(bucket);
+                                context.go('/explore');
+                              },
                             ),
                             const SizedBox(height: 12),
                             DashboardTerritoryCard(data: summary.territory),

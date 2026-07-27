@@ -142,6 +142,8 @@ export interface FacilityRepository {
     longitude?: number;
     radiusKm?: number;
     commercialStatus?: FacilityCommercialStatus;
+    /** Desempenho donut bucket — see countPurchaseBuckets. */
+    purchaseBucket?: "active" | "inactive" | "neverBought";
     /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
     productIds?: string[];
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
@@ -163,6 +165,7 @@ export interface FacilityRepository {
     longitude?: number;
     radiusKm?: number;
     commercialStatus?: FacilityCommercialStatus;
+    purchaseBucket?: "active" | "inactive" | "neverBought";
     productIds?: string[];
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;

@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
@@ -274,6 +276,38 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             onRemove: () {
               final next = Map<String, List<String>>.from(state.filters);
               next['status'] = [];
+              notifier.applyFilters(
+                filters: next,
+                radiusKm: state.radiusKm,
+                clearRadius: state.radiusKm == null,
+              );
+            },
+          ),
+        );
+      }
+      for (final key in (state.filters['purchaseBucket'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            label: PurchaseBucketFilter.label(key),
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['purchaseBucket'] = [];
+              notifier.applyFilters(
+                filters: next,
+                radiusKm: state.radiusKm,
+                clearRadius: state.radiusKm == null,
+              );
+            },
+          ),
+        );
+      }
+      for (final key in (state.filters['purchaseFunnelStage'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            label: purchaseFunnelStageFromApi(key)?.label ?? key,
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['purchaseFunnelStage'] = [];
               notifier.applyFilters(
                 filters: next,
                 radiusKm: state.radiusKm,

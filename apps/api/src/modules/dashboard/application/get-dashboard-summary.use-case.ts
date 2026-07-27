@@ -62,8 +62,10 @@ export class GetDashboardSummaryUseCase {
     const [purchaseStatus, doctorCount, features] = await Promise.all([
       this.repo.countPurchaseBuckets({ verticalId, facilityIds }),
       this.repo.countDoctors({ verticalId, facilityIds }),
+      // Admins get Brazil overview stats only — no territory polygons on the
+      // Desempenho minimap (same rule as the live Mapa tab).
       isAdmin
-        ? this.repo.listVerticalTerritoryFeatures(verticalId)
+        ? Promise.resolve([] as DashboardTerritoryFeature[])
         : this.repo.listAssignedTerritoryFeatures({
             userId: input.userId,
             verticalId,

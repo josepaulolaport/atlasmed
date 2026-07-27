@@ -14,6 +14,7 @@ import {
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
+import type { FacilityPurchaseBucket } from "../../../application/list-facilities-query";
 import type {
   FacilityCommercialStatus,
   FacilityListRecord,
@@ -337,6 +338,7 @@ export function buildFacilityListConditions(params: {
   scope: FacilityListScopeFilter;
   search?: string;
   commercialStatus?: FacilityCommercialStatus;
+  purchaseBucket?: FacilityPurchaseBucket;
   productIds?: string[];
   purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
   purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
@@ -364,6 +366,42 @@ export function buildFacilityListConditions(params: {
         eq(facilityVerticalProfiles.isActive, true),
         ...(params.scope.verticalIds?.length ? [inArray(facilityVerticalProfiles.verticalId, params.scope.verticalIds)] : []),
       ))));
+  }
+  if (params.purchaseBucket) {
+    const purchaseStatusFilter =
+      params.purchaseBucket === "active"
+        ? inArray(facilityVerticalProfiles.purchaseStatus, [
+            "HIGH_BUYER",
+            "REGULAR_BUYER",
+          ])
+        : params.purchaseBucket === "inactive"
+          ? eq(facilityVerticalProfiles.purchaseStatus, "LOW_BUYER")
+          : or(
+              eq(facilityVerticalProfiles.purchaseStatus, "NON_BUYER"),
+              isNull(facilityVerticalProfiles.purchaseStatus),
+            );
+    conditions.push(
+      inArray(
+        facilities.id,
+        db
+          .select({ facilityId: facilityVerticalProfiles.facilityId })
+          .from(facilityVerticalProfiles)
+          .where(
+            and(
+              purchaseStatusFilter,
+              eq(facilityVerticalProfiles.isActive, true),
+              ...(params.scope.verticalIds?.length
+                ? [
+                    inArray(
+                      facilityVerticalProfiles.verticalId,
+                      params.scope.verticalIds,
+                    ),
+                  ]
+                : []),
+            ),
+          ),
+      ),
+    );
   }
   if (params.productIds?.length) conditions.push(inArray(facilities.id, db.select({ facilityId: orders.facilityId })
     .from(orders).innerJoin(orderItems, eq(orderItems.orderId, orders.id))
@@ -402,6 +440,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     longitude?: number;
     radiusKm?: number;
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    purchaseBucket?: FacilityPurchaseBucket;
     productIds?: string[];
     purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
@@ -525,6 +564,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     longitude?: number;
     radiusKm?: number;
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    purchaseBucket?: FacilityPurchaseBucket;
     productIds?: string[];
     purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
