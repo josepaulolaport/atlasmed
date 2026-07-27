@@ -85,6 +85,8 @@ import {
 } from "../territory/composition";
 import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
+import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
+import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
 import { searchService } from "../../infrastructure/search/search.service";
 import { DrizzleRegistryReadRepository } from "../registry-ingestion/infrastructure/repositories/drizzle/drizzle-registry-read.repository";
 import { professionalRepositories } from "../professional/composition";
@@ -93,6 +95,7 @@ const registryReadRepository = new DrizzleRegistryReadRepository();
 
 export const facilityRepositories = {
   facility: new DrizzleFacilityRepository(),
+  purchaseRecurrence: new DrizzleFacilityPurchaseRecurrenceRepository(),
   association: new DrizzleFacilityProfessionalRepository(),
   representative: new DrizzleFacilityRepresentativeRepository(),
   userRepresentativeRelationship:
@@ -146,10 +149,15 @@ async function handleFacilityLocationChanged(facilityId: string): Promise<void> 
   await territoryMembershipService.assignFacilityById(facilityId);
 }
 
+export const purchaseRecurrenceService = new PurchaseRecurrenceService(
+  facilityRepositories.purchaseRecurrence,
+);
+
 const facilityMembershipDeps = {
   facilityRepository: facilityRepositories.facility,
   searchService,
   facilityGeocodingService,
+  purchaseRecurrenceService,
   onFacilityLocationChanged: handleFacilityLocationChanged,
 };
 

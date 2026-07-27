@@ -1,5 +1,4 @@
 import { Elysia, t } from "elysia";
-import { updateFacilityProfessionalSchema } from "@atlasmed/access";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { facilityUseCases } from "../../composition";
@@ -8,22 +7,6 @@ import { registryReadService } from "../../../registry-ingestion/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
-import { z, type ZodTypeAny } from "zod";
-
-function parseSchema<T extends ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
-  const parsed = schema.safeParse(body);
-
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.issues.map((issue) => ({
-        field: issue.path.join(".") || "body",
-        message: issue.message,
-      }))
-    );
-  }
-
-  return parsed.data;
-}
 
 const listFacilitiesRoute = new Elysia()
   .use(auth)
@@ -59,7 +42,12 @@ const listFacilitiesRoute = new Elysia()
         radiusKm: t.Optional(t.String()),
         commercialStatus: t.Optional(t.String()),
         productIds: t.Optional(t.String()),
+        purchaseFunnelStage: t.Optional(t.String()),
+        purchaseProfile: t.Optional(t.String()),
+        purchaseIntervalMinDays: t.Optional(t.String()),
+        purchaseIntervalMaxDays: t.Optional(t.String()),
         sort: t.Optional(t.String()),
+        order: t.Optional(t.String()),
         verticalId: t.Optional(t.String()),
       }),
     }
@@ -120,6 +108,22 @@ const getFacilityRoute = new Elysia()
     }
   );
 
+export const purchaseRecurrenceType = t.Union([
+  t.Object({ mode: t.Literal("AUTOMATIC") }, { additionalProperties: false }),
+  t.Object({
+    mode: t.Literal("PRESET"),
+    profile: t.Union([
+      t.Literal("WEEKLY"), t.Literal("BIWEEKLY"), t.Literal("MONTHLY"),
+      t.Literal("BIMONTHLY"), t.Literal("QUARTERLY"), t.Literal("SEMIANNUAL"),
+      t.Literal("ANNUAL"),
+    ]),
+  }, { additionalProperties: false }),
+  t.Object({
+    mode: t.Literal("CUSTOM"),
+    intervalDays: t.Integer({ minimum: 1, maximum: 3650 }),
+  }, { additionalProperties: false }),
+]);
+
 const updateFacilityRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
@@ -149,6 +153,7 @@ const updateFacilityRoute = new Elysia()
         name: t.Optional(t.String()),
         lat: t.Optional(t.Union([t.Number(), t.Null()])),
         lng: t.Optional(t.Union([t.Number(), t.Null()])),
+        purchaseRecurrence: t.Optional(purchaseRecurrenceType),
       }),
     }
   );
@@ -364,10 +369,6 @@ const updateFacilityRepresentativeRoute = new Elysia()
 
 const MAX_FACILITY_NOTE_LENGTH = 2_000;
 
-const facilityNoteSchema = z.object({
-  note: z.string().trim().min(1).max(MAX_FACILITY_NOTE_LENGTH),
-});
-
 const listFacilityNotesRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
@@ -396,12 +397,11 @@ const createFacilityNoteRoute = new Elysia()
   .post(
     "/facilities/:id/notes",
     async ({ params, body, getScope, getUserId }) => {
-      const parsed = parseSchema(facilityNoteSchema, body);
       const [scope, userId] = await Promise.all([getScope(), getUserId()]);
       return facilityUseCases.createFacilityNote().execute({
         facilityId: params.id,
         userId,
-        note: parsed.note,
+        note: body.note,
         scope,
       });
     },
@@ -583,13 +583,12 @@ const updateFacilityProfessionalRoleRoute = new Elysia()
     async ({ params, body, getScope, getUserId }) => {
       const scope = await getScope();
       const userId = await getUserId();
-      const parsed = parseSchema(updateFacilityProfessionalSchema, body);
       const association = await facilityUseCases.updateFacilityProfessionalRole().execute({
         facilityId: params.id,
         professionalId: params.professionalId,
         userId,
         scope,
-        ...parsed,
+        ...body,
       });
 
       if (!association) {

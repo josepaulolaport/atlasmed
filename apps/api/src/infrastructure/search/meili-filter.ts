@@ -8,11 +8,16 @@ const FILTER_FIELDS = [
   "specialtyNormalized",
   "activeFacilityIds",
   "activeTerritoryIds",
+  "purchaseFunnelStage",
+  "purchaseIntervalSource",
+  "manualPurchaseProfile",
+  "purchaseIntervalDays",
 ] as const;
 
 type FilterField = (typeof FILTER_FIELDS)[number];
 
 type FilterClause = { expression: string };
+type NumericFilterField = "purchaseIntervalDays";
 
 function escapeValue(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
@@ -30,6 +35,18 @@ export function inFilter(field: FilterField, values: string[]): FilterClause | u
   const uniqueValues = [...new Set(values)].sort();
   if (uniqueValues.length === 0) return undefined;
   return { expression: `${field} IN [${uniqueValues.map(quoted).join(", ")}]` };
+}
+
+export function isNullFilter(field: FilterField): FilterClause {
+  return { expression: `${field} IS NULL` };
+}
+
+export function gteFilter(field: NumericFilterField, value: number): FilterClause {
+  return { expression: `${field} >= ${value}` };
+}
+
+export function lteFilter(field: NumericFilterField, value: number): FilterClause {
+  return { expression: `${field} <= ${value}` };
 }
 
 export function geoRadiusFilter(latitude: number, longitude: number, radiusMeters: number): FilterClause {

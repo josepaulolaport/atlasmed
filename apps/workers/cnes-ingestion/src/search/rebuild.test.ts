@@ -59,6 +59,11 @@ describe("search rebuild", () => {
         verticalIds: ["vertical-a"],
         territoryIds: ["territory-1"],
         territoryAssignmentStatus: "assigned",
+        purchaseFunnelStage: "NEVER_PURCHASED",
+        purchaseIntervalDays: 30,
+        purchaseIntervalSource: "DEFAULT",
+        manualPurchaseProfile: null,
+        lastValidPurchaseDate: null,
         latitude: -23.55,
         longitude: -46.63,
         deactivatedAt: null,
@@ -77,6 +82,13 @@ describe("search rebuild", () => {
       verticalIds: ["vertical-a"],
       territoryIds: ["territory-1"],
       territoryAssignmentStatus: "assigned",
+      purchaseFunnelStage: "NEVER_PURCHASED",
+      purchaseFunnelStageRank: 0,
+      purchaseIntervalDays: 30,
+      purchaseIntervalSource: "DEFAULT",
+      manualPurchaseProfile: null,
+      hasLastValidPurchase: 0,
+      lastValidPurchaseSortAt: 0,
       _geo: { lat: -23.55, lng: -46.63 },
     });
   });
@@ -87,7 +99,7 @@ describe("search rebuild", () => {
       cnpj: null, cpf: null, cnesCode: null, city: null, state: null,
       verticalIds: ["vertical-a"],
       territoryIds: [],
-      territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
+      territoryAssignmentStatus: "unassigned", purchaseFunnelStage: "NEVER_PURCHASED", purchaseIntervalDays: 30, purchaseIntervalSource: "DEFAULT", manualPurchaseProfile: null, lastValidPurchaseDate: null, latitude: null, longitude: null,
       deactivatedAt: null, isActiveInRegistry: false,
     })).toEqual({
       id: "facility-1",
@@ -102,6 +114,13 @@ describe("search rebuild", () => {
       verticalIds: ["vertical-a"],
       territoryIds: [],
       territoryAssignmentStatus: "unassigned",
+      purchaseFunnelStage: "NEVER_PURCHASED",
+      purchaseFunnelStageRank: 0,
+      purchaseIntervalDays: 30,
+      purchaseIntervalSource: "DEFAULT",
+      manualPurchaseProfile: null,
+      hasLastValidPurchase: 0,
+      lastValidPurchaseSortAt: 0,
     });
   });
 
@@ -109,7 +128,7 @@ describe("search rebuild", () => {
     expect(mapFacilitySearchDocument({
       id: "facility-1", displayName: "Clínica", legalName: null, tradeName: null,
       cnpj: null, cpf: null, cnesCode: null, city: null, state: null,
-      territoryIds: [], territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
+      territoryIds: [], territoryAssignmentStatus: "unassigned", purchaseFunnelStage: "NEVER_PURCHASED", purchaseIntervalDays: 30, purchaseIntervalSource: "DEFAULT", manualPurchaseProfile: null, lastValidPurchaseDate: null, latitude: null, longitude: null,
       deactivatedAt: new Date(), isActiveInRegistry: true,
     })).toBeNull();
   });
@@ -162,7 +181,10 @@ describe("search rebuild", () => {
     );
     expect(facilityFilterable).not.toContain("commercialStatus");
     expect(facilityFilterable).not.toContain("territoryId");
-    expect(searchRebuild.FACILITY_SETTINGS.sortableAttributes).toEqual(["_geo"]);
+    expect(searchRebuild.FACILITY_SETTINGS.sortableAttributes).toEqual(expect.arrayContaining([
+      "_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDays",
+      "hasLastValidPurchase", "lastValidPurchaseSortAt", "id",
+    ]));
     expect(searchRebuild.PROFESSIONAL_SETTINGS.filterableAttributes).toEqual(
       expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"])
     );
@@ -311,4 +333,28 @@ describe("search rebuild", () => {
       "wait:5",
     ]);
   });
+});
+
+test("keeps recurrence fields and vertical memberships in facility search documents", () => {
+  expect(mapFacilitySearchDocument({
+    id: "facility-1", displayName: "Clínica", legalName: null, tradeName: null,
+    cnpj: null, cpf: null, cnesCode: null, city: null, state: null,
+    verticalIds: ["vertical-a"], territoryIds: ["territory-a"],
+    territoryAssignmentStatus: "assigned", latitude: null, longitude: null,
+    deactivatedAt: null, isActiveInRegistry: true,
+    purchaseFunnelStage: "PURCHASE_WINDOW", purchaseIntervalDays: 30,
+    purchaseIntervalSource: "MANUAL", manualPurchaseProfile: "MONTHLY",
+    lastValidPurchaseDate: "2026-07-01",
+  })).toMatchObject({
+    verticalIds: ["vertical-a"], territoryIds: ["territory-a"],
+    purchaseFunnelStage: "PURCHASE_WINDOW", purchaseFunnelStageRank: 2,
+    purchaseIntervalDays: 30, purchaseIntervalSource: "MANUAL",
+    manualPurchaseProfile: "MONTHLY", hasLastValidPurchase: 1,
+  });
+  expect(searchRebuild.FACILITY_SETTINGS.filterableAttributes).toEqual(
+    expect.arrayContaining(["verticalIds", "purchaseFunnelStage", "purchaseIntervalSource", "manualPurchaseProfile"]),
+  );
+  expect(searchRebuild.FACILITY_SETTINGS.sortableAttributes).toEqual(
+    expect.arrayContaining(["purchaseFunnelStageRank", "purchaseIntervalDays", "lastValidPurchaseSortAt"]),
+  );
 });

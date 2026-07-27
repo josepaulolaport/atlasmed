@@ -62,6 +62,15 @@ export interface FacilityRecord {
   territoryAssignmentSource: "geo" | "manual";
   commercialStatus: FacilityCommercialStatus | null;
   purchaseStatus: FacilityPurchaseStatus | null;
+  observedPurchaseIntervalDays: number | null;
+  purchaseIntervalDays: number;
+  purchaseIntervalSource: "DEFAULT" | "CALCULATED" | "MANUAL";
+  manualPurchaseProfile: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM" | null;
+  manualPurchaseIntervalDays: number | null;
+  lastValidPurchaseDate: string | null;
+  purchaseRecurrenceSampleSize: number;
+  purchaseFunnelStage: FacilityPurchaseFunnelStage;
+  nextPurchaseFunnelTransitionDate: string | null;
   conformityStatus: FacilityConformityStatus;
   /** Active consultant display name when loaded (list + detail). */
   consultantName: string | null;
@@ -116,6 +125,11 @@ export interface FacilitySourceUpsertInput {
   sourceLastSeenAt: Date;
 }
 
+export type FacilityPurchaseFunnelStage = "NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE";
+export type FacilityPurchaseProfileFilter = "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
+export type FacilityListSort = "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
+export type FacilityListOrder = "asc" | "desc";
+
 export interface FacilityRepository {
   findAll(params: {
     page: number;
@@ -127,6 +141,12 @@ export interface FacilityRepository {
     commercialStatus?: FacilityCommercialStatus;
     /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
     productIds?: string[];
+    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
+    purchaseProfile?: FacilityPurchaseProfileFilter;
+    purchaseIntervalMinDays?: number;
+    purchaseIntervalMaxDays?: number;
+    sort?: FacilityListSort;
+    order?: FacilityListOrder;
     scope: FacilityListScopeFilter;
     /** Internal canonical hydration constraint for a Meilisearch result page. */
     candidateIds?: string[];
@@ -140,6 +160,12 @@ export interface FacilityRepository {
     radiusKm?: number;
     commercialStatus?: FacilityCommercialStatus;
     productIds?: string[];
+    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
+    purchaseProfile?: FacilityPurchaseProfileFilter;
+    purchaseIntervalMinDays?: number;
+    purchaseIntervalMaxDays?: number;
+    sort?: FacilityListSort;
+    order?: FacilityListOrder;
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]>;
 

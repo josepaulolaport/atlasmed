@@ -10,7 +10,7 @@ import {
   orders,
   orderItems,
 } from "@atlasmed/database";
-import { eq, and, isNull, ilike, inArray, sql, asc, getTableColumns } from "drizzle-orm";
+import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 import type {
@@ -51,7 +51,7 @@ function deriveProfileTerritoryId(
   return null;
 }
 
-function mapFacility(
+export function mapFacility(
   facility: FacilityRowWithCoords | FacilityRow,
   options: {
     lat?: number | null;
@@ -101,6 +101,15 @@ function mapFacility(
     territoryAssignmentSource: facility.territoryAssignmentSource,
     commercialStatus: options.commercialStatus ?? null,
     purchaseStatus: options.purchaseStatus ?? null,
+    observedPurchaseIntervalDays: facility.observedPurchaseIntervalDays ?? null,
+    purchaseIntervalDays: facility.purchaseIntervalDays,
+    purchaseIntervalSource: facility.purchaseIntervalSource,
+    manualPurchaseProfile: facility.manualPurchaseProfile ?? null,
+    manualPurchaseIntervalDays: facility.manualPurchaseIntervalDays ?? null,
+    lastValidPurchaseDate: facility.lastValidPurchaseDate ?? null,
+    purchaseRecurrenceSampleSize: facility.purchaseRecurrenceSampleSize,
+    purchaseFunnelStage: facility.purchaseFunnelStage,
+    nextPurchaseFunnelTransitionDate: facility.nextPurchaseFunnelTransitionDate ?? null,
     conformityStatus: facility.conformityStatus,
     consultantName: options.consultantName ?? null,
     consultantSince: options.consultantSince ?? null,
@@ -298,6 +307,67 @@ async function loadTerritoryNames(
   return new Map(rows.map((row) => [row.id, row.name]));
 }
 
+
+export function buildFacilityListConditions(params: {
+  scope: FacilityListScopeFilter;
+  search?: string;
+  commercialStatus?: FacilityCommercialStatus;
+  productIds?: string[];
+  purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
+  purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
+  purchaseIntervalMinDays?: number;
+  purchaseIntervalMaxDays?: number;
+  candidateIds?: string[];
+}) {
+  const conditions = [isNull(facilities.deactivatedAt)];
+  const scopeCondition = buildScopeCondition(params.scope);
+  if (scopeCondition) conditions.push(scopeCondition);
+  if (params.candidateIds) conditions.push(inArray(facilities.id, params.candidateIds));
+  if (params.search) {
+    const pattern = `%${params.search}%`;
+    conditions.push(or(
+      ilike(facilities.displayName, pattern), ilike(facilities.legalName, pattern),
+      ilike(facilities.tradeName, pattern), ilike(facilities.cnpj, pattern),
+      ilike(facilities.cpf, pattern), ilike(facilities.cnesCode, pattern),
+      ilike(facilities.city, pattern), ilike(facilities.state, pattern),
+    )!);
+  }
+  if (params.commercialStatus) {
+    conditions.push(inArray(facilities.id, db.select({ facilityId: facilityVerticalProfiles.facilityId })
+      .from(facilityVerticalProfiles).where(and(
+        eq(facilityVerticalProfiles.commercialStatus, params.commercialStatus),
+        eq(facilityVerticalProfiles.isActive, true),
+        ...(params.scope.verticalIds?.length ? [inArray(facilityVerticalProfiles.verticalId, params.scope.verticalIds)] : []),
+      ))));
+  }
+  if (params.productIds?.length) conditions.push(inArray(facilities.id, db.select({ facilityId: orders.facilityId })
+    .from(orders).innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .where(inArray(orderItems.productId, params.productIds))));
+  if (params.purchaseFunnelStages?.length) conditions.push(inArray(facilities.purchaseFunnelStage, params.purchaseFunnelStages));
+  if (params.purchaseProfile === "AUTOMATIC") conditions.push(isNull(facilities.manualPurchaseProfile));
+  else if (params.purchaseProfile) conditions.push(eq(facilities.manualPurchaseProfile, params.purchaseProfile));
+  if (params.purchaseIntervalMinDays !== undefined) conditions.push(gte(facilities.purchaseIntervalDays, params.purchaseIntervalMinDays));
+  if (params.purchaseIntervalMaxDays !== undefined) conditions.push(lte(facilities.purchaseIntervalDays, params.purchaseIntervalMaxDays));
+  return and(...conditions);
+}
+
+const purchaseFunnelStageRank = sql<number>`case ${facilities.purchaseFunnelStage}
+  when 'NEVER_PURCHASED' then 0 when 'OUTSIDE_WINDOW' then 1
+  when 'PURCHASE_WINDOW' then 2 when 'CHURN' then 3 when 'INACTIVE' then 4 end`;
+
+export function buildFacilityListOrderBy(params: {
+  sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
+  order?: "asc" | "desc";
+}) {
+  const direction = params.order === "desc" ? desc : asc;
+  switch (params.sort) {
+    case "purchaseFunnelStage": return [direction(purchaseFunnelStageRank), asc(facilities.displayName), asc(facilities.id)];
+    case "purchaseIntervalDays": return [direction(facilities.purchaseIntervalDays), asc(facilities.displayName), asc(facilities.id)];
+    case "lastPurchaseDate": return [sql`${facilities.lastValidPurchaseDate} ${sql.raw(params.order === "desc" ? "desc" : "asc")} nulls last`, asc(facilities.displayName), asc(facilities.id)];
+    default: return [asc(facilities.displayName), asc(facilities.id)];
+  }
+}
+
 export class DrizzleFacilityRepository implements FacilityRepository {
   async findAll(params: {
     page: number;
@@ -308,53 +378,15 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     radiusKm?: number;
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
     productIds?: string[];
+    purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
+    purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
+    purchaseIntervalMinDays?: number;
+    purchaseIntervalMaxDays?: number;
+    sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
+    order?: "asc" | "desc";
     scope: FacilityListScopeFilter;
     candidateIds?: string[];
   }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
-    const conditions = [isNull(facilities.deactivatedAt)];
-
-    const scopeCondition = buildScopeCondition(params.scope);
-    if (scopeCondition) conditions.push(scopeCondition);
-
-    if (params.candidateIds) {
-      conditions.push(inArray(facilities.id, params.candidateIds));
-    }
-
-    if (params.search) {
-      conditions.push(ilike(facilities.displayName, `%${params.search}%`));
-    }
-    if (params.commercialStatus) {
-      conditions.push(
-        inArray(
-          facilities.id,
-          db
-            .select({ facilityId: facilityVerticalProfiles.facilityId })
-            .from(facilityVerticalProfiles)
-            .where(
-              and(
-                eq(facilityVerticalProfiles.commercialStatus, params.commercialStatus),
-                eq(facilityVerticalProfiles.isActive, true),
-                ...(params.scope.verticalIds?.length
-                  ? [inArray(facilityVerticalProfiles.verticalId, params.scope.verticalIds)]
-                  : []),
-              ),
-            ),
-        ),
-      );
-    }
-    if (params.productIds?.length) {
-      conditions.push(
-        inArray(
-          facilities.id,
-          db
-            .select({ facilityId: orders.facilityId })
-            .from(orders)
-            .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
-            .where(inArray(orderItems.productId, params.productIds))
-        )
-      );
-    }
-
     const referencePoint =
       params.latitude === undefined
         ? undefined
@@ -362,16 +394,18 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     const distanceKm = referencePoint
       ? sql<number>`ST_Distance(${facilities.location}::geography, ${referencePoint}::geography) / 1000`
       : undefined;
-    if (referencePoint) {
-      conditions.push(sql`${facilities.location} IS NOT NULL`);
-      if (params.radiusKm !== undefined) {
-        conditions.push(
-          sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`
-        );
-      }
-    }
+    const where = and(
+      buildFacilityListConditions(params),
+      ...(referencePoint
+        ? [
+            sql`${facilities.location} IS NOT NULL`,
+            ...(params.radiusKm !== undefined
+              ? [sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`]
+              : []),
+          ]
+        : []),
+    );
 
-    const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
     const [rows, countRows] = await Promise.all([
@@ -386,8 +420,8 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         .where(where)
         .orderBy(
           ...(distanceKm
-            ? [asc(distanceKm), asc(facilities.displayName)]
-            : [asc(facilities.displayName)])
+            ? [asc(distanceKm), asc(facilities.displayName), asc(facilities.id)]
+            : buildFacilityListOrderBy(params))
         )
         .offset(skip)
         .limit(params.limit),
@@ -464,6 +498,12 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     radiusKm?: number;
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
     productIds?: string[];
+    purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
+    purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
+    purchaseIntervalMinDays?: number;
+    purchaseIntervalMaxDays?: number;
+    sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
+    order?: "asc" | "desc";
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]> {
     if (params.ids.length === 0) {

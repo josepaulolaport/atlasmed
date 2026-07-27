@@ -1,0 +1,295 @@
+import 'package:flutter/material.dart';
+
+enum PurchaseRecurrenceSource { defaultValue, calculated, manual }
+
+enum PurchaseProfile {
+  automatic,
+  weekly,
+  biweekly,
+  monthly,
+  bimonthly,
+  quarterly,
+  semiannual,
+  annual,
+  custom,
+}
+
+enum PurchaseFunnelStage {
+  neverPurchased,
+  outsideWindow,
+  purchaseWindow,
+  churn,
+  inactive,
+}
+
+enum FacilitySort {
+  relevance,
+  distance,
+  name,
+  purchaseFunnelStage,
+  purchaseIntervalDays,
+  lastPurchaseDate,
+}
+
+enum SortOrder { asc, desc }
+
+extension FacilitySortX on FacilitySort {
+  String get apiValue => switch (this) {
+    FacilitySort.relevance => 'relevance',
+    FacilitySort.distance => 'distance',
+    FacilitySort.name => 'name',
+    FacilitySort.purchaseFunnelStage => 'purchaseFunnelStage',
+    FacilitySort.purchaseIntervalDays => 'purchaseIntervalDays',
+    FacilitySort.lastPurchaseDate => 'lastPurchaseDate',
+  };
+}
+
+extension PurchaseRecurrenceSourceX on PurchaseRecurrenceSource {
+  String get apiValue => switch (this) {
+    PurchaseRecurrenceSource.defaultValue => 'DEFAULT',
+    PurchaseRecurrenceSource.calculated => 'CALCULATED',
+    PurchaseRecurrenceSource.manual => 'MANUAL',
+  };
+
+  String get label => switch (this) {
+    PurchaseRecurrenceSource.defaultValue => 'Padrão',
+    PurchaseRecurrenceSource.calculated => 'Calculado',
+    PurchaseRecurrenceSource.manual => 'Manual',
+  };
+}
+
+extension PurchaseProfileX on PurchaseProfile {
+  String get apiValue => switch (this) {
+    PurchaseProfile.automatic => 'AUTOMATIC',
+    PurchaseProfile.weekly => 'WEEKLY',
+    PurchaseProfile.biweekly => 'BIWEEKLY',
+    PurchaseProfile.monthly => 'MONTHLY',
+    PurchaseProfile.bimonthly => 'BIMONTHLY',
+    PurchaseProfile.quarterly => 'QUARTERLY',
+    PurchaseProfile.semiannual => 'SEMIANNUAL',
+    PurchaseProfile.annual => 'ANNUAL',
+    PurchaseProfile.custom => 'CUSTOM',
+  };
+
+  String get label => switch (this) {
+    PurchaseProfile.automatic => 'Automático',
+    PurchaseProfile.weekly => 'Semanal',
+    PurchaseProfile.biweekly => 'Quinzenal',
+    PurchaseProfile.monthly => 'Mensal',
+    PurchaseProfile.bimonthly => 'Bimestral',
+    PurchaseProfile.quarterly => 'Trimestral',
+    PurchaseProfile.semiannual => 'Semestral',
+    PurchaseProfile.annual => 'Anual',
+    PurchaseProfile.custom => 'Personalizado',
+  };
+
+  int? get presetDays => switch (this) {
+    PurchaseProfile.weekly => 7,
+    PurchaseProfile.biweekly => 15,
+    PurchaseProfile.monthly => 30,
+    PurchaseProfile.bimonthly => 60,
+    PurchaseProfile.quarterly => 90,
+    PurchaseProfile.semiannual => 180,
+    PurchaseProfile.annual => 365,
+    PurchaseProfile.automatic || PurchaseProfile.custom => null,
+  };
+
+  String get optionLabel {
+    final days = presetDays;
+    return days == null ? label : '$label — $days dias';
+  }
+}
+
+extension PurchaseFunnelStageX on PurchaseFunnelStage {
+  String get apiValue => switch (this) {
+    PurchaseFunnelStage.neverPurchased => 'NEVER_PURCHASED',
+    PurchaseFunnelStage.outsideWindow => 'OUTSIDE_WINDOW',
+    PurchaseFunnelStage.purchaseWindow => 'PURCHASE_WINDOW',
+    PurchaseFunnelStage.churn => 'CHURN',
+    PurchaseFunnelStage.inactive => 'INACTIVE',
+  };
+
+  String get label => switch (this) {
+    PurchaseFunnelStage.neverPurchased => 'Nunca comprou',
+    PurchaseFunnelStage.outsideWindow => 'Fora do período',
+    PurchaseFunnelStage.purchaseWindow => 'Período de compra',
+    PurchaseFunnelStage.churn => 'Churn',
+    PurchaseFunnelStage.inactive => 'Inativo',
+  };
+
+  Color get color => switch (this) {
+    PurchaseFunnelStage.neverPurchased => const Color(0xFF475569),
+    PurchaseFunnelStage.outsideWindow => const Color(0xFF2563EB),
+    PurchaseFunnelStage.purchaseWindow => const Color(0xFF15803D),
+    PurchaseFunnelStage.churn => const Color(0xFFB45309),
+    PurchaseFunnelStage.inactive => const Color(0xFFB91C1C),
+  };
+
+  Color get backgroundColor => color.withValues(alpha: 0.1);
+}
+
+PurchaseRecurrenceSource? purchaseRecurrenceSourceFromApi(Object? value) =>
+    switch (value) {
+      'DEFAULT' => PurchaseRecurrenceSource.defaultValue,
+      'CALCULATED' => PurchaseRecurrenceSource.calculated,
+      'MANUAL' => PurchaseRecurrenceSource.manual,
+      _ => null,
+    };
+
+PurchaseProfile? purchaseProfileFromApi(Object? value) => switch (value) {
+  'AUTOMATIC' => PurchaseProfile.automatic,
+  'WEEKLY' => PurchaseProfile.weekly,
+  'BIWEEKLY' => PurchaseProfile.biweekly,
+  'MONTHLY' => PurchaseProfile.monthly,
+  'BIMONTHLY' => PurchaseProfile.bimonthly,
+  'QUARTERLY' => PurchaseProfile.quarterly,
+  'SEMIANNUAL' => PurchaseProfile.semiannual,
+  'ANNUAL' => PurchaseProfile.annual,
+  'CUSTOM' => PurchaseProfile.custom,
+  _ => null,
+};
+
+PurchaseFunnelStage? purchaseFunnelStageFromApi(Object? value) =>
+    switch (value) {
+      'NEVER_PURCHASED' => PurchaseFunnelStage.neverPurchased,
+      'OUTSIDE_WINDOW' => PurchaseFunnelStage.outsideWindow,
+      'PURCHASE_WINDOW' => PurchaseFunnelStage.purchaseWindow,
+      'CHURN' => PurchaseFunnelStage.churn,
+      'INACTIVE' => PurchaseFunnelStage.inactive,
+      _ => null,
+    };
+
+DateTime? parseDateOnly(Object? value) {
+  if (value is! String || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value)) {
+    return null;
+  }
+  final year = int.parse(value.substring(0, 4));
+  final month = int.parse(value.substring(5, 7));
+  final day = int.parse(value.substring(8, 10));
+  final parsed = DateTime(year, month, day);
+  return parsed.year == year && parsed.month == month && parsed.day == day
+      ? parsed
+      : null;
+}
+
+String formatDateOnly(DateTime? date) {
+  if (date == null) return 'Não disponível';
+  String two(int value) => value.toString().padLeft(2, '0');
+  return '${two(date.day)}/${two(date.month)}/${date.year}';
+}
+
+class PurchaseRecurrenceSnapshot {
+  const PurchaseRecurrenceSnapshot({
+    required this.intervalDays,
+    required this.sampleSize,
+    this.observedIntervalDays,
+    this.source,
+    this.profile,
+    this.lastPurchaseDate,
+    this.funnelStage,
+    this.nextTransitionDate,
+    this.rawSource,
+    this.rawProfile,
+    this.rawFunnelStage,
+  });
+
+  factory PurchaseRecurrenceSnapshot.fromMap(Map<String, dynamic> map) {
+    return PurchaseRecurrenceSnapshot(
+      observedIntervalDays: map['observedIntervalDays'] as int?,
+      intervalDays: (map['intervalDays'] as num?)?.toInt() ?? 0,
+      source: purchaseRecurrenceSourceFromApi(map['source']),
+      rawSource: map['source'] as String?,
+      profile: purchaseProfileFromApi(map['profile']),
+      rawProfile: map['profile'] as String?,
+      lastPurchaseDate: parseDateOnly(map['lastPurchaseDate']),
+      sampleSize: (map['sampleSize'] as num?)?.toInt() ?? 0,
+      funnelStage: purchaseFunnelStageFromApi(map['funnelStage']),
+      rawFunnelStage: map['funnelStage'] as String?,
+      nextTransitionDate: parseDateOnly(map['nextTransitionDate']),
+    );
+  }
+
+  final int? observedIntervalDays;
+  final int intervalDays;
+  final PurchaseRecurrenceSource? source;
+  final PurchaseProfile? profile;
+  final DateTime? lastPurchaseDate;
+  final int sampleSize;
+  final PurchaseFunnelStage? funnelStage;
+  final DateTime? nextTransitionDate;
+  final String? rawSource;
+  final String? rawProfile;
+  final String? rawFunnelStage;
+
+  bool get hasUnknownEnums =>
+      (rawSource != null && source == null) ||
+      (rawProfile != null && profile == null) ||
+      (rawFunnelStage != null && funnelStage == null);
+}
+
+sealed class PurchaseRecurrenceCommand {
+  const PurchaseRecurrenceCommand();
+
+  void validate() {}
+  Map<String, dynamic> toJson();
+}
+
+class AutomaticPurchaseRecurrence extends PurchaseRecurrenceCommand {
+  const AutomaticPurchaseRecurrence();
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'purchaseRecurrence': {'mode': 'AUTOMATIC'},
+  };
+}
+
+class PresetPurchaseRecurrence extends PurchaseRecurrenceCommand {
+  const PresetPurchaseRecurrence(this.profile);
+
+  final PurchaseProfile profile;
+
+  @override
+  void validate() {
+    if (profile == PurchaseProfile.automatic ||
+        profile == PurchaseProfile.custom) {
+      throw ArgumentError.value(
+        profile,
+        'profile',
+        'Perfil predefinido inválido',
+      );
+    }
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    validate();
+    return {
+      'purchaseRecurrence': {'mode': 'PRESET', 'profile': profile.apiValue},
+    };
+  }
+}
+
+class CustomPurchaseRecurrence extends PurchaseRecurrenceCommand {
+  const CustomPurchaseRecurrence(this.intervalDays);
+
+  final int intervalDays;
+
+  @override
+  void validate() {
+    if (intervalDays < 1 || intervalDays > 3650) {
+      throw ArgumentError.value(
+        intervalDays,
+        'intervalDays',
+        'O intervalo deve estar entre 1 e 3650 dias',
+      );
+    }
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    validate();
+    return {
+      'purchaseRecurrence': {'mode': 'CUSTOM', 'intervalDays': intervalDays},
+    };
+  }
+}

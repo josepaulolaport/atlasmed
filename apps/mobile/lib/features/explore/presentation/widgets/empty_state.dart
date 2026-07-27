@@ -5,21 +5,32 @@ class EmptyState extends StatelessWidget {
   /// Facility Ver todos: `'facility-doctor'` | `'facility-admin'`.
   final String query;
   final String kind;
+  final bool hasActiveFilters;
+  final VoidCallback? onClearFilters;
 
-  const EmptyState({super.key, required this.query, required this.kind});
+  const EmptyState({
+    super.key,
+    required this.query,
+    required this.kind,
+    this.hasActiveFilters = false,
+    this.onClearFilters,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final constrained = query.trim().isNotEmpty || hasActiveFilters;
     final title = query.isNotEmpty
         ? 'Nada encontrado para "$query"'
+        : hasActiveFilters
+        ? 'Nenhum resultado com estes filtros'
         : switch (kind) {
             'facility-doctor' => 'Nenhum médico associado',
             'facility-admin' => 'Nenhum profissional associado',
             _ => 'Nenhum resultado',
           };
 
-    final subtitle = query.isNotEmpty
-        ? 'Tente outra busca ou remova alguns filtros para ampliar o resultado.'
+    final subtitle = constrained
+        ? 'Tente outra busca ou limpe os filtros para ampliar os resultados.'
         : switch (kind) {
             'facility-doctor' =>
               'Toque em + no canto inferior para buscar e associar médicos a esta clínica.',
@@ -70,6 +81,13 @@ class EmptyState extends StatelessWidget {
                 height: 1.5,
               ),
             ),
+            if (hasActiveFilters && onClearFilters != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton(
+                onPressed: onClearFilters,
+                child: const Text('Limpar filtros'),
+              ),
+            ],
           ],
         ),
       ),

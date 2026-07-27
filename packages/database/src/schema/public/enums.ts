@@ -1,3 +1,8 @@
+import {
+  PURCHASE_FUNNEL_STAGES,
+  PURCHASE_INTERVAL_SOURCES,
+  PURCHASE_PROFILES,
+} from "@atlasmed/facility-insights";
 import { pgEnum } from "drizzle-orm/pg-core";
 
 export const invitationStatusEnum = pgEnum("invitation_status", [
@@ -56,6 +61,18 @@ export const purchaseStatusEnum = pgEnum("purchase_status", [
   "REGULAR_BUYER",
   "HIGH_BUYER",
 ]);
+
+export const purchaseIntervalSourceEnum = pgEnum(
+  "purchase_interval_source",
+  PURCHASE_INTERVAL_SOURCES,
+);
+
+export const purchaseProfileEnum = pgEnum("purchase_profile", PURCHASE_PROFILES);
+
+export const purchaseFunnelStageEnum = pgEnum(
+  "purchase_funnel_stage",
+  PURCHASE_FUNNEL_STAGES,
+);
 
 export const contactTypeEnum = pgEnum("contact_type", [
   "PROFESSIONAL",

@@ -11,10 +11,13 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_t
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_visits_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/api_repository_providers.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
@@ -34,9 +37,12 @@ api.Clinic _parseClinicDetail(String json) {
 // ── Clinic detail repository ────────────────────────────────
 class _ClinicDetailRepository extends Repository<api.Clinic>
     with SessionEnvironmentMixin<api.Clinic> {
-  _ClinicDetailRepository({required String id})
+  _ClinicDetailRepository({required String id, String? verticalId})
     : super(
-        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/facilities/$id'),
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$id'
+          '${verticalId == null || verticalId.isEmpty ? '' : '?verticalId=${Uri.encodeQueryComponent(verticalId)}'}',
+        ),
         resolveOnCreate: false,
         name: 'ClinicDetailRepository',
       );
@@ -63,13 +69,13 @@ class DoctorDetailRepository extends Repository<ApiDoctor>
 }
 
 // ── Detail fetch helpers (no Riverpod family; called per request) ──
-Future<ClinicDetail> _fetchClinicDetail(String id) async {
+Future<ClinicDetail> _fetchClinicDetail(String id, {String? verticalId}) async {
   // Mock nearby pins (`near-*` / `:empty`) are disabled on the real API.
   if (id.startsWith('near-') || id.endsWith(':empty')) {
     throw Exception('Clinic not found: $id');
   }
 
-  final repo = _ClinicDetailRepository(id: id);
+  final repo = _ClinicDetailRepository(id: id, verticalId: verticalId);
   try {
     // Always hit the network — currentValueOrResolve() returns hydrated cache
     // and skips refresh, which leaves stale admin fields after NC approve.
@@ -124,6 +130,7 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       cpf: apiClinic.cpf,
       commercialStatus: apiClinic.commercialStatus,
       conformityStatus: apiClinic.conformityStatus,
+      purchaseRecurrence: apiClinic.purchaseRecurrence,
     );
   } finally {
     repo.dispose();
@@ -178,8 +185,11 @@ DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
 final clinicDetailProvider = FutureProvider.family<ClinicDetail, String>((
   ref,
   id,
-) {
-  return _fetchClinicDetail(id);
+) async {
+  final verticalId = await ref.watch(
+    effectiveFacilityVerticalIdProvider.future,
+  );
+  return _fetchClinicDetail(id, verticalId: verticalId);
 });
 
 // ── Doctor detail provider ──────────────────────────────────
@@ -317,6 +327,14 @@ class ExploreState {
           final bDays = b.lastVisitDays ?? 999999;
           return bDays.compareTo(aDays);
         });
+      case 'purchase-funnel-asc':
+      case 'purchase-funnel-desc':
+      case 'purchase-interval-asc':
+      case 'purchase-interval-desc':
+      case 'last-purchase-asc':
+      case 'last-purchase-desc':
+        // These are canonical server sorts; preserve API pagination order.
+        break;
       default:
         break;
     }
@@ -367,6 +385,19 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   static const _searchDebounceDuration = Duration(milliseconds: 350);
   static const meaningfulMoveMeters = 150.0;
 
+  Future<void> refreshAfterClinicUpdate(api.Clinic clinic) async {
+    final mapped = Clinic.fromApi(clinic);
+    state = state.copyWith(
+      clinics: [
+        for (final item in state.clinics)
+          if (item.id == mapped.id) mapped else item,
+      ],
+    );
+    _clinicPage = 1;
+    _clinicHasMore = true;
+    await _fetchClinicsPage(page: 1);
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -384,6 +415,55 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     if (list == null || list.isEmpty) return null;
     return list.first;
   }
+
+  List<PurchaseFunnelStage> get _purchaseFunnelStages =>
+      (state.filters['purchaseFunnelStage'] ?? const [])
+          .map(purchaseFunnelStageFromApi)
+          .whereType<PurchaseFunnelStage>()
+          .toList(growable: false);
+
+  PurchaseProfile? get _purchaseProfile {
+    final value = state.filters['purchaseProfile']?.first;
+    return purchaseProfileFromApi(value);
+  }
+
+  int? _purchaseIntervalBound(String key) =>
+      int.tryParse(state.filters[key]?.first ?? '');
+
+  ({FacilitySort? sort, SortOrder? order}) get _facilitySort =>
+      switch (state.sort) {
+        'distance' => (
+          sort: _origin == null ? null : FacilitySort.distance,
+          order: SortOrder.asc,
+        ),
+        'name-asc' => (sort: FacilitySort.name, order: SortOrder.asc),
+        'name-desc' => (sort: FacilitySort.name, order: SortOrder.desc),
+        'purchase-funnel-asc' => (
+          sort: FacilitySort.purchaseFunnelStage,
+          order: SortOrder.asc,
+        ),
+        'purchase-funnel-desc' => (
+          sort: FacilitySort.purchaseFunnelStage,
+          order: SortOrder.desc,
+        ),
+        'purchase-interval-asc' => (
+          sort: FacilitySort.purchaseIntervalDays,
+          order: SortOrder.asc,
+        ),
+        'purchase-interval-desc' => (
+          sort: FacilitySort.purchaseIntervalDays,
+          order: SortOrder.desc,
+        ),
+        'last-purchase-asc' => (
+          sort: FacilitySort.lastPurchaseDate,
+          order: SortOrder.asc,
+        ),
+        'last-purchase-desc' => (
+          sort: FacilitySort.lastPurchaseDate,
+          order: SortOrder.desc,
+        ),
+        _ => (sort: null, order: null),
+      };
 
   DeviceLocation? get _origin =>
       state.origin ?? _ref.read(locationSessionProvider).location;
@@ -456,7 +536,8 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     final verticalId = await _ref.read(
       effectiveFacilityVerticalIdProvider.future,
     );
-    final repo = ClinicsRepository(
+    final facilitySort = _facilitySort;
+    final query = ClinicsQuery(
       page: p,
       limit: 20,
       searchQuery: state.query.isNotEmpty ? state.query : null,
@@ -465,10 +546,19 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       radiusKm: state.radiusKm,
       commercialStatus: _commercialStatus,
       productIds: _commaJoin(state.filters['products']),
-      sort: origin != null && state.sort == 'distance' ? 'distance' : null,
+      purchaseFunnelStages: _purchaseFunnelStages,
+      purchaseProfile: _purchaseProfile,
+      purchaseIntervalMinDays: _purchaseIntervalBound(
+        'purchaseIntervalMinDays',
+      ),
+      purchaseIntervalMaxDays: _purchaseIntervalBound(
+        'purchaseIntervalMaxDays',
+      ),
+      sort: facilitySort.sort,
+      order: facilitySort.order,
       verticalId: verticalId,
-      resolveOnCreate: false,
     );
+    final repo = _ref.read(clinicsRepositoryProvider(query));
     try {
       final result = await repo.currentValueOrResolve();
       if (generation != null && generation != _refreshGeneration) return;
@@ -489,7 +579,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         _clinicHasMore = result.pagination.page < result.pagination.totalPages;
       }
     } finally {
-      repo.dispose();
+      // The Riverpod repository provider owns this repository's lifecycle.
     }
   }
 

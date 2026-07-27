@@ -160,6 +160,48 @@ describe("Facility HTTP auth integration", () => {
     );
   });
 
+  it("validates facility purchase list filter and sort query combinations", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.admin.email);
+    const invalidRelevance = await authRequest(
+      app,
+      "http://localhost/api/v1/facilities?sort=relevance",
+      token
+    );
+    const invalidRange = await authRequest(
+      app,
+      "http://localhost/api/v1/facilities?purchaseIntervalMinDays=90&purchaseIntervalMaxDays=30",
+      token
+    );
+    const valid = await authRequest(
+      app,
+      "http://localhost/api/v1/facilities?purchaseFunnelStage=NEVER_PURCHASED%2CCHURN&purchaseProfile=AUTOMATIC&purchaseIntervalMinDays=1&purchaseIntervalMaxDays=3650&sort=purchaseFunnelStage&order=desc",
+      token
+    );
+
+    expect(invalidRelevance.status).toBe(400);
+    expect(invalidRange.status).toBe(400);
+    expect(valid.status).toBe(200);
+  });
+
+  it("uses TypeBox to reject invalid facility note and professional role bodies", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.admin.email);
+    const [invalidNote, invalidRole] = await Promise.all([
+      authRequest(app, `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/notes`, token, {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ note: "" }),
+      }),
+      authRequest(app, `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`, token, {
+        method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ relationshipLevel: 11 }),
+      }),
+    ]);
+
+    expect(invalidNote.status).toBe(422);
+    expect(invalidRole.status).toBe(422);
+  });
+
   it("scoped field USER can read in-territory facility", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 

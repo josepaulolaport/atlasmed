@@ -7,12 +7,14 @@
     "dev": "bun --watch src/worker.ts",
     "start": "bun src/worker.ts",
     "typecheck": "bunx tsc -p tsconfig.json",
-    "test": "bun test"
+    "test": "bun test",
+    "schedule:purchase-recurrence": "bun src/scripts/ensure-purchase-recurrence-schedule.ts"
   },
   "dependencies": {
     "@atlasmed/cnes-ingestion": "workspace:*",
     "@atlasmed/config": "workspace:*",
     "@atlasmed/database": "workspace:*",
+    "@atlasmed/facility-insights": "workspace:*",
     "@atlasmed/observability": "workspace:*",
     "@aws-sdk/client-s3": "^3.1093.0",
     "@temporalio/activity": "^1.11.7",

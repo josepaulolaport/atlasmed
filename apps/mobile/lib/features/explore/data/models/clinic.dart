@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
     as api;
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 // ── Clinic model ─────────────────────────────────────────────
 class Clinic {
@@ -15,6 +16,7 @@ class Clinic {
   final int doctorCount;
   final bool isPriority;
   final List<String> products;
+  final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
   const Clinic({
     required this.id,
@@ -27,6 +29,7 @@ class Clinic {
     required this.doctorCount,
     required this.isPriority,
     required this.products,
+    this.purchaseRecurrence,
   });
 
   String? get locationLabel {
@@ -60,6 +63,7 @@ class Clinic {
       doctorCount: clinicDto.professionalCount,
       isPriority: false,
       products: [],
+      purchaseRecurrence: clinicDto.purchaseRecurrence,
     );
   }
 }

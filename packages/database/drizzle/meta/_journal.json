@@ -232,6 +232,13 @@
       "when": 1785051443243,
       "tag": "0032_drop_facilities_territory_id_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1785113127713,
+      "tag": "0033_facility_purchase_recurrence",
+      "breakpoints": true
     }
   ]
 }

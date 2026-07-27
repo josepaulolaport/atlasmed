@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_specialties_repository.dart';
@@ -17,6 +18,12 @@ class ClinicsQuery {
     this.radiusKm,
     this.commercialStatus,
     this.productIds,
+    this.purchaseFunnelStages = const [],
+    this.purchaseProfile,
+    this.purchaseIntervalMinDays,
+    this.purchaseIntervalMaxDays,
+    this.sort,
+    this.order,
     this.verticalId,
   });
 
@@ -28,6 +35,12 @@ class ClinicsQuery {
   final double? radiusKm;
   final String? commercialStatus;
   final String? productIds;
+  final List<PurchaseFunnelStage> purchaseFunnelStages;
+  final PurchaseProfile? purchaseProfile;
+  final int? purchaseIntervalMinDays;
+  final int? purchaseIntervalMaxDays;
+  final FacilitySort? sort;
+  final SortOrder? order;
   final String? verticalId;
 
   @override
@@ -41,6 +54,12 @@ class ClinicsQuery {
         other.radiusKm == radiusKm &&
         other.commercialStatus == commercialStatus &&
         other.productIds == productIds &&
+        _sameStages(other.purchaseFunnelStages, purchaseFunnelStages) &&
+        other.purchaseProfile == purchaseProfile &&
+        other.purchaseIntervalMinDays == purchaseIntervalMinDays &&
+        other.purchaseIntervalMaxDays == purchaseIntervalMaxDays &&
+        other.sort == sort &&
+        other.order == order &&
         other.verticalId == verticalId;
   }
 
@@ -54,8 +73,21 @@ class ClinicsQuery {
     radiusKm,
     commercialStatus,
     productIds,
+    Object.hashAll(purchaseFunnelStages),
+    purchaseProfile,
+    purchaseIntervalMinDays,
+    purchaseIntervalMaxDays,
+    sort,
+    order,
     verticalId,
   );
+
+  static bool _sameStages(
+    List<PurchaseFunnelStage> left,
+    List<PurchaseFunnelStage> right,
+  ) =>
+      left.length == right.length &&
+      left.asMap().entries.every((entry) => right[entry.key] == entry.value);
 
   /// Whether this query would return distinct results from [other].
   bool differsFrom(ClinicsQuery other) => this != other;
@@ -108,6 +140,14 @@ class DoctorsQuery {
   );
 }
 
+final facilityPurchaseRecurrenceRepositoryProvider =
+    Provider.autoDispose<FacilityPurchaseRecurrenceRepository>((ref) {
+      ref.watch(sessionProvider);
+      final repository = FacilityPurchaseRecurrenceRepository();
+      ref.onDispose(repository.dispose);
+      return repository;
+    });
+
 final clinicsRepositoryProvider = Provider.autoDispose
     .family<ClinicsRepository, ClinicsQuery>((ref, query) {
       ref.watch(sessionProvider);
@@ -120,6 +160,12 @@ final clinicsRepositoryProvider = Provider.autoDispose
         radiusKm: query.radiusKm,
         commercialStatus: query.commercialStatus,
         productIds: query.productIds,
+        purchaseFunnelStages: query.purchaseFunnelStages,
+        purchaseProfile: query.purchaseProfile,
+        purchaseIntervalMinDays: query.purchaseIntervalMinDays,
+        purchaseIntervalMaxDays: query.purchaseIntervalMaxDays,
+        sort: query.sort,
+        order: query.order,
         verticalId: query.verticalId,
       );
       ref.onDispose(repository.dispose);

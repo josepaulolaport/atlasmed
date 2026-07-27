@@ -22,6 +22,9 @@ import {
   conformityStatusEnum,
   conformityRecordStatusEnum,
   purchaseStatusEnum,
+  purchaseIntervalSourceEnum,
+  purchaseProfileEnum,
+  purchaseFunnelStageEnum,
   authSessionDeviceTypeEnum,
   authSessionTypeEnum,
   verificationTokenTypeEnum,
@@ -62,6 +65,9 @@ export { RELATIONSHIP_LEVEL_MIN, RELATIONSHIP_LEVEL_MAX };
 export type ConformityStatus = (typeof conformityStatusEnum.enumValues)[number];
 export type ConformityRecordStatus = (typeof conformityRecordStatusEnum.enumValues)[number];
 export type PurchaseStatus = (typeof purchaseStatusEnum.enumValues)[number];
+export type PurchaseIntervalSource = (typeof purchaseIntervalSourceEnum.enumValues)[number];
+export type PurchaseProfile = (typeof purchaseProfileEnum.enumValues)[number];
+export type PurchaseFunnelStage = (typeof purchaseFunnelStageEnum.enumValues)[number];
 export type AuthSessionDeviceType = (typeof authSessionDeviceTypeEnum.enumValues)[number];
 export type AuthSessionType = (typeof authSessionTypeEnum.enumValues)[number];
 export type VerificationTokenType = (typeof verificationTokenTypeEnum.enumValues)[number];

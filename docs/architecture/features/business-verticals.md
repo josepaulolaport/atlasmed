@@ -369,7 +369,7 @@ Still required for ship slice B (not territory redesign):
 
 **Deploy notes (when shipping code for the above):**
 
-- After Meili document shape change (`verticalIds` / `territoryIds`, no `commercialStatus`), run a **full facilities search rebuild** (`POST /api/v1/search-sync` → `search-sync-facilities-full`).
+- After Meili document shape change (`verticalIds` / `territoryIds`, no `commercialStatus`), run a **full facilities search rebuild** (`POST /api/v1/sync` with `{ "entity": "facilities" }` → `search-sync-facilities-full`).
 - `facilities.territory_id` dropped in migration `0031` (profiles are membership source of truth).
 
 ---

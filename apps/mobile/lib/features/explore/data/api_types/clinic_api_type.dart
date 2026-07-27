@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 /// Shared API response types for the explore feature's clinic domain.
 /// Used by [ClinicsRepository].
@@ -41,7 +42,12 @@ class Clinic {
     this.conformityStatus,
     this.createdAt,
     this.updatedAt,
+    this.purchaseRecurrence,
   });
+
+  factory Clinic.fromJson(String json) {
+    return Clinic.fromMap(jsonDecode(json) as Map<String, dynamic>);
+  }
 
   factory Clinic.fromMap(Map<String, dynamic> map) {
     return Clinic(
@@ -86,6 +92,11 @@ class Clinic {
       conformityStatus: readNullableString(map['conformityStatus']),
       createdAt: readNullableDateTime(map['createdAt']),
       updatedAt: readNullableDateTime(map['updatedAt']),
+      purchaseRecurrence: map['purchaseRecurrence'] is Map
+          ? PurchaseRecurrenceSnapshot.fromMap(
+              (map['purchaseRecurrence'] as Map).cast<String, dynamic>(),
+            )
+          : null,
     );
   }
 
@@ -107,6 +118,7 @@ class Clinic {
   final List<ClinicService> services;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
   // Detail fields from GET /facilities/:id (and list when present)
   final String? phone;

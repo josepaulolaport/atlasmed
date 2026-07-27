@@ -19,6 +19,7 @@
         "@atlasmed/cnes-ingestion": "workspace:*",
         "@atlasmed/config": "workspace:*",
         "@atlasmed/database": "workspace:*",
+        "@atlasmed/facility-insights": "workspace:*",
         "@atlasmed/mapbox": "workspace:*",
         "@atlasmed/observability": "workspace:*",
         "@aws-sdk/client-s3": "3.1093.0",
@@ -116,6 +117,7 @@
         "@atlasmed/cnes-ingestion": "workspace:*",
         "@atlasmed/config": "workspace:*",
         "@atlasmed/database": "workspace:*",
+        "@atlasmed/facility-insights": "workspace:*",
         "@atlasmed/observability": "workspace:*",
         "@aws-sdk/client-s3": "^3.1093.0",
         "@temporalio/activity": "^1.11.7",
@@ -170,6 +172,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@atlasmed/config": "workspace:*",
+        "@atlasmed/facility-insights": "workspace:*",
         "@paralleldrive/cuid2": "^3.3.0",
         "drizzle-orm": "^0.45.2",
         "postgres": "^3.4.9",
@@ -178,6 +181,14 @@
         "@types/bun": "1.3.14",
         "drizzle-kit": "^0.31.10",
         "typescript": "^5.9.3",
+      },
+    },
+    "packages/facility-insights": {
+      "name": "@atlasmed/facility-insights",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "typescript": "^5",
       },
     },
     "packages/mapbox": {
@@ -231,6 +242,8 @@
     "@atlasmed/config": ["@atlasmed/config@workspace:packages/config"],
 
     "@atlasmed/database": ["@atlasmed/database@workspace:packages/database"],
+
+    "@atlasmed/facility-insights": ["@atlasmed/facility-insights@workspace:packages/facility-insights"],
 
     "@atlasmed/mapbox": ["@atlasmed/mapbox@workspace:packages/mapbox"],
 

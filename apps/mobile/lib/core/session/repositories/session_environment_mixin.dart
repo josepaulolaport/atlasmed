@@ -23,7 +23,8 @@ class SessionExpiredException implements Exception {
 ///
 /// Automatically:
 /// - Injects `Authorization: Bearer <token>` via [tokenBuilder]
-/// - Handles 401/403 by refreshing or logging out
+/// - Handles 401 by refreshing or logging out; preserves 403 as authorization
+///   failures so callers can surface permission-specific feedback.
 /// - Retries on [SessionExpiredException] and [NetworkUnavailableException]
 /// - Skips refresh when no active session exists
 mixin SessionEnvironmentMixin<T> on Repository<T> {
@@ -72,7 +73,12 @@ mixin SessionEnvironmentMixin<T> on Repository<T> {
     // Only auth failures trigger session refresh. A 5xx from the API is a
     // server/DB error — treating it as session expiry caused retry loops and
     // misleading SessionExpiredException logs (e.g. facilities 500).
-    if (statusCode == 401 || statusCode == 403) {
+    if (statusCode == 403) {
+      // Authorization is not authentication: leave the active session intact
+      // so feature forms can show their permission-specific error.
+      return true;
+    }
+    if (statusCode == 401) {
       if (_isSessionEnvironment) {
         // SessionEnvironment itself got rejected → full logout
         await SessionEnvironment.instance.delete();
