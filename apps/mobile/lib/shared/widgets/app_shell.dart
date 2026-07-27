@@ -96,7 +96,7 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: const Color(0xF2F7F8FB),
+      backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -118,7 +118,7 @@ class AtlasTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xF2f7f8fb),
+        color: Colors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
       ),
       child: SafeArea(
