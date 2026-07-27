@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 
-class SortSheet extends StatefulWidget {
-  final bool open;
-  final VoidCallback onClose;
+class SortSheet extends StatelessWidget {
   final String kind;
   final String sort;
   final bool hasSearchQuery;
@@ -12,8 +10,6 @@ class SortSheet extends StatefulWidget {
 
   const SortSheet({
     super.key,
-    required this.open,
-    required this.onClose,
     required this.kind,
     required this.sort,
     this.hasSearchQuery = false,
@@ -21,59 +17,10 @@ class SortSheet extends StatefulWidget {
     required this.onApply,
   });
 
-  @override
-  State<SortSheet> createState() => _SortSheetState();
-}
-
-class _SortSheetState extends State<SortSheet>
-    with SingleTickerProviderStateMixin {
-  late String _selected;
-  late AnimationController _animController;
-  late Animation<double> _overlayAnim;
-  late Animation<double> _sheetAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.sort;
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
-    _overlayAnim = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.ease));
-    _sheetAnim = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Cubic(0.2, 0.8, 0.2, 1),
-      ),
-    );
-    if (widget.open) _animController.forward();
-  }
-
-  @override
-  void didUpdateWidget(SortSheet oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.open && !oldWidget.open) {
-      _selected = widget.sort;
-      _animController.forward();
-    } else if (!widget.open && oldWidget.open) {
-      _animController.reverse();
-    }
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
   List<_SortOption> get _options {
-    if (widget.kind == 'clinic') {
+    if (kind == 'clinic') {
       return [
-        if (widget.hasSearchQuery)
+        if (hasSearchQuery)
           _SortOption(
             'relevance',
             'Relevância',
@@ -81,7 +28,7 @@ class _SortSheetState extends State<SortSheet>
           ),
         _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
         _SortOption('name-desc', 'Nome Z–A', 'Ordem alfabética inversa'),
-        if (widget.hasLocation)
+        if (hasLocation)
           _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
         _SortOption('purchase-funnel-asc', 'Etapa do funil', 'Ordem crescente'),
         _SortOption(
@@ -112,7 +59,7 @@ class _SortSheetState extends State<SortSheet>
       ];
     }
     // Facility-scoped people lists (no distance / last-contact).
-    if (widget.kind == 'facility-people') {
+    if (kind == 'facility-people') {
       return [_SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética')];
     }
     return [
@@ -128,130 +75,92 @@ class _SortSheetState extends State<SortSheet>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.open && _animController.isDismissed) {
-      return const SizedBox.shrink();
-    }
-
-    return Stack(
-      children: [
-        FadeTransition(
-          opacity: _overlayAnim,
-          child: GestureDetector(
-            onTap: widget.onClose,
-            child: Container(
-              color: const Color(0x803B82F6).withValues(alpha: 0.5),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: AnimatedBuilder(
-            animation: _animController,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(
-                  0,
-                  _sheetAnim.value * MediaQuery.of(context).size.height * 0.5,
-                ),
-                child: child,
-              );
-            },
-            child: BottomSheetWidget(
-              title: 'Ordenar por',
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _options.map((opt) {
-                    final on = _selected == opt.key;
-                    return Semantics(
-                      button: true,
-                      selected: on,
-                      label: '${opt.label}. ${opt.subtitle}',
-                      child: InkWell(
-                        onTap: () {
-                          setState(() => _selected = opt.key);
-                          widget.onApply(opt.key);
-                          widget.onClose();
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          margin: const EdgeInsets.only(bottom: 4),
-                          decoration: BoxDecoration(
+    final selected = sort;
+    return BottomSheetWidget(
+      title: 'Ordenar por',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _options.map((opt) {
+            final on = selected == opt.key;
+            return Semantics(
+              button: true,
+              selected: on,
+              label: '${opt.label}. ${opt.subtitle}',
+              child: InkWell(
+                onTap: () {
+                  onApply(opt.key);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color: on ? const Color(0xFFeef2ff) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
                             color: on
-                                ? const Color(0xFFeef2ff)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
+                                ? const Color(0xFF1e40af)
+                                : const Color(0xFFd1d5db),
+                            width: 2,
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: on
-                                        ? const Color(0xFF1e40af)
-                                        : const Color(0xFFd1d5db),
-                                    width: 2,
-                                  ),
-                                  color: on
-                                      ? const Color(0xFF1e40af)
-                                      : Colors.white,
+                          color: on ? const Color(0xFF1e40af) : Colors.white,
+                        ),
+                        child: on
+                            ? const Center(
+                                child: Icon(
+                                  Icons.circle,
+                                  size: 8,
+                                  color: Colors.white,
                                 ),
-                                child: on
-                                    ? const Center(
-                                        child: Icon(
-                                          Icons.circle,
-                                          size: 8,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : null,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              opt.label,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0f1729),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      opt.label,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0f1729),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      opt.subtitle,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF6b7280),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              opt.subtitle,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF6b7280),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          }).toList(),
         ),
-      ],
+      ),
     );
   }
 }

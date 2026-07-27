@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
@@ -223,8 +225,10 @@ class _DoctorDetailContent extends ConsumerWidget {
         ),
         RefreshIndicator(
           onRefresh: () async {
-            await repository.refresh();
-            notesRepository.refresh();
+            await Future.wait([
+              repository.refresh(),
+              notesRepository.refresh(),
+            ]);
           },
           child: SingleChildScrollView(
             child: ColoredBox(

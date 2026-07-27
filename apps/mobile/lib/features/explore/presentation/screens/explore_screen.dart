@@ -91,7 +91,6 @@ class ExploreResultsList extends StatelessWidget {
 }
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
-  bool _sortOpen = false;
   Timer? _gpsTimer;
 
   static const _gpsInterval = Duration(seconds: 90);
@@ -147,66 +146,71 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const AtlasAppBar(page: 'Explorar'),
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              const SizedBox(height: 16),
-              _buildSearchBar(state, notifier, filterCount, isClinic),
-              const FacilityVerticalFilterBar(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-              ),
-              TabToggle(
-                value: state.activeTab,
-                onChanged: notifier.setTab,
-                clinicCount: state.clinicTotal,
-                doctorCount: state.doctorTotal,
-                trailing: ExploreSortChip(
-                  sort: state.sort,
-                  onTap: () => setState(() => _sortOpen = true),
-                ),
-              ),
-              if (filterChips.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: SortRow(
-                    sort: state.sort,
-                    onSortTap: () => setState(() => _sortOpen = true),
-                    filterChips: filterChips,
-                    includeSort: false,
-                  ),
-                ),
-              Expanded(
-                child: state.loading
-                    ? ListView.builder(
-                        itemCount: 8,
-                        itemBuilder: (_, _) => SkeletonRow(isDoctor: !isClinic),
-                      )
-                    : displayedList.isEmpty
-                    ? EmptyState(query: state.query, kind: state.activeTab)
-                    : RefreshIndicator(
-                        onRefresh: () => ref
-                            .read(exploreProvider.notifier)
-                            .refreshGpsAndList(),
-                        child: ExploreResultsList(
-                          items: displayedList,
-                          hasMore: hasMore,
-                          isLoadingMore: state.loadingMore,
-                          onLoadMore: notifier.loadMore,
-                          bottomInset: bottomInset,
-                        ),
-                      ),
-              ),
-            ],
+          const SizedBox(height: 16),
+          _buildSearchBar(state, notifier, filterCount, isClinic),
+          const FacilityVerticalFilterBar(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
           ),
-          SortSheet(
-            open: _sortOpen,
-            onClose: () => setState(() => _sortOpen = false),
-            kind: state.activeTab,
-            sort: state.sort,
-            onApply: notifier.setSort,
+          TabToggle(
+            value: state.activeTab,
+            onChanged: notifier.setTab,
+            clinicCount: state.clinicTotal,
+            doctorCount: state.doctorTotal,
+            trailing: ExploreSortChip(
+              sort: state.sort,
+              onTap: () => _showSortSheet(state, notifier),
+            ),
+          ),
+          if (filterChips.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: SortRow(
+                sort: state.sort,
+                onSortTap: () => _showSortSheet(state, notifier),
+                filterChips: filterChips,
+                includeSort: false,
+              ),
+            ),
+          Expanded(
+            child: state.loading
+                ? ListView.builder(
+                    itemCount: 8,
+                    itemBuilder: (_, _) => SkeletonRow(isDoctor: !isClinic),
+                  )
+                : displayedList.isEmpty
+                ? EmptyState(query: state.query, kind: state.activeTab)
+                : RefreshIndicator(
+                    onRefresh: () =>
+                        ref.read(exploreProvider.notifier).refreshGpsAndList(),
+                    child: ExploreResultsList(
+                      items: displayedList,
+                      hasMore: hasMore,
+                      isLoadingMore: state.loadingMore,
+                      onLoadMore: notifier.loadMore,
+                      bottomInset: bottomInset,
+                    ),
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showSortSheet(
+    ExploreState state,
+    ExploreNotifier notifier,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
+      builder: (ctx) => SortSheet(
+        kind: state.activeTab,
+        sort: state.sort,
+        onApply: notifier.setSort,
       ),
     );
   }

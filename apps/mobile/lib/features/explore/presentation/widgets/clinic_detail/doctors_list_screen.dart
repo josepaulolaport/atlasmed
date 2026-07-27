@@ -45,7 +45,6 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
   String _query = '';
   String _sort = 'name-asc';
   Map<String, List<String>> _filters = {};
-  bool _sortOpen = false;
 
   @override
   void initState() {
@@ -218,97 +217,93 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
               child: const Icon(Icons.add_rounded),
             )
           : null,
-      body: Stack(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                child: SearchBarWidget(
-                  value: _query,
-                  onChanged: (q) => setState(() => _query = q),
-                  onFilter: _showFilterSheet,
-                  filterCount: _filterCount,
-                  hintText: 'Buscar médico, especialidade…',
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
-                child: SortRow(
-                  sort: _sort,
-                  onSortTap: () => setState(() => _sortOpen = true),
-                  filterChips: _filterChips,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                child: Text(
-                  filtered.length == 1
-                      ? '1 médico'
-                      : '${filtered.length} médicos',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6b7280),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: filtered.isEmpty
-                    ? EmptyState(query: _query, kind: 'facility-doctor')
-                    : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) {
-                          final d = filtered[i];
-                          return DoctorRow(
-                            showDistance: false,
-                            showRelationship: true,
-                            phone: d.phone,
-                            relationshipScore: d.relationshipScore,
-                            badges: _badgesFor(d),
-                            doctor: Doctor(
-                              id: d.id,
-                              name: d.name,
-                              initials: d.initials,
-                              hue: d.hue,
-                              specialty: d.specialty ?? '',
-                              primaryClinic: '',
-                              crm: d.crm ?? '',
-                              distanceKm: 0,
-                              isPriority: d.isDecisionMaker || d.isPrescriber,
-                            ),
-                            onEditRoles:
-                                ref.watch(canMutateProfessionalProvider)
-                                ? () => _editRoles(d)
-                                : null,
-                            onTap: () {
-                              final facilityId = widget.facilityId;
-                              final uri =
-                                  facilityId == null || facilityId.isEmpty
-                                  ? '/explore/doctor/${d.id}'
-                                  : '/explore/doctor/${d.id}?facilityId=$facilityId';
-                              context.push(uri);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+            child: SearchBarWidget(
+              value: _query,
+              onChanged: (q) => setState(() => _query = q),
+              onFilter: _showFilterSheet,
+              filterCount: _filterCount,
+              hintText: 'Buscar médico, especialidade…',
+            ),
           ),
-          SortSheet(
-            open: _sortOpen,
-            onClose: () => setState(() => _sortOpen = false),
-            kind: 'facility-people',
-            sort: _sort,
-            onApply: (s) {
-              setState(() {
-                _sort = s;
-                _sortOpen = false;
-              });
-            },
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+            child: SortRow(
+              sort: _sort,
+              onSortTap: _showSortSheet,
+              filterChips: _filterChips,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+            child: Text(
+              filtered.length == 1 ? '1 médico' : '${filtered.length} médicos',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF6b7280),
+              ),
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? EmptyState(query: _query, kind: 'facility-doctor')
+                : ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final d = filtered[i];
+                      return DoctorRow(
+                        showDistance: false,
+                        showRelationship: true,
+                        phone: d.phone,
+                        relationshipScore: d.relationshipScore,
+                        badges: _badgesFor(d),
+                        doctor: Doctor(
+                          id: d.id,
+                          name: d.name,
+                          initials: d.initials,
+                          hue: d.hue,
+                          specialty: d.specialty ?? '',
+                          primaryClinic: '',
+                          crm: d.crm ?? '',
+                          distanceKm: 0,
+                          isPriority: d.isDecisionMaker || d.isPrescriber,
+                        ),
+                        onEditRoles: ref.watch(canMutateProfessionalProvider)
+                            ? () => _editRoles(d)
+                            : null,
+                        onTap: () {
+                          final facilityId = widget.facilityId;
+                          final uri = facilityId == null || facilityId.isEmpty
+                              ? '/explore/doctor/${d.id}'
+                              : '/explore/doctor/${d.id}?facilityId=$facilityId';
+                          context.push(uri);
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showSortSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SortSheet(
+        kind: 'facility-people',
+        sort: _sort,
+        onApply: (s) {
+          setState(() => _sort = s);
+          Navigator.pop(ctx);
+        },
       ),
     );
   }
