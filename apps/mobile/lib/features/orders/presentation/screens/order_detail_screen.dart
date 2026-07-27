@@ -89,7 +89,7 @@ class OrderDetailScreen extends ConsumerWidget {
                         child: _ActionButton(
                           label: 'Repetir pedido',
                           filled: false,
-                          onTap: () => context.go('/pedidos/novo'),
+                          onTap: () => context.go('/orders/new'),
                         ),
                       ),
                       const SizedBox(width: 12),

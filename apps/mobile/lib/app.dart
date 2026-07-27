@@ -53,6 +53,8 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/core/session/session_listenable.dart';
 
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+
 class AtlasMedApp extends ConsumerStatefulWidget {
   const AtlasMedApp({super.key});
 
@@ -78,7 +80,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
       locationSessionProvider,
       (_, _) => _router.refresh(),
     );
-    _authWatchListener = () => _syncLocationWatching();
+    _authWatchListener = _syncLocationWatching;
     _sessionListenable.addListener(_authWatchListener!);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(avatarControllerProvider.notifier).recoverLostData();
@@ -109,38 +111,36 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_sessionListenable.isAuthenticated) return;
-    final notifier = ref.read(locationSessionProvider.notifier);
-    if (state == AppLifecycleState.resumed) {
-      // Soft recheck first (catches permission revoked in Settings); then
-      // refresh a fix if still allowed.
-      unawaited(() async {
-        await notifier.revalidate();
-        if (ref.read(locationSessionProvider).isUsable) {
-          await notifier.ensureLocation();
-        }
-      }());
+    if (!_sessionListenable.isAuthenticated ||
+        state != AppLifecycleState.resumed) {
+      return;
     }
+    final notifier = ref.read(locationSessionProvider.notifier);
+    unawaited(() async {
+      await notifier.revalidate();
+      if (ref.read(locationSessionProvider).isUsable) {
+        await notifier.ensureLocation();
+      }
+    }());
   }
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'AtlasMed',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      routerConfig: _router,
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp.router(
+    title: 'AtlasMed',
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.light,
+    themeMode: ThemeMode.light,
+    routerConfig: _router,
+  );
 
   GoRouter _buildRouter() {
     return GoRouter(
+      navigatorKey: _rootNavigatorKey,
       initialLocation: '/splash',
       observers: [appRouteObserver],
       refreshListenable: _sessionListenable,
-      redirect: (context, state) {
+      redirect: (_, state) {
         final isAuthenticated = _sessionListenable.isAuthenticated;
-
         final location = state.matchedLocation;
         final isSplash = location.startsWith('/splash');
         final isLocationGate = location == '/location-gate';
@@ -148,15 +148,11 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         if (isAuthenticated) {
           final locationSession = ref.read(locationSessionProvider);
           if (!locationSession.isUsable) {
-            if (!isLocationGate) return '/location-gate';
-            return null;
+            return isLocationGate ? null : '/location-gate';
           }
-          if (isSplash || isLocationGate) return '/workspace';
-          return null;
+          return (isSplash || isLocationGate) ? '/explore' : null;
         }
-
-        if (!isSplash) return '/splash';
-        return null;
+        return isSplash ? null : '/splash';
       },
       routes: [
         GoRoute(
@@ -165,37 +161,36 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         GoRoute(
           path: '/splash',
-          builder: (gc, _) => SplashScreen(
+          builder: (context, _) => SplashScreen(
             onDone: () {
               if (_sessionListenable.isAuthenticated) {
                 ref.read(locationSessionProvider.notifier).ensureLocation();
-                gc.go('/location-gate');
+                context.go('/location-gate');
               } else {
-                gc.go('/splash/login');
+                context.go('/splash/login');
               }
             },
           ),
           routes: [
-            // Auth flow routes
             GoRoute(
               path: 'login',
-              builder: (gc, _) => LoginScreen(
-                onForgotPassword: () => gc.push('/splash/login/forgot'),
-                onRegisterInvite: () => gc.push('/splash/login/register'),
+              builder: (context, _) => LoginScreen(
+                onForgotPassword: () => context.push('/splash/login/forgot'),
+                onRegisterInvite: () => context.push('/splash/login/register'),
                 onLoginSuccess: () {
                   ref.read(locationSessionProvider.notifier).ensureLocation();
-                  gc.go('/location-gate');
+                  context.go('/location-gate');
                 },
               ),
               routes: [
                 GoRoute(
                   path: 'register',
-                  builder: (gc, state) => RegisterInviteScreen(
+                  builder: (context, state) => RegisterInviteScreen(
                     initialToken: state.uri.queryParameters['token'],
-                    onBackToLogin: () => gc.go('/splash/login'),
+                    onBackToLogin: () => context.go('/splash/login'),
                     onRegistered: () {
-                      final messenger = ScaffoldMessenger.maybeOf(gc);
-                      gc.go('/splash/login');
+                      final messenger = ScaffoldMessenger.maybeOf(context);
+                      context.go('/splash/login');
                       messenger?.showSnackBar(
                         const SnackBar(
                           content: Text(
@@ -208,31 +203,32 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                 ),
                 GoRoute(
                   path: 'forgot',
-                  builder: (gc, _) => ForgotEmailScreen(
-                    onBack: () => gc.pop(),
-                    onCodeSent: () => gc.push('/splash/login/forgot/code'),
+                  builder: (context, _) => ForgotEmailScreen(
+                    onBack: () => context.pop(),
+                    onCodeSent: () => context.push('/splash/login/forgot/code'),
                   ),
                   routes: [
                     GoRoute(
                       path: 'code',
-                      builder: (gc, _) => ForgotCodeScreen(
-                        onBack: () => gc.pop(),
+                      builder: (context, _) => ForgotCodeScreen(
+                        onBack: () => context.pop(),
                         onCodeVerified: () =>
-                            gc.push('/splash/login/forgot/new-password'),
+                            context.push('/splash/login/forgot/new-password'),
                       ),
                     ),
                     GoRoute(
                       path: 'new-password',
-                      builder: (gc, _) => ForgotNewPasswordScreen(
-                        onBack: () => gc.pop(),
-                        onSuccess: () =>
-                            gc.pushReplacement('/splash/login/forgot/success'),
+                      builder: (context, _) => ForgotNewPasswordScreen(
+                        onBack: () => context.pop(),
+                        onSuccess: () => context.pushReplacement(
+                          '/splash/login/forgot/success',
+                        ),
                       ),
                     ),
                     GoRoute(
                       path: 'success',
-                      builder: (gc, _) => ForgotSuccessScreen(
-                        onBackToLogin: () => gc.go('/splash/login'),
+                      builder: (context, _) => ForgotSuccessScreen(
+                        onBackToLogin: () => context.go('/splash/login'),
                       ),
                     ),
                   ],
@@ -241,223 +237,195 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
             ),
           ],
         ),
-        // Authenticated shell — shared drawer across all main sections
-        ShellRoute(
-          builder: (_, _, child) => AppShellScreen(child: child),
-          routes: [
-            // Desempenho
-            GoRoute(
-              path: '/bi',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: DashboardScreen()),
-            ),
-            // Explorar (with clinic/doctor detail sub-routes)
-            GoRoute(
-              path: '/workspace',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: ExploreScreen()),
+        StatefulShellRoute.indexedStack(
+          builder: (_, _, navigationShell) =>
+              AppShellScreen(navigationShell: navigationShell),
+          branches: [
+            StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: 'clinic/:id',
-                  builder: (_, state) =>
-                      ClinicDetailScreen(clinicId: state.pathParameters['id']!),
+                  path: '/explore',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: ExploreScreen()),
                 ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
                 GoRoute(
-                  path: 'doctor/:id',
-                  builder: (_, state) => DoctorDetailScreen(
-                    doctorId: state.pathParameters['id']!,
-                    facilityId: state.uri.queryParameters['facilityId'],
+                  path: '/map',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: MapScreen()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/territories',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: TerritoriesScreen()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/users',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: UsersScreen()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/orders',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: MyOrdersScreen()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/registrations',
+                  pageBuilder: (_, _) => const NoTransitionPage(
+                    child: CadastrosReviewListScreen(),
                   ),
                 ),
               ],
             ),
-            // Mapa
-            GoRoute(
-              path: '/mapa',
-              pageBuilder: (_, _) => const NoTransitionPage(child: MapScreen()),
-            ),
-            // Territórios
-            GoRoute(
-              path: '/territorios',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: TerritoriesScreen()),
-            ),
-            // Pedidos
-            GoRoute(
-              path: '/pedidos',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: MyOrdersScreen()),
+            StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: 'novo',
-                  builder: (_, _) => const NewOrderProductsScreen(),
-                  routes: [
-                    GoRoute(
-                      path: 'carrinho',
-                      builder: (_, _) => const CartScreen(),
-                    ),
-                    GoRoute(
-                      path: 'checkout',
-                      builder: (_, _) => const CheckoutScreen(),
-                    ),
-                    GoRoute(
-                      path: 'sucesso',
-                      builder: (_, _) => const OrderSuccessScreen(),
-                    ),
-                  ],
-                ),
-                GoRoute(
-                  path: ':id',
-                  builder: (_, state) =>
-                      OrderDetailScreen(orderId: state.pathParameters['id']!),
-                  routes: [
-                    GoRoute(
-                      path: 'rastreio',
-                      builder: (_, state) => OrderTrackingScreen(
-                        orderId: state.pathParameters['id']!,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            // Cadastros — ops approval queue for facility registration docs
-            GoRoute(
-              path: '/cadastros',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: CadastrosReviewListScreen()),
-              routes: [
-                GoRoute(
-                  path: ':id',
-                  builder: (_, state) => CadastroReviewDetailScreen(
-                    submissionId: state.pathParameters['id']!,
+                  path: '/non-conformities',
+                  pageBuilder: (_, _) => const NoTransitionPage(
+                    child: NaoConformidadesListScreen(),
                   ),
                 ),
               ],
             ),
-            // Não Conformidades — field-change suggestions (clinic/doctor)
-            GoRoute(
-              path: '/nao-conformidades',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: NaoConformidadesListScreen()),
+            StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: ':id',
-                  builder: (_, state) => NaoConformidadeDetailScreen(
-                    suggestionId: state.pathParameters['id']!,
-                  ),
+                  path: '/products',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: ProductsHomeScreen()),
                 ),
               ],
             ),
-            // Catálogo (current — kept intact while Produtos is redesigned)
-            GoRoute(
-              path: '/catalogo',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: CatalogHomeScreen()),
+            StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: 'brasindice',
-                  builder: (_, _) => const CatalogPriceIndexScreen(),
-                ),
-                GoRoute(
-                  path: 'comparativo/:variantId',
-                  builder: (_, state) => CatalogComparisonScreen(
-                    variantId: state.pathParameters['variantId']!,
-                  ),
-                ),
-              ],
-            ),
-            // Produtos (revamp — build the new experience here)
-            GoRoute(
-              path: '/produtos',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: ProductsHomeScreen()),
-              routes: [
-                GoRoute(
-                  path: ':familyId',
-                  builder: (_, state) => ProductDetailScreen(
-                    familyId: state.pathParameters['familyId']!,
-                  ),
-                ),
-              ],
-            ),
-            // Apresentações
-            GoRoute(
-              path: '/apresentacoes',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: PresentationsScreen()),
-            ),
-            // Perfil
-            GoRoute(
-              path: '/perfil',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: ProfileScreen()),
-            ),
-            // Usuários (admin-only — see canManageUsersProvider)
-            GoRoute(
-              path: '/usuarios',
-              pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: UsersScreen()),
-              routes: [
-                GoRoute(
-                  path: 'convidar',
-                  builder: (_, _) => const InviteUserScreen(),
-                ),
-                GoRoute(
-                  path: 'convites',
-                  builder: (_, _) => const InvitationsScreen(),
-                  routes: [
-                    GoRoute(
-                      path: ':invitationId',
-                      builder: (_, state) => InvitationDetailScreen(
-                        invitationId: state.pathParameters['invitationId']!,
-                      ),
-                      routes: [
-                        GoRoute(
-                          path: 'editar',
-                          builder: (_, state) => InviteUserScreen(
-                            invitationId: state.pathParameters['invitationId'],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                GoRoute(
-                  path: ':id',
-                  builder: (_, state) =>
-                      UserDetailScreen(userId: state.pathParameters['id']!),
-                  routes: [
-                    GoRoute(
-                      path: 'editar',
-                      builder: (_, state) => EditUserProfileScreen(
-                        userId: state.pathParameters['id']!,
-                      ),
-                    ),
-                    GoRoute(
-                      path: 'atribuicoes',
-                      builder: (_, state) => EditUserAssignmentsScreen(
-                        userId: state.pathParameters['id']!,
-                      ),
-                    ),
-                  ],
+                  path: '/profile',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: ProfileScreen()),
                 ),
               ],
             ),
           ],
         ),
-        // Editor de território — full screen, no shared drawer/shell chrome.
+        // Details and flows use the root navigator so the drawer cannot capture
+        // the edge-swipe back gesture.
         GoRoute(
-          path: '/territorios/:id/editar',
+          path: '/explore/clinic/:id',
+          builder: (_, state) =>
+              ClinicDetailScreen(clinicId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/explore/doctor/:id',
+          builder: (_, state) => DoctorDetailScreen(
+            doctorId: state.pathParameters['id']!,
+            facilityId: state.uri.queryParameters['facilityId'],
+          ),
+        ),
+        GoRoute(
+          path: '/orders/new',
+          builder: (_, _) => const NewOrderProductsScreen(),
+        ),
+        GoRoute(
+          path: '/orders/new/cart',
+          builder: (_, _) => const CartScreen(),
+        ),
+        GoRoute(
+          path: '/orders/new/checkout',
+          builder: (_, _) => const CheckoutScreen(),
+        ),
+        GoRoute(
+          path: '/orders/new/success',
+          builder: (_, _) => const OrderSuccessScreen(),
+        ),
+        GoRoute(
+          path: '/orders/:id',
+          builder: (_, state) =>
+              OrderDetailScreen(orderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/orders/:id/tracking',
+          builder: (_, state) =>
+              OrderTrackingScreen(orderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/registrations/:id',
+          builder: (_, state) => CadastroReviewDetailScreen(
+            submissionId: state.pathParameters['id']!,
+          ),
+        ),
+        GoRoute(
+          path: '/non-conformities/:id',
+          builder: (_, state) => NaoConformidadeDetailScreen(
+            suggestionId: state.pathParameters['id']!,
+          ),
+        ),
+        GoRoute(
+          path: '/products/:familyId',
+          builder: (_, state) =>
+              ProductDetailScreen(familyId: state.pathParameters['familyId']!),
+        ),
+        GoRoute(
+          path: '/users/invite',
+          builder: (_, _) => const InviteUserScreen(),
+        ),
+        GoRoute(
+          path: '/users/invitations',
+          builder: (_, _) => const InvitationsScreen(),
+        ),
+        GoRoute(
+          path: '/users/invitations/:invitationId',
+          builder: (_, state) => InvitationDetailScreen(
+            invitationId: state.pathParameters['invitationId']!,
+          ),
+        ),
+        GoRoute(
+          path: '/users/invitations/:invitationId/edit',
+          builder: (_, state) => InviteUserScreen(
+            invitationId: state.pathParameters['invitationId'],
+          ),
+        ),
+        GoRoute(
+          path: '/users/:id',
+          builder: (_, state) =>
+              UserDetailScreen(userId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/users/:id/edit',
+          builder: (_, state) =>
+              EditUserProfileScreen(userId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/users/:id/assignments',
+          builder: (_, state) =>
+              EditUserAssignmentsScreen(userId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/territories/:id/edit',
           builder: (_, state) => TerritoryEditorScreen(
             target: TerritoryEditorTarget.existing(state.pathParameters['id']!),
           ),
         ),
-        // Criação de território — same full-screen editor, started from
-        // an empty boundary; `extra` carries the kind/sector hints from
-        // whatever the viewer had filtered to.
         GoRoute(
-          path: '/territorios/criar',
+          path: '/territories/create',
           builder: (_, state) => TerritoryEditorScreen(
             target: state.extra is TerritoryEditorTarget
                 ? state.extra as TerritoryEditorTarget
@@ -465,6 +433,22 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                     initialKind: TerritoryKind.managerZone,
                   ),
           ),
+        ),
+        GoRoute(path: '/dashboard', builder: (_, _) => const DashboardScreen()),
+        GoRoute(path: '/catalog', builder: (_, _) => const CatalogHomeScreen()),
+        GoRoute(
+          path: '/catalog/price-index',
+          builder: (_, _) => const CatalogPriceIndexScreen(),
+        ),
+        GoRoute(
+          path: '/catalog/comparison/:variantId',
+          builder: (_, state) => CatalogComparisonScreen(
+            variantId: state.pathParameters['variantId']!,
+          ),
+        ),
+        GoRoute(
+          path: '/presentations',
+          builder: (_, _) => const PresentationsScreen(),
         ),
       ],
     );

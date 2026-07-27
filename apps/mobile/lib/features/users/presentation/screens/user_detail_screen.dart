@@ -346,7 +346,7 @@ class _IdentityCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.push('/usuarios/${user.id}/editar'),
+                onPressed: () => context.push('/users/${user.id}/edit'),
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: const Text('Editar informações'),
               ),
@@ -482,7 +482,7 @@ class _AssignmentsSection extends ConsumerWidget {
           trailing: canManage
               ? TextButton(
                   onPressed: () async {
-                    await context.push('/usuarios/${user.id}/atribuicoes');
+                    await context.push('/users/${user.id}/assignments');
                     ref.invalidate(userAssignmentsProvider(user.id));
                   },
                   child: const Text('Gerenciar'),

@@ -86,13 +86,14 @@ class _NewTerritoryButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return FloatingActionButton.extended(
       backgroundColor: const Color(0xFF0a2f7f),
+      foregroundColor: Colors.white,
       icon: const Icon(Icons.add_rounded),
       label: const Text('Novo território'),
       onPressed: () {
         final kind = ref.read(selectedTerritoryKindProvider);
         final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
         context.push(
-          '/territorios/criar',
+          '/territories/criar',
           extra: TerritoryEditorTarget.creating(
             initialKind: kind,
             initialVerticalId: verticalId,
@@ -356,7 +357,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
                 onEditInfo: () => _editInfo(selectedTerritory),
                 onAssign: () => _assignUser(selectedTerritory),
                 onEditArea: () =>
-                    context.push('/territorios/${selectedTerritory.id}/editar'),
+                    context.push('/territories/${selectedTerritory.id}/edit'),
                 onDelete: () => _confirmAndDelete(selectedTerritory),
                 onClose: _deselectTerritory,
               ),

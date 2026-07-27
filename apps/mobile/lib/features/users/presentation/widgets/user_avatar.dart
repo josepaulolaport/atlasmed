@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 /// Circular avatar for a managed [User] — shows the real `avatarUrl` when
@@ -60,15 +61,15 @@ class UserAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: avatarUrl != null && avatarUrl.isNotEmpty
-          ? Image.network(
-              _avatarUri(avatarUrl),
-              headers: token == null
+          ? CachedNetworkImage(
+              imageUrl: _avatarUri(avatarUrl),
+              httpHeaders: token == null
                   ? null
                   : {'Authorization': 'Bearer $token'},
               fit: BoxFit.cover,
               width: size,
               height: size,
-              errorBuilder: (_, _, _) =>
+              errorWidget: (_, _, _) =>
                   _InitialsLabel(initials: _initials, size: size),
             )
           : _InitialsLabel(initials: _initials, size: size),

@@ -712,14 +712,14 @@ class CatalogTabBar extends StatelessWidget {
               child: _segment(
                 label: 'Produtos',
                 selected: active == CatalogTab.produtos,
-                onTap: () => context.go('/catalogo'),
+                onTap: () => context.go('/catalog'),
               ),
             ),
             Expanded(
               child: _segment(
                 label: 'Tabela Brasíndice',
                 selected: active == CatalogTab.tabelaCompleta,
-                onTap: () => context.go('/catalogo/brasindice'),
+                onTap: () => context.go('/catalog/price-index'),
               ),
             ),
           ],

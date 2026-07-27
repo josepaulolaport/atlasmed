@@ -43,7 +43,7 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: () => context.push('/pedidos/novo'),
+              onPressed: () => context.push('/orders/new'),
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Criar pedido'),
               style: OutlinedButton.styleFrom(
@@ -169,7 +169,7 @@ class _OrderCard extends StatelessWidget {
           const Divider(height: 1, color: Color(0xFFf3f4f6)),
           const SizedBox(height: 8),
           InkWell(
-            onTap: () => context.push('/pedidos/${order.id}'),
+            onTap: () => context.push('/orders/${order.id}'),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(

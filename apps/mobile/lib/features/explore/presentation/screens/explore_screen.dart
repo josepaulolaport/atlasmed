@@ -68,75 +68,74 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         : state.filteredDoctors;
     final displayedList = filteredList.take(state.visibleCount).toList();
     final hasMore = state.visibleCount < filteredList.length;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     final filterChips = buildFilterChips(state, notifier, isClinic);
     final filterCount = filterChips.length;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                const AtlasTopBar(page: 'Explorar'),
-                const SizedBox(height: 16),
-                _buildSearchBar(state, notifier, filterCount, isClinic),
-                const FacilityVerticalFilterBar(
-                  padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+      appBar: const AtlasAppBar(page: 'Explorar'),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              const SizedBox(height: 16),
+              _buildSearchBar(state, notifier, filterCount, isClinic),
+              const FacilityVerticalFilterBar(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+              ),
+              TabToggle(
+                value: state.activeTab,
+                onChanged: notifier.setTab,
+                clinicCount: state.clinicTotal,
+                doctorCount: state.doctorTotal,
+                trailing: ExploreSortChip(
+                  sort: state.sort,
+                  onTap: () => setState(() => _sortOpen = true),
                 ),
-                TabToggle(
-                  value: state.activeTab,
-                  onChanged: notifier.setTab,
-                  clinicCount: state.clinicTotal,
-                  doctorCount: state.doctorTotal,
-                  trailing: ExploreSortChip(
+              ),
+              if (filterChips.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: SortRow(
                     sort: state.sort,
-                    onTap: () => setState(() => _sortOpen = true),
+                    onSortTap: () => setState(() => _sortOpen = true),
+                    filterChips: filterChips,
+                    includeSort: false,
                   ),
                 ),
-                if (filterChips.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: SortRow(
-                      sort: state.sort,
-                      onSortTap: () => setState(() => _sortOpen = true),
-                      filterChips: filterChips,
-                      includeSort: false,
-                    ),
-                  ),
-                Expanded(
-                  child: state.loading
-                      ? ListView.builder(
-                          itemCount: 8,
-                          itemBuilder: (_, _) =>
-                              SkeletonRow(isDoctor: !isClinic),
-                        )
-                      : filteredList.isEmpty
-                      ? EmptyState(query: state.query, kind: state.activeTab)
-                      : RefreshIndicator(
-                          onRefresh: () => ref
-                              .read(exploreProvider.notifier)
-                              .refreshGpsAndList(),
-                          child: _buildResultsList(
-                            displayedList,
-                            hasMore,
-                            isClinic,
-                            notifier,
-                          ),
+              Expanded(
+                child: state.loading
+                    ? ListView.builder(
+                        itemCount: 8,
+                        itemBuilder: (_, _) => SkeletonRow(isDoctor: !isClinic),
+                      )
+                    : filteredList.isEmpty
+                    ? EmptyState(query: state.query, kind: state.activeTab)
+                    : RefreshIndicator(
+                        onRefresh: () => ref
+                            .read(exploreProvider.notifier)
+                            .refreshGpsAndList(),
+                        child: _buildResultsList(
+                          displayedList,
+                          hasMore,
+                          isClinic,
+                          notifier,
+                          bottomInset,
                         ),
-                ),
-              ],
-            ),
-            SortSheet(
-              open: _sortOpen,
-              onClose: () => setState(() => _sortOpen = false),
-              kind: state.activeTab,
-              sort: state.sort,
-              onApply: notifier.setSort,
-            ),
-          ],
-        ),
+                      ),
+              ),
+            ],
+          ),
+          SortSheet(
+            open: _sortOpen,
+            onClose: () => setState(() => _sortOpen = false),
+            kind: state.activeTab,
+            sort: state.sort,
+            onApply: notifier.setSort,
+          ),
+        ],
       ),
     );
   }
@@ -148,6 +147,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       builder: (context) => FilterSheet(
         kind: state.activeTab,
         filters: state.filters,
@@ -189,7 +189,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     bool hasMore,
     bool isClinic,
     ExploreNotifier notifier,
+    double bottomInset,
   ) {
+    final bottomSpacerIndex = items.length + (hasMore ? 1 : 0);
+
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is ScrollEndNotification &&
@@ -204,9 +207,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        itemCount: items.length + (hasMore ? 1 : 0),
+        itemCount: bottomSpacerIndex + 1,
         itemBuilder: (context, index) {
-          if (index >= items.length) {
+          if (index == bottomSpacerIndex) {
+            return SizedBox(height: bottomInset);
+          }
+
+          if (index == items.length && hasMore) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Center(
@@ -226,13 +233,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             final clinic = items[index] as Clinic;
             return ClinicRow(
               clinic: clinic,
-              onTap: () => context.push('/workspace/clinic/${clinic.id}'),
+              onTap: () => context.push('/explore/clinic/${clinic.id}'),
             );
           }
           final doctor = items[index] as Doctor;
           return DoctorRow(
             doctor: doctor,
-            onTap: () => context.push('/workspace/doctor/${doctor.id}'),
+            onTap: () => context.push('/explore/doctor/${doctor.id}'),
           );
         },
       ),

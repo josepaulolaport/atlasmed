@@ -20,7 +20,7 @@ class ProfessionalNotesRepository extends Repository<List<ProfessionalNote>>
          endpoint: Uri.parse(
            '${AppConfig.apiBaseUrl}/api/v1/professionals/$professionalId/notes',
          ),
-         resolveOnCreate: false,
+         resolveOnCreate: true,
          name: 'ProfessionalNotesRepository',
        );
 

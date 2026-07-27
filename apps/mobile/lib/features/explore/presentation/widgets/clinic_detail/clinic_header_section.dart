@@ -1,6 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -115,29 +115,6 @@ class ClinicHeaderSection extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () => context.pop(),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.bookmark_border_rounded,
-                  color: Colors.white,
-                ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Favoritos — em breve'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Column(
@@ -413,15 +390,15 @@ class _Avatar extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: hasImage
-                    ? Image.network(
-                        _absoluteUrl(url),
-                        headers: token == null
+                    ? CachedNetworkImage(
+                        imageUrl: _absoluteUrl(url),
+                        httpHeaders: token == null
                             ? null
                             : {'Authorization': 'Bearer $token'},
                         fit: BoxFit.cover,
                         width: 52,
                         height: 52,
-                        errorBuilder: (_, _, _) => _Initials(name: name),
+                        errorWidget: (_, _, _) => _Initials(name: name),
                       )
                     : _Initials(name: name),
               ),

@@ -4,7 +4,6 @@ class DoctorDetail {
   final String id;
   final String name;
   final String initials;
-  final double hue;
   final String specialty;
   final String crm;
   final String role;
@@ -53,7 +52,6 @@ class DoctorDetail {
     required this.id,
     required this.name,
     required this.initials,
-    required this.hue,
     required this.specialty,
     required this.crm,
     required this.role,
@@ -125,7 +123,6 @@ class DoctorDetail {
       id: id ?? this.id,
       name: name ?? this.name,
       initials: initials ?? this.initials,
-      hue: hue ?? this.hue,
       specialty: specialty ?? this.specialty,
       crm: crm ?? this.crm,
       role: role ?? this.role,

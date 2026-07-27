@@ -125,7 +125,7 @@ class _NewOrderProductsScreenState
                   heroTag: 'new-order-products-cta',
                   backgroundColor: const Color(0xFF0a2f7f),
                   foregroundColor: Colors.white,
-                  onPressed: () => context.push('/pedidos/novo/carrinho'),
+                  onPressed: () => context.push('/orders/new/cart'),
                   label: Text('Ver carrinho · ${cart.totalQty} itens →'),
                 ),
               ),
@@ -171,7 +171,7 @@ class _NewOrderProductsScreenState
           CartBadge(
             totalQty: cart.totalQty,
             totalValue: cart.subtotal,
-            onTap: () => context.push('/pedidos/novo/carrinho'),
+            onTap: () => context.push('/orders/new/cart'),
           ),
         ],
       ),

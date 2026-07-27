@@ -15,6 +15,6 @@ class ManageAssignmentsSheet {
     required User user,
     required UserAssignments assignments,
   }) {
-    return context.push<void>('/usuarios/${user.id}/atribuicoes');
+    return context.push<void>('/users/${user.id}/assignments');
   }
 }

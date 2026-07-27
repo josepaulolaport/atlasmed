@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
@@ -22,9 +24,9 @@ import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 // ======================================================================
 
 class AppShellScreen extends StatefulWidget {
-  final Widget child;
+  final StatefulNavigationShell navigationShell;
 
-  const AppShellScreen({super.key, required this.child});
+  const AppShellScreen({super.key, required this.navigationShell});
 
   @override
   State<AppShellScreen> createState() => AppShellScreenState();
@@ -32,6 +34,8 @@ class AppShellScreen extends StatefulWidget {
 
 class AppShellScreenState extends State<AppShellScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  static const Color _defaultShellChromeColor = Color(0xFFF7F8FB);
 
   /// Finds the nearest ancestor AppShellScreenState from the given context.
   static AppShellScreenState? of(BuildContext context) =>
@@ -45,31 +49,42 @@ class AppShellScreenState extends State<AppShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final location = GoRouterState.of(context).matchedLocation;
-    final activeSection = _sectionFromRoute(location);
-
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: const Color(0xFFf7f8fb),
-      drawer: AtlasDrawer(activeSection: activeSection),
-      body: widget.child,
+    final navigationShell = widget.navigationShell;
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
+    final chromeColor = _defaultShellChromeColor;
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: chromeColor,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.dark,
     );
-  }
 
-  static String _sectionFromRoute(String location) {
-    if (location.startsWith('/workspace')) return 'explorar';
-    if (location.startsWith('/perfil')) return 'perfil';
-    if (location.startsWith('/bi')) return 'desempenho';
-    if (location.startsWith('/pedidos')) return 'pedidos';
-    if (location.startsWith('/cadastros')) return 'cadastros';
-    if (location.startsWith('/nao-conformidades')) return 'nao-conformidades';
-    if (location.startsWith('/produtos')) return 'produtos';
-    if (location.startsWith('/catalogo')) return 'catalogo';
-    if (location.startsWith('/apresentacoes')) return 'apresentacoes';
-    if (location.startsWith('/mapa')) return 'mapa';
-    if (location.startsWith('/territorios')) return 'territorios';
-    if (location.startsWith('/usuarios')) return 'usuarios';
-    return '';
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: _defaultShellChromeColor,
+        drawer: AtlasDrawer(
+          activeBranchIndex: navigationShell.currentIndex,
+          onSelectBranch: (branchIndex) => navigationShell.goBranch(
+            branchIndex,
+            initialLocation: branchIndex == navigationShell.currentIndex,
+          ),
+        ),
+        body: Stack(
+          children: [
+            navigationShell,
+            if (statusBarHeight > 0)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: statusBarHeight,
+                child: IgnorePointer(child: ColoredBox(color: chromeColor)),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -78,10 +93,35 @@ void openAppDrawer(BuildContext context) =>
     AppShellScreenState.of(context)?.openDrawer();
 
 // ======================================================================
-// AtlasTopBar — slim sticky bar with hamburger + breadcrumb
+// AtlasTopBar — legacy inline bar with hamburger + breadcrumb
 //   page    — current page label ("Explorar", "Perfil", etc.)
 //   compact — drop breadcrumb for detail/sub screens
 // ======================================================================
+
+class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String page;
+  final bool compact;
+
+  const AtlasAppBar({super.key, this.page = '', this.compact = false});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(48);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      backgroundColor: const Color(0xFFF7F8FB),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: preferredSize.height,
+      shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
+      titleSpacing: 0,
+      title: _AtlasTopBarContent(page: page, compact: compact),
+    );
+  }
+}
 
 class AtlasTopBar extends StatelessWidget {
   final String page;
@@ -93,34 +133,47 @@ class AtlasTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xF2f7f8fb),
+        color: Color(0xFFF7F8FB),
         border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
       ),
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
-          child: SizedBox(
-            height: 40,
-            child: Row(
-              children: [
-                _hamburgerButton(context),
-                if (!compact) ...[
-                  const SizedBox(width: 8),
-                  _breadcrumb(context),
-                ],
-                if (compact) const Spacer(),
-              ],
-            ),
-          ),
+        child: _AtlasTopBarContent(page: page, compact: compact),
+      ),
+    );
+  }
+}
+
+class _AtlasTopBarContent extends StatelessWidget {
+  final String page;
+  final bool compact;
+
+  const _AtlasTopBarContent({required this.page, required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 10, 4),
+      child: SizedBox(
+        height: 40,
+        child: Row(
+          children: [
+            _hamburgerButton(context),
+            if (!compact) ...[const SizedBox(width: 8), _breadcrumb(context)],
+            if (compact) const Spacer(),
+          ],
         ),
       ),
     );
   }
 
   Widget _hamburgerButton(BuildContext context) {
+    final isInsideAppShell = AppShellScreenState.of(context) != null;
+
     return GestureDetector(
-      onTap: () => openAppDrawer(context),
+      onTap: isInsideAppShell
+          ? () => openAppDrawer(context)
+          : () => Navigator.of(context).maybePop(),
       child: Container(
         width: 36,
         height: 36,
@@ -215,84 +268,85 @@ class AtlasTopBar extends StatelessWidget {
 // Navigation items definition
 // ======================================================================
 
-class _DrawerItem {
-  final String key;
+class AppNavigationItem {
+  final int branchIndex;
   final String label;
   final String route;
-  final IconData icon;
+  final IconData? icon;
 
-  /// When set, the item is hidden from roles for which this returns
-  /// `false`. `null` means visible to everyone. Prefer mirroring CASL
-  /// helpers in `role_capabilities.dart` — API still enforces access.
+  /// When set, the item is hidden from roles for which this returns `false`.
   final bool Function(UserRoleName role)? visibleFor;
 
-  const _DrawerItem({
-    required this.key,
+  const AppNavigationItem({
+    required this.branchIndex,
     required this.label,
     required this.route,
-    required this.icon,
+    this.icon,
     this.visibleFor,
   });
+
+  bool isActiveForBranch(int activeBranchIndex) =>
+      branchIndex == activeBranchIndex;
 }
 
-const _drawerItems = <_DrawerItem>[
-  _DrawerItem(
-    key: 'explorar',
+const appNavigationItems = <AppNavigationItem>[
+  AppNavigationItem(
+    branchIndex: 0,
     label: 'Explorar',
-    route: '/workspace',
+    route: '/explore',
     icon: Icons.search_rounded,
   ),
-  _DrawerItem(
-    key: 'mapa',
+  AppNavigationItem(
+    branchIndex: 1,
     label: 'Mapa',
-    route: '/mapa',
+    route: '/map',
     icon: Icons.map_outlined,
   ),
-  _DrawerItem(
-    key: 'territorios',
+  AppNavigationItem(
+    branchIndex: 2,
     label: 'Territórios',
-    route: '/territorios',
+    route: '/territories',
     icon: Icons.layers_outlined,
     visibleFor: canReadTerritories,
   ),
-  _DrawerItem(
-    key: 'usuarios',
+  AppNavigationItem(
+    branchIndex: 3,
     label: 'Usuários',
-    route: '/usuarios',
+    route: '/users',
     icon: Icons.people_outline_rounded,
     visibleFor: canManageUsers,
   ),
-  _DrawerItem(
-    key: 'pedidos',
+  AppNavigationItem(
+    branchIndex: 4,
     label: 'Pedidos',
-    route: '/pedidos',
+    route: '/orders',
     icon: Icons.inventory_2_outlined,
   ),
-  _DrawerItem(
-    key: 'cadastros',
+  AppNavigationItem(
+    branchIndex: 5,
     label: 'Cadastros',
-    route: '/cadastros',
+    route: '/registrations',
     icon: Icons.fact_check_outlined,
     visibleFor: canReviewCadastro,
   ),
-  _DrawerItem(
-    key: 'nao-conformidades',
+  AppNavigationItem(
+    branchIndex: 6,
     label: 'Não Conformidades',
-    route: '/nao-conformidades',
+    route: '/non-conformities',
     icon: Icons.rate_review_outlined,
     visibleFor: canReadFieldSuggestions,
   ),
-  _DrawerItem(
-    key: 'produtos',
+  AppNavigationItem(
+    branchIndex: 7,
     label: 'Produtos',
-    route: '/produtos',
+    route: '/products',
     icon: Icons.inventory_outlined,
     visibleFor: canReadCatalog,
   ),
-  _DrawerItem(
-    key: 'perfil',
+  AppNavigationItem(
+    branchIndex: 8,
     label: 'Perfil',
-    route: '/perfil',
+    route: '/profile',
     icon: Icons.person_outline_rounded,
   ),
 ];
@@ -302,9 +356,14 @@ const _drawerItems = <_DrawerItem>[
 // ======================================================================
 
 class AtlasDrawer extends ConsumerWidget {
-  final String activeSection;
+  final int activeBranchIndex;
+  final ValueChanged<int> onSelectBranch;
 
-  const AtlasDrawer({super.key, required this.activeSection});
+  const AtlasDrawer({
+    super.key,
+    required this.activeBranchIndex,
+    required this.onSelectBranch,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -339,7 +398,8 @@ class AtlasDrawer extends ConsumerWidget {
                     ),
                     Expanded(
                       child: _NavItems(
-                        activeSection: activeSection,
+                        activeBranchIndex: activeBranchIndex,
+                        onSelectBranch: onSelectBranch,
                         role: user?.role.name,
                       ),
                     ),
@@ -436,13 +496,13 @@ class _DrawerHeader extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: avatarUrl != null && avatarUrl!.isNotEmpty
-                    ? Image.network(
-                        _avatarUri(avatarUrl!),
-                        headers: avatarToken == null
+                    ? CachedNetworkImage(
+                        imageUrl: _avatarUri(avatarUrl!),
+                        httpHeaders: avatarToken == null
                             ? null
                             : {"Authorization": "Bearer $avatarToken"},
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Center(
+                        errorWidget: (_, _, _) => Center(
                           child: Text(
                             initials,
                             style: const TextStyle(
@@ -493,14 +553,19 @@ class _DrawerHeader extends StatelessWidget {
 }
 
 class _NavItems extends StatelessWidget {
-  final String activeSection;
+  final int activeBranchIndex;
+  final ValueChanged<int> onSelectBranch;
   final UserRoleName? role;
 
-  const _NavItems({required this.activeSection, this.role});
+  const _NavItems({
+    required this.activeBranchIndex,
+    required this.onSelectBranch,
+    this.role,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final items = _drawerItems.where((item) {
+    final items = appNavigationItems.where((item) {
       final visibleFor = item.visibleFor;
       if (visibleFor == null) return true;
       // Hide role-gated items while the role is still resolving, so they
@@ -512,14 +577,18 @@ class _NavItems extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 0),
       child: Column(
         children: items.map((item) {
-          final isActive = item.key == activeSection;
+          final isActive = item.isActiveForBranch(activeBranchIndex);
           return _buildNavRow(item, isActive, context);
         }).toList(),
       ),
     );
   }
 
-  Widget _buildNavRow(_DrawerItem item, bool isActive, BuildContext context) {
+  Widget _buildNavRow(
+    AppNavigationItem item,
+    bool isActive,
+    BuildContext context,
+  ) {
     final color = isActive ? const Color(0xFF0a2f7f) : const Color(0xFF374151);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
@@ -530,7 +599,7 @@ class _NavItems extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: () {
             Navigator.of(context).pop(); // close drawer
-            context.go(item.route);
+            onSelectBranch(item.branchIndex);
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
