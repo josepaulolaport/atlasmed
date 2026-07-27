@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_nearby_map_screen.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Inline map preview + horizontal "Clínicas no raio" card strip.
@@ -117,21 +118,11 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
+            child: AtlasButton.outline(
               width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _openNearbyMap(),
-                icon: const Icon(Icons.map_rounded, size: 18),
-                label: const Text('Ver estabelecimentos próximos'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.navyBright,
-                  side: const BorderSide(color: AppColors.blue100),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
+              onPressed: () => _openNearbyMap(),
+              icon: const Icon(Icons.map_rounded, size: 18),
+              label: const Text('Ver estabelecimentos próximos'),
             ),
           ),
         ],

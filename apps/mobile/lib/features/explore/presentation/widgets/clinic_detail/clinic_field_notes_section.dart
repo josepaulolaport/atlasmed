@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Notas de campo" — private, facility-scoped notes only the current user sees.
@@ -100,8 +101,8 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
             ],
           if (widget.canAdd) ...[
             const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: _saving ? null : _addNote,
+            AtlasButton.outline(
+              onPressed: _saving ? () {} : _addNote,
               icon: _saving
                   ? const SizedBox(
                       width: 18,
@@ -110,14 +111,6 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
                     )
                   : const Icon(Icons.add_rounded, size: 18),
               label: const Text('Adicionar nota'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.navyBright,
-                side: const BorderSide(color: AppColors.blue100),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             ),
           ],
         ],

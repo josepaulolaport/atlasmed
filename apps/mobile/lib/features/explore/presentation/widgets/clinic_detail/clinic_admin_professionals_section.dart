@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/contact_action
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Profissionais administrativos" — snapping PageView of compact cards
@@ -48,18 +49,10 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
             ),
             if (onAssociate != null) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onAssociate,
+              AtlasButton.outline(
+                onPressed: onAssociate!,
                 icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                 label: const Text('Criar profissional'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.navyBright,
-                  side: const BorderSide(color: AppColors.blue100),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
               ),
             ],
           ],

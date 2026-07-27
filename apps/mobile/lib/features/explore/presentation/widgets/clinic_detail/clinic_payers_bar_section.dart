@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Fontes Pagadoras" — donut chart with a "principal fonte" callout and a
@@ -26,34 +27,23 @@ class ClinicPayersBarSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (payers.isEmpty) {
       return ClinicDetailCard(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Nenhuma fonte pagadora cadastrada',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.gray400),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Nenhuma fonte pagadora cadastrada',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.gray400),
+            ),
+            if (onEdit != null) ...[
+              const SizedBox(height: 12),
+              AtlasButton.outline(
+                onPressed: onEdit!,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Adicionar fonte'),
               ),
-              if (onEdit != null) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Adicionar fonte'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.navyBright,
-                    side: const BorderSide(color: AppColors.blue100),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       );
     }
@@ -165,18 +155,10 @@ class ClinicPayersBarSection extends StatelessWidget {
             const SizedBox(height: 4),
             const Divider(height: 1, color: AppColors.gray100),
             const SizedBox(height: 4),
-            OutlinedButton.icon(
-              onPressed: onEdit,
+            AtlasButton.outline(
+              onPressed: onEdit!,
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Adicionar fonte'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.navyBright,
-                side: const BorderSide(color: AppColors.blue100),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             ),
           ],
         ],
