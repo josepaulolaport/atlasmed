@@ -692,7 +692,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                     ),
                   ),
                 ClinicSectionHeader(
-                  title: 'Pedidos recentes',
+                  title: 'Histórico de pedidos',
                   badge: ordersState.orders.isEmpty
                       ? null
                       : _CountBadge(count: ordersState.orders.length),
