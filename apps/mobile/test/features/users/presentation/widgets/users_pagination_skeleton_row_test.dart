@@ -11,7 +11,7 @@ void main() {
     );
 
     expect(find.byType(UsersPaginationSkeletonRow), findsOneWidget);
-    expect(find.byType(ShaderMask), findsOneWidget);
+    expect(find.byType(UsersSkeletonRow), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 }

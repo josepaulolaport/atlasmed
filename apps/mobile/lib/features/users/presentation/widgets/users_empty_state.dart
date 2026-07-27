@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 
 class UsersEmptyState extends StatelessWidget {
@@ -96,67 +97,12 @@ class UsersSkeletonRow extends StatelessWidget {
 }
 
 /// A user-row-shaped shimmer shown only while the following page is loading.
-class UsersPaginationSkeletonRow extends StatefulWidget {
+class UsersPaginationSkeletonRow extends StatelessWidget {
   const UsersPaginationSkeletonRow({super.key});
 
   @override
-  State<UsersPaginationSkeletonRow> createState() =>
-      _UsersPaginationSkeletonRowState();
-}
-
-class _UsersPaginationSkeletonRowState extends State<UsersPaginationSkeletonRow>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _shimmerController;
-
-  @override
-  void initState() {
-    super.initState();
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _shimmerController.stop();
-    } else if (!_shimmerController.isAnimating) {
-      _shimmerController.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _shimmerController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: AnimatedBuilder(
-        animation: _shimmerController,
-        builder: (context, child) => ShaderMask(
-          blendMode: BlendMode.srcATop,
-          shaderCallback: (bounds) => LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: const [
-              Color(0xFFeef0f3),
-              Color(0xFFf8fafc),
-              Color(0xFFeef0f3),
-            ],
-            stops: const [0.25, 0.5, 0.75],
-            transform: _UsersSlidingGradientTransform(_shimmerController.value),
-          ).createShader(bounds),
-          child: child,
-        ),
-        child: const UsersSkeletonRow(),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      const ExcludeSemantics(child: Shimmer(child: UsersSkeletonRow()));
 }
 
 class _UsersSkeletonBar extends StatelessWidget {
@@ -174,21 +120,6 @@ class _UsersSkeletonBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         color: const Color(0xFFeef0f3),
       ),
-    );
-  }
-}
-
-class _UsersSlidingGradientTransform extends GradientTransform {
-  const _UsersSlidingGradientTransform(this.slidePercent);
-
-  final double slidePercent;
-
-  @override
-  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.translationValues(
-      (slidePercent * 2 - 1) * bounds.width,
-      0,
-      0,
     );
   }
 }
