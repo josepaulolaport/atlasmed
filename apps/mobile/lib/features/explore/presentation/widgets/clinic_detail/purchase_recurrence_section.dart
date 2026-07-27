@@ -26,26 +26,17 @@ class PurchaseRecurrenceSection extends StatelessWidget {
 
     return ClinicDetailCard(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      padding: EdgeInsets.zero,
+      padding: .zero,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: .start,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
             child: Wrap(
               spacing: 10,
               runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
+              crossAxisAlignment: .center,
               children: [
-                const Text(
-                  'Ciclo de recompra',
-                  style: TextStyle(
-                    color: AppColors.gray900,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                  ),
-                ),
                 if (recurrence.funnelStage != null)
                   _StageBadge(stage: recurrence.funnelStage!),
               ],
