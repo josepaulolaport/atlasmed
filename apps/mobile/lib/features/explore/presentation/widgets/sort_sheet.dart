@@ -21,12 +21,6 @@ class SortSheet extends StatelessWidget {
   List<_SortOption> get _options {
     if (kind == 'clinic') {
       return [
-        if (hasSearchQuery)
-          _SortOption(
-            'relevance',
-            'Relevância',
-            'Melhores resultados para a busca',
-          ),
         _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
         _SortOption('name-desc', 'Nome Z–A', 'Ordem alfabética inversa'),
         if (hasLocation)
@@ -65,12 +59,7 @@ class SortSheet extends StatelessWidget {
     }
     return [
       _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
-      _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
-      _SortOption(
-        'last-contact',
-        'Sem contato há mais tempo',
-        'Retome relacionamentos',
-      ),
+      _SortOption('name-desc', 'Nome Z–A', 'Ordem alfabética inversa'),
     ];
   }
 

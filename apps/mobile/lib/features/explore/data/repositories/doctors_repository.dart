@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 class DoctorsRepository extends Repository<PaginatedProfessionals>
     with SessionEnvironmentMixin<PaginatedProfessionals> {
@@ -19,6 +20,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
     this.longitude,
     this.radiusKm,
     this.specialty,
+    this.sort,
+    this.order,
   }) : super(
          endpoint: buildEndpoint(
            baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
@@ -35,6 +38,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
              if (radiusKm != null) 'radiusKm': radiusKm.toString(),
              if (specialty != null && specialty.trim().isNotEmpty)
                'specialty': specialty.trim(),
+             if (sort != null) 'sort': sort.apiValue,
+             if (order != null) 'order': order.name,
            },
          ),
          name: 'DoctorsRepository',
@@ -48,6 +53,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   final double? longitude;
   final double? radiusKm;
   final String? specialty;
+  final FacilitySort? sort;
+  final SortOrder? order;
 
   /// Build the endpoint URI for this repository.
   /// Calls the shared [buildEndpoint] from [query_builder.dart].
@@ -61,6 +68,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
     double? longitude,
     double? radiusKm,
     String? specialty,
+    FacilitySort? sort,
+    SortOrder? order,
   }) {
     return buildEndpoint(
       baseUrl: baseUrl,
@@ -77,6 +86,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
         if (radiusKm != null) 'radiusKm': radiusKm.toString(),
         if (specialty != null && specialty.trim().isNotEmpty)
           'specialty': specialty.trim(),
+        if (sort != null) 'sort': sort.apiValue,
+        if (order != null) 'order': order.name,
       },
     );
   }

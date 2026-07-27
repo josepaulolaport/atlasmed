@@ -162,6 +162,11 @@ function buildPersonUpdateData(data: ProfessionalUpdateInput) {
   return patch;
 }
 
+function buildProfessionalListOrderBy(params: { order?: "asc" | "desc" }) {
+  const direction = params.order === "desc" ? desc : asc;
+  return [direction(professionals.lastName), direction(professionals.firstName)];
+}
+
 export class DrizzleProfessionalRepository implements ProfessionalRepository {
   async findAll(params: {
     page: number;
@@ -172,6 +177,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
+    sort?: string;
+    order?: "asc" | "desc";
     scope: ProfessionalListScopeFilter;
     candidateIds?: string[];
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }> {
@@ -284,7 +291,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
         .select({ ...getTableColumns(professionals), distanceKm: distanceKm ?? sql<number | null>`null` })
         .from(professionals)
         .where(where)
-        .orderBy(...(distanceKm ? [asc(distanceKm), asc(professionals.lastName), asc(professionals.firstName)] : [asc(professionals.lastName), asc(professionals.firstName)]))
+        .orderBy(...(distanceKm && params.sort !== "name" ? [asc(distanceKm), asc(professionals.lastName), asc(professionals.firstName)] : buildProfessionalListOrderBy(params)))
         .offset(skip)
         .limit(params.limit),
       db.select({ count: sql<number>`count(*)::int` }).from(professionals).where(where),
