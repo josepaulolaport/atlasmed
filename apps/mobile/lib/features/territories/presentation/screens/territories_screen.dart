@@ -86,6 +86,7 @@ class _NewTerritoryButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return FloatingActionButton.extended(
       backgroundColor: const Color(0xFF0a2f7f),
+      foregroundColor: Colors.white,
       icon: const Icon(Icons.add_rounded),
       label: const Text('Novo território'),
       onPressed: () {

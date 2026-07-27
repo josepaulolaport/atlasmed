@@ -103,14 +103,34 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     final detailAsync = ref.watch(clinicDetailProvider(clinicId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
-      body: detailAsync.when(
-        // Keep showing the last clinic while NC approve (or pull-to-refresh)
-        // refetches — avoids a full-screen skeleton flash.
-        skipLoadingOnReload: true,
-        loading: () => _loadingSkeleton(context),
-        error: (err, _) => _errorView(context, clinicId, err),
-        data: (detail) => _ClinicDetailBody(detail: detail, clinicId: clinicId),
+      backgroundColor: const Color(0xFF1e40af),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1e40af),
+        foregroundColor: Colors.white,
+        systemOverlayStyle: .light,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark_border_rounded),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Favoritos — em breve'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: ColoredBox(
+        color: const Color(0xFFf8f9fb),
+        child: detailAsync.when(
+          skipLoadingOnReload: true,
+          loading: () => _loadingSkeleton(context),
+          error: (err, _) => _errorView(context, clinicId, err),
+          data: (detail) =>
+              _ClinicDetailBody(detail: detail, clinicId: clinicId),
+        ),
       ),
     );
   }
@@ -356,44 +376,62 @@ class _ClinicDetailBody extends ConsumerWidget {
         .watch(establishmentDetailSectionsProvider(clinicId))
         .valueOrNull;
 
-    return Column(
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        ClinicHeaderSection(detail: detail, sections: sections),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(clinicDetailProvider(clinicId));
-              ref.invalidate(establishmentDetailSectionsProvider(clinicId));
-              ref.invalidate(clinicVisitsProvider(clinicId));
-              ref.invalidate(facilityPhotosProvider(clinicId));
-              ref.invalidate(facilityNotesProvider(clinicId));
-              ref.invalidate(facilityNearbyPreviewProvider(clinicId));
-              final doctorsNotifier = ref.read(
-                facilityDoctorsRosterProvider(clinicId).notifier,
-              );
-              final adminsNotifier = ref.read(
-                facilityAdministratorsRosterProvider(clinicId).notifier,
-              );
-              final payersNotifier = ref.read(
-                facilityPayersProvider(clinicId).notifier,
-              );
-              final ordersNotifier = ref.read(
-                facilityOrdersProvider(clinicId).notifier,
-              );
-              await Future.wait([
-                ref.read(clinicDetailProvider(clinicId).future),
-                ref.read(establishmentDetailSectionsProvider(clinicId).future),
-                ref.read(facilityNearbyPreviewProvider(clinicId).future),
-                ref.read(facilityPhotosProvider(clinicId).future),
-                ref.read(facilityNotesProvider(clinicId).future),
-                doctorsNotifier.retry(),
-                adminsNotifier.retry(),
-                payersNotifier.retry(),
-                ordersNotifier.retry(),
-              ]);
-            },
-            child: _ClinicDetailContent(detail: detail, clinicId: clinicId),
-          ),
+        Column(
+          children: [
+            Expanded(child: Container(color: const Color(0xFF1e40af))),
+            Expanded(child: Container(color: const Color(0xFFf8f9fb))),
+          ],
+        ),
+        Column(
+          children: [
+            Expanded(
+              child: RefreshIndicator(
+                color: const Color(0xFF1e40af),
+                backgroundColor: Colors.white,
+                onRefresh: () async {
+                  ref.invalidate(clinicDetailProvider(clinicId));
+                  ref.invalidate(establishmentDetailSectionsProvider(clinicId));
+                  ref.invalidate(clinicVisitsProvider(clinicId));
+                  ref.invalidate(facilityPhotosProvider(clinicId));
+                  ref.invalidate(facilityNotesProvider(clinicId));
+                  ref.invalidate(facilityNearbyPreviewProvider(clinicId));
+                  final doctorsNotifier = ref.read(
+                    facilityDoctorsRosterProvider(clinicId).notifier,
+                  );
+                  final adminsNotifier = ref.read(
+                    facilityAdministratorsRosterProvider(clinicId).notifier,
+                  );
+                  final payersNotifier = ref.read(
+                    facilityPayersProvider(clinicId).notifier,
+                  );
+                  final ordersNotifier = ref.read(
+                    facilityOrdersProvider(clinicId).notifier,
+                  );
+                  await Future.wait([
+                    ref.read(clinicDetailProvider(clinicId).future),
+                    ref.read(
+                      establishmentDetailSectionsProvider(clinicId).future,
+                    ),
+                    ref.read(facilityNearbyPreviewProvider(clinicId).future),
+                    ref.read(facilityPhotosProvider(clinicId).future),
+                    ref.read(facilityNotesProvider(clinicId).future),
+                    doctorsNotifier.retry(),
+                    adminsNotifier.retry(),
+                    payersNotifier.retry(),
+                    ordersNotifier.retry(),
+                  ]);
+                },
+                child: _ClinicDetailContent(
+                  detail: detail,
+                  clinicId: clinicId,
+                  sections: sections,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -406,8 +444,12 @@ class _ClinicDetailBody extends ConsumerWidget {
 class _ClinicDetailContent extends ConsumerWidget {
   final ClinicDetail detail;
   final String clinicId;
-
-  const _ClinicDetailContent({required this.detail, required this.clinicId});
+  final EstablishmentDetailSections? sections;
+  const _ClinicDetailContent({
+    required this.detail,
+    required this.clinicId,
+    this.sections,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -429,8 +471,10 @@ class _ClinicDetailContent extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       children: [
+        ClinicHeaderSection(detail: detail, sections: sections),
+        // const SizedBox(height: 16),
         _QuickActions(detail: detail),
         ClinicTopShortcutsSection(
           facilityId: clinicId,

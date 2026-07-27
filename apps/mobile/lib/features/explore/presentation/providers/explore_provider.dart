@@ -11,7 +11,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_t
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
@@ -47,9 +46,9 @@ class _ClinicDetailRepository extends Repository<api.Clinic>
 }
 
 // ── Doctor detail repository ────────────────────────────────
-class _DoctorDetailRepository extends Repository<ApiDoctor>
+class DoctorDetailRepository extends Repository<ApiDoctor>
     with SessionEnvironmentMixin<ApiDoctor> {
-  _DoctorDetailRepository({required String id})
+  DoctorDetailRepository({required String id})
     : super(
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
         resolveOnCreate: false,
@@ -131,19 +130,6 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
   }
 }
 
-Future<DoctorDetail> _fetchDoctorDetail(String id) async {
-  final repo = _DoctorDetailRepository(id: id);
-  try {
-    final apiDoctor = await repo.refresh();
-    if (apiDoctor == null) {
-      throw Exception('Doctor not found: $id');
-    }
-    return doctorDetailFromApi(apiDoctor);
-  } finally {
-    repo.dispose();
-  }
-}
-
 /// Maps a professional API profile into the doctor detail UI model.
 DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
   final name = apiDoctor.displayName;
@@ -157,7 +143,6 @@ DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
     id: apiDoctor.id,
     name: name,
     initials: initials.toUpperCase(),
-    hue: 0,
     specialty: apiDoctor.specialty ?? '',
     crm: apiDoctor.crm,
     role: apiDoctor.specialty ?? '',
@@ -198,28 +183,19 @@ final clinicDetailProvider = FutureProvider.family<ClinicDetail, String>((
 });
 
 // ── Doctor detail provider ──────────────────────────────────
-final doctorDetailProvider = FutureProvider.family<DoctorDetail, String>((
-  ref,
-  id,
-) {
-  return _fetchDoctorDetail(id);
-});
-
-// ── Professional notes ──────────────────────────────────────
-final professionalNotesRepositoryProvider =
-    Provider.family<ProfessionalNotesRepository, String>((ref, professionalId) {
-      return ProfessionalNotesRepository(professionalId);
+final doctorProvider = Provider.autoDispose
+    .family<DoctorDetailRepository, String>((ref, id) {
+      final repository = DoctorDetailRepository(id: id);
+      ref.onDispose(repository.dispose);
+      return repository;
     });
 
-final professionalNotesProvider =
-    FutureProvider.family<List<ProfessionalNote>, String>((
-      ref,
-      professionalId,
-    ) {
-      return ref
-          .watch(professionalNotesRepositoryProvider(professionalId))
-          .currentValueOrResolve()
-          .then((notes) => notes ?? const []);
+// ── Professional notes ──────────────────────────────────────
+final professionalNotesRepositoryProvider = Provider.autoDispose
+    .family<ProfessionalNotesRepository, String>((ref, professionalId) {
+      final repository = ProfessionalNotesRepository(professionalId);
+      ref.onDispose(repository.dispose);
+      return repository;
     });
 
 // ── Clinic visits ──────────────────────────────────────────
