@@ -77,7 +77,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
         backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: const Text(
           'Gerenciar concorrentes',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -180,7 +180,7 @@ class _CompetitorRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [
@@ -324,7 +324,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFe5e7eb),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),

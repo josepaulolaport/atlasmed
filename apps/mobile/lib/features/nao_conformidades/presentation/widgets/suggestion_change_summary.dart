@@ -31,7 +31,7 @@ class SuggestionChangeSummary extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDeactivation
-                      ? const Color(0xFFfecaca)
+                      ? const AppColors.red100
                       : const AppColors.blueLight,
                 ),
               ),
@@ -44,7 +44,7 @@ class SuggestionChangeSummary extends StatelessWidget {
                         : Icons.label_outline_rounded,
                     size: 12,
                     color: isDeactivation
-                        ? const Color(0xFFdc2626)
+                        ? const AppColors.error
                         : const AppColors.navyBright,
                   ),
                   const SizedBox(width: 4),
@@ -56,7 +56,7 @@ class SuggestionChangeSummary extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: isDeactivation
-                          ? const Color(0xFFdc2626)
+                          ? const AppColors.error
                           : const AppColors.navyBright,
                     ),
                   ),
@@ -90,7 +90,7 @@ class SuggestionChangeSummary extends StatelessWidget {
             muted: false,
             strike: false,
             compact: compact,
-            emphasizeColor: const Color(0xFFdc2626),
+            emphasizeColor: const AppColors.error,
           ),
         ] else ...[
           _ValueLine(
@@ -153,9 +153,9 @@ class _ValueLine extends StatelessWidget {
               fontWeight: muted ? FontWeight.w500 : FontWeight.w700,
               color: muted
                   ? const AppColors.gray500
-                  : (emphasizeColor ?? const Color(0xFF059669)),
+                  : (emphasizeColor ?? const AppColors.green600),
               decoration: strike ? TextDecoration.lineThrough : null,
-              decorationColor: const Color(0xFFdc2626),
+              decorationColor: const AppColors.error,
             ),
           ),
         ],

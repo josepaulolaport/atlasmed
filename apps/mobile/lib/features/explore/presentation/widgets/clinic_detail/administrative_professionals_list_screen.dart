@@ -416,7 +416,7 @@ class _AdminProfessionalRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +426,7 @@ class _AdminProfessionalRow extends StatelessWidget {
               height: 44,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFFdbeafe),
+                color: AppColors.blue100,
               ),
               child: Center(
                 child: Text(
@@ -434,7 +434,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1e3a8a),
+                    color: AppColors.blueDarker,
                   ),
                 ),
               ),
@@ -492,7 +492,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             color: hasPhone
-                                ? const Color(0xFF4b5563)
+                                ? const AppColors.gray600
                                 : const AppColors.gray400,
                           ),
                         ),
@@ -526,7 +526,7 @@ class _RowBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final emphasized = label.toUpperCase().contains('DECISOR');
     final color = emphasized
-        ? const Color(0xFF7c3aed)
+        ? const AppColors.purple
         : const AppColors.navyBright;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

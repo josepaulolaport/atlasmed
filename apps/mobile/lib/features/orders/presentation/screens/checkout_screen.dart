@@ -32,7 +32,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             height: 4,
             margin: const EdgeInsets.only(top: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFe5e7eb),
+              color: const AppColors.gray200,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -81,7 +81,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             height: 4,
             margin: const EdgeInsets.only(top: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFe5e7eb),
+              color: const AppColors.gray200,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -176,7 +176,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF111827),
+                  color: AppColors.gray950,
                 ),
               ),
               const SizedBox(height: 12),
@@ -204,7 +204,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFeef0f3)),
+                  border: Border.all(color: const AppColors.surfaceSecondary),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +214,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF111827),
+                        color: AppColors.gray950,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -241,7 +241,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     style: const TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w700,
-                                      color: Color(0xFF111827),
+                                      color: AppColors.gray950,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -320,7 +320,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
+                            color: AppColors.gray950,
                           ),
                         ),
                         Text(
@@ -448,7 +448,7 @@ class _StepItem extends StatelessWidget {
         ? const AppColors.navyDeep
         : current
         ? const AppColors.blueLight
-        : const Color(0xFFeef0f3);
+        : const AppColors.surfaceSecondary;
     final fg = done ? Colors.white : const AppColors.navyDeep;
     return Column(
       children: [
@@ -474,7 +474,7 @@ class _StepItem extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF4b5563),
+            color: AppColors.gray600,
           ),
         ),
       ],

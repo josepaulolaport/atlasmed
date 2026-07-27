@@ -297,7 +297,7 @@ class _IdentityCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -686,7 +686,7 @@ class _VerticalAssignmentCardState
                 color: const AppColors.background,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Color(0xFFe5e7eb)),
+                  side: const BorderSide(color: AppColors.gray200),
                 ),
                 child: InkWell(
                   onTap: _busy ? null : _pickManager,
@@ -836,7 +836,7 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -911,7 +911,7 @@ class _SectionShimmer extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(16),
       ),
     );

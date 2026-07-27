@@ -212,14 +212,14 @@ class _UpdatedHint extends StatelessWidget {
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_rounded, size: 14, color: Color(0xFF059669)),
+          Icon(Icons.check_rounded, size: 14, color: AppColors.green600),
           SizedBox(width: 4),
           Text(
             'Atualizado',
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF059669),
+              color: AppColors.green600,
             ),
           ),
         ],
@@ -340,7 +340,7 @@ class _FilterChip extends StatelessWidget {
             border: Border.all(
               color: selected
                   ? const AppColors.navyBright
-                  : const Color(0xFFe5e7eb),
+                  : const AppColors.gray200,
             ),
           ),
           child: Text(
@@ -376,7 +376,7 @@ class _SuggestionListCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

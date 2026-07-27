@@ -134,7 +134,7 @@ class _ManagePermissionsSheetState
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -149,7 +149,7 @@ class _ManagePermissionsSheetState
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
+                          color: AppColors.gray950,
                         ),
                       ),
                     ),
@@ -264,7 +264,7 @@ class _ManagePermissionsSheetState
                           decoration: BoxDecoration(
                             color: const AppColors.surfaceTertiary,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFeef0f3)),
+                            border: Border.all(color: const AppColors.surfaceSecondary),
                           ),
                           child: Row(
                             children: [
@@ -281,7 +281,7 @@ class _ManagePermissionsSheetState
                                 icon: const Icon(
                                   Icons.delete_outline,
                                   size: 18,
-                                  color: Color(0xFFB91C1C),
+                                  color: AppColors.redDark,
                                 ),
                                 onPressed: _busy ? null : () => _revoke(grant),
                               ),

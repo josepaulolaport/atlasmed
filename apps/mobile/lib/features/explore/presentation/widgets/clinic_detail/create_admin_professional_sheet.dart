@@ -100,7 +100,7 @@ class _CreateAdminProfessionalSheetState
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFe5e7eb),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -217,14 +217,14 @@ class _CreateAdminProfessionalSheetState
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFFf8f9fb),
+        fillColor: const AppColors.surfaceTertiary,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+          borderSide: const BorderSide(color: AppColors.gray200),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+          borderSide: const BorderSide(color: AppColors.gray200),
         ),
       ),
     );

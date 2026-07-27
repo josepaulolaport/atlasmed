@@ -124,7 +124,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       height: 1.35,
-                      color: Color(0xFF4b5563),
+                      color: AppColors.gray600,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -218,7 +218,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF1f9254),
+              backgroundColor: const AppColors.greenDark,
             ),
             child: const Text('Aprovar'),
           ),
@@ -332,7 +332,7 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFe5e7eb),
+                color: const AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -359,14 +359,14 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
             decoration: InputDecoration(
               hintText: 'Ex.: Documento ilegível, envie nova foto…',
               filled: true,
-              fillColor: const Color(0xFFf8f9fb),
+              fillColor: const AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+                borderSide: const BorderSide(color: AppColors.gray200),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+                borderSide: const BorderSide(color: AppColors.gray200),
               ),
             ),
           ),
@@ -462,7 +462,7 @@ class _ClinicSnapshotCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,7 +578,7 @@ class _RejectNoteBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFfde8e8),
+        color: const AppColors.red50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -619,7 +619,7 @@ class _DecisionBar extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottom),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
+        border: Border(top: BorderSide(color: AppColors.gray200)),
       ),
       child: Row(
         children: [
@@ -642,7 +642,7 @@ class _DecisionBar extends StatelessWidget {
             child: FilledButton(
               onPressed: onApprove,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1f9254),
+                backgroundColor: const AppColors.greenDark,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(

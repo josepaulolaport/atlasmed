@@ -267,9 +267,9 @@ class _MapsAppTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFFf8f9fb),
+          color: const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [

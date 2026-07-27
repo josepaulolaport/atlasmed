@@ -53,7 +53,7 @@ class DoctorRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,7 +86,7 @@ class DoctorRow extends StatelessWidget {
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFe11d48),
+                        color: const AppColors.rose,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
@@ -173,7 +173,7 @@ class DoctorRow extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               color: hasPhone
-                                  ? const Color(0xFF4b5563)
+                                  ? const AppColors.gray600
                                   : const AppColors.gray400,
                             ),
                           ),
@@ -217,7 +217,7 @@ class _RowBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final emphasized = label.toUpperCase().contains('DECISOR');
     final color = emphasized
-        ? const Color(0xFF7c3aed)
+        ? const AppColors.purple
         : const AppColors.navyBright;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

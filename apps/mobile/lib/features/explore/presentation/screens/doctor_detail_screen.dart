@@ -49,7 +49,7 @@ class DoctorDetailScreen extends ConsumerWidget {
         : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
         backgroundColor: const AppColors.navyBright,
         foregroundColor: Colors.white,
@@ -221,7 +221,7 @@ class _DoctorDetailContent extends ConsumerWidget {
         Column(
           children: [
             Expanded(child: Container(color: const AppColors.navyBright)),
-            Expanded(child: Container(color: const Color(0xFFf8f9fb))),
+            Expanded(child: Container(color: const AppColors.surfaceTertiary)),
           ],
         ),
         RefreshIndicator(
@@ -233,7 +233,7 @@ class _DoctorDetailContent extends ConsumerWidget {
           },
           child: SingleChildScrollView(
             child: ColoredBox(
-              color: const Color(0xFFf8f9fb),
+              color: const AppColors.surfaceTertiary,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -722,7 +722,7 @@ class _DoctorQuickActions extends StatelessWidget {
           child: Column(
             children: [
               Expanded(child: Container(color: const AppColors.navyBright)),
-              Expanded(child: Container(color: const Color(0xFFf8f9fb))),
+              Expanded(child: Container(color: const AppColors.surfaceTertiary)),
             ],
           ),
         ),
@@ -882,17 +882,17 @@ class _SignalCard extends StatelessWidget {
     final (Color color, Color bg, IconData icon) = switch (signal.kind) {
       'good' => (
         const AppColors.green,
-        const Color(0xFFe6f7f0),
+        const AppColors.green50,
         Icons.trending_up_rounded,
       ),
       'warn' => (
         const AppColors.amber,
-        const Color(0xFFfef3d5),
+        const AppColors.amber50,
         Icons.info_outline_rounded,
       ),
       _ => (
         const AppColors.navyBright,
-        const Color(0xFFeef4ff),
+        const AppColors.blueLight,
         Icons.lightbulb_outline_rounded,
       ),
     };
@@ -927,7 +927,7 @@ class _SignalCard extends StatelessWidget {
                     signal.body,
                     style: const TextStyle(
                       fontSize: 11.5,
-                      color: Color(0xFF4b5563),
+                      color: AppColors.gray600,
                       height: 1.35,
                     ),
                   ),
@@ -1134,7 +1134,7 @@ class _DoctorPrescribing extends StatelessWidget {
                 return Column(
                   children: [
                     if (i > 0)
-                      Container(height: 1, color: const Color(0xFFeef0f3)),
+                      Container(height: 1, color: const AppColors.surfaceSecondary),
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: Column(
@@ -1160,7 +1160,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFe6f7f0),
+                                    color: const AppColors.green50,
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: const Text(
@@ -1254,7 +1254,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                     Container(
                                       height: 5,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFeef0f3),
+                                        color: const AppColors.surfaceSecondary,
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                       child: FractionallySizedBox(
@@ -1351,7 +1351,7 @@ class _DoctorClinics extends StatelessWidget {
                           decoration: BoxDecoration(
                             border: i > 0
                                 ? const Border(
-                                    top: BorderSide(color: Color(0xFFeef0f3)),
+                                    top: BorderSide(color: AppColors.surfaceSecondary),
                                   )
                                 : null,
                           ),
@@ -1362,7 +1362,7 @@ class _DoctorClinics extends StatelessWidget {
                                 height: 34,
                                 decoration: BoxDecoration(
                                   color: c.isMain
-                                      ? const Color(0xFFeef2ff)
+                                      ? const AppColors.blue50
                                       : const AppColors.gray100,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -1576,7 +1576,7 @@ class _DoctorVisits extends StatelessWidget {
                                 v.note,
                                 style: const TextStyle(
                                   fontSize: 11.5,
-                                  color: Color(0xFF4b5563),
+                                  color: AppColors.gray600,
                                   height: 1.35,
                                 ),
                                 maxLines: 3,
@@ -1740,7 +1740,7 @@ class _DoctorNotes extends StatelessWidget {
                         decoration: BoxDecoration(
                           border: i < notes.length - 1
                               ? const Border(
-                                  bottom: BorderSide(color: Color(0xFFeef0f3)),
+                                  bottom: BorderSide(color: AppColors.surfaceSecondary),
                                 )
                               : null,
                         ),
@@ -1751,7 +1751,7 @@ class _DoctorNotes extends StatelessWidget {
                               width: 18,
                               height: 18,
                               decoration: BoxDecoration(
-                                color: detail.primaryBg,
+                                color: const AppColors.blue50,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Center(

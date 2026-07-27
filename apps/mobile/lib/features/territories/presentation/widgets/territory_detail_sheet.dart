@@ -27,7 +27,7 @@ class TerritoryDetailSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isManagerZone = territory.kind == TerritoryKind.managerZone;
     final kindColor = isManagerZone
-        ? const Color(0xFF2563EB)
+        ? const AppColors.blue600
         : const AppColors.green;
 
     return SafeArea(

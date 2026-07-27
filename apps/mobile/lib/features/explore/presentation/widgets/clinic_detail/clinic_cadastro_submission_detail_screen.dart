@@ -52,9 +52,9 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         elevation: 0,
         foregroundColor: const AppColors.gray900,
         title: Text(
@@ -72,7 +72,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +100,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFfde8e8),
+                color: const AppColors.red50,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

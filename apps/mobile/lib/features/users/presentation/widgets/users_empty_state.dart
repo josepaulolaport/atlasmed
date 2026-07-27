@@ -66,7 +66,7 @@ class UsersSkeletonRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: Row(
         children: [
@@ -75,7 +75,7 @@ class UsersSkeletonRow extends StatelessWidget {
             height: 44,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFeef0f3),
+              color: AppColors.surfaceSecondary,
             ),
           ),
           const SizedBox(width: 12),
@@ -119,7 +119,7 @@ class _UsersSkeletonBar extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: const Color(0xFFeef0f3),
+        color: const AppColors.surfaceSecondary,
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Light shimmer wrapper for AtlasMed skeleton placeholders.
 class AtlasShimmer extends StatelessWidget {
@@ -29,7 +30,7 @@ class AtlasShimmer extends StatelessWidget {
         height: size.height,
         decoration: BoxDecoration(
           borderRadius: .all(.circular(16)),
-          color: const Color(0xFFeef0f3),
+          color: const AppColors.surfaceSecondary,
         ),
       ),
     );

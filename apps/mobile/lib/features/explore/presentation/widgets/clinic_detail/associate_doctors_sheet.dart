@@ -217,7 +217,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFe5e7eb),
+                      color: const AppColors.gray200,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -303,7 +303,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               12 + MediaQuery.paddingOf(context).bottom,
             ),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
+              border: Border(top: BorderSide(color: AppColors.gray200)),
               color: Colors.white,
             ),
             child: Column(
@@ -316,7 +316,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     label: const Text('Criar perfil de médico'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const AppColors.navyBright,
-                      side: const BorderSide(color: Color(0xFFdbeafe)),
+                      side: const BorderSide(color: AppColors.blue100),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -331,7 +331,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     onPressed: _selected.isEmpty || _saving ? null : _confirm,
                     style: FilledButton.styleFrom(
                       backgroundColor: const AppColors.navyBright,
-                      disabledBackgroundColor: const Color(0xFFe5e7eb),
+                      disabledBackgroundColor: const AppColors.gray200,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -381,7 +381,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                 height: 12,
                 indent: 20,
                 endIndent: 20,
-                color: Color(0xFFe5e7eb),
+                color: AppColors.gray200,
               );
           }
           return const SizedBox.shrink();
@@ -566,9 +566,9 @@ class _ModalSearchFieldState extends State<_ModalSearchField> {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: const Color(0xFFf8f9fb),
+        color: const AppColors.surfaceTertiary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFe5e7eb)),
+        border: Border.all(color: const AppColors.gray200),
       ),
       child: Row(
         children: [

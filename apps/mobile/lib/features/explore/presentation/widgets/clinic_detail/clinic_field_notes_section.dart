@@ -112,7 +112,7 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
               label: const Text('Adicionar nota'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const AppColors.navyBright,
-                side: const BorderSide(color: Color(0xFFdbeafe)),
+                side: const BorderSide(color: AppColors.blue100),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -246,7 +246,7 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
             decoration: InputDecoration(
               hintText: 'Ex.: Estacionamento difícil, usar Zona Azul...',
               filled: true,
-              fillColor: const Color(0xFFf8f9fb),
+              fillColor: const AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -293,7 +293,7 @@ class _NoteRow extends StatelessWidget {
           height: 20,
           margin: const EdgeInsets.only(top: 1),
           decoration: BoxDecoration(
-            color: const Color(0xFFeef4ff),
+            color: const AppColors.blueLight,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Center(

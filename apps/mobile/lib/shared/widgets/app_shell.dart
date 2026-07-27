@@ -117,7 +117,7 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       toolbarHeight: preferredSize.height,
-      shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
+      shape: const Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       titleSpacing: 0,
       title: _AtlasTopBarContent(page: page, compact: compact),
       systemOverlayStyle: .dark,
@@ -136,7 +136,7 @@ class AtlasTopBar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.background,
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: SafeArea(
         bottom: false,
@@ -182,7 +182,7 @@ class _AtlasTopBarContent extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0A0f1729),
@@ -574,7 +574,7 @@ class _NavItems extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color: isActive ? const Color(0xFFeef2ff) : Colors.transparent,
+        color: isActive ? const AppColors.blue50 : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -627,7 +627,7 @@ class _DrawerFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: Column(
         children: [

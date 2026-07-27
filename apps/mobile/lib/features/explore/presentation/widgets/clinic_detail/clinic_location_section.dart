@@ -125,7 +125,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
                 label: const Text('Ver estabelecimentos próximos'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const AppColors.navyBright,
-                  side: const BorderSide(color: Color(0xFFdbeafe)),
+                  side: const BorderSide(color: AppColors.blue100),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -195,7 +195,7 @@ class _ExpandButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFFeef4ff),
+          color: const AppColors.blueLight,
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Row(
@@ -245,9 +245,9 @@ class _NearbyClinicCard extends StatelessWidget {
         width: 168,
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFf8f9fb),
+          color: const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

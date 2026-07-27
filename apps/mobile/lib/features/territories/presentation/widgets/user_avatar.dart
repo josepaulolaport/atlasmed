@@ -18,12 +18,12 @@ class UserAvatar extends StatelessWidget {
   static const _palette = <Color>[
     AppColors.navyDeep,
     AppColors.green600,
-    Color(0xFFB45309),
-    Color(0xFF7C3AED),
-    Color(0xFFBE185D),
+    AppColors.amberDark,
+    AppColors.purple,
+    AppColors.pink,
     AppColors.blue600,
     Color(0xFF4338CA),
-    Color(0xFF9A3412),
+    AppColors.orange,
   ];
 
   Color get _backgroundColor {

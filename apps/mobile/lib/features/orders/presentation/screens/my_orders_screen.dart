@@ -250,7 +250,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         children: [
@@ -298,7 +298,7 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? const AppColors.navyDeep : Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
         ),
         child: Text(
           label,
@@ -328,7 +328,7 @@ class _OrderCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,7 +347,7 @@ class _OrderCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1f2937),
+                color: AppColors.gray800,
               ),
             ),
             const SizedBox(height: 3),
@@ -358,7 +358,7 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 10),
             PStatusChip(status: order.status),
             const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3)),
+            const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -404,7 +404,7 @@ class _EmptyState extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.all(Radius.circular(20)),
               border: Border.fromBorderSide(
-                BorderSide(color: Color(0xFFeef0f3)),
+                BorderSide(color: AppColors.surfaceSecondary),
               ),
             ),
             child: Icon(
@@ -419,7 +419,7 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1f2937),
+              color: AppColors.gray800,
             ),
           ),
           const SizedBox(height: 6),

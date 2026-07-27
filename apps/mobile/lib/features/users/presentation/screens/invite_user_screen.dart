@@ -344,7 +344,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                         border: Border.all(
                           color: selected
                               ? role.name.color
-                              : const Color(0xFFe5e7eb),
+                              : const AppColors.gray200,
                         ),
                       ),
                       child: Text(
@@ -406,7 +406,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                     side: BorderSide(
                       color: selected
                           ? const AppColors.navyDeep
-                          : const Color(0xFFe5e7eb),
+                          : const AppColors.gray200,
                     ),
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -711,7 +711,7 @@ class _VerticalAssignmentBlock extends StatelessWidget {
       decoration: BoxDecoration(
         color: const AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,7 +867,7 @@ class _PickerButton extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFe5e7eb)),
+        side: const BorderSide(color: AppColors.gray200),
       ),
       child: InkWell(
         onTap: onTap,

@@ -23,7 +23,7 @@ class ProductsProductCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
@@ -41,7 +41,7 @@ class ProductsProductCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const AppColors.background,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFeef0f3)),
+                  border: Border.all(color: const AppColors.surfaceSecondary),
                 ),
                 child: const Icon(
                   Icons.medication_liquid_outlined,

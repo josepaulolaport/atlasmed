@@ -230,7 +230,7 @@ class _ProductRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
           ),
           child: Row(
             children: [
@@ -238,7 +238,7 @@ class _ProductRow extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFeef2ff),
+                  color: const AppColors.blue50,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -343,7 +343,7 @@ class _VariantQuickView extends StatelessWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFe5e7eb),
+                    color: const AppColors.gray200,
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
@@ -389,7 +389,7 @@ class _PublicationFooter extends StatelessWidget {
       decoration: BoxDecoration(
         color: const AppColors.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [

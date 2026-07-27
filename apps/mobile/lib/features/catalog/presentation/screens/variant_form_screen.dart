@@ -220,7 +220,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
         backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: Text(
           _isEditing ? 'Editar produto' : 'Novo produto',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -309,7 +309,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       'Não foi possível carregar os verticais.',
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFFdc2626),
+                        color: AppColors.error,
                       ),
                     ),
                     data: (sectors) => sectors.isEmpty
@@ -451,7 +451,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       _error!,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFFdc2626),
+                        color: AppColors.error,
                       ),
                     ),
                   ],

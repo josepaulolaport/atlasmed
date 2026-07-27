@@ -53,7 +53,7 @@ extension TrackingStatusX on TrackingStatus {
       case TrackingStatus.confirmed:
         return const AppColors.green;
       case TrackingStatus.processing:
-        return const Color(0xFF1d4ed8);
+        return const AppColors.blueDark;
       case TrackingStatus.shipped:
         return const Color(0xFF8b5cf6);
       case TrackingStatus.delivered:
@@ -70,7 +70,7 @@ extension TrackingStatusX on TrackingStatus {
       case TrackingStatus.confirmed:
         return const AppColors.green50;
       case TrackingStatus.processing:
-        return const Color(0xFFeef2ff);
+        return const AppColors.blue50;
       case TrackingStatus.shipped:
         return const AppColors.blueLight;
       case TrackingStatus.delivered:

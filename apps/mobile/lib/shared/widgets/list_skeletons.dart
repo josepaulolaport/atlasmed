@@ -53,9 +53,9 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: const [
-            Color(0xFFeef0f3),
+            AppColors.surfaceSecondary,
             AppColors.surfaceTertiary,
-            Color(0xFFeef0f3),
+            AppColors.surfaceSecondary,
           ],
           stops: const [0.25, 0.5, 0.75],
           transform: _SlidingGradientTransform(_controller.value),
@@ -88,7 +88,7 @@ class _SkeletonBar extends StatelessWidget {
     width: width,
     height: height,
     decoration: BoxDecoration(
-      color: const Color(0xFFeef0f3),
+      color: const AppColors.surfaceSecondary,
       borderRadius: BorderRadius.circular(4),
     ),
   );
@@ -131,7 +131,7 @@ class _ReviewCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFeef0f3)),
+      border: Border.all(color: const AppColors.surfaceSecondary),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,7 +140,7 @@ class _ReviewCardPlaceholder extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFFeef0f3),
+            color: const AppColors.surfaceSecondary,
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -193,7 +193,7 @@ class _SuggestionCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFeef0f3)),
+      border: Border.all(color: const AppColors.surfaceSecondary),
     ),
     child: const Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +248,7 @@ class _OrderCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFeef0f3)),
+      border: Border.all(color: const AppColors.surfaceSecondary),
     ),
     child: const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,7 +261,7 @@ class _OrderCardPlaceholder extends StatelessWidget {
         SizedBox(height: 12),
         _SkeletonBar(width: 68, height: 21),
         SizedBox(height: 12),
-        Divider(height: 1, color: Color(0xFFeef0f3)),
+        Divider(height: 1, color: AppColors.surfaceSecondary),
         SizedBox(height: 11),
         Row(
           children: [
@@ -301,7 +301,7 @@ class InvitationListSkeleton extends StatelessWidget {
             const SizedBox(height: 7),
             const _SkeletonBar(width: 200, height: 11),
             if (index != 3) const SizedBox(height: 14),
-            if (index != 3) const Divider(height: 1, color: Color(0xFFeef0f3)),
+            if (index != 3) const Divider(height: 1, color: AppColors.surfaceSecondary),
           ],
         ),
       ),
@@ -332,7 +332,7 @@ class _ProductRowPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFeef0f3)),
+      border: Border.all(color: const AppColors.surfaceSecondary),
     ),
     child: const Row(
       children: [
@@ -380,7 +380,7 @@ class _CompetitorRowPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFeef0f3)),
+      border: Border.all(color: const AppColors.surfaceSecondary),
     ),
     child: const Row(
       children: [
@@ -482,7 +482,7 @@ class _SkeletonIconBox extends StatelessWidget {
     width: size,
     height: size,
     decoration: BoxDecoration(
-      color: const Color(0xFFeef0f3),
+      color: const AppColors.surfaceSecondary,
       borderRadius: BorderRadius.circular(radius),
     ),
   );

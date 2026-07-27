@@ -357,7 +357,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryFillLayerId,
           sourceId: _territorySourceId,
           slot: 'bottom',
-          fillColor: const Color(0xFF2563EB).toARGB32(),
+          fillColor: const AppColors.blue600.toARGB32(),
           fillOpacity: 0.10,
         ),
       );
@@ -366,7 +366,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryLineLayerId,
           sourceId: _territorySourceId,
           slot: 'middle',
-          lineColor: const Color(0xFF1D4ED8).toARGB32(),
+          lineColor: const AppColors.blueDark.toARGB32(),
           lineWidth: 2,
           lineOpacity: 0.85,
           lineJoin: LineJoin.ROUND,
@@ -1133,9 +1133,9 @@ class _StackedClinicTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFf8f9fb),
+          color: const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [

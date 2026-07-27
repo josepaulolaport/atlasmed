@@ -38,7 +38,7 @@ class EditorSaveBar extends StatelessWidget {
               onPressed: saving ? null : onCancel,
               style: OutlinedButton.styleFrom(
                 foregroundColor: const AppColors.gray700,
-                side: const BorderSide(color: Color(0xFFE5E7EB)),
+                side: const BorderSide(color: AppColors.gray200),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

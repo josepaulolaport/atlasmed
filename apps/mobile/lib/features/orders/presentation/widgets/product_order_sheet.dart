@@ -105,7 +105,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFe5e7eb),
+              color: const AppColors.gray200,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -113,7 +113,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
           Container(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+              border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +188,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     ),
                     decoration: BoxDecoration(
                       color: widget.clinicId != null
-                          ? const Color(0xFFeef2ff)
+                          ? const AppColors.blue50
                           : const AppColors.amber50,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
@@ -259,7 +259,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFeef0f3)),
+                      border: Border.all(color: const AppColors.surfaceSecondary),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -312,11 +312,11 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                 border: Border.all(
                                   color: active
                                       ? const AppColors.navyDeep
-                                      : const Color(0xFFeef0f3),
+                                      : const AppColors.surfaceSecondary,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 color: active
-                                    ? const Color(0xFFeef2ff)
+                                    ? const AppColors.blue50
                                     : Colors.white,
                               ),
                               child: Text(
@@ -456,7 +456,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                   if (suggestion != null && suggestion.history.length > 1)
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFeef0f3)),
+                        border: Border.all(color: const AppColors.surfaceSecondary),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ExpansionTile(
@@ -489,7 +489,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                           ),
                         ),
                         children: [
-                          const Divider(height: 1, color: Color(0xFFeef0f3)),
+                          const Divider(height: 1, color: AppColors.surfaceSecondary),
                           ...suggestion.history.asMap().entries.map((entry) {
                             final h = entry.value;
                             final isFirst = entry.key == 0;
@@ -547,7 +547,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFeef2ff),
+                                        color: const AppColors.blue50,
                                         borderRadius: BorderRadius.circular(
                                           999,
                                         ),
@@ -576,7 +576,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
           Container(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
+              border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
             ),
             child: Column(
               children: [
@@ -666,7 +666,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
           borderRadius: BorderRadius.circular(10),
           color: const AppColors.background,
         ),
@@ -721,10 +721,10 @@ class _PriceRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: active ? const AppColors.navyDeep : const Color(0xFFeef0f3),
+            color: active ? const AppColors.navyDeep : const AppColors.surfaceSecondary,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: active ? const Color(0xFFeef2ff) : Colors.white,
+          color: active ? const AppColors.blue50 : Colors.white,
         ),
         child: Row(
           children: [

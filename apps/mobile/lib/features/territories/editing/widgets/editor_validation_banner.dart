@@ -15,14 +15,14 @@ class EditorValidationBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const AppColors.red50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFECACA)),
+        border: Border.all(color: const AppColors.red100),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.error_outline_rounded,
             size: 18,
-            color: Color(0xFFDC2626),
+            color: AppColors.error,
           ),
           const SizedBox(width: 8),
           Expanded(

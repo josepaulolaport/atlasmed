@@ -87,7 +87,7 @@ class EditorToolbar extends StatelessWidget {
               width: 1,
               height: 26,
               margin: const EdgeInsets.symmetric(horizontal: 6),
-              color: const Color(0xFFE5E7EB),
+              color: const AppColors.gray200,
             ),
             _IconButton(
               icon: Icons.undo_rounded,
@@ -132,7 +132,7 @@ class _ModeButton extends StatelessWidget {
         ? const AppColors.navyDeep
         : const AppColors.gray500;
     return Material(
-      color: selected && enabled ? const Color(0xFFEEF2FF) : Colors.transparent,
+      color: selected && enabled ? const AppColors.blue50 : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

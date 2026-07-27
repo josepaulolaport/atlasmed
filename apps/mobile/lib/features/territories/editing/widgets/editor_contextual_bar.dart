@@ -66,7 +66,7 @@ class EditorContextualBar extends StatelessWidget {
               icon: Icons.delete_outline_rounded,
               label: 'Excluir',
               selected: false,
-              color: const Color(0xFFDC2626),
+              color: const AppColors.error,
               onTap: onDeleteArea,
             ),
         ],
@@ -98,7 +98,7 @@ class _ActionChip extends StatelessWidget {
         : (color ??
               (selected ? const AppColors.navyDeep : const AppColors.gray700));
     return Material(
-      color: selected ? const Color(0xFFEEF2FF) : Colors.transparent,
+      color: selected ? const AppColors.blue50 : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

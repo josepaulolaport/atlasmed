@@ -426,7 +426,7 @@ class _TargetCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
           ),
           child: Row(
             children: [
@@ -493,7 +493,7 @@ class _DiffCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: const AppColors.red50,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFfecaca)),
+          border: Border.all(color: const AppColors.red100),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -529,9 +529,9 @@ class _DiffCard extends StatelessWidget {
               suggestion.currentValue,
               style: const TextStyle(
                 fontSize: 14,
-                color: Color(0xFF4b5563),
+                color: AppColors.gray600,
                 decoration: TextDecoration.lineThrough,
-                decorationColor: Color(0xFFdc2626),
+                decorationColor: AppColors.error,
               ),
             ),
             const SizedBox(height: 14),
@@ -549,7 +549,7 @@ class _DiffCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFFdc2626),
+                color: AppColors.error,
               ),
             ),
           ],
@@ -562,7 +562,7 @@ class _DiffCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -598,9 +598,9 @@ class _DiffCard extends StatelessWidget {
             suggestion.currentValue,
             style: const TextStyle(
               fontSize: 14,
-              color: Color(0xFF4b5563),
+              color: AppColors.gray600,
               decoration: TextDecoration.lineThrough,
-              decorationColor: Color(0xFFdc2626),
+              decorationColor: AppColors.error,
             ),
           ),
           const SizedBox(height: 14),
@@ -618,7 +618,7 @@ class _DiffCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF059669),
+              color: AppColors.green600,
             ),
           ),
         ],
@@ -640,7 +640,7 @@ class _ReasonCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Text(
         reason,
@@ -698,7 +698,7 @@ class _RejectNoteBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const AppColors.red50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFfecaca)),
+        border: Border.all(color: const AppColors.red100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -708,7 +708,7 @@ class _RejectNoteBanner extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: Color(0xFFdc2626),
+              color: AppColors.error,
             ),
           ),
           const SizedBox(height: 4),
@@ -734,7 +734,7 @@ class _DecisionBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: Row(
         children: [
@@ -742,8 +742,8 @@ class _DecisionBar extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFdc2626),
-                side: const BorderSide(color: Color(0xFFfecaca)),
+                foregroundColor: const AppColors.error,
+                side: const BorderSide(color: AppColors.red100),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -760,7 +760,7 @@ class _DecisionBar extends StatelessWidget {
             child: FilledButton(
               onPressed: onAccept,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
+                backgroundColor: const AppColors.green600,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

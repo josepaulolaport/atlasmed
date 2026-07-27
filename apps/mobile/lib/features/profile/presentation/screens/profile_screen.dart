@@ -213,7 +213,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         fontSize: 19,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.4,
-                        color: Color(0xFF1f2937),
+                        color: AppColors.gray800,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -285,7 +285,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 height: 66,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Color(0xFFeef0f3),
+                  color: AppColors.surfaceSecondary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -296,7 +296,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     width: 150,
                     height: 14,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFeef0f3),
+                      color: const AppColors.surfaceSecondary,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -305,7 +305,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     width: 100,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFeef0f3),
+                      color: const AppColors.surfaceSecondary,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -329,7 +329,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -402,7 +402,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Container(
                       height: 5,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFeef0f3),
+                        color: const AppColors.surfaceSecondary,
                         borderRadius: BorderRadius.circular(3),
                       ),
                       child: FractionallySizedBox(
@@ -443,7 +443,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: const Color(0xFFeef0f3)),
+                      border: Border.all(color: const AppColors.surfaceSecondary),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
@@ -465,7 +465,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1f2937),
+                            color: AppColors.gray800,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -502,7 +502,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 height: 88,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(color: const Color(0xFFeef0f3)),
+                  border: Border.all(color: const AppColors.surfaceSecondary),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Padding(
@@ -514,7 +514,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         width: 40,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFeef0f3),
+                          color: const AppColors.surfaceSecondary,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -523,7 +523,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         width: 50,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFeef0f3),
+                          color: const AppColors.surfaceSecondary,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -547,7 +547,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -670,7 +670,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFe5e7eb),
+                        color: const AppColors.gray200,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -695,7 +695,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1f2937),
+                        color: AppColors.gray800,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -739,7 +739,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         onPressed: () => setState(() => _logoutConfirm = false),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Color(0xFFeef0f3)),
+                          side: const BorderSide(color: AppColors.surfaceSecondary),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -787,7 +787,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       height: height,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(14),
       ),
     );
@@ -1066,7 +1066,7 @@ class _StatCell extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: highlight
                   ? const AppColors.green
-                  : const Color(0xFF1f2937),
+                  : const AppColors.gray800,
             ),
           ),
           const SizedBox(height: 1),
@@ -1092,7 +1092,7 @@ class _TerritoryMapPreview extends StatelessWidget {
       decoration: BoxDecoration(
         color: const AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Stack(
         children: [
@@ -1146,7 +1146,7 @@ class _TerritoryMapPreview extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: const Color(0xFFeef0f3)),
+                border: Border.all(color: const AppColors.surfaceSecondary),
                 boxShadow: const [
                   BoxShadow(color: Color(0x14000000), blurRadius: 4),
                 ],
@@ -1256,7 +1256,7 @@ class _PrefRow extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1f2937),
+                    color: AppColors.gray800,
                   ),
                 ),
                 const SizedBox(height: 2),

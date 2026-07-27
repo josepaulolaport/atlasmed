@@ -163,7 +163,7 @@ class _TerritoryMapExpandedScreenState
         FillLayer(
           id: _fillLayerId,
           sourceId: _sourceId,
-          fillColor: const Color(0xFF2563EB).toARGB32(),
+          fillColor: const AppColors.blue600.toARGB32(),
           fillOpacity: 0.18,
         ),
       );
@@ -171,7 +171,7 @@ class _TerritoryMapExpandedScreenState
         LineLayer(
           id: _lineLayerId,
           sourceId: _sourceId,
-          lineColor: const Color(0xFF1D4ED8).toARGB32(),
+          lineColor: const AppColors.blueDark.toARGB32(),
           lineWidth: 2,
           lineOpacity: 0.9,
           lineJoin: LineJoin.ROUND,

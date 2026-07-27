@@ -27,9 +27,9 @@ abstract final class CommercialStatusFilter {
   };
 
   static Color bg(String value) => switch (value) {
-    registered => const Color(0xFFeef4ff),
-    active => const Color(0xFFe6f7f0),
-    suspended => const Color(0xFFfef3d5),
+    registered => const AppColors.blueLight,
+    active => const AppColors.green50,
+    suspended => const AppColors.amber50,
     inactive => const AppColors.gray100,
     _ => const AppColors.gray100,
   };

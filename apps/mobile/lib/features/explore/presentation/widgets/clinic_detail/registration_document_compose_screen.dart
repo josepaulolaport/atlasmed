@@ -341,9 +341,9 @@ class _RegistrationDocumentComposeScreenState
         Navigator.of(context).pop(false);
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFf8f9fb),
+          backgroundColor: const AppColors.surfaceTertiary,
           elevation: 0,
           foregroundColor: const AppColors.gray900,
           title: const Text('Preparar envio'),
@@ -449,7 +449,7 @@ class _RegistrationDocumentComposeScreenState
                         ? null
                         : () => Navigator.of(context).pop(false),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF4b5563),
+                      foregroundColor: const AppColors.gray600,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -700,7 +700,7 @@ class _ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: onTap == null ? const Color(0xFFe5e7eb) : const Color(0xFFdbeafe),
+      color: onTap == null ? const AppColors.gray200 : const AppColors.blue100,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
@@ -747,7 +747,7 @@ class _EmptyComposeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFe5e7eb)),
+        border: Border.all(color: const AppColors.gray200),
       ),
       child: const Column(
         children: [
@@ -799,7 +799,7 @@ class _DocumentProgressTile extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -865,7 +865,7 @@ class _DocumentProgressTile extends StatelessWidget {
                           ? 0
                           : item.progress.clamp(0.05, 1),
                       minHeight: 4,
-                      backgroundColor: const Color(0xFFe5e7eb),
+                      backgroundColor: const AppColors.gray200,
                       color: item.phase == _ItemPhase.failed
                           ? const AppColors.red
                           : const AppColors.navyBright,
@@ -901,7 +901,7 @@ class _ImageProgressTile extends StatelessWidget {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -974,7 +974,7 @@ class _ImageProgressTile extends StatelessWidget {
                                 ? 0
                                 : item.progress.clamp(0.05, 1),
                             minHeight: 4,
-                            backgroundColor: const Color(0xFFe5e7eb),
+                            backgroundColor: const AppColors.gray200,
                             color: item.phase == _ItemPhase.failed
                                 ? const AppColors.red
                                 : const AppColors.navyBright,

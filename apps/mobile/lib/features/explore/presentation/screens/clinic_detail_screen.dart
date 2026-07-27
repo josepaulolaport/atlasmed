@@ -135,17 +135,15 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
           const SizedBox(width: 6),
         ],
       ),
-      body: RepositoryBuilder<ClinicDetailRepository, api.Clinic>(
-        repository: repo,
-        builder: (context, data, _) {
-          if (data == null) {
-            return _loadingSkeleton(context);
-          }
-          return _ClinicDetailBody(
-            detail: ClinicDetail.fromApi(data),
-            clinicId: clinicId,
-          );
-        },
+      body: ColoredBox(
+        color: const AppColors.surfaceTertiary,
+        child: detailAsync.when(
+          skipLoadingOnReload: true,
+          loading: () => _loadingSkeleton(context),
+          error: (err, _) => _errorView(context, clinicId, err),
+          data: (detail) =>
+              _ClinicDetailBody(detail: detail, clinicId: clinicId),
+        ),
       ),
     );
   }
@@ -516,12 +514,12 @@ class _ClinicDetailContent extends ConsumerWidget {
         Column(
           children: [
             Expanded(child: Container(color: const AppColors.navyBright)),
-            Expanded(child: Container(color: const Color(0xFFf8f9fb))),
+            Expanded(child: Container(color: const AppColors.surfaceTertiary)),
           ],
         ),
         SingleChildScrollView(
           child: ColoredBox(
-            color: const Color(0xFFf8f9fb),
+            color: const AppColors.surfaceTertiary,
             child: Column(
               children: [
                 ClinicHeaderSection(detail: detail, sections: sections),
@@ -821,7 +819,7 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFeef4ff),
+        color: const AppColors.blueLight,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -908,7 +906,7 @@ class _SectionErrorCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFfde8e8),
+        color: const AppColors.red50,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -1082,7 +1080,7 @@ class _ActionButton extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF4b5563),
+                color: AppColors.gray600,
               ),
             ),
           ],
@@ -1104,9 +1102,9 @@ class _SuggestEditBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFf8f9fb),
+        color: const AppColors.surfaceTertiary,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1159,7 +1157,7 @@ class _ClinicDeactivateButton extends ConsumerWidget {
           icon: const Icon(Icons.power_settings_new_rounded, size: 18),
           label: const Text('Solicitar desativação'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFdc2626),
+            foregroundColor: const AppColors.error,
             side: const BorderSide(color: AppColors.red100),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
@@ -1196,7 +1194,7 @@ class _ShimmerBlock extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFeef0f3),
+        color: const AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(16),
       ),
     );

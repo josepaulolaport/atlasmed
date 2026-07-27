@@ -880,7 +880,7 @@ class _TerritoryActionBar extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 10),
-          const Divider(height: 1, color: Color(0xFFE5E7EB)),
+          const Divider(height: 1, color: AppColors.gray200),
           const SizedBox(height: 4),
           Wrap(
             spacing: 4,
@@ -913,7 +913,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                   icon: Icons.delete_outline,
                   label: 'Excluir',
                   onTap: onDelete,
-                  color: const Color(0xFFDC2626),
+                  color: const AppColors.error,
                 ),
             ],
           ),

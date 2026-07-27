@@ -17,7 +17,7 @@ class UserRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         ),
         child: Row(
           children: [

@@ -109,9 +109,9 @@ class _ClinicRegistrationDocumentDetailScreenState
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         elevation: 0,
         foregroundColor: const AppColors.gray900,
         title: Text(
@@ -156,7 +156,7 @@ class _ClinicRegistrationDocumentDetailScreenState
               style: const TextStyle(
                 fontSize: 13.5,
                 height: 1.4,
-                color: Color(0xFF4b5563),
+                color: AppColors.gray600,
               ),
             ),
             const SizedBox(height: 16),
@@ -222,7 +222,7 @@ class _ClinicRegistrationDocumentDetailScreenState
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFe5e7eb)),
+                  border: Border.all(color: const AppColors.gray200),
                 ),
                 child: const Text(
                   'Nenhum envio ainda. Toque em Enviar documento para começar.',
@@ -327,7 +327,7 @@ class _CurrentDocumentCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFe5e7eb)),
+            border: Border.all(color: const AppColors.gray200),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +360,7 @@ class _CurrentDocumentCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13,
                   height: 1.35,
-                  color: Color(0xFF4b5563),
+                  color: AppColors.gray600,
                 ),
               ),
             ],
@@ -386,7 +386,7 @@ class _HistoryCard extends StatelessWidget {
   final VoidCallback onTap;
 
   Color get _statusColor {
-    if (submission.isApproved) return const Color(0xFF1f9254);
+    if (submission.isApproved) return const AppColors.greenDark;
     if (submission.isRejected) return const AppColors.red;
     if (submission.isUnderReview) return const AppColors.amber;
     return const AppColors.gray500;
@@ -394,8 +394,8 @@ class _HistoryCard extends StatelessWidget {
 
   Color get _statusBg {
     if (submission.isApproved) return const AppColors.green50;
-    if (submission.isRejected) return const Color(0xFFfde8e8);
-    if (submission.isUnderReview) return const Color(0xFFfef3d5);
+    if (submission.isRejected) return const AppColors.red50;
+    if (submission.isUnderReview) return const AppColors.amber50;
     return const AppColors.gray100;
   }
 
@@ -418,7 +418,7 @@ class _HistoryCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFe5e7eb)),
+            border: Border.all(color: const AppColors.gray200),
           ),
           child: Row(
             children: [

@@ -164,7 +164,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFe5e7eb)),
+                  border: Border.all(color: const AppColors.gray200),
                   color: Colors.white,
                 ),
                 child: const Center(
@@ -408,11 +408,23 @@ class _DoctorFilters extends ConsumerWidget {
                   'Não foi possível carregar as especialidades.',
                   style: TextStyle(fontSize: 13, color: AppColors.gray500),
                 ),
-                builder: (context, specialties, repository) {
-                  final options =
-                      <String>{...?specialties, ...selected}.toList()..sort(
-                        (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
-                      );
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: onRetry,
+                  child: const Text(
+                    'Tentar novamente',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.blue600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            data: (specialties) {
+              final options = <String>{...specialties, ...selected}.toList()
+                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
               if (options.isEmpty) {
                 return const Text(

@@ -371,7 +371,7 @@ class _Flag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFeef4ff),
+        color: const AppColors.blueLight,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -394,7 +394,7 @@ class _RoleBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isNew = label.toUpperCase() == 'NOVA';
-    final color = isNew ? const AppColors.green : const Color(0xFF7c3aed);
+    final color = isNew ? const AppColors.green : const AppColors.purple;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(

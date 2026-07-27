@@ -92,7 +92,7 @@ class VariantInfoCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const AppColors.background,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFeef0f3)),
+                border: Border.all(color: const AppColors.surfaceSecondary),
               ),
               child: const Icon(
                 Icons.medication_liquid_outlined,
@@ -120,7 +120,7 @@ class VariantInfoCard extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFeef4ff),
+                    color: const AppColors.blueLight,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -140,7 +140,7 @@ class VariantInfoCard extends StatelessWidget {
         _CodesPanel(variant: variant),
         if (onViewComparison != null || onManageCompetitors != null) ...[
           const SizedBox(height: 12),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3)),
+          const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Wrap(
@@ -176,7 +176,7 @@ class VariantInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -240,7 +240,7 @@ class _CodesPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: const AppColors.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         children: [
@@ -255,7 +255,7 @@ class _CodesPanel extends StatelessWidget {
   }
 
   Widget _rowDivider() =>
-      const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3));
+      const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary);
 
   Widget _codeRow(String label, String value) {
     return Padding(

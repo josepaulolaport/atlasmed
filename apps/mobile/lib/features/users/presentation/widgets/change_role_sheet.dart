@@ -162,7 +162,7 @@ class _RoleOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.08) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? color : const Color(0xFFe5e7eb)),
+          border: Border.all(color: selected ? color : const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -181,7 +181,7 @@ class _RoleOption extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+                      color: AppColors.gray950,
                     ),
                   ),
                   if (description != null)

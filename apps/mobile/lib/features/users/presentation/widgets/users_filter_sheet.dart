@@ -224,7 +224,7 @@ class _Chip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.12) : Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? color : const Color(0xFFe5e7eb)),
+          border: Border.all(color: selected ? color : const AppColors.gray200),
         ),
         child: Text(
           label,

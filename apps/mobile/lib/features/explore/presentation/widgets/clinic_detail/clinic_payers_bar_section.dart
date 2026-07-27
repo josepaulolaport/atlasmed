@@ -246,7 +246,7 @@ class _PayerLegendRow extends StatelessWidget {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF4b5563),
+            color: AppColors.gray600,
           ),
         ),
       ],

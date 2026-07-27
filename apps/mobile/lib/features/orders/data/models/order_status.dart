@@ -35,7 +35,7 @@ extension OrderStatusX on OrderStatus {
       case OrderStatus.rejected:
         return const AppColors.red;
       case OrderStatus.noBilling:
-        return const Color(0xFF7c3aed);
+        return const AppColors.purple;
     }
   }
 

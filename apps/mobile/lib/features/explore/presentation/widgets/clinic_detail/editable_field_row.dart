@@ -215,7 +215,7 @@ class _EmptyValueChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFFfef3d5),
+          color: const AppColors.amber50,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: const AppColors.amber.withValues(alpha: 0.3),

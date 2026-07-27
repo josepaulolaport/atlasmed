@@ -251,7 +251,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     border: Border(
-                      bottom: BorderSide(color: Color(0xFFeef0f3)),
+                      bottom: BorderSide(color: AppColors.surfaceSecondary),
                     ),
                   ),
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
@@ -290,7 +290,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFeef0f3)),
+                            border: Border.all(color: const AppColors.surfaceSecondary),
                             borderRadius: BorderRadius.circular(12),
                             color: Colors.white,
                           ),
@@ -494,7 +494,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFeef2ff),
+                                color: const AppColors.blue50,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.center,
@@ -728,7 +728,7 @@ class _TimelineRow extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isDone
                           ? color.withValues(alpha: 0.25)
-                          : const Color(0xFFe5e7eb),
+                          : const AppColors.gray200,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -841,7 +841,7 @@ class _DriverCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: const Color(0xFFeef2ff),
+                color: const AppColors.blue50,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -896,7 +896,7 @@ class _ProductRow extends StatelessWidget {
           height: 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: const Color(0xFFeef2ff),
+            color: const AppColors.blue50,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text('💊', style: TextStyle(fontSize: 18)),

@@ -130,7 +130,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
     final hasZero = _hasZeroShare;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
         backgroundColor: Colors.white,
         foregroundColor: const AppColors.gray900,
@@ -194,7 +194,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
               ],
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFeef0f3)),
+          const Divider(height: 1, color: AppColors.surfaceSecondary),
           Expanded(
             child: _payers.isEmpty
                 ? _EmptyEditor(onAdd: _openAddSheet)
@@ -504,7 +504,7 @@ class _PayerEditCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isZero ? const Color(0xFFfecaca) : const Color(0xFFeef0f3),
+          color: isZero ? const AppColors.red100 : const AppColors.surfaceSecondary,
         ),
       ),
       child: Row(
@@ -533,7 +533,7 @@ class _PayerEditCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFdc2626),
+                      color: AppColors.error,
                     ),
                   ),
               ],
@@ -628,7 +628,7 @@ class _StepButton extends StatelessWidget {
           color: const AppColors.gray100,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 18, color: const Color(0xFF4b5563)),
+        child: Icon(icon, size: 18, color: const AppColors.gray600),
       ),
     );
   }
@@ -685,7 +685,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFe5e7eb),
+              color: const AppColors.gray200,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -751,7 +751,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     separatorBuilder: (_, _) => const Divider(
                       height: 1,
                       indent: 20,
-                      color: Color(0xFFeef0f3),
+                      color: AppColors.surfaceSecondary,
                     ),
                     itemBuilder: (_, i) {
                       final entry = filtered[i];
@@ -789,7 +789,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
               12 + MediaQuery.paddingOf(context).bottom,
             ),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
+              border: Border(top: BorderSide(color: AppColors.gray200)),
               color: Colors.white,
             ),
             child: SizedBox(
@@ -805,7 +805,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                       },
                 style: FilledButton.styleFrom(
                   backgroundColor: const AppColors.navyBright,
-                  disabledBackgroundColor: const Color(0xFFe5e7eb),
+                  disabledBackgroundColor: const AppColors.gray200,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

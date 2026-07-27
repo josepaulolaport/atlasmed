@@ -18,7 +18,7 @@ class TerritoryKindSwitch extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: const Color(0xFFeef0f3),
+        color: const AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

@@ -50,11 +50,7 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
               label: const Text('Criar pedido'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const AppColors.navyBright,
-                side: const BorderSide(color: Color(0xFFdbeafe)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                side: const BorderSide(color: AppColors.blue100),
               ),
             ),
           ],
@@ -212,13 +208,13 @@ class _OrderCard extends StatelessWidget {
   (String, Color, Color) _style(String status) {
     switch (status) {
       case 'APPROVED':
-        return ('Aprovado', const AppColors.green, const Color(0xFFe6f7f0));
+        return ('Aprovado', const AppColors.green, const AppColors.green50);
       case 'INVOICED':
-        return ('Faturado', const AppColors.navyBright, const Color(0xFFeef4ff));
+        return ('Faturado', const AppColors.navyBright, const AppColors.blueLight);
       case 'PENDING':
-        return ('Pendente', const AppColors.amber, const Color(0xFFfef3d5));
+        return ('Pendente', const AppColors.amber, const AppColors.amber50);
       case 'REJECTED':
-        return ('Rejeitado', const AppColors.red, const Color(0xFFfde8e8));
+        return ('Rejeitado', const AppColors.red, const AppColors.red50);
       default:
         return (status, const AppColors.gray500, const AppColors.gray100);
     }
@@ -227,17 +223,17 @@ class _OrderCard extends StatelessWidget {
   (String, Color, Color) _typeStyle(String type) {
     switch (type) {
       case 'SALE':
-        return ('Venda', const Color(0xFF4b5563), const AppColors.gray100);
+        return ('Venda', const AppColors.gray600, const AppColors.gray100);
       case 'CONSIGNMENT':
         return (
           'Consignação',
-          const Color(0xFF4b5563),
+          const AppColors.gray600,
           const AppColors.gray100,
         );
       case 'DONATION':
-        return ('Doação', const Color(0xFF4b5563), const AppColors.gray100);
+        return ('Doação', const AppColors.gray600, const AppColors.gray100);
       default:
-        return ('Outro', const Color(0xFF4b5563), const AppColors.gray100);
+        return ('Outro', const AppColors.gray600, const AppColors.gray100);
     }
   }
 }
@@ -318,7 +314,7 @@ class _OrderItemsTable extends StatelessWidget {
                     item.productName,
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF4b5563),
+                      color: AppColors.gray600,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

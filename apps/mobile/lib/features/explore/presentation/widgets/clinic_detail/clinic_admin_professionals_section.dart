@@ -115,7 +115,7 @@ class _ProfessionalCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFeef4ff),
+                  color: const AppColors.blueLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -302,7 +302,7 @@ class _Flag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFeef4ff),
+        color: const AppColors.blueLight,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

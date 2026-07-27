@@ -155,7 +155,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
         backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: Text(
           _isEditing ? 'Editar concorrente' : 'Novo concorrente',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -278,7 +278,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
                       _error!,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFFdc2626),
+                        color: AppColors.error,
                       ),
                     ),
                   ],

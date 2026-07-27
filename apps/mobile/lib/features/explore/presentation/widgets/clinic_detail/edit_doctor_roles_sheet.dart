@@ -69,7 +69,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFe5e7eb),
+                color: const AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),

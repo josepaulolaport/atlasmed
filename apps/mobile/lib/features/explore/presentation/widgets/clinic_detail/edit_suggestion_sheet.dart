@@ -136,7 +136,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFe5e7eb),
+                color: const AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -168,7 +168,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
             decoration: InputDecoration(
               hintText: 'Novo valor para ${widget.fieldLabel}',
               filled: true,
-              fillColor: const Color(0xFFf8f9fb),
+              fillColor: const AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

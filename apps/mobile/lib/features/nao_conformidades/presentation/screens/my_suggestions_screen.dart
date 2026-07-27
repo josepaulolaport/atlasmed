@@ -23,9 +23,9 @@ class MySuggestionsScreen extends ConsumerWidget {
     final asyncItems = ref.watch(mySuggestionsForClinicProvider(targetId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         elevation: 0,
         foregroundColor: const AppColors.gray900,
         title: Text(
@@ -124,7 +124,7 @@ class _EmptyCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: const Text(
         'Você ainda não enviou não conformidades para este perfil.',
@@ -153,7 +153,7 @@ class _SuggestionCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

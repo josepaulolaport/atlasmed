@@ -156,7 +156,7 @@ class _ConcentrationSwitcher extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -208,7 +208,7 @@ class _HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -273,7 +273,7 @@ class _HeroCard extends StatelessWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFeef2ff),
+                        color: const AppColors.blue50,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: const AppColors.blueLight),
                       ),
@@ -309,7 +309,7 @@ class _HeroCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: const AppColors.background,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFeef0f3)),
+              border: Border.all(color: const AppColors.surfaceSecondary),
             ),
             child: const Icon(
               Icons.medication_liquid_outlined,
@@ -340,7 +340,7 @@ class _TabBar extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFe5e7eb))),
+        border: Border(bottom: BorderSide(color: AppColors.gray200)),
       ),
       child: Row(
         children: [
@@ -481,7 +481,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,7 +545,7 @@ class _InfoDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3));
+    return const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary);
   }
 }
 

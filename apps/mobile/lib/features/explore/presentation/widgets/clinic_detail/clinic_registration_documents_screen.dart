@@ -30,9 +30,9 @@ class _ClinicRegistrationDocumentsScreenState
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         elevation: 0,
         foregroundColor: const AppColors.gray900,
         title: Text(
@@ -91,7 +91,7 @@ class _ClinicRegistrationDocumentsScreenState
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFfef3d5),
+                    color: const AppColors.amber50,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -230,7 +230,7 @@ class _BillingEmailSheetState extends State<_BillingEmailSheet> {
             decoration: InputDecoration(
               hintText: 'financeiro@clinica.com.br',
               filled: true,
-              fillColor: const Color(0xFFf8f9fb),
+              fillColor: const AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

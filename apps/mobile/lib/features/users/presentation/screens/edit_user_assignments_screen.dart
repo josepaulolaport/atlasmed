@@ -235,7 +235,7 @@ class _EditUserAssignmentsScreenState
                 side: BorderSide(
                   color: selected
                       ? const AppColors.navyDeep
-                      : const Color(0xFFe5e7eb),
+                      : const AppColors.gray200,
                 ),
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(

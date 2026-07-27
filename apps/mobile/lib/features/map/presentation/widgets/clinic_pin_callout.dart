@@ -152,7 +152,7 @@ class ClinicPinCalloutCloseButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFe5e7eb)),
+        border: Border.all(color: const AppColors.gray200),
         boxShadow: const [
           BoxShadow(
             color: Color(0x40111827),
@@ -164,7 +164,7 @@ class ClinicPinCalloutCloseButton extends StatelessWidget {
       child: const Icon(
         Icons.close_rounded,
         size: 15,
-        color: Color(0xFF4b5563),
+        color: AppColors.gray600,
       ),
     );
   }

@@ -66,7 +66,7 @@ class _TaxIdTypeSuggestionSheetBodyState
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFe5e7eb),
+                color: const AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -146,7 +146,7 @@ class _TypeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFFdbeafe) : const Color(0xFFf8f9fb),
+      color: selected ? const AppColors.blue100 : const AppColors.surfaceTertiary,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -158,7 +158,7 @@ class _TypeChip extends StatelessWidget {
             border: Border.all(
               color: selected
                   ? const AppColors.navyBright
-                  : const Color(0xFFe5e7eb),
+                  : const AppColors.gray200,
             ),
           ),
           child: Column(
@@ -179,7 +179,7 @@ class _TypeChip extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   color: selected
                       ? const AppColors.navyBright
-                      : const Color(0xFF4b5563),
+                      : const AppColors.gray600,
                 ),
               ),
             ],

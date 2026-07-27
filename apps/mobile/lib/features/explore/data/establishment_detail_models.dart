@@ -720,7 +720,7 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
       case EstablishmentDocumentStatus.pending:
         return const AppColors.amber;
       case EstablishmentDocumentStatus.approved:
-        return const Color(0xFF1f9254);
+        return const AppColors.greenDark;
       case EstablishmentDocumentStatus.rejected:
         return const AppColors.red;
     }
@@ -731,13 +731,13 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
       case EstablishmentDocumentStatus.missing:
         return const AppColors.gray100;
       case EstablishmentDocumentStatus.ready:
-        return const Color(0xFFdbeafe);
+        return const AppColors.blue100;
       case EstablishmentDocumentStatus.pending:
-        return const Color(0xFFfef3d5);
+        return const AppColors.amber50;
       case EstablishmentDocumentStatus.approved:
         return const AppColors.green50;
       case EstablishmentDocumentStatus.rejected:
-        return const Color(0xFFfde8e8);
+        return const AppColors.red50;
     }
   }
 

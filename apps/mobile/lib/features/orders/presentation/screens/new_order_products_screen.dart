@@ -215,7 +215,7 @@ class _NewOrderProductsScreenState
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFeef2ff),
+          color: const AppColors.blue50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0x1F0a2f7f), width: 1.2),
         ),
@@ -425,7 +425,7 @@ class _ProductCard extends StatelessWidget {
                   width: 30,
                   height: 30,
                   decoration: const BoxDecoration(
-                    color: Color(0xFFeef2ff),
+                    color: AppColors.blue50,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

@@ -86,7 +86,7 @@ class _PersonRow extends StatelessWidget {
   const _PersonRow({
     required this.name,
     required this.roleLabel,
-    this.avatarColor = const Color(0xFFeef4ff),
+    this.avatarColor = const AppColors.blueLight,
     this.initialsColor = const AppColors.navyBright,
   });
 

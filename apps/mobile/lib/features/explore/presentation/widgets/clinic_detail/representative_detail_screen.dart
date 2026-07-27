@@ -50,9 +50,9 @@ class _RepresentativeDetailScreenState
         Navigator.of(context).pop(_professional);
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFf8f9fb),
+          backgroundColor: const AppColors.surfaceTertiary,
           elevation: 0,
           foregroundColor: const AppColors.gray900,
           title: const Text('Perfil do profissional'),
@@ -69,7 +69,7 @@ class _RepresentativeDetailScreenState
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundColor: const Color(0xFFeef4ff),
+                    backgroundColor: const AppColors.blueLight,
                     child: Text(
                       _initials(_professional.name),
                       style: const TextStyle(
@@ -268,7 +268,7 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFeef4ff),
+        color: const AppColors.blueLight,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

@@ -105,11 +105,11 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                   fillColor: const AppColors.background,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFeef0f3)),
+                    borderSide: const BorderSide(color: AppColors.surfaceSecondary),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFeef0f3)),
+                    borderSide: const BorderSide(color: AppColors.surfaceSecondary),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -122,7 +122,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                 ),
               ),
             ),
-            const Divider(height: 1, color: Color(0xFFeef0f3)),
+            const Divider(height: 1, color: AppColors.surfaceSecondary),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
               child: Row(
@@ -156,7 +156,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                 ],
               ),
             ),
-            const Divider(height: 1, color: Color(0xFFeef0f3)),
+            const Divider(height: 1, color: AppColors.surfaceSecondary),
             Expanded(
               child: filtered.isEmpty
                   ? Center(
@@ -251,9 +251,9 @@ class _ManagerAvatar extends StatelessWidget {
   static const _palette = <Color>[
     AppColors.navyDeep,
     AppColors.green600,
-    Color(0xFFB45309),
-    Color(0xFF7C3AED),
-    Color(0xFFBE185D),
+    AppColors.amberDark,
+    AppColors.purple,
+    AppColors.pink,
     AppColors.blue600,
   ];
 

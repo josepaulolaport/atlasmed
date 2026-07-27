@@ -19,7 +19,7 @@ class ClinicRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,7 +34,7 @@ class ClinicRow extends StatelessWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFFdbeafe), Color(0xFFeef4ff)],
+                      colors: [AppColors.blue100, AppColors.blueLight],
                     ),
                   ),
                   child: const Icon(
@@ -51,7 +51,7 @@ class ClinicRow extends StatelessWidget {
                       width: 14,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFe11d48),
+                        color: const AppColors.rose,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),

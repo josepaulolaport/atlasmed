@@ -91,7 +91,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
         backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: const Text(
           'Editar informações',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -150,7 +150,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF111827),
+                              color: AppColors.gray950,
                             ),
                           ),
                         ),

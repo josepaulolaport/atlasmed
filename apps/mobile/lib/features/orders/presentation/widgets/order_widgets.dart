@@ -146,7 +146,7 @@ class StepperWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(10),
         color: const AppColors.background,
       ),
@@ -166,7 +166,7 @@ class StepperWidget extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1f2937),
+                color: AppColors.gray800,
               ),
             ),
           ),
@@ -216,7 +216,7 @@ class CartBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: active ? const AppColors.navyDeep : Colors.transparent,
           border: Border.all(
-            color: active ? const AppColors.navyDeep : const Color(0xFFeef0f3),
+            color: active ? const AppColors.navyDeep : const AppColors.surfaceSecondary,
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -300,7 +300,7 @@ class SelectorField extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: disabled ? const AppColors.background : Colors.white,
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -324,7 +324,7 @@ class SelectorField extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       color: value != null
-                          ? const Color(0xFF1f2937)
+                          ? const AppColors.gray800
                           : const AppColors.gray300,
                       fontWeight: value != null
                           ? FontWeight.w500
@@ -359,7 +359,7 @@ class BackChevron extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
           borderRadius: BorderRadius.circular(10),
           color: Colors.white,
         ),
@@ -399,7 +399,7 @@ class OrderProductsWidget extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1f2937),
+                        color: AppColors.gray800,
                       ),
                     ),
                     Text(

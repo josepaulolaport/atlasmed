@@ -21,7 +21,7 @@ class TabToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -95,7 +95,7 @@ class _Tab extends StatelessWidget {
                   height: 18,
                   decoration: BoxDecoration(
                     color: selected
-                        ? const Color(0xFFeef2ff)
+                        ? const AppColors.blue50
                         : const AppColors.gray100,
                     borderRadius: BorderRadius.circular(999),
                   ),

@@ -9,7 +9,7 @@ const payerShareColors = <Color>[
   AppColors.amber,
   AppColors.navyBright,
   AppColors.gray400,
-  Color(0xFF7c3aed),
+  AppColors.purple,
 ];
 
 Color payerShareColorForIndex(int i) =>

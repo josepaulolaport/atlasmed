@@ -25,6 +25,41 @@ class AppColors {
   static const backdropStart = Color(0xFF0a2f7f);
   static const backdropMid = Color(0xFF1e40af);
   static const backdropEnd = Color(0xFF3b82f6);
+  // Extended neutrals
+  static const gray200 = Color(0xFFE5E7EB);
+  static const gray600 = Color(0xFF4B5563);
+  static const gray800 = Color(0xFF1F2937);
+  static const gray950 = Color(0xFF111827);
+
+  // Surface backgrounds
+  static const surfaceSecondary = Color(0xFFEEF0F3);
+  static const surfaceTertiary = Color(0xFFF8F9FB);
+
+  // Extended status
+  static const error = Color(0xFFDC2626);
+  static const blue600 = Color(0xFF2563EB);
+  static const green600 = Color(0xFF059669);
+
+  // Tinted backgrounds
+  static const blue50 = Color(0xFFEEF2FF);
+  static const red50 = Color(0xFFFDE8E8);
+  static const red100 = Color(0xFFFECACA);
+  static const amber50 = Color(0xFFFEF3D5);
+  static const green50 = Color(0xFFE6F7F0);
+
+  // Blue-50 variant (also high frequency)
+  static const blueLight = Color(0xFFEEF4FF);
+  // Status & accent extended palette
+  static const blueDark = Color(0xFF1D4ED8);
+  static const blueDarker = Color(0xFF1E3A8A);
+  static const purple = Color(0xFF7C3AED);
+  static const pink = Color(0xFFBE185D);
+  static const orange = Color(0xFF9A3412);
+  static const amberDark = Color(0xFFB45309);
+  static const rose = Color(0xFFE11D48);
+  static const redDark = Color(0xFFB91C1C);
+  static const greenDark = Color(0xFF1F9254);
+  static const blue100 = Color(0xFFDBEAFE);
 }
 
 class AppTheme {

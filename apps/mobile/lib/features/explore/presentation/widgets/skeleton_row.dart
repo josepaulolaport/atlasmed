@@ -39,9 +39,9 @@ class _SkeletonRowState extends State<SkeletonRow>
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: const [
-            Color(0xFFeef0f3),
+            AppColors.surfaceSecondary,
             AppColors.surfaceTertiary,
-            Color(0xFFeef0f3),
+            AppColors.surfaceSecondary,
           ],
           stops: const [0.25, 0.5, 0.75],
           transform: _SlidingGradientTransform(_shimmerController.value),
@@ -51,7 +51,7 @@ class _SkeletonRowState extends State<SkeletonRow>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         ),
         child: Row(
           children: [
@@ -60,7 +60,7 @@ class _SkeletonRowState extends State<SkeletonRow>
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(avatarBorder),
-                color: const Color(0xFFeef0f3),
+                color: const AppColors.surfaceSecondary,
               ),
             ),
             const SizedBox(width: 12),
@@ -88,7 +88,7 @@ class _SkeletonRowState extends State<SkeletonRow>
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: const Color(0xFFeef0f3),
+        color: const AppColors.surfaceSecondary,
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/immersive_photo_gallery_screen.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen, sideways-swipeable photo gallery for the establishment header.
 Future<void> openClinicPhotoViewer(
@@ -36,7 +37,7 @@ Future<void> openClinicPhotoViewer(
     placeholderBuilder: (context, i) {
       final colors = photos.thumbnailColors;
       final color = colors.isEmpty
-          ? const Color(0xFF1f2937)
+          ? const AppColors.gray800
           : colors[i % colors.length];
       return ColoredBox(
         color: color,

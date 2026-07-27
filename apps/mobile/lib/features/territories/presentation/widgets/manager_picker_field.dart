@@ -123,7 +123,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: hasSelection
-                      ? const Color(0xFF111827)
+                      ? const AppColors.gray950
                       : const AppColors.gray400,
                 ),
                 overflow: TextOverflow.ellipsis,

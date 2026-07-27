@@ -429,7 +429,7 @@ class _RegisterInviteScreenState extends State<RegisterInviteScreen> {
                         Text(
                           _error!,
                           style: const TextStyle(
-                            color: Color(0xFFFECACA),
+                            color: AppColors.red100,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),

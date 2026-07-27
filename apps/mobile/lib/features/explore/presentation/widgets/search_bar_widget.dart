@@ -27,7 +27,7 @@ class SearchBarWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A000000),
@@ -77,7 +77,7 @@ class SearchBarWidget extends StatelessWidget {
                       height: 20,
                       margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFe5e7eb),
+                        color: const AppColors.gray200,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -100,7 +100,7 @@ class SearchBarWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: filterCount > 0 ? const AppColors.navyBright : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A000000),
@@ -129,7 +129,7 @@ class SearchBarWidget extends StatelessWidget {
                       height: 16,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFe11d48),
+                        color: const AppColors.rose,
                         shape: BoxShape.circle,
                       ),
                       child: Center(

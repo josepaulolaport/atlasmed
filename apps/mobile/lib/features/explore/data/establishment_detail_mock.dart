@@ -146,7 +146,7 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
       thumbnailColors: const [
         AppColors.green,
         AppColors.gray300,
-        Color(0xFF1f2937),
+        AppColors.gray800,
         AppColors.blueLight,
         Color(0xFFfbbf24),
       ],

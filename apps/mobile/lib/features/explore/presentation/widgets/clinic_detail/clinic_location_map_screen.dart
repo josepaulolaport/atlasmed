@@ -42,7 +42,7 @@ class _ClinicLocationMapScreenState extends State<ClinicLocationMapScreen> {
     final top = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       body: Column(
         children: [
           Padding(

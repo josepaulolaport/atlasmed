@@ -90,7 +90,7 @@ class _FacilityRosterFilterSheetState extends State<FacilityRosterFilterSheet> {
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(46),
                       foregroundColor: const AppColors.gray700,
-                      side: const BorderSide(color: Color(0xFFe5e7eb)),
+                      side: const BorderSide(color: AppColors.gray200),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -143,7 +143,7 @@ class _Chip extends StatelessWidget {
           color: selected ? const AppColors.navyBright : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? const AppColors.navyBright : const Color(0xFFe5e7eb),
+            color: selected ? const AppColors.navyBright : const AppColors.gray200,
           ),
         ),
         child: Text(

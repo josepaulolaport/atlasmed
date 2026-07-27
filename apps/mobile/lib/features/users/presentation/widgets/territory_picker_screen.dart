@@ -606,10 +606,10 @@ class _ManagerScopeBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+        color: const AppColors.blue600.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+          color: const AppColors.blue600.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
@@ -617,7 +617,7 @@ class _ManagerScopeBanner extends StatelessWidget {
           const Icon(
             Icons.account_tree_outlined,
             size: 20,
-            color: Color(0xFF2563EB),
+            color: AppColors.blue600,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -627,7 +627,7 @@ class _ManagerScopeBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1e3a8a),
+                      color: AppColors.blueDarker,
                     ),
                   )
                 : Column(
@@ -638,7 +638,7 @@ class _ManagerScopeBanner extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1e3a8a),
+                          color: AppColors.blueDarker,
                         ),
                       ),
                       const SizedBox(height: 2),

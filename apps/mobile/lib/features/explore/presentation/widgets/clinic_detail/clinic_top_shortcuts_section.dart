@@ -202,8 +202,8 @@ class _ShortcutBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (_tone) {
-      _BadgeTone.complete => (const AppColors.green50, const Color(0xFF1f9254)),
-      _BadgeTone.pending => (const Color(0xFFfef3d5), const AppColors.amber),
+      _BadgeTone.complete => (const AppColors.green50, const AppColors.greenDark),
+      _BadgeTone.pending => (const AppColors.amber50, const AppColors.amber),
       _BadgeTone.neutral => (const AppColors.gray100, const AppColors.gray400),
     };
     return Container(

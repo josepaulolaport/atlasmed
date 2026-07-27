@@ -31,7 +31,7 @@ final class ClinicMapPin {
   static const double focusLogicalHeight = 46;
 
   static const Color singleFill = AppColors.green;
-  static const Color clusterFill = Color(0xFF1d4ed8);
+  static const Color clusterFill = AppColors.blueDark;
 
   /// Amber focus pin so the current clinic reads apart from green/blue pins.
   static const Color focusFill = AppColors.amber;

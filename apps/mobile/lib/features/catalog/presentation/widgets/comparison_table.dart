@@ -195,7 +195,7 @@ class PriceIndexTable extends StatelessWidget {
                     return Container(
                       decoration: BoxDecoration(
                         color: row.isOwn
-                            ? const Color(0xFFeef2ff)
+                            ? const AppColors.blue50
                             : Colors.white,
                         border: const Border(
                           bottom: BorderSide(color: AppColors.gray100),
@@ -231,7 +231,7 @@ class _ColumnHeaderBar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         boxShadow: [
           BoxShadow(
             color: Color(0x0F000000),
@@ -266,7 +266,7 @@ class _OwnProductBar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         boxShadow: [
           BoxShadow(
             color: Color(0x0F000000),
@@ -283,7 +283,7 @@ class _OwnProductBar extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
           Container(
-            color: const Color(0xFFeef2ff),
+            color: const AppColors.blue50,
             child: _ComparisonDataRow(row: ownRow, sortColumn: sortColumn),
           ),
         ],
@@ -522,7 +522,7 @@ class _ComparisonDataRow extends StatelessWidget {
       width: _priceColumnWidth,
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: active ? const Color(0xFFeef4ff) : Colors.white,
+        color: active ? const AppColors.blueLight : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: active ? const Color(0xFFc7d7fb) : const AppColors.gray200,
@@ -572,7 +572,7 @@ class _AddProductButton extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: InkWell(
         onTap: () => showComingSoonSnack(context, 'Adicionar produto'),

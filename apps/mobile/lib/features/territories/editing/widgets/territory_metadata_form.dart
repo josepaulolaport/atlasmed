@@ -100,7 +100,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
         backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: Text(
           widget.initial == null ? 'Novo território' : 'Editar informações',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),

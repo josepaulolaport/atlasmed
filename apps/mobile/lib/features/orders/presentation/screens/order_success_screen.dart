@@ -68,7 +68,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1F2937),
+                                  color: AppColors.gray800,
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -95,7 +95,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1F2937),
+                            color: AppColors.gray800,
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -118,7 +118,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                               const SizedBox(height: 14),
                               const Divider(
                                 height: 1,
-                                color: Color(0xFFE5E7EB),
+                                color: AppColors.gray200,
                               ),
                               const SizedBox(height: 14),
                               Row(
@@ -130,7 +130,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1F2937),
+                                      color: AppColors.gray800,
                                     ),
                                   ),
                                   Text(
@@ -249,7 +249,7 @@ class _HeroSection extends StatelessWidget {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1F2937),
+              color: AppColors.gray800,
             ),
           ),
           const SizedBox(height: 8),
@@ -268,7 +268,7 @@ class _HeroSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: const AppColors.gray200),
             ),
             child: Text(
               orderId,
@@ -298,7 +298,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: const AppColors.gray200),
       ),
       child: child,
     );
@@ -324,7 +324,7 @@ class _OrderItemRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2937),
+                  color: AppColors.gray800,
                 ),
               ),
               const SizedBox(height: 2),

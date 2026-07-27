@@ -1,5 +1,7 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/repository/domain/exceptions/unexpected_status_code_exception.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -129,7 +131,7 @@ class _PurchaseRecurrenceFormState extends State<PurchaseRecurrenceForm> {
               padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Text(
                 'O perfil recebido não é reconhecido. Escolha explicitamente um perfil para salvar sem perder o valor atual.',
-                style: TextStyle(color: Color(0xFFB45309)),
+                style: TextStyle(color: AppColors.amberDark),
               ),
             ),
           _profileTile(
@@ -164,7 +166,7 @@ class _PurchaseRecurrenceFormState extends State<PurchaseRecurrenceForm> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Text(
                 _error!,
-                style: const TextStyle(color: Color(0xFFB91C1C)),
+                style: const TextStyle(color: AppColors.redDark),
               ),
             ),
           const SizedBox(height: 16),

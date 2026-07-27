@@ -119,7 +119,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -133,7 +133,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                         style: const TextStyle(
                           fontSize: 16.5,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
+                          color: AppColors.gray950,
                         ),
                       ),
                     ),
@@ -172,7 +172,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                         context,
                       ).pop(widget.pickingManagerZone ? null : clearAssignee),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFFB91C1C),
+                        foregroundColor: const AppColors.redDark,
                         padding: EdgeInsets.zero,
                       ),
                       child: Text(
@@ -183,7 +183,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                     ),
                   ),
                 ),
-              const Divider(height: 1, color: Color(0xFFEEF0F3)),
+              const Divider(height: 1, color: AppColors.surfaceSecondary),
               Expanded(child: _buildList(scrollController)),
             ],
           ),
@@ -317,7 +317,7 @@ class _UserRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+                      color: AppColors.gray950,
                     ),
                   ),
                   const SizedBox(height: 2),

@@ -123,7 +123,7 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: Row(
         children: [
@@ -177,7 +177,7 @@ class _CardShell extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFeef0f3)),
+      border: Border.all(color: const AppColors.surfaceSecondary),
     ),
     child: child,
   );
@@ -225,7 +225,7 @@ class _TimelineRow extends StatelessWidget {
         : (step.current ? const AppColors.navyDeep : Colors.white);
     final borderColor = step.done || step.current
         ? circleColor
-        : const Color(0xFFe5e7eb);
+        : const AppColors.gray200;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -271,7 +271,7 @@ class _TimelineRow extends StatelessWidget {
                 ),
                 if (!last)
                   Expanded(
-                    child: Container(width: 2, color: const Color(0xFFeef0f3)),
+                    child: Container(width: 2, color: const AppColors.surfaceSecondary),
                   ),
               ],
             ),
@@ -288,7 +288,7 @@ class _TimelineRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1f2937),
+                      color: AppColors.gray800,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -418,7 +418,7 @@ class _DestinationCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1f2937),
+                      color: AppColors.gray800,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -476,7 +476,7 @@ class _ItemsCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1f2937),
+                            color: AppColors.gray800,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -686,9 +686,9 @@ class _ActionButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         backgroundColor: filled ? Colors.white : Colors.white,
         foregroundColor: filled
-            ? const Color(0xFF111827)
+            ? const AppColors.gray950
             : const AppColors.navyDeep,
-        side: const BorderSide(color: Color(0xFFeef0f3)),
+        side: const BorderSide(color: AppColors.surfaceSecondary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       child: Text(
@@ -696,7 +696,7 @@ class _ActionButton extends StatelessWidget {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: filled ? const Color(0xFF111827) : const AppColors.navyDeep,
+          color: filled ? const AppColors.gray950 : const AppColors.navyDeep,
         ),
       ),
     ),

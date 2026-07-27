@@ -192,7 +192,7 @@ class _FilterChip extends StatelessWidget {
             border: Border.all(
               color: selected
                   ? const AppColors.navyDeep
-                  : const Color(0xFFe5e7eb),
+                  : const AppColors.gray200,
             ),
           ),
           child: Text(
@@ -200,7 +200,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const Color(0xFF4b5563),
+              color: selected ? Colors.white : const AppColors.gray600,
             ),
           ),
         ),
@@ -228,7 +228,7 @@ class _ReviewListCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFeef0f3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,7 +270,7 @@ class _ReviewListCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFF4b5563),
+                        color: AppColors.gray600,
                       ),
                     ),
                     const SizedBox(height: 4),
