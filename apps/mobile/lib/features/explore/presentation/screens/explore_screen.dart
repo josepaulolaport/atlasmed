@@ -79,14 +79,14 @@ class ExploreResultsList extends StatelessWidget {
             final clinic = items[index] as Clinic;
             return ClinicRow(
               clinic: clinic,
-              onTap: () => context.push('/workspace/clinic/${clinic.id}'),
+              onTap: () => context.push('/explore/clinic/${clinic.id}'),
             );
           }
 
           final doctor = items[index] as Doctor;
           return DoctorRow(
             doctor: doctor,
-            onTap: () => context.push('/workspace/doctor/${doctor.id}'),
+            onTap: () => context.push('/explore/doctor/${doctor.id}'),
           );
         },
       ),

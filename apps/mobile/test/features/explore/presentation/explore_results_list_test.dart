@@ -1,8 +1,10 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   const clinic = Clinic(
@@ -27,6 +29,7 @@ void main() {
           isLoadingMore: loadingMore,
           isClinic: true,
           onLoadMore: () {},
+          bottomInset: 0,
         ),
       ),
     );
@@ -44,5 +47,87 @@ void main() {
     expect(find.byType(SkeletonRow), findsOneWidget);
     expect(find.byType(ShaderMask), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  const doctor = Doctor(
+    id: 'doctor-1',
+    name: 'Dra. Ana',
+    initials: 'DA',
+    hue: 0,
+    specialty: 'Cardiologia',
+    primaryClinic: '',
+    crm: '12345',
+    distanceKm: null,
+    isPriority: false,
+  );
+
+  testWidgets('opens a clinic through the explore route', (tester) async {
+    String? navigatedLocation;
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => Scaffold(
+            body: ExploreResultsList(
+              items: const [clinic],
+              hasMore: false,
+              isLoadingMore: false,
+              isClinic: true,
+              onLoadMore: () {},
+              bottomInset: 0,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/explore/clinic/:id',
+          builder: (_, state) {
+            navigatedLocation = state.uri.toString();
+            return const SizedBox();
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.tap(find.text('Clínica Central'));
+    await tester.pumpAndSettle();
+
+    expect(navigatedLocation, '/explore/clinic/clinic-1');
+  });
+
+  testWidgets('opens a doctor through the explore route', (tester) async {
+    String? navigatedLocation;
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => Scaffold(
+            body: ExploreResultsList(
+              items: const [doctor],
+              hasMore: false,
+              isLoadingMore: false,
+              isClinic: false,
+              onLoadMore: () {},
+              bottomInset: 0,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/explore/doctor/:id',
+          builder: (_, state) {
+            navigatedLocation = state.uri.toString();
+            return const SizedBox();
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.tap(find.text('Dra. Ana'));
+    await tester.pumpAndSettle();
+
+    expect(navigatedLocation, '/explore/doctor/doctor-1');
   });
 }
