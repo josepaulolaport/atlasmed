@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
@@ -47,12 +48,34 @@ class AppShellScreenState extends State<AppShellScreen> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final activeSection = _sectionFromRoute(location);
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: const Color(0xFFf7f8fb),
-      drawer: AtlasDrawer(activeSection: activeSection),
-      body: widget.child,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Color(0xFFF7F8FB),
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: const Color(0xFFF7F8FB),
+        drawer: AtlasDrawer(activeSection: activeSection),
+        body: Stack(
+          children: [
+            widget.child,
+            if (statusBarHeight > 0)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: statusBarHeight,
+                child: const IgnorePointer(
+                  child: ColoredBox(color: Color(0xFFF7F8FB)),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -96,7 +119,7 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F8FB),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -118,7 +141,7 @@ class AtlasTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFF7F8FB),
         border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
       ),
       child: SafeArea(
