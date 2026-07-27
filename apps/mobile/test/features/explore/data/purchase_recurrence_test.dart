@@ -139,7 +139,7 @@ void main() {
       'professionalCount': 0,
     });
 
-    expect(active.commercialStatus, CommercialStatus.active);
+    expect(active.commercialStatus, 'ACTIVE');
     expect(absent.commercialStatus, isNull);
   });
 
