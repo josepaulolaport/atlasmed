@@ -382,7 +382,7 @@ class _ClinicDetailBody extends ConsumerWidget {
         Column(
           children: [
             Expanded(child: Container(color: const Color(0xFF1e40af))),
-            Expanded(flex: 4, child: Container(color: const Color(0xFFf8f9fb))),
+            Expanded(child: Container(color: const Color(0xFFf8f9fb))),
           ],
         ),
         Column(
