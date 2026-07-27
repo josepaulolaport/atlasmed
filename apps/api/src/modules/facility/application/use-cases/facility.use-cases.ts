@@ -48,6 +48,7 @@ export class ListFacilitiesUseCase {
     longitude?: number;
     radiusKm?: number;
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    purchaseBucket?: "active" | "inactive" | "neverBought";
     productIds?: string[];
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
@@ -81,6 +82,7 @@ export class ListFacilitiesUseCase {
         longitude: input.longitude,
         radiusKm: input.radiusKm,
         commercialStatus: input.commercialStatus,
+        purchaseBucket: input.purchaseBucket,
         productIds: input.productIds,
         purchaseFunnelStages: input.purchaseFunnelStages,
         purchaseProfile: input.purchaseProfile,
@@ -181,6 +183,7 @@ export class ListFacilitiesUseCase {
             longitude: input.longitude,
             radiusKm: input.radiusKm,
             commercialStatus: input.commercialStatus,
+            purchaseBucket: input.purchaseBucket,
             productIds: input.productIds,
             purchaseFunnelStages: input.purchaseFunnelStages,
             purchaseProfile: input.purchaseProfile,

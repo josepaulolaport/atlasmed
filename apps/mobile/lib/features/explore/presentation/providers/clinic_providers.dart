@@ -12,6 +12,7 @@ class ClinicsQuery {
     this.longitude,
     this.radiusKm,
     this.commercialStatus,
+    this.purchaseBucket,
     this.productIds,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
@@ -29,6 +30,7 @@ class ClinicsQuery {
   final double? longitude;
   final double? radiusKm;
   final String? commercialStatus;
+  final String? purchaseBucket;
   final String? productIds;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
@@ -48,6 +50,7 @@ class ClinicsQuery {
         other.longitude == longitude &&
         other.radiusKm == radiusKm &&
         other.commercialStatus == commercialStatus &&
+        other.purchaseBucket == purchaseBucket &&
         other.productIds == productIds &&
         _sameStages(other.purchaseFunnelStages, purchaseFunnelStages) &&
         other.purchaseProfile == purchaseProfile &&
@@ -67,6 +70,7 @@ class ClinicsQuery {
     longitude,
     radiusKm,
     commercialStatus,
+    purchaseBucket,
     productIds,
     Object.hashAll(purchaseFunnelStages),
     purchaseProfile,
@@ -99,6 +103,7 @@ final clinicsRepositoryProvider = Provider.autoDispose
         longitude: query.longitude,
         radiusKm: query.radiusKm,
         commercialStatus: query.commercialStatus,
+        purchaseBucket: query.purchaseBucket,
         productIds: query.productIds,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,

@@ -41,4 +41,14 @@ describe("parseListFacilitiesQuery", () => {
     expect(parseListFacilitiesQuery({ sort: "purchaseIntervalDays" })).toMatchObject({ sort: "purchaseIntervalDays", order: "asc" });
     expect(parseListFacilitiesQuery({ sort: "lastPurchaseDate" })).toMatchObject({ sort: "lastPurchaseDate", order: "asc" });
   });
+
+  it("accepts purchaseBucket values used by Desempenho drill-down", () => {
+    expect(parseListFacilitiesQuery({ purchaseBucket: "neverBought" })).toMatchObject({
+      purchaseBucket: "neverBought",
+    });
+    expect(parseListFacilitiesQuery({ purchaseBucket: "active" })).toMatchObject({
+      purchaseBucket: "active",
+    });
+    expect(() => parseListFacilitiesQuery({ purchaseBucket: "OTHER" })).toThrow();
+  });
 });

@@ -42,6 +42,7 @@ const listFacilitiesRoute = new Elysia()
         longitude: t.Optional(t.String()),
         radiusKm: t.Optional(t.String()),
         commercialStatus: t.Optional(t.String()),
+        purchaseBucket: t.Optional(t.String()),
         productIds: t.Optional(t.String()),
         purchaseFunnelStage: t.Optional(t.String()),
         purchaseProfile: t.Optional(t.String()),

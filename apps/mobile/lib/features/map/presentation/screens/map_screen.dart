@@ -335,7 +335,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _drawTerritory(TerritoryGeometry? territory) async {
     final map = _mapboxMap;
-    if (map == null || territory == null) return;
+    if (map == null) return;
+    if (territory == null) {
+      await _clearTerritoryOverlay();
+      return;
+    }
     try {
       final style = map.style;
       if (await style.styleSourceExists(_territorySourceId)) {
@@ -374,6 +378,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     } catch (_) {
       // Territory overlay is optional.
+    }
+  }
+
+  Future<void> _clearTerritoryOverlay() async {
+    final map = _mapboxMap;
+    if (map == null) return;
+    try {
+      final style = map.style;
+      if (await style.styleLayerExists(_territoryLineLayerId)) {
+        await style.removeStyleLayer(_territoryLineLayerId);
+      }
+      if (await style.styleLayerExists(_territoryFillLayerId)) {
+        await style.removeStyleLayer(_territoryFillLayerId);
+      }
+      if (await style.styleSourceExists(_territorySourceId)) {
+        await style.removeStyleSource(_territorySourceId);
+      }
+    } catch (_) {
+      // Best-effort clear (admin / no territory).
     }
   }
 

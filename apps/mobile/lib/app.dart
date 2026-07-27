@@ -244,6 +244,15 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
             StatefulShellBranch(
               routes: [
                 GoRoute(
+                  path: '/dashboard',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: DashboardScreen()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/explore',
                   pageBuilder: (_, _) =>
                       const NoTransitionPage(child: ExploreScreen()),
@@ -434,7 +443,6 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                   ),
           ),
         ),
-        GoRoute(path: '/dashboard', builder: (_, _) => const DashboardScreen()),
         GoRoute(path: '/catalog', builder: (_, _) => const CatalogHomeScreen()),
         GoRoute(
           path: '/catalog/price-index',
