@@ -34,12 +34,12 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),
+      appBar: const AtlasAppBar(page: 'Pedidos'),
       body: SafeArea(
         child: Stack(
           children: [
             Column(
               children: [
-                const AtlasTopBar(page: 'Pedidos'),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),

@@ -67,7 +67,6 @@ class FacilityPhotosRepository extends Repository<FacilityPhotosResponse>
         endpoint: Uri.parse(
           '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/photos',
         ),
-        resolveOnCreate: false,
         name: 'FacilityPhotosRepository',
       );
 

@@ -142,7 +142,6 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         endpoint: Uri.parse(
           '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro',
         ),
-        resolveOnCreate: false,
         name: 'FacilityCadastroRepository',
       );
 

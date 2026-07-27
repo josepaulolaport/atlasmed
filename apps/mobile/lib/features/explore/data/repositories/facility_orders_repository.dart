@@ -85,7 +85,6 @@ class FacilityOrdersRepository extends Repository<FacilityOrdersPage>
            '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/orders'
            '?page=$page&limit=$limit',
          ),
-         resolveOnCreate: false,
          name: 'FacilityOrdersRepository',
        );
 

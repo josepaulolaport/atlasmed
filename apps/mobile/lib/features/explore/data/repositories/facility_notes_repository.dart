@@ -24,7 +24,6 @@ class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
         endpoint: Uri.parse(
           '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/notes',
         ),
-        resolveOnCreate: false,
         name: 'FacilityNotesRepository',
       );
 

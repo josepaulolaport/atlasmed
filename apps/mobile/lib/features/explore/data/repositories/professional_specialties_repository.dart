@@ -9,7 +9,6 @@ class ProfessionalSpecialtiesRepository extends Repository<List<String>>
     with SessionEnvironmentMixin<List<String>> {
   ProfessionalSpecialtiesRepository({
     String? baseUrl,
-    super.resolveOnCreate = false,
   }) : super(
          endpoint: Uri.parse(
            '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/professionals/specialties',

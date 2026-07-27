@@ -119,6 +119,7 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
       shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
       titleSpacing: 0,
       title: _AtlasTopBarContent(page: page, compact: compact),
+      systemOverlayStyle: .dark,
     );
   }
 }

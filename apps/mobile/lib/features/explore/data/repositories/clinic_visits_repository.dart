@@ -18,7 +18,6 @@ class ClinicVisitsRepository extends Repository<List<ClinicVisit>>
         endpoint: Uri.parse(
           '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/visits',
         ),
-        resolveOnCreate: false,
         name: 'ClinicVisitsRepository',
       );
 

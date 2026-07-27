@@ -19,7 +19,6 @@ class DoctorsRepository extends Repository<PaginatedDoctors>
     this.longitude,
     this.radiusKm,
     this.specialty,
-    super.resolveOnCreate = false,
   }) : super(
          endpoint: buildEndpoint(
            baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
