@@ -351,10 +351,6 @@ const appNavigationItems = <AppNavigationItem>[
   ),
 ];
 
-// ======================================================================
-// AtlasDrawer — slide-in navigation drawer
-// ======================================================================
-
 class AtlasDrawer extends ConsumerWidget {
   final int activeBranchIndex;
   final ValueChanged<int> onSelectBranch;
@@ -463,23 +459,6 @@ class _DrawerHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Green radial glow
-          Positioned(
-            top: -40,
-            right: -30,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  center: Alignment.center,
-                  radius: 0.7,
-                  colors: [Color(0x5916a373), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
