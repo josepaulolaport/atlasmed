@@ -58,7 +58,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -136,7 +136,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 final selected = _sortBy == sortBy;
                 return _Chip(
                   label: sortBy.label,
-                  color: const AppColors.navyDeep,
+                  color: AppColors.navyDeep,
                   selected: selected,
                   onTap: () => _selectSort(sortBy),
                 );
@@ -150,7 +150,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 final selected = _sortDir == dir;
                 return _Chip(
                   label: dir.labelFor(_sortBy),
-                  color: const AppColors.navyDeep,
+                  color: AppColors.navyDeep,
                   selected: selected,
                   onTap: () => setState(() => _sortDir = dir),
                 );
@@ -176,7 +176,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 Expanded(
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const AppColors.navyDeep,
+                      backgroundColor: AppColors.navyDeep,
                     ),
                     onPressed: () {
                       widget.onApply(
@@ -224,14 +224,14 @@ class _Chip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.12) : Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? color : const AppColors.gray200),
+          border: Border.all(color: selected ? color : AppColors.gray200),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: selected ? color : const AppColors.gray700,
+            color: selected ? color : AppColors.gray700,
           ),
         ),
       ),

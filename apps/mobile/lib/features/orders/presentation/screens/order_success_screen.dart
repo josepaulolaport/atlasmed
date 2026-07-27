@@ -32,7 +32,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
     final total = cart.subtotal;
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -49,7 +49,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const AppColors.blueLight,
+                            color: AppColors.blueLight,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -152,9 +152,9 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const AppColors.green50,
+                      color: AppColors.green50,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const AppColors.green50),
+                      border: Border.all(color: AppColors.green50),
                     ),
                     child: const Row(
                       children: [
@@ -188,7 +188,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                 child: ElevatedButton(
                   onPressed: () => context.go('/orders'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const AppColors.navyDeep,
+                    backgroundColor: AppColors.navyDeep,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -234,7 +234,7 @@ class _HeroSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const AppColors.green50, width: 2),
+              border: Border.all(color: AppColors.green50, width: 2),
             ),
             child: const Icon(
               Icons.check_rounded,
@@ -268,7 +268,7 @@ class _HeroSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const AppColors.gray200),
+              border: Border.all(color: AppColors.gray200),
             ),
             child: Text(
               orderId,
@@ -298,7 +298,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.gray200),
+        border: Border.all(color: AppColors.gray200),
       ),
       child: child,
     );

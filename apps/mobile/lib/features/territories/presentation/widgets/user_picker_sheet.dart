@@ -119,7 +119,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -153,7 +153,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                     hintText: 'Buscar por nome...',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: const AppColors.gray100,
+                    fillColor: AppColors.gray100,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -172,7 +172,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                         context,
                       ).pop(widget.pickingManagerZone ? null : clearAssignee),
                       style: TextButton.styleFrom(
-                        foregroundColor: const AppColors.redDark,
+                        foregroundColor: AppColors.redDark,
                         padding: EdgeInsets.zero,
                       ),
                       child: Text(

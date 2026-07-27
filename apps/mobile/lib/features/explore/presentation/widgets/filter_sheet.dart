@@ -164,7 +164,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const AppColors.gray200),
+                  border: Border.all(color: AppColors.gray200),
                   color: Colors.white,
                 ),
                 child: const Center(
@@ -217,7 +217,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: const AppColors.navyBright,
+                  color: AppColors.navyBright,
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x4D1e40af),
@@ -384,7 +384,10 @@ class _DoctorFilters extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = local['specialties'] ?? const <String>[];
+    final selected = Set<String>.from(local['specialties'] ?? const <String>[]);
+    final specialtiesRepo = ref.watch(
+      professionalSpecialtiesRepositoryProvider,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -393,62 +396,66 @@ class _DoctorFilters extends ConsumerWidget {
         const _SectionHeader(title: 'Especialidade'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: specialtiesAsync.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Carregando especialidades…',
-                style: TextStyle(fontSize: 13, color: AppColors.gray500),
-              ),
-            ),
-            error: (_, _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Não foi possível carregar as especialidades.',
-                  style: TextStyle(fontSize: 13, color: AppColors.gray500),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: onRetry,
-                  child: const Text(
-                    'Tentar novamente',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.blue600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            data: (specialties) {
-              final options = <String>{...specialties, ...selected}.toList()
-                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-              if (options.isEmpty) {
-                return const Text(
-                  'Nenhuma especialidade disponível no seu escopo.',
-                  style: TextStyle(fontSize: 13, color: AppColors.gray500),
-                );
-              }
-
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: options.map((s) {
-                      final on = selected.contains(s);
-                      return _SimpleChip(
-                        label: s,
-                        selected: on,
-                        onTap: () => onToggle(s),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
+          child: _SpecialtiesContent(
+            selected: selected,
+            onToggle: onToggle,
+            specialtiesRepo: specialtiesRepo,
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _SpecialtiesContent extends ConsumerWidget {
+  const _SpecialtiesContent({
+    required this.selected,
+    required this.onToggle,
+    required this.specialtiesRepo,
+  });
+
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+  final ProfessionalSpecialtiesRepository specialtiesRepo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RepositoryBuilder<ProfessionalSpecialtiesRepository, List<String>>(
+      repository: specialtiesRepo,
+      builder: (context, snapshot, repository) {
+        if (snapshot == null) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Carregando especialidades…',
+              style: TextStyle(fontSize: 13, color: AppColors.gray500),
+            ),
+          );
+        }
+
+        final options = <String>{...snapshot, ...selected}.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+        if (options.isEmpty) {
+          return const Text(
+            'Nenhuma especialidade disponível no seu escopo.',
+            style: TextStyle(fontSize: 13, color: AppColors.gray500),
+          );
+        }
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((s) {
+            final on = selected.contains(s);
+            return _SimpleChip(
+              label: s,
+              selected: on,
+              onTap: () => onToggle(s),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }
@@ -494,9 +501,7 @@ class _ToggleChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? dotColor.withValues(alpha: 0.1)
-              : const AppColors.gray100,
+          color: selected ? dotColor.withValues(alpha: 0.1) : AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: selected ? dotColor : Colors.transparent),
         ),
@@ -517,7 +522,7 @@ class _ToggleChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? dotColor : const AppColors.gray700,
+                color: selected ? dotColor : AppColors.gray700,
               ),
             ),
           ],
@@ -545,10 +550,10 @@ class _SimpleChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? const AppColors.navyBright : const AppColors.gray100,
+          color: selected ? AppColors.navyBright : AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? const AppColors.navyBright : Colors.transparent,
+            color: selected ? AppColors.navyBright : Colors.transparent,
           ),
         ),
         child: Text(
@@ -556,7 +561,7 @@ class _SimpleChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const AppColors.gray700,
+            color: selected ? Colors.white : AppColors.gray700,
           ),
         ),
       ),

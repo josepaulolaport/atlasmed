@@ -307,9 +307,9 @@ class _PreviewStage extends StatelessWidget {
       height: height,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const AppColors.gray900,
+          color: AppColors.gray900,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const AppColors.gray900),
+          border: Border.all(color: AppColors.gray900),
         ),
         child: ClipRRect(borderRadius: BorderRadius.circular(14), child: child),
       ),
@@ -339,7 +339,7 @@ class _ImageFileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const AppColors.gray900,
+      color: AppColors.gray900,
       elevation: 0,
       shadowColor: Colors.transparent,
       child: Stack(
@@ -415,7 +415,7 @@ class _PdfFileCardState extends State<_PdfFileCard> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const AppColors.gray900,
+      color: AppColors.gray900,
       elevation: 0,
       shadowColor: Colors.transparent,
       child: FutureBuilder<List<ImageProvider?>>(
@@ -562,7 +562,7 @@ class _FullscreenButton extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: const AppColors.gray900,
+            color: AppColors.gray900,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0x33FFFFFF)),
           ),
@@ -597,7 +597,7 @@ class _GlassChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const AppColors.gray900,
+        color: AppColors.gray900,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x33FFFFFF)),
       ),
@@ -633,9 +633,7 @@ class _CarouselPager extends StatelessWidget {
             width: i == index ? 14 : 5,
             height: 5,
             decoration: BoxDecoration(
-              color: i == index
-                  ? const AppColors.navyBright
-                  : const AppColors.gray300,
+              color: i == index ? AppColors.navyBright : AppColors.gray300,
               borderRadius: BorderRadius.circular(99),
             ),
           ),

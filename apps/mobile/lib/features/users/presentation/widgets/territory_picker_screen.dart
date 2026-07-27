@@ -230,7 +230,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                   width: double.infinity,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const AppColors.navyDeep,
+                      backgroundColor: AppColors.navyDeep,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _loading
@@ -606,11 +606,9 @@ class _ManagerScopeBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const AppColors.blue600.withValues(alpha: 0.08),
+        color: AppColors.blue600.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const AppColors.blue600.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppColors.blue600.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [

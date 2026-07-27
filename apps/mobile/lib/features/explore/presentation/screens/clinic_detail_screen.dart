@@ -6,13 +6,14 @@ import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
     as api;
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
@@ -20,6 +21,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purc
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_payers_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
@@ -112,12 +115,12 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
   @override
   Widget build(BuildContext context) {
     final clinicId = widget.clinicId;
-    final repo = ref.watch(clinicDetailRepositoryProvider(clinicId));
+    final repository = ref.watch(clinicDetailRepositoryProvider(clinicId));
 
     return Scaffold(
-      backgroundColor: const AppColors.navyBright,
+      backgroundColor: AppColors.navyBright,
       appBar: AppBar(
-        backgroundColor: const AppColors.navyBright,
+        backgroundColor: AppColors.navyBright,
         foregroundColor: Colors.white,
         systemOverlayStyle: .light,
         actions: [
@@ -136,13 +139,16 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
         ],
       ),
       body: ColoredBox(
-        color: const AppColors.surfaceTertiary,
-        child: detailAsync.when(
-          skipLoadingOnReload: true,
-          loading: () => _loadingSkeleton(context),
-          error: (err, _) => _errorView(context, clinicId, err),
-          data: (detail) =>
-              _ClinicDetailBody(detail: detail, clinicId: clinicId),
+        color: AppColors.surfaceTertiary,
+        child: RepositoryBuilder<ClinicDetailRepository, api.Clinic>(
+          repository: repository,
+          builder: (context, snapshot, repository) {
+            if (snapshot == null) {
+              return _loadingSkeleton(context);
+            }
+            final detail = ClinicDetail.fromApi(snapshot);
+            return _ClinicDetailBody(detail: detail, clinicId: clinicId);
+          },
         ),
       ),
     );
@@ -152,7 +158,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     return SafeArea(
       child: Column(
         children: [
-          _buildHeaderShimmer(context),
+          _buildHeaderSkeleton(context),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -160,7 +166,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
                 6,
                 (_) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: _ShimmerBlock(height: 100),
+                  child: _SkeletonBlock(height: 100),
                 ),
               ),
             ),
@@ -170,7 +176,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     );
   }
 
-  Widget _buildHeaderShimmer(BuildContext context) {
+  Widget _buildHeaderSkeleton(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return Container(
       height: 180 + top,
@@ -183,53 +189,6 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       ),
       child: const Center(
         child: CircularProgressIndicator(color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _errorView(BuildContext context, String clinicId, Object error) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.wifi_off_rounded,
-                size: 48,
-                color: AppColors.red,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Não foi possível carregar o estabelecimento',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _friendlyLoadError(error),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.gray500, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => ref.invalidate(clinicDetailProvider(clinicId)),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Tentar novamente'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => context.pop(),
-                child: const Text('Voltar'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -437,7 +396,7 @@ class _ClinicDetailBody extends ConsumerWidget {
         .valueOrNull;
 
     return RefreshIndicator(
-      color: const AppColors.navyBright,
+      color: AppColors.navyBright,
       backgroundColor: Colors.white,
       onRefresh: () async {
         ref.invalidate(clinicDetailRepositoryProvider(clinicId));
@@ -513,13 +472,13 @@ class _ClinicDetailContent extends ConsumerWidget {
       children: [
         Column(
           children: [
-            Expanded(child: Container(color: const AppColors.navyBright)),
-            Expanded(child: Container(color: const AppColors.surfaceTertiary)),
+            Expanded(child: Container(color: AppColors.navyBright)),
+            Expanded(child: Container(color: AppColors.surfaceTertiary)),
           ],
         ),
         SingleChildScrollView(
           child: ColoredBox(
-            color: const AppColors.surfaceTertiary,
+            color: AppColors.surfaceTertiary,
             child: Column(
               children: [
                 ClinicHeaderSection(detail: detail, sections: sections),
@@ -819,7 +778,7 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: const AppColors.blueLight,
+        color: AppColors.blueLight,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -851,20 +810,13 @@ class _HeaderLinkButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.navyBright,
-              ),
-            ),
-            if (icon != null)
-              Icon(icon, size: 16, color: const AppColors.navyBright),
-          ],
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.navyBright,
+          ),
         ),
       ),
     );
@@ -906,7 +858,7 @@ class _SectionErrorCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const AppColors.red50,
+        color: AppColors.red50,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -927,7 +879,7 @@ class _SectionErrorCard extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Tentar novamente'),
               style: TextButton.styleFrom(
-                foregroundColor: const AppColors.red,
+                foregroundColor: AppColors.red,
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
               ),
@@ -1063,7 +1015,7 @@ class _ActionButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(color: const AppColors.gray100),
+                border: Border.all(color: AppColors.gray100),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -1072,7 +1024,7 @@ class _ActionButton extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(icon, size: 20, color: const AppColors.navyBright),
+              child: Icon(icon, size: 20, color: AppColors.navyBright),
             ),
             const SizedBox(height: 6),
             Text(
@@ -1102,9 +1054,9 @@ class _SuggestEditBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const AppColors.surfaceTertiary,
+        color: AppColors.surfaceTertiary,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1157,7 +1109,7 @@ class _ClinicDeactivateButton extends ConsumerWidget {
           icon: const Icon(Icons.power_settings_new_rounded, size: 18),
           label: const Text('Solicitar desativação'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const AppColors.error,
+            foregroundColor: AppColors.error,
             side: const BorderSide(color: AppColors.red100),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
@@ -1185,17 +1137,19 @@ class _ClinicDeactivateButton extends ConsumerWidget {
 // for the old implementation. `ClinicAdminInfoSection` should use
 // `displayTaxIdentifier` (from `tax_identifier.dart`) for its CNPJ/CPF row.
 // ===============================================================
-class _ShimmerBlock extends StatelessWidget {
+class _SkeletonBlock extends StatelessWidget {
   final double height;
-  const _ShimmerBlock({required this.height});
+  const _SkeletonBlock({required this.height});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: const AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(16),
+    return AtlasShimmer(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }

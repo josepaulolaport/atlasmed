@@ -7,14 +7,13 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 /// Distinct specialty labels from `GET /api/v1/professionals/specialties`.
 class ProfessionalSpecialtiesRepository extends Repository<List<String>>
     with SessionEnvironmentMixin<List<String>> {
-  ProfessionalSpecialtiesRepository({
-    String? baseUrl,
-  }) : super(
-         endpoint: Uri.parse(
-           '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/professionals/specialties',
-         ),
-         name: 'ProfessionalSpecialtiesRepository',
-       );
+  ProfessionalSpecialtiesRepository({String? baseUrl})
+    : super(
+        endpoint: Uri.parse(
+          '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/professionals/specialties',
+        ),
+        name: 'ProfessionalSpecialtiesRepository',
+      );
 
   @override
   List<String> fromJson(String json) {

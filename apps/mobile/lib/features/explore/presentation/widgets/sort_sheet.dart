@@ -114,26 +114,18 @@ class SortSheet extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: on
-                                ? const AppColors.blue50
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
+                                ? AppColors.navyBright
+                                : AppColors.gray300,
+                            width: 2,
                           ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: on
-                                        ? const AppColors.navyBright
-                                        : const AppColors.gray300,
-                                    width: 2,
-                                  ),
-                                  color: on
-                                      ? const AppColors.navyBright
-                                      : Colors.white,
+                          color: on ? AppColors.navyBright : Colors.transparent,
+                        ),
+                        child: on
+                            ? const Center(
+                                child: Icon(
+                                  Icons.check,
+                                  size: 12,
+                                  color: Colors.white,
                                 ),
                               )
                             : null,
@@ -148,31 +140,15 @@ class SortSheet extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF0f1729),
+                                color: AppColors.gray900,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      opt.label,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.gray900,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      opt.subtitle,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.gray500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              opt.subtitle,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.gray500,
                               ),
                             ),
                           ],

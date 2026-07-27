@@ -59,7 +59,7 @@ class EmptyState extends StatelessWidget {
                     ? Icons.search_off_rounded
                     : Icons.person_off_outlined,
                 size: 32,
-                color: const AppColors.gray400,
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 20),

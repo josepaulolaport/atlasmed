@@ -51,7 +51,7 @@ class ClinicRow extends StatelessWidget {
                       width: 14,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: const AppColors.rose,
+                        color: AppColors.rose,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
@@ -208,7 +208,7 @@ class _MetaItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 11, color: const AppColors.gray500),
+        Icon(icon, size: 11, color: AppColors.gray500),
         const SizedBox(width: 4),
         Text(
           text,

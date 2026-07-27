@@ -145,7 +145,7 @@ class _AddressEditSuggestionSheetBodyState
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -231,7 +231,7 @@ class _AddressEditSuggestionSheetBodyState
                   });
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyBright,
+                  backgroundColor: AppColors.navyBright,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -285,7 +285,7 @@ class _AddressField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: label,
             filled: true,
-            fillColor: const AppColors.surfaceTertiary,
+            fillColor: AppColors.surfaceTertiary,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,

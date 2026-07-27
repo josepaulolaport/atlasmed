@@ -49,7 +49,7 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -92,7 +92,7 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
               width: double.infinity,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyDeep,
+                  backgroundColor: AppColors.navyDeep,
                 ),
                 onPressed: _saving ? null : _submit,
                 child: _saving
@@ -162,7 +162,7 @@ class _RoleOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.08) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? color : const AppColors.gray200),
+          border: Border.all(color: selected ? color : AppColors.gray200),
         ),
         child: Row(
           children: [

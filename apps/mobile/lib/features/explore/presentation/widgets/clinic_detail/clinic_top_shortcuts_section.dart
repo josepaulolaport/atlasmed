@@ -160,7 +160,7 @@ class _ShortcutCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 19, color: const AppColors.navyBright),
+            Icon(icon, size: 19, color: AppColors.navyBright),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -202,9 +202,9 @@ class _ShortcutBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (_tone) {
-      _BadgeTone.complete => (const AppColors.green50, const AppColors.greenDark),
-      _BadgeTone.pending => (const AppColors.amber50, const AppColors.amber),
-      _BadgeTone.neutral => (const AppColors.gray100, const AppColors.gray400),
+      _BadgeTone.complete => (AppColors.green50, AppColors.greenDark),
+      _BadgeTone.pending => (AppColors.amber50, AppColors.amber),
+      _BadgeTone.neutral => (AppColors.gray100, AppColors.gray400),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

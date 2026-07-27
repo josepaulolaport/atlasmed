@@ -368,13 +368,13 @@ extension FacilityCommercialStatusX on FacilityCommercialStatus {
   Color get color {
     switch (this) {
       case FacilityCommercialStatus.registered:
-        return const AppColors.blueAccent;
+        return AppColors.blueAccent;
       case FacilityCommercialStatus.active:
-        return const AppColors.green;
+        return AppColors.green;
       case FacilityCommercialStatus.suspended:
-        return const AppColors.amber;
+        return AppColors.amber;
       case FacilityCommercialStatus.inactive:
-        return const AppColors.gray500;
+        return AppColors.gray500;
     }
   }
 }
@@ -402,13 +402,13 @@ extension FacilityPurchaseStatusX on FacilityPurchaseStatus {
   Color get color {
     switch (this) {
       case FacilityPurchaseStatus.nonBuyer:
-        return const AppColors.amber;
+        return AppColors.amber;
       case FacilityPurchaseStatus.lowBuyer:
-        return const AppColors.blueAccent;
+        return AppColors.blueAccent;
       case FacilityPurchaseStatus.regularBuyer:
-        return const AppColors.navyBright;
+        return AppColors.navyBright;
       case FacilityPurchaseStatus.highBuyer:
-        return const AppColors.green;
+        return AppColors.green;
     }
   }
 }
@@ -438,13 +438,13 @@ extension FacilityConformityStatusX on FacilityConformityStatus {
   Color get color {
     switch (this) {
       case FacilityConformityStatus.incomplete:
-        return const AppColors.gray500;
+        return AppColors.gray500;
       case FacilityConformityStatus.complete:
-        return const AppColors.green;
+        return AppColors.green;
       case FacilityConformityStatus.expiringSoon:
-        return const AppColors.amber;
+        return AppColors.amber;
       case FacilityConformityStatus.nonConforming:
-        return const AppColors.red;
+        return AppColors.red;
     }
   }
 }
@@ -615,11 +615,11 @@ extension VisitSentimentX on VisitSentiment {
   Color get color {
     switch (this) {
       case VisitSentiment.positive:
-        return const AppColors.green;
+        return AppColors.green;
       case VisitSentiment.mixed:
-        return const AppColors.amber;
+        return AppColors.amber;
       case VisitSentiment.negative:
-        return const AppColors.red;
+        return AppColors.red;
     }
   }
 }
@@ -714,30 +714,30 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
   Color get color {
     switch (this) {
       case EstablishmentDocumentStatus.missing:
-        return const AppColors.gray400;
+        return AppColors.gray400;
       case EstablishmentDocumentStatus.ready:
-        return const AppColors.navyBright;
+        return AppColors.navyBright;
       case EstablishmentDocumentStatus.pending:
-        return const AppColors.amber;
+        return AppColors.amber;
       case EstablishmentDocumentStatus.approved:
-        return const AppColors.greenDark;
+        return AppColors.greenDark;
       case EstablishmentDocumentStatus.rejected:
-        return const AppColors.red;
+        return AppColors.red;
     }
   }
 
   Color get backgroundColor {
     switch (this) {
       case EstablishmentDocumentStatus.missing:
-        return const AppColors.gray100;
+        return AppColors.gray100;
       case EstablishmentDocumentStatus.ready:
-        return const AppColors.blue100;
+        return AppColors.blue100;
       case EstablishmentDocumentStatus.pending:
-        return const AppColors.amber50;
+        return AppColors.amber50;
       case EstablishmentDocumentStatus.approved:
-        return const AppColors.green50;
+        return AppColors.green50;
       case EstablishmentDocumentStatus.rejected:
-        return const AppColors.red50;
+        return AppColors.red50;
     }
   }
 

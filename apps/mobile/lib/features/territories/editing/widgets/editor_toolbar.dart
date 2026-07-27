@@ -87,7 +87,7 @@ class EditorToolbar extends StatelessWidget {
               width: 1,
               height: 26,
               margin: const EdgeInsets.symmetric(horizontal: 6),
-              color: const AppColors.gray200,
+              color: AppColors.gray200,
             ),
             _IconButton(
               icon: Icons.undo_rounded,
@@ -127,12 +127,12 @@ class _ModeButton extends StatelessWidget {
     // the bar, showing every label at once would overflow a typical
     // phone width.
     final iconColor = !enabled
-        ? const AppColors.gray300
+        ? AppColors.gray300
         : selected
-        ? const AppColors.navyDeep
-        : const AppColors.gray500;
+        ? AppColors.navyDeep
+        : AppColors.gray500;
     return Material(
-      color: selected && enabled ? const AppColors.blue50 : Colors.transparent,
+      color: selected && enabled ? AppColors.blue50 : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -186,7 +186,7 @@ class _IconButton extends StatelessWidget {
         child: Icon(
           icon,
           size: 19,
-          color: enabled ? const AppColors.gray700 : const AppColors.gray300,
+          color: enabled ? AppColors.gray700 : AppColors.gray300,
         ),
       ),
     );

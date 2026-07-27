@@ -124,7 +124,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
                 icon: const Icon(Icons.map_rounded, size: 18),
                 label: const Text('Ver estabelecimentos próximos'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const AppColors.navyBright,
+                  foregroundColor: AppColors.navyBright,
                   side: const BorderSide(color: AppColors.blue100),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -182,46 +182,6 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
   }
 }
 
-class _ExpandButton extends StatelessWidget {
-  const _ExpandButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: const AppColors.blueLight,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.open_in_full_rounded,
-              size: 12,
-              color: AppColors.navyBright,
-            ),
-            SizedBox(width: 4),
-            Text(
-              'Expandir',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.navyBright,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Compact card for one nearby establishment, shown in the inline
 /// "Clínicas no raio" horizontal strip — same card language as the radius
 /// map's own nearby-clinic strip. Tapping it (the "Ver mais" affordance)
@@ -245,9 +205,9 @@ class _NearbyClinicCard extends StatelessWidget {
         width: 168,
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
-          color: const AppColors.surfaceTertiary,
+          color: AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const AppColors.gray200),
+          border: Border.all(color: AppColors.gray200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,7 +342,7 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
       await manager.create(
         CircleAnnotationOptions(
           geometry: _point(widget.location),
-          circleColor: const AppColors.navyBright.toARGB32(),
+          circleColor: AppColors.navyBright.toARGB32(),
           circleRadius: 10,
           circleStrokeColor: Colors.white.toARGB32(),
           circleStrokeWidth: 3,
@@ -405,14 +365,14 @@ class _MapPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const AppColors.surfaceSecondary,
+      color: AppColors.surfaceSecondary,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Icon(
             Icons.map_outlined,
             size: 64,
-            color: const AppColors.navyBright.withValues(alpha: 0.15),
+            color: AppColors.navyBright.withValues(alpha: 0.15),
           ),
           const Icon(
             Icons.location_on_rounded,

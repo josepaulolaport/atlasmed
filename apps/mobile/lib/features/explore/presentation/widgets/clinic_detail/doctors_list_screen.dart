@@ -204,7 +204,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         title: Text(
           'Médicos · ${_doctors.length}',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
@@ -213,7 +213,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       floatingActionButton: ref.watch(canMutateProfessionalProvider)
           ? FloatingActionButton(
               onPressed: _openAssociate,
-              backgroundColor: const AppColors.navyBright,
+              backgroundColor: AppColors.navyBright,
               foregroundColor: Colors.white,
               child: const Icon(Icons.add_rounded),
             )
@@ -238,7 +238,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                 child: SortRow(
                   sort: _sort,
-                  onSortTap: () => setState(() => _sortOpen = true),
+                  onSortTap: _showSortSheet,
                   filterChips: _filterChips,
                 ),
               ),

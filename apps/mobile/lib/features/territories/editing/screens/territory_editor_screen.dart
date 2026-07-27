@@ -1553,7 +1553,7 @@ class _RoundIconButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Padding(
           padding: const EdgeInsets.all(10),
-          child: Icon(icon, size: 18, color: const AppColors.gray700),
+          child: Icon(icon, size: 18, color: AppColors.gray700),
         ),
       ),
     );
@@ -1576,7 +1576,7 @@ class _CenteredMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const AppColors.background,
+      color: AppColors.background,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -1590,7 +1590,7 @@ class _CenteredMessage extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 3),
                 )
               else if (icon != null)
-                Icon(icon, size: 42, color: const AppColors.gray500),
+                Icon(icon, size: 42, color: AppColors.gray500),
               if (title != null) ...[
                 const SizedBox(height: 16),
                 Text(

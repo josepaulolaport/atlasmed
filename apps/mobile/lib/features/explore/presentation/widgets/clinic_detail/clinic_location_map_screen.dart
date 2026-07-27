@@ -42,7 +42,7 @@ class _ClinicLocationMapScreenState extends State<ClinicLocationMapScreen> {
     final top = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       body: Column(
         children: [
           Padding(
@@ -117,7 +117,7 @@ class _ClinicLocationMapScreenState extends State<ClinicLocationMapScreen> {
       await manager.create(
         CircleAnnotationOptions(
           geometry: _point(widget.location),
-          circleColor: const AppColors.navyBright.toARGB32(),
+          circleColor: AppColors.navyBright.toARGB32(),
           circleRadius: 11,
           circleStrokeColor: Colors.white.toARGB32(),
           circleStrokeWidth: 3,
@@ -140,14 +140,14 @@ class _LocationMapPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const AppColors.surfaceSecondary,
+      color: AppColors.surfaceSecondary,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Icon(
             Icons.map_outlined,
             size: 64,
-            color: const AppColors.navyBright.withValues(alpha: 0.15),
+            color: AppColors.navyBright.withValues(alpha: 0.15),
           ),
           const Icon(
             Icons.location_on_rounded,

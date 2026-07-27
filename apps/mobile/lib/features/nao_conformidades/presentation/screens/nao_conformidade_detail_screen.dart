@@ -35,7 +35,7 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
 
     return asyncSuggestion.when(
       loading: () => Scaffold(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
@@ -79,7 +79,7 @@ class _NotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -112,7 +112,7 @@ class _DetailBody extends ConsumerWidget {
     final showDecisionBar = canReview && suggestion.isPending;
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -128,7 +128,7 @@ class _DetailBody extends ConsumerWidget {
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       label: Text(canReview ? 'Fila' : 'Voltar'),
                       style: TextButton.styleFrom(
-                        foregroundColor: const AppColors.navyBright,
+                        foregroundColor: AppColors.navyBright,
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -343,9 +343,9 @@ class _FieldChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: const AppColors.blueLight,
+          color: AppColors.blueLight,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const AppColors.blueLight),
+          border: Border.all(color: AppColors.blueLight),
         ),
         child: Text(
           'Campo: $label',
@@ -426,7 +426,7 @@ class _TargetCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
           ),
           child: Row(
             children: [
@@ -434,13 +434,13 @@ class _TargetCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const AppColors.blueLight,
+                  color: AppColors.blueLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   suggestion.targetType.icon,
                   size: 20,
-                  color: const AppColors.navyBright,
+                  color: AppColors.navyBright,
                 ),
               ),
               const SizedBox(width: 12),
@@ -491,9 +491,9 @@ class _DiffCard extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const AppColors.red50,
+          color: AppColors.red50,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const AppColors.red100),
+          border: Border.all(color: AppColors.red100),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -562,7 +562,7 @@ class _DiffCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -640,7 +640,7 @@ class _ReasonCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Text(
         reason,
@@ -663,9 +663,9 @@ class _AwaitingReviewBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const AppColors.amber50,
+        color: AppColors.amber50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.amber50),
+        border: Border.all(color: AppColors.amber50),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,9 +696,9 @@ class _RejectNoteBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const AppColors.red50,
+        color: AppColors.red50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.red100),
+        border: Border.all(color: AppColors.red100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -742,7 +742,7 @@ class _DecisionBar extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
-                foregroundColor: const AppColors.error,
+                foregroundColor: AppColors.error,
                 side: const BorderSide(color: AppColors.red100),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -760,7 +760,7 @@ class _DecisionBar extends StatelessWidget {
             child: FilledButton(
               onPressed: onAccept,
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.green600,
+                backgroundColor: AppColors.green600,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

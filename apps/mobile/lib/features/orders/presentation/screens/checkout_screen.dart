@@ -32,7 +32,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             height: 4,
             margin: const EdgeInsets.only(top: 10),
             decoration: BoxDecoration(
-              color: const AppColors.gray200,
+              color: AppColors.gray200,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -81,7 +81,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             height: 4,
             margin: const EdgeInsets.only(top: 10),
             decoration: BoxDecoration(
-              color: const AppColors.gray200,
+              color: AppColors.gray200,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -132,7 +132,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final canConfirm = cart.clinic != null && cart.doctor != null;
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -204,7 +204,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const AppColors.surfaceSecondary),
+                  border: Border.all(color: AppColors.surfaceSecondary),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,9 +343,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: const AppColors.green50,
+                  color: AppColors.green50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const AppColors.green50),
+                  border: Border.all(color: AppColors.green50),
                 ),
                 child: const Row(
                   children: [
@@ -381,8 +381,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const AppColors.navyDeep,
-                    disabledBackgroundColor: const AppColors.gray300,
+                    backgroundColor: AppColors.navyDeep,
+                    disabledBackgroundColor: AppColors.gray300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -445,11 +445,11 @@ class _StepItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = done
-        ? const AppColors.navyDeep
+        ? AppColors.navyDeep
         : current
-        ? const AppColors.blueLight
-        : const AppColors.surfaceSecondary;
-    final fg = done ? Colors.white : const AppColors.navyDeep;
+        ? AppColors.blueLight
+        : AppColors.surfaceSecondary;
+    final fg = done ? Colors.white : AppColors.navyDeep;
     return Column(
       children: [
         Container(
@@ -489,7 +489,7 @@ class _Line extends StatelessWidget {
       child: Container(
         height: 2,
         margin: const EdgeInsets.only(bottom: 22),
-        color: const AppColors.gray200,
+        color: AppColors.gray200,
       ),
     );
   }

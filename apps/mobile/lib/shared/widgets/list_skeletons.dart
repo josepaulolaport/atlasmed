@@ -1,81 +1,6 @@
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-
-/// Animates the neutral surfaces used by list loading placeholders.
-class Shimmer extends StatefulWidget {
-  const Shimmer({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  State<Shimmer> createState() => _ShimmerState();
-}
-
-class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.stop();
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) {
-      return widget.child;
-    }
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) => ShaderMask(
-        blendMode: BlendMode.srcATop,
-        shaderCallback: (bounds) => LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: const [
-            AppColors.surfaceSecondary,
-            AppColors.surfaceTertiary,
-            AppColors.surfaceSecondary,
-          ],
-          stops: const [0.25, 0.5, 0.75],
-          transform: _SlidingGradientTransform(_controller.value),
-        ).createShader(bounds),
-        child: child,
-      ),
-      child: widget.child,
-    );
-  }
-}
-
-class _SlidingGradientTransform extends GradientTransform {
-  const _SlidingGradientTransform(this.slidePercent);
-
-  final double slidePercent;
-
-  @override
-  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) =>
-      Matrix4.translationValues((slidePercent * 2 - 1) * bounds.width, 0, 0);
-}
 
 class _SkeletonBar extends StatelessWidget {
   const _SkeletonBar({required this.width, required this.height});
@@ -88,7 +13,7 @@ class _SkeletonBar extends StatelessWidget {
     width: width,
     height: height,
     decoration: BoxDecoration(
-      color: const AppColors.surfaceSecondary,
+      color: AppColors.surfaceSecondary,
       borderRadius: BorderRadius.circular(4),
     ),
   );
@@ -101,7 +26,7 @@ class _ListPlaceholder extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   @override
-  Widget build(BuildContext context) => Shimmer(
+  Widget build(BuildContext context) => AtlasShimmer(
     child: Padding(
       padding: padding ?? EdgeInsets.zero,
       child: Column(children: children),
@@ -131,7 +56,7 @@ class _ReviewCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,7 +65,7 @@ class _ReviewCardPlaceholder extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const AppColors.surfaceSecondary,
+            color: AppColors.surfaceSecondary,
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -193,7 +118,7 @@ class _SuggestionCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +173,7 @@ class _OrderCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -301,7 +226,8 @@ class InvitationListSkeleton extends StatelessWidget {
             const SizedBox(height: 7),
             const _SkeletonBar(width: 200, height: 11),
             if (index != 3) const SizedBox(height: 14),
-            if (index != 3) const Divider(height: 1, color: AppColors.surfaceSecondary),
+            if (index != 3)
+              const Divider(height: 1, color: AppColors.surfaceSecondary),
           ],
         ),
       ),
@@ -332,7 +258,7 @@ class _ProductRowPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Row(
       children: [
@@ -380,7 +306,7 @@ class _CompetitorRowPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Row(
       children: [
@@ -416,7 +342,7 @@ class CompetitorPickerListSkeleton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: const AppColors.background,
+            color: AppColors.background,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Row(
@@ -482,7 +408,7 @@ class _SkeletonIconBox extends StatelessWidget {
     width: size,
     height: size,
     decoration: BoxDecoration(
-      color: const AppColors.surfaceSecondary,
+      color: AppColors.surfaceSecondary,
       borderRadius: BorderRadius.circular(radius),
     ),
   );

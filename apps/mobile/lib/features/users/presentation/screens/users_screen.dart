@@ -48,7 +48,7 @@ class UsersScreen extends ConsumerWidget {
       ),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
-              backgroundColor: const AppColors.navyDeep,
+              backgroundColor: AppColors.navyDeep,
               onPressed: () => context.push('/users/invite'),
               icon: const Icon(
                 Icons.person_add_alt_1_rounded,
@@ -239,7 +239,7 @@ class _SearchBar extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const AppColors.gray200),
+              border: Border.all(color: AppColors.gray200),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A000000),
@@ -310,9 +310,9 @@ class _SearchBar extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: filterCount > 0 ? const AppColors.navyBright : Colors.white,
+              color: filterCount > 0 ? AppColors.navyBright : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const AppColors.gray200),
+              border: Border.all(color: AppColors.gray200),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A000000),
@@ -329,7 +329,7 @@ class _SearchBar extends StatelessWidget {
                     size: 18,
                     color: filterCount > 0
                         ? Colors.white
-                        : const AppColors.navyBright,
+                        : AppColors.navyBright,
                   ),
                 ),
                 if (filterCount > 0)

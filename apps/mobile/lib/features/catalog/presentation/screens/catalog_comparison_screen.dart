@@ -8,8 +8,8 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/comparison_table.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
-import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
     show isAdminProvider;
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Comparativo" screen — scoped to exactly one AtlasMed product: shows that
 /// variant (pinned) plus its registered competitor equivalences, searchable
@@ -93,7 +93,7 @@ class _CatalogComparisonScreenState
     final isAdmin = ref.watch(isAdminProvider);
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [

@@ -146,10 +146,10 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
     final families = familiesAsync.valueOrNull ?? const [];
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
-              backgroundColor: const AppColors.navyDeep,
+              backgroundColor: AppColors.navyDeep,
               icon: const Icon(Icons.add_rounded),
               label: const Text('Novo produto'),
               onPressed: () => _openNewProductForm(families),
@@ -230,7 +230,7 @@ class _ProductRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
           ),
           child: Row(
             children: [
@@ -238,7 +238,7 @@ class _ProductRow extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const AppColors.blue50,
+                  color: AppColors.blue50,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -343,7 +343,7 @@ class _VariantQuickView extends StatelessWidget {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const AppColors.gray200,
+                    color: AppColors.gray200,
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
@@ -387,9 +387,9 @@ class _PublicationFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const AppColors.background,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [

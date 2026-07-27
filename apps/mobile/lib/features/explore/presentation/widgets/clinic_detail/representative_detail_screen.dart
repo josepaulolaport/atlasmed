@@ -50,11 +50,11 @@ class _RepresentativeDetailScreenState
         Navigator.of(context).pop(_professional);
       },
       child: Scaffold(
-        backgroundColor: const AppColors.surfaceTertiary,
+        backgroundColor: AppColors.surfaceTertiary,
         appBar: AppBar(
-          backgroundColor: const AppColors.surfaceTertiary,
+          backgroundColor: AppColors.surfaceTertiary,
           elevation: 0,
-          foregroundColor: const AppColors.gray900,
+          foregroundColor: AppColors.gray900,
           title: const Text('Perfil do profissional'),
           actions: [
             if (canEdit)
@@ -69,7 +69,7 @@ class _RepresentativeDetailScreenState
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundColor: const AppColors.blueLight,
+                    backgroundColor: AppColors.blueLight,
                     child: Text(
                       _initials(_professional.name),
                       style: const TextStyle(
@@ -268,7 +268,7 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const AppColors.blueLight,
+        color: AppColors.blueLight,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -349,7 +349,7 @@ class _InfoRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(icon, size: 17, color: const AppColors.gray400),
+            Icon(icon, size: 17, color: AppColors.gray400),
             const SizedBox(width: 10),
             SizedBox(
               width: 80,
@@ -365,8 +365,8 @@ class _InfoRow extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: value != null
-                      ? const AppColors.navyBright
-                      : const AppColors.gray400,
+                      ? AppColors.navyBright
+                      : AppColors.gray400,
                 ),
               ),
             ),

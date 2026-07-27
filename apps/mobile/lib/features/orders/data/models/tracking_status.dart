@@ -49,15 +49,15 @@ extension TrackingStatusX on TrackingStatus {
   Color get color {
     switch (this) {
       case TrackingStatus.pending:
-        return const AppColors.amber;
+        return AppColors.amber;
       case TrackingStatus.confirmed:
-        return const AppColors.green;
+        return AppColors.green;
       case TrackingStatus.processing:
-        return const AppColors.blueDark;
+        return AppColors.blueDark;
       case TrackingStatus.shipped:
         return const Color(0xFF8b5cf6);
       case TrackingStatus.delivered:
-        return const AppColors.green;
+        return AppColors.green;
       case TrackingStatus.cancelled:
         return const Color(0xFFef4444);
     }
@@ -66,17 +66,17 @@ extension TrackingStatusX on TrackingStatus {
   Color get tone {
     switch (this) {
       case TrackingStatus.pending:
-        return const AppColors.amber50;
+        return AppColors.amber50;
       case TrackingStatus.confirmed:
-        return const AppColors.green50;
+        return AppColors.green50;
       case TrackingStatus.processing:
-        return const AppColors.blue50;
+        return AppColors.blue50;
       case TrackingStatus.shipped:
-        return const AppColors.blueLight;
+        return AppColors.blueLight;
       case TrackingStatus.delivered:
-        return const AppColors.green50;
+        return AppColors.green50;
       case TrackingStatus.cancelled:
-        return const AppColors.red50;
+        return AppColors.red50;
     }
   }
 }

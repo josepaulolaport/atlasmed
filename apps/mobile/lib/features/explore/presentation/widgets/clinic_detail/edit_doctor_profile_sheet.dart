@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// API keys on `PATCH /api/v1/professionals/:id` that the doctor detail UI can edit.
@@ -131,7 +130,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -163,7 +162,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
             decoration: InputDecoration(
               hintText: _hint,
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -180,7 +179,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.navyBright,
+              backgroundColor: AppColors.navyBright,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

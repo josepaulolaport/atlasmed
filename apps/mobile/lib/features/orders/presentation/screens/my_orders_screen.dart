@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
@@ -34,7 +33,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
     final ordersAsync = ref.watch(meusOrdersProvider(statuses));
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -155,7 +154,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const AppColors.navyDeep,
+                        backgroundColor: AppColors.navyDeep,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -208,7 +207,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _SummaryCard(
             label: 'Em trânsito',
             count: transitCount,
-            color: const AppColors.navyDeep,
+            color: AppColors.navyDeep,
           ),
         ),
         const SizedBox(width: 10),
@@ -216,7 +215,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _SummaryCard(
             label: 'Pendentes',
             count: pendingCount,
-            color: const AppColors.amber,
+            color: AppColors.amber,
           ),
         ),
         const SizedBox(width: 10),
@@ -224,7 +223,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _SummaryCard(
             label: 'Entregues',
             count: deliveredCount,
-            color: const AppColors.green,
+            color: AppColors.green,
           ),
         ),
       ],
@@ -250,7 +249,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Column(
         children: [
@@ -296,16 +295,16 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? const AppColors.navyDeep : Colors.white,
+          color: selected ? AppColors.navyDeep : Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const AppColors.surfaceSecondary),
+          border: Border.all(color: AppColors.surfaceSecondary),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const AppColors.gray500,
+            color: selected ? Colors.white : AppColors.gray500,
           ),
         ),
       ),
@@ -328,7 +327,7 @@ class _OrderCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const AppColors.surfaceSecondary),
+          border: Border.all(color: AppColors.surfaceSecondary),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,7 +357,11 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 10),
             PStatusChip(status: order.status),
             const SizedBox(height: 12),
-            const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary),
+            const Divider(
+              height: 1,
+              thickness: 1,
+              color: AppColors.surfaceSecondary,
+            ),
             const SizedBox(height: 10),
             Row(
               children: [

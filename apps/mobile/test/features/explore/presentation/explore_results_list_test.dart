@@ -2,6 +2,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,7 +47,7 @@ void main() {
     await tester.pumpWidget(buildSubject(loadingMore: true));
 
     expect(find.byType(SkeletonRow), findsOneWidget);
-    expect(find.byType(ShaderMask), findsOneWidget);
+    expect(find.byType(AtlasShimmer), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 

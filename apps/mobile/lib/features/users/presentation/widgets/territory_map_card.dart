@@ -118,8 +118,8 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
                 height: widget.mapHeight,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const AppColors.surfaceSecondary,
-                    border: Border.all(color: const AppColors.surfaceSecondary),
+                    color: AppColors.surfaceSecondary,
+                    border: Border.all(color: AppColors.surfaceSecondary),
                   ),
                   child: Stack(
                     fit: StackFit.expand,
@@ -202,7 +202,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
         FillLayer(
           id: _fillLayerId,
           sourceId: _sourceId,
-          fillColor: const AppColors.blue600.toARGB32(),
+          fillColor: AppColors.blue600.toARGB32(),
           fillOpacity: 0.22,
         ),
       );
@@ -210,7 +210,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
         LineLayer(
           id: _lineLayerId,
           sourceId: _sourceId,
-          lineColor: const AppColors.blueDark.toARGB32(),
+          lineColor: AppColors.blueDark.toARGB32(),
           lineWidth: 2,
           lineOpacity: 0.9,
           lineJoin: LineJoin.ROUND,
@@ -314,7 +314,7 @@ class _ExpandButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
         boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 4)],
       ),
       child: const Icon(

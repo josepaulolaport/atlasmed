@@ -21,7 +21,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
 
     if (submission == null) {
       return Scaffold(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
@@ -49,7 +49,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
         submission.isPending && ref.watch(canReviewCadastroProvider);
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -65,7 +65,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       label: const Text('Fila'),
                       style: TextButton.styleFrom(
-                        foregroundColor: const AppColors.navyBright,
+                        foregroundColor: AppColors.navyBright,
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -217,9 +217,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.greenDark,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.greenDark),
             child: const Text('Aprovar'),
           ),
         ],
@@ -332,7 +330,7 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -359,7 +357,7 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
             decoration: InputDecoration(
               hintText: 'Ex.: Documento ilegível, envie nova foto…',
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppColors.gray200),
@@ -387,9 +385,7 @@ class _RejectNoteSheetState extends State<_RejectNoteSheet> {
                     if (text.isEmpty) return;
                     Navigator.of(context).pop(text);
                   },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const AppColors.red,
-                  ),
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.red),
                   child: const Text('Rejeitar'),
                 ),
               ),
@@ -462,7 +458,7 @@ class _ClinicSnapshotCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,7 +538,7 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: const AppColors.gray400),
+          Icon(icon, size: 16, color: AppColors.gray400),
           const SizedBox(width: 8),
           SizedBox(
             width: 78,
@@ -578,7 +574,7 @@ class _RejectNoteBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const AppColors.red50,
+        color: AppColors.red50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -627,7 +623,7 @@ class _DecisionBar extends StatelessWidget {
             child: OutlinedButton(
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
-                foregroundColor: const AppColors.red,
+                foregroundColor: AppColors.red,
                 side: const BorderSide(color: AppColors.red100),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -642,7 +638,7 @@ class _DecisionBar extends StatelessWidget {
             child: FilledButton(
               onPressed: onApprove,
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.greenDark,
+                backgroundColor: AppColors.greenDark,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
