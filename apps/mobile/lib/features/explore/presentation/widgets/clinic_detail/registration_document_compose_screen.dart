@@ -466,7 +466,7 @@ class _RegistrationDocumentComposeScreenState
                     style: FilledButton.styleFrom(
                       backgroundColor: const AppColors.navyBright,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFcbd5e1),
+                      disabledBackgroundColor: const AppColors.gray300,
                       disabledForegroundColor: Colors.white70,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -927,7 +927,7 @@ class _ImageProgressTile extends StatelessWidget {
                         fit: BoxFit.cover,
                         width: double.infinity,
                         errorBuilder: (_, _, _) => const ColoredBox(
-                          color: Color(0xFFf1f5f9),
+                          color: AppColors.gray100,
                           child: Center(
                             child: Icon(
                               Icons.broken_image_outlined,

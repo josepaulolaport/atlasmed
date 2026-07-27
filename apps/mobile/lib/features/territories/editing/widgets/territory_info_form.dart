@@ -116,7 +116,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+                        borderSide: BorderSide(color: AppColors.gray200),
                       ),
                     ),
                   ),
@@ -140,7 +140,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE1E4EA)),
+                      border: Border.all(color: const AppColors.gray200),
                     ),
                     child: Row(
                       children: [

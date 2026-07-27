@@ -598,7 +598,7 @@ class _DeliveryBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final delivered = detail.status == OrderStatus.invoiced;
     final bg = delivered ? const Color(0x1F16a373) : const Color(0x1A0a2f7f);
-    final fg = delivered ? const Color(0xFF0f8a5f) : const AppColors.navyDeep;
+    final fg = delivered ? const AppColors.green600 : const AppColors.navyDeep;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -653,7 +653,7 @@ class _AvatarInitials extends StatelessWidget {
       width: 34,
       height: 34,
       decoration: const BoxDecoration(
-        color: Color(0xFFe8eefc),
+        color: AppColors.blueLight,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,

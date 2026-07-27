@@ -125,7 +125,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+                        borderSide: BorderSide(color: AppColors.gray200),
                       ),
                     ),
                   ),
@@ -259,7 +259,7 @@ class _FormBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE1E4EA)),
+        border: Border.all(color: const AppColors.gray200),
       ),
       child: child,
     );

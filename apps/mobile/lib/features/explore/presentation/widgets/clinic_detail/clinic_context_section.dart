@@ -39,7 +39,7 @@ class ClinicContextSection extends StatelessWidget {
                   ? 'gerente responsável · desde ${_formatMonthYear(managerSince!)}'
                   : 'gerente responsável',
               avatarColor: const Color(0xFFecfdf5),
-              initialsColor: const Color(0xFF047857),
+              initialsColor: const AppColors.green600,
             ),
           ],
           const Divider(height: 20, color: AppColors.gray100),

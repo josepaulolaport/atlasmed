@@ -43,7 +43,7 @@ class TerritoryDetailSheet extends ConsumerWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFe1e4ea),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

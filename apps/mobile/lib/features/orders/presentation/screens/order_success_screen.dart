@@ -49,7 +49,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: const AppColors.blueLight,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -152,9 +152,9 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEAF8EF),
+                      color: const AppColors.green50,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFBEE7CC)),
+                      border: Border.all(color: const AppColors.green50),
                     ),
                     child: const Row(
                       children: [
@@ -170,7 +170,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF166534),
+                              color: AppColors.green600,
                             ),
                           ),
                         ),
@@ -222,7 +222,7 @@ class _HeroSection extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFEAF8EF), Color(0xFFF6FBF8)],
+          colors: [AppColors.green50, AppColors.green50],
         ),
         borderRadius: BorderRadius.circular(20),
       ),
@@ -234,7 +234,7 @@ class _HeroSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFBEE7CC), width: 2),
+              border: Border.all(color: const AppColors.green50, width: 2),
             ),
             child: const Icon(
               Icons.check_rounded,

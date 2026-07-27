@@ -354,7 +354,7 @@ class _IdentityCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFf1f3f6)),
+          const Divider(height: 1, color: AppColors.gray100),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -369,7 +369,7 @@ class _IdentityCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFf1f3f6)),
+          const Divider(height: 1, color: AppColors.gray100),
           const SizedBox(height: 12),
           _DetailRow(label: 'Usuário', value: '@${user.username}'),
           const SizedBox(height: 8),

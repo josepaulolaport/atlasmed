@@ -161,7 +161,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0f172a),
+                          color: AppColors.gray900,
                         ),
                       ),
                     ],
@@ -343,9 +343,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAF8F1),
+                  color: const AppColors.green50,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFc8eadb)),
+                  border: Border.all(color: const AppColors.green50),
                 ),
                 child: const Row(
                   children: [
@@ -361,7 +361,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF116a4c),
+                          color: AppColors.green600,
                         ),
                       ),
                     ),
@@ -447,7 +447,7 @@ class _StepItem extends StatelessWidget {
     final bg = done
         ? const AppColors.navyDeep
         : current
-        ? const Color(0xFFEAF0FF)
+        ? const AppColors.blueLight
         : const Color(0xFFeef0f3);
     final fg = done ? Colors.white : const AppColors.navyDeep;
     return Column(
@@ -489,7 +489,7 @@ class _Line extends StatelessWidget {
       child: Container(
         height: 2,
         margin: const EdgeInsets.only(bottom: 22),
-        color: const Color(0xFFDDE3EE),
+        color: const AppColors.gray200,
       ),
     );
   }

@@ -170,7 +170,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                   : ListView.separated(
                       itemCount: filtered.length,
                       separatorBuilder: (_, _) =>
-                          const Divider(height: 1, color: Color(0xFFf1f3f6)),
+                          const Divider(height: 1, color: AppColors.gray100),
                       itemBuilder: (context, index) {
                         final manager = filtered[index];
                         final selected = manager.id == widget.selectedId;
@@ -250,11 +250,11 @@ class _ManagerAvatar extends StatelessWidget {
 
   static const _palette = <Color>[
     AppColors.navyDeep,
-    Color(0xFF1D7A5F),
+    AppColors.green600,
     Color(0xFFB45309),
     Color(0xFF7C3AED),
     Color(0xFFBE185D),
-    Color(0xFF0E7490),
+    AppColors.blue600,
   ];
 
   Color get _backgroundColor {

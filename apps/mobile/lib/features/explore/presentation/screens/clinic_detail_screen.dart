@@ -1160,7 +1160,7 @@ class _ClinicDeactivateButton extends ConsumerWidget {
           label: const Text('Solicitar desativação'),
           style: OutlinedButton.styleFrom(
             foregroundColor: const Color(0xFFdc2626),
-            side: const BorderSide(color: Color(0xFFfca5a5)),
+            side: const BorderSide(color: AppColors.red100),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

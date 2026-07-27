@@ -144,10 +144,10 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
     photos: PhotoGallerySummary(
       count: 5,
       thumbnailColors: const [
-        Color(0xFF5eead4),
+        AppColors.green,
         AppColors.gray300,
         Color(0xFF1f2937),
-        Color(0xFF93c5fd),
+        AppColors.blueLight,
         Color(0xFFfbbf24),
       ],
       lastUpdatedAt: DateTime(2026, 2, 10),

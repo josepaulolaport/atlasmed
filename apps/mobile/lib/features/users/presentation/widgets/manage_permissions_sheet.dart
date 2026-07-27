@@ -231,7 +231,7 @@ class _ManagePermissionsSheetState
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Divider(height: 1, color: Color(0xFFf1f3f6)),
+                    const Divider(height: 1, color: AppColors.gray100),
                     const SizedBox(height: 12),
                     const Text(
                       'Permissões concedidas',
@@ -262,7 +262,7 @@ class _ManagePermissionsSheetState
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFf9fafb),
+                            color: const AppColors.surfaceTertiary,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: const Color(0xFFeef0f3)),
                           ),

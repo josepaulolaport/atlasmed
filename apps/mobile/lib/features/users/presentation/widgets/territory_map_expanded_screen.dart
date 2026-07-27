@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen, freely interactive view of a single assigned territory's
 /// map — opened by tapping a [TerritoryMapCard]. Unlike the card preview,
@@ -120,7 +121,7 @@ class _TerritoryMapExpandedScreenState
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFFdbe2ee),
+                                color: AppColors.gray200,
                               ),
                             ),
                           ],
@@ -235,11 +236,11 @@ class _ExpandedMapPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFdfe5f0), Color(0xFFc9d2e3)],
+          colors: [Color(0xFFdfe5f0), AppColors.gray300],
         ),
       ),
       child: const Center(
-        child: Icon(Icons.map_outlined, size: 48, color: Color(0xFF8b95a8)),
+        child: Icon(Icons.map_outlined, size: 48, color: AppColors.gray400),
       ),
     );
   }

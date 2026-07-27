@@ -263,7 +263,7 @@ class _NewOrderProductsScreenState
             border: Border.all(
               color: focused
                   ? const AppColors.navyDeep
-                  : const Color(0xFFd8dee9),
+                  : const AppColors.gray200,
               width: 1.5,
             ),
           ),
@@ -305,7 +305,7 @@ class _NewOrderProductsScreenState
             ),
             selectedColor: const AppColors.navyDeep,
             backgroundColor: Colors.white,
-            side: const BorderSide(color: Color(0xFFd8dee9), width: 1),
+            side: const BorderSide(color: AppColors.gray200, width: 1),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999),
             ),
@@ -342,7 +342,7 @@ class _ProductCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: inCart ? const AppColors.navyDeep : const Color(0xFFd8dee9),
+            color: inCart ? const AppColors.navyDeep : const AppColors.gray200,
             width: 1.5,
           ),
           boxShadow: inCart
@@ -414,7 +414,7 @@ class _ProductCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f8a5f),
+                    color: AppColors.green600,
                   ),
                 ),
               )

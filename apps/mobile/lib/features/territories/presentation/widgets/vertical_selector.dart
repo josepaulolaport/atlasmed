@@ -75,7 +75,7 @@ class _Chip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? const AppColors.navyDeep : Colors.white,
           border: Border.all(
-            color: selected ? const AppColors.navyDeep : const Color(0xFFe1e4ea),
+            color: selected ? const AppColors.navyDeep : const AppColors.gray200,
           ),
           borderRadius: BorderRadius.circular(999),
         ),

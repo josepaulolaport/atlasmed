@@ -345,13 +345,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Container(
                       width: 1,
                       height: 28,
-                      color: const Color(0xFFf1f3f6),
+                      color: const AppColors.gray100,
                     ),
                     _StatCell(value: '${stats.doctors}', label: 'médicos'),
                     Container(
                       width: 1,
                       height: 28,
-                      color: const Color(0xFFf1f3f6),
+                      color: const AppColors.gray100,
                     ),
                     _StatCell(
                       value: '${stats.coveragePct}%',
@@ -410,7 +410,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.green, Color(0xFF14b680)],
+                              colors: [AppColors.green, AppColors.green600],
                             ),
                             borderRadius: BorderRadius.circular(3),
                           ),
@@ -773,7 +773,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           since.isEmpty ? 'Atlasmed · v0.1.0' : 'Atlasmed · v0.1.0 · $since',
           style: const TextStyle(
             fontSize: 10.5,
-            color: Color(0xFFc4c9d2),
+            color: AppColors.gray300,
             letterSpacing: 0.3,
           ),
         ),
@@ -960,7 +960,7 @@ class _ProfileToggleState extends State<_ProfileToggle> {
         width: 38,
         height: 22,
         decoration: BoxDecoration(
-          color: _value ? widget.accent : const Color(0xFFd9dde4),
+          color: _value ? widget.accent : const AppColors.gray200,
           borderRadius: BorderRadius.circular(11),
         ),
         child: AnimatedAlign(
@@ -990,7 +990,7 @@ class _ProfileChevron extends StatelessWidget {
     return const Icon(
       Icons.chevron_right_rounded,
       size: 18,
-      color: Color(0xFFc4c9d2),
+      color: AppColors.gray300,
     );
   }
 }
@@ -1090,7 +1090,7 @@ class _TerritoryMapPreview extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFe9eef1),
+        color: const AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFeef0f3)),
       ),
@@ -1240,7 +1240,7 @@ class _PrefRow extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         border: showTopBorder
-            ? const Border(top: BorderSide(color: Color(0xFFf1f3f6)))
+            ? const Border(top: BorderSide(color: AppColors.gray100))
             : null,
       ),
       child: Row(

@@ -101,7 +101,7 @@ class _ClinicRegistrationDocumentsScreenState
                     style: TextStyle(
                       fontSize: 12.5,
                       height: 1.35,
-                      color: Color(0xFF92400e),
+                      color: AppColors.amber,
                     ),
                   ),
                 ),

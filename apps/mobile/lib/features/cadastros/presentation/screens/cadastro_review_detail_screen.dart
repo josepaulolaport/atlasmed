@@ -628,7 +628,7 @@ class _DecisionBar extends StatelessWidget {
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
                 foregroundColor: const AppColors.red,
-                side: const BorderSide(color: Color(0xFFf5c2c2)),
+                side: const BorderSide(color: AppColors.red100),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

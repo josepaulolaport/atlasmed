@@ -96,7 +96,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE1E4EA)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [

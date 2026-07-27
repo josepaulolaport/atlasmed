@@ -132,7 +132,7 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFeef2ff),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFc7d2fe)),
+          border: Border.all(color: const AppColors.blueLight),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

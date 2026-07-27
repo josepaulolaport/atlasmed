@@ -255,7 +255,7 @@ class _HeroCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0d9488),
+                          color: const AppColors.green,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: const Text(
@@ -275,7 +275,7 @@ class _HeroCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFeef2ff),
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0xFFc7d2fe)),
+                        border: Border.all(color: const AppColors.blueLight),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -314,7 +314,7 @@ class _HeroCard extends StatelessWidget {
             child: const Icon(
               Icons.medication_liquid_outlined,
               size: 40,
-              color: Color(0xFFc8cdd5),
+              color: AppColors.gray300,
             ),
           ),
         ],

@@ -210,7 +210,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                           label: const Text('Adicionar fonte'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const AppColors.navyBright,
-                            side: const BorderSide(color: Color(0xFFbfdbfe)),
+                            side: const BorderSide(color: AppColors.blueLight),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
@@ -357,8 +357,8 @@ class _TotalChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ok = isEmpty || (balanced && !hasZeroShare);
-    final bg = ok ? const Color(0xFFecfdf5) : const Color(0xFFfef2f2);
-    final fg = ok ? const Color(0xFF047857) : const AppColors.red;
+    final bg = ok ? const Color(0xFFecfdf5) : const AppColors.red50;
+    final fg = ok ? const AppColors.green600 : const AppColors.red;
     final String label;
     if (isEmpty) {
       label = 'Nenhuma fonte — salve para limpar o cadastro';

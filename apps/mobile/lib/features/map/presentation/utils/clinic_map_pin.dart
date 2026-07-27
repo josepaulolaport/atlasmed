@@ -34,7 +34,7 @@ final class ClinicMapPin {
   static const Color clusterFill = Color(0xFF1d4ed8);
 
   /// Amber focus pin so the current clinic reads apart from green/blue pins.
-  static const Color focusFill = Color(0xFFEA580C);
+  static const Color focusFill = AppColors.amber;
 
   static Uint8List? _singleBytes;
   static Uint8List? _clusterBytes;

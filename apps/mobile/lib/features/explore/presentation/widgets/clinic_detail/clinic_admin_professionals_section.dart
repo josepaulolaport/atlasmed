@@ -269,7 +269,7 @@ class _ContactRow extends StatelessWidget {
             size: 15,
             color: value != null
                 ? const AppColors.navyBright
-                : const Color(0xFFcbd5e1),
+                : const AppColors.gray300,
           ),
           const SizedBox(width: 8),
           Expanded(

@@ -388,7 +388,7 @@ class _CompTextInput extends StatelessWidget {
         ),
         border: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+          borderSide: BorderSide(color: AppColors.gray200),
         ),
       ),
     );

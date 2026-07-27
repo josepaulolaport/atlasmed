@@ -735,7 +735,7 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
       case EstablishmentDocumentStatus.pending:
         return const Color(0xFFfef3d5);
       case EstablishmentDocumentStatus.approved:
-        return const Color(0xFFe7f6ec);
+        return const AppColors.green50;
       case EstablishmentDocumentStatus.rejected:
         return const Color(0xFFfde8e8);
     }

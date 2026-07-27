@@ -46,7 +46,7 @@ class ProductsProductCard extends StatelessWidget {
                 child: const Icon(
                   Icons.medication_liquid_outlined,
                   size: 34,
-                  color: Color(0xFFc8cdd5),
+                  color: AppColors.gray300,
                 ),
               ),
               const SizedBox(width: 12),

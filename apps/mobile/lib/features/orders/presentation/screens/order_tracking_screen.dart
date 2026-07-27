@@ -269,7 +269,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.2,
-                                color: Color(0xFF8a94a6),
+                                color: AppColors.gray400,
                               ),
                             ),
                             SizedBox(height: 2),
@@ -471,7 +471,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               decoration: const BoxDecoration(
                                 border: Border(
                                   top: BorderSide(
-                                    color: Color(0xFFd8dde5),
+                                    color: AppColors.gray200,
                                     width: 1,
                                     style: BorderStyle.solid,
                                   ),
@@ -521,7 +521,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                                     order.clinic.address,
                                     style: const TextStyle(
                                       fontSize: 12.5,
-                                      color: Color(0xFF5b6474),
+                                      color: AppColors.gray600,
                                       height: 1.35,
                                     ),
                                   ),
@@ -541,7 +541,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const AppColors.red,
                                   side: const BorderSide(
-                                    color: Color(0xFFe9b7b7),
+                                    color: AppColors.red100,
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 14,
@@ -690,7 +690,7 @@ class _TimelineRow extends StatelessWidget {
                   color: isDone ? color : Colors.white,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isDone ? color : const Color(0xFFd7dce3),
+                    color: isDone ? color : const AppColors.gray200,
                     width: 1.2,
                   ),
                   boxShadow: isCurrent
@@ -715,7 +715,7 @@ class _TimelineRow extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF667085),
+                            color: AppColors.gray400,
                           ),
                         ),
                 ),
@@ -756,7 +756,7 @@ class _TimelineRow extends StatelessWidget {
                   timestamp,
                   style: const TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFF8a94a6),
+                    color: AppColors.gray400,
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -764,7 +764,7 @@ class _TimelineRow extends StatelessWidget {
                   description,
                   style: const TextStyle(
                     fontSize: 12.5,
-                    color: Color(0xFF5b6474),
+                    color: AppColors.gray600,
                     height: 1.35,
                   ),
                 ),
@@ -832,7 +832,7 @@ class _DriverCard extends StatelessWidget {
                     '${driver.vehicle} · ⭐ ${driver.rating.toStringAsFixed(1)}',
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF5b6474),
+                      color: AppColors.gray600,
                     ),
                   ),
                 ],

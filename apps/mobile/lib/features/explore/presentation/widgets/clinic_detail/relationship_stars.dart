@@ -18,9 +18,9 @@ class RelationshipStars extends StatelessWidget {
   final ValueChanged<int?>? onChanged;
   final bool showLabel;
 
-  static const _filledColor = Color(0xFFf5a623);
-  static const _emptyColor = Color(0xFFcbd5e1);
-  static const _undeterminedColor = Color(0xFFcbd5e1);
+  static const _filledColor = AppColors.amber;
+  static const _emptyColor = AppColors.gray300;
+  static const _undeterminedColor = AppColors.gray300;
 
   /// Icon size when editable — large enough to see half-fill.
   static const _editableIconSize = 34.0;

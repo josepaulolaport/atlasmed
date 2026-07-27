@@ -648,7 +648,7 @@ class _ManagerScopeBanner extends StatelessWidget {
                             : 'Área: $territoryName',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF334155),
+                          color: AppColors.gray700,
                         ),
                       ),
                     ],

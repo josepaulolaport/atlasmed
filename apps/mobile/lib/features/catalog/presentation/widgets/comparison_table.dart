@@ -144,7 +144,7 @@ class ComparisonSection extends StatelessWidget {
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         border: Border(
-                          bottom: BorderSide(color: Color(0xFFf1f2f5)),
+                          bottom: BorderSide(color: AppColors.gray100),
                         ),
                       ),
                       child: _ComparisonDataRow(
@@ -198,7 +198,7 @@ class PriceIndexTable extends StatelessWidget {
                             ? const Color(0xFFeef2ff)
                             : Colors.white,
                         border: const Border(
-                          bottom: BorderSide(color: Color(0xFFf1f2f5)),
+                          bottom: BorderSide(color: AppColors.gray100),
                         ),
                       ),
                       child: _ComparisonDataRow(
@@ -456,7 +456,7 @@ class _ComparisonDataRow extends StatelessWidget {
                   textAlign: TextAlign.right,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 9, color: Color(0xFFadb2bd)),
+                  style: const TextStyle(fontSize: 9, color: AppColors.gray400),
                 ),
               ),
             ],
@@ -509,7 +509,7 @@ class _ComparisonDataRow extends StatelessWidget {
             style: const TextStyle(
               fontSize: 9.5,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF3b3f8f),
+              color: AppColors.navyDeep,
             ),
           ),
         ),
@@ -525,7 +525,7 @@ class _ComparisonDataRow extends StatelessWidget {
         color: active ? const Color(0xFFeef4ff) : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: active ? const Color(0xFFc7d7fb) : const Color(0xFFe2e5ec),
+          color: active ? const Color(0xFFc7d7fb) : const AppColors.gray200,
         ),
       ),
       child: FittedBox(

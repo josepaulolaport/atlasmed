@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class SkeletonRow extends StatefulWidget {
   final bool isDoctor;
@@ -39,7 +40,7 @@ class _SkeletonRowState extends State<SkeletonRow>
           end: Alignment.centerRight,
           colors: const [
             Color(0xFFeef0f3),
-            Color(0xFFf8fafc),
+            AppColors.surfaceTertiary,
             Color(0xFFeef0f3),
           ],
           stops: const [0.25, 0.5, 0.75],

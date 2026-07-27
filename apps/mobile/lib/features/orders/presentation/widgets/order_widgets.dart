@@ -50,7 +50,7 @@ class PTag extends StatelessWidget {
   static const _map = {
     'top': {
       'bg': Color(0x1F16a373),
-      'color': Color(0xFF0f8a5f),
+      'color': AppColors.green600,
       'label': 'Top',
     },
     'novo': {
@@ -60,7 +60,7 @@ class PTag extends StatelessWidget {
     },
     'premium': {
       'bg': Color(0x1Fc6861b),
-      'color': Color(0xFFb07a10),
+      'color': AppColors.amber,
       'label': 'Premium',
     },
   };
@@ -325,7 +325,7 @@ class SelectorField extends StatelessWidget {
                       fontSize: 14,
                       color: value != null
                           ? const Color(0xFF1f2937)
-                          : const Color(0xFFc4c9d2),
+                          : const AppColors.gray300,
                       fontWeight: value != null
                           ? FontWeight.w500
                           : FontWeight.w400,
@@ -337,7 +337,7 @@ class SelectorField extends StatelessWidget {
             const Icon(
               Icons.keyboard_arrow_down,
               size: 16,
-              color: Color(0xFFc4c9d2),
+              color: AppColors.gray300,
             ),
           ],
         ),

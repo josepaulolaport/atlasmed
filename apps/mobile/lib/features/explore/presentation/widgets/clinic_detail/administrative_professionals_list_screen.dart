@@ -481,7 +481,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                         size: 13,
                         color: hasPhone
                             ? const AppColors.gray500
-                            : const Color(0xFFc4c9d2),
+                            : const AppColors.gray300,
                       ),
                       const SizedBox(width: 5),
                       Expanded(

@@ -343,9 +343,9 @@ class _FieldChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFFeff6ff),
+          color: const AppColors.blueLight,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFbfdbfe)),
+          border: Border.all(color: const AppColors.blueLight),
         ),
         child: Text(
           'Campo: $label',
@@ -434,7 +434,7 @@ class _TargetCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFeff6ff),
+                  color: const AppColors.blueLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -491,7 +491,7 @@ class _DiffCard extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFfef2f2),
+          color: const AppColors.red50,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFfecaca)),
         ),
@@ -663,20 +663,20 @@ class _AwaitingReviewBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFfefce8),
+        color: const AppColors.amber50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFfde68a)),
+        border: Border.all(color: const AppColors.amber50),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.hourglass_top_rounded, size: 18, color: Color(0xFFa16207)),
+          Icon(Icons.hourglass_top_rounded, size: 18, color: AppColors.amber),
           SizedBox(width: 8),
           Expanded(
             child: Text(
               'Aguardando análise. Aceite e rejeição ficam na fila de '
               'Não Conformidades.',
-              style: TextStyle(fontSize: 12.5, color: Color(0xFF854d0e)),
+              style: TextStyle(fontSize: 12.5, color: AppColors.amber),
             ),
           ),
         ],
@@ -696,7 +696,7 @@ class _RejectNoteBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFfef2f2),
+        color: const AppColors.red50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFfecaca)),
       ),

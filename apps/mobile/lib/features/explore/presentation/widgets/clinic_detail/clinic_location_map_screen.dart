@@ -140,7 +140,7 @@ class _LocationMapPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFe8eef5),
+      color: const AppColors.surfaceSecondary,
       child: Stack(
         alignment: Alignment.center,
         children: [

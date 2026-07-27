@@ -128,7 +128,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                         'Adicionar ao pedido',
                         style: TextStyle(
                           fontSize: 9.5,
-                          color: Color(0xFF8a94a6),
+                          color: AppColors.gray400,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.8,
                         ),
@@ -189,7 +189,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     decoration: BoxDecoration(
                       color: widget.clinicId != null
                           ? const Color(0xFFeef2ff)
-                          : const Color(0xFFfef3e1),
+                          : const AppColors.amber50,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: widget.clinicId != null
@@ -233,7 +233,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                   'Selecione uma clínica para ver preços negociados',
                                   style: TextStyle(
                                     fontSize: 11.5,
-                                    color: Color(0xFFa85a05),
+                                    color: AppColors.amber,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -248,7 +248,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF8a94a6),
+                      color: AppColors.gray400,
                       letterSpacing: 0.8,
                     ),
                   ),
@@ -345,7 +345,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF8a94a6),
+                          color: AppColors.gray400,
                           letterSpacing: 0.8,
                         ),
                       ),
@@ -357,7 +357,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFe7f6ef),
+                            color: const AppColors.green50,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: const Row(
@@ -366,7 +366,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                               Icon(
                                 Icons.access_time,
                                 size: 9,
-                                color: Color(0xFF0f7c5a),
+                                color: AppColors.green600,
                               ),
                               SizedBox(width: 3),
                               Text(
@@ -374,7 +374,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0f7c5a),
+                                  color: AppColors.green600,
                                 ),
                               ),
                             ],
@@ -589,7 +589,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                           'Subtotal · $_qty ${_qty == 1 ? 'unidade' : 'unidades'}',
                           style: const TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF8a94a6),
+                            color: AppColors.gray400,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -600,7 +600,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             'Economia: ${brl((widget.product.price - suggestion.unit) * _qty)}',
                             style: const TextStyle(
                               fontSize: 10.5,
-                              color: Color(0xFF0f7c5a),
+                              color: AppColors.green600,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -678,7 +678,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
               fontWeight: FontWeight.w700,
               color: enabled
                   ? const AppColors.navyDeep
-                  : const Color(0xFFcbd5e1),
+                  : const AppColors.gray300,
             ),
           ),
         ),
@@ -736,7 +736,7 @@ class _PriceRow extends StatelessWidget {
                 border: Border.all(
                   color: active
                       ? const AppColors.navyDeep
-                      : const Color(0xFFcbd5e1),
+                      : const AppColors.gray300,
                 ),
                 color: Colors.white,
               ),
@@ -779,7 +779,7 @@ class _PriceRow extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: badgeGood
-                                ? const Color(0xFFe7f6ef)
+                                ? const AppColors.green50
                                 : const AppColors.gray100,
                             borderRadius: BorderRadius.circular(6),
                           ),
@@ -789,7 +789,7 @@ class _PriceRow extends StatelessWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: badgeGood
-                                  ? const Color(0xFF0f7c5a)
+                                  ? const AppColors.green600
                                   : const AppColors.gray500,
                             ),
                           ),
@@ -803,7 +803,7 @@ class _PriceRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11.5,
                       color: hintWarn
-                          ? const Color(0xFFa85a05)
+                          ? const AppColors.amber
                           : const AppColors.gray500,
                       height: 1.4,
                     ),

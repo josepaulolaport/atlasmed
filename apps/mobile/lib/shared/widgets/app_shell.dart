@@ -236,7 +236,7 @@ class _AtlasTopBarContent extends StatelessWidget {
               fontSize: 9.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.4,
-              color: Color(0xFF8a94a6),
+              color: AppColors.gray400,
             ),
           ),
           if (page.isNotEmpty) ...[
@@ -244,7 +244,7 @@ class _AtlasTopBarContent extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 6),
               child: CircleAvatar(
                 radius: 1.5,
-                backgroundColor: Color(0xFFc8cdd5),
+                backgroundColor: AppColors.gray300,
               ),
             ),
             Flexible(

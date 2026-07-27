@@ -6,7 +6,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 const payerShareColors = <Color>[
   AppColors.gray900,
   AppColors.green,
-  Color(0xFFeab308),
+  AppColors.amber,
   AppColors.navyBright,
   AppColors.gray400,
   Color(0xFF7c3aed),

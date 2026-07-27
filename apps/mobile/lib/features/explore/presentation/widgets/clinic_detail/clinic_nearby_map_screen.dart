@@ -1577,7 +1577,7 @@ class _NearbyMapPlaceholder extends StatelessWidget {
           child: Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFe8eef5),
+              color: const AppColors.surfaceSecondary,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(

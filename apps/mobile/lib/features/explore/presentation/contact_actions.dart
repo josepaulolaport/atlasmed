@@ -176,7 +176,7 @@ Future<void> launchMapsRoute(
               _MapsAppTile(
                 label: 'Waze',
                 icon: Icons.navigation_rounded,
-                color: const Color(0xFF33CCFF),
+                color: const AppColors.blueAccent,
                 onTap: () => Navigator.of(sheetContext).pop(_MapsApp.waze),
               ),
               const SizedBox(height: 8),

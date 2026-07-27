@@ -731,7 +731,7 @@ class _DoctorQuickActions extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const Color(0xFFedeff3)),
+            border: Border.all(color: const AppColors.surfaceSecondary),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -1057,7 +1057,7 @@ class _DoctorPersonalCard extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: Color(0xFF8a94a6),
+                  color: AppColors.gray400,
                 ),
               ),
             ),
@@ -1069,7 +1069,7 @@ class _DoctorPersonalCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFFb0b7c3),
+                    color: AppColors.gray400,
                   ),
                 ),
               ),
@@ -1116,7 +1116,7 @@ class _DoctorPrescribing extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const Color(0xFFedeff3)),
+              border: Border.all(color: const AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
@@ -1169,7 +1169,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                       fontSize: 9,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.3,
-                                      color: Color(0xFF117a55),
+                                      color: AppColors.green600,
                                     ),
                                   ),
                                 ),
@@ -1189,7 +1189,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   color: positive
-                                      ? const Color(0xFF117a55)
+                                      ? const AppColors.green600
                                       : const AppColors.red,
                                 ),
                               ),
@@ -1216,7 +1216,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: v == item.trend.last
                                             ? const AppColors.navyBright
-                                            : const Color(0xFFc7d2fe),
+                                            : const AppColors.blueLight,
                                         borderRadius: BorderRadius.circular(2),
                                       ),
                                     );
@@ -1316,7 +1316,7 @@ class _DoctorClinics extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const Color(0xFFedeff3)),
+              border: Border.all(color: const AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
@@ -1472,7 +1472,7 @@ class _DoctorVisits extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const Color(0xFFedeff3)),
+              border: Border.all(color: const AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
@@ -1704,7 +1704,7 @@ class _DoctorNotes extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const Color(0xFFedeff3)),
+              border: Border.all(color: const AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
@@ -1788,7 +1788,7 @@ class _DoctorNotes extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: const Color(0xFFc7d2fe),
+                            color: const AppColors.blueLight,
                             width: 1,
                             style: BorderStyle.solid,
                           ),
@@ -1854,7 +1854,7 @@ class _SectionHeader extends StatelessWidget {
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.4,
-                  color: Color(0xFF8a94a6),
+                  color: AppColors.gray400,
                 ),
               ),
               if (subtitle != null)

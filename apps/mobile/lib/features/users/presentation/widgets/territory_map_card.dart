@@ -118,7 +118,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
                 height: widget.mapHeight,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFe9eef1),
+                    color: const AppColors.surfaceSecondary,
                     border: Border.all(color: const Color(0xFFeef0f3)),
                   ),
                   child: Stack(
@@ -336,11 +336,11 @@ class _MapPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFdfe5f0), Color(0xFFc9d2e3)],
+          colors: [Color(0xFFdfe5f0), AppColors.gray300],
         ),
       ),
       child: const Center(
-        child: Icon(Icons.map_outlined, size: 30, color: Color(0xFF8b95a8)),
+        child: Icon(Icons.map_outlined, size: 30, color: AppColors.gray400),
       ),
     );
   }

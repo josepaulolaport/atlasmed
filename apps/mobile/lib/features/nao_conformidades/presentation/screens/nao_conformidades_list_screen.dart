@@ -241,7 +241,7 @@ class _EmptyFilterState extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFeff6ff),
+              color: const AppColors.blueLight,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(

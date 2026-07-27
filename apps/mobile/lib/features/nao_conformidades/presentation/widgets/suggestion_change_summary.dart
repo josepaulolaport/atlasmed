@@ -26,13 +26,13 @@ class SuggestionChangeSummary extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: isDeactivation
-                    ? const Color(0xFFfef2f2)
-                    : const Color(0xFFeff6ff),
+                    ? const AppColors.red50
+                    : const AppColors.blueLight,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDeactivation
                       ? const Color(0xFFfecaca)
-                      : const Color(0xFFbfdbfe),
+                      : const AppColors.blueLight,
                 ),
               ),
               child: Row(

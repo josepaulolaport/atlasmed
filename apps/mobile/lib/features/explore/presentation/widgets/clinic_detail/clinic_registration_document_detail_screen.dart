@@ -388,15 +388,15 @@ class _HistoryCard extends StatelessWidget {
   Color get _statusColor {
     if (submission.isApproved) return const Color(0xFF1f9254);
     if (submission.isRejected) return const AppColors.red;
-    if (submission.isUnderReview) return const Color(0xFFc2661b);
+    if (submission.isUnderReview) return const AppColors.amber;
     return const AppColors.gray500;
   }
 
   Color get _statusBg {
-    if (submission.isApproved) return const Color(0xFFe7f6ec);
+    if (submission.isApproved) return const AppColors.green50;
     if (submission.isRejected) return const Color(0xFFfde8e8);
     if (submission.isUnderReview) return const Color(0xFFfef3d5);
-    return const Color(0xFFf1f5f9);
+    return const AppColors.gray100;
   }
 
   @override

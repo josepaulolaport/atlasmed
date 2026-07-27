@@ -245,7 +245,7 @@ class _CadastroDocumentPagesPreviewState
         child: Center(
           child: Text(
             widget.emptyLabel,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF94a3b8)),
+            style: const TextStyle(fontSize: 13, color: AppColors.gray400),
           ),
         ),
       );
@@ -307,9 +307,9 @@ class _PreviewStage extends StatelessWidget {
       height: height,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFF0f172a),
+          color: const AppColors.gray900,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0x1A0F172A)),
+          border: Border.all(color: const AppColors.gray900),
         ),
         child: ClipRRect(borderRadius: BorderRadius.circular(14), child: child),
       ),
@@ -339,7 +339,7 @@ class _ImageFileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF0f172a),
+      color: const AppColors.gray900,
       elevation: 0,
       shadowColor: Colors.transparent,
       child: Stack(
@@ -415,7 +415,7 @@ class _PdfFileCardState extends State<_PdfFileCard> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF0f172a),
+      color: const AppColors.gray900,
       elevation: 0,
       shadowColor: Colors.transparent,
       child: FutureBuilder<List<ImageProvider?>>(
@@ -485,11 +485,11 @@ class _PdfFileCardState extends State<_PdfFileCard> {
                     onTap: widget.busy ? null : () => widget.onExpand(i),
                     child: provider == null
                         ? const ColoredBox(
-                            color: Color(0xFF1e293b),
+                            color: AppColors.gray800,
                             child: Center(
                               child: Icon(
                                 Icons.broken_image_outlined,
-                                color: Color(0xFF94a3b8),
+                                color: AppColors.gray400,
                               ),
                             ),
                           )
@@ -562,7 +562,7 @@ class _FullscreenButton extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: const Color(0xCC0f172a),
+            color: const AppColors.gray900,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0x33FFFFFF)),
           ),
@@ -597,7 +597,7 @@ class _GlassChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xCC0f172a),
+        color: const AppColors.gray900,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0x33FFFFFF)),
       ),
@@ -635,7 +635,7 @@ class _CarouselPager extends StatelessWidget {
             decoration: BoxDecoration(
               color: i == index
                   ? const AppColors.navyBright
-                  : const Color(0xFFcbd5e1),
+                  : const AppColors.gray300,
               borderRadius: BorderRadius.circular(99),
             ),
           ),
@@ -646,7 +646,7 @@ class _CarouselPager extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF64748b),
+            color: AppColors.gray400,
           ),
         ),
       ],
@@ -702,7 +702,7 @@ class _RemoteOrLocalImageState extends State<_RemoteOrLocalImage> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const ColoredBox(
-            color: Color(0xFFf1f5f9),
+            color: AppColors.gray100,
             child: Center(
               child: SizedBox(
                 width: 22,
@@ -715,7 +715,7 @@ class _RemoteOrLocalImageState extends State<_RemoteOrLocalImage> {
         final provider = snapshot.data;
         if (provider == null) {
           return const ColoredBox(
-            color: Color(0xFFf1f5f9),
+            color: AppColors.gray100,
             child: Center(
               child: Icon(
                 Icons.broken_image_outlined,
@@ -730,7 +730,7 @@ class _RemoteOrLocalImageState extends State<_RemoteOrLocalImage> {
           width: double.infinity,
           height: double.infinity,
           errorBuilder: (_, _, _) => const ColoredBox(
-            color: Color(0xFFf1f5f9),
+            color: AppColors.gray100,
             child: Center(
               child: Icon(
                 Icons.broken_image_outlined,

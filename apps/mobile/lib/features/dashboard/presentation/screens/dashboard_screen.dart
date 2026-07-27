@@ -23,7 +23,7 @@ class DashboardScreen extends ConsumerWidget {
                     Icon(
                       Icons.bar_chart_rounded,
                       size: 48,
-                      color: Color(0xFFc8cdd5),
+                      color: AppColors.gray300,
                     ),
                     SizedBox(height: 16),
                     Text(
