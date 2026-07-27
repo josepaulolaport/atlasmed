@@ -25,28 +25,31 @@ class ClinicPayersBarSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (payers.isEmpty) {
       return ClinicDetailCard(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Column(
-            children: [
-              const Text(
-                'Nenhuma fonte pagadora cadastrada',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-              ),
-              if (onEdit != null) ...[
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Adicionar fonte'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF1e40af),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Nenhuma fonte pagadora cadastrada',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+            ),
+            if (onEdit != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Adicionar fonte'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1e40af),
+                  side: const BorderSide(color: Color(0xFFdbeafe)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       );
     }
@@ -158,15 +161,16 @@ class ClinicPayersBarSection extends StatelessWidget {
             const SizedBox(height: 4),
             const Divider(height: 1, color: Color(0xFFf3f4f6)),
             const SizedBox(height: 4),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Adicionar fonte'),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF1e40af),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+            OutlinedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Adicionar fonte'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1e40af),
+                side: const BorderSide(color: Color(0xFFdbeafe)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),

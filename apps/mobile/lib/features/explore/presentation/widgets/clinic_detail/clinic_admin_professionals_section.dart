@@ -37,28 +37,31 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (professionals.isEmpty && !hasMore) {
       return ClinicDetailCard(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Column(
-            children: [
-              const Text(
-                'Nenhum contato administrativo cadastrado',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-              ),
-              if (onAssociate != null) ...[
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: onAssociate,
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: const Text('Criar profissional'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF1e40af),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Nenhum contato administrativo cadastrado',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+            ),
+            if (onAssociate != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onAssociate,
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                label: const Text('Criar profissional'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1e40af),
+                  side: const BorderSide(color: Color(0xFFdbeafe)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       );
     }

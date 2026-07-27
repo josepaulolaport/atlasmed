@@ -5,17 +5,26 @@ class PurchaseRecurrenceSection extends StatelessWidget {
   const PurchaseRecurrenceSection({
     super.key,
     required this.value,
-    this.onEdit,
   });
 
   final PurchaseRecurrenceSnapshot? value;
-  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final recurrence = value;
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -47,12 +56,6 @@ class PurchaseRecurrenceSection extends StatelessWidget {
                 formatDateOnly(recurrence.nextTransitionDate),
               ),
             ],
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Editar perfil de compras'),
-            ),
           ],
         ),
       ),
@@ -71,6 +74,7 @@ class PurchaseRecurrenceSection extends StatelessWidget {
         Expanded(
           child: Text(
             text,
+            textAlign: TextAlign.right,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
