@@ -410,7 +410,7 @@ class _TargetCard extends StatelessWidget {
 
   void _openClinic(BuildContext context) {
     if (suggestion.targetId.isEmpty) return;
-    context.push('/workspace/clinic/${suggestion.targetId}');
+    context.push('/explore/clinic/${suggestion.targetId}');
   }
 
   @override

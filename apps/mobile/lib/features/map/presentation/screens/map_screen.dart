@@ -1049,7 +1049,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _openEstablishment(String id) {
-    context.push('/workspace/clinic/$id');
+    context.push('/explore/clinic/$id');
   }
 
   static bool _isInsideBounds(

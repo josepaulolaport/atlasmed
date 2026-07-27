@@ -180,7 +180,7 @@ class _NaoConformidadesListScreenState
                               _SuggestionListCard(
                                 suggestion: item,
                                 onTap: () => context.push(
-                                  '/nao-conformidades/${item.id}',
+                                  '/non-conformities/${item.id}',
                                 ),
                               ),
                             ],

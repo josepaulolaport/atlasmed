@@ -1242,7 +1242,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
 
   void _openEstablishment(String id) {
     if (id == widget.facilityId) return;
-    context.push('/workspace/clinic/$id');
+    context.push('/explore/clinic/$id');
   }
 
   Point _point(EstablishmentLocation loc) =>

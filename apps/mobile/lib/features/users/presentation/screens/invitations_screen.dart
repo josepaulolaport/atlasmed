@@ -89,7 +89,7 @@ class _InvitationRow extends ConsumerWidget {
     return Material(
       color: Colors.white,
       child: InkWell(
-        onTap: () => context.push('/usuarios/convites/${invitation.id}'),
+        onTap: () => context.push('/users/invitations/${invitation.id}'),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: const BoxDecoration(

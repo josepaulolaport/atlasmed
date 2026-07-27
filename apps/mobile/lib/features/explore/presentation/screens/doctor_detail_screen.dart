@@ -1340,7 +1340,7 @@ class _DoctorClinics extends StatelessWidget {
                       ].join(' · ');
                       return InkWell(
                         onTap: () {
-                          context.push('/workspace/clinic/${c.id}');
+                          context.push('/explore/clinic/${c.id}');
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),

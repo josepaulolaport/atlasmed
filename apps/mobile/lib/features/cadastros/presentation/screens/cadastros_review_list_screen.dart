@@ -147,7 +147,7 @@ class _CadastrosReviewListScreenState
                             _ReviewListCard(
                               submission: item,
                               onTap: () =>
-                                  context.push('/cadastros/${item.id}'),
+                                  context.push('/registrations/${item.id}'),
                             ),
                           ],
                         ];

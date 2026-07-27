@@ -38,7 +38,7 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
   }
 
   void _openFamily(MockProductFamily family) {
-    context.push('/produtos/${family.id}');
+    context.push('/products/${family.id}');
   }
 
   @override

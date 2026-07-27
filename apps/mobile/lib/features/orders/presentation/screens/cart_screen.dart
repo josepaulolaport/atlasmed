@@ -59,7 +59,7 @@ class CartScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: cart.items.isEmpty
                       ? null
-                      : () => context.push('/pedidos/novo/checkout'),
+                      : () => context.push('/orders/new/checkout'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _navy,
                     disabledBackgroundColor: _navy.withValues(alpha: 0.4),

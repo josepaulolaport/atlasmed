@@ -185,7 +185,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/pedidos'),
+                  onPressed: () => context.go('/orders'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0A2F7F),
                     foregroundColor: Colors.white,

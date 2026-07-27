@@ -286,8 +286,8 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                               final facilityId = widget.facilityId;
                               final uri =
                                   facilityId == null || facilityId.isEmpty
-                                  ? '/workspace/doctor/${d.id}'
-                                  : '/workspace/doctor/${d.id}?facilityId=$facilityId';
+                                  ? '/explore/doctor/${d.id}'
+                                  : '/explore/doctor/${d.id}?facilityId=$facilityId';
                               context.push(uri);
                             },
                           );

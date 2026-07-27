@@ -256,8 +256,8 @@ class _DoctorCard extends StatelessWidget {
             onTap: () {
               final id = facilityId;
               final uri = id == null || id.isEmpty
-                  ? '/workspace/doctor/${doctor.id}'
-                  : '/workspace/doctor/${doctor.id}?facilityId=$id';
+                  ? '/explore/doctor/${doctor.id}'
+                  : '/explore/doctor/${doctor.id}?facilityId=$id';
               context.push(uri);
             },
             child: Padding(
