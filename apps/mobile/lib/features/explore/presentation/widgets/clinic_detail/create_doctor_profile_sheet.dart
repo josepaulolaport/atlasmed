@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Create a doctor profile. When [facilityId] is a real facility, persists via
 /// `POST /professionals` (with facility link) + optional role PATCH.
@@ -84,7 +85,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 4),
@@ -92,7 +93,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
               _useApi
                   ? 'Preencha os dados básicos. O perfil será criado e vinculado a esta clínica.'
                   : 'Preencha os dados básicos. O perfil será associado após a confirmação.',
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 12.5, color: AppColors.gray500),
             ),
             const SizedBox(height: 16),
             _field(_nameCtrl, 'Nome completo', TextInputType.name),
@@ -129,7 +130,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
             FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

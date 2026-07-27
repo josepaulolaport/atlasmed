@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformi
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Detail for one field-change suggestion.
 ///
@@ -34,14 +35,14 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
 
     return asyncSuggestion.when(
       loading: () => Scaffold(
-        backgroundColor: const Color(0xFFf7f8fb),
+        backgroundColor: const AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
               const AtlasTopBar(page: 'Não Conformidades', compact: true),
               const Expanded(
                 child: Center(
-                  child: CircularProgressIndicator(color: Color(0xFF1e40af)),
+                  child: CircularProgressIndicator(color: AppColors.navyBright),
                 ),
               ),
             ],
@@ -78,7 +79,7 @@ class _NotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -87,7 +88,7 @@ class _NotFound extends StatelessWidget {
               child: Center(
                 child: Text(
                   'Sugestão não encontrada',
-                  style: TextStyle(color: Color(0xFF6b7280)),
+                  style: TextStyle(color: AppColors.gray500),
                 ),
               ),
             ),
@@ -111,7 +112,7 @@ class _DetailBody extends ConsumerWidget {
     final showDecisionBar = canReview && suggestion.isPending;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -127,7 +128,7 @@ class _DetailBody extends ConsumerWidget {
                       icon: const Icon(Icons.arrow_back_rounded, size: 18),
                       label: Text(canReview ? 'Fila' : 'Voltar'),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF1e40af),
+                        foregroundColor: const AppColors.navyBright,
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -141,7 +142,7 @@ class _DetailBody extends ConsumerWidget {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0a2f7f),
+                            color: AppColors.navyDeep,
                           ),
                         ),
                       ),
@@ -159,7 +160,7 @@ class _DetailBody extends ConsumerWidget {
                     '${_formatDateTime(suggestion.submittedAt)}',
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                   if (suggestion.reviewedAt != null) ...[
@@ -170,7 +171,7 @@ class _DetailBody extends ConsumerWidget {
                       '${_formatDateTime(suggestion.reviewedAt!)}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   ],
@@ -351,7 +352,7 @@ class _FieldChip extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1e40af),
+            color: AppColors.navyBright,
           ),
         ),
       ),
@@ -397,7 +398,7 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.6,
-        color: Color(0xFF9ca3af),
+        color: AppColors.gray400,
       ),
     );
   }
@@ -439,7 +440,7 @@ class _TargetCard extends StatelessWidget {
                 child: Icon(
                   suggestion.targetType.icon,
                   size: 20,
-                  color: const Color(0xFF1e40af),
+                  color: const AppColors.navyBright,
                 ),
               ),
               const SizedBox(width: 12),
@@ -452,7 +453,7 @@ class _TargetCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -460,7 +461,7 @@ class _TargetCard extends StatelessWidget {
                       suggestion.contextSubtitle,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -469,7 +470,7 @@ class _TargetCard extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 22,
-                color: Color(0xFF1e40af),
+                color: AppColors.navyBright,
               ),
             ],
           ),
@@ -502,7 +503,7 @@ class _DiffCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 4),
@@ -511,7 +512,7 @@ class _DiffCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 14),
@@ -520,7 +521,7 @@ class _DiffCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 4),
@@ -539,7 +540,7 @@ class _DiffCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 4),
@@ -571,7 +572,7 @@ class _DiffCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 4),
@@ -580,7 +581,7 @@ class _DiffCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1e40af),
+              color: AppColors.navyBright,
             ),
           ),
           const SizedBox(height: 14),
@@ -589,7 +590,7 @@ class _DiffCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 4),
@@ -608,7 +609,7 @@ class _DiffCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 4),
@@ -646,7 +647,7 @@ class _ReasonCard extends StatelessWidget {
         style: const TextStyle(
           fontSize: 13.5,
           height: 1.4,
-          color: Color(0xFF374151),
+          color: AppColors.gray700,
         ),
       ),
     );

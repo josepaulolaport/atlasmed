@@ -16,6 +16,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full list of CRM doctors at an establishment — same table chrome as
 /// Explorar (search + filter + sort chips + [DoctorRow]).
@@ -203,7 +204,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         title: Text(
           'Médicos · ${_doctors.length}',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
@@ -212,7 +213,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       floatingActionButton: ref.watch(canMutateProfessionalProvider)
           ? FloatingActionButton(
               onPressed: _openAssociate,
-              backgroundColor: const Color(0xFF1e40af),
+              backgroundColor: const AppColors.navyBright,
               foregroundColor: Colors.white,
               child: const Icon(Icons.add_rounded),
             )
@@ -220,15 +221,81 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-            child: SearchBarWidget(
-              value: _query,
-              onChanged: (q) => setState(() => _query = q),
-              onFilter: _showFilterSheet,
-              filterCount: _filterCount,
-              hintText: 'Buscar médico, especialidade…',
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                child: SearchBarWidget(
+                  value: _query,
+                  onChanged: (q) => setState(() => _query = q),
+                  onFilter: _showFilterSheet,
+                  filterCount: _filterCount,
+                  hintText: 'Buscar médico, especialidade…',
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+                child: SortRow(
+                  sort: _sort,
+                  onSortTap: () => setState(() => _sortOpen = true),
+                  filterChips: _filterChips,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Text(
+                  filtered.length == 1
+                      ? '1 médico'
+                      : '${filtered.length} médicos',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.gray500,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? EmptyState(query: _query, kind: 'facility-doctor')
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) {
+                          final d = filtered[i];
+                          return DoctorRow(
+                            showDistance: false,
+                            showRelationship: true,
+                            phone: d.phone,
+                            relationshipScore: d.relationshipScore,
+                            badges: _badgesFor(d),
+                            doctor: Doctor(
+                              id: d.id,
+                              name: d.name,
+                              initials: d.initials,
+                              hue: d.hue,
+                              specialty: d.specialty ?? '',
+                              primaryClinic: '',
+                              crm: d.crm ?? '',
+                              distanceKm: 0,
+                              isPriority: d.isDecisionMaker || d.isPrescriber,
+                            ),
+                            onEditRoles:
+                                ref.watch(canMutateProfessionalProvider)
+                                ? () => _editRoles(d)
+                                : null,
+                            onTap: () {
+                              final facilityId = widget.facilityId;
+                              final uri =
+                                  facilityId == null || facilityId.isEmpty
+                                  ? '/explore/doctor/${d.id}'
+                                  : '/explore/doctor/${d.id}?facilityId=$facilityId';
+                              context.push(uri);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),

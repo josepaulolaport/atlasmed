@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/providers/catal
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/product_order_sheet.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class NewOrderProductsScreen extends ConsumerStatefulWidget {
   const NewOrderProductsScreen({super.key});
@@ -74,18 +75,9 @@ class _NewOrderProductsScreenState
         .toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 6),
-          child: BackChevron(),
-        ),
-        leadingWidth: 52,
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const AppColors.background,
+      body: SafeArea(
+        child: Column(
           children: [
             Text(
               'NOVO PEDIDO',
@@ -161,7 +153,7 @@ class _NewOrderProductsScreenState
                 width: double.infinity,
                 child: FloatingActionButton.extended(
                   heroTag: 'new-order-products-cta',
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   foregroundColor: Colors.white,
                   onPressed: () => context.push('/orders/new/cart'),
                   label: Text('Ver carrinho · ${cart.totalQty} itens →'),
@@ -170,6 +162,49 @@ class _NewOrderProductsScreenState
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildHeader(CartState cart) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Row(
+        children: [
+          const BackChevron(),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'NOVO PEDIDO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray500,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Produtos',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navyDeep,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          CartBadge(
+            totalQty: cart.totalQty,
+            totalValue: cart.subtotal,
+            onTap: () => context.push('/orders/new/cart'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -194,7 +229,7 @@ class _NewOrderProductsScreenState
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF0a2f7f),
+                  color: AppColors.navyDeep,
                 ),
               ),
             ),
@@ -205,7 +240,7 @@ class _NewOrderProductsScreenState
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
               ),
             ),
@@ -227,7 +262,7 @@ class _NewOrderProductsScreenState
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: focused
-                  ? const Color(0xFF0a2f7f)
+                  ? const AppColors.navyDeep
                   : const Color(0xFFd8dee9),
               width: 1.5,
             ),
@@ -240,7 +275,7 @@ class _NewOrderProductsScreenState
             onSubmitted: (query) =>
                 ref.read(catalogProductsProvider.notifier).load(search: query),
             decoration: const InputDecoration(
-              icon: Icon(Icons.search, size: 20, color: Color(0xFF9ca3af)),
+              icon: Icon(Icons.search, size: 20, color: AppColors.gray400),
               hintText: 'Buscar produto…',
               border: InputBorder.none,
             ),
@@ -266,9 +301,9 @@ class _NewOrderProductsScreenState
             labelStyle: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: active ? Colors.white : const Color(0xFF6b7280),
+              color: active ? Colors.white : const AppColors.gray500,
             ),
-            selectedColor: const Color(0xFF0a2f7f),
+            selectedColor: const AppColors.navyDeep,
             backgroundColor: Colors.white,
             side: const BorderSide(color: Color(0xFFd8dee9), width: 1),
             shape: RoundedRectangleBorder(
@@ -307,7 +342,7 @@ class _ProductCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: inCart ? const Color(0xFF0a2f7f) : const Color(0xFFd8dee9),
+            color: inCart ? const AppColors.navyDeep : const Color(0xFFd8dee9),
             width: 1.5,
           ),
           boxShadow: inCart
@@ -336,7 +371,7 @@ class _ProductCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0f1729),
+                            color: AppColors.gray900,
                           ),
                         ),
                       ),
@@ -348,7 +383,7 @@ class _ProductCard extends StatelessWidget {
                     product.subtitle,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -357,7 +392,7 @@ class _ProductCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                     ),
                   ),
                 ],
@@ -396,7 +431,7 @@ class _ProductCard extends StatelessWidget {
                   child: const Icon(
                     Icons.add,
                     size: 18,
-                    color: Color(0xFF0a2f7f),
+                    color: AppColors.navyDeep,
                   ),
                 ),
               ),
@@ -434,7 +469,7 @@ class _EmptyState extends StatelessWidget {
         'Nenhum produto encontrado',
         style: TextStyle(
           fontSize: 14,
-          color: Color(0xFF6b7280),
+          color: AppColors.gray500,
           fontWeight: FontWeight.w600,
         ),
       ),

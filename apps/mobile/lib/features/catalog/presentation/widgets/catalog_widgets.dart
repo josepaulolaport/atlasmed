@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 String formatDate(DateTime date) {
   final d = date.day.toString().padLeft(2, '0');
@@ -44,13 +45,13 @@ class CatalogErrorState extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: const BoxDecoration(
-                color: Color(0xFFf3f4f6),
+                color: AppColors.gray100,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.wifi_off_rounded,
                 size: 26,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 16),
@@ -60,7 +61,7 @@ class CatalogErrorState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
+                color: AppColors.gray700,
               ),
             ),
             const SizedBox(height: 14),
@@ -69,7 +70,7 @@ class CatalogErrorState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Tentar novamente'),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF1e40af),
+                foregroundColor: const AppColors.navyBright,
               ),
             ),
           ],
@@ -127,7 +128,7 @@ class CatalogSearchBar extends StatelessWidget {
                   const Icon(
                     Icons.search_rounded,
                     size: 16,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -137,11 +138,11 @@ class CatalogSearchBar extends StatelessWidget {
                       textInputAction: TextInputAction.search,
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                       decoration: InputDecoration(
                         hintText: hintText,
-                        hintStyle: const TextStyle(color: Color(0xFF9ca3af)),
+                        hintStyle: const TextStyle(color: AppColors.gray400),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -165,7 +166,7 @@ class CatalogSearchBar extends StatelessWidget {
                         child: const Icon(
                           Icons.close_rounded,
                           size: 10,
-                          color: Color(0xFF6b7280),
+                          color: AppColors.gray500,
                         ),
                       ),
                     ),
@@ -180,7 +181,7 @@ class CatalogSearchBar extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: filterCount > 0 ? const Color(0xFF1e40af) : Colors.white,
+                color: filterCount > 0 ? const AppColors.navyBright : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFe5e7eb)),
                 boxShadow: const [
@@ -199,7 +200,7 @@ class CatalogSearchBar extends StatelessWidget {
                       size: 18,
                       color: filterCount > 0
                           ? Colors.white
-                          : const Color(0xFF1e40af),
+                          : const AppColors.navyBright,
                     ),
                   ),
                   if (filterCount > 0)
@@ -364,7 +365,7 @@ class _ProductFilterSheetState extends State<_ProductFilterSheet> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -379,7 +380,7 @@ class _ProductFilterSheetState extends State<_ProductFilterSheet> {
                         style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1e40af),
+                          color: AppColors.navyBright,
                         ),
                       ),
                     ),
@@ -439,7 +440,7 @@ class _ProductFilterSheetState extends State<_ProductFilterSheet> {
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1e40af),
+                    backgroundColor: const AppColors.navyBright,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -485,7 +486,7 @@ class _FilterChipSection extends StatelessWidget {
           style: const TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF9ca3af),
+            color: AppColors.gray400,
             letterSpacing: 0.4,
           ),
         ),
@@ -526,7 +527,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFF1e40af) : const Color(0xFFf3f4f6),
+      color: selected ? const AppColors.navyBright : const AppColors.gray100,
       borderRadius: BorderRadius.circular(99),
       child: InkWell(
         onTap: onTap,
@@ -538,7 +539,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const Color(0xFF374151),
+              color: selected ? Colors.white : const AppColors.gray700,
             ),
           ),
         ),
@@ -620,7 +621,7 @@ class _FilterSheetShell extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -663,8 +664,8 @@ class _FilterOptionRow extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected
-                        ? const Color(0xFF0a2f7f)
-                        : const Color(0xFF374151),
+                        ? const AppColors.navyDeep
+                        : const AppColors.gray700,
                   ),
                 ),
               ),
@@ -672,7 +673,7 @@ class _FilterOptionRow extends StatelessWidget {
                 const Icon(
                   Icons.check_rounded,
                   size: 18,
-                  color: Color(0xFF0a2f7f),
+                  color: AppColors.navyDeep,
                 ),
             ],
           ),
@@ -750,8 +751,8 @@ class CatalogTabBar extends StatelessWidget {
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: selected
-                    ? const Color(0xFF0a2f7f)
-                    : const Color(0xFF6b7280),
+                    ? const AppColors.navyDeep
+                    : const AppColors.gray500,
               ),
             ),
           ),

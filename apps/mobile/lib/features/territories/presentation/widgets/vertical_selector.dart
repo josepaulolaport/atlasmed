@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Horizontal row of business-vertical chips.
 class VerticalSelector extends StatelessWidget {
@@ -72,9 +73,9 @@ class _Chip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF0a2f7f) : Colors.white,
+          color: selected ? const AppColors.navyDeep : Colors.white,
           border: Border.all(
-            color: selected ? const Color(0xFF0a2f7f) : const Color(0xFFe1e4ea),
+            color: selected ? const AppColors.navyDeep : const Color(0xFFe1e4ea),
           ),
           borderRadius: BorderRadius.circular(999),
         ),
@@ -83,7 +84,7 @@ class _Chip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const Color(0xFF374151),
+            color: selected ? Colors.white : const AppColors.gray700,
           ),
         ),
       ),

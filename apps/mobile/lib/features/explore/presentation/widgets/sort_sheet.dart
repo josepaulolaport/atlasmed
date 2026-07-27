@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class SortSheet extends StatelessWidget {
   final String kind;
@@ -117,14 +118,22 @@ class SortSheet extends StatelessWidget {
                                 : const Color(0xFFd1d5db),
                             width: 2,
                           ),
-                          color: on ? const Color(0xFF1e40af) : Colors.white,
-                        ),
-                        child: on
-                            ? const Center(
-                                child: Icon(
-                                  Icons.circle,
-                                  size: 8,
-                                  color: Colors.white,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: on
+                                        ? const AppColors.navyBright
+                                        : const AppColors.gray300,
+                                    width: 2,
+                                  ),
+                                  color: on
+                                      ? const AppColors.navyBright
+                                      : Colors.white,
                                 ),
                               )
                             : null,
@@ -141,13 +150,29 @@ class SortSheet extends StatelessWidget {
                                 fontWeight: FontWeight.w600,
                                 color: Color(0xFF0f1729),
                               ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              opt.subtitle,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF6b7280),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      opt.label,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.gray900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      opt.subtitle,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.gray500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Suggestion sheet to propose PF vs PJ for a facility.
 ///
@@ -75,14 +76,14 @@ class _TaxIdTypeSuggestionSheetBodyState
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Pessoa Física (PF) ou Pessoa Jurídica (PJ). A alteração '
             'passa por revisão administrativa antes de valer no cadastro.',
-            style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+            style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
           ),
           const SizedBox(height: 16),
           Row(
@@ -114,7 +115,7 @@ class _TaxIdTypeSuggestionSheetBodyState
                   ? null
                   : () => Navigator.of(context).pop(true),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -156,7 +157,7 @@ class _TypeChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected
-                  ? const Color(0xFF1e40af)
+                  ? const AppColors.navyBright
                   : const Color(0xFFe5e7eb),
             ),
           ),
@@ -166,8 +167,8 @@ class _TypeChip extends StatelessWidget {
                 icon,
                 size: 22,
                 color: selected
-                    ? const Color(0xFF1e40af)
-                    : const Color(0xFF6b7280),
+                    ? const AppColors.navyBright
+                    : const AppColors.gray500,
               ),
               const SizedBox(height: 8),
               Text(
@@ -177,7 +178,7 @@ class _TypeChip extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: selected
-                      ? const Color(0xFF1e40af)
+                      ? const AppColors.navyBright
                       : const Color(0xFF4b5563),
                 ),
               ),

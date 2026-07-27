@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Compact filter sheet for facility-scoped people lists (Médicos /
 /// Profissionais administrativos "Ver todos") — same chrome as Explorar's
@@ -59,7 +60,7 @@ class _FacilityRosterFilterSheetState extends State<FacilityRosterFilterSheet> {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
-                  color: Color(0xFF6b7280),
+                  color: AppColors.gray500,
                 ),
               ),
             ),
@@ -88,7 +89,7 @@ class _FacilityRosterFilterSheetState extends State<FacilityRosterFilterSheet> {
                     onPressed: () => setState(() => _local = {}),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(46),
-                      foregroundColor: const Color(0xFF374151),
+                      foregroundColor: const AppColors.gray700,
                       side: const BorderSide(color: Color(0xFFe5e7eb)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -104,7 +105,7 @@ class _FacilityRosterFilterSheetState extends State<FacilityRosterFilterSheet> {
                     onPressed: () => widget.onApply(_local),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(46),
-                      backgroundColor: const Color(0xFF1e40af),
+                      backgroundColor: const AppColors.navyBright,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -139,10 +140,10 @@ class _Chip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1e40af) : Colors.white,
+          color: selected ? const AppColors.navyBright : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? const Color(0xFF1e40af) : const Color(0xFFe5e7eb),
+            color: selected ? const AppColors.navyBright : const Color(0xFFe5e7eb),
           ),
         ),
         child: Text(
@@ -150,7 +151,7 @@ class _Chip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: selected ? Colors.white : const Color(0xFF374151),
+            color: selected ? Colors.white : const AppColors.gray700,
           ),
         ),
       ),

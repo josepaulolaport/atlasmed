@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/us
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Sentinel result of [UserPickerSheet.pickAssignee] meaning "explicitly
 /// clear the current assignee" — distinct from a `null` `Future` result,
@@ -152,7 +153,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                     hintText: 'Buscar por nome...',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: const Color(0xFFF3F4F6),
+                    fillColor: const AppColors.gray100,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -324,14 +325,14 @@ class _UserRow extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ],
               ),
             ),
             if (selected)
-              const Icon(Icons.check_circle, color: Color(0xFF0A2F7F)),
+              const Icon(Icons.check_circle, color: AppColors.navyDeep),
           ],
         ),
       ),
@@ -352,7 +353,7 @@ class _EmptyState extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13.5, color: Color(0xFF6B7280)),
+          style: const TextStyle(fontSize: 13.5, color: AppColors.gray500),
         ),
       ),
     );

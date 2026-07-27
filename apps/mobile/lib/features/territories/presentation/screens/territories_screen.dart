@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TerritoriesScreen extends ConsumerWidget {
   const TerritoriesScreen({super.key});
@@ -60,7 +61,7 @@ class _TerritoriesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       floatingActionButton: floatingActionButton,
       body: SafeArea(
         // The map should bleed all the way to the bottom edge — only the
@@ -85,7 +86,7 @@ class _NewTerritoryButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return FloatingActionButton.extended(
-      backgroundColor: const Color(0xFF0a2f7f),
+      backgroundColor: const AppColors.navyDeep,
       foregroundColor: Colors.white,
       icon: const Icon(Icons.add_rounded),
       label: const Text('Novo território'),
@@ -218,7 +219,7 @@ class _VerticalFilterStatus extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280),
+                color: AppColors.gray500,
               ),
             ),
           ),
@@ -815,7 +816,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.2,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -830,7 +831,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                             child: Icon(
                               Icons.person_rounded,
                               size: 14,
-                              color: Color(0xFF9CA3AF),
+                              color: AppColors.gray400,
                             ),
                           ),
                         Expanded(
@@ -842,7 +843,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
-                                    color: Color(0xFF6b7280),
+                                    color: AppColors.gray500,
                                   ),
                                 ),
                                 TextSpan(
@@ -850,7 +851,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF374151),
+                                    color: AppColors.gray700,
                                   ),
                                 ),
                               ],
@@ -872,7 +873,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                   child: Icon(
                     Icons.close_rounded,
                     size: 18,
-                    color: Color(0xFF9CA3AF),
+                    color: AppColors.gray400,
                   ),
                 ),
               ),
@@ -937,7 +938,7 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = color ?? const Color(0xFF374151);
+    final tint = color ?? const AppColors.gray700;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -995,7 +996,7 @@ class _StateMessage extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 3),
               )
             else
-              Icon(icon, size: 42, color: const Color(0xFF6B7280)),
+              Icon(icon, size: 42, color: const AppColors.gray500),
             const SizedBox(height: 16),
             Text(
               title,
@@ -1005,7 +1006,7 @@ class _StateMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+              style: const TextStyle(fontSize: 14, color: AppColors.gray500),
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),

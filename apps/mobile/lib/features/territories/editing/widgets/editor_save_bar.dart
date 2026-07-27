@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Permanently visible Cancel / Save actions.
 class EditorSaveBar extends StatelessWidget {
@@ -36,7 +37,7 @@ class EditorSaveBar extends StatelessWidget {
             child: OutlinedButton(
               onPressed: saving ? null : onCancel,
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF374151),
+                foregroundColor: const AppColors.gray700,
                 side: const BorderSide(color: Color(0xFFE5E7EB)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -54,7 +55,7 @@ class EditorSaveBar extends StatelessWidget {
             child: FilledButton(
               onPressed: canSave && !saving ? onSave : null,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0A2F7F),
+                backgroundColor: const AppColors.navyDeep,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

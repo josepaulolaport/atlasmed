@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Fontes Pagadoras" — donut chart with a "principal fonte" callout and a
 /// legend list, replacing the previous stacked bar.
@@ -25,26 +26,23 @@ class ClinicPayersBarSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (payers.isEmpty) {
       return ClinicDetailCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Nenhuma fonte pagadora cadastrada',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-            ),
-            if (onEdit != null) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Adicionar fonte'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1e40af),
-                  side: const BorderSide(color: Color(0xFFdbeafe)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            children: [
+              const Text(
+                'Nenhuma fonte pagadora cadastrada',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.gray400),
+              ),
+              if (onEdit != null) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Adicionar fonte'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const AppColors.navyBright,
                   ),
                 ),
               ),
@@ -85,14 +83,14 @@ class ClinicPayersBarSection extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0f1729),
+                            color: AppColors.gray900,
                           ),
                         ),
                         Text(
                           'faturamento',
                           style: TextStyle(
                             fontSize: 9,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                         ),
                       ],
@@ -112,7 +110,7 @@ class ClinicPayersBarSection extends StatelessWidget {
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.3,
-                          color: Color(0xFF9ca3af),
+                          color: AppColors.gray400,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -121,14 +119,14 @@ class ClinicPayersBarSection extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0f1729),
+                          color: AppColors.gray900,
                         ),
                       ),
                       Text(
                         '${summary!.principalSourcePercent.toStringAsFixed(0)}% do faturamento',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6b7280),
+                          color: AppColors.gray500,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -137,7 +135,7 @@ class ClinicPayersBarSection extends StatelessWidget {
                         '${summary!.updatedAt != null ? ' · atualizado há ${DateTime.now().difference(summary!.updatedAt!).inDays} dias' : ''}',
                         style: const TextStyle(
                           fontSize: 11,
-                          color: Color(0xFF9ca3af),
+                          color: AppColors.gray400,
                         ),
                       ),
                     ],
@@ -146,7 +144,7 @@ class ClinicPayersBarSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          const Divider(height: 1, color: Color(0xFFf3f4f6)),
+          const Divider(height: 1, color: AppColors.gray100),
           const SizedBox(height: 4),
           ...payers.asMap().entries.map(
             (entry) => Padding(
@@ -159,18 +157,17 @@ class ClinicPayersBarSection extends StatelessWidget {
           ),
           if (onEdit != null) ...[
             const SizedBox(height: 4),
-            const Divider(height: 1, color: Color(0xFFf3f4f6)),
+            const Divider(height: 1, color: AppColors.gray100),
             const SizedBox(height: 4),
-            OutlinedButton.icon(
-              onPressed: onEdit,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Adicionar fonte'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1e40af),
-                side: const BorderSide(color: Color(0xFFdbeafe)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Adicionar fonte'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const AppColors.navyBright,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                 ),
               ),
             ),
@@ -241,7 +238,7 @@ class _PayerLegendRow extends StatelessWidget {
         Expanded(
           child: Text(
             payer.name,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF0f1729)),
+            style: const TextStyle(fontSize: 13, color: AppColors.gray900),
           ),
         ),
         Text(

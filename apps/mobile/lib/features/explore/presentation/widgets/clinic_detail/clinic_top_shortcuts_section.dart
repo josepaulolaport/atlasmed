@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/my_suggestions_screen.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Shortcut cards — Cadastro, Dados administrativos, and Não Conformidades.
 class ClinicTopShortcutsSection extends ConsumerWidget {
@@ -159,7 +160,7 @@ class _ShortcutCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 19, color: const Color(0xFF1e40af)),
+            Icon(icon, size: 19, color: const AppColors.navyBright),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -169,7 +170,7 @@ class _ShortcutCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
             ),
@@ -179,7 +180,7 @@ class _ShortcutCard extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ],
         ),
@@ -202,8 +203,8 @@ class _ShortcutBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = switch (_tone) {
       _BadgeTone.complete => (const Color(0xFFe7f6ec), const Color(0xFF1f9254)),
-      _BadgeTone.pending => (const Color(0xFFfef3d5), const Color(0xFFc6861b)),
-      _BadgeTone.neutral => (const Color(0xFFf3f4f6), const Color(0xFF9ca3af)),
+      _BadgeTone.pending => (const Color(0xFFfef3d5), const AppColors.amber),
+      _BadgeTone.neutral => (const AppColors.gray100, const AppColors.gray400),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

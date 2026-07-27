@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full profile of an administrative representative.
 class RepresentativeDetailScreen extends ConsumerStatefulWidget {
@@ -53,7 +54,7 @@ class _RepresentativeDetailScreenState
         appBar: AppBar(
           backgroundColor: const Color(0xFFf8f9fb),
           elevation: 0,
-          foregroundColor: const Color(0xFF0f1729),
+          foregroundColor: const AppColors.gray900,
           title: const Text('Perfil do profissional'),
           actions: [
             if (canEdit)
@@ -74,7 +75,7 @@ class _RepresentativeDetailScreenState
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1e40af),
+                        color: AppColors.navyBright,
                       ),
                     ),
                   ),
@@ -85,7 +86,7 @@ class _RepresentativeDetailScreenState
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   if (_professional.roleTitle != null) ...[
@@ -94,7 +95,7 @@ class _RepresentativeDetailScreenState
                       _professional.roleTitle!,
                       style: const TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -127,7 +128,7 @@ class _RepresentativeDetailScreenState
                 const SizedBox(height: 6),
                 const Text(
                   'Toque à esquerda da estrela para meia, à direita para cheia. Segure para limpar.',
-                  style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
+                  style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
                 ),
               ],
             ),
@@ -275,7 +276,7 @@ class _Chip extends StatelessWidget {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF1e40af),
+          color: AppColors.navyBright,
         ),
       ),
     );
@@ -312,7 +313,7 @@ class _SectionCard extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.4,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 10),
@@ -348,13 +349,13 @@ class _InfoRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(icon, size: 17, color: const Color(0xFF9ca3af)),
+            Icon(icon, size: 17, color: const AppColors.gray400),
             const SizedBox(width: 10),
             SizedBox(
               width: 80,
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+                style: const TextStyle(fontSize: 13, color: AppColors.gray500),
               ),
             ),
             Expanded(
@@ -364,8 +365,8 @@ class _InfoRow extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: value != null
-                      ? const Color(0xFF1e40af)
-                      : const Color(0xFF9ca3af),
+                      ? const AppColors.navyBright
+                      : const AppColors.gray400,
                 ),
               ),
             ),

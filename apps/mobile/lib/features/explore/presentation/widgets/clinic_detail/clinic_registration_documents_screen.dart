@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_cadastro_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_registration_document_detail_screen.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Clinic Cadastro: one card per document type (+ billing email).
 class ClinicRegistrationDocumentsScreen extends ConsumerStatefulWidget {
@@ -33,7 +34,7 @@ class _ClinicRegistrationDocumentsScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFFf8f9fb),
         elevation: 0,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         title: Text(
           checklistAsync.when(
             data: (c) => 'Cadastro · ${c.fileDocuments.length}',
@@ -53,7 +54,7 @@ class _ClinicRegistrationDocumentsScreenState
                 Text(
                   error.toString().replaceFirst('Exception: ', ''),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFF6b7280)),
+                  style: const TextStyle(color: AppColors.gray500),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
@@ -80,7 +81,7 @@ class _ClinicRegistrationDocumentsScreenState
                 style: TextStyle(
                   fontSize: 12.5,
                   height: 1.4,
-                  color: Color(0xFF6b7280),
+                  color: AppColors.gray500,
                 ),
               ),
               const SizedBox(height: 14),
@@ -109,7 +110,7 @@ class _ClinicRegistrationDocumentsScreenState
                   padding: EdgeInsets.only(bottom: 12),
                   child: Text(
                     'Nenhum documento de arquivo aplicável para este tipo.',
-                    style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+                    style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
                   ),
                 ),
               ],
@@ -213,13 +214,13 @@ class _BillingEmailSheetState extends State<_BillingEmailSheet> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Informe o email administrativo do estabelecimento.',
-            style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+            style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -243,7 +244,7 @@ class _BillingEmailSheetState extends State<_BillingEmailSheet> {
               onPressed: () =>
                   Navigator.of(context).pop(_controller.text.trim()),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -339,7 +340,7 @@ class _DocumentTypeCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -352,8 +353,8 @@ class _DocumentTypeCard extends StatelessWidget {
                         color:
                             document.isBillingEmail &&
                                 document.billingEmail?.isNotEmpty != true
-                            ? const Color(0xFF1e40af)
-                            : const Color(0xFF6b7280),
+                            ? const AppColors.navyBright
+                            : const AppColors.gray500,
                         fontWeight:
                             document.isBillingEmail &&
                                 document.billingEmail?.isNotEmpty != true
@@ -384,7 +385,7 @@ class _DocumentTypeCard extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ],
           ),

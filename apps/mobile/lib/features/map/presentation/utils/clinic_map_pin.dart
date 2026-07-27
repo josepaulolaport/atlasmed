@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Tear-drop clinic pins for Mapbox (no built-in pin shape — we rasterize).
 ///
@@ -29,7 +30,7 @@ final class ClinicMapPin {
   static const double focusLogicalWidth = 36;
   static const double focusLogicalHeight = 46;
 
-  static const Color singleFill = Color(0xFF16a373);
+  static const Color singleFill = AppColors.green;
   static const Color clusterFill = Color(0xFF1d4ed8);
 
   /// Amber focus pin so the current clinic reads apart from green/blue pins.

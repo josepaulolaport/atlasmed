@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Primary action button with frosted/white variants and loading state.
 class PrimaryButton extends StatelessWidget {
@@ -69,7 +70,7 @@ class PrimaryButton extends StatelessWidget {
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            white ? const Color(0xFF0a2f7f) : Colors.white,
+                            white ? const AppColors.navyDeep : Colors.white,
                           ),
                         ),
                       )
@@ -83,7 +84,7 @@ class PrimaryButton extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.2,
                               color: white
-                                  ? const Color(0xFF0a2f7f)
+                                  ? const AppColors.navyDeep
                                   : Colors.white,
                             ),
                           ),
@@ -93,7 +94,7 @@ class PrimaryButton extends StatelessWidget {
                               trailingIcon,
                               size: 18,
                               color: white
-                                  ? const Color(0xFF0a2f7f)
+                                  ? const AppColors.navyDeep
                                   : Colors.white,
                             ),
                           ],

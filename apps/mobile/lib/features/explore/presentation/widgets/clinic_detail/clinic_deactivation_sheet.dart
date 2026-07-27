@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Asks for a reason and submits a clinic-deactivation suggestion.
 Future<void> requestClinicDeactivation(
@@ -112,7 +113,7 @@ class _ClinicDeactivationSheetBodyState
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 6),
@@ -121,7 +122,7 @@ class _ClinicDeactivationSheetBodyState
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1e40af),
+              color: AppColors.navyBright,
             ),
           ),
           const SizedBox(height: 8),
@@ -131,7 +132,7 @@ class _ClinicDeactivationSheetBodyState
             style: const TextStyle(
               fontSize: 12.5,
               height: 1.35,
-              color: Color(0xFF6b7280),
+              color: AppColors.gray500,
             ),
           ),
           const SizedBox(height: 14),

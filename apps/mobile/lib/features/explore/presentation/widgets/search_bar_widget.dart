@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class SearchBarWidget extends StatelessWidget {
   final String value;
@@ -41,7 +42,7 @@ class SearchBarWidget extends StatelessWidget {
                 const Icon(
                   Icons.search_rounded,
                   size: 16,
-                  color: Color(0xFF6b7280),
+                  color: AppColors.gray500,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -57,11 +58,11 @@ class SearchBarWidget extends StatelessWidget {
                     onChanged: onChanged,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                     decoration: InputDecoration(
                       hintText: hintText,
-                      hintStyle: const TextStyle(color: Color(0xFF9ca3af)),
+                      hintStyle: const TextStyle(color: AppColors.gray400),
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
@@ -82,7 +83,7 @@ class SearchBarWidget extends StatelessWidget {
                       child: const Icon(
                         Icons.close_rounded,
                         size: 10,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ),
@@ -97,7 +98,7 @@ class SearchBarWidget extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: filterCount > 0 ? const Color(0xFF1e40af) : Colors.white,
+              color: filterCount > 0 ? const AppColors.navyBright : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFe5e7eb)),
               boxShadow: const [
@@ -116,7 +117,7 @@ class SearchBarWidget extends StatelessWidget {
                     size: 18,
                     color: filterCount > 0
                         ? Colors.white
-                        : const Color(0xFF1e40af),
+                        : const AppColors.navyBright,
                   ),
                 ),
                 if (filterCount > 0)

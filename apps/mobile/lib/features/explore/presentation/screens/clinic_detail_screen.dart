@@ -41,6 +41,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_payer_sources_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_section.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
@@ -114,9 +115,9 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     final repo = ref.watch(clinicDetailRepositoryProvider(clinicId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1e40af),
+      backgroundColor: const AppColors.navyBright,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1e40af),
+        backgroundColor: const AppColors.navyBright,
         foregroundColor: Colors.white,
         systemOverlayStyle: .light,
         actions: [
@@ -176,7 +177,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     return Container(
       height: 180 + top,
       decoration: const BoxDecoration(
-        color: Color(0xFF1e40af),
+        color: AppColors.navyBright,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(24),
           bottomRight: Radius.circular(24),
@@ -184,6 +185,53 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       ),
       child: const Center(
         child: CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _errorView(BuildContext context, String clinicId, Object error) {
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.wifi_off_rounded,
+                size: 48,
+                color: AppColors.red,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Não foi possível carregar o estabelecimento',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.gray900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _friendlyLoadError(error),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.gray500, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(clinicDetailProvider(clinicId)),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Tentar novamente'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => context.pop(),
+                child: const Text('Voltar'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -391,7 +439,7 @@ class _ClinicDetailBody extends ConsumerWidget {
         .valueOrNull;
 
     return RefreshIndicator(
-      color: const Color(0xFF1e40af),
+      color: const AppColors.navyBright,
       backgroundColor: Colors.white,
       onRefresh: () async {
         ref.invalidate(clinicDetailRepositoryProvider(clinicId));
@@ -467,7 +515,7 @@ class _ClinicDetailContent extends ConsumerWidget {
       children: [
         Column(
           children: [
-            Expanded(child: Container(color: const Color(0xFF1e40af))),
+            Expanded(child: Container(color: const AppColors.navyBright)),
             Expanded(child: Container(color: const Color(0xFFf8f9fb))),
           ],
         ),
@@ -672,7 +720,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                   const ClinicDetailCard(
                     child: Text(
                       'Localização não disponível para este estabelecimento',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                      style: TextStyle(fontSize: 13, color: AppColors.gray400),
                     ),
                   )
                 else
@@ -781,7 +829,7 @@ class _CountBadge extends StatelessWidget {
         style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF1e40af),
+          color: AppColors.navyBright,
         ),
       ),
     );
@@ -813,9 +861,11 @@ class _HeaderLinkButton extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1e40af),
+                color: AppColors.navyBright,
               ),
             ),
+            if (icon != null)
+              Icon(icon, size: 16, color: const AppColors.navyBright),
           ],
         ),
       ),
@@ -868,7 +918,7 @@ class _SectionErrorCard extends StatelessWidget {
             message,
             style: const TextStyle(
               fontSize: 12.5,
-              color: Color(0xFFb84545),
+              color: AppColors.red,
               height: 1.4,
             ),
           ),
@@ -879,7 +929,7 @@ class _SectionErrorCard extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Tentar novamente'),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFb84545),
+                foregroundColor: const AppColors.red,
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
               ),
@@ -1015,7 +1065,7 @@ class _ActionButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFf3f4f6)),
+                border: Border.all(color: const AppColors.gray100),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -1024,7 +1074,7 @@ class _ActionButton extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(icon, size: 20, color: const Color(0xFF1e40af)),
+              child: Icon(icon, size: 20, color: const AppColors.navyBright),
             ),
             const SizedBox(height: 6),
             Text(
@@ -1064,14 +1114,14 @@ class _SuggestEditBanner extends StatelessWidget {
           const Icon(
             Icons.edit_note_rounded,
             size: 18,
-            color: Color(0xFF9ca3af),
+            color: AppColors.gray400,
           ),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
               'Toque nos ícones em qualquer campo. Sugestões passam por '
               'revisão administrativa antes de entrar no perfil.',
-              style: TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
+              style: TextStyle(fontSize: 11.5, color: AppColors.gray500),
             ),
           ),
         ],

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Width shared by every ICMS price column — both the sortable header
 /// labels and the price boxes below them — so the columns line up.
@@ -315,14 +316,14 @@ class _ColumnHeaderRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
                 letterSpacing: 0.3,
               ),
             ),
           ),
           const Text(
             'ICMS',
-            style: TextStyle(fontSize: 9.5, color: Color(0xFF9ca3af)),
+            style: TextStyle(fontSize: 9.5, color: AppColors.gray400),
           ),
           const Spacer(),
           _sortableHeader('17%', ComparisonSortColumn.icms17),
@@ -350,8 +351,8 @@ class _ColumnHeaderRow extends StatelessWidget {
                 fontSize: 10.5,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                 color: active
-                    ? const Color(0xFF0a2f7f)
-                    : const Color(0xFF9ca3af),
+                    ? const AppColors.navyDeep
+                    : const AppColors.gray400,
               ),
             ),
             Padding(
@@ -363,7 +364,7 @@ class _ColumnHeaderRow extends StatelessWidget {
                 child: const Icon(
                   Icons.arrow_downward_rounded,
                   size: 10,
-                  color: Color(0xFF0a2f7f),
+                  color: AppColors.navyDeep,
                 ),
               ),
             ),
@@ -405,7 +406,7 @@ class _ComparisonDataRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: row.isOwn ? FontWeight.w700 : FontWeight.w600,
-                    color: const Color(0xFF0f1729),
+                    color: const AppColors.gray900,
                     height: 1.15,
                   ),
                 ),
@@ -469,7 +470,7 @@ class _ComparisonDataRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFF0a2f7f),
+        color: const AppColors.navyDeep,
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Text(
@@ -497,7 +498,7 @@ class _ComparisonDataRow extends StatelessWidget {
           style: const TextStyle(
             fontSize: 9.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF9ca3af),
+            color: AppColors.gray400,
           ),
         ),
         Expanded(
@@ -536,7 +537,7 @@ class _ComparisonDataRow extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-            color: active ? const Color(0xFF0a2f7f) : const Color(0xFF374151),
+            color: active ? const AppColors.navyDeep : const AppColors.gray700,
           ),
         ),
       ),
@@ -556,7 +557,7 @@ class _EmptyState extends StatelessWidget {
       child: Center(
         child: Text(
           message,
-          style: const TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
+          style: const TextStyle(fontSize: 11.5, color: AppColors.gray400),
         ),
       ),
     );
@@ -581,14 +582,14 @@ class _AddProductButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add_rounded, size: 15, color: Color(0xFF1e40af)),
+                Icon(Icons.add_rounded, size: 15, color: AppColors.navyBright),
                 SizedBox(width: 6),
                 Text(
                   'Adicionar Produto',
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1e40af),
+                    color: AppColors.navyBright,
                   ),
                 ),
               ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ── Order status ─────────────────────────────────────────────
 enum OrderStatus { draft, pending, approved, invoiced, rejected, noBilling }
@@ -24,15 +25,15 @@ extension OrderStatusX on OrderStatus {
   Color get color {
     switch (this) {
       case OrderStatus.draft:
-        return const Color(0xFF6b7280);
+        return const AppColors.gray500;
       case OrderStatus.pending:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
       case OrderStatus.approved:
-        return const Color(0xFF1e40af);
+        return const AppColors.navyBright;
       case OrderStatus.invoiced:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case OrderStatus.rejected:
-        return const Color(0xFFb84545);
+        return const AppColors.red;
       case OrderStatus.noBilling:
         return const Color(0xFF7c3aed);
     }

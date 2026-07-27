@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/app_back_
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/glass_input.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Accept-invite registration — confirm identity, choose username/password.
 /// Manager and territory come from the invite and are not shown here.
@@ -130,7 +131,7 @@ class _RegisterInviteScreenState extends State<RegisterInviteScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF0a2f7f)),
+            colorScheme: const ColorScheme.light(primary: AppColors.navyDeep),
           ),
           child: child!,
         );

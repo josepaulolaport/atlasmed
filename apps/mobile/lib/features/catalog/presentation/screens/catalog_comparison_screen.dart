@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/comparison_table.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
     show isAdminProvider;
 
 /// "Comparativo" screen — scoped to exactly one AtlasMed product: shows that
@@ -92,7 +93,7 @@ class _CatalogComparisonScreenState
     final isAdmin = ref.watch(isAdminProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -157,7 +158,7 @@ class _Header extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0a2f7f),
+                color: AppColors.navyDeep,
                 letterSpacing: -0.1,
               ),
               maxLines: 2,
@@ -173,7 +174,7 @@ class _Header extends StatelessWidget {
                 child: Icon(
                   Icons.compare_arrows_rounded,
                   size: 20,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
               ),
             ),

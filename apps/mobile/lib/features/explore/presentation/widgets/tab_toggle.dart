@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TabToggle extends StatelessWidget {
   final String value; // 'clinic' | 'doctor'
@@ -84,8 +85,8 @@ class _Tab extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: selected
-                        ? const Color(0xFF0a2f7f)
-                        : const Color(0xFF9ca3af),
+                        ? const AppColors.navyDeep
+                        : const AppColors.gray400,
                   ),
                 ),
                 const SizedBox(width: 7),
@@ -95,7 +96,7 @@ class _Tab extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: selected
                         ? const Color(0xFFeef2ff)
-                        : const Color(0xFFf3f4f6),
+                        : const AppColors.gray100,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Center(
@@ -105,8 +106,8 @@ class _Tab extends StatelessWidget {
                         fontSize: 10.5,
                         fontWeight: FontWeight.w600,
                         color: selected
-                            ? const Color(0xFF0a2f7f)
-                            : const Color(0xFF9ca3af),
+                            ? const AppColors.navyDeep
+                            : const AppColors.gray400,
                       ),
                     ),
                   ),
@@ -121,7 +122,7 @@ class _Tab extends StatelessWidget {
                 child: Container(
                   height: 2,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0a2f7f),
+                    color: const AppColors.navyDeep,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(2),
                     ),

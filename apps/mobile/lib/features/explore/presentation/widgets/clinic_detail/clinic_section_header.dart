@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicSectionHeader extends StatelessWidget {
   const ClinicSectionHeader({
@@ -35,7 +36,7 @@ class ClinicSectionHeader extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                       letterSpacing: -0.3,
                     ),
                     maxLines: 1,

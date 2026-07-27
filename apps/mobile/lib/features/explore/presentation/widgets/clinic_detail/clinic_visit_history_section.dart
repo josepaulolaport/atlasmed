@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Histórico de visitas" — stats row, sentiment filter pills and a rich
 /// visit timeline (attendees, sample given, linked order, summary).
@@ -34,7 +35,7 @@ class _ClinicVisitHistorySectionState extends State<ClinicVisitHistorySection> {
       return const ClinicDetailCard(
         child: Text(
           'Nenhuma visita registrada',
-          style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+          style: TextStyle(fontSize: 13, color: AppColors.gray400),
         ),
       );
     }
@@ -81,7 +82,7 @@ class _ClinicVisitHistorySectionState extends State<ClinicVisitHistorySection> {
               child: Center(
                 child: Text(
                   'Nenhum registro encontrado',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                  style: TextStyle(fontSize: 13, color: AppColors.gray400),
                 ),
               ),
             )
@@ -142,7 +143,7 @@ class _Stat extends StatelessWidget {
               fontSize: 9.5,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.3,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 2),
@@ -151,13 +152,13 @@ class _Stat extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14.5,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           if (caption != null)
             Text(
               caption!,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF9ca3af)),
+              style: const TextStyle(fontSize: 10, color: AppColors.gray400),
             ),
         ],
       ),
@@ -183,7 +184,7 @@ class _FilterPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1e40af) : const Color(0xFFeef0f3),
+          color: selected ? const AppColors.navyBright : const Color(0xFFeef0f3),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -191,7 +192,7 @@ class _FilterPill extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: selected ? Colors.white : const Color(0xFF6b7280),
+            color: selected ? Colors.white : const AppColors.gray500,
           ),
         ),
       ),
@@ -238,7 +239,7 @@ class _VisitEntryRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   Text(
@@ -246,7 +247,7 @@ class _VisitEntryRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ],
@@ -288,7 +289,7 @@ class _VisitEntryRow extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF0f1729),
+                              color: AppColors.gray900,
                             ),
                           ),
                         ),
@@ -297,7 +298,7 @@ class _VisitEntryRow extends StatelessWidget {
                             '${entry.durationMinutes} min',
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF9ca3af),
+                              color: AppColors.gray400,
                             ),
                           ),
                         if (entry.consultantInitials != null) ...[
@@ -310,7 +311,7 @@ class _VisitEntryRow extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF1e40af),
+                                color: AppColors.navyBright,
                               ),
                             ),
                           ),
@@ -322,7 +323,7 @@ class _VisitEntryRow extends StatelessWidget {
                         entry.attendees!,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6b7280),
+                          color: AppColors.gray500,
                         ),
                       ),
                     if (entry.sampleGiven != null)
@@ -330,7 +331,7 @@ class _VisitEntryRow extends StatelessWidget {
                         'amostra: ${entry.sampleGiven}',
                         style: const TextStyle(
                           fontSize: 11.5,
-                          color: Color(0xFF6b7280),
+                          color: AppColors.gray500,
                         ),
                       ),
                     if (entry.linkedOrderValue != null)
@@ -339,7 +340,7 @@ class _VisitEntryRow extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF16a373),
+                          color: AppColors.green,
                         ),
                       ),
                     if (entry.summary != null) ...[

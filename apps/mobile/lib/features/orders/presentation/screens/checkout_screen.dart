@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/selectable.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -45,10 +46,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           // TODO: fetch real clinic list via FacilitiesRepository
           ...<SelectableClinic>[].map(
             (clinic) => ListTile(
-              leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
+              leading: const Icon(Icons.business, color: AppColors.navyDeep),
               title: Text(clinic.name),
               trailing: cart.clinic?.id == clinic.id
-                  ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
+                  ? const Icon(Icons.check_circle, color: AppColors.navyDeep)
                   : null,
               onTap: () {
                 ref.read(cartProvider.notifier).setClinic(clinic);
@@ -96,7 +97,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               padding: EdgeInsets.only(bottom: 24),
               child: Text(
                 'Nenhum médico disponível para esta clínica',
-                style: TextStyle(color: Color(0xFF6b7280)),
+                style: TextStyle(color: AppColors.gray500),
               ),
             )
           else
@@ -105,7 +106,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 title: Text(doc.name),
                 subtitle: Text(doc.specialty),
                 trailing: cart.doctor?.id == doc.id
-                    ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
+                    ? const Icon(Icons.check_circle, color: AppColors.navyDeep)
                     : null,
                 onTap: () {
                   ref.read(cartProvider.notifier).setDoctor(doc);
@@ -131,7 +132,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final canConfirm = cart.clinic != null && cart.doctor != null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -150,7 +151,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF6b7280),
+                          color: AppColors.gray500,
                           letterSpacing: 0.8,
                         ),
                       ),
@@ -248,7 +249,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     item.productSubtitle,
                                     style: const TextStyle(
                                       fontSize: 11.5,
-                                      color: Color(0xFF6b7280),
+                                      color: AppColors.gray500,
                                     ),
                                   ),
                                   const SizedBox(height: 6),
@@ -258,7 +259,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                         '× ${item.qty}',
                                         style: const TextStyle(
                                           fontSize: 11.5,
-                                          color: Color(0xFF6b7280),
+                                          color: AppColors.gray500,
                                         ),
                                       ),
                                       const Spacer(),
@@ -267,7 +268,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                           _money(catalogTotal),
                                           style: const TextStyle(
                                             fontSize: 11.5,
-                                            color: Color(0xFF9ca3af),
+                                            color: AppColors.gray400,
                                             decoration:
                                                 TextDecoration.lineThrough,
                                           ),
@@ -278,7 +279,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                           style: const TextStyle(
                                             fontSize: 12.5,
                                             fontWeight: FontWeight.w700,
-                                            color: Color(0xFF16a373),
+                                            color: AppColors.green,
                                           ),
                                         ),
                                       ] else
@@ -287,7 +288,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                           style: const TextStyle(
                                             fontSize: 12.5,
                                             fontWeight: FontWeight.w700,
-                                            color: Color(0xFF374151),
+                                            color: AppColors.gray700,
                                           ),
                                         ),
                                     ],
@@ -299,7 +300,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                       style: const TextStyle(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF16a373),
+                                        color: AppColors.green,
                                       ),
                                     ),
                                   ],
@@ -327,7 +328,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0a2f7f),
+                            color: AppColors.navyDeep,
                           ),
                         ),
                       ],
@@ -351,7 +352,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     Icon(
                       Icons.local_shipping_outlined,
                       size: 18,
-                      color: Color(0xFF16a373),
+                      color: AppColors.green,
                     ),
                     SizedBox(width: 8),
                     Expanded(
@@ -380,8 +381,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0a2f7f),
-                    disabledBackgroundColor: const Color(0xFFd1d5db),
+                    backgroundColor: const AppColors.navyDeep,
+                    disabledBackgroundColor: const AppColors.gray300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -402,7 +403,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 const Center(
                   child: Text(
                     'Selecione clínica e médico para continuar',
-                    style: TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af)),
+                    style: TextStyle(fontSize: 12.5, color: AppColors.gray400),
                   ),
                 ),
               ],
@@ -444,11 +445,11 @@ class _StepItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bg = done
-        ? const Color(0xFF0a2f7f)
+        ? const AppColors.navyDeep
         : current
         ? const Color(0xFFEAF0FF)
         : const Color(0xFFeef0f3);
-    final fg = done ? Colors.white : const Color(0xFF0a2f7f);
+    final fg = done ? Colors.white : const AppColors.navyDeep;
     return Column(
       children: [
         Container(

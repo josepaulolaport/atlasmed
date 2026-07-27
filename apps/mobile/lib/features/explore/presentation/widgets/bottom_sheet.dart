@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class BottomSheetWidget extends StatelessWidget {
   final Widget child;
@@ -29,7 +30,7 @@ class BottomSheetWidget extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFFd1d5db),
+              color: const AppColors.gray300,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -43,7 +44,7 @@ class BottomSheetWidget extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                     letterSpacing: -0.2,
                   ),
                 ),

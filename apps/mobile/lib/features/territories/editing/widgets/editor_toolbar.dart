@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Persistent, fixed-position tool switcher + undo/redo. Never tracks the
 /// map — it's app chrome, not a map annotation.
@@ -126,10 +127,10 @@ class _ModeButton extends StatelessWidget {
     // the bar, showing every label at once would overflow a typical
     // phone width.
     final iconColor = !enabled
-        ? const Color(0xFFD1D5DB)
+        ? const AppColors.gray300
         : selected
-        ? const Color(0xFF0A2F7F)
-        : const Color(0xFF6B7280);
+        ? const AppColors.navyDeep
+        : const AppColors.gray500;
     return Material(
       color: selected && enabled ? const Color(0xFFEEF2FF) : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
@@ -185,7 +186,7 @@ class _IconButton extends StatelessWidget {
         child: Icon(
           icon,
           size: 19,
-          color: enabled ? const Color(0xFF374151) : const Color(0xFFD1D5DB),
+          color: enabled ? const AppColors.gray700 : const AppColors.gray300,
         ),
       ),
     );

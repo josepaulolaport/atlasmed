@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/cata
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/comparison_table.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Tabela Brasíndice/Simpro" screen — the complete price index: every
 /// AtlasMed product and every competitor product in the catalog, flattened
@@ -64,7 +65,7 @@ class _CatalogPriceIndexScreenState
     final indexAsync = ref.watch(catalogPriceIndexProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [

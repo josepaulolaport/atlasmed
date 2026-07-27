@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class UsersEmptyState extends StatelessWidget {
   const UsersEmptyState({super.key, this.query = ''});
@@ -18,13 +19,13 @@ class UsersEmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: const BoxDecoration(
-                color: Color(0xFFf3f4f6),
+                color: AppColors.gray100,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.people_outline_rounded,
                 size: 32,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 20),
@@ -35,7 +36,7 @@ class UsersEmptyState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 6),
@@ -46,7 +47,7 @@ class UsersEmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
                 height: 1.5,
               ),
             ),

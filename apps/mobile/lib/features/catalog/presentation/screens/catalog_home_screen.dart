@@ -14,6 +14,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
     show isAdminProvider;
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Entry point for the Catálogo de Produtos section, designed like a store
 /// catalog rather than a filing cabinet: a search box and a family filter
@@ -145,10 +146,10 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
     final families = familiesAsync.valueOrNull ?? const [];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
-              backgroundColor: const Color(0xFF0a2f7f),
+              backgroundColor: const AppColors.navyDeep,
               icon: const Icon(Icons.add_rounded),
               label: const Text('Novo produto'),
               onPressed: () => _openNewProductForm(families),
@@ -180,7 +181,7 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
                             'Nenhum produto encontrado',
                             style: TextStyle(
                               fontSize: 12.5,
-                              color: Color(0xFF9ca3af),
+                              color: AppColors.gray400,
                             ),
                           ),
                         )
@@ -243,7 +244,7 @@ class _ProductRow extends StatelessWidget {
                 child: const Icon(
                   Icons.medication_liquid_outlined,
                   size: 20,
-                  color: Color(0xFF0a2f7f),
+                  color: AppColors.navyDeep,
                 ),
               ),
               const SizedBox(width: 12),
@@ -259,7 +260,7 @@ class _ProductRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                         letterSpacing: -0.1,
                       ),
                     ),
@@ -271,7 +272,7 @@ class _ProductRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 11.5,
-                          color: Color(0xFF9ca3af),
+                          color: AppColors.gray400,
                         ),
                       ),
                     ],
@@ -284,14 +285,14 @@ class _ProductRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0a2f7f),
+                  color: AppColors.navyDeep,
                 ),
               ),
               const SizedBox(width: 2),
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ],
           ),
@@ -386,7 +387,7 @@ class _PublicationFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFf7f8fb),
+        color: const AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFeef0f3)),
       ),
@@ -401,7 +402,7 @@ class _PublicationFooter extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -410,14 +411,14 @@ class _PublicationFooter extends StatelessWidget {
                   'Brasíndice: ${formatDate(brasindiceDate)}',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
                 Text(
                   'Simpro: ${formatDate(simproDate)}',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
               ],
@@ -428,7 +429,7 @@ class _PublicationFooter extends StatelessWidget {
             icon: const Icon(
               Icons.edit_outlined,
               size: 16,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
         ],

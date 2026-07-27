@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicContextSection extends StatelessWidget {
   const ClinicContextSection({
@@ -41,7 +42,7 @@ class ClinicContextSection extends StatelessWidget {
               initialsColor: const Color(0xFF047857),
             ),
           ],
-          const Divider(height: 20, color: Color(0xFFf3f4f6)),
+          const Divider(height: 20, color: AppColors.gray100),
           if (regionZoneLabel != null)
             _ContextRow(
               icon: Icons.explore_outlined,
@@ -86,7 +87,7 @@ class _PersonRow extends StatelessWidget {
     required this.name,
     required this.roleLabel,
     this.avatarColor = const Color(0xFFeef4ff),
-    this.initialsColor = const Color(0xFF1e40af),
+    this.initialsColor = const AppColors.navyBright,
   });
 
   final String? name;
@@ -120,14 +121,14 @@ class _PersonRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
               Text(
                 roleLabel,
                 style: const TextStyle(
                   fontSize: 11.5,
-                  color: Color(0xFF9ca3af),
+                  color: AppColors.gray400,
                 ),
               ),
             ],
@@ -164,13 +165,13 @@ class _ContextRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF9ca3af)),
+          Icon(icon, size: 16, color: const AppColors.gray400),
           const SizedBox(width: 10),
           SizedBox(
             width: 80,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 13, color: AppColors.gray500),
             ),
           ),
           Expanded(
@@ -179,7 +180,7 @@ class _ContextRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
           ),

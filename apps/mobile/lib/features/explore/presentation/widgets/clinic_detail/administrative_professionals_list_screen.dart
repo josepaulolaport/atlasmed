@@ -13,6 +13,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full list of administrative professionals — same Explorar table chrome
 /// (search + filter + sort + hairline rows) as [DoctorsListScreen].
@@ -186,7 +187,7 @@ class _AdministrativeProfessionalsListScreenState
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         title: Text(
           'Profissionais administrativos · ${_professionals.length}',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -195,7 +196,7 @@ class _AdministrativeProfessionalsListScreenState
       floatingActionButton: ref.watch(canMutateProfessionalProvider)
           ? FloatingActionButton(
               onPressed: _openAssociate,
-              backgroundColor: const Color(0xFF1e40af),
+              backgroundColor: const AppColors.navyBright,
               foregroundColor: Colors.white,
               child: const Icon(Icons.add_rounded),
             )
@@ -203,15 +204,80 @@ class _AdministrativeProfessionalsListScreenState
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-            child: SearchBarWidget(
-              value: _query,
-              onChanged: (q) => setState(() => _query = q),
-              onFilter: _showFilterSheet,
-              filterCount: _filterCount,
-              hintText: 'Buscar nome, cargo…',
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                child: SearchBarWidget(
+                  value: _query,
+                  onChanged: (q) => setState(() => _query = q),
+                  onFilter: _showFilterSheet,
+                  filterCount: _filterCount,
+                  hintText: 'Buscar nome, cargo…',
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+                child: SortRow(
+                  sort: _sort,
+                  onSortTap: () => setState(() => _sortOpen = true),
+                  filterChips: _filterChips,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Text(
+                  filtered.length == 1
+                      ? '1 profissional'
+                      : '${filtered.length} profissionais',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.gray500,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? EmptyState(query: _query, kind: 'facility-admin')
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) => _AdminProfessionalRow(
+                          professional: filtered[i],
+                          onTap: () async {
+                            final updated = await Navigator.of(context)
+                                .push<AdministrativeProfessional>(
+                                  MaterialPageRoute(
+                                    builder: (_) => RepresentativeDetailScreen(
+                                      professional: filtered[i],
+                                      facilityName: widget.facilityName,
+                                      facilityId: widget.facilityId,
+                                    ),
+                                  ),
+                                );
+                            if (updated == null || !mounted) return;
+                            setState(() {
+                              _professionals = [
+                                for (final p in _professionals)
+                                  if (p.id == updated.id) updated else p,
+                              ];
+                            });
+                            final facilityId = widget.facilityId;
+                            if (facilityId != null && facilityId.isNotEmpty) {
+                              await ref
+                                  .read(
+                                    facilityAdministratorsRosterProvider(
+                                      facilityId,
+                                    ).notifier,
+                                  )
+                                  .retry();
+                            }
+                          },
+                        ),
+                      ),
+              ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
@@ -384,7 +450,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                       letterSpacing: -0.15,
                     ),
                   ),
@@ -400,7 +466,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF1e40af),
+                            color: AppColors.navyBright,
                           ),
                         ),
                       for (final label in professional.roleChipLabels)
@@ -414,7 +480,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                         Icons.phone_outlined,
                         size: 13,
                         color: hasPhone
-                            ? const Color(0xFF6b7280)
+                            ? const AppColors.gray500
                             : const Color(0xFFc4c9d2),
                       ),
                       const SizedBox(width: 5),
@@ -427,7 +493,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                             fontSize: 12,
                             color: hasPhone
                                 ? const Color(0xFF4b5563)
-                                : const Color(0xFF9ca3af),
+                                : const AppColors.gray400,
                           ),
                         ),
                       ),
@@ -461,7 +527,7 @@ class _RowBadge extends StatelessWidget {
     final emphasized = label.toUpperCase().contains('DECISOR');
     final color = emphasized
         ? const Color(0xFF7c3aed)
-        : const Color(0xFF1e40af);
+        : const AppColors.navyBright;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(

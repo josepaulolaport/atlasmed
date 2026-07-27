@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Result of a local document pick (camera, gallery, or file).
 class PickedRegistrationFile {
@@ -51,20 +52,20 @@ Future<PickedRegistrationFile?> pickRegistrationDocument(
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
               const SizedBox(height: 4),
               const Text(
                 'Foto, imagem da galeria ou arquivo (PDF e similares).',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+                style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
               ),
               const SizedBox(height: 12),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
                   Icons.camera_alt_outlined,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
                 title: const Text('Tirar foto'),
                 onTap: () => Navigator.of(sheetContext).pop(_PickKind.camera),
@@ -73,7 +74,7 @@ Future<PickedRegistrationFile?> pickRegistrationDocument(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
                   Icons.photo_library_outlined,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
                 title: const Text('Escolher da galeria'),
                 onTap: () => Navigator.of(sheetContext).pop(_PickKind.gallery),
@@ -82,12 +83,12 @@ Future<PickedRegistrationFile?> pickRegistrationDocument(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
                   Icons.insert_drive_file_outlined,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
                 title: const Text('Escolher arquivo'),
                 subtitle: const Text(
                   'PDF, documento ou imagem',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
+                  style: TextStyle(fontSize: 12, color: AppColors.gray400),
                 ),
                 onTap: () => Navigator.of(sheetContext).pop(_PickKind.file),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/mock/mock_products_data.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Compact family card for the Produtos list — brand-level intro only.
 /// Concentrations and pricing live on the detail screen.
@@ -38,7 +39,7 @@ class ProductsProductCard extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFf7f8fb),
+                  color: const AppColors.background,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFFeef0f3)),
                 ),
@@ -60,7 +61,7 @@ class ProductsProductCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0a2f7f),
+                        color: AppColors.navyDeep,
                         letterSpacing: -0.1,
                       ),
                     ),
@@ -85,7 +86,7 @@ class ProductsProductCard extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ],
           ),
@@ -110,7 +111,7 @@ class _MetaLine extends StatelessWidget {
           style: const TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF9ca3af),
+            color: AppColors.gray400,
           ),
         ),
         Expanded(
@@ -121,7 +122,7 @@ class _MetaLine extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF6b7280),
+              color: AppColors.gray500,
             ),
           ),
         ),

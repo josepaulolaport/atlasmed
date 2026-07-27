@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 enum UserRoleName { admin, manager, rep, ops }
 
@@ -21,11 +22,11 @@ extension UserRoleNameX on UserRoleName {
       case UserRoleName.admin:
         return const Color(0xFF8b5cf6);
       case UserRoleName.manager:
-        return const Color(0xFF1e40af);
+        return const AppColors.navyBright;
       case UserRoleName.rep:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case UserRoleName.ops:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class InvitationsScreen extends ConsumerWidget {
   const InvitationsScreen({super.key});
@@ -26,7 +27,7 @@ class InvitationsScreen extends ConsumerWidget {
                     onPressed: () => context.pop(),
                     icon: const Icon(
                       Icons.arrow_back_rounded,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   const Text(
@@ -34,7 +35,7 @@ class InvitationsScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                 ],
@@ -46,7 +47,7 @@ class InvitationsScreen extends ConsumerWidget {
                 error: (_, _) => const Center(
                   child: Text(
                     'Não foi possível carregar os convites.',
-                    style: TextStyle(color: Color(0xFF6b7280)),
+                    style: TextStyle(color: AppColors.gray500),
                   ),
                 ),
                 data: (invitations) {
@@ -54,7 +55,7 @@ class InvitationsScreen extends ConsumerWidget {
                     return const Center(
                       child: Text(
                         'Nenhum convite enviado ainda.',
-                        style: TextStyle(color: Color(0xFF6b7280)),
+                        style: TextStyle(color: AppColors.gray500),
                       ),
                     );
                   }
@@ -108,7 +109,7 @@ class _InvitationRow extends ConsumerWidget {
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -117,7 +118,7 @@ class _InvitationRow extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -139,7 +140,7 @@ class _InvitationRow extends ConsumerWidget {
                             style: const TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF0a2f7f),
+                              color: AppColors.navyDeep,
                             ),
                           ),
                         ),
@@ -172,7 +173,7 @@ class _InvitationRow extends ConsumerWidget {
                       'convidado por ${invitation.invitedByName}',
                       style: const TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   ],
@@ -182,7 +183,7 @@ class _InvitationRow extends ConsumerWidget {
                 PopupMenuButton<String>(
                   icon: const Icon(
                     Icons.more_vert_rounded,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                   onSelected: (action) => _handleAction(context, ref, action),
                   itemBuilder: (context) => const [
@@ -193,7 +194,7 @@ class _InvitationRow extends ConsumerWidget {
               else
                 const Icon(
                   Icons.chevron_right_rounded,
-                  color: Color(0xFF9ca3af),
+                  color: AppColors.gray400,
                 ),
             ],
           ),

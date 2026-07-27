@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TerritoryEditorScreen extends ConsumerStatefulWidget {
   final TerritoryEditorTarget target;
@@ -1507,7 +1508,7 @@ class _DrawAreaBar extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280),
+                color: AppColors.gray500,
               ),
             ),
           ),
@@ -1552,7 +1553,7 @@ class _RoundIconButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         child: Padding(
           padding: const EdgeInsets.all(10),
-          child: Icon(icon, size: 18, color: const Color(0xFF374151)),
+          child: Icon(icon, size: 18, color: const AppColors.gray700),
         ),
       ),
     );
@@ -1575,7 +1576,7 @@ class _CenteredMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFFF7F8FB),
+      color: const AppColors.background,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -1589,7 +1590,7 @@ class _CenteredMessage extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 3),
                 )
               else if (icon != null)
-                Icon(icon, size: 42, color: const Color(0xFF6B7280)),
+                Icon(icon, size: 42, color: const AppColors.gray500),
               if (title != null) ...[
                 const SizedBox(height: 16),
                 Text(
@@ -1607,7 +1608,7 @@ class _CenteredMessage extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.gray500,
                   ),
                 ),
               ],

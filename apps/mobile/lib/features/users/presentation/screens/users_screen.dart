@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_row
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class UsersScreen extends ConsumerWidget {
   const UsersScreen({super.key});
@@ -32,7 +33,7 @@ class UsersScreen extends ConsumerWidget {
                       onPressed: () => context.push('/users/invitations'),
                       icon: const Icon(
                         Icons.mail_outline_rounded,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                       tooltip: 'Ver convites',
                     ),
@@ -47,7 +48,7 @@ class UsersScreen extends ConsumerWidget {
       ),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
-              backgroundColor: const Color(0xFF0a2f7f),
+              backgroundColor: const AppColors.navyDeep,
               onPressed: () => context.push('/users/invite'),
               icon: const Icon(
                 Icons.person_add_alt_1_rounded,
@@ -81,13 +82,13 @@ class _AccessRestricted extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: const BoxDecoration(
-                color: Color(0xFFf3f4f6),
+                color: AppColors.gray100,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.lock_outline_rounded,
                 size: 32,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 20),
@@ -96,7 +97,7 @@ class _AccessRestricted extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 6),
@@ -105,7 +106,7 @@ class _AccessRestricted extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
                 height: 1.5,
               ),
             ),
@@ -149,7 +150,7 @@ class _UsersListState extends ConsumerState<_UsersList> {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
           ),
@@ -253,7 +254,7 @@ class _SearchBar extends StatelessWidget {
                 const Icon(
                   Icons.search_rounded,
                   size: 16,
-                  color: Color(0xFF6b7280),
+                  color: AppColors.gray500,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -269,11 +270,11 @@ class _SearchBar extends StatelessWidget {
                     onChanged: onChanged,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                     decoration: const InputDecoration(
                       hintText: 'Buscar por nome, usuário ou email...',
-                      hintStyle: TextStyle(color: Color(0xFF9ca3af)),
+                      hintStyle: TextStyle(color: AppColors.gray400),
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
@@ -294,7 +295,7 @@ class _SearchBar extends StatelessWidget {
                       child: const Icon(
                         Icons.close_rounded,
                         size: 10,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ),
@@ -309,7 +310,7 @@ class _SearchBar extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: filterCount > 0 ? const Color(0xFF1e40af) : Colors.white,
+              color: filterCount > 0 ? const AppColors.navyBright : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFe5e7eb)),
               boxShadow: const [
@@ -328,7 +329,7 @@ class _SearchBar extends StatelessWidget {
                     size: 18,
                     color: filterCount > 0
                         ? Colors.white
-                        : const Color(0xFF1e40af),
+                        : const AppColors.navyBright,
                   ),
                 ),
                 if (filterCount > 0)

@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_prod
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Admin-only full-screen form for registering a new competitor product
 /// or editing an existing one. Same shape as [VariantFormScreen] — a
@@ -149,9 +150,9 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         foregroundColor: const Color(0xFF111827),
@@ -289,7 +290,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
               child: FilledButton(
                 onPressed: _isValid && !_saving ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -331,7 +332,7 @@ class _CompFieldLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 12.5,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF374151),
+        color: AppColors.gray700,
       ),
     );
   }
@@ -348,7 +349,7 @@ class _CompSectionLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF9ca3af),
+        color: AppColors.gray400,
         letterSpacing: 0.5,
       ),
     );
@@ -374,10 +375,10 @@ class _CompTextInput extends StatelessWidget {
       controller: controller,
       textCapitalization: capitalization,
       keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 14, color: Color(0xFF0f1729)),
+      style: const TextStyle(fontSize: 14, color: AppColors.gray900),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF9ca3af)),
+        hintStyle: const TextStyle(color: AppColors.gray400),
         filled: true,
         fillColor: Colors.white,
         isDense: true,

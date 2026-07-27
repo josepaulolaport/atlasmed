@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Prominent field + before/after summary used on suggestion cards.
 class SuggestionChangeSummary extends StatelessWidget {
@@ -44,7 +45,7 @@ class SuggestionChangeSummary extends StatelessWidget {
                     size: 12,
                     color: isDeactivation
                         ? const Color(0xFFdc2626)
-                        : const Color(0xFF1e40af),
+                        : const AppColors.navyBright,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -56,7 +57,7 @@ class SuggestionChangeSummary extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: isDeactivation
                           ? const Color(0xFFdc2626)
-                          : const Color(0xFF1e40af),
+                          : const AppColors.navyBright,
                     ),
                   ),
                 ],
@@ -71,7 +72,7 @@ class SuggestionChangeSummary extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 11.5 : 12,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF6b7280),
+              color: const AppColors.gray500,
             ),
           ),
           const SizedBox(height: 3),
@@ -142,7 +143,7 @@ class _ValueLine extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 11.5 : 12,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF9ca3af),
+              color: const AppColors.gray400,
             ),
           ),
           TextSpan(
@@ -151,7 +152,7 @@ class _ValueLine extends StatelessWidget {
               fontSize: compact ? 12 : 13,
               fontWeight: muted ? FontWeight.w500 : FontWeight.w700,
               color: muted
-                  ? const Color(0xFF6b7280)
+                  ? const AppColors.gray500
                   : (emphasizeColor ?? const Color(0xFF059669)),
               decoration: strike ? TextDecoration.lineThrough : null,
               decorationColor: const Color(0xFFdc2626),

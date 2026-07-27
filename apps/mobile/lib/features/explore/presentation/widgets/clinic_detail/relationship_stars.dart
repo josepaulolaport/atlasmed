@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Relacionamento" star rating (1–10 → 5 stars, 2 points each).
 ///
@@ -47,7 +48,7 @@ class RelationshipStars extends StatelessWidget {
             style: TextStyle(
               fontSize: _editable ? 13 : 11.5,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF6b7280),
+              color: const AppColors.gray500,
             ),
           ),
           SizedBox(width: _editable ? 10 : 6),

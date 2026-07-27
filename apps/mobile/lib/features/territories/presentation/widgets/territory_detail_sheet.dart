@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Bottom sheet with a summary of the tapped territory.
 class TerritoryDetailSheet extends ConsumerWidget {
@@ -27,7 +28,7 @@ class TerritoryDetailSheet extends ConsumerWidget {
     final isManagerZone = territory.kind == TerritoryKind.managerZone;
     final kindColor = isManagerZone
         ? const Color(0xFF2563EB)
-        : const Color(0xFF16a373);
+        : const AppColors.green;
 
     return SafeArea(
       top: false,
@@ -69,7 +70,7 @@ class TerritoryDetailSheet extends ConsumerWidget {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
                 letterSpacing: -0.2,
               ),
             ),
@@ -160,14 +161,14 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 13.5, color: Color(0xFF6b7280)),
+            style: const TextStyle(fontSize: 13.5, color: AppColors.gray500),
           ),
           Text(
             value,
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
         ],

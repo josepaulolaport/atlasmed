@@ -11,7 +11,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dar
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
 /// and full address. Rendered above the scrollable section list, not inside
@@ -100,7 +100,7 @@ class ClinicHeaderSection extends ConsumerWidget {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(16, top + 4, 16, 18),
       decoration: const BoxDecoration(
-        color: Color(0xFF1e40af),
+        color: AppColors.navyBright,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(24),
           bottomRight: Radius.circular(24),
@@ -413,7 +413,7 @@ class _Avatar extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFF1e40af),
+                      color: const AppColors.navyBright,
                       width: 2,
                     ),
                   ),
@@ -421,7 +421,7 @@ class _Avatar extends StatelessWidget {
                     child: Icon(
                       taxIdType!.icon,
                       size: 11,
-                      color: const Color(0xFF1e40af),
+                      color: const AppColors.navyBright,
                     ),
                   ),
                 ),
@@ -433,7 +433,7 @@ class _Avatar extends StatelessWidget {
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1e40af),
+                  color: const AppColors.navyBright,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
@@ -472,7 +472,7 @@ class _Initials extends StatelessWidget {
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF1e40af),
+          color: AppColors.navyBright,
         ),
       ),
     );

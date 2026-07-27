@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/prov
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidade_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/widgets/suggestion_change_summary.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Dedicated list of the current user’s clinic suggestions.
 class MySuggestionsScreen extends ConsumerWidget {
@@ -26,7 +27,7 @@ class MySuggestionsScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFFf8f9fb),
         elevation: 0,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         title: Text(
           asyncItems.maybeWhen(
             data: (items) => 'Não Conformidades · ${items.length}',
@@ -55,7 +56,7 @@ class MySuggestionsScreen extends ConsumerWidget {
                   onPressed: () =>
                       ref.invalidate(mySuggestionsForClinicProvider(targetId)),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF1e40af),
+                    backgroundColor: const AppColors.navyBright,
                   ),
                   child: const Text('Tentar novamente'),
                 ),
@@ -76,7 +77,7 @@ class MySuggestionsScreen extends ConsumerWidget {
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0a2f7f),
+                  color: AppColors.navyDeep,
                 ),
               ),
               const SizedBox(height: 4),
@@ -84,7 +85,7 @@ class MySuggestionsScreen extends ConsumerWidget {
                 pending == 0
                     ? 'Nenhuma sugestão aguardando análise'
                     : '$pending aguardando análise',
-                style: const TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+                style: const TextStyle(fontSize: 13, color: AppColors.gray500),
               ),
               const SizedBox(height: 16),
               if (items.isEmpty)
@@ -127,7 +128,7 @@ class _EmptyCard extends StatelessWidget {
       ),
       child: const Text(
         'Você ainda não enviou não conformidades para este perfil.',
-        style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+        style: TextStyle(fontSize: 13, color: AppColors.gray400),
       ),
     );
   }
@@ -189,7 +190,7 @@ class _SuggestionCard extends StatelessWidget {
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ],
               ),

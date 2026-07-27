@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Notas de campo" — private, facility-scoped notes only the current user sees.
 class ClinicFieldNotesSection extends ConsumerWidget {
@@ -34,7 +35,7 @@ class ClinicFieldNotesSection extends ConsumerWidget {
           children: [
             const Text(
               'Não foi possível carregar as notas.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              style: TextStyle(fontSize: 13, color: AppColors.gray400),
             ),
             TextButton(
               onPressed: () =>
@@ -89,7 +90,7 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
               padding: EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 'Nenhuma nota registrada — só você verá as notas adicionadas aqui.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                style: TextStyle(fontSize: 13, color: AppColors.gray400),
               ),
             )
           else
@@ -110,7 +111,7 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
                   : const Icon(Icons.add_rounded, size: 18),
               label: const Text('Adicionar nota'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1e40af),
+                foregroundColor: const AppColors.navyBright,
                 side: const BorderSide(color: Color(0xFFdbeafe)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -228,13 +229,13 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 4),
           const Text(
             'Só você verá esta nota.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
+            style: TextStyle(fontSize: 12, color: AppColors.gray400),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -260,7 +261,7 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
               onPressed: () =>
                   Navigator.of(context).pop(_controller.text.trim()),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -301,7 +302,7 @@ class _NoteRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1e40af),
+                color: AppColors.navyBright,
               ),
             ),
           ),
@@ -310,7 +311,7 @@ class _NoteRow extends StatelessWidget {
         Expanded(
           child: Text(
             note.text,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
+            style: const TextStyle(fontSize: 13, color: AppColors.gray700),
           ),
         ),
       ],

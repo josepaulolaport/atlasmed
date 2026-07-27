@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ── Tracking status ──────────────────────────────────────────
 enum TrackingStatus {
@@ -50,13 +51,13 @@ extension TrackingStatusX on TrackingStatus {
       case TrackingStatus.pending:
         return const Color(0xFFf59e0b);
       case TrackingStatus.confirmed:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case TrackingStatus.processing:
         return const Color(0xFF1d4ed8);
       case TrackingStatus.shipped:
         return const Color(0xFF8b5cf6);
       case TrackingStatus.delivered:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case TrackingStatus.cancelled:
         return const Color(0xFFef4444);
     }

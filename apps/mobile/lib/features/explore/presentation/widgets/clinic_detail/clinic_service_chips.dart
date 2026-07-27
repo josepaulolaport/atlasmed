@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicServiceChips extends StatelessWidget {
   const ClinicServiceChips({super.key, required this.services});
@@ -32,7 +33,7 @@ class ClinicServiceChips extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1e40af),
+                    color: AppColors.navyBright,
                   ),
                 ),
               ),

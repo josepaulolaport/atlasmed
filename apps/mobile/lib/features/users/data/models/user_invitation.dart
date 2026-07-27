@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Mirrors the DB `invitation_status` enum.
 enum InvitationStatus { pending, accepted, expired, revoked }
@@ -23,13 +24,13 @@ extension InvitationStatusX on InvitationStatus {
   Color get color {
     switch (this) {
       case InvitationStatus.pending:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
       case InvitationStatus.accepted:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case InvitationStatus.expired:
-        return const Color(0xFF6b7280);
+        return const AppColors.gray500;
       case InvitationStatus.revoked:
-        return const Color(0xFFb84545);
+        return const AppColors.red;
     }
   }
 

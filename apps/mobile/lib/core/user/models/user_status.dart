@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 enum UserStatus { active, inactive, suspended, pending }
 
@@ -19,13 +20,13 @@ extension UserStatusX on UserStatus {
   Color get color {
     switch (this) {
       case UserStatus.active:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case UserStatus.inactive:
-        return const Color(0xFF6b7280);
+        return const AppColors.gray500;
       case UserStatus.suspended:
-        return const Color(0xFFb84545);
+        return const AppColors.red;
       case UserStatus.pending:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
     }
   }
 }

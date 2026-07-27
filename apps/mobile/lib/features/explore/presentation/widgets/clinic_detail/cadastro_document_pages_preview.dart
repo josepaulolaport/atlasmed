@@ -8,6 +8,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/immersive_photo_gallery_screen.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Stable generated download/share name:
 /// `{document_type}_v{version}_{submitted_user}_{yyyyMMdd_HHmm}[_pN].{ext}`
@@ -633,7 +634,7 @@ class _CarouselPager extends StatelessWidget {
             height: 5,
             decoration: BoxDecoration(
               color: i == index
-                  ? const Color(0xFF1e40af)
+                  ? const AppColors.navyBright
                   : const Color(0xFFcbd5e1),
               borderRadius: BorderRadius.circular(99),
             ),
@@ -718,7 +719,7 @@ class _RemoteOrLocalImageState extends State<_RemoteOrLocalImage> {
             child: Center(
               child: Icon(
                 Icons.broken_image_outlined,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
           );
@@ -733,7 +734,7 @@ class _RemoteOrLocalImageState extends State<_RemoteOrLocalImage> {
             child: Center(
               child: Icon(
                 Icons.broken_image_outlined,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
           ),

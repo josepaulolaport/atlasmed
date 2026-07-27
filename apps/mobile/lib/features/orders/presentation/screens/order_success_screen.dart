@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart'
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
   const OrderSuccessScreen({super.key});
@@ -31,7 +32,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
     final total = cart.subtotal;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -53,7 +54,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                           ),
                           child: const Icon(
                             Icons.local_hospital_outlined,
-                            color: Color(0xFF0A2F7F),
+                            color: AppColors.navyDeep,
                             size: 20,
                           ),
                         ),
@@ -75,7 +76,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                                 doctorName,
                                 style: const TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF6B7280),
+                                  color: AppColors.gray500,
                                 ),
                               ),
                             ],
@@ -103,7 +104,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                             'Seu carrinho foi limpo após a confirmação.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF6B7280),
+                              color: AppColors.gray500,
                             ),
                           )
                         else
@@ -137,7 +138,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0A2F7F),
+                                      color: AppColors.navyDeep,
                                     ),
                                   ),
                                 ],
@@ -160,7 +161,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                         Icon(
                           Icons.schedule_outlined,
                           size: 18,
-                          color: Color(0xFF16A373),
+                          color: AppColors.green,
                         ),
                         SizedBox(width: 10),
                         Expanded(
@@ -187,7 +188,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                 child: ElevatedButton(
                   onPressed: () => context.go('/orders'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0A2F7F),
+                    backgroundColor: const AppColors.navyDeep,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -238,7 +239,7 @@ class _HeroSection extends StatelessWidget {
             child: const Icon(
               Icons.check_rounded,
               size: 42,
-              color: Color(0xFF16A373),
+              color: AppColors.green,
             ),
           ),
           const SizedBox(height: 16),
@@ -257,7 +258,7 @@ class _HeroSection extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13.5,
-              color: Color(0xFF6B7280),
+              color: AppColors.gray500,
               height: 1.4,
             ),
           ),
@@ -274,7 +275,7 @@ class _HeroSection extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0A2F7F),
+                color: AppColors.navyDeep,
                 letterSpacing: 0.2,
               ),
             ),
@@ -331,7 +332,7 @@ class _OrderItemRow extends StatelessWidget {
                 item.productSubtitle,
                 style: const TextStyle(
                   fontSize: 11.5,
-                  color: Color(0xFF6B7280),
+                  color: AppColors.gray500,
                 ),
               ),
             ],
@@ -342,7 +343,7 @@ class _OrderItemRow extends StatelessWidget {
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF374151),
+            color: AppColors.gray700,
           ),
         ),
       ],

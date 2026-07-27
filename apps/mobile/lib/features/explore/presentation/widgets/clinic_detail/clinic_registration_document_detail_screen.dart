@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/faci
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/cadastro_document_pages_preview.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_cadastro_submission_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/registration_document_compose_screen.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Document-type hub: current approved/latest state, history, new submission.
 class ClinicRegistrationDocumentDetailScreen extends ConsumerStatefulWidget {
@@ -112,7 +113,7 @@ class _ClinicRegistrationDocumentDetailScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFFf8f9fb),
         elevation: 0,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         title: Text(
           _document.title,
           maxLines: 1,
@@ -129,7 +130,7 @@ class _ClinicRegistrationDocumentDetailScreenState
               icon: const Icon(Icons.upload_file_outlined, size: 18),
               label: Text(hasApproved ? 'Enviar novo' : 'Enviar documento'),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -165,7 +166,7 @@ class _ClinicRegistrationDocumentDetailScreenState
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 8),
@@ -186,7 +187,7 @@ class _ClinicRegistrationDocumentDetailScreenState
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.4,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ),
                 const Spacer(),
@@ -195,7 +196,7 @@ class _ClinicRegistrationDocumentDetailScreenState
                     '${_history.length}',
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
               ],
@@ -209,7 +210,7 @@ class _ClinicRegistrationDocumentDetailScreenState
             else if (_historyError != null)
               Text(
                 _historyError!,
-                style: const TextStyle(fontSize: 13, color: Color(0xFFb84545)),
+                style: const TextStyle(fontSize: 13, color: AppColors.red),
               )
             else if (_history.isEmpty)
               Container(
@@ -226,7 +227,7 @@ class _ClinicRegistrationDocumentDetailScreenState
                 child: const Text(
                   'Nenhum envio ainda. Toque em Enviar documento para começar.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+                  style: TextStyle(fontSize: 13, color: AppColors.gray500),
                 ),
               )
             else
@@ -386,9 +387,9 @@ class _HistoryCard extends StatelessWidget {
 
   Color get _statusColor {
     if (submission.isApproved) return const Color(0xFF1f9254);
-    if (submission.isRejected) return const Color(0xFFb84545);
+    if (submission.isRejected) return const AppColors.red;
     if (submission.isUnderReview) return const Color(0xFFc2661b);
-    return const Color(0xFF6b7280);
+    return const AppColors.gray500;
   }
 
   Color get _statusBg {
@@ -430,7 +431,7 @@ class _HistoryCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -439,7 +440,7 @@ class _HistoryCard extends StatelessWidget {
                       '${submission.fileCount == 1 ? 'arquivo' : 'arquivos'}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -464,7 +465,7 @@ class _HistoryCard extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 18,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ],
           ),

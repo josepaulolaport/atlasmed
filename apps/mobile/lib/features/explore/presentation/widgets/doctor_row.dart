@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class DoctorRow extends StatelessWidget {
   final Doctor doctor;
@@ -104,7 +105,7 @@ class DoctorRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                       letterSpacing: -0.15,
                     ),
                   ),
@@ -116,7 +117,7 @@ class DoctorRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF1e40af),
+                        color: AppColors.navyBright,
                       ),
                     ),
                   ],
@@ -137,7 +138,7 @@ class DoctorRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -148,7 +149,7 @@ class DoctorRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -160,7 +161,7 @@ class DoctorRow extends StatelessWidget {
                           Icons.phone_outlined,
                           size: 13,
                           color: hasPhone
-                              ? const Color(0xFF6b7280)
+                              ? const AppColors.gray500
                               : const Color(0xFFc4c9d2),
                         ),
                         const SizedBox(width: 5),
@@ -173,7 +174,7 @@ class DoctorRow extends StatelessWidget {
                               fontSize: 12,
                               color: hasPhone
                                   ? const Color(0xFF4b5563)
-                                  : const Color(0xFF9ca3af),
+                                  : const AppColors.gray400,
                             ),
                           ),
                         ),
@@ -196,7 +197,7 @@ class DoctorRow extends StatelessWidget {
                 icon: const Icon(
                   Icons.edit_outlined,
                   size: 20,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
               ),
             ],
@@ -217,7 +218,7 @@ class _RowBadge extends StatelessWidget {
     final emphasized = label.toUpperCase().contains('DECISOR');
     final color = emphasized
         ? const Color(0xFF7c3aed)
-        : const Color(0xFF1e40af);
+        : const AppColors.navyBright;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(

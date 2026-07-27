@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Animates the neutral surfaces used by list loading placeholders.
 class Shimmer extends StatefulWidget {
@@ -415,7 +416,7 @@ class CompetitorPickerListSkeleton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFf7f8fb),
+            color: const AppColors.background,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Row(

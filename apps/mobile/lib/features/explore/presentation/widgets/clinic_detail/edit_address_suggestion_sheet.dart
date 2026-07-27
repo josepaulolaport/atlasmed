@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Bottom sheet to suggest edits for the street-address components.
 /// Display on the admin card stays as one composed "Endereço" line; editing
@@ -154,7 +155,7 @@ class _AddressEditSuggestionSheetBodyState
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 4),
@@ -164,7 +165,7 @@ class _AddressEditSuggestionSheetBodyState
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: 12),
@@ -207,7 +208,7 @@ class _AddressEditSuggestionSheetBodyState
             const SizedBox(height: 8),
             const Text(
               'Sua sugestão passa por revisão administrativa antes de entrar no perfil.',
-              style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
+              style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -230,7 +231,7 @@ class _AddressEditSuggestionSheetBodyState
                   });
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1e40af),
+                  backgroundColor: const AppColors.navyBright,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -272,7 +273,7 @@ class _AddressField extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF6b7280),
+            color: AppColors.gray500,
           ),
         ),
         const SizedBox(height: 6),

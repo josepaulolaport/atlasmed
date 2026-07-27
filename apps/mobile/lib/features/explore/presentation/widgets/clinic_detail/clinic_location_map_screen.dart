@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen, single-pin map of just this establishment's own location —
 /// what "Expandir" on the inline preview opens. Deliberately has no nearby
@@ -61,7 +62,7 @@ class _ClinicLocationMapScreenState extends State<ClinicLocationMapScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0f1729),
+                          color: AppColors.gray900,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -71,7 +72,7 @@ class _ClinicLocationMapScreenState extends State<ClinicLocationMapScreen> {
                           widget.location.formattedAddress!,
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF6b7280),
+                            color: AppColors.gray500,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -116,7 +117,7 @@ class _ClinicLocationMapScreenState extends State<ClinicLocationMapScreen> {
       await manager.create(
         CircleAnnotationOptions(
           geometry: _point(widget.location),
-          circleColor: const Color(0xFF1e40af).toARGB32(),
+          circleColor: const AppColors.navyBright.toARGB32(),
           circleRadius: 11,
           circleStrokeColor: Colors.white.toARGB32(),
           circleStrokeWidth: 3,
@@ -146,12 +147,12 @@ class _LocationMapPlaceholder extends StatelessWidget {
           Icon(
             Icons.map_outlined,
             size: 64,
-            color: const Color(0xFF1e40af).withValues(alpha: 0.15),
+            color: const AppColors.navyBright.withValues(alpha: 0.15),
           ),
           const Icon(
             Icons.location_on_rounded,
             size: 36,
-            color: Color(0xFF1e40af),
+            color: AppColors.navyBright,
           ),
           Positioned(
             bottom: 24,
@@ -160,7 +161,7 @@ class _LocationMapPlaceholder extends StatelessWidget {
             child: Text(
               '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
             ),
           ),
         ],

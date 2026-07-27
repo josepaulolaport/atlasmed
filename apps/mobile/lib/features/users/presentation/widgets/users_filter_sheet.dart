@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class UsersFilterSheet extends StatefulWidget {
   const UsersFilterSheet({
@@ -68,7 +69,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
               style: TextStyle(
                 fontSize: 16.5,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 18),
@@ -77,7 +78,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
             const SizedBox(height: 8),
@@ -100,7 +101,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
             const SizedBox(height: 8),
@@ -124,7 +125,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
             const SizedBox(height: 8),
@@ -135,7 +136,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 final selected = _sortBy == sortBy;
                 return _Chip(
                   label: sortBy.label,
-                  color: const Color(0xFF0a2f7f),
+                  color: const AppColors.navyDeep,
                   selected: selected,
                   onTap: () => _selectSort(sortBy),
                 );
@@ -149,7 +150,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 final selected = _sortDir == dir;
                 return _Chip(
                   label: dir.labelFor(_sortBy),
-                  color: const Color(0xFF0a2f7f),
+                  color: const AppColors.navyDeep,
                   selected: selected,
                   onTap: () => setState(() => _sortDir = dir),
                 );
@@ -175,7 +176,7 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 Expanded(
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0a2f7f),
+                      backgroundColor: const AppColors.navyDeep,
                     ),
                     onPressed: () {
                       widget.onApply(
@@ -230,7 +231,7 @@ class _Chip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: selected ? color : const Color(0xFF374151),
+            color: selected ? color : const AppColors.gray700,
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_suggestion_sheet.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Optional context so a submitted suggestion lands in the Não Conformidades
 /// queue and on “Não Conformidades” for this profile.
@@ -107,8 +108,8 @@ class EditableFieldRow extends ConsumerWidget {
             onTap: _isEmpty
                 ? (showEditButton ? () => _suggestEdit(context, ref) : null)
                 : () => _copy(context),
-            splashColor: const Color(0xFF1e40af).withValues(alpha: 0.08),
-            highlightColor: const Color(0xFF1e40af).withValues(alpha: 0.05),
+            splashColor: const AppColors.navyBright.withValues(alpha: 0.08),
+            highlightColor: const AppColors.navyBright.withValues(alpha: 0.05),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
               child: Column(
@@ -117,7 +118,7 @@ class EditableFieldRow extends ConsumerWidget {
                   Row(
                     children: [
                       if (icon != null) ...[
-                        Icon(icon, size: 15, color: const Color(0xFF9ca3af)),
+                        Icon(icon, size: 15, color: const AppColors.gray400),
                         const SizedBox(width: 8),
                       ],
                       Expanded(
@@ -127,7 +128,7 @@ class EditableFieldRow extends ConsumerWidget {
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                         ),
                       ),
@@ -154,7 +155,7 @@ class EditableFieldRow extends ConsumerWidget {
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
-                                          color: Color(0xFF9ca3af),
+                                          color: AppColors.gray400,
                                         ),
                                       ))
                               : Text(
@@ -163,7 +164,7 @@ class EditableFieldRow extends ConsumerWidget {
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                     height: 1.35,
-                                    color: Color(0xFF0f1729),
+                                    color: AppColors.gray900,
                                   ),
                                 ),
                         ),
@@ -174,7 +175,7 @@ class EditableFieldRow extends ConsumerWidget {
                           icon: const Icon(
                             Icons.edit_outlined,
                             size: 18,
-                            color: Color(0xFF6b7280),
+                            color: AppColors.gray500,
                           ),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
@@ -194,7 +195,7 @@ class EditableFieldRow extends ConsumerWidget {
         if (showDivider)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Divider(height: 1, thickness: 1, color: Color(0xFFf3f4f6)),
+            child: Divider(height: 1, thickness: 1, color: AppColors.gray100),
           ),
       ],
     );
@@ -217,7 +218,7 @@ class _EmptyValueChip extends StatelessWidget {
           color: const Color(0xFFfef3d5),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: const Color(0xFFc6861b).withValues(alpha: 0.3),
+            color: const AppColors.amber.withValues(alpha: 0.3),
           ),
         ),
         child: Text(
@@ -225,7 +226,7 @@ class _EmptyValueChip extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFFc6861b),
+            color: AppColors.amber,
           ),
         ),
       ),

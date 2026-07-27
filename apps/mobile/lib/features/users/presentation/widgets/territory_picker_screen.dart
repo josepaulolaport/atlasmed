@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen multi-select map picker for invite / assignment flows.
 ///
@@ -172,7 +173,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   const Expanded(
@@ -181,7 +182,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                   ),
@@ -229,7 +230,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                   width: double.infinity,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0a2f7f),
+                      backgroundColor: const AppColors.navyDeep,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _loading
@@ -264,7 +265,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
               const Text(
                 'Não foi possível carregar os territórios.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF6b7280)),
+                style: TextStyle(color: AppColors.gray500),
               ),
               const SizedBox(height: 12),
               TextButton(
@@ -286,7 +287,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       return const Center(
         child: Text(
           'Nenhum território disponível nesta seleção.',
-          style: TextStyle(color: Color(0xFF6b7280)),
+          style: TextStyle(color: AppColors.gray500),
         ),
       );
     }
@@ -294,7 +295,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       return const Center(
         child: Text(
           'Mapa indisponível.',
-          style: TextStyle(color: Color(0xFF6b7280)),
+          style: TextStyle(color: AppColors.gray500),
         ),
       );
     }
@@ -681,7 +682,7 @@ class _LegendDot extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF6b7280),
+            color: AppColors.gray500,
           ),
         ),
       ],

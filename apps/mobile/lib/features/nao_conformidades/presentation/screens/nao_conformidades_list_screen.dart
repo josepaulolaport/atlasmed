@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/prov
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/widgets/suggestion_change_summary.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Ops queue: field-change suggestions from reps/managers + accepted history.
 class NaoConformidadesListScreen extends ConsumerStatefulWidget {
@@ -75,7 +76,7 @@ class _NaoConformidadesListScreenState
         0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -83,7 +84,7 @@ class _NaoConformidadesListScreenState
             const AtlasTopBar(page: 'Não Conformidades'),
             Expanded(
               child: RefreshIndicator(
-                color: const Color(0xFF1e40af),
+                color: const AppColors.navyBright,
                 backgroundColor: Colors.white,
                 strokeWidth: 2.6,
                 displacement: 48,
@@ -100,7 +101,7 @@ class _NaoConformidadesListScreenState
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0a2f7f),
+                        color: AppColors.navyDeep,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -115,7 +116,7 @@ class _NaoConformidadesListScreenState
                                 : '$pendingCount aguardando análise',
                             style: const TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF6b7280),
+                              color: AppColors.gray500,
                             ),
                           ),
                         ),
@@ -246,7 +247,7 @@ class _EmptyFilterState extends StatelessWidget {
             child: const Icon(
               Icons.inbox_outlined,
               size: 26,
-              color: Color(0xFF1e40af),
+              color: AppColors.navyBright,
             ),
           ),
           const SizedBox(height: 14),
@@ -255,13 +256,13 @@ class _EmptyFilterState extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF374151),
+              color: AppColors.gray700,
             ),
           ),
           const SizedBox(height: 6),
           const Text(
             'Puxe para baixo para atualizar',
-            style: TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af)),
+            style: TextStyle(fontSize: 12.5, color: AppColors.gray400),
           ),
         ],
       ),
@@ -289,20 +290,20 @@ class _ErrorState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 12.5, color: AppColors.gray500),
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: onRetry,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
               ),
               child: const Text('Tentar novamente'),
             ),
@@ -327,7 +328,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFF1e40af) : Colors.white,
+      color: selected ? const AppColors.navyBright : Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -338,7 +339,7 @@ class _FilterChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
-                  ? const Color(0xFF1e40af)
+                  ? const AppColors.navyBright
                   : const Color(0xFFe5e7eb),
             ),
           ),
@@ -347,7 +348,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const Color(0xFF374151),
+              color: selected ? Colors.white : const AppColors.gray700,
             ),
           ),
         ),
@@ -389,7 +390,7 @@ class _SuggestionListCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -399,7 +400,7 @@ class _SuggestionListCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -436,7 +437,7 @@ class _SuggestionListCard extends StatelessWidget {
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ],
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class SortRow extends StatelessWidget {
   final String sort;
@@ -98,7 +99,7 @@ class _SortChip extends StatelessWidget {
             const Icon(
               Icons.swap_vert_rounded,
               size: 12,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
             const SizedBox(width: 5),
             Text(
@@ -106,7 +107,7 @@ class _SortChip extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
           ],

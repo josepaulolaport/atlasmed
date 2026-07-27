@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 const _resourceOptions = <String>[
   'USER',
@@ -170,7 +171,7 @@ class _ManagePermissionsSheetState
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -222,7 +223,7 @@ class _ManagePermissionsSheetState
                       width: double.infinity,
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF0a2f7f),
+                          backgroundColor: const AppColors.navyDeep,
                         ),
                         onPressed: _busy ? null : _grant,
                         icon: const Icon(Icons.add, size: 18),
@@ -237,7 +238,7 @@ class _ManagePermissionsSheetState
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -248,7 +249,7 @@ class _ManagePermissionsSheetState
                           'Nenhuma permissão extra concedida.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                         ),
                       )

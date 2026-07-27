@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart'
 import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ======================================================================
 // ProfileScreen — representative's personal overview
@@ -44,11 +45,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ListTile(
                 leading: const Icon(
                   Icons.delete_outline,
-                  color: Color(0xFFb84545),
+                  color: AppColors.red,
                 ),
                 title: const Text(
                   "Remover foto",
-                  style: TextStyle(color: Color(0xFFb84545)),
+                  style: TextStyle(color: AppColors.red),
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -84,7 +85,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final avatarToken = ref.watch(sessionProvider).currentValue?.token;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: Stack(
         children: [
           SafeArea(
@@ -220,7 +221,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       profile.role,
                       style: const TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -240,7 +241,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           Icon(
                             Icons.location_on_outlined,
                             size: 10,
-                            color: const Color(0xFF0a2f7f),
+                            color: const AppColors.navyDeep,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -249,7 +250,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.2,
-                              color: Color(0xFF0a2f7f),
+                              color: AppColors.navyDeep,
                             ),
                           ),
                         ],
@@ -373,7 +374,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           text: TextSpan(
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF374151),
+                              color: AppColors.gray700,
                             ),
                             children: [
                               const TextSpan(text: 'Você cobriu '),
@@ -381,7 +382,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 text: '${stats.coveragePct}%',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF16a373),
+                                  color: AppColors.green,
                                 ),
                               ),
                               const TextSpan(text: ' da sua região'),
@@ -392,7 +393,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           stats.coverageWeek,
                           style: const TextStyle(
                             fontSize: 10.5,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                         ),
                       ],
@@ -409,7 +410,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Container(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF16a373), Color(0xFF14b680)],
+                              colors: [AppColors.green, Color(0xFF14b680)],
                             ),
                             borderRadius: BorderRadius.circular(3),
                           ),
@@ -472,7 +473,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           item.sub,
                           style: const TextStyle(
                             fontSize: 10.5,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                         ),
                       ],
@@ -559,7 +560,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 trailing: item.kind == 'toggle'
                     ? _ProfileToggle(
                         value: item.value,
-                        accent: const Color(0xFF0a2f7f),
+                        accent: const AppColors.navyDeep,
                       )
                     : _ProfileChevron(),
                 showTopBorder: i > 0,
@@ -583,7 +584,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Icon(
           _prefIconData(label),
           size: 14,
-          color: const Color(0xFF0a2f7f),
+          color: const AppColors.navyDeep,
         ),
       ),
     );
@@ -620,14 +621,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         icon: const Icon(
           Icons.logout_rounded,
           size: 15,
-          color: Color(0xFFb84545),
+          color: AppColors.red,
         ),
         label: const Text(
           'Sair da conta',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFFb84545),
+            color: AppColors.red,
           ),
         ),
       ),
@@ -685,7 +686,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: const Icon(
                         Icons.logout_rounded,
                         size: 22,
-                        color: Color(0xFFb84545),
+                        color: AppColors.red,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -704,7 +705,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                         height: 1.5,
                       ),
                     ),
@@ -716,7 +717,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ref.read(sessionProvider).delete();
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFb84545),
+                          backgroundColor: const AppColors.red,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -748,7 +749,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF374151),
+                            color: AppColors.gray700,
                           ),
                         ),
                       ),
@@ -835,7 +836,7 @@ class _AvatarEditor extends StatelessWidget {
             right: -2,
             bottom: -2,
             child: Material(
-              color: const Color(0xFF0a2f7f),
+              color: const AppColors.navyDeep,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -888,11 +889,11 @@ class _ProfileAvatar extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0a2f7f), Color(0xFF1e40af), Color(0xFF16a373)],
+          colors: [AppColors.navyDeep, AppColors.navyBright, AppColors.green],
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0a2f7f).withValues(alpha: 0.22),
+            color: const AppColors.navyDeep.withValues(alpha: 0.22),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -1012,7 +1013,7 @@ class _SectionHeader extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
-              color: Color(0xFF374151),
+              color: AppColors.gray700,
             ),
           ),
           if (action != null)
@@ -1026,13 +1027,13 @@ class _SectionHeader extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                     ),
                   ),
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 14,
-                    color: Color(0xFF0a2f7f),
+                    color: AppColors.navyDeep,
                   ),
                 ],
               ),
@@ -1064,14 +1065,14 @@ class _StatCell extends StatelessWidget {
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: highlight
-                  ? const Color(0xFF16a373)
+                  ? const AppColors.green
                   : const Color(0xFF1f2937),
             ),
           ),
           const SizedBox(height: 1),
           Text(
             label,
-            style: const TextStyle(fontSize: 10.5, color: Color(0xFF9ca3af)),
+            style: const TextStyle(fontSize: 10.5, color: AppColors.gray400),
           ),
         ],
       ),
@@ -1118,7 +1119,7 @@ class _TerritoryMapPreview extends StatelessWidget {
                     height: 6,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -1127,7 +1128,7 @@ class _TerritoryMapPreview extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -1153,7 +1154,7 @@ class _TerritoryMapPreview extends StatelessWidget {
               child: const Icon(
                 Icons.open_in_full_rounded,
                 size: 13,
-                color: Color(0xFF374151),
+                color: AppColors.gray700,
               ),
             ),
           ),
@@ -1183,7 +1184,7 @@ class _MapPainter extends CustomPainter {
 
     paint.color = const Color(0x2E0a2f7f);
     canvas.drawPath(path, paint);
-    paint.color = const Color(0xFF0a2f7f);
+    paint.color = const AppColors.navyDeep;
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = 2;
     canvas.drawPath(path, paint);
@@ -1209,7 +1210,7 @@ class _MapPainter extends CustomPainter {
     final repPos = Offset(size.width * 0.39, size.height * 0.45);
     paint.color = const Color(0x2E16a373);
     canvas.drawCircle(repPos, 14, paint);
-    paint.color = const Color(0xFF16a373);
+    paint.color = const AppColors.green;
     canvas.drawCircle(repPos, 7, paint);
   }
 
@@ -1263,7 +1264,7 @@ class _PrefRow extends StatelessWidget {
                   sub,
                   style: const TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

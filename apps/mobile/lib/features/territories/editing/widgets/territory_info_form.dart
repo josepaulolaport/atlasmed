@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/manager_picker_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TerritoryInfoForm extends ConsumerStatefulWidget {
   final Territory territory;
@@ -85,9 +86,9 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         foregroundColor: const Color(0xFF111827),
@@ -155,7 +156,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                         ),
                         Switch(
                           value: _isActive,
-                          activeThumbColor: const Color(0xFF0a2f7f),
+                          activeThumbColor: const AppColors.navyDeep,
                           onChanged: (value) =>
                               setState(() => _isActive = value),
                         ),
@@ -170,7 +171,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
               child: FilledButton(
                 onPressed: _isValid && !_saving ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -213,7 +214,7 @@ class _FieldLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 12.5,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF374151),
+        color: AppColors.gray700,
       ),
     );
   }

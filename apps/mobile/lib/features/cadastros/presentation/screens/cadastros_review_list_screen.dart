@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/ca
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Ops queue: documents submitted by reps awaiting approve/reject.
 class CadastrosReviewListScreen extends ConsumerStatefulWidget {
@@ -33,7 +34,7 @@ class _CadastrosReviewListScreenState
         .$1;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,7 +54,7 @@ class _CadastrosReviewListScreenState
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0a2f7f),
+                        color: AppColors.navyDeep,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -67,7 +68,7 @@ class _CadastrosReviewListScreenState
                       ),
                       style: const TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -113,7 +114,7 @@ class _CadastrosReviewListScreenState
                                 error.toString(),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                  color: Color(0xFF6b7280),
+                                  color: AppColors.gray500,
                                 ),
                               ),
                               TextButton(
@@ -135,7 +136,7 @@ class _CadastrosReviewListScreenState
                                   'Nenhum cadastro neste filtro',
                                   style: TextStyle(
                                     fontSize: 13.5,
-                                    color: Color(0xFF9ca3af),
+                                    color: AppColors.gray400,
                                   ),
                                 ),
                               ),
@@ -179,7 +180,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFF0a2f7f) : Colors.white,
+      color: selected ? const AppColors.navyDeep : Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -190,7 +191,7 @@ class _FilterChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
-                  ? const Color(0xFF0a2f7f)
+                  ? const AppColors.navyDeep
                   : const Color(0xFFe5e7eb),
             ),
           ),
@@ -259,7 +260,7 @@ class _ReviewListCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -278,7 +279,7 @@ class _ReviewListCard extends StatelessWidget {
                       '${_relative(submission.submittedAt)}',
                       style: const TextStyle(
                         fontSize: 11.5,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   ],
@@ -310,7 +311,7 @@ class _ReviewListCard extends StatelessWidget {
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 20,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ],
               ),

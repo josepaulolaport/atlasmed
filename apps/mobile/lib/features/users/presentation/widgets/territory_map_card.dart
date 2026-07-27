@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_expanded_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// A small, non-interactive live map preview for a single assigned
 /// territory — used in the horizontally-scrollable "Territórios atribuídos"
@@ -89,7 +90,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           if (widget.assignment.verticalName != null) ...[
@@ -98,7 +99,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
               widget.assignment.verticalName!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 11.5, color: AppColors.gray500),
             ),
           ],
           const SizedBox(height: 8),
@@ -319,7 +320,7 @@ class _ExpandButton extends StatelessWidget {
       child: const Icon(
         Icons.open_in_full_rounded,
         size: 13,
-        color: Color(0xFF374151),
+        color: AppColors.gray700,
       ),
     );
   }

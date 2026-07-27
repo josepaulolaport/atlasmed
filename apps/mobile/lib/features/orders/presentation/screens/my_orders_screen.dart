@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class MyOrdersScreen extends ConsumerStatefulWidget {
   const MyOrdersScreen({super.key});
@@ -33,8 +34,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
     final ordersAsync = ref.watch(meusOrdersProvider(statuses));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
-      appBar: const AtlasAppBar(page: 'Pedidos'),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -49,7 +49,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0a2f7f),
+                          color: AppColors.navyDeep,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -155,7 +155,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0a2f7f),
+                        backgroundColor: const AppColors.navyDeep,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -208,7 +208,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _SummaryCard(
             label: 'Em trânsito',
             count: transitCount,
-            color: const Color(0xFF0a2f7f),
+            color: const AppColors.navyDeep,
           ),
         ),
         const SizedBox(width: 10),
@@ -216,7 +216,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _SummaryCard(
             label: 'Pendentes',
             count: pendingCount,
-            color: const Color(0xFFc6861b),
+            color: const AppColors.amber,
           ),
         ),
         const SizedBox(width: 10),
@@ -224,7 +224,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _SummaryCard(
             label: 'Entregues',
             count: deliveredCount,
-            color: const Color(0xFF16a373),
+            color: const AppColors.green,
           ),
         ),
       ],
@@ -268,7 +268,7 @@ class _SummaryCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 11,
-              color: Color(0xFF6b7280),
+              color: AppColors.gray500,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -296,7 +296,7 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF0a2f7f) : Colors.white,
+          color: selected ? const AppColors.navyDeep : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: const Color(0xFFeef0f3)),
         ),
@@ -305,7 +305,7 @@ class _FilterChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const Color(0xFF6b7280),
+            color: selected ? Colors.white : const AppColors.gray500,
           ),
         ),
       ),
@@ -337,7 +337,7 @@ class _OrderCard extends StatelessWidget {
               '${order.id} • ${order.date}',
               style: const TextStyle(
                 fontSize: 11,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -353,7 +353,7 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               order.doctor,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
             ),
             const SizedBox(height: 10),
             PStatusChip(status: order.status),
@@ -366,7 +366,7 @@ class _OrderCard extends StatelessWidget {
                   '${order.items} itens · toque para detalhes',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -376,7 +376,7 @@ class _OrderCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0a2f7f),
+                    color: AppColors.navyDeep,
                   ),
                 ),
               ],
@@ -410,7 +410,7 @@ class _EmptyState extends StatelessWidget {
             child: Icon(
               Icons.shopping_bag_outlined,
               size: 32,
-              color: Color(0xFF0a2f7f),
+              color: AppColors.navyDeep,
             ),
           ),
           const SizedBox(height: 16),
@@ -426,7 +426,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             'Toque em “Novo pedido” para começar.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+            style: TextStyle(fontSize: 13, color: AppColors.gray500),
           ),
         ],
       ),

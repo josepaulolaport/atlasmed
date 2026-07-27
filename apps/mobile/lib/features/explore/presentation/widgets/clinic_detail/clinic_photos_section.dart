@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Fotos da clínica" row — kept for a future manage-photos entry point.
 /// The live gallery opens from the header avatar (`openClinicPhotoViewer`).
@@ -19,13 +20,13 @@ class ClinicPhotosSection extends StatelessWidget {
             const Icon(
               Icons.photo_library_outlined,
               size: 20,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
                 'Nenhuma foto cadastrada',
-                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                style: TextStyle(fontSize: 13, color: AppColors.gray400),
               ),
             ),
             TextButton(
@@ -54,7 +55,7 @@ class ClinicPhotosSection extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   if (p.lastUpdatedAt != null) ...[
@@ -63,7 +64,7 @@ class ClinicPhotosSection extends StatelessWidget {
                       'Última: ${_formatMonthYear(p.lastUpdatedAt!)}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   ],
@@ -73,7 +74,7 @@ class ClinicPhotosSection extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ],
         ),
@@ -120,7 +121,7 @@ class _ThumbnailStack extends StatelessWidget {
       return const Icon(
         Icons.photo_library_outlined,
         size: 32,
-        color: Color(0xFF9ca3af),
+        color: AppColors.gray400,
       );
     }
 

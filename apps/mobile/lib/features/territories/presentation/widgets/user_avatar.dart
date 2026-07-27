@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Small circular avatar showing a user's initials on a deterministic
 /// background color (no network image — there's no `avatarUrl` in the mock
@@ -15,7 +16,7 @@ class UserAvatar extends StatelessWidget {
   }
 
   static const _palette = <Color>[
-    Color(0xFF0A2F7F),
+    AppColors.navyDeep,
     Color(0xFF1D7A5F),
     Color(0xFFB45309),
     Color(0xFF7C3AED),

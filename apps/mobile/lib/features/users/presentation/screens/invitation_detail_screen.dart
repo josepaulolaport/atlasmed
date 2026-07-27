@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Read-only review of a sent invite. Pending invites can open the edit form.
 class InvitationDetailScreen extends ConsumerWidget {
@@ -20,7 +21,7 @@ class InvitationDetailScreen extends ConsumerWidget {
     final invitationAsync = ref.watch(invitationDetailProvider(invitationId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -32,7 +33,7 @@ class InvitationDetailScreen extends ConsumerWidget {
                     onPressed: () => context.pop(),
                     icon: const Icon(
                       Icons.arrow_back_rounded,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   const Expanded(
@@ -41,7 +42,7 @@ class InvitationDetailScreen extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                   ),
@@ -50,7 +51,7 @@ class InvitationDetailScreen extends ConsumerWidget {
                         ? PopupMenuButton<String>(
                             icon: const Icon(
                               Icons.more_vert_rounded,
-                              color: Color(0xFF6b7280),
+                              color: AppColors.gray500,
                             ),
                             onSelected: (action) =>
                                 _handleAction(context, ref, invitation, action),
@@ -77,7 +78,7 @@ class InvitationDetailScreen extends ConsumerWidget {
                 error: (_, _) => const Center(
                   child: Text(
                     'Não foi possível carregar o convite.',
-                    style: TextStyle(color: Color(0xFF6b7280)),
+                    style: TextStyle(color: AppColors.gray500),
                   ),
                 ),
                 data: (invitation) => _InvitationDetailBody(
@@ -166,7 +167,7 @@ class _InvitationDetailBody extends StatelessWidget {
                       'Nenhum vertical atribuído neste convite.',
                       style: TextStyle(
                         fontSize: 13.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   )
@@ -191,7 +192,7 @@ class _InvitationDetailBody extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0a2f7f),
+                    backgroundColor: const AppColors.navyDeep,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: onEdit,
@@ -224,7 +225,7 @@ class _IdentityCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0a2f7f).withValues(alpha: 0.08),
+                  color: const AppColors.navyDeep.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -232,7 +233,7 @@ class _IdentityCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0a2f7f),
+                    color: AppColors.navyDeep,
                   ),
                 ),
               ),
@@ -323,14 +324,14 @@ class _VerticalAssignmentCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF6b7280),
+              color: AppColors.gray500,
             ),
           ),
           const SizedBox(height: 8),
           if (assignment.territories.isEmpty)
             const Text(
               'Nenhum território selecionado.',
-              style: TextStyle(fontSize: 13.5, color: Color(0xFF6b7280)),
+              style: TextStyle(fontSize: 13.5, color: AppColors.gray500),
             )
           else
             SizedBox(
@@ -388,7 +389,7 @@ class _SectionCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 12),
@@ -419,7 +420,7 @@ class _InfoRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
           ),
@@ -429,7 +430,7 @@ class _InfoRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
           ),

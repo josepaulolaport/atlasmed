@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Card shown on the family detail screen for a single variant: name +
 /// presentation up top, thumbnail and price side by side, then a dedicated
@@ -49,7 +50,7 @@ class VariantInfoCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                       letterSpacing: -0.1,
                     ),
                   ),
@@ -59,7 +60,7 @@ class VariantInfoCard extends StatelessWidget {
                       variant.presentation,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   ],
@@ -75,7 +76,7 @@ class VariantInfoCard extends StatelessWidget {
                   child: Icon(
                     Icons.edit_outlined,
                     size: 18,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ),
               ),
@@ -89,7 +90,7 @@ class VariantInfoCard extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: const Color(0xFFf7f8fb),
+                color: const AppColors.background,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFeef0f3)),
               ),
@@ -108,7 +109,7 @@ class VariantInfoCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -127,7 +128,7 @@ class VariantInfoCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                     ),
                   ),
                 ),
@@ -214,11 +215,11 @@ class _CardLink extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1e40af),
+              color: AppColors.navyBright,
             ),
           ),
           const SizedBox(width: 2),
-          Icon(icon, size: 16, color: const Color(0xFF1e40af)),
+          Icon(icon, size: 16, color: const AppColors.navyBright),
         ],
       ),
     );
@@ -237,7 +238,7 @@ class _CodesPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFf7f8fb),
+        color: const AppColors.background,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFeef0f3)),
       ),
@@ -266,7 +267,7 @@ class _CodesPanel extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF6b7280),
+              color: AppColors.gray500,
               letterSpacing: 0.4,
             ),
           ),
@@ -276,7 +277,7 @@ class _CodesPanel extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
               letterSpacing: 0.2,
             ),
           ),

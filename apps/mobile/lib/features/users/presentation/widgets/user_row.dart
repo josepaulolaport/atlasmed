@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_avatar.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_badges.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class UserRow extends StatelessWidget {
   const UserRow({super.key, required this.user, required this.onTap});
@@ -32,7 +33,7 @@ class UserRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                       letterSpacing: -0.15,
                     ),
                   ),
@@ -42,7 +43,7 @@ class UserRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                   const SizedBox(height: 6),

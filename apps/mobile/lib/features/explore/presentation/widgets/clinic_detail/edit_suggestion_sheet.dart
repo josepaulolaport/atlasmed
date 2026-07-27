@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/field_suggestion_mapper.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Shared bottom sheet for the "tap a pencil, suggest an edit" pattern.
 Future<void> showEditSuggestionSheet(
@@ -145,7 +146,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 4),
@@ -155,7 +156,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.4,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 12),
@@ -178,7 +179,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
           const SizedBox(height: 8),
           const Text(
             'Sua sugestão passa por revisão administrativa antes de entrar no perfil.',
-            style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
+            style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -190,7 +191,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
                 Navigator.of(context).pop(value);
               },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(

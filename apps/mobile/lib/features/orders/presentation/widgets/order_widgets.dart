@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ── PStatusChip ──────────────────────────────────────────────
 class PStatusChip extends StatelessWidget {
@@ -54,7 +55,7 @@ class PTag extends StatelessWidget {
     },
     'novo': {
       'bg': Color(0x1A1e40af),
-      'color': Color(0xFF1e40af),
+      'color': AppColors.navyBright,
       'label': 'Novo',
     },
     'premium': {
@@ -147,7 +148,7 @@ class StepperWidget extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFeef0f3)),
         borderRadius: BorderRadius.circular(10),
-        color: const Color(0xFFf7f8fb),
+        color: const AppColors.background,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -155,7 +156,7 @@ class StepperWidget extends StatelessWidget {
           _btn(
             '-',
             () => onChange(value - 1),
-            value > 0 ? const Color(0xFF0a2f7f) : const Color(0xFFd1d5db),
+            value > 0 ? const AppColors.navyDeep : const AppColors.gray300,
           ),
           SizedBox(
             width: 28,
@@ -169,7 +170,7 @@ class StepperWidget extends StatelessWidget {
               ),
             ),
           ),
-          _btn('+', () => onChange(value + 1), const Color(0xFF0a2f7f)),
+          _btn('+', () => onChange(value + 1), const AppColors.navyDeep),
         ],
       ),
     );
@@ -213,9 +214,9 @@ class CartBadge extends StatelessWidget {
             ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
             : const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF0a2f7f) : Colors.transparent,
+          color: active ? const AppColors.navyDeep : Colors.transparent,
           border: Border.all(
-            color: active ? const Color(0xFF0a2f7f) : const Color(0xFFeef0f3),
+            color: active ? const AppColors.navyDeep : const Color(0xFFeef0f3),
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -229,7 +230,7 @@ class CartBadge extends StatelessWidget {
                 Icon(
                   Icons.shopping_bag_outlined,
                   size: 18,
-                  color: active ? Colors.white : const Color(0xFF9ca3af),
+                  color: active ? Colors.white : const AppColors.gray400,
                 ),
                 if (active)
                   Positioned(
@@ -239,7 +240,7 @@ class CartBadge extends StatelessWidget {
                       width: 16,
                       height: 16,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF16a373),
+                        color: AppColors.green,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -298,7 +299,7 @@ class SelectorField extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
-          color: disabled ? const Color(0xFFf7f8fb) : Colors.white,
+          color: disabled ? const AppColors.background : Colors.white,
           border: Border.all(color: const Color(0xFFeef0f3)),
           borderRadius: BorderRadius.circular(12),
         ),
@@ -312,7 +313,7 @@ class SelectorField extends StatelessWidget {
                     label,
                     style: const TextStyle(
                       fontSize: 10,
-                      color: Color(0xFF9ca3af),
+                      color: AppColors.gray400,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
                     ),
@@ -365,7 +366,7 @@ class BackChevron extends StatelessWidget {
         child: const Icon(
           Icons.chevron_left,
           size: 16,
-          color: Color(0xFF374151),
+          color: AppColors.gray700,
         ),
       ),
     );
@@ -405,7 +406,7 @@ class OrderProductsWidget extends StatelessWidget {
                       product.sub,
                       style: const TextStyle(
                         fontSize: 11.5,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   ],
@@ -413,7 +414,7 @@ class OrderProductsWidget extends StatelessWidget {
               ),
               Text(
                 '× $qty',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF9ca3af)),
+                style: const TextStyle(fontSize: 11, color: AppColors.gray400),
               ),
               const SizedBox(width: 8),
               Text(
@@ -421,7 +422,7 @@ class OrderProductsWidget extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF374151),
+                  color: AppColors.gray700,
                 ),
               ),
             ],

@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Modal table for picking a manager — each row shows avatar, name and
 /// their territory (or "Sem território"). Returns the selected
@@ -77,7 +78,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
             ),
@@ -101,7 +102,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                           icon: const Icon(Icons.close_rounded, size: 18),
                         ),
                   filled: true,
-                  fillColor: const Color(0xFFf7f8fb),
+                  fillColor: const AppColors.background,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFFeef0f3)),
@@ -112,7 +113,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF0a2f7f)),
+                    borderSide: const BorderSide(color: AppColors.navyDeep),
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -134,7 +135,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -146,7 +147,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -163,7 +164,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                         widget.managers.isEmpty
                             ? 'Nenhum gerente disponível.'
                             : 'Nenhum gerente encontrado.',
-                        style: const TextStyle(color: Color(0xFF6b7280)),
+                        style: const TextStyle(color: AppColors.gray500),
                       ),
                     )
                   : ListView.separated(
@@ -200,7 +201,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                                       fontWeight: selected
                                           ? FontWeight.w700
                                           : FontWeight.w600,
-                                      color: const Color(0xFF0f1729),
+                                      color: const AppColors.gray900,
                                     ),
                                   ),
                                 ),
@@ -213,8 +214,8 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                                     style: TextStyle(
                                       fontSize: 12.5,
                                       color: manager.territoryName == null
-                                          ? const Color(0xFF9ca3af)
-                                          : const Color(0xFF6b7280),
+                                          ? const AppColors.gray400
+                                          : const AppColors.gray500,
                                     ),
                                   ),
                                 ),
@@ -224,7 +225,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                                       ? const Icon(
                                           Icons.check_circle_rounded,
                                           size: 20,
-                                          color: Color(0xFF0a2f7f),
+                                          color: AppColors.navyDeep,
                                         )
                                       : null,
                                 ),
@@ -248,7 +249,7 @@ class _ManagerAvatar extends StatelessWidget {
   final ManagerOption manager;
 
   static const _palette = <Color>[
-    Color(0xFF0A2F7F),
+    AppColors.navyDeep,
     Color(0xFF1D7A5F),
     Color(0xFFB45309),
     Color(0xFF7C3AED),

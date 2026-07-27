@@ -17,6 +17,7 @@ import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class UserDetailScreen extends ConsumerWidget {
   const UserDetailScreen({super.key, required this.userId});
@@ -30,7 +31,7 @@ class UserDetailScreen extends ConsumerWidget {
     final userAsync = ref.watch(userDetailProvider(userId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -51,7 +52,7 @@ class UserDetailScreen extends ConsumerWidget {
                 error: (_, _) => const Center(
                   child: Text(
                     'Não foi possível carregar este usuário.',
-                    style: TextStyle(color: Color(0xFF6b7280)),
+                    style: TextStyle(color: AppColors.gray500),
                   ),
                 ),
                 data: (user) {
@@ -59,7 +60,7 @@ class UserDetailScreen extends ConsumerWidget {
                     return const Center(
                       child: Text(
                         'Usuário não encontrado.',
-                        style: TextStyle(color: Color(0xFF6b7280)),
+                        style: TextStyle(color: AppColors.gray500),
                       ),
                     );
                   }
@@ -102,7 +103,7 @@ class UserDetailScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(
                   Icons.play_circle_outline,
-                  color: Color(0xFF16a373),
+                  color: AppColors.green,
                 ),
                 title: const Text('Ativar'),
                 onTap: () => Navigator.pop(sheetContext, 'activate'),
@@ -111,7 +112,7 @@ class UserDetailScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(
                   Icons.pause_circle_outline,
-                  color: Color(0xFFc6861b),
+                  color: AppColors.amber,
                 ),
                 title: const Text('Suspender'),
                 onTap: () => Navigator.pop(sheetContext, 'suspend'),
@@ -119,7 +120,7 @@ class UserDetailScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(
                   Icons.block_outlined,
-                  color: Color(0xFFb84545),
+                  color: AppColors.red,
                 ),
                 title: const Text('Desativar'),
                 onTap: () => Navigator.pop(sheetContext, 'deactivate'),
@@ -129,7 +130,7 @@ class UserDetailScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(
                   Icons.play_circle_outline,
-                  color: Color(0xFF16a373),
+                  color: AppColors.green,
                 ),
                 title: const Text('Cancelar suspensão'),
                 onTap: () => Navigator.pop(sheetContext, 'unsuspend'),
@@ -220,7 +221,7 @@ class _Header extends StatelessWidget {
             onPressed: () => context.pop(),
             icon: const Icon(
               Icons.arrow_back_rounded,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           Expanded(
@@ -230,7 +231,7 @@ class _Header extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
           ),
@@ -239,7 +240,7 @@ class _Header extends StatelessWidget {
               onPressed: onMore,
               icon: const Icon(
                 Icons.more_vert_rounded,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
         ],
@@ -316,7 +317,7 @@ class _IdentityCard extends StatelessWidget {
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -324,7 +325,7 @@ class _IdentityCard extends StatelessWidget {
                       user.email,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -427,7 +428,7 @@ class _VerificationChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = verified ? const Color(0xFF16a373) : const Color(0xFF9ca3af);
+    final color = verified ? const AppColors.green : const AppColors.gray400;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -491,7 +492,7 @@ class _AssignmentsSection extends ConsumerWidget {
           child: verticalAssignments.isEmpty
               ? const Text(
                   'Nenhum vertical atribuído.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                  style: TextStyle(fontSize: 13, color: AppColors.gray400),
                 )
               : Wrap(
                   spacing: 6,
@@ -504,7 +505,7 @@ class _AssignmentsSection extends ConsumerWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFf3f4f6),
+                            color: const AppColors.gray100,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -512,7 +513,7 @@ class _AssignmentsSection extends ConsumerWidget {
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF374151),
+                              color: AppColors.gray700,
                             ),
                           ),
                         ),
@@ -676,13 +677,13 @@ class _VerticalAssignmentCardState
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
             const SizedBox(height: 8),
             if (canManage)
               Material(
-                color: const Color(0xFFf7f8fb),
+                color: const AppColors.background,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: const BorderSide(color: Color(0xFFe5e7eb)),
@@ -700,7 +701,7 @@ class _VerticalAssignmentCardState
                         const Icon(
                           Icons.person_outline_rounded,
                           size: 20,
-                          color: Color(0xFF0a2f7f),
+                          color: AppColors.navyDeep,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -709,7 +710,7 @@ class _VerticalAssignmentCardState
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF0f1729),
+                              color: AppColors.gray900,
                             ),
                           ),
                         ),
@@ -720,13 +721,13 @@ class _VerticalAssignmentCardState
                             icon: const Icon(
                               Icons.close_rounded,
                               size: 18,
-                              color: Color(0xFF9ca3af),
+                              color: AppColors.gray400,
                             ),
                           )
                         else
                           const Icon(
                             Icons.chevron_right_rounded,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                       ],
                     ),
@@ -748,7 +749,7 @@ class _VerticalAssignmentCardState
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
               ),
@@ -766,7 +767,7 @@ class _VerticalAssignmentCardState
               canManage && widget.showManager && assignment.managerId == null
                   ? 'Selecione um gerente primeiro.'
                   : 'Nenhum território selecionado.',
-              style: const TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              style: const TextStyle(fontSize: 13, color: AppColors.gray400),
             )
           else
             SizedBox(
@@ -805,7 +806,7 @@ class _VerticalAssignmentCardState
                                 child: Icon(
                                   Icons.close_rounded,
                                   size: 16,
-                                  color: Color(0xFF6b7280),
+                                  color: AppColors.gray500,
                                 ),
                               ),
                             ),
@@ -850,7 +851,7 @@ class _SectionCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
               ),
@@ -878,7 +879,7 @@ class _DetailRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 13.5, color: Color(0xFF6b7280)),
+          style: const TextStyle(fontSize: 13.5, color: AppColors.gray500),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -890,7 +891,7 @@ class _DetailRow extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
         ),
