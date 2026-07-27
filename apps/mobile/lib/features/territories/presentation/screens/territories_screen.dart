@@ -92,7 +92,7 @@ class _NewTerritoryButton extends ConsumerWidget {
         final kind = ref.read(selectedTerritoryKindProvider);
         final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
         context.push(
-          '/territorios/criar',
+          '/territories/criar',
           extra: TerritoryEditorTarget.creating(
             initialKind: kind,
             initialVerticalId: verticalId,
@@ -356,7 +356,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
                 onEditInfo: () => _editInfo(selectedTerritory),
                 onAssign: () => _assignUser(selectedTerritory),
                 onEditArea: () =>
-                    context.push('/territorios/${selectedTerritory.id}/editar'),
+                    context.push('/territories/${selectedTerritory.id}/edit'),
                 onDelete: () => _confirmAndDelete(selectedTerritory),
                 onClose: _deselectTerritory,
               ),

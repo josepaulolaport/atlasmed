@@ -607,7 +607,7 @@ class _ClinicDetailContent extends ConsumerWidget {
               : _HeaderLinkButton(
                   label: 'Ver todos',
                   icon: Icons.chevron_right_rounded,
-                  onTap: () => context.push('/pedidos'),
+                  onTap: () => context.push('/orders'),
                 ),
         ),
         if (ordersState.loading && ordersState.orders.isEmpty)
@@ -878,7 +878,7 @@ class _QuickActions extends ConsumerWidget {
           _ActionButton(
             icon: Icons.note_add_rounded,
             label: 'Pedido',
-            onTap: () => context.push('/pedidos/novo'),
+            onTap: () => context.push('/orders/new'),
           ),
         ],
       ),

@@ -99,7 +99,7 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
         family: family,
         onViewComparison: () {
           Navigator.pop(sheetContext);
-          context.push('/catalogo/comparativo/${variant.id}');
+          context.push('/catalog/comparison/${variant.id}');
         },
         onEdit: !isAdmin
             ? null

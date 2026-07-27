@@ -28,7 +28,7 @@ class UsersScreen extends ConsumerWidget {
                     top: 0,
                     bottom: 0,
                     child: IconButton(
-                      onPressed: () => context.push('/usuarios/convites'),
+                      onPressed: () => context.push('/users/invitations'),
                       icon: const Icon(
                         Icons.mail_outline_rounded,
                         color: Color(0xFF0f1729),
@@ -47,7 +47,7 @@ class UsersScreen extends ConsumerWidget {
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
               backgroundColor: const Color(0xFF0a2f7f),
-              onPressed: () => context.push('/usuarios/convidar'),
+              onPressed: () => context.push('/users/invite'),
               icon: const Icon(
                 Icons.person_add_alt_1_rounded,
                 color: Colors.white,
@@ -196,7 +196,7 @@ class _UsersListState extends ConsumerState<_UsersList> {
                         final user = state.items[index];
                         return UserRow(
                           user: user,
-                          onTap: () => context.push('/usuarios/${user.id}'),
+                          onTap: () => context.push('/users/${user.id}'),
                         );
                       },
                     ),

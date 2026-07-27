@@ -127,7 +127,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                                       child: _OrderCard(
                                         order: order,
                                         onTap: () => context.push(
-                                          '/pedidos/${order.id}',
+                                          '/orders/${order.id}',
                                         ),
                                       ),
                                     ),
@@ -150,7 +150,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                     height: 54,
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => context.go('/pedidos/novo'),
+                      onPressed: () => context.go('/orders/new'),
                       icon: const Icon(Icons.add_rounded, size: 20),
                       label: const Text(
                         'Novo pedido',

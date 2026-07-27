@@ -376,7 +376,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ? () {
                           // TODO: submit order via OrdersRepository.createOrder()
                           // when POST /api/v1/orders endpoint exists
-                          context.push('/pedidos/novo/sucesso');
+                          context.push('/orders/new/success');
                         }
                       : null,
                   style: ElevatedButton.styleFrom(

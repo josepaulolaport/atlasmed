@@ -83,7 +83,7 @@ class InvitationDetailScreen extends ConsumerWidget {
                 data: (invitation) => _InvitationDetailBody(
                   invitation: invitation,
                   onEdit: () => context.push(
-                    '/usuarios/convites/${invitation.id}/editar',
+                    '/users/invitations/${invitation.id}/edit',
                   ),
                 ),
               ),
