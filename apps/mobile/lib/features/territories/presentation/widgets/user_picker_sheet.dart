@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_avatar.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -210,7 +211,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const UserPickerListSkeleton();
         }
         final users = snapshot.data ?? const <AppUser>[];
         if (users.isEmpty) {
@@ -245,7 +246,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const UserPickerListSkeleton();
         }
         var candidates = snapshot.data ?? const <AssignableManager>[];
         if (_query.trim().isNotEmpty) {

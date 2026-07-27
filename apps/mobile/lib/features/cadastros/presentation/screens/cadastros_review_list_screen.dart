@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_mode
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 
 /// Ops queue: documents submitted by reps awaiting approve/reject.
 class CadastrosReviewListScreen extends ConsumerStatefulWidget {
@@ -97,10 +98,10 @@ class _CadastrosReviewListScreenState
                     ),
                     const SizedBox(height: 16),
                     ...queueAsync.when(
-                      loading: () => [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 48),
-                          child: Center(child: CircularProgressIndicator()),
+                      loading: () => const [
+                        Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: ReviewListSkeleton(),
                         ),
                       ],
                       error: (error, _) => [
