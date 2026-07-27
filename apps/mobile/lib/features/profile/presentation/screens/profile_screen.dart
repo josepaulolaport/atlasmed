@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
@@ -904,13 +905,13 @@ class _ProfileAvatar extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: imageUrl != null && imageUrl!.isNotEmpty
-          ? Image.network(
-              imageUrl!,
-              headers: authorization == null
+          ? CachedNetworkImage(
+              imageUrl: imageUrl!,
+              httpHeaders: authorization == null
                   ? null
                   : {"Authorization": authorization!},
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => _initials(),
+              errorWidget: (_, _, _) => _initials(),
             )
           : _initials(),
     );
