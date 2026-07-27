@@ -2,6 +2,7 @@ import { db } from "../../../../infrastructure/database/db";
 import {
   facilityVerticalProfiles,
   facilityProfessionals,
+  facilities,
   territories,
   userTerritoryAssignments,
 } from "@atlasmed/database";
@@ -25,38 +26,41 @@ export class DrizzleDashboardRepository {
    * Purchase buckets for profiled facilities in one vertical, optionally
    * restricted to a facility id set (non-global scopes).
    *
-   * active = HIGH_BUYER + REGULAR_BUYER
-   * inactive = LOW_BUYER
-   * neverBought = NON_BUYER (+ null treated as NON_BUYER)
+   * active   = PURCHASE_WINDOW + OUTSIDE_WINDOW
+   * inactive = CHURN
+   * neverBought = NEVER_PURCHASED + INACTIVE (+ null)
    */
   async countPurchaseBuckets(input: {
     verticalId: string;
     facilityIds: string[] | null;
   }): Promise<PurchaseStatusBuckets> {
-    const where = input.facilityIds === null
-      ? eq(facilityVerticalProfiles.verticalId, input.verticalId)
-      : input.facilityIds.length === 0
-        ? and(
-            eq(facilityVerticalProfiles.verticalId, input.verticalId),
-            sql`FALSE`,
-          )
-        : and(
-            eq(facilityVerticalProfiles.verticalId, input.verticalId),
-            inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
-          );
+    const conditions = [
+      eq(facilityVerticalProfiles.verticalId, input.verticalId),
+    ];
+    if (input.facilityIds !== null) {
+      conditions.push(
+        input.facilityIds.length === 0
+          ? sql`FALSE`
+          : inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
+      );
+    }
 
     const [row] = await db
       .select({
         active:
-          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseStatus} IN ('HIGH_BUYER', 'REGULAR_BUYER'))::int`,
+          sql<number>`COUNT(*) FILTER (WHERE ${facilities.purchaseFunnelStage} IN ('PURCHASE_WINDOW', 'OUTSIDE_WINDOW'))::int`,
         inactive:
-          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseStatus} = 'LOW_BUYER')::int`,
+          sql<number>`COUNT(*) FILTER (WHERE ${facilities.purchaseFunnelStage} = 'CHURN')::int`,
         neverBought:
-          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseStatus} = 'NON_BUYER' OR ${facilityVerticalProfiles.purchaseStatus} IS NULL)::int`,
+          sql<number>`COUNT(*) FILTER (WHERE ${facilities.purchaseFunnelStage} IN ('NEVER_PURCHASED', 'INACTIVE') OR ${facilities.purchaseFunnelStage} IS NULL)::int`,
         total: sql<number>`COUNT(*)::int`,
       })
-      .from(facilityVerticalProfiles)
-      .where(where);
+      .from(facilities)
+      .innerJoin(
+        facilityVerticalProfiles,
+        eq(facilityVerticalProfiles.facilityId, facilities.id),
+      )
+      .where(and(...conditions));
 
     return {
       active: Number(row?.active ?? 0),

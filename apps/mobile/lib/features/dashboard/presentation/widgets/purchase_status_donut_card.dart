@@ -89,7 +89,7 @@ class PurchaseStatusDonutCard extends StatelessWidget {
           Row(
             children: [
               const Text(
-                'STATUS DAS CLÍNICAS',
+                'FUNIL DE COMPRAS',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
