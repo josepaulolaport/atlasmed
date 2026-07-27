@@ -37,7 +37,7 @@ void main() {
   });
 
   testWidgets(
-    'keeps an idle has-more end extent that can request the next page',
+    'requests the next page when a user drags to the idle trailing extent',
     (tester) async {
       var loadMoreCalls = 0;
       await tester.pumpWidget(
@@ -52,8 +52,10 @@ void main() {
 
       await tester.drag(find.byType(ListView), const Offset(-1000, 0));
       await tester.pump();
+      await tester.drag(find.byType(ListView), const Offset(-1000, 0));
+      await tester.pump();
 
-      expect(loadMoreCalls, greaterThan(0));
+      expect(loadMoreCalls, 1);
     },
   );
 }
