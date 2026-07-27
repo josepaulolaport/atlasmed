@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Modal table for picking a manager — each row shows avatar, name and
@@ -247,6 +248,22 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
   }
 }
 
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    initials,
+    style: const TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w700,
+      fontSize: 12,
+    ),
+  );
+}
+
 class _ManagerAvatar extends StatelessWidget {
   const _ManagerAvatar({required this.manager});
 
@@ -288,6 +305,8 @@ class _ManagerAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarUrl = manager.avatarUrl;
     final token = SessionEnvironment.instance.currentValue?.token;
+    final hash = manager.avatarBlurhash?.trim();
+    final hasBlurhash = hash != null && hash.isNotEmpty;
 
     return Container(
       width: 36,
@@ -307,23 +326,12 @@ class _ManagerAvatar extends StatelessWidget {
               fit: BoxFit.cover,
               width: 36,
               height: 36,
-              errorWidget: (_, _, _) => Text(
-                _initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
+              placeholder: (_, _) => hasBlurhash
+                  ? BlurHash(hash: hash)
+                  : _InitialsAvatar(initials: _initials),
+              errorWidget: (_, _, _) => _InitialsAvatar(initials: _initials),
             )
-          : Text(
-              _initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
-            ),
+          : _InitialsAvatar(initials: _initials),
     );
   }
 }
