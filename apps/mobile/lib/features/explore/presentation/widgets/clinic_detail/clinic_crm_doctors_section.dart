@@ -16,6 +16,7 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
     required this.doctors,
     this.facilityId,
     this.hasMore = false,
+    this.isLoadingMore = false,
     this.onLoadMore,
     this.onAssociate,
     this.onDoctorUpdated,
@@ -24,9 +25,11 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   final List<FacilityCrmDoctor> doctors;
   final String? facilityId;
 
-  /// When true, a trailing spinner page is shown and [onLoadMore] is called
-  /// as the user reaches the end of the loaded cards.
+  /// When true, [onLoadMore] is called as the user reaches the loaded cards.
   final bool hasMore;
+
+  /// Shows the trailing shimmer only for an active next-page request.
+  final bool isLoadingMore;
   final VoidCallback? onLoadMore;
 
   /// Opens the full list / associate flow when the roster is empty.
@@ -69,6 +72,7 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
       height: 278,
       itemCount: doctors.length,
       hasMore: hasMore,
+      isLoadingMore: isLoadingMore,
       onLoadMore: onLoadMore,
       itemBuilder: (_, i) => _DoctorCard(
         doctor: doctors[i],

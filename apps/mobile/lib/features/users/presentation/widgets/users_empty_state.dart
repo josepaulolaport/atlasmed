@@ -71,21 +71,21 @@ class UsersSkeletonRow extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFFeef0f3),
+              color: Color(0xFFeef0f3),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _bar(width: 160, height: 12),
-                const SizedBox(height: 8),
-                _bar(width: 120, height: 10),
-                const SizedBox(height: 8),
-                _bar(width: 90, height: 10),
+              children: const [
+                _UsersSkeletonBar(width: 160, height: 12),
+                SizedBox(height: 8),
+                _UsersSkeletonBar(width: 120, height: 10),
+                SizedBox(height: 8),
+                _UsersSkeletonBar(width: 90, height: 10),
               ],
             ),
           ),
@@ -93,8 +93,80 @@ class UsersSkeletonRow extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _bar({required double width, required double height}) {
+/// A user-row-shaped shimmer shown only while the following page is loading.
+class UsersPaginationSkeletonRow extends StatefulWidget {
+  const UsersPaginationSkeletonRow({super.key});
+
+  @override
+  State<UsersPaginationSkeletonRow> createState() =>
+      _UsersPaginationSkeletonRowState();
+}
+
+class _UsersPaginationSkeletonRowState extends State<UsersPaginationSkeletonRow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _shimmerController.stop();
+    } else if (!_shimmerController.isAnimating) {
+      _shimmerController.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: AnimatedBuilder(
+        animation: _shimmerController,
+        builder: (context, child) => ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) => LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: const [
+              Color(0xFFeef0f3),
+              Color(0xFFf8fafc),
+              Color(0xFFeef0f3),
+            ],
+            stops: const [0.25, 0.5, 0.75],
+            transform: _UsersSlidingGradientTransform(_shimmerController.value),
+          ).createShader(bounds),
+          child: child,
+        ),
+        child: const UsersSkeletonRow(),
+      ),
+    );
+  }
+}
+
+class _UsersSkeletonBar extends StatelessWidget {
+  const _UsersSkeletonBar({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: width,
       height: height,
@@ -102,6 +174,21 @@ class UsersSkeletonRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         color: const Color(0xFFeef0f3),
       ),
+    );
+  }
+}
+
+class _UsersSlidingGradientTransform extends GradientTransform {
+  const _UsersSlidingGradientTransform(this.slidePercent);
+
+  final double slidePercent;
+
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(
+      (slidePercent * 2 - 1) * bounds.width,
+      0,
+      0,
     );
   }
 }

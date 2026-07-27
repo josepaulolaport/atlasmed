@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 
 void main() {
   testWidgets('renders administrative professional rows', (tester) async {
@@ -51,32 +52,36 @@ void main() {
     );
   });
 
-  testWidgets('shows trailing loader while hasMore', (tester) async {
-    const professionals = [
-      AdministrativeProfessional(
-        id: '1',
-        name: 'Carlos Mendes',
-        roleTitle: 'Diretor administrativo',
-        email: 'carlos@test.com',
-        phone: '11999999999',
-        contactType: 'DECISOR',
-        isDecisionMaker: true,
-      ),
-    ];
+  testWidgets(
+    'does not reserve a trailing placeholder while pagination is idle',
+    (tester) async {
+      const professionals = [
+        AdministrativeProfessional(
+          id: '1',
+          name: 'Carlos Mendes',
+          roleTitle: 'Diretor administrativo',
+          email: 'carlos@test.com',
+          phone: '11999999999',
+          contactType: 'DECISOR',
+          isDecisionMaker: true,
+        ),
+      ];
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: ClinicAdminProfessionalsSection(
-            professionals: professionals,
-            facilityName: 'Clínica Teste',
-            hasMore: true,
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ClinicAdminProfessionalsSection(
+              professionals: professionals,
+              facilityName: 'Clínica Teste',
+              hasMore: true,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.text('Carregando…'), findsNothing);
-  });
+      expect(find.byType(FacilityRosterPaginationSkeleton), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Carregando…'), findsNothing);
+    },
+  );
 }
