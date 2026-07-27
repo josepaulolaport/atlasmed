@@ -105,7 +105,6 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFF1e40af),
-      // extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: const Color(0xFF1e40af),
         foregroundColor: Colors.white,
@@ -378,47 +377,62 @@ class _ClinicDetailBody extends ConsumerWidget {
         .watch(establishmentDetailSectionsProvider(clinicId))
         .valueOrNull;
 
-    return Column(
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(clinicDetailProvider(clinicId));
-              ref.invalidate(establishmentDetailSectionsProvider(clinicId));
-              ref.invalidate(clinicVisitsProvider(clinicId));
-              ref.invalidate(facilityPhotosProvider(clinicId));
-              ref.invalidate(facilityNotesProvider(clinicId));
-              ref.invalidate(facilityNearbyPreviewProvider(clinicId));
-              final doctorsNotifier = ref.read(
-                facilityDoctorsRosterProvider(clinicId).notifier,
-              );
-              final adminsNotifier = ref.read(
-                facilityAdministratorsRosterProvider(clinicId).notifier,
-              );
-              final payersNotifier = ref.read(
-                facilityPayersProvider(clinicId).notifier,
-              );
-              final ordersNotifier = ref.read(
-                facilityOrdersProvider(clinicId).notifier,
-              );
-              await Future.wait([
-                ref.read(clinicDetailProvider(clinicId).future),
-                ref.read(establishmentDetailSectionsProvider(clinicId).future),
-                ref.read(facilityNearbyPreviewProvider(clinicId).future),
-                ref.read(facilityPhotosProvider(clinicId).future),
-                ref.read(facilityNotesProvider(clinicId).future),
-                doctorsNotifier.retry(),
-                adminsNotifier.retry(),
-                payersNotifier.retry(),
-                ordersNotifier.retry(),
-              ]);
-            },
-            child: _ClinicDetailContent(
-              detail: detail,
-              clinicId: clinicId,
-              sections: sections,
+        Column(
+          children: [
+            Expanded(child: Container(color: const Color(0xFF1e40af))),
+            Expanded(flex: 4, child: Container(color: const Color(0xFFf8f9fb))),
+          ],
+        ),
+        Column(
+          children: [
+            Expanded(
+              child: RefreshIndicator(
+                color: const Color(0xFF1e40af),
+                backgroundColor: Colors.white,
+                onRefresh: () async {
+                  ref.invalidate(clinicDetailProvider(clinicId));
+                  ref.invalidate(establishmentDetailSectionsProvider(clinicId));
+                  ref.invalidate(clinicVisitsProvider(clinicId));
+                  ref.invalidate(facilityPhotosProvider(clinicId));
+                  ref.invalidate(facilityNotesProvider(clinicId));
+                  ref.invalidate(facilityNearbyPreviewProvider(clinicId));
+                  final doctorsNotifier = ref.read(
+                    facilityDoctorsRosterProvider(clinicId).notifier,
+                  );
+                  final adminsNotifier = ref.read(
+                    facilityAdministratorsRosterProvider(clinicId).notifier,
+                  );
+                  final payersNotifier = ref.read(
+                    facilityPayersProvider(clinicId).notifier,
+                  );
+                  final ordersNotifier = ref.read(
+                    facilityOrdersProvider(clinicId).notifier,
+                  );
+                  await Future.wait([
+                    ref.read(clinicDetailProvider(clinicId).future),
+                    ref.read(
+                      establishmentDetailSectionsProvider(clinicId).future,
+                    ),
+                    ref.read(facilityNearbyPreviewProvider(clinicId).future),
+                    ref.read(facilityPhotosProvider(clinicId).future),
+                    ref.read(facilityNotesProvider(clinicId).future),
+                    doctorsNotifier.retry(),
+                    adminsNotifier.retry(),
+                    payersNotifier.retry(),
+                    ordersNotifier.retry(),
+                  ]);
+                },
+                child: _ClinicDetailContent(
+                  detail: detail,
+                  clinicId: clinicId,
+                  sections: sections,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -458,7 +472,7 @@ class _ClinicDetailContent extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       children: [
         ClinicHeaderSection(detail: detail, sections: sections),
         const SizedBox(height: 16),
