@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 class DashboardRepository extends Repository<DashboardSummary>
