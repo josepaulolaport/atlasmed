@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -35,6 +36,13 @@ Future<void> openClinicPhotoViewer(
     providers: providers,
     initialIndex: initialIndex,
     placeholderBuilder: (context, i) {
+      final hash = i < photos.imageBlurhashes.length
+          ? photos.imageBlurhashes[i]?.trim()
+          : null;
+      if (hash != null && hash.isNotEmpty) {
+        return BlurHash(hash: hash);
+      }
+
       final colors = photos.thumbnailColors;
       final color = colors.isEmpty
           ? AppColors.gray800

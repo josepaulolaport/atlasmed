@@ -41,20 +41,28 @@ class FacilityPhotosResponse {
     return FacilityPhotosResponse(
       imageUrl: map['imageUrl'] as String?,
       photos: data
-          .map((item) => (id: item['id'] as String, url: item['url'] as String))
+          .map(
+            (item) => (
+              id: item['id'] as String,
+              url: item['url'] as String,
+              blurhash: item['blurhash'] as String?,
+            ),
+          )
           .toList(growable: false),
     );
   }
 
   final String? imageUrl;
-  final List<({String id, String url})> photos;
+  final List<({String id, String url, String? blurhash})> photos;
 
   PhotoGallerySummary toSummary() {
     final urls = photos.map((p) => p.url).toList(growable: false);
     return PhotoGallerySummary(
       count: urls.length,
       imageUrls: urls,
+      imageBlurhashes: photos.map((p) => p.blurhash).toList(growable: false),
       profileImageUrl: imageUrl ?? (urls.isEmpty ? null : urls.first),
+      profileImageBlurhash: photos.isEmpty ? null : photos.first.blurhash,
     );
   }
 }

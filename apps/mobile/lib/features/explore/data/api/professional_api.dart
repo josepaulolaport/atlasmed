@@ -50,6 +50,7 @@ class ProfessionalDTO {
   final String? taxId;
   final String? websiteUrl;
   final String? imageUrl;
+  final String? imageBlurhash;
   final String? crmCouncil;
   final String? favoriteSport;
   final String? notes;
@@ -82,6 +83,7 @@ class ProfessionalDTO {
     this.taxId,
     this.websiteUrl,
     this.imageUrl,
+    this.imageBlurhash,
     this.crmCouncil,
     this.notes,
     this.distanceKm,
@@ -116,6 +118,7 @@ class ProfessionalDTO {
       taxId: readNullableString(map['taxId']),
       websiteUrl: readNullableString(map['websiteUrl']),
       imageUrl: readNullableString(map['imageUrl']),
+      imageBlurhash: readNullableString(map['imageBlurhash']),
       crmCouncil: readNullableString(map['crmCouncil']),
       notes: readNullableString(map['notes']),
       distanceKm: readNullableDouble(map['distanceKm']),
@@ -125,9 +128,7 @@ class ProfessionalDTO {
   }
 
   factory ProfessionalDTO.fromJson(String json) {
-    return ProfessionalDTO.fromMap(
-      jsonDecode(json) as Map<String, dynamic>,
-    );
+    return ProfessionalDTO.fromMap(jsonDecode(json) as Map<String, dynamic>);
   }
 
   String get displayName {
@@ -160,10 +161,7 @@ class ProfessionalDTO {
 // ── PaginatedProfessionals ───────────────────────────────────
 
 class PaginatedProfessionals {
-  const PaginatedProfessionals({
-    required this.items,
-    required this.pagination,
-  });
+  const PaginatedProfessionals({required this.items, required this.pagination});
 
   factory PaginatedProfessionals.fromJson(String json) {
     final decoded = jsonDecode(json) as Map<String, dynamic>;
