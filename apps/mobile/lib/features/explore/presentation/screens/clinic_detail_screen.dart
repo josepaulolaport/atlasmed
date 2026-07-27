@@ -131,6 +131,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
               );
             },
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: RepositoryBuilder<ClinicDetailRepository, api.Clinic>(
@@ -476,36 +477,57 @@ class _ClinicDetailContent extends ConsumerWidget {
             child: Column(
               children: [
                 ClinicHeaderSection(detail: detail, sections: sections),
+                const SizedBox(height: 16),
                 _QuickActions(detail: detail),
                 ClinicTopShortcutsSection(
                   facilityId: clinicId,
                   facilityName: detail.name,
                   detail: detail,
                 ),
-                const ClinicSectionHeader(title: 'Compras'),
-                PurchaseRecurrenceSection(
-                  value: detail.purchaseRecurrence,
-                  onEdit: canMutate
-                      ? () =>
-                            _openPurchaseRecurrenceEditor(context, ref, detail)
-                      : null,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Compras',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0f1729),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      if (canMutate)
+                        _HeaderLinkButton(
+                          label: 'Editar',
+                          onTap: () => _openPurchaseRecurrenceEditor(
+                            context,
+                            ref,
+                            detail,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
+                PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
                 ClinicSectionHeader(
-                  title: 'Profissionais administrativos',
+                  title: 'Administrativo',
                   badge: adminsRoster.total == 0
                       ? null
                       : _CountBadge(count: adminsRoster.total),
-                  trailing: _HeaderLinkButton(
-                    label: 'Ver todos',
-                    icon: Icons.chevron_right_rounded,
-                    onTap: () => _openAdministratorsList(
-                      context,
-                      ref,
-                      clinicId: clinicId,
-                      facilityName: detail.name,
-                      rosterFallback: adminsRoster.items,
-                    ),
-                  ),
+                  trailing: adminsRoster.items.isEmpty
+                      ? null
+                      : _HeaderLinkButton(
+                          label: 'Ver todos',
+                          onTap: () => _openAdministratorsList(
+                            context,
+                            ref,
+                            clinicId: clinicId,
+                            facilityName: detail.name,
+                            rosterFallback: adminsRoster.items,
+                          ),
+                        ),
                 ),
                 if (adminsRoster.loading && adminsRoster.items.isEmpty)
                   const _SectionLoadingCard()
@@ -550,17 +572,18 @@ class _ClinicDetailContent extends ConsumerWidget {
                   badge: doctorsRoster.total == 0
                       ? null
                       : _CountBadge(count: doctorsRoster.total),
-                  trailing: _HeaderLinkButton(
-                    label: 'Ver todos',
-                    icon: Icons.chevron_right_rounded,
-                    onTap: () => _openDoctorsList(
-                      context,
-                      ref,
-                      clinicId: clinicId,
-                      facilityName: detail.name,
-                      rosterFallback: doctorsRoster.items,
-                    ),
-                  ),
+                  trailing: doctorsRoster.items.isEmpty
+                      ? null
+                      : _HeaderLinkButton(
+                          label: 'Ver todos',
+                          onTap: () => _openDoctorsList(
+                            context,
+                            ref,
+                            clinicId: clinicId,
+                            facilityName: detail.name,
+                            rosterFallback: doctorsRoster.items,
+                          ),
+                        ),
                 ),
                 if (doctorsRoster.loading && doctorsRoster.items.isEmpty)
                   const _SectionLoadingCard()
@@ -607,9 +630,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                   ),
                 ClinicSectionHeader(
                   title: 'Fontes Pagadoras',
-                  trailing:
-                      !canMutate ||
-                          (payersState.loading && payersState.payers.isEmpty)
+                  trailing: !canMutate || payersState.payers.isEmpty
                       ? null
                       : _HeaderLinkButton(
                           label: 'Editar',
@@ -671,7 +692,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                     ),
                   ),
                 ClinicSectionHeader(
-                  title: 'Pedidos recentes',
+                  title: 'Histórico de pedidos',
                   badge: ordersState.orders.isEmpty
                       ? null
                       : _CountBadge(count: ordersState.orders.length),
@@ -679,7 +700,6 @@ class _ClinicDetailContent extends ConsumerWidget {
                       ? null
                       : _HeaderLinkButton(
                           label: 'Ver todos',
-                          icon: Icons.chevron_right_rounded,
                           onTap: () => context.push('/orders'),
                         ),
                 ),
@@ -773,14 +793,9 @@ class _CountBadge extends StatelessWidget {
 /// the title (single `InkWell` + tight padding, no button min-size/padding
 /// quirks that would shift it out of alignment with the others).
 class _HeaderLinkButton extends StatelessWidget {
-  const _HeaderLinkButton({
-    required this.label,
-    this.icon,
-    required this.onTap,
-  });
+  const _HeaderLinkButton({required this.label, required this.onTap});
 
   final String label;
-  final IconData? icon;
   final VoidCallback onTap;
 
   @override
@@ -801,8 +816,6 @@ class _HeaderLinkButton extends StatelessWidget {
                 color: Color(0xFF1e40af),
               ),
             ),
-            if (icon != null)
-              Icon(icon, size: 16, color: const Color(0xFF1e40af)),
           ],
         ),
       ),

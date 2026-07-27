@@ -9,7 +9,6 @@ class DoctorDetailRepository extends Repository<ApiDoctor>
   DoctorDetailRepository({required String id})
     : super(
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
-        resolveOnCreate: false,
         name: 'DoctorDetailRepository',
       );
 

@@ -13,7 +13,6 @@ class ClinicDetailRepository extends Repository<api.Clinic>
           '${AppConfig.apiBaseUrl}/api/v1/facilities/$id'
           '${verticalId == null || verticalId.isEmpty ? '' : '?verticalId=${Uri.encodeQueryComponent(verticalId)}'}',
         ),
-        resolveOnCreate: false,
         name: 'ClinicDetailRepository',
       );
 

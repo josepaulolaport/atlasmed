@@ -53,26 +53,29 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [_ExpandButton(onTap: () => _openLocationMap())],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _openLocationMap(),
-            child: ClipRRect(
-              borderRadius: BorderRadius.zero,
-              child: SizedBox(
-                height: 160,
-                child: _fullMapOpen
+          SizedBox(
+            height: 160,
+            child: Stack(
+              children: [
+                _fullMapOpen
                     ? _MapPlaceholder(location: widget.location)
                     : _MiniMapPreview(
                         key: ValueKey('clinic-mini-$_miniMapGeneration'),
                         location: widget.location,
                       ),
-              ),
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (nearby.isEmpty) {
+                        _openLocationMap();
+                      } else {
+                        _openNearbyMap(focusId: nearby.first.id);
+                      }
+                    },
+                    behavior: HitTestBehavior.opaque,
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(
@@ -175,46 +178,6 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
       _fullMapOpen = false;
       _miniMapGeneration++;
     });
-  }
-}
-
-class _ExpandButton extends StatelessWidget {
-  const _ExpandButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: const Color(0xFFeef4ff),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.open_in_full_rounded,
-              size: 12,
-              color: Color(0xFF1e40af),
-            ),
-            SizedBox(width: 4),
-            Text(
-              'Expandir',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1e40af),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

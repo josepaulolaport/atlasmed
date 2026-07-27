@@ -356,29 +356,21 @@ enum FacilityCommercialStatus { registered, active, suspended, inactive }
 
 extension FacilityCommercialStatusX on FacilityCommercialStatus {
   String get label {
-    switch (this) {
-      case FacilityCommercialStatus.registered:
-        return 'Registrada';
-      case FacilityCommercialStatus.active:
-        return 'Ativa';
-      case FacilityCommercialStatus.suspended:
-        return 'Suspensa';
-      case FacilityCommercialStatus.inactive:
-        return 'Inativa';
-    }
+    return switch (this) {
+      .registered => 'Registrada',
+      .active => 'Ativa',
+      .suspended => 'Suspensa',
+      .inactive => 'Inativa',
+    };
   }
 
   Color get color {
-    switch (this) {
-      case FacilityCommercialStatus.registered:
-        return const Color(0xFF3b82f6);
-      case FacilityCommercialStatus.active:
-        return const Color(0xFF16a373);
-      case FacilityCommercialStatus.suspended:
-        return const Color(0xFFc6861b);
-      case FacilityCommercialStatus.inactive:
-        return const Color(0xFF6b7280);
-    }
+    return switch (this) {
+      .registered => const Color(0xFF3b82f6),
+      .active => const Color(0xFF16a373),
+      .suspended => const Color(0xFFc6861b),
+      .inactive => Color(0xFF6b7280),
+    };
   }
 }
 

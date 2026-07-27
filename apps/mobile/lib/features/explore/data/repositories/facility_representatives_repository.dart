@@ -39,7 +39,6 @@ class FacilityRepresentativesRepository
                'search': search.trim(),
            },
          ),
-         resolveOnCreate: false,
          name: 'FacilityRepresentativesRepository',
        );
 

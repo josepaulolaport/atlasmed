@@ -25,7 +25,6 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
     : _client = client,
       super(
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals'),
-        resolveOnCreate: false,
         name: 'FacilityAssociateRepository',
       );
 

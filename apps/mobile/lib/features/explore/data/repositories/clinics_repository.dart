@@ -29,7 +29,6 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     this.sort,
     this.order,
     this.verticalId,
-    super.resolveOnCreate = false,
   }) : super(
          endpoint: buildEndpoint(
            baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
@@ -149,7 +148,6 @@ class FacilityPurchaseRecurrenceRepository extends Repository<Clinic>
         endpoint: Uri.parse(
           '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities',
         ),
-        resolveOnCreate: false,
         name: 'FacilityPurchaseRecurrenceRepository',
       );
 

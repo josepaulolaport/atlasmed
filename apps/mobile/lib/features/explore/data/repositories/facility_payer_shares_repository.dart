@@ -21,7 +21,6 @@ class FacilityPayerSharesRepository
         endpoint: Uri.parse(
           '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/healthcare-provider-shares',
         ),
-        resolveOnCreate: false,
         name: 'FacilityPayerSharesRepository',
       );
 
@@ -92,7 +91,6 @@ class HealthcareProvidersRepository
            '${AppConfig.apiBaseUrl}/api/v1/healthcare-providers'
            '?page=$page&limit=$limit&isActive=${isActive ? 'true' : 'false'}',
          ),
-         resolveOnCreate: false,
          name: 'HealthcareProvidersRepository',
        );
 

@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dar
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
 /// and full address. Rendered above the scrollable section list, not inside
@@ -97,7 +98,7 @@ class ClinicHeaderSection extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(8, top + 4, 8, 18),
+      padding: EdgeInsets.fromLTRB(16, top + 4, 16, 18),
       decoration: const BoxDecoration(
         color: Color(0xFF1e40af),
         borderRadius: BorderRadius.only(
@@ -184,10 +185,8 @@ class ClinicHeaderSection extends ConsumerWidget {
                   runSpacing: 8,
                   children: [
                     if (signals != null) ...[
-                      _SignalChip(
-                        category: 'Status',
-                        label: signals.commercialStatus.label,
-                        dotColor: signals.commercialStatus.color,
+                      FacilityCommercialStatusChip(
+                        status: signals.commercialStatus,
                       ),
                       if (signals.purchaseStatus != null)
                         _SignalChip(

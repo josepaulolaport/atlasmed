@@ -200,6 +200,7 @@ class _DoctorDetailContent extends ConsumerWidget {
       context,
       detail: detail,
       field: field,
+      ref: ref,
     );
     if (updated == null) return;
     await repository.refresh();

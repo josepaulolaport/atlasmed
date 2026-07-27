@@ -18,6 +18,7 @@ class ClinicDetailCard extends StatelessWidget {
     return Container(
       margin: margin,
       padding: padding,
+      clipBehavior: .antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),

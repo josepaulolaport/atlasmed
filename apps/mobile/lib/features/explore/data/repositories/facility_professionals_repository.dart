@@ -41,7 +41,6 @@ class FacilityProfessionalsRepository
                'search': search.trim(),
            },
          ),
-         resolveOnCreate: false,
          name: 'FacilityProfessionalsRepository',
        );
 

@@ -35,6 +35,7 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
     if (orders.isEmpty) {
       return ClinicDetailCard(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
               'Nenhum pedido registrado para este estabelecimento',
@@ -49,6 +50,10 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF1e40af),
                 side: const BorderSide(color: Color(0xFFdbeafe)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -108,7 +113,7 @@ class _OrderCard extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: statusBg,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.receipt_long_rounded,

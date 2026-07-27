@@ -119,6 +119,7 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
       shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
       titleSpacing: 0,
       title: _AtlasTopBarContent(page: page, compact: compact),
+      systemOverlayStyle: .dark,
     );
   }
 }
@@ -351,10 +352,6 @@ const appNavigationItems = <AppNavigationItem>[
   ),
 ];
 
-// ======================================================================
-// AtlasDrawer — slide-in navigation drawer
-// ======================================================================
-
 class AtlasDrawer extends ConsumerWidget {
   final int activeBranchIndex;
   final ValueChanged<int> onSelectBranch;
@@ -463,23 +460,6 @@ class _DrawerHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Green radial glow
-          Positioned(
-            top: -40,
-            right: -30,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  center: Alignment.center,
-                  radius: 0.7,
-                  colors: [Color(0x5916a373), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 
 /// API keys on `PATCH /api/v1/professionals/:id` that the doctor detail UI can edit.
 enum DoctorEditableField {
@@ -23,6 +24,7 @@ Future<DoctorDetail?> showEditDoctorFieldSheet(
   BuildContext context, {
   required DoctorDetail detail,
   required DoctorEditableField field,
+  required WidgetRef ref,
 }) {
   return showModalBottomSheet<DoctorDetail>(
     context: context,
@@ -32,21 +34,43 @@ Future<DoctorDetail?> showEditDoctorFieldSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _EditDoctorFieldSheet(detail: detail, field: field),
+    builder: (_) => _EditDoctorFieldSheet(detail: detail, field: field, ref: ref),
   );
 }
 
-class _EditDoctorFieldSheet extends StatefulWidget {
-  const _EditDoctorFieldSheet({required this.detail, required this.field});
+class _EditDoctorFieldSheet extends ConsumerWidget {
+  const _EditDoctorFieldSheet({
+    required this.detail,
+    required this.field,
+    required this.ref,
+  });
 
   final DoctorDetail detail;
   final DoctorEditableField field;
+  final WidgetRef ref;
 
   @override
-  State<_EditDoctorFieldSheet> createState() => _EditDoctorFieldSheetState();
+  Widget build(BuildContext context, WidgetRef widgetRef) {
+    return _EditDoctorFieldSheetBody(detail: detail, field: field, ref: ref);
+  }
 }
 
-class _EditDoctorFieldSheetState extends State<_EditDoctorFieldSheet> {
+class _EditDoctorFieldSheetBody extends StatefulWidget {
+  const _EditDoctorFieldSheetBody({
+    required this.detail,
+    required this.field,
+    required this.ref,
+  });
+
+  final DoctorDetail detail;
+  final DoctorEditableField field;
+  final WidgetRef ref;
+
+  @override
+  State<_EditDoctorFieldSheetBody> createState() => _EditDoctorFieldSheetBodyState();
+}
+
+class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
   late final TextEditingController _controller;
   bool _saving = false;
 
@@ -208,7 +232,7 @@ class _EditDoctorFieldSheetState extends State<_EditDoctorFieldSheet> {
     }
 
     setState(() => _saving = true);
-    final repo = DoctorsRepository(resolveOnCreate: false);
+    final repo = widget.ref.read(doctorsRepositoryFlatProvider);
     try {
       final updated = await repo.patchProfessionalField(
         id: widget.detail.id,
@@ -230,8 +254,6 @@ class _EditDoctorFieldSheetState extends State<_EditDoctorFieldSheet> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-    } finally {
-      repo.dispose();
     }
   }
 
