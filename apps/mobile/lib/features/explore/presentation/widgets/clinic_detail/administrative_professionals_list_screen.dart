@@ -46,7 +46,6 @@ class _AdministrativeProfessionalsListScreenState
   String _query = '';
   String _sort = 'name-asc';
   Map<String, List<String>> _filters = {};
-  bool _sortOpen = false;
 
   static const _typeSection = 'Função';
 
@@ -201,96 +200,96 @@ class _AdministrativeProfessionalsListScreenState
               child: const Icon(Icons.add_rounded),
             )
           : null,
-      body: Stack(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                child: SearchBarWidget(
-                  value: _query,
-                  onChanged: (q) => setState(() => _query = q),
-                  onFilter: _showFilterSheet,
-                  filterCount: _filterCount,
-                  hintText: 'Buscar nome, cargo…',
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
-                child: SortRow(
-                  sort: _sort,
-                  onSortTap: () => setState(() => _sortOpen = true),
-                  filterChips: _filterChips,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                child: Text(
-                  filtered.length == 1
-                      ? '1 profissional'
-                      : '${filtered.length} profissionais',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6b7280),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: filtered.isEmpty
-                    ? EmptyState(query: _query, kind: 'facility-admin')
-                    : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) => _AdminProfessionalRow(
-                          professional: filtered[i],
-                          onTap: () async {
-                            final updated = await Navigator.of(context)
-                                .push<AdministrativeProfessional>(
-                                  MaterialPageRoute(
-                                    builder: (_) => RepresentativeDetailScreen(
-                                      professional: filtered[i],
-                                      facilityName: widget.facilityName,
-                                      facilityId: widget.facilityId,
-                                    ),
-                                  ),
-                                );
-                            if (updated == null || !mounted) return;
-                            setState(() {
-                              _professionals = [
-                                for (final p in _professionals)
-                                  if (p.id == updated.id) updated else p,
-                              ];
-                            });
-                            final facilityId = widget.facilityId;
-                            if (facilityId != null && facilityId.isNotEmpty) {
-                              await ref
-                                  .read(
-                                    facilityAdministratorsRosterProvider(
-                                      facilityId,
-                                    ).notifier,
-                                  )
-                                  .retry();
-                            }
-                          },
-                        ),
-                      ),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+            child: SearchBarWidget(
+              value: _query,
+              onChanged: (q) => setState(() => _query = q),
+              onFilter: _showFilterSheet,
+              filterCount: _filterCount,
+              hintText: 'Buscar nome, cargo…',
+            ),
           ),
-          SortSheet(
-            open: _sortOpen,
-            onClose: () => setState(() => _sortOpen = false),
-            kind: 'facility-people',
-            sort: _sort,
-            onApply: (s) {
-              setState(() {
-                _sort = s;
-                _sortOpen = false;
-              });
-            },
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+            child: SortRow(
+              sort: _sort,
+              onSortTap: _showSortSheet,
+              filterChips: _filterChips,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+            child: Text(
+              filtered.length == 1
+                  ? '1 profissional'
+                  : '${filtered.length} profissionais',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF6b7280),
+              ),
+            ),
+          ),
+          Expanded(
+            child: filtered.isEmpty
+                ? EmptyState(query: _query, kind: 'facility-admin')
+                : ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) => _AdminProfessionalRow(
+                      professional: filtered[i],
+                      onTap: () async {
+                        final updated = await Navigator.of(context)
+                            .push<AdministrativeProfessional>(
+                              MaterialPageRoute(
+                                builder: (_) => RepresentativeDetailScreen(
+                                  professional: filtered[i],
+                                  facilityName: widget.facilityName,
+                                  facilityId: widget.facilityId,
+                                ),
+                              ),
+                            );
+                        if (updated == null || !mounted) return;
+                        setState(() {
+                          _professionals = [
+                            for (final p in _professionals)
+                              if (p.id == updated.id) updated else p,
+                          ];
+                        });
+                        final facilityId = widget.facilityId;
+                        if (facilityId != null && facilityId.isNotEmpty) {
+                          await ref
+                              .read(
+                                facilityAdministratorsRosterProvider(
+                                  facilityId,
+                                ).notifier,
+                              )
+                              .retry();
+                        }
+                      },
+                    ),
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showSortSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SortSheet(
+        kind: 'facility-people',
+        sort: _sort,
+        onApply: (s) {
+          setState(() => _sort = s);
+          Navigator.pop(ctx);
+        },
       ),
     );
   }

@@ -82,18 +82,28 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SortSheet(
-            open: true,
-            onClose: () {},
-            kind: 'clinic',
-            sort: 'name-asc',
-            hasSearchQuery: false,
-            hasLocation: false,
-            onApply: (_) {},
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (ctx) => SortSheet(
+                    kind: 'clinic',
+                    sort: 'name-asc',
+                    hasSearchQuery: false,
+                    hasLocation: false,
+                    onApply: (_) {},
+                  ),
+                );
+              },
+              child: const Text('Open sort'),
+            ),
           ),
         ),
       ),
     );
+    await tester.tap(find.text('Open sort'));
     await tester.pumpAndSettle();
 
     expect(find.text('Relevância'), findsNothing);
@@ -107,18 +117,28 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SortSheet(
-            open: true,
-            onClose: () {},
-            kind: 'clinic',
-            sort: 'name-asc',
-            hasSearchQuery: true,
-            hasLocation: true,
-            onApply: (value) => applied = value,
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () {
+                showModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (ctx) => SortSheet(
+                    kind: 'clinic',
+                    sort: 'name-asc',
+                    hasSearchQuery: true,
+                    hasLocation: true,
+                    onApply: (value) => applied = value,
+                  ),
+                );
+              },
+              child: const Text('Open sort'),
+            ),
           ),
         ),
       ),
     );
+    await tester.tap(find.text('Open sort'));
     await tester.pumpAndSettle();
     expect(find.text('Etapa do funil'), findsOneWidget);
     expect(find.text('Intervalo de compras'), findsOneWidget);
