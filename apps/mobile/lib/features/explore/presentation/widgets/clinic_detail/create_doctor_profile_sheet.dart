@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 

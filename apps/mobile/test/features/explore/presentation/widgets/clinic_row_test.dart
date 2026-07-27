@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart'
     as api;
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
@@ -7,14 +7,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Clinic clinicFromLocation({
+  FacilityEntry clinicFromLocation({
     String? neighborhood,
     String? city,
     String? state,
     String? commercialStatus,
   }) {
-    return Clinic.fromApi(
-      api.Clinic(
+    return FacilityEntry.fromDTO(
+      api.FacilityDTO(
         id: 'clinic-1',
         name: 'Clínica Central',
         professionalCount: 1,
@@ -33,17 +33,14 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ClinicRow(
-            clinic: const Clinic(
+            clinic: const FacilityEntry(
               id: 'clinic-1',
               name: 'Clínica Central',
               city: '',
               neighborhood: '',
               distanceKm: 0,
               commercialStatus: 'ACTIVE',
-              lastVisitDays: null,
               doctorCount: 1,
-              isPriority: false,
-              products: [],
             ),
             onTap: () {},
           ),
@@ -72,8 +69,8 @@ void main() {
   testWidgets('shows a compact purchase funnel stage when available', (
     tester,
   ) async {
-    final clinic = Clinic.fromApi(
-      const api.Clinic(
+    final clinic = FacilityEntry.fromDTO(
+      const api.FacilityDTO(
         id: 'clinic-recurrence',
         name: 'Clínica Recorrente',
         professionalCount: 1,
@@ -81,17 +78,14 @@ void main() {
     );
 
     // The list model receives the snapshot from the facilities endpoint.
-    final withRecurrence = Clinic(
+    final withRecurrence = FacilityEntry(
       id: clinic.id,
       name: clinic.name,
       city: clinic.city,
       neighborhood: clinic.neighborhood,
       distanceKm: clinic.distanceKm,
       commercialStatus: clinic.commercialStatus,
-      lastVisitDays: clinic.lastVisitDays,
       doctorCount: clinic.doctorCount,
-      isPriority: clinic.isPriority,
-      products: clinic.products,
       purchaseRecurrence: const PurchaseRecurrenceSnapshot(
         intervalDays: 30,
         sampleSize: 2,
@@ -117,17 +111,14 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ClinicRow(
-            clinic: const Clinic(
+            clinic: const FacilityEntry(
               id: 'clinic-without-recurrence',
               name: 'Clínica sem perfil',
               city: '',
               neighborhood: '',
               distanceKm: null,
               commercialStatus: null,
-              lastVisitDays: null,
               doctorCount: 0,
-              isPriority: false,
-              products: [],
             ),
             onTap: () {},
           ),

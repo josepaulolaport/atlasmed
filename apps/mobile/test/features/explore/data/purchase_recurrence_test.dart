@@ -35,7 +35,7 @@ void main() {
     });
 
     test('preserves raw unknown enum values without defaulting them', () {
-      final clinic = FacilityDTO.fromMap({
+      final facility = FacilityDTO.fromMap({
         'id': 'facility-1',
         'name': 'Clínica Central',
         'professionalCount': 0,

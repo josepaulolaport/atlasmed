@@ -327,16 +327,14 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                         phone: d.phone,
                         relationshipScore: d.relationshipScore,
                         badges: _badgesFor(d),
-                        doctor: Doctor(
+                        doctor: ProfessionalEntry(
                           id: d.id,
                           name: d.name,
                           initials: d.initials,
                           hue: d.hue,
                           specialty: d.specialty ?? '',
-                          primaryClinic: '',
                           crm: d.crm ?? '',
                           distanceKm: 0,
-                          isPriority: d.isDecisionMaker || d.isPrescriber,
                         ),
                         onEditRoles: ref.watch(canMutateProfessionalProvider)
                             ? () => _editRoles(d)
