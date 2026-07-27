@@ -30,7 +30,7 @@ class AtlasShimmer extends StatelessWidget {
         height: size.height,
         decoration: BoxDecoration(
           borderRadius: .all(.circular(16)),
-          color: const AppColors.surfaceSecondary,
+          color: AppColors.surfaceSecondary,
         ),
       ),
     );

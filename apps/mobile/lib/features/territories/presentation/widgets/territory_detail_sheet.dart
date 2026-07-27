@@ -26,9 +26,7 @@ class TerritoryDetailSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isManagerZone = territory.kind == TerritoryKind.managerZone;
-    final kindColor = isManagerZone
-        ? const AppColors.blue600
-        : const AppColors.green;
+    final kindColor = isManagerZone ? AppColors.blue600 : AppColors.green;
 
     return SafeArea(
       top: false,
@@ -43,7 +41,7 @@ class TerritoryDetailSheet extends ConsumerWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

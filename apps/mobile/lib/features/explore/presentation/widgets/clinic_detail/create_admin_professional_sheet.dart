@@ -100,7 +100,7 @@ class _CreateAdminProfessionalSheetState
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -161,7 +161,7 @@ class _CreateAdminProfessionalSheetState
             FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -197,7 +197,7 @@ class _CreateAdminProfessionalSheetState
         ),
       ),
       value: value,
-      activeThumbColor: const AppColors.navyBright,
+      activeThumbColor: AppColors.navyBright,
       onChanged: (next) => setState(() => onChanged(next)),
     );
   }
@@ -217,7 +217,7 @@ class _CreateAdminProfessionalSheetState
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const AppColors.surfaceTertiary,
+        fillColor: AppColors.surfaceTertiary,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.gray200),

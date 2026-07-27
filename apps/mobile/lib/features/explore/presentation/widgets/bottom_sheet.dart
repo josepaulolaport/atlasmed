@@ -30,7 +30,7 @@ class BottomSheetWidget extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: const AppColors.gray300,
+              color: AppColors.gray300,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

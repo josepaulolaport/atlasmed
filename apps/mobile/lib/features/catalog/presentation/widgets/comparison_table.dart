@@ -194,9 +194,7 @@ class PriceIndexTable extends StatelessWidget {
                     final row = rows[index];
                     return Container(
                       decoration: BoxDecoration(
-                        color: row.isOwn
-                            ? const AppColors.blue50
-                            : Colors.white,
+                        color: row.isOwn ? AppColors.blue50 : Colors.white,
                         border: const Border(
                           bottom: BorderSide(color: AppColors.gray100),
                         ),
@@ -283,7 +281,7 @@ class _OwnProductBar extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
           Container(
-            color: const AppColors.blue50,
+            color: AppColors.blue50,
             child: _ComparisonDataRow(row: ownRow, sortColumn: sortColumn),
           ),
         ],
@@ -350,9 +348,7 @@ class _ColumnHeaderRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: active
-                    ? const AppColors.navyDeep
-                    : const AppColors.gray400,
+                color: active ? AppColors.navyDeep : AppColors.gray400,
               ),
             ),
             Padding(
@@ -406,7 +402,7 @@ class _ComparisonDataRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: row.isOwn ? FontWeight.w700 : FontWeight.w600,
-                    color: const AppColors.gray900,
+                    color: AppColors.gray900,
                     height: 1.15,
                   ),
                 ),
@@ -470,7 +466,7 @@ class _ComparisonDataRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: const AppColors.navyDeep,
+        color: AppColors.navyDeep,
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Text(
@@ -522,10 +518,10 @@ class _ComparisonDataRow extends StatelessWidget {
       width: _priceColumnWidth,
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: active ? const AppColors.blueLight : Colors.white,
+        color: active ? AppColors.blueLight : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: active ? const Color(0xFFc7d7fb) : const AppColors.gray200,
+          color: active ? const Color(0xFFc7d7fb) : AppColors.gray200,
         ),
       ),
       child: FittedBox(
@@ -537,7 +533,7 @@ class _ComparisonDataRow extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-            color: active ? const AppColors.navyDeep : const AppColors.gray700,
+            color: active ? AppColors.navyDeep : AppColors.gray700,
           ),
         ),
       ),

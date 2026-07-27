@@ -47,7 +47,7 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
     final families = _filtered;
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

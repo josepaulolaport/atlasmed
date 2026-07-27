@@ -86,12 +86,12 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const AppColors.gray950,
+        foregroundColor: AppColors.gray950,
         title: const Text(
           'Editar informações',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -140,7 +140,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const AppColors.gray200),
+                      border: Border.all(color: AppColors.gray200),
                     ),
                     child: Row(
                       children: [
@@ -156,7 +156,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                         ),
                         Switch(
                           value: _isActive,
-                          activeThumbColor: const AppColors.navyDeep,
+                          activeThumbColor: AppColors.navyDeep,
                           onChanged: (value) =>
                               setState(() => _isActive = value),
                         ),
@@ -171,7 +171,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
               child: FilledButton(
                 onPressed: _isValid && !_saving ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyDeep,
+                  backgroundColor: AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('PurchaseRecurrenceSnapshot', () {
     test('parses the complete facility response', () {
-      final clinic = Clinic.fromMap({
+      final facility = FacilityDTO.fromMap({
         'id': 'facility-1',
         'name': 'Clínica Central',
         'professionalCount': 2,
@@ -23,7 +23,7 @@ void main() {
         },
       });
 
-      final recurrence = clinic.purchaseRecurrence!;
+      final recurrence = facility.purchaseRecurrence!;
       expect(recurrence.observedIntervalDays, 31);
       expect(recurrence.intervalDays, 30);
       expect(recurrence.source, PurchaseRecurrenceSource.calculated);
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('preserves raw unknown enum values without defaulting them', () {
-      final clinic = Clinic.fromMap({
+      final facility = FacilityDTO.fromMap({
         'id': 'facility-1',
         'name': 'Clínica Central',
         'professionalCount': 0,
@@ -51,7 +51,7 @@ void main() {
         },
       });
 
-      final recurrence = clinic.purchaseRecurrence!;
+      final recurrence = facility.purchaseRecurrence!;
       expect(recurrence.source, isNull);
       expect(recurrence.rawSource, 'FUTURE_SOURCE');
       expect(recurrence.funnelStage, isNull);
@@ -127,13 +127,13 @@ void main() {
   });
 
   test('API clinic parses commercial status without inventing a default', () {
-    final active = Clinic.fromMap({
+    final active = FacilityDTO.fromMap({
       'id': 'facility-1',
       'name': 'Clínica Central',
       'professionalCount': 0,
       'commercialStatus': 'ACTIVE',
     });
-    final absent = Clinic.fromMap({
+    final absent = FacilityDTO.fromMap({
       'id': 'facility-2',
       'name': 'Clínica Sem Status',
       'professionalCount': 0,

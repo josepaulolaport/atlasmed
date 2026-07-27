@@ -111,7 +111,7 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
                   : const Icon(Icons.add_rounded, size: 18),
               label: const Text('Adicionar nota'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const AppColors.navyBright,
+                foregroundColor: AppColors.navyBright,
                 side: const BorderSide(color: AppColors.blue100),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -246,7 +246,7 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
             decoration: InputDecoration(
               hintText: 'Ex.: Estacionamento difícil, usar Zona Azul...',
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -261,7 +261,7 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
               onPressed: () =>
                   Navigator.of(context).pop(_controller.text.trim()),
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -293,7 +293,7 @@ class _NoteRow extends StatelessWidget {
           height: 20,
           margin: const EdgeInsets.only(top: 1),
           decoration: BoxDecoration(
-            color: const AppColors.blueLight,
+            color: AppColors.blueLight,
             borderRadius: BorderRadius.circular(6),
           ),
           child: Center(

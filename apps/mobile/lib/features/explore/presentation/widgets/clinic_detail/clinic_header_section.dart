@@ -5,11 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -23,7 +23,7 @@ class ClinicHeaderSection extends ConsumerWidget {
     required this.sections,
   });
 
-  final ClinicDetail detail;
+  final Facility detail;
 
   /// Nullable while the mocked sections provider is still loading — the
   /// header degrades gracefully to identity + address only in that case.
@@ -64,10 +64,10 @@ class ClinicHeaderSection extends ConsumerWidget {
     // shown when the API (or an explicit section payload) provides it.
     final sectionSignals = sections?.statusSignals;
     final liveCommercial = parseFacilityCommercialStatus(
-      detail.commercialStatus,
+      detail.commercial?.commercialStatus,
     );
     final liveConformity = parseFacilityConformityStatus(
-      detail.conformityStatus,
+      detail.commercial?.conformityStatus,
     );
     final signals =
         sectionSignals == null &&
@@ -88,11 +88,11 @@ class ClinicHeaderSection extends ConsumerWidget {
           );
     final specialties = sections?.specialtiesLabel;
     // Identity / contact / address / PF-PJ prefer the live facility DTO.
-    final fullAddress = detail.formattedAddress;
-    final taxIdType = parseFacilityTaxIdType(detail.taxIdType);
-    final phone = _nonEmpty(detail.phone);
-    final whatsapp = _nonEmpty(detail.whatsapp);
-    final email = _nonEmpty(detail.email);
+    final fullAddress = detail.address?.formattedAddress;
+    final taxIdType = parseFacilityTaxIdType(detail.registration?.taxIdType);
+    final phone = _nonEmpty(detail.contact?.phone);
+    final whatsapp = _nonEmpty(detail.contact?.whatsapp);
+    final email = _nonEmpty(detail.contact?.email);
     final phoneLabel = formatBrazilianPhone(phone) ?? phone;
     final whatsappLabel = formatBrazilianPhone(whatsapp) ?? whatsapp;
 
@@ -197,8 +197,8 @@ class ClinicHeaderSection extends ConsumerWidget {
                     ] else
                       _SignalChip(
                         category: 'Status',
-                        label: detail.status.label,
-                        dotColor: detail.status.color,
+                        label: detail.commercial?.statusLabel.label ?? 'Sem status',
+                        dotColor: detail.commercial?.statusLabel.color ?? const Color(0xFF9ca3af),
                       ),
                   ],
                 ),
@@ -412,16 +412,13 @@ class _Avatar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const AppColors.navyBright,
-                      width: 2,
-                    ),
+                    border: Border.all(color: AppColors.navyBright, width: 2),
                   ),
                   child: Center(
                     child: Icon(
                       taxIdType!.icon,
                       size: 11,
-                      color: const AppColors.navyBright,
+                      color: AppColors.navyBright,
                     ),
                   ),
                 ),
@@ -433,7 +430,7 @@ class _Avatar extends StatelessWidget {
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
-                  color: const AppColors.navyBright,
+                  color: AppColors.navyBright,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),

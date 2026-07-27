@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// API keys on `PATCH /api/v1/professionals/:id` that the doctor detail UI can edit.
@@ -21,14 +20,14 @@ enum DoctorEditableField {
 
 /// Single-field editor for a doctor profile attribute.
 ///
-/// Returns the updated [DoctorDetail] on success, or `null` if dismissed.
-Future<DoctorDetail?> showEditDoctorFieldSheet(
+/// Returns the updated [Professional] on success, or `null` if dismissed.
+Future<Professional?> showEditDoctorFieldSheet(
   BuildContext context, {
-  required DoctorDetail detail,
+  required Professional detail,
   required DoctorEditableField field,
   required WidgetRef ref,
 }) {
-  return showModalBottomSheet<DoctorDetail>(
+  return showModalBottomSheet<Professional>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -48,7 +47,7 @@ class _EditDoctorFieldSheet extends ConsumerWidget {
     required this.ref,
   });
 
-  final DoctorDetail detail;
+  final Professional detail;
   final DoctorEditableField field;
   final WidgetRef ref;
 
@@ -65,7 +64,7 @@ class _EditDoctorFieldSheetBody extends StatefulWidget {
     required this.ref,
   });
 
-  final DoctorDetail detail;
+  final Professional detail;
   final DoctorEditableField field;
   final WidgetRef ref;
 
@@ -131,7 +130,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -163,7 +162,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
             decoration: InputDecoration(
               hintText: _hint,
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -180,7 +179,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.navyBright,
+              backgroundColor: AppColors.navyBright,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -240,7 +239,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
         value: raw.isEmpty ? null : raw,
       );
       if (!mounted) return;
-      Navigator.of(context).pop(DoctorDetail.fromApi(updated));
+      Navigator.of(context).pop(Professional.fromDTO(updated));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);

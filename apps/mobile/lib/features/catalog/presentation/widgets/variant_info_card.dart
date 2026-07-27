@@ -90,9 +90,9 @@ class VariantInfoCard extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: const AppColors.background,
+                color: AppColors.background,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const AppColors.surfaceSecondary),
+                border: Border.all(color: AppColors.surfaceSecondary),
               ),
               child: const Icon(
                 Icons.medication_liquid_outlined,
@@ -120,7 +120,7 @@ class VariantInfoCard extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: const AppColors.blueLight,
+                    color: AppColors.blueLight,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -140,7 +140,11 @@ class VariantInfoCard extends StatelessWidget {
         _CodesPanel(variant: variant),
         if (onViewComparison != null || onManageCompetitors != null) ...[
           const SizedBox(height: 12),
-          const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: AppColors.surfaceSecondary,
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Wrap(
@@ -176,7 +180,7 @@ class VariantInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -219,7 +223,7 @@ class _CardLink extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 2),
-          Icon(icon, size: 16, color: const AppColors.navyBright),
+          Icon(icon, size: 16, color: AppColors.navyBright),
         ],
       ),
     );
@@ -238,9 +242,9 @@ class _CodesPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const AppColors.background,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Column(
         children: [

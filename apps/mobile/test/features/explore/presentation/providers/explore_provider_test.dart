@@ -1,19 +1,16 @@
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _clinic = Clinic(
+const _clinic = FacilityEntry(
   id: 'facility-1',
   name: 'Clínica Central',
   city: '',
   neighborhood: '',
   distanceKm: null,
   commercialStatus: null,
-  lastVisitDays: null,
   doctorCount: 0,
-  isPriority: false,
-  products: [],
 );
 
 void main() {
@@ -22,17 +19,14 @@ void main() {
       sort: 'purchase-funnel-asc',
       clinics: [
         _clinic,
-        Clinic(
+        FacilityEntry(
           id: 'facility-2',
           name: 'Outra clínica',
           city: '',
           neighborhood: '',
           distanceKm: null,
           commercialStatus: null,
-          lastVisitDays: null,
           doctorCount: 0,
-          isPriority: false,
-          products: const [],
           purchaseRecurrence: const PurchaseRecurrenceSnapshot(
             intervalDays: 30,
             sampleSize: 2,
@@ -53,17 +47,14 @@ void main() {
       sort: 'name-asc',
       clinics: [
         _clinic,
-        const Clinic(
+        const FacilityEntry(
           id: 'facility-2',
           name: 'Alfa',
           city: '',
           neighborhood: '',
           distanceKm: null,
           commercialStatus: null,
-          lastVisitDays: null,
           doctorCount: 0,
-          isPriority: false,
-          products: [],
         ),
       ],
     );

@@ -91,7 +91,7 @@ class _SortChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const AppColors.gray200),
+          border: Border.all(color: AppColors.gray200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -130,9 +130,9 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const AppColors.blue50,
+          color: AppColors.blue50,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const AppColors.blueLight),
+          border: Border.all(color: AppColors.blueLight),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -146,7 +146,11 @@ class _FilterChip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(Icons.close_rounded, size: 9, color: AppColors.blueDarker),
+            const Icon(
+              Icons.close_rounded,
+              size: 9,
+              color: AppColors.blueDarker,
+            ),
           ],
         ),
       ),

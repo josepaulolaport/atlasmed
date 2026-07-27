@@ -158,7 +158,7 @@ Future<void> launchMapsRoute(
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const AppColors.gray300,
+                    color: AppColors.gray300,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -176,7 +176,7 @@ Future<void> launchMapsRoute(
               _MapsAppTile(
                 label: 'Waze',
                 icon: Icons.navigation_rounded,
-                color: const AppColors.blueAccent,
+                color: AppColors.blueAccent,
                 onTap: () => Navigator.of(sheetContext).pop(_MapsApp.waze),
               ),
               const SizedBox(height: 8),
@@ -267,9 +267,9 @@ class _MapsAppTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: const AppColors.surfaceTertiary,
+          color: AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const AppColors.gray200),
+          border: Border.all(color: AppColors.gray200),
         ),
         child: Row(
           children: [

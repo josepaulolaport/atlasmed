@@ -134,7 +134,7 @@ class _ManagePermissionsSheetState
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -223,7 +223,7 @@ class _ManagePermissionsSheetState
                       width: double.infinity,
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: const AppColors.navyDeep,
+                          backgroundColor: AppColors.navyDeep,
                         ),
                         onPressed: _busy ? null : _grant,
                         icon: const Icon(Icons.add, size: 18),
@@ -262,9 +262,11 @@ class _ManagePermissionsSheetState
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: const AppColors.surfaceTertiary,
+                            color: AppColors.surfaceTertiary,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const AppColors.surfaceSecondary),
+                            border: Border.all(
+                              color: AppColors.surfaceSecondary,
+                            ),
                           ),
                           child: Row(
                             children: [

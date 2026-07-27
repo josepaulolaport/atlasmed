@@ -24,13 +24,13 @@ extension InvitationStatusX on InvitationStatus {
   Color get color {
     switch (this) {
       case InvitationStatus.pending:
-        return const AppColors.amber;
+        return AppColors.amber;
       case InvitationStatus.accepted:
-        return const AppColors.green;
+        return AppColors.green;
       case InvitationStatus.expired:
-        return const AppColors.gray500;
+        return AppColors.gray500;
       case InvitationStatus.revoked:
-        return const AppColors.red;
+        return AppColors.red;
     }
   }
 

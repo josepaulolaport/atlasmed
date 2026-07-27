@@ -119,11 +119,11 @@ extension PurchaseFunnelStageX on PurchaseFunnelStage {
   };
 
   Color get color => switch (this) {
-    PurchaseFunnelStage.neverPurchased => const AppColors.gray600,
-    PurchaseFunnelStage.outsideWindow => const AppColors.blue600,
-    PurchaseFunnelStage.purchaseWindow => const AppColors.green600,
-    PurchaseFunnelStage.churn => const AppColors.amberDark,
-    PurchaseFunnelStage.inactive => const AppColors.redDark,
+    PurchaseFunnelStage.neverPurchased => AppColors.gray600,
+    PurchaseFunnelStage.outsideWindow => AppColors.blue600,
+    PurchaseFunnelStage.purchaseWindow => AppColors.green600,
+    PurchaseFunnelStage.churn => AppColors.amberDark,
+    PurchaseFunnelStage.inactive => AppColors.redDark,
   };
 
   Color get backgroundColor => color.withValues(alpha: 0.1);

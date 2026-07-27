@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
     show facilityRosterPageSize;
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
@@ -140,11 +141,11 @@ class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>> {
 
 final facilityDoctorsRosterProvider = StateNotifierProvider.autoDispose
     .family<
-      FacilityRosterNotifier<FacilityCrmDoctor>,
-      FacilityRosterState<FacilityCrmDoctor>,
+      FacilityRosterNotifier<ProfessionalRoster>,
+      FacilityRosterState<ProfessionalRoster>,
       String
     >((ref, facilityId) {
-      return FacilityRosterNotifier<FacilityCrmDoctor>(
+      return FacilityRosterNotifier<ProfessionalRoster>(
         facilityId: facilityId,
         loadPage: ({required facilityId, required page}) async {
           if (isMockNearbyFacilityId(facilityId)) {

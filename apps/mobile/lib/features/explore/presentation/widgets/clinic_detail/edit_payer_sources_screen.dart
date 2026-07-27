@@ -130,10 +130,10 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
     final hasZero = _hasZeroShare;
 
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         title: const Text(
@@ -152,7 +152,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddSheet,
-        backgroundColor: const AppColors.navyBright,
+        backgroundColor: AppColors.navyBright,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Adicionar'),
@@ -209,7 +209,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                           icon: const Icon(Icons.add_rounded, size: 18),
                           label: const Text('Adicionar fonte'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: const AppColors.navyBright,
+                            foregroundColor: AppColors.navyBright,
                             side: const BorderSide(color: AppColors.blueLight),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -357,8 +357,8 @@ class _TotalChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ok = isEmpty || (balanced && !hasZeroShare);
-    final bg = ok ? const Color(0xFFecfdf5) : const AppColors.red50;
-    final fg = ok ? const AppColors.green600 : const AppColors.red;
+    final bg = ok ? const Color(0xFFecfdf5) : AppColors.red50;
+    final fg = ok ? AppColors.green600 : AppColors.red;
     final String label;
     if (isEmpty) {
       label = 'Nenhuma fonte — salve para limpar o cadastro';
@@ -401,7 +401,7 @@ class _TotalChip extends StatelessWidget {
             TextButton(
               onPressed: onDistribute,
               style: TextButton.styleFrom(
-                foregroundColor: const AppColors.navyBright,
+                foregroundColor: AppColors.navyBright,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -462,7 +462,7 @@ class _EmptyEditor extends StatelessWidget {
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Adicionar fonte'),
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
@@ -504,7 +504,7 @@ class _PayerEditCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isZero ? const AppColors.red100 : const AppColors.surfaceSecondary,
+          color: isZero ? AppColors.red100 : AppColors.surfaceSecondary,
         ),
       ),
       child: Row(
@@ -543,7 +543,7 @@ class _PayerEditCard extends StatelessWidget {
           IconButton(
             onPressed: onRemove,
             icon: const Icon(Icons.delete_outline_rounded, size: 20),
-            color: const AppColors.gray400,
+            color: AppColors.gray400,
             tooltip: 'Remover',
           ),
         ],
@@ -625,10 +625,10 @@ class _StepButton extends StatelessWidget {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: const AppColors.gray100,
+          color: AppColors.gray100,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 18, color: const AppColors.gray600),
+        child: Icon(icon, size: 18, color: AppColors.gray600),
       ),
     );
   }
@@ -685,7 +685,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const AppColors.gray200,
+              color: AppColors.gray200,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -718,7 +718,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     hintText: 'Buscar fonte pagadora…',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
                     filled: true,
-                    fillColor: const AppColors.gray100,
+                    fillColor: AppColors.gray100,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -776,7 +776,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                             color: AppColors.gray900,
                           ),
                         ),
-                        activeColor: const AppColors.navyBright,
+                        activeColor: AppColors.navyBright,
                       );
                     },
                   ),
@@ -804,8 +804,8 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                         Navigator.pop(context, picked);
                       },
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyBright,
-                  disabledBackgroundColor: const AppColors.gray200,
+                  backgroundColor: AppColors.navyBright,
+                  disabledBackgroundColor: AppColors.gray200,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

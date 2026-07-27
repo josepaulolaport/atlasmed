@@ -52,11 +52,11 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const AppColors.surfaceTertiary,
+        backgroundColor: AppColors.surfaceTertiary,
         elevation: 0,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         title: Text(
           'Envio v${submission.version}',
           maxLines: 1,
@@ -72,7 +72,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const AppColors.gray200),
+              border: Border.all(color: AppColors.gray200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +100,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const AppColors.red50,
+                color: AppColors.red50,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

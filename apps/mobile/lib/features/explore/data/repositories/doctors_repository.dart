@@ -4,11 +4,11 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 
-class DoctorsRepository extends Repository<PaginatedDoctors>
-    with SessionEnvironmentMixin<PaginatedDoctors> {
+class DoctorsRepository extends Repository<PaginatedProfessionals>
+    with SessionEnvironmentMixin<PaginatedProfessionals> {
   DoctorsRepository({
     String? baseUrl,
     this.page = 1,
@@ -82,11 +82,11 @@ class DoctorsRepository extends Repository<PaginatedDoctors>
   }
 
   @override
-  PaginatedDoctors fromJson(String json) => PaginatedDoctors.fromJson(json);
+  PaginatedProfessionals fromJson(String json) => PaginatedProfessionals.fromJson(json);
 
   /// Patches a single person-level field via `PATCH /api/v1/professionals/:id`.
   /// Pass [value] `null` to clear a nullable column.
-  Future<ApiDoctor> patchProfessionalField({
+  Future<ProfessionalDTO> patchProfessionalField({
     required String id,
     required String fieldKey,
     required String? value,
@@ -108,6 +108,6 @@ class DoctorsRepository extends Repository<PaginatedDoctors>
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    return ApiDoctor.fromMap(map);
+    return ProfessionalDTO.fromMap(map);
   }
 }

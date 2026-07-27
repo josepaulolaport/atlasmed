@@ -13,9 +13,9 @@ class EditorValidationBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const AppColors.red50,
+        color: AppColors.red50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.red100),
+        border: Border.all(color: AppColors.red100),
       ),
       child: Row(
         children: [

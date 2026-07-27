@@ -3,26 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
-    as api;
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purchase_recurrence_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_payers_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/administrative_professionals_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
@@ -103,21 +104,21 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     _lastVisibilityRefreshAt = now;
 
     final clinicId = widget.clinicId;
-    ref.invalidate(clinicDetailRepositoryProvider(clinicId));
+    ref.invalidate(facilityZipRepositoryProvider(clinicId));
     // Warm so skipLoadingOnReload can swap in fresh data without a skeleton.
     // ignore: unused_result
-    ref.read(clinicDetailRepositoryProvider(clinicId)).refresh();
+    ref.read(facilityZipRepositoryProvider(clinicId)).refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     final clinicId = widget.clinicId;
-    final repo = ref.watch(clinicDetailRepositoryProvider(clinicId));
+    final repo = ref.watch(facilityZipRepositoryProvider(clinicId));
 
     return Scaffold(
-      backgroundColor: const AppColors.navyBright,
+      backgroundColor: AppColors.navyBright,
       appBar: AppBar(
-        backgroundColor: const AppColors.navyBright,
+        backgroundColor: AppColors.navyBright,
         foregroundColor: Colors.white,
         systemOverlayStyle: .light,
         actions: [
@@ -135,15 +136,18 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
           const SizedBox(width: 6),
         ],
       ),
-      body: ColoredBox(
-        color: const AppColors.surfaceTertiary,
-        child: detailAsync.when(
-          skipLoadingOnReload: true,
-          loading: () => _loadingSkeleton(context),
-          error: (err, _) => _errorView(context, clinicId, err),
-          data: (detail) =>
-              _ClinicDetailBody(detail: detail, clinicId: clinicId),
-        ),
+      body: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
+        repository: repo,
+        builder: (context, data, _) {
+          if (data == null) {
+            return _loadingSkeleton(context);
+          }
+          return _ClinicDetailBody(
+            detail: data.facility,
+            clinicId: clinicId,
+            integrations: data,
+          );
+        },
       ),
     );
   }
@@ -152,7 +156,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     return SafeArea(
       child: Column(
         children: [
-          _buildHeaderShimmer(context),
+          _buildHeaderSkeleton(context),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -160,7 +164,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
                 6,
                 (_) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: _ShimmerBlock(height: 100),
+                  child: _SkeletonBlock(height: 100),
                 ),
               ),
             ),
@@ -170,7 +174,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     );
   }
 
-  Widget _buildHeaderShimmer(BuildContext context) {
+  Widget _buildHeaderSkeleton(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return Container(
       height: 180 + top,
@@ -183,53 +187,6 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       ),
       child: const Center(
         child: CircularProgressIndicator(color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _errorView(BuildContext context, String clinicId, Object error) {
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.wifi_off_rounded,
-                size: 48,
-                color: AppColors.red,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Não foi possível carregar o estabelecimento',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _friendlyLoadError(error),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.gray500, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => ref.invalidate(clinicDetailProvider(clinicId)),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Tentar novamente'),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => context.pop(),
-                child: const Text('Voltar'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -285,7 +242,7 @@ Future<void> _openDoctorsList(
   WidgetRef ref, {
   required String clinicId,
   required String facilityName,
-  required List<FacilityCrmDoctor> rosterFallback,
+  required List<ProfessionalRoster> rosterFallback,
 }) async {
   await Navigator.of(context).push<void>(
     MaterialPageRoute(
@@ -377,7 +334,7 @@ Future<void> _openPayerSourcesEditor(
 Future<void> _openPurchaseRecurrenceEditor(
   BuildContext context,
   WidgetRef ref,
-  ClinicDetail detail,
+  Facility detail,
 ) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -401,7 +358,7 @@ Future<void> _openPurchaseRecurrenceEditor(
                 if (sheetContext.mounted) Navigator.of(sheetContext).pop();
               },
               refreshDetail: () {
-                ref.invalidate(clinicDetailRepositoryProvider(detail.id));
+                ref.invalidate(facilityZipRepositoryProvider(detail.id));
               },
               refreshExplore: ref
                   .read(exploreProvider.notifier)
@@ -425,10 +382,15 @@ Future<void> _openPurchaseRecurrenceEditor(
 // Body — fixed blue header (outside the scroll) + scrollable sections
 // ===============================================================
 class _ClinicDetailBody extends ConsumerWidget {
-  const _ClinicDetailBody({required this.detail, required this.clinicId});
+  const _ClinicDetailBody({
+    required this.detail,
+    required this.clinicId,
+    this.integrations,
+  });
 
-  final ClinicDetail detail;
+  final Facility detail;
   final String clinicId;
+  final FacilityWithIntegrations? integrations;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -437,13 +399,11 @@ class _ClinicDetailBody extends ConsumerWidget {
         .valueOrNull;
 
     return RefreshIndicator(
-      color: const AppColors.navyBright,
+      color: AppColors.navyBright,
       backgroundColor: Colors.white,
       onRefresh: () async {
-        ref.invalidate(clinicDetailRepositoryProvider(clinicId));
         ref.invalidate(establishmentDetailSectionsProvider(clinicId));
         ref.invalidate(clinicVisitsRepositoryProvider(clinicId));
-        ref.invalidate(facilityPhotosProvider(clinicId));
         ref.invalidate(facilityNotesProvider(clinicId));
         ref.invalidate(facilityNearbyPreviewProvider(clinicId));
         final doctorsNotifier = ref.read(
@@ -452,28 +412,21 @@ class _ClinicDetailBody extends ConsumerWidget {
         final adminsNotifier = ref.read(
           facilityAdministratorsRosterProvider(clinicId).notifier,
         );
-        final payersNotifier = ref.read(
-          facilityPayersProvider(clinicId).notifier,
-        );
-        final ordersNotifier = ref.read(
-          facilityOrdersProvider(clinicId).notifier,
-        );
         await Future.wait([
-          ref.read(clinicDetailRepositoryProvider(clinicId)).refresh(),
+          ref.read(facilityZipRepositoryProvider(clinicId)).refresh(),
           ref.read(establishmentDetailSectionsProvider(clinicId).future),
           ref.read(facilityNearbyPreviewProvider(clinicId).future),
-          ref.read(facilityPhotosProvider(clinicId).future),
           ref.read(facilityNotesProvider(clinicId).future),
           doctorsNotifier.retry(),
           adminsNotifier.retry(),
-          payersNotifier.retry(),
-          ordersNotifier.retry(),
+          // photos, orders, payers são cobertos pelo ZipRepository
         ]);
       },
       child: _ClinicDetailContent(
         detail: detail,
         clinicId: clinicId,
         sections: sections,
+        integrations: integrations,
       ),
     );
   }
@@ -483,13 +436,15 @@ class _ClinicDetailBody extends ConsumerWidget {
 // Scrollable content body — section order per Spec 0005 redesign
 // ===============================================================
 class _ClinicDetailContent extends ConsumerWidget {
-  final ClinicDetail detail;
+  final Facility detail;
   final String clinicId;
   final EstablishmentDetailSections? sections;
+  final FacilityWithIntegrations? integrations;
   const _ClinicDetailContent({
     required this.detail,
     required this.clinicId,
     this.sections,
+    this.integrations,
   });
 
   @override
@@ -503,6 +458,15 @@ class _ClinicDetailContent extends ConsumerWidget {
     final doctorsRoster = ref.watch(facilityDoctorsRosterProvider(clinicId));
     final payersState = ref.watch(facilityPayersProvider(clinicId));
     final ordersState = ref.watch(facilityOrdersProvider(clinicId));
+    // Prefer zipped data (from FacilityZipRepository) over individual providers.
+    final effectivePayers = (integrations?.payerShares != null &&
+            integrations!.payerShares.isNotEmpty)
+        ? integrations!.payerShares
+        : payersState.payers;
+    final effectiveOrders = (integrations?.orders != null &&
+            integrations!.orders.isNotEmpty)
+        ? integrations!.orders
+        : ordersState.orders;
     final location = establishmentLocationFromDetail(detail);
     final nearbyAsync = ref.watch(facilityNearbyPreviewProvider(clinicId));
     final canMutate = ref.watch(canMutateFacilityProvider);
@@ -513,13 +477,13 @@ class _ClinicDetailContent extends ConsumerWidget {
       children: [
         Column(
           children: [
-            Expanded(child: Container(color: const AppColors.navyBright)),
-            Expanded(child: Container(color: const AppColors.surfaceTertiary)),
+            Expanded(child: Container(color: AppColors.navyBright)),
+            Expanded(child: Container(color: AppColors.surfaceTertiary)),
           ],
         ),
         SingleChildScrollView(
           child: ColoredBox(
-            color: const AppColors.surfaceTertiary,
+            color: AppColors.surfaceTertiary,
             child: Column(
               children: [
                 ClinicHeaderSection(detail: detail, sections: sections),
@@ -676,7 +640,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                   ),
                 ClinicSectionHeader(
                   title: 'Fontes Pagadoras',
-                  trailing: !canMutate || payersState.payers.isEmpty
+                  trailing: !canMutate || effectivePayers.isEmpty
                       ? null
                       : _HeaderLinkButton(
                           label: 'Editar',
@@ -685,7 +649,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                             ref,
                             clinicId: clinicId,
                             facilityName: detail.name,
-                            payers: payersState.payers,
+                            payers: effectivePayers,
                           ),
                         ),
                 ),
@@ -701,7 +665,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                   )
                 else
                   ClinicPayersBarSection(
-                    payers: payersState.payers,
+                    payers: effectivePayers,
                     summary: payersState.summary,
                     onEdit: canMutate
                         ? () => _openPayerSourcesEditor(
@@ -709,7 +673,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                             ref,
                             clinicId: clinicId,
                             facilityName: detail.name,
-                            payers: payersState.payers,
+                            payers: effectivePayers,
                           )
                         : null,
                   ),
@@ -739,10 +703,10 @@ class _ClinicDetailContent extends ConsumerWidget {
                   ),
                 ClinicSectionHeader(
                   title: 'Histórico de pedidos',
-                  badge: ordersState.orders.isEmpty
+                  badge: effectiveOrders.isEmpty
                       ? null
-                      : _CountBadge(count: ordersState.orders.length),
-                  trailing: ordersState.orders.isEmpty
+                      : _CountBadge(count: effectiveOrders.length),
+                  trailing: effectiveOrders.isEmpty
                       ? null
                       : _HeaderLinkButton(
                           label: 'Ver todos',
@@ -761,7 +725,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                   )
                 else
                   ClinicOrdersSection(
-                    orders: ordersState.orders,
+                    orders: effectiveOrders,
                     facilityId: clinicId,
                   ),
                 const ClinicSectionHeader(title: 'Notas de campo'),
@@ -777,16 +741,21 @@ class _ClinicDetailContent extends ConsumerWidget {
                   ),
                   data: (sections) => ClinicContextSection(
                     consultantName:
-                        detail.consultantName ?? sections.consultantName,
+                        detail.territory?.consultantName ??
+                        sections.consultantName,
                     consultantSince:
-                        detail.consultantSince ?? sections.consultantSince,
+                        detail.territory?.consultantSince ??
+                        sections.consultantSince,
                     // Manager is derived from the consultor's users.manager_id — no
                     // facility tenure. Prefer live; no mock fallback (would invent a manager).
-                    managerName: detail.managerName,
+                    managerName: detail.territory?.managerName,
                     managerSince: null,
                     regionZoneLabel:
-                        detail.territoryName ?? sections.regionZoneLabel,
-                    city: detail.city.isNotEmpty ? detail.city : null,
+                        detail.territory?.territoryName ??
+                        sections.regionZoneLabel,
+                    city: (detail.address?.city.isNotEmpty ?? false)
+                        ? detail.address!.city
+                        : null,
                   ),
                 ),
                 if (canSuggest) const _SuggestEditBanner(),
@@ -819,7 +788,7 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: const AppColors.blueLight,
+        color: AppColors.blueLight,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -851,20 +820,13 @@ class _HeaderLinkButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.navyBright,
-              ),
-            ),
-            if (icon != null)
-              Icon(icon, size: 16, color: const AppColors.navyBright),
-          ],
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.navyBright,
+          ),
         ),
       ),
     );
@@ -906,7 +868,7 @@ class _SectionErrorCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const AppColors.red50,
+        color: AppColors.red50,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -927,7 +889,7 @@ class _SectionErrorCard extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Tentar novamente'),
               style: TextButton.styleFrom(
-                foregroundColor: const AppColors.red,
+                foregroundColor: AppColors.red,
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
               ),
@@ -943,7 +905,7 @@ class _SectionErrorCard extends StatelessWidget {
 // QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
 // ===============================================================
 class _QuickActions extends ConsumerWidget {
-  final ClinicDetail detail;
+  final Facility detail;
   const _QuickActions({required this.detail});
 
   @override
@@ -971,7 +933,7 @@ class _QuickActions extends ConsumerWidget {
             label: 'Ligar',
             onTap: () => launchContactUrl(
               context,
-              url: callUrl(detail.phone),
+              url: callUrl(detail.contact?.phone),
               contactLabel: 'telefone',
             ),
           ),
@@ -980,7 +942,9 @@ class _QuickActions extends ConsumerWidget {
             label: 'WhatsApp',
             onTap: () => launchContactUrl(
               context,
-              url: whatsappUrl(detail.whatsapp ?? detail.phone),
+              url: whatsappUrl(
+                detail.contact?.whatsapp ?? detail.contact?.phone,
+              ),
               contactLabel: 'WhatsApp',
             ),
           ),
@@ -989,9 +953,9 @@ class _QuickActions extends ConsumerWidget {
             label: 'Rota',
             onTap: () => launchMapsRoute(
               context,
-              latitude: detail.lat,
-              longitude: detail.lng,
-              address: detail.formattedAddress,
+              latitude: detail.address?.lat,
+              longitude: detail.address?.lng,
+              address: detail.address?.formattedAddress,
             ),
           ),
           if (canVisit)
@@ -1063,7 +1027,7 @@ class _ActionButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                border: Border.all(color: const AppColors.gray100),
+                border: Border.all(color: AppColors.gray100),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -1072,7 +1036,7 @@ class _ActionButton extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(icon, size: 20, color: const AppColors.navyBright),
+              child: Icon(icon, size: 20, color: AppColors.navyBright),
             ),
             const SizedBox(height: 6),
             Text(
@@ -1102,9 +1066,9 @@ class _SuggestEditBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const AppColors.surfaceTertiary,
+        color: AppColors.surfaceTertiary,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1157,7 +1121,7 @@ class _ClinicDeactivateButton extends ConsumerWidget {
           icon: const Icon(Icons.power_settings_new_rounded, size: 18),
           label: const Text('Solicitar desativação'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: const AppColors.error,
+            foregroundColor: AppColors.error,
             side: const BorderSide(color: AppColors.red100),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
@@ -1185,17 +1149,19 @@ class _ClinicDeactivateButton extends ConsumerWidget {
 // for the old implementation. `ClinicAdminInfoSection` should use
 // `displayTaxIdentifier` (from `tax_identifier.dart`) for its CNPJ/CPF row.
 // ===============================================================
-class _ShimmerBlock extends StatelessWidget {
+class _SkeletonBlock extends StatelessWidget {
   final double height;
-  const _ShimmerBlock({required this.height});
+  const _SkeletonBlock({required this.height});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: const AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(16),
+    return AtlasShimmer(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }

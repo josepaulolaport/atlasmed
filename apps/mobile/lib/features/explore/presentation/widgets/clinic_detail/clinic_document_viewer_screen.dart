@@ -373,9 +373,9 @@ class _UnsupportedCanvas extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray800,
+                  color: AppColors.gray800,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const AppColors.gray700),
+                  border: Border.all(color: AppColors.gray700),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -385,9 +385,7 @@ class _UnsupportedCanvas extends StatelessWidget {
                           ? Icons.picture_as_pdf_rounded
                           : Icons.insert_drive_file_rounded,
                       size: 48,
-                      color: isPdf
-                          ? const AppColors.red
-                          : const AppColors.blueLight,
+                      color: isPdf ? AppColors.red : AppColors.blueLight,
                     ),
                     const SizedBox(height: 16),
                     Padding(
@@ -421,7 +419,7 @@ class _UnsupportedCanvas extends StatelessWidget {
               child: FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyBright,
+                  backgroundColor: AppColors.navyBright,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

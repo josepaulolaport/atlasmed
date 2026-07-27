@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
     show facilityRosterListPageSize;
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
@@ -31,7 +31,7 @@ class DoctorsListScreen extends ConsumerStatefulWidget {
     this.facilityId,
   });
 
-  final List<FacilityCrmDoctor> doctors;
+  final List<ProfessionalRoster> doctors;
   final String facilityName;
 
   /// When set, load a larger roster page after first frame.
@@ -42,7 +42,7 @@ class DoctorsListScreen extends ConsumerStatefulWidget {
 }
 
 class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
-  late List<FacilityCrmDoctor> _doctors = List.of(widget.doctors);
+  late List<ProfessionalRoster> _doctors = List.of(widget.doctors);
   String _query = '';
   String _sort = 'name-asc';
   Map<String, List<String>> _filters = {};
@@ -57,7 +57,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     final facilityId = widget.facilityId;
     if (facilityId == null || facilityId.isEmpty) return;
 
-    List<FacilityCrmDoctor> next;
+    List<ProfessionalRoster> next;
     if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
       next = const [];
     } else {
@@ -84,7 +84,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     setState(() => _doctors = next);
   }
 
-  Future<void> _refreshAfterMutation(List<FacilityCrmDoctor> added) async {
+  Future<void> _refreshAfterMutation(List<ProfessionalRoster> added) async {
     setState(() {
       final existing = _doctors.map((d) => d.id).toSet();
       _doctors = [..._doctors, ...added.where((d) => !existing.contains(d.id))];
@@ -125,8 +125,8 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
   int get _filterCount =>
       _filters.values.fold<int>(0, (sum, list) => sum + list.length);
 
-  List<FacilityCrmDoctor> get _filtered {
-    var list = List<FacilityCrmDoctor>.from(_doctors);
+  List<ProfessionalRoster> get _filtered {
+    var list = List<ProfessionalRoster>.from(_doctors);
     final q = _query.trim().toLowerCase();
     if (q.isNotEmpty) {
       list = list
@@ -204,7 +204,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         title: Text(
           'Médicos · ${_doctors.length}',
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
@@ -213,7 +213,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       floatingActionButton: ref.watch(canMutateProfessionalProvider)
           ? FloatingActionButton(
               onPressed: _openAssociate,
-              backgroundColor: const AppColors.navyBright,
+              backgroundColor: AppColors.navyBright,
               foregroundColor: Colors.white,
               child: const Icon(Icons.add_rounded),
             )
@@ -238,7 +238,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                 child: SortRow(
                   sort: _sort,
-                  onSortTap: () => setState(() => _sortOpen = true),
+                  onSortTap: _showSortSheet,
                   filterChips: _filterChips,
                 ),
               ),
@@ -268,16 +268,14 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                             phone: d.phone,
                             relationshipScore: d.relationshipScore,
                             badges: _badgesFor(d),
-                            doctor: Doctor(
+                            doctor: ProfessionalEntry(
                               id: d.id,
                               name: d.name,
                               initials: d.initials,
                               hue: d.hue,
                               specialty: d.specialty ?? '',
-                              primaryClinic: '',
                               crm: d.crm ?? '',
                               distanceKm: 0,
-                              isPriority: d.isDecisionMaker || d.isPrescriber,
                             ),
                             onEditRoles:
                                 ref.watch(canMutateProfessionalProvider)
@@ -329,16 +327,14 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                         phone: d.phone,
                         relationshipScore: d.relationshipScore,
                         badges: _badgesFor(d),
-                        doctor: Doctor(
+                        doctor: ProfessionalEntry(
                           id: d.id,
                           name: d.name,
                           initials: d.initials,
                           hue: d.hue,
                           specialty: d.specialty ?? '',
-                          primaryClinic: '',
                           crm: d.crm ?? '',
                           distanceKm: 0,
-                          isPriority: d.isDecisionMaker || d.isPrescriber,
                         ),
                         onEditRoles: ref.watch(canMutateProfessionalProvider)
                             ? () => _editRoles(d)
@@ -391,7 +387,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     );
   }
 
-  List<String> _badgesFor(FacilityCrmDoctor d) {
+  List<String> _badgesFor(ProfessionalRoster d) {
     final badges = <String>[];
     if (d.roleBadge != null && d.roleBadge!.trim().isNotEmpty) {
       badges.add(d.roleBadge!);
@@ -406,7 +402,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     return badges;
   }
 
-  Future<void> _editRoles(FacilityCrmDoctor doctor) async {
+  Future<void> _editRoles(ProfessionalRoster doctor) async {
     final updated = await showEditDoctorRolesSheet(
       context,
       doctor: doctor,

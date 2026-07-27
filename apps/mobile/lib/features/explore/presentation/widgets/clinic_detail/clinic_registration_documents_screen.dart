@@ -30,11 +30,11 @@ class _ClinicRegistrationDocumentsScreenState
     );
 
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const AppColors.surfaceTertiary,
+        backgroundColor: AppColors.surfaceTertiary,
         elevation: 0,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         title: Text(
           checklistAsync.when(
             data: (c) => 'Cadastro · ${c.fileDocuments.length}',
@@ -91,7 +91,7 @@ class _ClinicRegistrationDocumentsScreenState
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const AppColors.amber50,
+                    color: AppColors.amber50,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -230,7 +230,7 @@ class _BillingEmailSheetState extends State<_BillingEmailSheet> {
             decoration: InputDecoration(
               hintText: 'financeiro@clinica.com.br',
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -244,7 +244,7 @@ class _BillingEmailSheetState extends State<_BillingEmailSheet> {
               onPressed: () =>
                   Navigator.of(context).pop(_controller.text.trim()),
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -353,8 +353,8 @@ class _DocumentTypeCard extends StatelessWidget {
                         color:
                             document.isBillingEmail &&
                                 document.billingEmail?.isNotEmpty != true
-                            ? const AppColors.navyBright
-                            : const AppColors.gray500,
+                            ? AppColors.navyBright
+                            : AppColors.gray500,
                         fontWeight:
                             document.isBillingEmail &&
                                 document.billingEmail?.isNotEmpty != true

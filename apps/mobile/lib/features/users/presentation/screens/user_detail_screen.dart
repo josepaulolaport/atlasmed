@@ -15,6 +15,8 @@ import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_bad
 
 import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -31,7 +33,7 @@ class UserDetailScreen extends ConsumerWidget {
     final userAsync = ref.watch(userDetailProvider(userId));
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -118,10 +120,7 @@ class UserDetailScreen extends ConsumerWidget {
                 onTap: () => Navigator.pop(sheetContext, 'suspend'),
               ),
               ListTile(
-                leading: const Icon(
-                  Icons.block_outlined,
-                  color: AppColors.red,
-                ),
+                leading: const Icon(Icons.block_outlined, color: AppColors.red),
                 title: const Text('Desativar'),
                 onTap: () => Navigator.pop(sheetContext, 'deactivate'),
               ),
@@ -271,7 +270,7 @@ class _UserDetailBody extends ConsumerWidget {
         if (showsAssignments) ...[
           const SizedBox(height: 16),
           assignmentsAsync.when(
-            loading: () => const _SectionShimmer(height: 220),
+            loading: () => const _SectionSkeleton(height: 220),
             error: (_, _) => const SizedBox.shrink(),
             data: (assignments) => _AssignmentsSection(
               user: user,
@@ -297,7 +296,7 @@ class _IdentityCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -428,7 +427,7 @@ class _VerificationChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = verified ? const AppColors.green : const AppColors.gray400;
+    final color = verified ? AppColors.green : AppColors.gray400;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -505,7 +504,7 @@ class _AssignmentsSection extends ConsumerWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: const AppColors.gray100,
+                            color: AppColors.gray100,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -683,7 +682,7 @@ class _VerticalAssignmentCardState
             const SizedBox(height: 8),
             if (canManage)
               Material(
-                color: const AppColors.background,
+                color: AppColors.background,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: const BorderSide(color: AppColors.gray200),
@@ -836,7 +835,7 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -900,19 +899,21 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _SectionShimmer extends StatelessWidget {
-  const _SectionShimmer({required this.height});
+class _SectionSkeleton extends StatelessWidget {
+  const _SectionSkeleton({required this.height});
 
   final double height;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const AppColors.surfaceSecondary),
-        borderRadius: BorderRadius.circular(16),
+    return AtlasShimmer(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.surfaceSecondary),
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }

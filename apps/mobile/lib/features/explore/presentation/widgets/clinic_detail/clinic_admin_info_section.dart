@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
@@ -19,20 +19,20 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class ClinicAdminInfoSection extends ConsumerWidget {
   const ClinicAdminInfoSection({super.key, required this.detail});
 
-  final ClinicDetail detail;
+  final Facility detail;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
     final hasTaxId =
-        (detail.cnpj?.trim().isNotEmpty ?? false) ||
-        (detail.cpf?.trim().isNotEmpty ?? false);
+        (detail.registration?.cnpj?.trim().isNotEmpty ?? false) ||
+        (detail.registration?.cpf?.trim().isNotEmpty ?? false);
     final taxIdentifier = displayTaxIdentifier(
-      taxIdType: detail.taxIdType,
-      cnpj: detail.cnpj,
-      cpf: detail.cpf,
+      taxIdType: detail.registration?.taxIdType,
+      cnpj: detail.registration?.cnpj,
+      cpf: detail.registration?.cpf,
     );
-    final taxIdType = parseFacilityTaxIdType(detail.taxIdType);
+    final taxIdType = parseFacilityTaxIdType(detail.registration?.taxIdType);
     final taxTypeLabel = switch (taxIdType) {
       FacilityTaxIdType.pf => 'Pessoa Física (PF)',
       FacilityTaxIdType.pj => 'Pessoa Jurídica (PJ)',
@@ -68,7 +68,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
             onEdit: () {
               showTaxIdTypeSuggestionSheet(
                 context,
-                currentTaxIdType: detail.taxIdType,
+                currentTaxIdType: detail.registration?.taxIdType,
               );
             },
             fieldKey: null,
@@ -84,7 +84,9 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'Telefone',
-            value: formatBrazilianPhone(detail.phone) ?? detail.phone,
+            value:
+                formatBrazilianPhone(detail.contact?.phone) ??
+                detail.contact?.phone,
             icon: Icons.phone_outlined,
             onEdit: null,
             fieldKey: 'phoneNumber',
@@ -92,7 +94,9 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'WhatsApp',
-            value: formatBrazilianPhone(detail.whatsapp) ?? detail.whatsapp,
+            value:
+                formatBrazilianPhone(detail.contact?.whatsapp) ??
+                detail.contact?.whatsapp,
             icon: Icons.chat_outlined,
             onEdit: null,
             fieldKey: 'whatsappNumber',
@@ -100,7 +104,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'E-mail',
-            value: detail.email,
+            value: detail.contact?.email,
             icon: Icons.email_outlined,
             onEdit: null,
             fieldKey: 'email',
@@ -108,7 +112,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'Site',
-            value: detail.website,
+            value: detail.contact?.website,
             icon: Icons.language_outlined,
             onEdit: null,
             fieldKey: 'websiteUrl',
@@ -116,7 +120,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'Responsável',
-            value: detail.responsibleDoctor,
+            value: detail.registration?.responsiblePerson,
             icon: Icons.medical_services_outlined,
             onEdit: null,
             fieldKey: 'responsibleName',
@@ -124,16 +128,16 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'Horário',
-            value: detail.openingHours,
+            value: detail.registration?.openingHours,
             icon: Icons.schedule_outlined,
             onEdit: null,
             fieldKey: 'openingHours',
             editable: true,
           ),
-          if (detail.registeredSince != null)
+          if (detail.registration?.registeredSince != null)
             (
               label: 'Cliente desde',
-              value: _formatDate(detail.registeredSince!),
+              value: _formatDate(detail.registration!.registeredSince!),
               icon: Icons.date_range_outlined,
               onEdit: null,
               fieldKey: null,
@@ -141,7 +145,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
             ),
           (
             label: 'Estado',
-            value: detail.state,
+            value: detail.address?.state,
             icon: Icons.map_outlined,
             onEdit: null,
             fieldKey: null,
@@ -149,7 +153,9 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'Cidade',
-            value: detail.city.trim().isEmpty ? null : detail.city,
+            value: (detail.address?.city ?? '').trim().isEmpty
+                ? null
+                : detail.address?.city,
             icon: Icons.location_city_outlined,
             onEdit: null,
             fieldKey: null,
@@ -157,7 +163,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'CEP',
-            value: detail.postalCode,
+            value: detail.address?.postalCode,
             icon: Icons.local_post_office_outlined,
             onEdit: null,
             fieldKey: null,
@@ -165,19 +171,19 @@ class ClinicAdminInfoSection extends ConsumerWidget {
           ),
           (
             label: 'Endereço',
-            value: detail.composedAddressLine,
+            value: detail.address?.composedAddressLine,
             icon: Icons.location_on_outlined,
             onEdit: () => showAddressEditSuggestionSheet(
               context,
               ref: ref,
               facilityId: detail.id,
-              neighborhood: detail.neighborhood,
-              streetAddress: detail.streetAddress,
-              streetNumber: detail.streetNumber,
-              addressComplement: detail.addressComplement,
-              city: detail.city,
-              state: detail.state,
-              postalCode: detail.postalCode,
+              neighborhood: detail.address?.neighborhood,
+              streetAddress: detail.address?.streetAddress,
+              streetNumber: detail.address?.streetNumber,
+              addressComplement: detail.address?.addressComplement,
+              city: detail.address?.city,
+              state: detail.address?.state,
+              postalCode: detail.address?.postalCode,
             ),
             fieldKey: 'address',
             editable: true,

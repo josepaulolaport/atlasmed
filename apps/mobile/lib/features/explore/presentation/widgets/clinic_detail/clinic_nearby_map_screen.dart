@@ -189,7 +189,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       body: Column(
         children: [
           Padding(
@@ -583,7 +583,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         FillLayer(
           id: _nearbyRadiusFillLayerId,
           sourceId: _nearbyRadiusSourceId,
-          fillColor: const AppColors.navyBright.toARGB32(),
+          fillColor: AppColors.navyBright.toARGB32(),
           fillOpacity: 0.10,
         ),
       );
@@ -591,7 +591,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         LineLayer(
           id: _nearbyRadiusLineLayerId,
           sourceId: _nearbyRadiusSourceId,
-          lineColor: const AppColors.blue600.toARGB32(),
+          lineColor: AppColors.blue600.toARGB32(),
           lineWidth: 1.5,
           lineOpacity: 0.40,
         ),
@@ -931,7 +931,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const AppColors.gray300,
+                      color: AppColors.gray300,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -1267,9 +1267,9 @@ class _StackedEstablishmentTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: const AppColors.surfaceTertiary,
+          color: AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const AppColors.gray200),
+          border: Border.all(color: AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -1391,9 +1391,9 @@ class _RadiusPanel extends StatelessWidget {
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 trackHeight: 5,
-                activeTrackColor: const AppColors.navyBright,
-                inactiveTrackColor: const AppColors.gray200,
-                thumbColor: const AppColors.navyBright,
+                activeTrackColor: AppColors.navyBright,
+                inactiveTrackColor: AppColors.gray200,
+                thumbColor: AppColors.navyBright,
                 overlayColor: const Color(0x1F1e40af),
                 thumbShape: const RoundSliderThumbShape(
                   enabledThumbRadius: 9,
@@ -1462,12 +1462,10 @@ class _NearbyEstablishmentCard extends StatelessWidget {
         width: width,
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
-          color: isSelected ? const AppColors.blueLight : const AppColors.surfaceTertiary,
+          color: isSelected ? AppColors.blueLight : AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? const AppColors.navyBright
-                : const AppColors.gray200,
+            color: isSelected ? AppColors.navyBright : AppColors.gray200,
             width: isSelected ? 1.4 : 1,
           ),
         ),
@@ -1577,7 +1575,7 @@ class _NearbyMapPlaceholder extends StatelessWidget {
           child: Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const AppColors.surfaceSecondary,
+              color: AppColors.surfaceSecondary,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(

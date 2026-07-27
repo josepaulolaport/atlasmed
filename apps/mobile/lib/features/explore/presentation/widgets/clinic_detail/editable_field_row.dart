@@ -108,8 +108,8 @@ class EditableFieldRow extends ConsumerWidget {
             onTap: _isEmpty
                 ? (showEditButton ? () => _suggestEdit(context, ref) : null)
                 : () => _copy(context),
-            splashColor: const AppColors.navyBright.withValues(alpha: 0.08),
-            highlightColor: const AppColors.navyBright.withValues(alpha: 0.05),
+            splashColor: AppColors.navyBright.withValues(alpha: 0.08),
+            highlightColor: AppColors.navyBright.withValues(alpha: 0.05),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
               child: Column(
@@ -118,7 +118,7 @@ class EditableFieldRow extends ConsumerWidget {
                   Row(
                     children: [
                       if (icon != null) ...[
-                        Icon(icon, size: 15, color: const AppColors.gray400),
+                        Icon(icon, size: 15, color: AppColors.gray400),
                         const SizedBox(width: 8),
                       ],
                       Expanded(
@@ -215,11 +215,9 @@ class _EmptyValueChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         decoration: BoxDecoration(
-          color: const AppColors.amber50,
+          color: AppColors.amber50,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const AppColors.amber.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,

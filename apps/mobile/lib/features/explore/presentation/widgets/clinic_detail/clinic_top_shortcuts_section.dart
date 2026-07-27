@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_cadastro_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_registration_documents_screen.dart';
@@ -20,7 +20,7 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
 
   final String facilityId;
   final String facilityName;
-  final ClinicDetail detail;
+  final Facility detail;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,24 +105,24 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
   }
 }
 
-int _adminInfoPendingCount(ClinicDetail detail) {
+int _adminInfoPendingCount(Facility detail) {
   bool empty(String? v) => v == null || v.trim().isEmpty;
   final hasTaxId =
-      (detail.cnpj?.trim().isNotEmpty ?? false) ||
-      (detail.cpf?.trim().isNotEmpty ?? false);
+      (detail.registration?.cnpj?.trim().isNotEmpty ?? false) ||
+      (detail.registration?.cpf?.trim().isNotEmpty ?? false);
   final fields = <bool>[
-    empty(detail.taxIdType),
+    empty(detail.registration?.taxIdType),
     !hasTaxId,
-    empty(detail.phone),
-    empty(detail.whatsapp),
-    empty(detail.email),
-    empty(detail.website),
-    empty(detail.responsibleDoctor),
-    empty(detail.openingHours),
-    empty(detail.state),
-    empty(detail.city),
-    empty(detail.postalCode),
-    empty(detail.composedAddressLine),
+    empty(detail.contact?.phone),
+    empty(detail.contact?.whatsapp),
+    empty(detail.contact?.email),
+    empty(detail.contact?.website),
+    empty(detail.registration?.responsiblePerson),
+    empty(detail.registration?.openingHours),
+    empty(detail.address?.state),
+    empty(detail.address?.city),
+    empty(detail.address?.postalCode),
+    empty(detail.address?.composedAddressLine),
   ];
   return fields.where((isEmpty) => isEmpty).length;
 }
@@ -160,7 +160,7 @@ class _ShortcutCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 19, color: const AppColors.navyBright),
+            Icon(icon, size: 19, color: AppColors.navyBright),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -202,9 +202,9 @@ class _ShortcutBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (_tone) {
-      _BadgeTone.complete => (const AppColors.green50, const AppColors.greenDark),
-      _BadgeTone.pending => (const AppColors.amber50, const AppColors.amber),
-      _BadgeTone.neutral => (const AppColors.gray100, const AppColors.gray400),
+      _BadgeTone.complete => (AppColors.green50, AppColors.greenDark),
+      _BadgeTone.pending => (AppColors.amber50, AppColors.amber),
+      _BadgeTone.neutral => (AppColors.gray100, AppColors.gray400),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

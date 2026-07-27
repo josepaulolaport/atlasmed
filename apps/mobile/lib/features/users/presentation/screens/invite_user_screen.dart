@@ -258,8 +258,8 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
               _birthDate == null ? 'Selecionar data' : formatDate(_birthDate!),
               style: TextStyle(
                 color: _birthDate == null
-                    ? const AppColors.gray400
-                    : const AppColors.gray900,
+                    ? AppColors.gray400
+                    : AppColors.gray900,
               ),
             ),
           ),
@@ -342,9 +342,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                             : Colors.white,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color: selected
-                              ? role.name.color
-                              : const AppColors.gray200,
+                          color: selected ? role.name.color : AppColors.gray200,
                         ),
                       ),
                       child: Text(
@@ -352,9 +350,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: selected
-                              ? role.name.color
-                              : const AppColors.gray700,
+                          color: selected ? role.name.color : AppColors.gray700,
                         ),
                       ),
                     ),
@@ -395,18 +391,14 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                     selectedColor: const Color(
                       0xFF0a2f7f,
                     ).withValues(alpha: 0.12),
-                    checkmarkColor: const AppColors.navyDeep,
+                    checkmarkColor: AppColors.navyDeep,
                     labelStyle: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: selected
-                          ? const AppColors.navyDeep
-                          : const AppColors.gray700,
+                      color: selected ? AppColors.navyDeep : AppColors.gray700,
                     ),
                     side: BorderSide(
-                      color: selected
-                          ? const AppColors.navyDeep
-                          : const AppColors.gray200,
+                      color: selected ? AppColors.navyDeep : AppColors.gray200,
                     ),
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -446,7 +438,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyDeep,
+                backgroundColor: AppColors.navyDeep,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: _submitting ? null : _submit,
@@ -709,9 +701,9 @@ class _VerticalAssignmentBlock extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const AppColors.background,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,7 +868,7 @@ class _PickerButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: const AppColors.navyDeep),
+              Icon(icon, size: 20, color: AppColors.navyDeep),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

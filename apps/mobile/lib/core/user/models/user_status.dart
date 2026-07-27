@@ -20,13 +20,13 @@ extension UserStatusX on UserStatus {
   Color get color {
     switch (this) {
       case UserStatus.active:
-        return const AppColors.green;
+        return AppColors.green;
       case UserStatus.inactive:
-        return const AppColors.gray500;
+        return AppColors.gray500;
       case UserStatus.suspended:
-        return const AppColors.red;
+        return AppColors.red;
       case UserStatus.pending:
-        return const AppColors.amber;
+        return AppColors.amber;
     }
   }
 }

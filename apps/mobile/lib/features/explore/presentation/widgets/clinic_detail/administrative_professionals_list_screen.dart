@@ -187,7 +187,7 @@ class _AdministrativeProfessionalsListScreenState
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         title: Text(
           'Profissionais administrativos · ${_professionals.length}',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -196,7 +196,7 @@ class _AdministrativeProfessionalsListScreenState
       floatingActionButton: ref.watch(canMutateProfessionalProvider)
           ? FloatingActionButton(
               onPressed: _openAssociate,
-              backgroundColor: const AppColors.navyBright,
+              backgroundColor: AppColors.navyBright,
               foregroundColor: Colors.white,
               child: const Icon(Icons.add_rounded),
             )
@@ -221,7 +221,7 @@ class _AdministrativeProfessionalsListScreenState
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
                 child: SortRow(
                   sort: _sort,
-                  onSortTap: () => setState(() => _sortOpen = true),
+                  onSortTap: _showSortSheet,
                   filterChips: _filterChips,
                 ),
               ),
@@ -479,9 +479,7 @@ class _AdminProfessionalRow extends StatelessWidget {
                       Icon(
                         Icons.phone_outlined,
                         size: 13,
-                        color: hasPhone
-                            ? const AppColors.gray500
-                            : const AppColors.gray300,
+                        color: hasPhone ? AppColors.gray500 : AppColors.gray300,
                       ),
                       const SizedBox(width: 5),
                       Expanded(
@@ -492,8 +490,8 @@ class _AdminProfessionalRow extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             color: hasPhone
-                                ? const AppColors.gray600
-                                : const AppColors.gray400,
+                                ? AppColors.gray600
+                                : AppColors.gray400,
                           ),
                         ),
                       ),
@@ -525,9 +523,7 @@ class _RowBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final emphasized = label.toUpperCase().contains('DECISOR');
-    final color = emphasized
-        ? const AppColors.purple
-        : const AppColors.navyBright;
+    final color = emphasized ? AppColors.purple : AppColors.navyBright;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(

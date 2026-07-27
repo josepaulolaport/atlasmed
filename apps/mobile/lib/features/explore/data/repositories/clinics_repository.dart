@@ -3,15 +3,15 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/repository/domain/exceptions/unexpected_status_code_exception.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 /// Radius chip options for Explorar clinics (km). Clear = no `radiusKm`.
 const List<double> exploreRadiusKmOptions = [5, 10, 25, 50, 100];
 
-class ClinicsRepository extends Repository<PaginatedClinics>
-    with SessionEnvironmentMixin<PaginatedClinics> {
+class ClinicsRepository extends Repository<PaginatedFacilities>
+    with SessionEnvironmentMixin<PaginatedFacilities> {
   ClinicsRepository({
     String? baseUrl,
     this.page = 1,
@@ -134,14 +134,15 @@ class ClinicsRepository extends Repository<PaginatedClinics>
   }
 
   @override
-  PaginatedClinics fromJson(String json) => PaginatedClinics.fromJson(json);
+  PaginatedFacilities fromJson(String json) =>
+      PaginatedFacilities.fromJson(json);
 }
 
 /// Sends the typed recurrence command through the existing authenticated
 /// repository transport. It is separate from paginated listing because PATCH
 /// returns one facility DTO.
-class FacilityPurchaseRecurrenceRepository extends Repository<Clinic>
-    with SessionEnvironmentMixin<Clinic> {
+class FacilityPurchaseRecurrenceRepository extends Repository<FacilityDTO>
+    with SessionEnvironmentMixin<FacilityDTO> {
   FacilityPurchaseRecurrenceRepository({String? baseUrl})
     : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
       super(
@@ -155,7 +156,7 @@ class FacilityPurchaseRecurrenceRepository extends Repository<Clinic>
   RepositoryHttpRequest? _pendingRequest;
 
   @override
-  Clinic fromJson(String json) => Clinic.fromJson(json);
+  FacilityDTO fromJson(String json) => FacilityDTO.fromJson(json);
 
   RepositoryHttpRequest buildPatchRequest(
     String facilityId,
@@ -176,7 +177,7 @@ class FacilityPurchaseRecurrenceRepository extends Repository<Clinic>
     );
   }
 
-  Future<Clinic> updatePurchaseRecurrence(
+  Future<FacilityDTO> updatePurchaseRecurrence(
     String facilityId,
     PurchaseRecurrenceCommand command,
   ) async {

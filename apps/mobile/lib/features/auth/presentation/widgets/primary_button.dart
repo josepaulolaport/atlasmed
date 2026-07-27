@@ -70,7 +70,7 @@ class PrimaryButton extends StatelessWidget {
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            white ? const AppColors.navyDeep : Colors.white,
+                            white ? AppColors.navyDeep : Colors.white,
                           ),
                         ),
                       )
@@ -83,9 +83,7 @@ class PrimaryButton extends StatelessWidget {
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.2,
-                              color: white
-                                  ? const AppColors.navyDeep
-                                  : Colors.white,
+                              color: white ? AppColors.navyDeep : Colors.white,
                             ),
                           ),
                           if (trailingIcon != null) ...[
@@ -93,9 +91,7 @@ class PrimaryButton extends StatelessWidget {
                             Icon(
                               trailingIcon,
                               size: 18,
-                              color: white
-                                  ? const AppColors.navyDeep
-                                  : Colors.white,
+                              color: white ? AppColors.navyDeep : Colors.white,
                             ),
                           ],
                         ],

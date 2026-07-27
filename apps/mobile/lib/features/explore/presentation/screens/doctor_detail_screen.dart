@@ -6,9 +6,9 @@ import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctor_detail_repository.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
@@ -42,19 +42,13 @@ class DoctorDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(doctorDetailRepositoryProvider(doctorId));
 
-    // Compute AppBar color from cached data if available.
-    final currentValue = repository.currentValue;
-    final appBarColor = currentValue != null
-        ? DoctorDetail.fromApi(currentValue).primaryColor
-        : null;
-
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const AppColors.navyBright,
+        backgroundColor: AppColors.navyBright,
         foregroundColor: Colors.white,
       ),
-      body: FutureBuilder<ApiDoctor?>(
+      body: FutureBuilder<ProfessionalDTO?>(
         future: repository.currentValueOrResolve(),
         builder: (context, initialSnapshot) {
           if (initialSnapshot.connectionState != ConnectionState.done &&
@@ -62,7 +56,7 @@ class DoctorDetailScreen extends ConsumerWidget {
             return _loadingSkeleton(context);
           }
 
-          return StreamBuilder<RepositoryState<ApiDoctor>>(
+          return StreamBuilder<RepositoryState<ProfessionalDTO>>(
             stream: repository.stream,
             initialData: repository.currentState,
             builder: (context, snapshot) {
@@ -91,10 +85,10 @@ class DoctorDetailScreen extends ConsumerWidget {
     );
   }
 
-  DoctorDetail? _doctorDetailFromRepository(RepositoryState<ApiDoctor> state) {
+  Professional? _doctorDetailFromRepository(RepositoryState<ProfessionalDTO> state) {
     return state.map(
       empty: (_) => null,
-      ready: (ready) => DoctorDetail.fromApi(ready.data),
+      ready: (ready) => Professional.fromDTO(ready.data),
     );
   }
 
@@ -102,7 +96,7 @@ class DoctorDetailScreen extends ConsumerWidget {
     return SafeArea(
       child: Column(
         children: [
-          _buildHeaderShimmer(),
+          _buildHeaderSkeleton(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -110,11 +104,13 @@ class DoctorDetailScreen extends ConsumerWidget {
                 6,
                 (_) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: Container(
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                  child: AtlasShimmer(
+                    child: Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFeef0f3),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -126,7 +122,7 @@ class DoctorDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderShimmer() {
+  Widget _buildHeaderSkeleton() {
     return Container(
       height: 200,
       decoration: BoxDecoration(
@@ -150,11 +146,7 @@ class DoctorDetailScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 48,
-                color: AppColors.red,
-              ),
+              const Icon(Icons.error_outline, size: 48, color: AppColors.red),
               const SizedBox(height: 12),
               const Text(
                 'Erro ao carregar',
@@ -183,7 +175,7 @@ class DoctorDetailScreen extends ConsumerWidget {
 // ======================================================================
 
 class _DoctorDetailContent extends ConsumerWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   final DoctorDetailRepository repository;
   final String doctorId;
   final String? facilityId;
@@ -220,8 +212,8 @@ class _DoctorDetailContent extends ConsumerWidget {
       children: [
         Column(
           children: [
-            Expanded(child: Container(color: const AppColors.navyBright)),
-            Expanded(child: Container(color: const AppColors.surfaceTertiary)),
+            Expanded(child: Container(color: AppColors.navyBright)),
+            Expanded(child: Container(color: AppColors.surfaceTertiary)),
           ],
         ),
         RefreshIndicator(
@@ -233,7 +225,7 @@ class _DoctorDetailContent extends ConsumerWidget {
           },
           child: SingleChildScrollView(
             child: ColoredBox(
-              color: const AppColors.surfaceTertiary,
+              color: AppColors.surfaceTertiary,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -254,7 +246,7 @@ class _DoctorDetailContent extends ConsumerWidget {
                     const SizedBox(height: 16),
                   ],
                   if (detail.signals.isNotEmpty) ...[
-                    _DoctorSignals(detail: detail, signals: detail.signals),
+                    _ProfessionalSignals(detail: detail, signals: detail.signals),
                     const SizedBox(height: 16),
                   ],
                   _DoctorPersonalCard(
@@ -269,10 +261,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  _DoctorClinics(detail: detail, clinics: detail.clinics),
+                  _ProfessionalClinics(detail: detail, clinics: detail.clinics),
                   const SizedBox(height: 16),
                   if (detail.visits.isNotEmpty) ...[
-                    _DoctorVisits(visits: detail.visits),
+                    _ProfessionalVisits(visits: detail.visits),
                     const SizedBox(height: 16),
                   ],
                   RepositoryBuilder(
@@ -573,13 +565,13 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
 // ======================================================================
 
 class _DoctorHeader extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   const _DoctorHeader({required this.detail});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const AppColors.navyBright,
+      color: AppColors.navyBright,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,7 +598,7 @@ class _DoctorHeader extends StatelessWidget {
                           offset: const Offset(0, 6),
                         ),
                       ],
-                      color: const AppColors.navyBright,
+                      color: AppColors.navyBright,
                     ),
                     child: Center(
                       child: Text(
@@ -710,7 +702,7 @@ class _DoctorHeader extends StatelessWidget {
 // ======================================================================
 
 class _DoctorQuickActions extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   const _DoctorQuickActions({required this.detail});
 
   @override
@@ -721,8 +713,8 @@ class _DoctorQuickActions extends StatelessWidget {
         Positioned.fill(
           child: Column(
             children: [
-              Expanded(child: Container(color: const AppColors.navyBright)),
-              Expanded(child: Container(color: const AppColors.surfaceTertiary)),
+              Expanded(child: Container(color: AppColors.navyBright)),
+              Expanded(child: Container(color: AppColors.surfaceTertiary)),
             ],
           ),
         ),
@@ -731,11 +723,11 @@ class _DoctorQuickActions extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const AppColors.gray900.withValues(alpha: 0.08),
+                color: AppColors.gray900.withValues(alpha: 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -746,7 +738,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'Ligar',
                 icon: Icons.phone_rounded,
-                color: const AppColors.navyBright,
+                color: AppColors.navyBright,
                 onTap: () => launchContactUrl(
                   context,
                   url: callUrl(detail.phone),
@@ -756,7 +748,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'WhatsApp',
                 icon: Icons.chat_rounded,
-                color: const AppColors.navyBright.withValues(alpha: 0.7),
+                color: AppColors.navyBright.withValues(alpha: 0.7),
                 onTap: () => launchContactUrl(
                   context,
                   url: whatsappUrl(detail.whatsapp),
@@ -766,7 +758,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'E-mail',
                 icon: Icons.email_rounded,
-                color: const AppColors.navyBright.withValues(alpha: 0.7),
+                color: AppColors.navyBright.withValues(alpha: 0.7),
                 onTap: () => launchContactUrl(
                   context,
                   url: emailUrl(detail.email),
@@ -776,7 +768,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'Nova visita',
                 icon: Icons.event_rounded,
-                color: const AppColors.navyBright.withValues(alpha: 0.7),
+                color: AppColors.navyBright.withValues(alpha: 0.7),
                 onTap: () {},
               ),
             ],
@@ -814,14 +806,12 @@ class _QuickAction extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDisabled
-                      ? const AppColors.gray100
-                      : color.withAlpha(38),
+                  color: isDisabled ? AppColors.gray100 : color.withAlpha(38),
                 ),
                 child: Icon(
                   icon,
                   size: 18,
-                  color: isDisabled ? const AppColors.gray300 : color,
+                  color: isDisabled ? AppColors.gray300 : color,
                 ),
               ),
               const SizedBox(height: 5),
@@ -831,9 +821,7 @@ class _QuickAction extends StatelessWidget {
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.1,
-                  color: isDisabled
-                      ? const AppColors.gray300
-                      : const AppColors.gray900,
+                  color: isDisabled ? AppColors.gray300 : AppColors.gray900,
                 ),
               ),
             ],
@@ -845,13 +833,13 @@ class _QuickAction extends StatelessWidget {
 }
 
 // ======================================================================
-// 3. DoctorSignals — info/warning/success cards
+// 3. ProfessionalSignals — info/warning/success cards
 // ======================================================================
 
-class _DoctorSignals extends StatelessWidget {
-  final DoctorDetail detail;
-  final List<DoctorSignal> signals;
-  const _DoctorSignals({required this.detail, required this.signals});
+class _ProfessionalSignals extends StatelessWidget {
+  final Professional detail;
+  final List<ProfessionalSignal> signals;
+  const _ProfessionalSignals({required this.detail, required this.signals});
 
   @override
   Widget build(BuildContext context) {
@@ -873,26 +861,22 @@ class _DoctorSignals extends StatelessWidget {
 }
 
 class _SignalCard extends StatelessWidget {
-  final DoctorDetail detail;
-  final DoctorSignal signal;
+  final Professional detail;
+  final ProfessionalSignal signal;
   const _SignalCard({required this.detail, required this.signal});
 
   @override
   Widget build(BuildContext context) {
     final (Color color, Color bg, IconData icon) = switch (signal.kind) {
-      'good' => (
-        const AppColors.green,
-        const AppColors.green50,
-        Icons.trending_up_rounded,
-      ),
+      'good' => (AppColors.green, AppColors.green50, Icons.trending_up_rounded),
       'warn' => (
-        const AppColors.amber,
-        const AppColors.amber50,
+        AppColors.amber,
+        AppColors.amber50,
         Icons.info_outline_rounded,
       ),
       _ => (
-        const AppColors.navyBright,
-        const AppColors.blueLight,
+        AppColors.navyBright,
+        AppColors.blueLight,
         Icons.lightbulb_outline_rounded,
       ),
     };
@@ -946,7 +930,7 @@ class _SignalCard extends StatelessWidget {
 // ======================================================================
 
 class _DoctorPersonalCard extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   final ValueChanged<DoctorEditableField>? onEditField;
   const _DoctorPersonalCard({required this.detail, this.onEditField});
 
@@ -1097,8 +1081,8 @@ class _DoctorPersonalCard extends StatelessWidget {
 // ======================================================================
 
 class _DoctorPrescribing extends StatelessWidget {
-  final DoctorDetail detail;
-  final List<DoctorPrescribingItem> items;
+  final Professional detail;
+  final List<PrescribingItem> items;
   const _DoctorPrescribing({required this.detail, required this.items});
 
   @override
@@ -1116,11 +1100,11 @@ class _DoctorPrescribing extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1134,7 +1118,7 @@ class _DoctorPrescribing extends StatelessWidget {
                 return Column(
                   children: [
                     if (i > 0)
-                      Container(height: 1, color: const AppColors.surfaceSecondary),
+                      Container(height: 1, color: AppColors.surfaceSecondary),
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: Column(
@@ -1160,7 +1144,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const AppColors.green50,
+                                    color: AppColors.green50,
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: const Text(
@@ -1189,8 +1173,8 @@ class _DoctorPrescribing extends StatelessWidget {
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   color: positive
-                                      ? const AppColors.green600
-                                      : const AppColors.red,
+                                      ? AppColors.green600
+                                      : AppColors.red,
                                 ),
                               ),
                             ],
@@ -1215,8 +1199,8 @@ class _DoctorPrescribing extends StatelessWidget {
                                       height: pct * 28,
                                       decoration: BoxDecoration(
                                         color: v == item.trend.last
-                                            ? const AppColors.navyBright
-                                            : const AppColors.blueLight,
+                                            ? AppColors.navyBright
+                                            : AppColors.blueLight,
                                         borderRadius: BorderRadius.circular(2),
                                       ),
                                     );
@@ -1254,14 +1238,14 @@ class _DoctorPrescribing extends StatelessWidget {
                                     Container(
                                       height: 5,
                                       decoration: BoxDecoration(
-                                        color: const AppColors.surfaceSecondary,
+                                        color: AppColors.surfaceSecondary,
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                       child: FractionallySizedBox(
                                         widthFactor: item.share / 100,
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            color: const AppColors.navyBright,
+                                            color: AppColors.navyBright,
                                             borderRadius: BorderRadius.circular(
                                               3,
                                             ),
@@ -1289,13 +1273,13 @@ class _DoctorPrescribing extends StatelessWidget {
 }
 
 // ======================================================================
-// 6. DoctorClinics — clinics where they work
+// 6. ProfessionalClinics — clinics where they work
 // ======================================================================
 
-class _DoctorClinics extends StatelessWidget {
-  final DoctorDetail detail;
-  final List<DoctorClinic> clinics;
-  const _DoctorClinics({required this.detail, required this.clinics});
+class _ProfessionalClinics extends StatelessWidget {
+  final Professional detail;
+  final List<ProfessionalClinic> clinics;
+  const _ProfessionalClinics({required this.detail, required this.clinics});
 
   @override
   Widget build(BuildContext context) {
@@ -1316,11 +1300,11 @@ class _DoctorClinics extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1351,7 +1335,9 @@ class _DoctorClinics extends StatelessWidget {
                           decoration: BoxDecoration(
                             border: i > 0
                                 ? const Border(
-                                    top: BorderSide(color: AppColors.surfaceSecondary),
+                                    top: BorderSide(
+                                      color: AppColors.surfaceSecondary,
+                                    ),
                                   )
                                 : null,
                           ),
@@ -1362,16 +1348,16 @@ class _DoctorClinics extends StatelessWidget {
                                 height: 34,
                                 decoration: BoxDecoration(
                                   color: c.isMain
-                                      ? const AppColors.blue50
-                                      : const AppColors.gray100,
+                                      ? AppColors.blue50
+                                      : AppColors.gray100,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   Icons.local_hospital_rounded,
                                   size: 16,
                                   color: c.isMain
-                                      ? const AppColors.navyBright
-                                      : const AppColors.gray500,
+                                      ? AppColors.navyBright
+                                      : AppColors.gray500,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -1452,12 +1438,12 @@ class _DoctorClinics extends StatelessWidget {
 }
 
 // ======================================================================
-// 7. DoctorVisits — visit history
+// 7. ProfessionalVisits — visit history
 // ======================================================================
 
-class _DoctorVisits extends StatelessWidget {
-  final List<DoctorVisit> visits;
-  const _DoctorVisits({required this.visits});
+class _ProfessionalVisits extends StatelessWidget {
+  final List<ProfessionalVisit> visits;
+  const _ProfessionalVisits({required this.visits});
 
   @override
   Widget build(BuildContext context) {
@@ -1472,11 +1458,11 @@ class _DoctorVisits extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1486,10 +1472,10 @@ class _DoctorVisits extends StatelessWidget {
               children: List.generate(visits.length, (i) {
                 final v = visits[i];
                 final outcomeColor = switch (v.outcome) {
-                  'positivo' => const AppColors.green,
-                  'misto' => const AppColors.amber,
-                  'neutro' => const AppColors.gray500,
-                  _ => const AppColors.gray500,
+                  'positivo' => AppColors.green,
+                  'misto' => AppColors.amber,
+                  'neutro' => AppColors.gray500,
+                  _ => AppColors.gray500,
                 };
                 return Padding(
                   padding: EdgeInsets.only(top: i > 0 ? 14 : 0),
@@ -1545,7 +1531,7 @@ class _DoctorVisits extends StatelessWidget {
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const AppColors.gray100,
+                                    color: AppColors.gray100,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -1682,7 +1668,7 @@ class _DoctorVisits extends StatelessWidget {
 // ======================================================================
 
 class _DoctorNotes extends StatelessWidget {
-  final DoctorDetail detail;
+  final Professional detail;
   final List<ProfessionalNote>? notes;
   final VoidCallback onAddNote;
 
@@ -1704,11 +1690,11 @@ class _DoctorNotes extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1740,7 +1726,9 @@ class _DoctorNotes extends StatelessWidget {
                         decoration: BoxDecoration(
                           border: i < notes.length - 1
                               ? const Border(
-                                  bottom: BorderSide(color: AppColors.surfaceSecondary),
+                                  bottom: BorderSide(
+                                    color: AppColors.surfaceSecondary,
+                                  ),
                                 )
                               : null,
                         ),
@@ -1751,7 +1739,7 @@ class _DoctorNotes extends StatelessWidget {
                               width: 18,
                               height: 18,
                               decoration: BoxDecoration(
-                                color: const AppColors.blue50,
+                                color: AppColors.blue50,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Center(
@@ -1788,7 +1776,7 @@ class _DoctorNotes extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: const AppColors.blueLight,
+                            color: AppColors.blueLight,
                             width: 1,
                             style: BorderStyle.solid,
                           ),

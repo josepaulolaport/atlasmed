@@ -52,7 +52,7 @@ class ClinicStatusSignalsSection extends StatelessWidget {
             value: s.lastPurchaseAt != null
                 ? _formatDate(s.lastPurchaseAt!)
                 : 'Sem registro',
-            color: const AppColors.gray500,
+            color: AppColors.gray500,
             isLast: true,
           ),
         ],

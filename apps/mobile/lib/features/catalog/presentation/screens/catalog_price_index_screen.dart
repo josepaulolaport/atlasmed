@@ -65,7 +65,7 @@ class _CatalogPriceIndexScreenState
     final indexAsync = ref.watch(catalogPriceIndexProvider);
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [

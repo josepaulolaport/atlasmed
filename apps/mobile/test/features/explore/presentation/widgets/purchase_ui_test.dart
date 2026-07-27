@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
@@ -22,18 +22,15 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ClinicRow(
-              clinic: const Clinic(
+              clinic: FacilityEntry(
                 id: '1',
                 name: 'Clínica com nome muito comprido para tela estreita',
                 city: 'São Paulo',
                 neighborhood: 'Centro',
                 distanceKm: 1,
                 commercialStatus: CommercialStatusFilter.active,
-                lastVisitDays: null,
                 doctorCount: 2,
-                isPriority: false,
-                products: [],
-                purchaseRecurrence: PurchaseRecurrenceSnapshot(
+                purchaseRecurrence: const PurchaseRecurrenceSnapshot(
                   intervalDays: 30,
                   sampleSize: 0,
                   funnelStage: PurchaseFunnelStage.neverPurchased,

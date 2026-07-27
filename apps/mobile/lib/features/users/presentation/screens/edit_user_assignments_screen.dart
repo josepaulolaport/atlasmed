@@ -223,19 +223,15 @@ class _EditUserAssignmentsScreenState
                     }
                   });
                 },
-                selectedColor: const AppColors.navyDeep.withValues(alpha: 0.12),
-                checkmarkColor: const AppColors.navyDeep,
+                selectedColor: AppColors.navyDeep.withValues(alpha: 0.12),
+                checkmarkColor: AppColors.navyDeep,
                 labelStyle: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: selected
-                      ? const AppColors.navyDeep
-                      : const AppColors.gray700,
+                  color: selected ? AppColors.navyDeep : AppColors.gray700,
                 ),
                 side: BorderSide(
-                  color: selected
-                      ? const AppColors.navyDeep
-                      : const AppColors.gray200,
+                  color: selected ? AppColors.navyDeep : AppColors.gray200,
                 ),
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
@@ -250,7 +246,7 @@ class _EditUserAssignmentsScreenState
           width: double.infinity,
           child: FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.navyDeep,
+              backgroundColor: AppColors.navyDeep,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: _submitting ? null : _submit,

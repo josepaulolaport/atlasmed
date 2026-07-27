@@ -136,7 +136,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -168,7 +168,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
             decoration: InputDecoration(
               hintText: 'Novo valor para ${widget.fieldLabel}',
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -191,7 +191,7 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
                 Navigator.of(context).pop(value);
               },
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(

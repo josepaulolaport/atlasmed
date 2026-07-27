@@ -2,9 +2,8 @@ import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
@@ -19,8 +18,8 @@ class FacilityAssociateException implements Exception {
 }
 
 /// Search / create / associate doctors against a facility.
-class FacilityAssociateRepository extends Repository<PaginatedDoctors>
-    with SessionEnvironmentMixin<PaginatedDoctors> {
+class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
+    with SessionEnvironmentMixin<PaginatedProfessionals> {
   FacilityAssociateRepository(this.facilityId, {RepositoryHttpClient? client})
     : _client = client,
       super(
@@ -35,9 +34,9 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
   RepositoryHttpClient get client => _client ?? super.client;
 
   @override
-  PaginatedDoctors fromJson(String json) => PaginatedDoctors.fromJson(json);
+  PaginatedProfessionals fromJson(String json) => PaginatedProfessionals.fromJson(json);
 
-  Future<List<FacilityCrmDoctor>> searchDoctors({
+  Future<List<ProfessionalRoster>> searchDoctors({
     String? search,
     int limit = 40,
   }) async {
@@ -49,7 +48,7 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
       }
       return page.items
           .where((d) => !d.facilityIds.contains(facilityId))
-          .map(_doctorFromApi)
+          .map(_doctorFromDTO)
           .toList(growable: false);
     } finally {
       repo.dispose();
@@ -78,7 +77,7 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
     }
   }
 
-  Future<FacilityCrmDoctor> createAndAssociateDoctor({
+  Future<ProfessionalRoster> createAndAssociateDoctor({
     required String firstName,
     required String lastName,
     String? specialty,
@@ -119,27 +118,28 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final doctor = _doctorFromCreateResponse(map);
+    final dto = ProfessionalDTO.fromMap(map);
 
     final needsRolePatch = isPrescriber || isBuyer || isDecisionMaker;
     if (needsRolePatch) {
       await _patchRoles(
-        doctor.id,
+        dto.id,
         isPrescriber: isPrescriber,
         isBuyer: isBuyer,
         isDecisionMaker: isDecisionMaker,
       );
     }
 
-    return FacilityCrmDoctor(
-      id: doctor.id,
-      name: doctor.name,
-      initials: doctor.initials,
-      hue: doctor.hue,
-      specialty: specialty ?? doctor.specialty,
-      crm: doctor.crm,
-      phone: phone ?? doctor.phone,
-      email: email ?? doctor.email,
+    final name = dto.displayName;
+    return ProfessionalRoster(
+      id: dto.id,
+      name: name,
+      initials: initialsFromName(name),
+      hue: hueFromName(name),
+      specialty: specialty ?? dto.specialty,
+      crm: dto.crm.isEmpty ? null : dto.crm,
+      phone: phone ?? dto.phone,
+      email: email ?? dto.email,
       isPrescriber: isPrescriber,
       isBuyer: isBuyer,
       isDecisionMaker: isDecisionMaker,
@@ -184,8 +184,8 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
   }
 
   /// Updates facility-scoped role flags for an associated doctor.
-  Future<FacilityCrmDoctor> updateDoctorRoles(
-    FacilityCrmDoctor doctor, {
+  Future<ProfessionalRoster> updateDoctorRoles(
+    ProfessionalRoster doctor, {
     required bool isPartner,
     required bool isPrescriber,
     required bool isBuyer,
@@ -265,44 +265,15 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
     return null;
   }
 
-  FacilityCrmDoctor _doctorFromApi(ApiDoctor d) {
+  ProfessionalRoster _doctorFromDTO(ProfessionalDTO d) {
     final name = d.displayName;
-    return FacilityCrmDoctor(
+    return ProfessionalRoster(
       id: d.id,
       name: name,
       initials: initialsFromName(name),
       hue: hueFromName(name),
       specialty: d.specialty,
       crm: d.crm.isEmpty ? null : d.crm,
-    );
-  }
-
-  FacilityCrmDoctor _doctorFromCreateResponse(Map<String, dynamic> map) {
-    final firstName = (map['firstName'] as String?)?.trim() ?? '';
-    final lastName = (map['lastName'] as String?)?.trim() ?? '';
-    final fullName = (map['fullName'] as String?)?.trim();
-    final name = (fullName != null && fullName.isNotEmpty)
-        ? fullName
-        : '$firstName $lastName'.trim();
-    final crmNumber = map['crmNumber'] as String?;
-    final crmState = map['crmState'] as String?;
-    String? crm;
-    if (crmNumber != null && crmNumber.isNotEmpty) {
-      crm = crmState != null && crmState.isNotEmpty
-          ? 'CRM-$crmState $crmNumber'
-          : crmNumber;
-    }
-    return FacilityCrmDoctor(
-      id: map['id'] as String,
-      name: name.isEmpty ? 'Médico' : name,
-      initials: initialsFromName(name),
-      hue: hueFromName(name),
-      specialty:
-          map['primarySpecialtyLabel'] as String? ??
-          map['specialty'] as String?,
-      crm: crm,
-      phone: map['mobilePhone'] as String? ?? map['landlinePhone'] as String?,
-      email: map['email'] as String?,
     );
   }
 }

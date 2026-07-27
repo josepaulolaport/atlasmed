@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -105,10 +105,10 @@ class FacilityRosterPaginationSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
-    child: Shimmer(
+    child: AtlasShimmer(
       child: Container(
         decoration: BoxDecoration(
-          color: const AppColors.surfaceSecondary,
+          color: AppColors.surfaceSecondary,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(14),
@@ -166,7 +166,7 @@ class _RosterSkeletonBlock extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        color: const AppColors.surfaceSecondary,
+        color: AppColors.surfaceSecondary,
       ),
     );
   }

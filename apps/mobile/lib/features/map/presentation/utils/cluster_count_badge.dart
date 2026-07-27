@@ -83,7 +83,7 @@ class ClusterCountBadge {
     canvas.drawCircle(
       center,
       radius - 1.5 * dpr,
-      Paint()..color = const AppColors.error,
+      Paint()..color = AppColors.error,
     );
 
     final fontSize =

@@ -95,12 +95,12 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const AppColors.gray950,
+        foregroundColor: AppColors.gray950,
         title: Text(
           widget.initial == null ? 'Novo território' : 'Editar informações',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -170,7 +170,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
               child: FilledButton(
                 onPressed: _isValid ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyDeep,
+                  backgroundColor: AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -259,7 +259,7 @@ class _FormBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.gray200),
+        border: Border.all(color: AppColors.gray200),
       ),
       child: child,
     );

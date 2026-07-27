@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Create a doctor profile. When [facilityId] is a real facility, persists via
 /// `POST /professionals` (with facility link) + optional role PATCH.
-Future<FacilityCrmDoctor?> showCreateDoctorProfileSheet(
+Future<ProfessionalRoster?> showCreateDoctorProfileSheet(
   BuildContext context, {
   String? facilityId,
 }) {
-  return showModalBottomSheet<FacilityCrmDoctor>(
+  return showModalBottomSheet<ProfessionalRoster>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -75,7 +74,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -130,7 +129,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
             FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -168,7 +167,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const AppColors.surfaceTertiary,
+        fillColor: AppColors.surfaceTertiary,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.gray200),
@@ -211,7 +210,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
         await Future<void>.delayed(const Duration(milliseconds: 450));
         if (!mounted) return;
         Navigator.of(context).pop(
-          FacilityCrmDoctor(
+          ProfessionalRoster(
             id: 'new-doc-${DateTime.now().millisecondsSinceEpoch}',
             name: name,
             initials: initialsFromName(name),

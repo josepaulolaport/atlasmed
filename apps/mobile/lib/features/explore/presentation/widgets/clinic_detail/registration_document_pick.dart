@@ -42,7 +42,7 @@ Future<PickedRegistrationFile?> pickRegistrationDocument(
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: const AppColors.gray200,
+                    color: AppColors.gray200,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

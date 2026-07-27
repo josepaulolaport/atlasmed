@@ -89,7 +89,7 @@ class _FacilityRosterFilterSheetState extends State<FacilityRosterFilterSheet> {
                     onPressed: () => setState(() => _local = {}),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(46),
-                      foregroundColor: const AppColors.gray700,
+                      foregroundColor: AppColors.gray700,
                       side: const BorderSide(color: AppColors.gray200),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -105,7 +105,7 @@ class _FacilityRosterFilterSheetState extends State<FacilityRosterFilterSheet> {
                     onPressed: () => widget.onApply(_local),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(46),
-                      backgroundColor: const AppColors.navyBright,
+                      backgroundColor: AppColors.navyBright,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -140,10 +140,10 @@ class _Chip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? const AppColors.navyBright : Colors.white,
+          color: selected ? AppColors.navyBright : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? const AppColors.navyBright : const AppColors.gray200,
+            color: selected ? AppColors.navyBright : AppColors.gray200,
           ),
         ),
         child: Text(
@@ -151,7 +151,7 @@ class _Chip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: selected ? Colors.white : const AppColors.gray700,
+            color: selected ? Colors.white : AppColors.gray700,
           ),
         ),
       ),

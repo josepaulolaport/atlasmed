@@ -42,9 +42,7 @@ class _ProductRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trendColor = product.isTrendingUp
-        ? const AppColors.green
-        : const AppColors.red;
+    final trendColor = product.isTrendingUp ? AppColors.green : AppColors.red;
     final trendIcon = product.isTrendingUp
         ? Icons.trending_up_rounded
         : Icons.trending_down_rounded;
@@ -89,8 +87,10 @@ class _ProductRow extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: (product.sharePercent / 100).clamp(0, 1),
                   minHeight: 6,
-                  backgroundColor: const AppColors.gray100,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.navyBright),
+                  backgroundColor: AppColors.gray100,
+                  valueColor: const AlwaysStoppedAnimation(
+                    AppColors.navyBright,
+                  ),
                 ),
               ),
             ),

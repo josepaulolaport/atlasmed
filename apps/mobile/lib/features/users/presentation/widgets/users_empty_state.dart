@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -103,7 +103,7 @@ class UsersPaginationSkeletonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      const ExcludeSemantics(child: Shimmer(child: UsersSkeletonRow()));
+      const ExcludeSemantics(child: AtlasShimmer(child: UsersSkeletonRow()));
 }
 
 class _UsersSkeletonBar extends StatelessWidget {
@@ -119,7 +119,7 @@ class _UsersSkeletonBar extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: const AppColors.surfaceSecondary,
+        color: AppColors.surfaceSecondary,
       ),
     );
   }

@@ -47,26 +47,26 @@ extension ClinicStatusX on ClinicStatus {
   Color get color {
     switch (this) {
       case ClinicStatus.active:
-        return const AppColors.green;
+        return AppColors.green;
       case ClinicStatus.negotiation:
-        return const AppColors.amber;
+        return AppColors.amber;
       case ClinicStatus.inactive:
-        return const AppColors.gray500;
+        return AppColors.gray500;
       case ClinicStatus.rejected:
-        return const AppColors.red;
+        return AppColors.red;
     }
   }
 
   Color get bg {
     switch (this) {
       case ClinicStatus.active:
-        return const AppColors.green50;
+        return AppColors.green50;
       case ClinicStatus.negotiation:
-        return const AppColors.amber50;
+        return AppColors.amber50;
       case ClinicStatus.inactive:
-        return const AppColors.gray100;
+        return AppColors.gray100;
       case ClinicStatus.rejected:
-        return const AppColors.red50;
+        return AppColors.red50;
     }
   }
 }

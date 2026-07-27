@@ -252,8 +252,8 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                                 : formatDate(_birthDate!),
                             style: TextStyle(
                               color: _birthDate == null
-                                  ? const AppColors.gray400
-                                  : const AppColors.gray900,
+                                  ? AppColors.gray400
+                                  : AppColors.gray900,
                             ),
                           ),
                         ),
@@ -262,7 +262,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                           width: double.infinity,
                           child: FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: const AppColors.navyDeep,
+                              backgroundColor: AppColors.navyDeep,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             onPressed: _submitting ? null : _submit,
