@@ -110,11 +110,13 @@ class DoctorDetailScreen extends ConsumerWidget {
                 6,
                 (_) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: Container(
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                  child: AtlasShimmer(
+                    child: Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFeef0f3),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),

@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dar
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 // ======================================================================
 // ProfileScreen — representative's personal overview
@@ -85,7 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final avatarToken = ref.watch(sessionProvider).currentValue?.token;
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           SafeArea(
@@ -241,7 +242,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           Icon(
                             Icons.location_on_outlined,
                             size: 10,
-                            color: const AppColors.navyDeep,
+                            color: AppColors.navyDeep,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -267,53 +268,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildHeaderShimmer() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0x120a2f7f), Color(0x050a2f7f), Colors.transparent],
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 66,
-                height: 66,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surfaceSecondary,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 150,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: const AppColors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 100,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: const AppColors.surfaceSecondary,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return AtlasShimmer(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0x120a2f7f), Color(0x050a2f7f), Colors.transparent],
           ),
-        ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 66,
+                  height: 66,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.surfaceSecondary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 150,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 100,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceSecondary,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -329,7 +332,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -345,13 +348,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Container(
                       width: 1,
                       height: 28,
-                      color: const AppColors.gray100,
+                      color: AppColors.gray100,
                     ),
                     _StatCell(value: '${stats.doctors}', label: 'médicos'),
                     Container(
                       width: 1,
                       height: 28,
-                      color: const AppColors.gray100,
+                      color: AppColors.gray100,
                     ),
                     _StatCell(
                       value: '${stats.coveragePct}%',
@@ -402,7 +405,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Container(
                       height: 5,
                       decoration: BoxDecoration(
-                        color: const AppColors.surfaceSecondary,
+                        color: AppColors.surfaceSecondary,
                         borderRadius: BorderRadius.circular(3),
                       ),
                       child: FractionallySizedBox(
@@ -443,7 +446,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: const AppColors.surfaceSecondary),
+                      border: Border.all(color: AppColors.surfaceSecondary),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
@@ -493,41 +496,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: [
         _SectionHeader(title: 'Resumo rápido'),
         const SizedBox(height: 8),
-        Row(
-          children: List.generate(
-            3,
-            (i) => Expanded(
-              child: Container(
-                margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
-                height: 88,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: const AppColors.surfaceSecondary),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: const AppColors.surfaceSecondary,
-                          borderRadius: BorderRadius.circular(4),
+        AtlasShimmer(
+          child: Row(
+            children: List.generate(
+              3,
+              (i) => Expanded(
+                child: Container(
+                  margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                  height: 88,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: AppColors.surfaceSecondary),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceSecondary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        width: 50,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: const AppColors.surfaceSecondary,
-                          borderRadius: BorderRadius.circular(4),
+                        const SizedBox(height: 20),
+                        Container(
+                          width: 50,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceSecondary,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -547,7 +552,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -560,7 +565,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 trailing: item.kind == 'toggle'
                     ? _ProfileToggle(
                         value: item.value,
-                        accent: const AppColors.navyDeep,
+                        accent: AppColors.navyDeep,
                       )
                     : _ProfileChevron(),
                 showTopBorder: i > 0,
@@ -584,7 +589,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Icon(
           _prefIconData(label),
           size: 14,
-          color: const AppColors.navyDeep,
+          color: AppColors.navyDeep,
         ),
       ),
     );
@@ -670,7 +675,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: const AppColors.gray200,
+                        color: AppColors.gray200,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -717,7 +722,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ref.read(sessionProvider).delete();
                         },
                         style: FilledButton.styleFrom(
-                          backgroundColor: const AppColors.red,
+                          backgroundColor: AppColors.red,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -783,12 +788,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Shimmer placeholder for sections ────────────────────────
   Widget _buildSectionShimmer({double height = 200}) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const AppColors.surfaceSecondary),
-        borderRadius: BorderRadius.circular(14),
+    return AtlasShimmer(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.surfaceSecondary),
+          borderRadius: BorderRadius.circular(14),
+        ),
       ),
     );
   }
@@ -836,7 +843,7 @@ class _AvatarEditor extends StatelessWidget {
             right: -2,
             bottom: -2,
             child: Material(
-              color: const AppColors.navyDeep,
+              color: AppColors.navyDeep,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
@@ -893,7 +900,7 @@ class _ProfileAvatar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: const AppColors.navyDeep.withValues(alpha: 0.22),
+            color: AppColors.navyDeep.withValues(alpha: 0.22),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -960,7 +967,7 @@ class _ProfileToggleState extends State<_ProfileToggle> {
         width: 38,
         height: 22,
         decoration: BoxDecoration(
-          color: _value ? widget.accent : const AppColors.gray200,
+          color: _value ? widget.accent : AppColors.gray200,
           borderRadius: BorderRadius.circular(11),
         ),
         child: AnimatedAlign(
@@ -1065,8 +1072,8 @@ class _StatCell extends StatelessWidget {
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: highlight
-                  ? const AppColors.green
-                  : const AppColors.gray800,
+                  ? AppColors.green
+                  : AppColors.gray800,
             ),
           ),
           const SizedBox(height: 1),
@@ -1090,9 +1097,9 @@ class _TerritoryMapPreview extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: const AppColors.surfaceSecondary,
+        color: AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Stack(
         children: [
@@ -1146,7 +1153,7 @@ class _TerritoryMapPreview extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: const AppColors.surfaceSecondary),
+                border: Border.all(color: AppColors.surfaceSecondary),
                 boxShadow: const [
                   BoxShadow(color: Color(0x14000000), blurRadius: 4),
                 ],
@@ -1184,7 +1191,7 @@ class _MapPainter extends CustomPainter {
 
     paint.color = const Color(0x2E0a2f7f);
     canvas.drawPath(path, paint);
-    paint.color = const AppColors.navyDeep;
+    paint.color = AppColors.navyDeep;
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = 2;
     canvas.drawPath(path, paint);
@@ -1210,7 +1217,7 @@ class _MapPainter extends CustomPainter {
     final repPos = Offset(size.width * 0.39, size.height * 0.45);
     paint.color = const Color(0x2E16a373);
     canvas.drawCircle(repPos, 14, paint);
-    paint.color = const AppColors.green;
+    paint.color = AppColors.green;
     canvas.drawCircle(repPos, 7, paint);
   }
 

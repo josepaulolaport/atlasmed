@@ -15,6 +15,8 @@ import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_bad
 
 import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -907,12 +909,14 @@ class _SectionShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const AppColors.surfaceSecondary),
-        borderRadius: BorderRadius.circular(16),
+    return AtlasShimmer(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const AppColors.surfaceSecondary),
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }

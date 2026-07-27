@@ -1,80 +1,19 @@
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Animates the neutral surfaces used by list loading placeholders.
-class Shimmer extends StatefulWidget {
+/// Thin wrapper around [AtlasShimmer] that also respects system-level
+/// [MediaQuery.disableAnimations].
+class Shimmer extends StatelessWidget {
   const Shimmer({super.key, required this.child});
 
   final Widget child;
 
   @override
-  State<Shimmer> createState() => _ShimmerState();
-}
-
-class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.stop();
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) {
-      return widget.child;
-    }
-
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) => ShaderMask(
-        blendMode: BlendMode.srcATop,
-        shaderCallback: (bounds) => LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: const [
-            AppColors.surfaceSecondary,
-            AppColors.surfaceTertiary,
-            AppColors.surfaceSecondary,
-          ],
-          stops: const [0.25, 0.5, 0.75],
-          transform: _SlidingGradientTransform(_controller.value),
-        ).createShader(bounds),
-        child: child,
-      ),
-      child: widget.child,
-    );
-  }
-}
-
-class _SlidingGradientTransform extends GradientTransform {
-  const _SlidingGradientTransform(this.slidePercent);
-
-  final double slidePercent;
-
-  @override
-  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) =>
-      Matrix4.translationValues((slidePercent * 2 - 1) * bounds.width, 0, 0);
+  Widget build(BuildContext context) => AtlasShimmer(
+    enabled: !MediaQuery.disableAnimationsOf(context),
+    child: child,
+  );
 }
 
 class _SkeletonBar extends StatelessWidget {

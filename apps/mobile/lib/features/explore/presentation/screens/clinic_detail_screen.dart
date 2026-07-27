@@ -20,6 +20,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purc
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_payers_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
@@ -1191,11 +1193,13 @@ class _ShimmerBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: const AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(16),
+    return AtlasShimmer(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: const AppColors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
     );
   }
