@@ -6,7 +6,7 @@ import {
   territories,
   userTerritoryAssignments,
 } from "@atlasmed/database";
-import { sql, eq, and, inArray } from "drizzle-orm";
+import { sql, eq, and, inArray, isNotNull } from "drizzle-orm";
 
 export type PurchaseStatusBuckets = {
   active: number;
@@ -34,14 +34,17 @@ export class DrizzleDashboardRepository {
     verticalId: string;
     facilityIds: string[] | null;
   }): Promise<PurchaseStatusBuckets> {
+    // Empty facilityIds → no facilities match → all buckets are zero.
+    if (input.facilityIds !== null && input.facilityIds.length === 0) {
+      return { active: 0, inactive: 0, neverBought: 0, total: 0 };
+    }
+
     const conditions = [
       eq(facilityVerticalProfiles.verticalId, input.verticalId),
     ];
     if (input.facilityIds !== null) {
       conditions.push(
-        input.facilityIds.length === 0
-          ? sql`FALSE`
-          : inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
+        inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
       );
     }
 
@@ -79,12 +82,14 @@ export class DrizzleDashboardRepository {
       eq(facilityVerticalProfiles.verticalId, input.verticalId),
     );
 
+    if (input.facilityIds !== null && input.facilityIds.length === 0) {
+      return 0;
+    }
+
     const where =
       input.facilityIds === null
         ? undefined
-        : input.facilityIds.length === 0
-          ? sql`FALSE`
-          : inArray(facilityProfessionals.facilityId, input.facilityIds);
+        : inArray(facilityProfessionals.facilityId, input.facilityIds);
 
     const [row] = await db
       .select({
@@ -142,7 +147,7 @@ export class DrizzleDashboardRepository {
       .where(
         and(
           eq(territories.verticalId, verticalId),
-          sql`${territories.boundary} IS NOT NULL`,
+          isNotNull(territories.boundary),
         ),
       )
       .orderBy(territories.name)
