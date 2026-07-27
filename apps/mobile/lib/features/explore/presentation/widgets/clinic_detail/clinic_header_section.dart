@@ -99,20 +99,7 @@ class ClinicHeaderSection extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(16, top + 4, 16, 18),
-      decoration: const BoxDecoration(
-        color: AppColors.navyBright,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x261e3a8a),
-            blurRadius: 14,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
+      decoration: const BoxDecoration(color: AppColors.navyBright),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
