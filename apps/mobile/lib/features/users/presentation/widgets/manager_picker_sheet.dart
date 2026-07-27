@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:flutter/material.dart';
@@ -293,15 +294,15 @@ class _ManagerAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: avatarUrl != null && avatarUrl.isNotEmpty
-          ? Image.network(
-              _avatarUri(avatarUrl),
-              headers: token == null
+          ? CachedNetworkImage(
+              imageUrl: _avatarUri(avatarUrl),
+              httpHeaders: token == null
                   ? null
                   : {'Authorization': 'Bearer $token'},
               fit: BoxFit.cover,
               width: 36,
               height: 36,
-              errorBuilder: (_, _, _) => Text(
+              errorWidget: (_, _, _) => Text(
                 _initials,
                 style: const TextStyle(
                   color: Colors.white,

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -495,13 +496,13 @@ class _DrawerHeader extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: avatarUrl != null && avatarUrl!.isNotEmpty
-                    ? Image.network(
-                        _avatarUri(avatarUrl!),
-                        headers: avatarToken == null
+                    ? CachedNetworkImage(
+                        imageUrl: _avatarUri(avatarUrl!),
+                        httpHeaders: avatarToken == null
                             ? null
                             : {"Authorization": "Bearer $avatarToken"},
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Center(
+                        errorWidget: (_, _, _) => Center(
                           child: Text(
                             initials,
                             style: const TextStyle(

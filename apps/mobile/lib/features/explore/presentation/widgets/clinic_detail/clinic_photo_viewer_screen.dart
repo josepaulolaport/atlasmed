@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -24,7 +25,7 @@ Future<void> openClinicPhotoViewer(
     final absolute = url.startsWith('http')
         ? url
         : '${AppConfig.apiBaseUrl}$url';
-    return NetworkImage(absolute, headers: authHeaders);
+    return CachedNetworkImageProvider(absolute, headers: authHeaders);
   });
 
   return openImmersivePhotoGallery(
