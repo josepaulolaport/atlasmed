@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Bottom sheet to change a user's role. Mirrors the web app's
 /// `ChangeRoleDialog` — `PATCH /access/users/:id/role`, admin-only.
@@ -48,7 +49,7 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFe1e4ea),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -59,7 +60,7 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
               style: const TextStyle(
                 fontSize: 16.5,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 16),
@@ -70,7 +71,7 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
               ),
               error: (_, _) => const Text(
                 'Não foi possível carregar as funções.',
-                style: TextStyle(color: Color(0xFF6b7280)),
+                style: TextStyle(color: AppColors.gray500),
               ),
               data: (roles) => Column(
                 children: roles.map((role) {
@@ -91,7 +92,7 @@ class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
               width: double.infinity,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                 ),
                 onPressed: _saving ? null : _submit,
                 child: _saving
@@ -161,7 +162,7 @@ class _RoleOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.08) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? color : const Color(0xFFe5e7eb)),
+          border: Border.all(color: selected ? color : const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -180,7 +181,7 @@ class _RoleOption extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+                      color: AppColors.gray950,
                     ),
                   ),
                   if (description != null)
@@ -188,7 +189,7 @@ class _RoleOption extends StatelessWidget {
                       description!,
                       style: const TextStyle(
                         fontSize: 11.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                 ],

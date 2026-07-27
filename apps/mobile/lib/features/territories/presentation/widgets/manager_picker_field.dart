@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/us
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ManagerPickerField extends ConsumerStatefulWidget {
   final String? managerTerritoryId;
@@ -95,7 +96,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE1E4EA)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -108,7 +109,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
                 child: Icon(
                   Icons.person_outline,
                   size: 22,
-                  color: Color(0xFF9CA3AF),
+                  color: AppColors.gray400,
                 ),
               ),
             Expanded(
@@ -122,8 +123,8 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: hasSelection
-                      ? const Color(0xFF111827)
-                      : const Color(0xFF9CA3AF),
+                      ? const AppColors.gray950
+                      : const AppColors.gray400,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -131,7 +132,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
             const Icon(
               Icons.keyboard_arrow_down,
               size: 20,
-              color: Color(0xFF6B7280),
+              color: AppColors.gray500,
             ),
           ],
         ),

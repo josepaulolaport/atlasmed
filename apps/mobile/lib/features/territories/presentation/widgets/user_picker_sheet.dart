@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/us
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Sentinel result of [UserPickerSheet.pickAssignee] meaning "explicitly
 /// clear the current assignee" — distinct from a `null` `Future` result,
@@ -118,7 +119,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -132,7 +133,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                         style: const TextStyle(
                           fontSize: 16.5,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
+                          color: AppColors.gray950,
                         ),
                       ),
                     ),
@@ -152,7 +153,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                     hintText: 'Buscar por nome...',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     filled: true,
-                    fillColor: const Color(0xFFF3F4F6),
+                    fillColor: const AppColors.gray100,
                     contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -171,7 +172,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                         context,
                       ).pop(widget.pickingManagerZone ? null : clearAssignee),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFFB91C1C),
+                        foregroundColor: const AppColors.redDark,
                         padding: EdgeInsets.zero,
                       ),
                       child: Text(
@@ -182,7 +183,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                     ),
                   ),
                 ),
-              const Divider(height: 1, color: Color(0xFFEEF0F3)),
+              const Divider(height: 1, color: AppColors.surfaceSecondary),
               Expanded(child: _buildList(scrollController)),
             ],
           ),
@@ -316,7 +317,7 @@ class _UserRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111827),
+                      color: AppColors.gray950,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -324,14 +325,14 @@ class _UserRow extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ],
               ),
             ),
             if (selected)
-              const Icon(Icons.check_circle, color: Color(0xFF0A2F7F)),
+              const Icon(Icons.check_circle, color: AppColors.navyDeep),
           ],
         ),
       ),
@@ -352,7 +353,7 @@ class _EmptyState extends StatelessWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13.5, color: Color(0xFF6B7280)),
+          style: const TextStyle(fontSize: 13.5, color: AppColors.gray500),
         ),
       ),
     );

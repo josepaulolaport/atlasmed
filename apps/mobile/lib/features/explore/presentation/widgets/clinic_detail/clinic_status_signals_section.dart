@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Sinais" — concrete status signals sourced from `facilities` DB columns:
 /// commercial status, purchase status ("tipo de cliente"), conformity
@@ -18,7 +19,7 @@ class ClinicStatusSignalsSection extends StatelessWidget {
       return const ClinicDetailCard(
         child: Text(
           'Sinais indisponíveis para este estabelecimento',
-          style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+          style: TextStyle(fontSize: 13, color: AppColors.gray400),
         ),
       );
     }
@@ -51,7 +52,7 @@ class ClinicStatusSignalsSection extends StatelessWidget {
             value: s.lastPurchaseAt != null
                 ? _formatDate(s.lastPurchaseAt!)
                 : 'Sem registro',
-            color: const Color(0xFF6b7280),
+            color: const AppColors.gray500,
             isLast: true,
           ),
         ],
@@ -85,7 +86,7 @@ class _SignalRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: isLast
             ? null
-            : const Border(bottom: BorderSide(color: Color(0xFFf3f4f6))),
+            : const Border(bottom: BorderSide(color: AppColors.gray100)),
       ),
       child: Row(
         children: [
@@ -97,7 +98,7 @@ class _SignalRow extends StatelessWidget {
                   label,
                   style: const TextStyle(
                     fontSize: 12.5,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
                 if (detail != null) ...[
@@ -106,7 +107,7 @@ class _SignalRow extends StatelessWidget {
                     detail!,
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF9ca3af),
+                      color: AppColors.gray400,
                     ),
                   ),
                 ],

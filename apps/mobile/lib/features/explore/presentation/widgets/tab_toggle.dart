@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TabToggle extends StatelessWidget {
   final String value; // 'clinic' | 'doctor'
@@ -20,7 +21,7 @@ class TabToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
@@ -84,8 +85,8 @@ class _Tab extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: selected
-                        ? const Color(0xFF0a2f7f)
-                        : const Color(0xFF9ca3af),
+                        ? const AppColors.navyDeep
+                        : const AppColors.gray400,
                   ),
                 ),
                 const SizedBox(width: 7),
@@ -94,8 +95,8 @@ class _Tab extends StatelessWidget {
                   height: 18,
                   decoration: BoxDecoration(
                     color: selected
-                        ? const Color(0xFFeef2ff)
-                        : const Color(0xFFf3f4f6),
+                        ? const AppColors.blue50
+                        : const AppColors.gray100,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Center(
@@ -105,8 +106,8 @@ class _Tab extends StatelessWidget {
                         fontSize: 10.5,
                         fontWeight: FontWeight.w600,
                         color: selected
-                            ? const Color(0xFF0a2f7f)
-                            : const Color(0xFF9ca3af),
+                            ? const AppColors.navyDeep
+                            : const AppColors.gray400,
                       ),
                     ),
                   ),
@@ -121,7 +122,7 @@ class _Tab extends StatelessWidget {
                 child: Container(
                   height: 2,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0a2f7f),
+                    color: const AppColors.navyDeep,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(2),
                     ),

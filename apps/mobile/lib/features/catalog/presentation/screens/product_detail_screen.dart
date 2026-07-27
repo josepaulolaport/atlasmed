@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/catalog/data/mock/mock_products_dat
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 enum _ProductDetailTab { overview, use, evidence, competitors }
 
@@ -40,7 +41,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = _product;
     if (family == null || product == null || _familyProducts.isEmpty) {
       return Scaffold(
-        backgroundColor: const Color(0xFFf7f8fb),
+        backgroundColor: const AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
@@ -55,7 +56,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0a2f7f),
+                        color: AppColors.navyDeep,
                       ),
                     ),
                   ],
@@ -74,7 +75,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
+      backgroundColor: const AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -92,7 +93,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0a2f7f),
+                        color: AppColors.navyDeep,
                       ),
                     ),
                   ),
@@ -155,7 +156,7 @@ class _ConcentrationSwitcher extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -168,7 +169,7 @@ class _ConcentrationSwitcher extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: product.id == selectedId
-                          ? const Color(0xFF0a2f7f)
+                          ? const AppColors.navyDeep
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(999),
                     ),
@@ -182,7 +183,7 @@ class _ConcentrationSwitcher extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: product.id == selectedId
                             ? Colors.white
-                            : const Color(0xFF0a2f7f),
+                            : const AppColors.navyDeep,
                       ),
                     ),
                   ),
@@ -207,7 +208,7 @@ class _HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -228,7 +229,7 @@ class _HeroCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF0a2f7f),
+                    color: AppColors.navyDeep,
                     letterSpacing: -0.3,
                     height: 1.15,
                   ),
@@ -239,7 +240,7 @@ class _HeroCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12.5,
                     height: 1.35,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -254,7 +255,7 @@ class _HeroCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0d9488),
+                          color: const AppColors.green,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: const Text(
@@ -272,9 +273,9 @@ class _HeroCard extends StatelessWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFeef2ff),
+                        color: const AppColors.blue50,
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const Color(0xFFc7d2fe)),
+                        border: Border.all(color: const AppColors.blueLight),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -282,7 +283,7 @@ class _HeroCard extends StatelessWidget {
                           const Icon(
                             Icons.account_tree_outlined,
                             size: 13,
-                            color: Color(0xFF1e40af),
+                            color: AppColors.navyBright,
                           ),
                           const SizedBox(width: 5),
                           Text(
@@ -290,7 +291,7 @@ class _HeroCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF1e40af),
+                              color: AppColors.navyBright,
                             ),
                           ),
                         ],
@@ -306,14 +307,14 @@ class _HeroCard extends StatelessWidget {
             width: 88,
             height: 96,
             decoration: BoxDecoration(
-              color: const Color(0xFFf7f8fb),
+              color: const AppColors.background,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFeef0f3)),
+              border: Border.all(color: const AppColors.surfaceSecondary),
             ),
             child: const Icon(
               Icons.medication_liquid_outlined,
               size: 40,
-              color: Color(0xFFc8cdd5),
+              color: AppColors.gray300,
             ),
           ),
         ],
@@ -339,7 +340,7 @@ class _TabBar extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFe5e7eb))),
+        border: Border(bottom: BorderSide(color: AppColors.gray200)),
       ),
       child: Row(
         children: [
@@ -362,8 +363,8 @@ class _TabBar extends StatelessWidget {
                               ? FontWeight.w700
                               : FontWeight.w500,
                           color: tab == active
-                              ? const Color(0xFF0a2f7f)
-                              : const Color(0xFF9ca3af),
+                              ? const AppColors.navyDeep
+                              : const AppColors.gray400,
                         ),
                       ),
                     ),
@@ -372,7 +373,7 @@ class _TabBar extends StatelessWidget {
                       height: 2.5,
                       decoration: BoxDecoration(
                         color: tab == active
-                            ? const Color(0xFF0a2f7f)
+                            ? const AppColors.navyDeep
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(99),
                       ),
@@ -404,7 +405,7 @@ class _OverviewTab extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13.5,
               height: 1.45,
-              color: Color(0xFF374151),
+              color: AppColors.gray700,
             ),
           ),
         ),
@@ -461,7 +462,7 @@ class _ComingSoonTab extends StatelessWidget {
       title: _label,
       child: Text(
         'Conteúdo de $_label em breve.',
-        style: const TextStyle(fontSize: 13.5, color: Color(0xFF6b7280)),
+        style: const TextStyle(fontSize: 13.5, color: AppColors.gray500),
       ),
     );
   }
@@ -480,7 +481,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,7 +491,7 @@ class _SectionCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0a2f7f),
+              color: AppColors.navyDeep,
             ),
           ),
           const SizedBox(height: 12),
@@ -518,7 +519,7 @@ class _InfoRow extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(width: 12),
@@ -529,7 +530,7 @@ class _InfoRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
           ),
@@ -544,7 +545,7 @@ class _InfoDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3));
+    return const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary);
   }
 }
 
@@ -578,7 +579,7 @@ class _CompareButton extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF0a2f7f),
+              backgroundColor: const AppColors.navyDeep,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

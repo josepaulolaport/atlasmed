@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Segmented control toggling between manager zones and rep patches.
 class TerritoryKindSwitch extends StatelessWidget {
@@ -17,7 +18,7 @@ class TerritoryKindSwitch extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: const Color(0xFFeef0f3),
+        color: const AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -49,8 +50,8 @@ class TerritoryKindSwitch extends StatelessWidget {
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: selected
-                        ? const Color(0xFF0a2f7f)
-                        : const Color(0xFF6b7280),
+                        ? const AppColors.navyDeep
+                        : const AppColors.gray500,
                   ),
                 ),
               ),

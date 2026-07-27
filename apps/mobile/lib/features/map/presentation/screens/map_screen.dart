@@ -21,6 +21,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Live map tab: clinics as pins in the current camera view, Waze-style follow.
 class MapScreen extends ConsumerStatefulWidget {
@@ -152,7 +153,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       body: Column(
           children: [
             const AtlasTopBar(page: 'Mapa'),
@@ -356,7 +357,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryFillLayerId,
           sourceId: _territorySourceId,
           slot: 'bottom',
-          fillColor: const Color(0xFF2563EB).toARGB32(),
+          fillColor: const AppColors.blue600.toARGB32(),
           fillOpacity: 0.10,
         ),
       );
@@ -365,7 +366,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryLineLayerId,
           sourceId: _territorySourceId,
           slot: 'middle',
-          lineColor: const Color(0xFF1D4ED8).toARGB32(),
+          lineColor: const AppColors.blueDark.toARGB32(),
           lineWidth: 2,
           lineOpacity: 0.85,
           lineJoin: LineJoin.ROUND,
@@ -998,7 +999,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFd1d5db),
+                      color: const AppColors.gray300,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -1009,13 +1010,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Escolha qual estabelecimento deseja abrir',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+                  style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
                 ),
                 const SizedBox(height: 12),
                 ConstrainedBox(
@@ -1108,8 +1109,8 @@ class _RecenterButton extends StatelessWidget {
           child: Icon(
             following ? Icons.my_location_rounded : Icons.navigation_rounded,
             color: following
-                ? const Color(0xFF1e40af)
-                : const Color(0xFF0f1729),
+                ? const AppColors.navyBright
+                : const AppColors.gray900,
             size: 22,
           ),
         ),
@@ -1132,9 +1133,9 @@ class _StackedClinicTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFf8f9fb),
+          color: const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -1158,7 +1159,7 @@ class _StackedClinicTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1167,7 +1168,7 @@ class _StackedClinicTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ],
@@ -1176,7 +1177,7 @@ class _StackedClinicTile extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: Color(0xFF1e40af),
+              color: AppColors.navyBright,
             ),
           ],
         ),
@@ -1217,7 +1218,7 @@ class _MapMessage extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 3),
               )
             else
-              Icon(icon, size: 42, color: const Color(0xFF6B7280)),
+              Icon(icon, size: 42, color: const AppColors.gray500),
             const SizedBox(height: 16),
             Text(
               title,
@@ -1227,7 +1228,7 @@ class _MapMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+              style: const TextStyle(fontSize: 14, color: AppColors.gray500),
             ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),

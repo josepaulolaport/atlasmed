@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Horizontal snapping roster strip with a trailing shimmer card only while a
 /// next page is being requested.
@@ -107,7 +108,7 @@ class FacilityRosterPaginationSkeleton extends StatelessWidget {
     child: Shimmer(
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFeef0f3),
+          color: const AppColors.surfaceSecondary,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(14),
@@ -165,7 +166,7 @@ class _RosterSkeletonBlock extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        color: const Color(0xFFeef0f3),
+        color: const AppColors.surfaceSecondary,
       ),
     );
   }

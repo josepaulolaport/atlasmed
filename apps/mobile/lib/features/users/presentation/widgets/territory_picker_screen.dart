@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen multi-select map picker for invite / assignment flows.
 ///
@@ -172,7 +173,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                     onPressed: () => Navigator.of(context).maybePop(),
                     icon: const Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   const Expanded(
@@ -181,7 +182,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                   ),
@@ -229,7 +230,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                   width: double.infinity,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0a2f7f),
+                      backgroundColor: const AppColors.navyDeep,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _loading
@@ -264,7 +265,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
               const Text(
                 'Não foi possível carregar os territórios.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF6b7280)),
+                style: TextStyle(color: AppColors.gray500),
               ),
               const SizedBox(height: 12),
               TextButton(
@@ -286,7 +287,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       return const Center(
         child: Text(
           'Nenhum território disponível nesta seleção.',
-          style: TextStyle(color: Color(0xFF6b7280)),
+          style: TextStyle(color: AppColors.gray500),
         ),
       );
     }
@@ -294,7 +295,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       return const Center(
         child: Text(
           'Mapa indisponível.',
-          style: TextStyle(color: Color(0xFF6b7280)),
+          style: TextStyle(color: AppColors.gray500),
         ),
       );
     }
@@ -605,10 +606,10 @@ class _ManagerScopeBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+        color: const AppColors.blue600.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+          color: const AppColors.blue600.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
@@ -616,7 +617,7 @@ class _ManagerScopeBanner extends StatelessWidget {
           const Icon(
             Icons.account_tree_outlined,
             size: 20,
-            color: Color(0xFF2563EB),
+            color: AppColors.blue600,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -626,7 +627,7 @@ class _ManagerScopeBanner extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1e3a8a),
+                      color: AppColors.blueDarker,
                     ),
                   )
                 : Column(
@@ -637,7 +638,7 @@ class _ManagerScopeBanner extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1e3a8a),
+                          color: AppColors.blueDarker,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -647,7 +648,7 @@ class _ManagerScopeBanner extends StatelessWidget {
                             : 'Área: $territoryName',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF334155),
+                          color: AppColors.gray700,
                         ),
                       ),
                     ],
@@ -681,7 +682,7 @@ class _LegendDot extends StatelessWidget {
           style: const TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF6b7280),
+            color: AppColors.gray500,
           ),
         ),
       ],

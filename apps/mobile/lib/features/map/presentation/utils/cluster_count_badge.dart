@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Count chip for clustered clinic pins — number baked into the image so it
 /// cannot drift away from the red circle (Mapbox text-offset is in ems and
@@ -82,7 +83,7 @@ class ClusterCountBadge {
     canvas.drawCircle(
       center,
       radius - 1.5 * dpr,
-      Paint()..color = const Color(0xFFDC2626),
+      Paint()..color = const AppColors.error,
     );
 
     final fontSize =

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Prominent field + before/after summary used on suggestion cards.
 class SuggestionChangeSummary extends StatelessWidget {
@@ -25,13 +26,13 @@ class SuggestionChangeSummary extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: isDeactivation
-                    ? const Color(0xFFfef2f2)
-                    : const Color(0xFFeff6ff),
+                    ? const AppColors.red50
+                    : const AppColors.blueLight,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDeactivation
-                      ? const Color(0xFFfecaca)
-                      : const Color(0xFFbfdbfe),
+                      ? const AppColors.red100
+                      : const AppColors.blueLight,
                 ),
               ),
               child: Row(
@@ -43,8 +44,8 @@ class SuggestionChangeSummary extends StatelessWidget {
                         : Icons.label_outline_rounded,
                     size: 12,
                     color: isDeactivation
-                        ? const Color(0xFFdc2626)
-                        : const Color(0xFF1e40af),
+                        ? const AppColors.error
+                        : const AppColors.navyBright,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -55,8 +56,8 @@ class SuggestionChangeSummary extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: isDeactivation
-                          ? const Color(0xFFdc2626)
-                          : const Color(0xFF1e40af),
+                          ? const AppColors.error
+                          : const AppColors.navyBright,
                     ),
                   ),
                 ],
@@ -71,7 +72,7 @@ class SuggestionChangeSummary extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 11.5 : 12,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF6b7280),
+              color: const AppColors.gray500,
             ),
           ),
           const SizedBox(height: 3),
@@ -89,7 +90,7 @@ class SuggestionChangeSummary extends StatelessWidget {
             muted: false,
             strike: false,
             compact: compact,
-            emphasizeColor: const Color(0xFFdc2626),
+            emphasizeColor: const AppColors.error,
           ),
         ] else ...[
           _ValueLine(
@@ -142,7 +143,7 @@ class _ValueLine extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 11.5 : 12,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF9ca3af),
+              color: const AppColors.gray400,
             ),
           ),
           TextSpan(
@@ -151,10 +152,10 @@ class _ValueLine extends StatelessWidget {
               fontSize: compact ? 12 : 13,
               fontWeight: muted ? FontWeight.w500 : FontWeight.w700,
               color: muted
-                  ? const Color(0xFF6b7280)
-                  : (emphasizeColor ?? const Color(0xFF059669)),
+                  ? const AppColors.gray500
+                  : (emphasizeColor ?? const AppColors.green600),
               decoration: strike ? TextDecoration.lineThrough : null,
-              decorationColor: const Color(0xFFdc2626),
+              decorationColor: const AppColors.error,
             ),
           ),
         ],

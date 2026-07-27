@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Form to edit a user's profile fields (name, email, phone, username,
 /// birth date). Opened from the user detail screen.
@@ -71,7 +72,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                 child: Center(
                   child: Text(
                     'Acesso restrito.',
-                    style: TextStyle(color: Color(0xFF6b7280)),
+                    style: TextStyle(color: AppColors.gray500),
                   ),
                 ),
               ),
@@ -96,7 +97,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                     onPressed: () => context.pop(),
                     icon: const Icon(
                       Icons.arrow_back_rounded,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   const Expanded(
@@ -105,7 +106,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                   ),
@@ -118,7 +119,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                 error: (_, _) => const Center(
                   child: Text(
                     'Não foi possível carregar o usuário.',
-                    style: TextStyle(color: Color(0xFF6b7280)),
+                    style: TextStyle(color: AppColors.gray500),
                   ),
                 ),
                 data: (user) {
@@ -126,7 +127,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                     return const Center(
                       child: Text(
                         'Usuário não encontrado.',
-                        style: TextStyle(color: Color(0xFF6b7280)),
+                        style: TextStyle(color: AppColors.gray500),
                       ),
                     );
                   }
@@ -251,8 +252,8 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                                 : formatDate(_birthDate!),
                             style: TextStyle(
                               color: _birthDate == null
-                                  ? const Color(0xFF9ca3af)
-                                  : const Color(0xFF0f1729),
+                                  ? const AppColors.gray400
+                                  : const AppColors.gray900,
                             ),
                           ),
                         ),
@@ -261,7 +262,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
                           width: double.infinity,
                           child: FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0a2f7f),
+                              backgroundColor: const AppColors.navyDeep,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             onPressed: _submitting ? null : _submit,
@@ -343,7 +344,7 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
     style: const TextStyle(
       fontSize: 12.5,
       fontWeight: FontWeight.w600,
-      color: Color(0xFF6b7280),
+      color: AppColors.gray500,
     ),
   );
 }

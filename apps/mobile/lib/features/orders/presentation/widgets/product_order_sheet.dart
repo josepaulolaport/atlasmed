@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/price_mode.dart'
 import 'package:atlasmed_mobile_app/features/orders/data/models/suggestion_kind.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Bottom-sheet modal for setting quantity + unit price on a product.
 class ProductOrderSheet extends ConsumerStatefulWidget {
@@ -104,7 +105,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFe5e7eb),
+              color: const AppColors.gray200,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -112,7 +113,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
           Container(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+              border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +128,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                         'Adicionar ao pedido',
                         style: TextStyle(
                           fontSize: 9.5,
-                          color: Color(0xFF8a94a6),
+                          color: AppColors.gray400,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.8,
                         ),
@@ -138,7 +139,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0f1729),
+                          color: AppColors.gray900,
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -147,7 +148,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                         widget.product.subtitle,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6b7280),
+                          color: AppColors.gray500,
                         ),
                       ),
                     ],
@@ -159,13 +160,13 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     width: 30,
                     height: 30,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFf3f4f6),
+                      color: AppColors.gray100,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.close,
                       size: 14,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ),
@@ -187,8 +188,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     ),
                     decoration: BoxDecoration(
                       color: widget.clinicId != null
-                          ? const Color(0xFFeef2ff)
-                          : const Color(0xFFfef3e1),
+                          ? const AppColors.blue50
+                          : const AppColors.amber50,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: widget.clinicId != null
@@ -215,13 +216,13 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                       const TextSpan(
                                         text: 'Clínica destinatária · ',
                                         style: TextStyle(
-                                          color: Color(0xFF6b7280),
+                                          color: AppColors.gray500,
                                         ),
                                       ),
                                       TextSpan(
                                         text: widget.clinicName,
                                         style: const TextStyle(
-                                          color: Color(0xFF0f1729),
+                                          color: AppColors.gray900,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -232,7 +233,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                   'Selecione uma clínica para ver preços negociados',
                                   style: TextStyle(
                                     fontSize: 11.5,
-                                    color: Color(0xFFa85a05),
+                                    color: AppColors.amber,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -247,7 +248,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF8a94a6),
+                      color: AppColors.gray400,
                       letterSpacing: 0.8,
                     ),
                   ),
@@ -258,7 +259,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFeef0f3)),
+                      border: Border.all(color: const AppColors.surfaceSecondary),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -277,7 +278,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF0f1729),
+                              color: AppColors.gray900,
                               letterSpacing: -0.4,
                             ),
                             decoration: const InputDecoration(
@@ -310,12 +311,12 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                               decoration: BoxDecoration(
                                 border: Border.all(
                                   color: active
-                                      ? const Color(0xFF0a2f7f)
-                                      : const Color(0xFFeef0f3),
+                                      ? const AppColors.navyDeep
+                                      : const AppColors.surfaceSecondary,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 color: active
-                                    ? const Color(0xFFeef2ff)
+                                    ? const AppColors.blue50
                                     : Colors.white,
                               ),
                               child: Text(
@@ -325,8 +326,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: active
-                                      ? const Color(0xFF0a2f7f)
-                                      : const Color(0xFF6b7280),
+                                      ? const AppColors.navyDeep
+                                      : const AppColors.gray500,
                                 ),
                               ),
                             ),
@@ -344,7 +345,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF8a94a6),
+                          color: AppColors.gray400,
                           letterSpacing: 0.8,
                         ),
                       ),
@@ -356,7 +357,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFe7f6ef),
+                            color: const AppColors.green50,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: const Row(
@@ -365,7 +366,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                               Icon(
                                 Icons.access_time,
                                 size: 9,
-                                color: Color(0xFF0f7c5a),
+                                color: AppColors.green600,
                               ),
                               SizedBox(width: 3),
                               Text(
@@ -373,7 +374,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0f7c5a),
+                                  color: AppColors.green600,
                                 ),
                               ),
                             ],
@@ -424,8 +425,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: _mode == 'custom'
-                              ? const Color(0xFF0a2f7f)
-                              : const Color(0xFF0f1729),
+                              ? const AppColors.navyDeep
+                              : const AppColors.gray900,
                         ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
@@ -455,7 +456,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                   if (suggestion != null && suggestion.history.length > 1)
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFeef0f3)),
+                        border: Border.all(color: const AppColors.surfaceSecondary),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ExpansionTile(
@@ -466,7 +467,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             Icon(
                               Icons.access_time,
                               size: 13,
-                              color: Color(0xFF6b7280),
+                              color: AppColors.gray500,
                             ),
                             SizedBox(width: 7),
                             Text(
@@ -474,7 +475,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF0f1729),
+                                color: AppColors.gray900,
                               ),
                             ),
                           ],
@@ -483,12 +484,12 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                           '${suggestion.history.length} agreements',
                           style: const TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         children: [
-                          const Divider(height: 1, color: Color(0xFFeef0f3)),
+                          const Divider(height: 1, color: AppColors.surfaceSecondary),
                           ...suggestion.history.asMap().entries.map((entry) {
                             final h = entry.value;
                             final isFirst = entry.key == 0;
@@ -503,7 +504,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                     ? null
                                     : const Border(
                                         top: BorderSide(
-                                          color: Color(0xFFf3f4f6),
+                                          color: AppColors.gray100,
                                         ),
                                       ),
                               ),
@@ -521,7 +522,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                               style: const TextStyle(
                                                 fontSize: 12.5,
                                                 fontWeight: FontWeight.w700,
-                                                color: Color(0xFF0f1729),
+                                                color: AppColors.gray900,
                                               ),
                                             ),
                                             const SizedBox(width: 6),
@@ -533,7 +534,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                           '${_fmtDateLong(h.date)} · ${h.qty} un · ${h.orderId}',
                                           style: const TextStyle(
                                             fontSize: 11,
-                                            color: Color(0xFF6b7280),
+                                            color: AppColors.gray500,
                                           ),
                                         ),
                                       ],
@@ -546,7 +547,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFeef2ff),
+                                        color: const AppColors.blue50,
                                         borderRadius: BorderRadius.circular(
                                           999,
                                         ),
@@ -556,7 +557,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                         style: TextStyle(
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.w700,
-                                          color: Color(0xFF0a2f7f),
+                                          color: AppColors.navyDeep,
                                         ),
                                       ),
                                     ),
@@ -575,7 +576,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
           Container(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
+              border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
             ),
             child: Column(
               children: [
@@ -588,7 +589,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                           'Subtotal · $_qty ${_qty == 1 ? 'unidade' : 'unidades'}',
                           style: const TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF8a94a6),
+                            color: AppColors.gray400,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -599,7 +600,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             'Economia: ${brl((widget.product.price - suggestion.unit) * _qty)}',
                             style: const TextStyle(
                               fontSize: 10.5,
-                              color: Color(0xFF0f7c5a),
+                              color: AppColors.green600,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -611,7 +612,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0a2f7f),
+                        color: AppColors.navyDeep,
                         letterSpacing: -0.4,
                       ),
                     ),
@@ -623,7 +624,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                   child: ElevatedButton(
                     onPressed: _confirm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0a2f7f),
+                      backgroundColor: const AppColors.navyDeep,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -665,9 +666,9 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
           borderRadius: BorderRadius.circular(10),
-          color: const Color(0xFFf7f8fb),
+          color: const AppColors.background,
         ),
         child: Center(
           child: Text(
@@ -676,8 +677,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: enabled
-                  ? const Color(0xFF0a2f7f)
-                  : const Color(0xFFcbd5e1),
+                  ? const AppColors.navyDeep
+                  : const AppColors.gray300,
             ),
           ),
         ),
@@ -720,10 +721,10 @@ class _PriceRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: active ? const Color(0xFF0a2f7f) : const Color(0xFFeef0f3),
+            color: active ? const AppColors.navyDeep : const AppColors.surfaceSecondary,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: active ? const Color(0xFFeef2ff) : Colors.white,
+          color: active ? const AppColors.blue50 : Colors.white,
         ),
         child: Row(
           children: [
@@ -734,8 +735,8 @@ class _PriceRow extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: active
-                      ? const Color(0xFF0a2f7f)
-                      : const Color(0xFFcbd5e1),
+                      ? const AppColors.navyDeep
+                      : const AppColors.gray300,
                 ),
                 color: Colors.white,
               ),
@@ -745,7 +746,7 @@ class _PriceRow extends StatelessWidget {
                         width: 9,
                         height: 9,
                         decoration: const BoxDecoration(
-                          color: Color(0xFF0a2f7f),
+                          color: AppColors.navyDeep,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -765,8 +766,8 @@ class _PriceRow extends StatelessWidget {
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: active
-                              ? const Color(0xFF0a2f7f)
-                              : const Color(0xFF0f1729),
+                              ? const AppColors.navyDeep
+                              : const AppColors.gray900,
                         ),
                       ),
                       if (badge != null) ...[
@@ -778,8 +779,8 @@ class _PriceRow extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: badgeGood
-                                ? const Color(0xFFe7f6ef)
-                                : const Color(0xFFf3f4f6),
+                                ? const AppColors.green50
+                                : const AppColors.gray100,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -788,8 +789,8 @@ class _PriceRow extends StatelessWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: badgeGood
-                                  ? const Color(0xFF0f7c5a)
-                                  : const Color(0xFF6b7280),
+                                  ? const AppColors.green600
+                                  : const AppColors.gray500,
                             ),
                           ),
                         ),
@@ -802,8 +803,8 @@ class _PriceRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11.5,
                       color: hintWarn
-                          ? const Color(0xFFa85a05)
-                          : const Color(0xFF6b7280),
+                          ? const AppColors.amber
+                          : const AppColors.gray500,
                       height: 1.4,
                     ),
                   ),
@@ -821,7 +822,7 @@ class _PriceRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   Text(
@@ -830,8 +831,8 @@ class _PriceRow extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: active
-                          ? const Color(0xFF0a2f7f)
-                          : const Color(0xFF0f1729),
+                          ? const AppColors.navyDeep
+                          : const AppColors.gray900,
                     ),
                   ),
                 ],
@@ -846,7 +847,7 @@ class _PriceRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   priceWidget!,
@@ -868,7 +869,7 @@ Widget _agreementBadge(SuggestionKind kind) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
     decoration: BoxDecoration(
-      color: const Color(0xFFf3f4f6),
+      color: const AppColors.gray100,
       borderRadius: BorderRadius.circular(5),
     ),
     child: Text(
@@ -876,7 +877,7 @@ Widget _agreementBadge(SuggestionKind kind) {
       style: const TextStyle(
         fontSize: 9,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF6b7280),
+        color: AppColors.gray500,
       ),
     ),
   );

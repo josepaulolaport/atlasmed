@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_expanded_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// A small, non-interactive live map preview for a single assigned
 /// territory — used in the horizontally-scrollable "Territórios atribuídos"
@@ -89,7 +90,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           if (widget.assignment.verticalName != null) ...[
@@ -98,7 +99,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
               widget.assignment.verticalName!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 11.5, color: AppColors.gray500),
             ),
           ],
           const SizedBox(height: 8),
@@ -117,8 +118,8 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
                 height: widget.mapHeight,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFe9eef1),
-                    border: Border.all(color: const Color(0xFFeef0f3)),
+                    color: const AppColors.surfaceSecondary,
+                    border: Border.all(color: const AppColors.surfaceSecondary),
                   ),
                   child: Stack(
                     fit: StackFit.expand,
@@ -201,7 +202,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
         FillLayer(
           id: _fillLayerId,
           sourceId: _sourceId,
-          fillColor: const Color(0xFF2563EB).toARGB32(),
+          fillColor: const AppColors.blue600.toARGB32(),
           fillOpacity: 0.22,
         ),
       );
@@ -209,7 +210,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
         LineLayer(
           id: _lineLayerId,
           sourceId: _sourceId,
-          lineColor: const Color(0xFF1D4ED8).toARGB32(),
+          lineColor: const AppColors.blueDark.toARGB32(),
           lineWidth: 2,
           lineOpacity: 0.9,
           lineJoin: LineJoin.ROUND,
@@ -313,13 +314,13 @@ class _ExpandButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 4)],
       ),
       child: const Icon(
         Icons.open_in_full_rounded,
         size: 13,
-        color: Color(0xFF374151),
+        color: AppColors.gray700,
       ),
     );
   }
@@ -335,11 +336,11 @@ class _MapPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFdfe5f0), Color(0xFFc9d2e3)],
+          colors: [Color(0xFFdfe5f0), AppColors.gray300],
         ),
       ),
       child: const Center(
-        child: Icon(Icons.map_outlined, size: 30, color: Color(0xFF8b95a8)),
+        child: Icon(Icons.map_outlined, size: 30, color: AppColors.gray400),
       ),
     );
   }

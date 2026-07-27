@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Relacionamento" star rating (1–10 → 5 stars, 2 points each).
 ///
@@ -17,9 +18,9 @@ class RelationshipStars extends StatelessWidget {
   final ValueChanged<int?>? onChanged;
   final bool showLabel;
 
-  static const _filledColor = Color(0xFFf5a623);
-  static const _emptyColor = Color(0xFFcbd5e1);
-  static const _undeterminedColor = Color(0xFFcbd5e1);
+  static const _filledColor = AppColors.amber;
+  static const _emptyColor = AppColors.gray300;
+  static const _undeterminedColor = AppColors.gray300;
 
   /// Icon size when editable — large enough to see half-fill.
   static const _editableIconSize = 34.0;
@@ -47,7 +48,7 @@ class RelationshipStars extends StatelessWidget {
             style: TextStyle(
               fontSize: _editable ? 13 : 11.5,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF6b7280),
+              color: const AppColors.gray500,
             ),
           ),
           SizedBox(width: _editable ? 10 : 6),

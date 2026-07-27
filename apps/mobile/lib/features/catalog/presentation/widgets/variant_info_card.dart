@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Card shown on the family detail screen for a single variant: name +
 /// presentation up top, thumbnail and price side by side, then a dedicated
@@ -49,7 +50,7 @@ class VariantInfoCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                       letterSpacing: -0.1,
                     ),
                   ),
@@ -59,7 +60,7 @@ class VariantInfoCard extends StatelessWidget {
                       variant.presentation,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                       ),
                     ),
                   ],
@@ -75,7 +76,7 @@ class VariantInfoCard extends StatelessWidget {
                   child: Icon(
                     Icons.edit_outlined,
                     size: 18,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ),
               ),
@@ -89,14 +90,14 @@ class VariantInfoCard extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: const Color(0xFFf7f8fb),
+                color: const AppColors.background,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFeef0f3)),
+                border: Border.all(color: const AppColors.surfaceSecondary),
               ),
               child: const Icon(
                 Icons.medication_liquid_outlined,
                 size: 26,
-                color: Color(0xFFc8cdd5),
+                color: AppColors.gray300,
               ),
             ),
             const Spacer(),
@@ -108,7 +109,7 @@ class VariantInfoCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -119,7 +120,7 @@ class VariantInfoCard extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFeef4ff),
+                    color: const AppColors.blueLight,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -127,7 +128,7 @@ class VariantInfoCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                     ),
                   ),
                 ),
@@ -139,7 +140,7 @@ class VariantInfoCard extends StatelessWidget {
         _CodesPanel(variant: variant),
         if (onViewComparison != null || onManageCompetitors != null) ...[
           const SizedBox(height: 12),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3)),
+          const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Wrap(
@@ -175,7 +176,7 @@ class VariantInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -214,11 +215,11 @@ class _CardLink extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1e40af),
+              color: AppColors.navyBright,
             ),
           ),
           const SizedBox(width: 2),
-          Icon(icon, size: 16, color: const Color(0xFF1e40af)),
+          Icon(icon, size: 16, color: const AppColors.navyBright),
         ],
       ),
     );
@@ -237,9 +238,9 @@ class _CodesPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFf7f8fb),
+        color: const AppColors.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         children: [
@@ -254,7 +255,7 @@ class _CodesPanel extends StatelessWidget {
   }
 
   Widget _rowDivider() =>
-      const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3));
+      const Divider(height: 1, thickness: 1, color: AppColors.surfaceSecondary);
 
   Widget _codeRow(String label, String value) {
     return Padding(
@@ -266,7 +267,7 @@ class _CodesPanel extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF6b7280),
+              color: AppColors.gray500,
               letterSpacing: 0.4,
             ),
           ),
@@ -276,7 +277,7 @@ class _CodesPanel extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
               letterSpacing: 0.2,
             ),
           ),

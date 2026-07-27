@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_doctor_profile_sheet.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Search + multi-select doctors to associate with a facility.
 /// Returns the selected doctors (already-associated + newly picked).
@@ -188,7 +189,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF6b7280),
+          color: AppColors.gray500,
           letterSpacing: 0.3,
         ),
       ),
@@ -216,7 +217,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFe5e7eb),
+                      color: const AppColors.gray200,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -226,13 +227,13 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Busque e selecione médicos para vincular a esta clínica.',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+                  style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
                 ),
                 const SizedBox(height: 14),
                 _ModalSearchField(
@@ -259,7 +260,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13.5,
-                              color: Color(0xFF9ca3af),
+                              color: AppColors.gray400,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -286,7 +287,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 13.5,
-                          color: Color(0xFF9ca3af),
+                          color: AppColors.gray400,
                           height: 1.4,
                         ),
                       ),
@@ -302,7 +303,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               12 + MediaQuery.paddingOf(context).bottom,
             ),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
+              border: Border(top: BorderSide(color: AppColors.gray200)),
               color: Colors.white,
             ),
             child: Column(
@@ -314,8 +315,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                     label: const Text('Criar perfil de médico'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1e40af),
-                      side: const BorderSide(color: Color(0xFFdbeafe)),
+                      foregroundColor: const AppColors.navyBright,
+                      side: const BorderSide(color: AppColors.blue100),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -329,8 +330,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                   child: FilledButton(
                     onPressed: _selected.isEmpty || _saving ? null : _confirm,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1e40af),
-                      disabledBackgroundColor: const Color(0xFFe5e7eb),
+                      backgroundColor: const AppColors.navyBright,
+                      disabledBackgroundColor: const AppColors.gray200,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -380,7 +381,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                 height: 12,
                 indent: 20,
                 endIndent: 20,
-                color: Color(0xFFe5e7eb),
+                color: AppColors.gray200,
               );
           }
           return const SizedBox.shrink();
@@ -438,7 +439,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
             style: const TextStyle(
               fontSize: 14.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           subtitle: Text(
@@ -446,9 +447,9 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               if (d.specialty != null) d.specialty!,
               if (d.crm != null) d.crm!,
             ].join(' · '),
-            style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
+            style: const TextStyle(fontSize: 12, color: AppColors.gray500),
           ),
-          activeColor: const Color(0xFF1e40af),
+          activeColor: const AppColors.navyBright,
         );
       },
     );
@@ -565,14 +566,14 @@ class _ModalSearchFieldState extends State<_ModalSearchField> {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: const Color(0xFFf8f9fb),
+        color: const AppColors.surfaceTertiary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFe5e7eb)),
+        border: Border.all(color: const AppColors.gray200),
       ),
       child: Row(
         children: [
           const SizedBox(width: 12),
-          const Icon(Icons.search_rounded, size: 18, color: Color(0xFF6b7280)),
+          const Icon(Icons.search_rounded, size: 18, color: AppColors.gray500),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -580,18 +581,18 @@ class _ModalSearchFieldState extends State<_ModalSearchField> {
               onChanged: widget.onChanged,
               decoration: InputDecoration(
                 hintText: widget.hintText,
-                hintStyle: const TextStyle(color: Color(0xFF9ca3af)),
+                hintStyle: const TextStyle(color: AppColors.gray400),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
               ),
-              style: const TextStyle(fontSize: 14, color: Color(0xFF0f1729)),
+              style: const TextStyle(fontSize: 14, color: AppColors.gray900),
             ),
           ),
           if (widget.value.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.close_rounded, size: 18),
-              color: const Color(0xFF6b7280),
+              color: const AppColors.gray500,
               onPressed: () => widget.onChanged(''),
             ),
         ],

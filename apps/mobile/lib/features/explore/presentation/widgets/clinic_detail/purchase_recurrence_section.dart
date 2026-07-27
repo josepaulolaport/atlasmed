@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class PurchaseRecurrenceSection extends StatelessWidget {
   const PurchaseRecurrenceSection({
@@ -69,7 +70,7 @@ class PurchaseRecurrenceSection extends StatelessWidget {
       children: [
         SizedBox(
           width: 140,
-          child: Text(label, style: const TextStyle(color: Color(0xFF6B7280))),
+          child: Text(label, style: const TextStyle(color: AppColors.gray500)),
         ),
         Expanded(
           child: Text(

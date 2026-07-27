@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   final String orderId;
@@ -22,11 +23,11 @@ class OrderDetailScreen extends ConsumerWidget {
 
     return detailAsync.when(
       loading: () => const Scaffold(
-        backgroundColor: Color(0xFFf7f8fb),
+        backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (_, _) => const Scaffold(
-        backgroundColor: Color(0xFFf7f8fb),
+        backgroundColor: AppColors.background,
         body: Center(child: Text('Não foi possível carregar o pedido.')),
       ),
       data: (apiDetail) {
@@ -54,7 +55,7 @@ class OrderDetailScreen extends ConsumerWidget {
             detail.status == OrderStatus.approved && detail.tracking.isNotEmpty;
 
         return Scaffold(
-          backgroundColor: const Color(0xFFf7f8fb),
+          backgroundColor: const AppColors.background,
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -122,7 +123,7 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: Row(
         children: [
@@ -138,7 +139,7 @@ class _Header extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.1,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -147,7 +148,7 @@ class _Header extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0a2f7f),
+                    color: AppColors.navyDeep,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -155,7 +156,7 @@ class _Header extends StatelessWidget {
                   '· ${detail.placedAt}',
                   style: const TextStyle(
                     fontSize: 12.5,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ),
               ],
@@ -176,7 +177,7 @@ class _CardShell extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFeef0f3)),
+      border: Border.all(color: const AppColors.surfaceSecondary),
     ),
     child: child,
   );
@@ -197,7 +198,7 @@ class _TimelineCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 14),
@@ -220,11 +221,11 @@ class _TimelineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final circleColor = step.done
-        ? const Color(0xFF16a373)
-        : (step.current ? const Color(0xFF0a2f7f) : Colors.white);
+        ? const AppColors.green
+        : (step.current ? const AppColors.navyDeep : Colors.white);
     final borderColor = step.done || step.current
         ? circleColor
-        : const Color(0xFFe5e7eb);
+        : const AppColors.gray200;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -270,7 +271,7 @@ class _TimelineRow extends StatelessWidget {
                 ),
                 if (!last)
                   Expanded(
-                    child: Container(width: 2, color: const Color(0xFFeef0f3)),
+                    child: Container(width: 2, color: const AppColors.surfaceSecondary),
                   ),
               ],
             ),
@@ -287,7 +288,7 @@ class _TimelineRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1f2937),
+                      color: AppColors.gray800,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -295,7 +296,7 @@ class _TimelineRow extends StatelessWidget {
                     step.date,
                     style: const TextStyle(
                       fontSize: 11.5,
-                      color: Color(0xFF9ca3af),
+                      color: AppColors.gray400,
                     ),
                   ),
                 ],
@@ -320,7 +321,7 @@ class _TrackingCard extends StatelessWidget {
           _MiniIcon(
             icon: Icons.local_shipping_outlined,
             bg: const Color(0x1A0a2f7f),
-            fg: const Color(0xFF0a2f7f),
+            fg: const AppColors.navyDeep,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -332,7 +333,7 @@ class _TrackingCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -344,7 +345,7 @@ class _TrackingCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,
                     fontFamily: 'monospace',
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
               ],
@@ -376,7 +377,7 @@ class _DestinationCard extends StatelessWidget {
               _MiniIcon(
                 icon: Icons.local_hospital_outlined,
                 bg: const Color(0x1A1e40af),
-                fg: const Color(0xFF1e40af),
+                fg: const AppColors.navyBright,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -388,7 +389,7 @@ class _DestinationCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -396,7 +397,7 @@ class _DestinationCard extends StatelessWidget {
                       detail.clinicAddress,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -417,7 +418,7 @@ class _DestinationCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1f2937),
+                      color: AppColors.gray800,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -425,7 +426,7 @@ class _DestinationCard extends StatelessWidget {
                     detail.doctorCrm,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9ca3af),
+                      color: AppColors.gray400,
                     ),
                   ),
                 ],
@@ -453,7 +454,7 @@ class _ItemsCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 14),
@@ -475,7 +476,7 @@ class _ItemsCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1f2937),
+                            color: AppColors.gray800,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -483,7 +484,7 @@ class _ItemsCard extends StatelessWidget {
                           p.sub,
                           style: const TextStyle(
                             fontSize: 11.5,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                         ),
                       ],
@@ -493,7 +494,7 @@ class _ItemsCard extends StatelessWidget {
                     'R\$ ${p.unit.toStringAsFixed(2).replaceAll('.', ',')} · × $qty',
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF9ca3af),
+                      color: AppColors.gray400,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -502,7 +503,7 @@ class _ItemsCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+                      color: AppColors.navyDeep,
                     ),
                   ),
                 ],
@@ -539,14 +540,14 @@ class _PaymentCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
               Text(
                 detail.invoice,
                 style: const TextStyle(
                   fontSize: 11.5,
-                  color: Color(0xFF9ca3af),
+                  color: AppColors.gray400,
                 ),
               ),
             ],
@@ -574,7 +575,7 @@ class _PaymentCard extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: 12.5,
-          color: bold ? const Color(0xFF0f1729) : const Color(0xFF6b7280),
+          color: bold ? const AppColors.gray900 : const AppColors.gray500,
           fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
@@ -582,7 +583,7 @@ class _PaymentCard extends StatelessWidget {
         value,
         style: TextStyle(
           fontSize: 12.5,
-          color: bold ? const Color(0xFF0a2f7f) : const Color(0xFF374151),
+          color: bold ? const AppColors.navyDeep : const AppColors.gray700,
           fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
@@ -597,7 +598,7 @@ class _DeliveryBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final delivered = detail.status == OrderStatus.invoiced;
     final bg = delivered ? const Color(0x1F16a373) : const Color(0x1A0a2f7f);
-    final fg = delivered ? const Color(0xFF0f8a5f) : const Color(0xFF0a2f7f);
+    final fg = delivered ? const AppColors.green600 : const AppColors.navyDeep;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -652,7 +653,7 @@ class _AvatarInitials extends StatelessWidget {
       width: 34,
       height: 34,
       decoration: const BoxDecoration(
-        color: Color(0xFFe8eefc),
+        color: AppColors.blueLight,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
@@ -661,7 +662,7 @@ class _AvatarInitials extends StatelessWidget {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF0a2f7f),
+          color: AppColors.navyDeep,
         ),
       ),
     );
@@ -685,9 +686,9 @@ class _ActionButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         backgroundColor: filled ? Colors.white : Colors.white,
         foregroundColor: filled
-            ? const Color(0xFF111827)
-            : const Color(0xFF0a2f7f),
-        side: const BorderSide(color: Color(0xFFeef0f3)),
+            ? const AppColors.gray950
+            : const AppColors.navyDeep,
+        side: const BorderSide(color: AppColors.surfaceSecondary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       child: Text(
@@ -695,7 +696,7 @@ class _ActionButton extends StatelessWidget {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: filled ? const Color(0xFF111827) : const Color(0xFF0a2f7f),
+          color: filled ? const AppColors.gray950 : const AppColors.navyDeep,
         ),
       ),
     ),

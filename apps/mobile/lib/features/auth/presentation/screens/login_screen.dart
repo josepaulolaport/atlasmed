@@ -12,6 +12,7 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_back
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/glass_input.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/terms_footer.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final VoidCallback onForgotPassword;
@@ -229,7 +230,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                         Text(
                                           _errorMessage(_errorKind!),
                                           style: const TextStyle(
-                                            color: Color(0xFFFECACA),
+                                            color: AppColors.red100,
                                             fontSize: 14,
                                             fontWeight: FontWeight.w500,
                                           ),

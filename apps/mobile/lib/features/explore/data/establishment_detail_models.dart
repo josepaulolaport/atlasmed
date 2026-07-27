@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// One page of a facility roster (doctors or administrative professionals).
 class FacilityRosterPage<T> {
@@ -365,12 +366,16 @@ extension FacilityCommercialStatusX on FacilityCommercialStatus {
   }
 
   Color get color {
-    return switch (this) {
-      .registered => const Color(0xFF3b82f6),
-      .active => const Color(0xFF16a373),
-      .suspended => const Color(0xFFc6861b),
-      .inactive => Color(0xFF6b7280),
-    };
+    switch (this) {
+      case FacilityCommercialStatus.registered:
+        return const AppColors.blueAccent;
+      case FacilityCommercialStatus.active:
+        return const AppColors.green;
+      case FacilityCommercialStatus.suspended:
+        return const AppColors.amber;
+      case FacilityCommercialStatus.inactive:
+        return const AppColors.gray500;
+    }
   }
 }
 
@@ -397,13 +402,13 @@ extension FacilityPurchaseStatusX on FacilityPurchaseStatus {
   Color get color {
     switch (this) {
       case FacilityPurchaseStatus.nonBuyer:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
       case FacilityPurchaseStatus.lowBuyer:
-        return const Color(0xFF3b82f6);
+        return const AppColors.blueAccent;
       case FacilityPurchaseStatus.regularBuyer:
-        return const Color(0xFF1e40af);
+        return const AppColors.navyBright;
       case FacilityPurchaseStatus.highBuyer:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
     }
   }
 }
@@ -433,13 +438,13 @@ extension FacilityConformityStatusX on FacilityConformityStatus {
   Color get color {
     switch (this) {
       case FacilityConformityStatus.incomplete:
-        return const Color(0xFF6b7280);
+        return const AppColors.gray500;
       case FacilityConformityStatus.complete:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case FacilityConformityStatus.expiringSoon:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
       case FacilityConformityStatus.nonConforming:
-        return const Color(0xFFb84545);
+        return const AppColors.red;
     }
   }
 }
@@ -610,11 +615,11 @@ extension VisitSentimentX on VisitSentiment {
   Color get color {
     switch (this) {
       case VisitSentiment.positive:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case VisitSentiment.mixed:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
       case VisitSentiment.negative:
-        return const Color(0xFFb84545);
+        return const AppColors.red;
     }
   }
 }
@@ -709,30 +714,30 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
   Color get color {
     switch (this) {
       case EstablishmentDocumentStatus.missing:
-        return const Color(0xFF9ca3af);
+        return const AppColors.gray400;
       case EstablishmentDocumentStatus.ready:
-        return const Color(0xFF1e40af);
+        return const AppColors.navyBright;
       case EstablishmentDocumentStatus.pending:
-        return const Color(0xFFc6861b);
+        return const AppColors.amber;
       case EstablishmentDocumentStatus.approved:
-        return const Color(0xFF1f9254);
+        return const AppColors.greenDark;
       case EstablishmentDocumentStatus.rejected:
-        return const Color(0xFFb84545);
+        return const AppColors.red;
     }
   }
 
   Color get backgroundColor {
     switch (this) {
       case EstablishmentDocumentStatus.missing:
-        return const Color(0xFFf3f4f6);
+        return const AppColors.gray100;
       case EstablishmentDocumentStatus.ready:
-        return const Color(0xFFdbeafe);
+        return const AppColors.blue100;
       case EstablishmentDocumentStatus.pending:
-        return const Color(0xFFfef3d5);
+        return const AppColors.amber50;
       case EstablishmentDocumentStatus.approved:
-        return const Color(0xFFe7f6ec);
+        return const AppColors.green50;
       case EstablishmentDocumentStatus.rejected:
-        return const Color(0xFFfde8e8);
+        return const AppColors.red50;
     }
   }
 

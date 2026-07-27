@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Pedidos recentes" — snapping PageView of cards, mirroring the médicos
 /// card layout (icon + identity header, badge area, info rows, footer link).
@@ -39,7 +40,7 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
           children: [
             const Text(
               'Nenhum pedido registrado para este estabelecimento',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              style: TextStyle(fontSize: 13, color: AppColors.gray400),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -48,12 +49,8 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Criar pedido'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1e40af),
-                side: const BorderSide(color: Color(0xFFdbeafe)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                foregroundColor: const AppColors.navyBright,
+                side: const BorderSide(color: AppColors.blue100),
               ),
             ),
           ],
@@ -131,7 +128,7 @@ class _OrderCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -146,7 +143,7 @@ class _OrderCard extends StatelessWidget {
                           _formatOrderDate(order.orderedAt),
                           style: const TextStyle(
                             fontSize: 11.5,
-                            color: Color(0xFF6b7280),
+                            color: AppColors.gray500,
                           ),
                         ),
                         _Badge(
@@ -167,11 +164,11 @@ class _OrderCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFf3f4f6)),
+          const Divider(height: 1, color: AppColors.gray100),
           const SizedBox(height: 8),
           _OrderItemsTable(order: order),
           const Spacer(),
-          const Divider(height: 1, color: Color(0xFFf3f4f6)),
+          const Divider(height: 1, color: AppColors.gray100),
           const SizedBox(height: 8),
           InkWell(
             onTap: () => context.push('/orders/${order.id}'),
@@ -185,7 +182,7 @@ class _OrderCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1e40af),
+                        color: AppColors.navyBright,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -194,7 +191,7 @@ class _OrderCard extends StatelessWidget {
                   const Icon(
                     Icons.chevron_right_rounded,
                     size: 16,
-                    color: Color(0xFF1e40af),
+                    color: AppColors.navyBright,
                   ),
                 ],
               ),
@@ -211,32 +208,32 @@ class _OrderCard extends StatelessWidget {
   (String, Color, Color) _style(String status) {
     switch (status) {
       case 'APPROVED':
-        return ('Aprovado', const Color(0xFF16a373), const Color(0xFFe6f7f0));
+        return ('Aprovado', const AppColors.green, const AppColors.green50);
       case 'INVOICED':
-        return ('Faturado', const Color(0xFF1e40af), const Color(0xFFeef4ff));
+        return ('Faturado', const AppColors.navyBright, const AppColors.blueLight);
       case 'PENDING':
-        return ('Pendente', const Color(0xFFc6861b), const Color(0xFFfef3d5));
+        return ('Pendente', const AppColors.amber, const AppColors.amber50);
       case 'REJECTED':
-        return ('Rejeitado', const Color(0xFFb84545), const Color(0xFFfde8e8));
+        return ('Rejeitado', const AppColors.red, const AppColors.red50);
       default:
-        return (status, const Color(0xFF6b7280), const Color(0xFFf3f4f6));
+        return (status, const AppColors.gray500, const AppColors.gray100);
     }
   }
 
   (String, Color, Color) _typeStyle(String type) {
     switch (type) {
       case 'SALE':
-        return ('Venda', const Color(0xFF4b5563), const Color(0xFFf3f4f6));
+        return ('Venda', const AppColors.gray600, const AppColors.gray100);
       case 'CONSIGNMENT':
         return (
           'Consignação',
-          const Color(0xFF4b5563),
-          const Color(0xFFf3f4f6),
+          const AppColors.gray600,
+          const AppColors.gray100,
         );
       case 'DONATION':
-        return ('Doação', const Color(0xFF4b5563), const Color(0xFFf3f4f6));
+        return ('Doação', const AppColors.gray600, const AppColors.gray100);
       default:
-        return ('Outro', const Color(0xFF4b5563), const Color(0xFFf3f4f6));
+        return ('Outro', const AppColors.gray600, const AppColors.gray100);
     }
   }
 }
@@ -293,7 +290,7 @@ class _OrderItemsTable extends StatelessWidget {
       return const Center(
         child: Text(
           'Itens não detalhados',
-          style: TextStyle(fontSize: 11, color: Color(0xFF9ca3af)),
+          style: TextStyle(fontSize: 11, color: AppColors.gray400),
           textAlign: TextAlign.center,
         ),
       );
@@ -317,7 +314,7 @@ class _OrderItemsTable extends StatelessWidget {
                     item.productName,
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF4b5563),
+                      color: AppColors.gray600,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -329,7 +326,7 @@ class _OrderItemsTable extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
               ],
@@ -343,18 +340,18 @@ class _OrderItemsTable extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
           ),
         const SizedBox(height: 2),
-        const Divider(height: 1, color: Color(0xFFf3f4f6)),
+        const Divider(height: 1, color: AppColors.gray100),
         const SizedBox(height: 4),
         Row(
           children: [
             const Text(
               'Subtotal:',
-              style: TextStyle(fontSize: 11, color: Color(0xFF6b7280)),
+              style: TextStyle(fontSize: 11, color: AppColors.gray500),
             ),
             const SizedBox(width: 4),
             Expanded(
@@ -363,7 +360,7 @@ class _OrderItemsTable extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

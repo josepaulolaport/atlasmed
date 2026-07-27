@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_tax_id_type_suggestion_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Informações administrativas" — every field carries copy + pencil actions.
 /// Address is shown as Estado / Cidade / CEP / Endereço (composed line).
@@ -196,7 +197,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
                   Icon(
                     Icons.touch_app_outlined,
                     size: 13,
-                    color: Color(0xFFb0b7c3),
+                    color: AppColors.gray400,
                   ),
                   SizedBox(width: 6),
                   Text(
@@ -204,7 +205,7 @@ class ClinicAdminInfoSection extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFFb0b7c3),
+                      color: AppColors.gray400,
                     ),
                   ),
                 ],

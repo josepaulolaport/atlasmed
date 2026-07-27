@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_stat
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicRow extends StatelessWidget {
   final Clinic clinic;
@@ -18,7 +19,7 @@ class ClinicRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,13 +34,13 @@ class ClinicRow extends StatelessWidget {
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFFdbeafe), Color(0xFFeef4ff)],
+                      colors: [AppColors.blue100, AppColors.blueLight],
                     ),
                   ),
                   child: const Icon(
                     Icons.local_hospital_rounded,
                     size: 22,
-                    color: Color(0xFF1e40af),
+                    color: AppColors.navyBright,
                   ),
                 ),
                 if (clinic.isPriority)
@@ -50,7 +51,7 @@ class ClinicRow extends StatelessWidget {
                       width: 14,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFe11d48),
+                        color: const AppColors.rose,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
@@ -69,7 +70,7 @@ class ClinicRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                       letterSpacing: -0.15,
                     ),
                   ),
@@ -83,7 +84,7 @@ class ClinicRow extends StatelessWidget {
                           child: Icon(
                             Icons.location_on_rounded,
                             size: 11,
-                            color: Color(0xFF6b7280),
+                            color: AppColors.gray500,
                           ),
                         ),
                         const SizedBox(width: 2),
@@ -93,7 +94,7 @@ class ClinicRow extends StatelessWidget {
                             softWrap: true,
                             style: const TextStyle(
                               fontSize: 12.5,
-                              color: Color(0xFF6b7280),
+                              color: AppColors.gray500,
                               height: 1.25,
                             ),
                           ),
@@ -108,7 +109,7 @@ class ClinicRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -207,11 +208,11 @@ class _MetaItem extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 11, color: const Color(0xFF6b7280)),
+        Icon(icon, size: 11, color: const AppColors.gray500),
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
+          style: const TextStyle(fontSize: 11.5, color: AppColors.gray500),
         ),
       ],
     );

@@ -14,6 +14,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/faci
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen map of establishments near the current facility.
 ///
@@ -188,7 +189,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       body: Column(
         children: [
           Padding(
@@ -208,14 +209,14 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0f1729),
+                          color: AppColors.gray900,
                         ),
                       ),
                       Text(
                         widget.facilityName,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6b7280),
+                          color: AppColors.gray500,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -582,7 +583,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         FillLayer(
           id: _nearbyRadiusFillLayerId,
           sourceId: _nearbyRadiusSourceId,
-          fillColor: const Color(0xFF1e40af).toARGB32(),
+          fillColor: const AppColors.navyBright.toARGB32(),
           fillOpacity: 0.10,
         ),
       );
@@ -590,7 +591,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         LineLayer(
           id: _nearbyRadiusLineLayerId,
           sourceId: _nearbyRadiusSourceId,
-          lineColor: const Color(0xFF2563eb).toARGB32(),
+          lineColor: const AppColors.blue600.toARGB32(),
           lineWidth: 1.5,
           lineOpacity: 0.40,
         ),
@@ -930,7 +931,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFd1d5db),
+                      color: const AppColors.gray300,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -941,13 +942,13 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Escolha qual estabelecimento deseja abrir',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+                  style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
                 ),
                 const SizedBox(height: 12),
                 ConstrainedBox(
@@ -1266,9 +1267,9 @@ class _StackedEstablishmentTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFf8f9fb),
+          color: const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -1292,7 +1293,7 @@ class _StackedEstablishmentTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   if (establishment.specialtyLabel != null) ...[
@@ -1303,7 +1304,7 @@ class _StackedEstablishmentTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                   ],
@@ -1313,7 +1314,7 @@ class _StackedEstablishmentTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ],
@@ -1322,7 +1323,7 @@ class _StackedEstablishmentTile extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: Color(0xFF1e40af),
+              color: AppColors.navyBright,
             ),
           ],
         ),
@@ -1358,7 +1359,7 @@ class _RadiusPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
+        border: Border(top: BorderSide(color: AppColors.gray200)),
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + bottomInset),
@@ -1374,7 +1375,7 @@ class _RadiusPanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 Text(
@@ -1382,7 +1383,7 @@ class _RadiusPanel extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1e40af),
+                    color: AppColors.navyBright,
                   ),
                 ),
               ],
@@ -1390,9 +1391,9 @@ class _RadiusPanel extends StatelessWidget {
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 trackHeight: 5,
-                activeTrackColor: const Color(0xFF1e40af),
-                inactiveTrackColor: const Color(0xFFe5e7eb),
-                thumbColor: const Color(0xFF1e40af),
+                activeTrackColor: const AppColors.navyBright,
+                inactiveTrackColor: const AppColors.gray200,
+                thumbColor: const AppColors.navyBright,
                 overlayColor: const Color(0x1F1e40af),
                 thumbShape: const RoundSliderThumbShape(
                   enabledThumbRadius: 9,
@@ -1461,12 +1462,12 @@ class _NearbyEstablishmentCard extends StatelessWidget {
         width: width,
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFeef4ff) : const Color(0xFFf8f9fb),
+          color: isSelected ? const AppColors.blueLight : const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF1e40af)
-                : const Color(0xFFe5e7eb),
+                ? const AppColors.navyBright
+                : const AppColors.gray200,
             width: isSelected ? 1.4 : 1,
           ),
         ),
@@ -1495,7 +1496,7 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                       height: 1.15,
                     ),
                   ),
@@ -1508,7 +1509,7 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                 establishment.specialtyLabel!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280)),
+                style: const TextStyle(fontSize: 11, color: AppColors.gray500),
               ),
             ],
             if (establishment.shortAddress != null) ...[
@@ -1519,7 +1520,7 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 10.5,
-                  color: Color(0xFF9ca3af),
+                  color: AppColors.gray400,
                 ),
               ),
             ],
@@ -1529,7 +1530,7 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                 const Icon(
                   Icons.near_me_rounded,
                   size: 11,
-                  color: Color(0xFF6b7280),
+                  color: AppColors.gray500,
                 ),
                 const SizedBox(width: 3),
                 Text(
@@ -1537,14 +1538,14 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
                 const Spacer(),
                 const Icon(
                   Icons.chevron_right_rounded,
                   size: 15,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
               ],
             ),
@@ -1576,7 +1577,7 @@ class _NearbyMapPlaceholder extends StatelessWidget {
           child: Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFe8eef5),
+              color: const AppColors.surfaceSecondary,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
@@ -1586,12 +1587,12 @@ class _NearbyMapPlaceholder extends StatelessWidget {
                   const Icon(
                     Icons.map_outlined,
                     size: 48,
-                    color: Color(0xFF1e40af),
+                    color: AppColors.navyBright,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${center.latitude.toStringAsFixed(4)}, ${center.longitude.toStringAsFixed(4)}',
-                    style: const TextStyle(color: Color(0xFF6b7280)),
+                    style: const TextStyle(color: AppColors.gray500),
                   ),
                 ],
               ),
@@ -1607,7 +1608,7 @@ class _NearbyMapPlaceholder extends StatelessWidget {
               return ListTile(
                 leading: const Icon(
                   Icons.local_hospital_rounded,
-                  color: Color(0xFF16a373),
+                  color: AppColors.green,
                 ),
                 title: Text(e.name),
                 trailing: Text('${e.distanceKm.toStringAsFixed(1)} km'),

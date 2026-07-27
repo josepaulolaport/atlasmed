@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Shared legend / editor colors for fontes pagadoras.
 const payerShareColors = <Color>[
-  Color(0xFF0f1729),
-  Color(0xFF16a373),
-  Color(0xFFeab308),
-  Color(0xFF1e40af),
-  Color(0xFF9ca3af),
-  Color(0xFF7c3aed),
+  AppColors.gray900,
+  AppColors.green,
+  AppColors.amber,
+  AppColors.navyBright,
+  AppColors.gray400,
+  AppColors.purple,
 ];
 
 Color payerShareColorForIndex(int i) =>

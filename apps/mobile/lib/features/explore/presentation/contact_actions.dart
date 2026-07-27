@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 String? normalizeBrazilianPhone(String? phone) {
   final digits = phone?.replaceAll(RegExp(r'\D'), '') ?? '';
@@ -157,7 +158,7 @@ Future<void> launchMapsRoute(
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFd1d5db),
+                    color: const AppColors.gray300,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -168,14 +169,14 @@ Future<void> launchMapsRoute(
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
               const SizedBox(height: 12),
               _MapsAppTile(
                 label: 'Waze',
                 icon: Icons.navigation_rounded,
-                color: const Color(0xFF33CCFF),
+                color: const AppColors.blueAccent,
                 onTap: () => Navigator.of(sheetContext).pop(_MapsApp.waze),
               ),
               const SizedBox(height: 8),
@@ -266,9 +267,9 @@ class _MapsAppTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFFf8f9fb),
+          color: const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -288,14 +289,14 @@ class _MapsAppTile extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
             ),
             const Icon(
               Icons.chevron_right_rounded,
               size: 20,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ],
         ),

@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_nearby_map_screen.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Inline map preview + horizontal "Clínicas no raio" card strip.
 ///
@@ -88,7 +89,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
-                color: Color(0xFF9ca3af),
+                color: AppColors.gray400,
               ),
             ),
           ),
@@ -97,7 +98,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
               padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: Text(
                 'Nenhum estabelecimento no raio de busca',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af)),
+                style: TextStyle(fontSize: 12.5, color: AppColors.gray400),
               ),
             )
           else
@@ -123,8 +124,8 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
                 icon: const Icon(Icons.map_rounded, size: 18),
                 label: const Text('Ver estabelecimentos próximos'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1e40af),
-                  side: const BorderSide(color: Color(0xFFdbeafe)),
+                  foregroundColor: const AppColors.navyBright,
+                  side: const BorderSide(color: AppColors.blue100),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -181,6 +182,46 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
   }
 }
 
+class _ExpandButton extends StatelessWidget {
+  const _ExpandButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: const AppColors.blueLight,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.open_in_full_rounded,
+              size: 12,
+              color: AppColors.navyBright,
+            ),
+            SizedBox(width: 4),
+            Text(
+              'Expandir',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.navyBright,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Compact card for one nearby establishment, shown in the inline
 /// "Clínicas no raio" horizontal strip — same card language as the radius
 /// map's own nearby-clinic strip. Tapping it (the "Ver mais" affordance)
@@ -204,9 +245,9 @@ class _NearbyClinicCard extends StatelessWidget {
         width: 168,
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFf8f9fb),
+          color: const AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,7 +274,7 @@ class _NearbyClinicCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                       height: 1.15,
                     ),
                   ),
@@ -246,7 +287,7 @@ class _NearbyClinicCard extends StatelessWidget {
                 establishment.specialtyLabel!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280)),
+                style: const TextStyle(fontSize: 11, color: AppColors.gray500),
               ),
             ],
             if (establishment.shortAddress != null) ...[
@@ -257,7 +298,7 @@ class _NearbyClinicCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 10.5,
-                  color: Color(0xFF9ca3af),
+                  color: AppColors.gray400,
                 ),
               ),
             ],
@@ -267,7 +308,7 @@ class _NearbyClinicCard extends StatelessWidget {
                 const Icon(
                   Icons.near_me_rounded,
                   size: 11,
-                  color: Color(0xFF6b7280),
+                  color: AppColors.gray500,
                 ),
                 const SizedBox(width: 3),
                 Text(
@@ -275,14 +316,14 @@ class _NearbyClinicCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
                 const Spacer(),
                 const Icon(
                   Icons.chevron_right_rounded,
                   size: 15,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
               ],
             ),
@@ -341,7 +382,7 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
       await manager.create(
         CircleAnnotationOptions(
           geometry: _point(widget.location),
-          circleColor: const Color(0xFF1e40af).toARGB32(),
+          circleColor: const AppColors.navyBright.toARGB32(),
           circleRadius: 10,
           circleStrokeColor: Colors.white.toARGB32(),
           circleStrokeWidth: 3,
@@ -364,19 +405,19 @@ class _MapPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFe8eef5),
+      color: const AppColors.surfaceSecondary,
       child: Stack(
         alignment: Alignment.center,
         children: [
           Icon(
             Icons.map_outlined,
             size: 64,
-            color: const Color(0xFF1e40af).withValues(alpha: 0.15),
+            color: const AppColors.navyBright.withValues(alpha: 0.15),
           ),
           const Icon(
             Icons.location_on_rounded,
             size: 36,
-            color: Color(0xFF1e40af),
+            color: AppColors.navyBright,
           ),
           Positioned(
             bottom: 8,
@@ -385,7 +426,7 @@ class _MapPlaceholder extends StatelessWidget {
             child: Text(
               '${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 10, color: AppColors.gray500),
             ),
           ),
         ],

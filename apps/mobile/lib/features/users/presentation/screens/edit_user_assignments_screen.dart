@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Manage which sectors are assigned to a user.
 ///
@@ -92,7 +93,7 @@ class _EditUserAssignmentsScreenState
                 child: Center(
                   child: Text(
                     'Acesso restrito.',
-                    style: TextStyle(color: Color(0xFF6b7280)),
+                    style: TextStyle(color: AppColors.gray500),
                   ),
                 ),
               ),
@@ -117,7 +118,7 @@ class _EditUserAssignmentsScreenState
                     onPressed: () => context.pop(),
                     icon: const Icon(
                       Icons.arrow_back_rounded,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   Expanded(
@@ -129,7 +130,7 @@ class _EditUserAssignmentsScreenState
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0f1729),
+                        color: AppColors.gray900,
                       ),
                     ),
                   ),
@@ -151,7 +152,7 @@ class _EditUserAssignmentsScreenState
       return const Center(
         child: Text(
           'Não foi possível carregar os verticais.',
-          style: TextStyle(color: Color(0xFF6b7280)),
+          style: TextStyle(color: AppColors.gray500),
         ),
       );
     }
@@ -167,7 +168,7 @@ class _EditUserAssignmentsScreenState
           child: Text(
             'Esta função não possui verticais atribuíveis.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF6b7280)),
+            style: TextStyle(color: AppColors.gray500),
           ),
         ),
       );
@@ -181,7 +182,7 @@ class _EditUserAssignmentsScreenState
           'são definidos em cada card na ficha do usuário.',
           style: TextStyle(
             fontSize: 13.5,
-            color: Color(0xFF6b7280),
+            color: AppColors.gray500,
             height: 1.35,
           ),
         ),
@@ -191,7 +192,7 @@ class _EditUserAssignmentsScreenState
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF6b7280),
+            color: AppColors.gray500,
           ),
         ),
         const SizedBox(height: 8),
@@ -222,19 +223,19 @@ class _EditUserAssignmentsScreenState
                     }
                   });
                 },
-                selectedColor: const Color(0xFF0a2f7f).withValues(alpha: 0.12),
-                checkmarkColor: const Color(0xFF0a2f7f),
+                selectedColor: const AppColors.navyDeep.withValues(alpha: 0.12),
+                checkmarkColor: const AppColors.navyDeep,
                 labelStyle: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: selected
-                      ? const Color(0xFF0a2f7f)
-                      : const Color(0xFF374151),
+                      ? const AppColors.navyDeep
+                      : const AppColors.gray700,
                 ),
                 side: BorderSide(
                   color: selected
-                      ? const Color(0xFF0a2f7f)
-                      : const Color(0xFFe5e7eb),
+                      ? const AppColors.navyDeep
+                      : const AppColors.gray200,
                 ),
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
@@ -249,7 +250,7 @@ class _EditUserAssignmentsScreenState
           width: double.infinity,
           child: FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF0a2f7f),
+              backgroundColor: const AppColors.navyDeep,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: _submitting ? null : _submit,

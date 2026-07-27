@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_section.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Dedicated full-screen page for "Dados administrativos" — pushed from
 /// the top shortcut card on the establishment detail screen. Reuses the
@@ -14,11 +15,11 @@ class ClinicAdminInfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         elevation: 0,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         title: const Text('Dados administrativos'),
       ),
       body: ListView(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_cadastro_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/cadastro_document_pages_preview.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Read-only detail for one past Cadastro submission of a document type.
 class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
@@ -51,11 +52,11 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         elevation: 0,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         title: Text(
           'Envio v${submission.version}',
           maxLines: 1,
@@ -71,7 +72,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +82,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -99,7 +100,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFfde8e8),
+                color: const AppColors.red50,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -107,7 +108,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
                 style: const TextStyle(
                   fontSize: 12.5,
                   height: 1.35,
-                  color: Color(0xFFb84545),
+                  color: AppColors.red,
                 ),
               ),
             ),
@@ -119,7 +120,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.4,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 8),
@@ -153,7 +154,7 @@ class _MetaRow extends StatelessWidget {
             width: 96,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 12.5, color: AppColors.gray500),
             ),
           ),
           Expanded(
@@ -162,7 +163,7 @@ class _MetaRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
           ),

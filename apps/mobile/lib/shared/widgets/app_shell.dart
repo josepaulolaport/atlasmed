@@ -13,6 +13,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capabilities.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ======================================================================
 // AppShellScreen — Scaffold wrapper with shared navigation drawer.
@@ -35,7 +36,7 @@ class AppShellScreen extends StatefulWidget {
 class AppShellScreenState extends State<AppShellScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  static const Color _defaultShellChromeColor = Color(0xFFF7F8FB);
+  static const Color _defaultShellChromeColor = AppColors.background;
 
   /// Finds the nearest ancestor AppShellScreenState from the given context.
   static AppShellScreenState? of(BuildContext context) =>
@@ -111,12 +112,12 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       toolbarHeight: preferredSize.height,
-      shape: const Border(bottom: BorderSide(color: Color(0xFFEEF0F3))),
+      shape: const Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       titleSpacing: 0,
       title: _AtlasTopBarContent(page: page, compact: compact),
       systemOverlayStyle: .dark,
@@ -134,8 +135,8 @@ class AtlasTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF7F8FB),
-        border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+        color: AppColors.background,
+        border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: SafeArea(
         bottom: false,
@@ -181,7 +182,7 @@ class _AtlasTopBarContent extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFeef0f3)),
+          border: Border.all(color: const AppColors.surfaceSecondary),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0A0f1729),
@@ -198,7 +199,7 @@ class _AtlasTopBarContent extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.menu_rounded, color: Color(0xFF0a2f7f), size: 15),
+            const Icon(Icons.menu_rounded, color: AppColors.navyDeep, size: 15),
             // Green dot accent
             Positioned(
               top: 6,
@@ -207,7 +208,7 @@ class _AtlasTopBarContent extends StatelessWidget {
                 width: 5,
                 height: 5,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF16a373),
+                  color: AppColors.green,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -235,7 +236,7 @@ class _AtlasTopBarContent extends StatelessWidget {
               fontSize: 9.5,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.4,
-              color: Color(0xFF8a94a6),
+              color: AppColors.gray400,
             ),
           ),
           if (page.isNotEmpty) ...[
@@ -243,7 +244,7 @@ class _AtlasTopBarContent extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 6),
               child: CircleAvatar(
                 radius: 1.5,
-                backgroundColor: Color(0xFFc8cdd5),
+                backgroundColor: AppColors.gray300,
               ),
             ),
             Flexible(
@@ -254,7 +255,7 @@ class _AtlasTopBarContent extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   letterSpacing: -0.1,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
             ),
@@ -455,7 +456,7 @@ class _DrawerHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0a2f7f), Color(0xFF1e40af)],
+          colors: [AppColors.navyDeep, AppColors.navyBright],
         ),
       ),
       child: Stack(
@@ -569,11 +570,11 @@ class _NavItems extends StatelessWidget {
     bool isActive,
     BuildContext context,
   ) {
-    final color = isActive ? const Color(0xFF0a2f7f) : const Color(0xFF374151);
+    final color = isActive ? const AppColors.navyDeep : const AppColors.gray700;
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color: isActive ? const Color(0xFFeef2ff) : Colors.transparent,
+        color: isActive ? const AppColors.blue50 : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -602,7 +603,7 @@ class _NavItems extends StatelessWidget {
                   const Text(
                     '•',
                     style: TextStyle(
-                      color: Color(0xFF16a373),
+                      color: AppColors.green,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
@@ -626,7 +627,7 @@ class _DrawerFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 22),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFeef0f3))),
+        border: Border(top: BorderSide(color: AppColors.surfaceSecondary)),
       ),
       child: Column(
         children: [
@@ -645,7 +646,7 @@ class _DrawerFooter extends StatelessWidget {
                       Icon(
                         Icons.logout_rounded,
                         size: 18,
-                        color: Color(0xFFb84545),
+                        color: AppColors.red,
                       ),
                       SizedBox(width: 12),
                       Text(
@@ -653,7 +654,7 @@ class _DrawerFooter extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFFb84545),
+                          color: AppColors.red,
                         ),
                       ),
                     ],
@@ -667,7 +668,7 @@ class _DrawerFooter extends StatelessWidget {
             'Atlasmed · v0.1.0',
             style: TextStyle(
               fontSize: 10.5,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
               fontWeight: FontWeight.w500,
               letterSpacing: 0.3,
             ),

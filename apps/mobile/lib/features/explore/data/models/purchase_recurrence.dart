@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 enum PurchaseRecurrenceSource { defaultValue, calculated, manual }
 
@@ -118,11 +119,11 @@ extension PurchaseFunnelStageX on PurchaseFunnelStage {
   };
 
   Color get color => switch (this) {
-    PurchaseFunnelStage.neverPurchased => const Color(0xFF475569),
-    PurchaseFunnelStage.outsideWindow => const Color(0xFF2563EB),
-    PurchaseFunnelStage.purchaseWindow => const Color(0xFF15803D),
-    PurchaseFunnelStage.churn => const Color(0xFFB45309),
-    PurchaseFunnelStage.inactive => const Color(0xFFB91C1C),
+    PurchaseFunnelStage.neverPurchased => const AppColors.gray600,
+    PurchaseFunnelStage.outsideWindow => const AppColors.blue600,
+    PurchaseFunnelStage.purchaseWindow => const AppColors.green600,
+    PurchaseFunnelStage.churn => const AppColors.amberDark,
+    PurchaseFunnelStage.inactive => const AppColors.redDark,
   };
 
   Color get backgroundColor => color.withValues(alpha: 0.1);

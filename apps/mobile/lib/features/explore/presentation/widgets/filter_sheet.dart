@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/professio
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/specialties_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
   final String kind;
@@ -163,7 +164,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFe5e7eb)),
+                  border: Border.all(color: const AppColors.gray200),
                   color: Colors.white,
                 ),
                 child: const Center(
@@ -172,7 +173,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151),
+                      color: AppColors.gray700,
                     ),
                   ),
                 ),
@@ -216,7 +217,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: const Color(0xFF1e40af),
+                  color: const AppColors.navyBright,
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x4D1e40af),
@@ -392,26 +393,45 @@ class _DoctorFilters extends ConsumerWidget {
         const _SectionHeader(title: 'Especialidade'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child:
-              RepositoryBuilder<
-                ProfessionalSpecialtiesRepository,
-                List<String>
-              >(
-                repository: ref.watch(
-                  professionalSpecialtiesRepositoryProvider,
+          child: specialtiesAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Carregando especialidades…',
+                style: TextStyle(fontSize: 13, color: AppColors.gray500),
+              ),
+            ),
+            error: (_, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Não foi possível carregar as especialidades.',
+                  style: TextStyle(fontSize: 13, color: AppColors.gray500),
                 ),
-                builder: (context, specialties, repository) {
-                  final options =
-                      <String>{...?specialties, ...selected}.toList()..sort(
-                        (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
-                      );
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: onRetry,
+                  child: const Text(
+                    'Tentar novamente',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.blue600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            data: (specialties) {
+              final options = <String>{...specialties, ...selected}.toList()
+                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-                  if (options.isEmpty) {
-                    return const Text(
-                      'Nenhuma especialidade disponível no seu escopo.',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
-                    );
-                  }
+              if (options.isEmpty) {
+                return const Text(
+                  'Nenhuma especialidade disponível no seu escopo.',
+                  style: TextStyle(fontSize: 13, color: AppColors.gray500),
+                );
+              }
 
                   return Wrap(
                     spacing: 8,
@@ -447,7 +467,7 @@ class _SectionHeader extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 1,
-          color: Color(0xFF6b7280),
+          color: AppColors.gray500,
         ),
       ),
     );
@@ -476,7 +496,7 @@ class _ToggleChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? dotColor.withValues(alpha: 0.1)
-              : const Color(0xFFf3f4f6),
+              : const AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: selected ? dotColor : Colors.transparent),
         ),
@@ -497,7 +517,7 @@ class _ToggleChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? dotColor : const Color(0xFF374151),
+                color: selected ? dotColor : const AppColors.gray700,
               ),
             ),
           ],
@@ -525,10 +545,10 @@ class _SimpleChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1e40af) : const Color(0xFFf3f4f6),
+          color: selected ? const AppColors.navyBright : const AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? const Color(0xFF1e40af) : Colors.transparent,
+            color: selected ? const AppColors.navyBright : Colors.transparent,
           ),
         ),
         child: Text(
@@ -536,7 +556,7 @@ class _SimpleChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const Color(0xFF374151),
+            color: selected ? Colors.white : const AppColors.gray700,
           ),
         ),
       ),

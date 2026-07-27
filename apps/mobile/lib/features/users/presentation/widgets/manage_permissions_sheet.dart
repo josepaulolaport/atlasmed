@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 const _resourceOptions = <String>[
   'USER',
@@ -133,7 +134,7 @@ class _ManagePermissionsSheetState
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -148,7 +149,7 @@ class _ManagePermissionsSheetState
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF111827),
+                          color: AppColors.gray950,
                         ),
                       ),
                     ),
@@ -170,7 +171,7 @@ class _ManagePermissionsSheetState
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -222,7 +223,7 @@ class _ManagePermissionsSheetState
                       width: double.infinity,
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF0a2f7f),
+                          backgroundColor: const AppColors.navyDeep,
                         ),
                         onPressed: _busy ? null : _grant,
                         icon: const Icon(Icons.add, size: 18),
@@ -230,14 +231,14 @@ class _ManagePermissionsSheetState
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Divider(height: 1, color: Color(0xFFf1f3f6)),
+                    const Divider(height: 1, color: AppColors.gray100),
                     const SizedBox(height: 12),
                     const Text(
                       'Permissões concedidas',
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -248,7 +249,7 @@ class _ManagePermissionsSheetState
                           'Nenhuma permissão extra concedida.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Color(0xFF9ca3af),
+                            color: AppColors.gray400,
                           ),
                         ),
                       )
@@ -261,9 +262,9 @@ class _ManagePermissionsSheetState
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFf9fafb),
+                            color: const AppColors.surfaceTertiary,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFeef0f3)),
+                            border: Border.all(color: const AppColors.surfaceSecondary),
                           ),
                           child: Row(
                             children: [
@@ -280,7 +281,7 @@ class _ManagePermissionsSheetState
                                 icon: const Icon(
                                   Icons.delete_outline,
                                   size: 18,
-                                  color: Color(0xFFB91C1C),
+                                  color: AppColors.redDark,
                                 ),
                                 onPressed: _busy ? null : () => _revoke(grant),
                               ),

@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/compet
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Admin-only screen for managing which competitor products are linked to
 /// one AtlasMed variant's "comparativo" (`product_equivalences`). Linking
@@ -71,12 +72,12 @@ class ManageCompetitorsScreen extends ConsumerWidget {
     final comparisonAsync = ref.watch(catalogComparisonProvider(variantId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: const Text(
           'Gerenciar concorrentes',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -94,7 +95,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -117,7 +118,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                         'Nenhum concorrente cadastrado ainda',
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: Color(0xFF9ca3af),
+                          color: AppColors.gray400,
                         ),
                       ),
                     );
@@ -150,8 +151,8 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0a2f7f),
-                    side: const BorderSide(color: Color(0xFF0a2f7f)),
+                    foregroundColor: const AppColors.navyDeep,
+                    side: const BorderSide(color: AppColors.navyDeep),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -179,7 +180,7 @@ class _CompetitorRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [
@@ -194,7 +195,7 @@ class _CompetitorRow extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -204,7 +205,7 @@ class _CompetitorRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                   ),
                 ),
               ],
@@ -216,7 +217,7 @@ class _CompetitorRow extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0a2f7f),
+              color: AppColors.navyDeep,
             ),
           ),
           IconButton(
@@ -224,7 +225,7 @@ class _CompetitorRow extends StatelessWidget {
             icon: const Icon(
               Icons.link_off_rounded,
               size: 18,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
         ],
@@ -323,7 +324,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFe5e7eb),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -337,7 +338,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -355,8 +356,8 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0a2f7f),
-                    side: const BorderSide(color: Color(0xFF0a2f7f)),
+                    foregroundColor: const AppColors.navyDeep,
+                    side: const BorderSide(color: AppColors.navyDeep),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -383,7 +384,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                         'vinculados a este produto.',
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: Color(0xFF9ca3af),
+                          color: AppColors.gray400,
                         ),
                       ),
                     );
@@ -396,7 +397,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                     itemBuilder: (context, index) {
                       final competitor = unlinked[index];
                       return Material(
-                        color: const Color(0xFFf7f8fb),
+                        color: const AppColors.background,
                         borderRadius: BorderRadius.circular(12),
                         child: InkWell(
                           onTap: _linking
@@ -422,7 +423,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                                         style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w700,
-                                          color: Color(0xFF0f1729),
+                                          color: AppColors.gray900,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
@@ -431,7 +432,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                                         '${competitor.countryOfOrigin}',
                                         style: const TextStyle(
                                           fontSize: 11.5,
-                                          color: Color(0xFF9ca3af),
+                                          color: AppColors.gray400,
                                         ),
                                       ),
                                     ],
@@ -440,7 +441,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                                 const Icon(
                                   Icons.add_circle_outline_rounded,
                                   size: 20,
-                                  color: Color(0xFF1e40af),
+                                  color: AppColors.navyBright,
                                 ),
                               ],
                             ),

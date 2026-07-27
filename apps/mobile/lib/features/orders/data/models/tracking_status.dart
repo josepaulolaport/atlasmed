@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ── Tracking status ──────────────────────────────────────────
 enum TrackingStatus {
@@ -48,15 +49,15 @@ extension TrackingStatusX on TrackingStatus {
   Color get color {
     switch (this) {
       case TrackingStatus.pending:
-        return const Color(0xFFf59e0b);
+        return const AppColors.amber;
       case TrackingStatus.confirmed:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case TrackingStatus.processing:
-        return const Color(0xFF1d4ed8);
+        return const AppColors.blueDark;
       case TrackingStatus.shipped:
         return const Color(0xFF8b5cf6);
       case TrackingStatus.delivered:
-        return const Color(0xFF16a373);
+        return const AppColors.green;
       case TrackingStatus.cancelled:
         return const Color(0xFFef4444);
     }
@@ -65,17 +66,17 @@ extension TrackingStatusX on TrackingStatus {
   Color get tone {
     switch (this) {
       case TrackingStatus.pending:
-        return const Color(0xFFfef3e1);
+        return const AppColors.amber50;
       case TrackingStatus.confirmed:
-        return const Color(0xFFe7f6ef);
+        return const AppColors.green50;
       case TrackingStatus.processing:
-        return const Color(0xFFeef2ff);
+        return const AppColors.blue50;
       case TrackingStatus.shipped:
-        return const Color(0xFFf3eefe);
+        return const AppColors.blueLight;
       case TrackingStatus.delivered:
-        return const Color(0xFFe7f6ef);
+        return const AppColors.green50;
       case TrackingStatus.cancelled:
-        return const Color(0xFFfee2e2);
+        return const AppColors.red50;
     }
   }
 }

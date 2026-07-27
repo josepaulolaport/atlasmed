@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Edit facility-scoped doctor role flags (`PATCH …/professionals/:id`).
 Future<FacilityCrmDoctor?> showEditDoctorRolesSheet(
@@ -68,7 +69,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFe5e7eb),
+                color: const AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -78,13 +79,13 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             widget.doctor.name,
-            style: const TextStyle(fontSize: 13.5, color: Color(0xFF6b7280)),
+            style: const TextStyle(fontSize: 13.5, color: AppColors.gray500),
           ),
           const SizedBox(height: 12),
           _roleToggle('Prescritor', _isPrescriber, (v) => _isPrescriber = v),
@@ -95,7 +96,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF1e40af),
+              backgroundColor: const AppColors.navyBright,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -126,11 +127,11 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF0f1729),
+          color: AppColors.gray900,
         ),
       ),
       value: value,
-      activeThumbColor: const Color(0xFF1e40af),
+      activeThumbColor: const AppColors.navyBright,
       onChanged: (next) => setState(() => onChanged(next)),
     );
   }

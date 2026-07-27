@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/faci
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_document_viewer_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/registration_document_merge.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/registration_document_pick.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Opens compose screen where each picked file is uploaded and processed
 /// immediately. Returns `true` when the user taps Enviar and the document
@@ -340,11 +341,11 @@ class _RegistrationDocumentComposeScreenState
         Navigator.of(context).pop(false);
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: const AppColors.surfaceTertiary,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFf8f9fb),
+          backgroundColor: const AppColors.surfaceTertiary,
           elevation: 0,
-          foregroundColor: const Color(0xFF0f1729),
+          foregroundColor: const AppColors.gray900,
           title: const Text('Preparar envio'),
         ),
         body: ListView(
@@ -355,7 +356,7 @@ class _RegistrationDocumentComposeScreenState
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 6),
@@ -366,7 +367,7 @@ class _RegistrationDocumentComposeScreenState
               style: TextStyle(
                 fontSize: 13,
                 height: 1.4,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
             const SizedBox(height: 16),
@@ -402,7 +403,7 @@ class _RegistrationDocumentComposeScreenState
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.4,
-                      color: Color(0xFF9ca3af),
+                      color: AppColors.gray400,
                     ),
                   ),
                   const Spacer(),
@@ -411,7 +412,7 @@ class _RegistrationDocumentComposeScreenState
                     '/${_items.length} prontos',
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ],
@@ -448,7 +449,7 @@ class _RegistrationDocumentComposeScreenState
                         ? null
                         : () => Navigator.of(context).pop(false),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF4b5563),
+                      foregroundColor: const AppColors.gray600,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -463,9 +464,9 @@ class _RegistrationDocumentComposeScreenState
                   child: FilledButton(
                     onPressed: canSend ? _submitForReview : null,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1e40af),
+                      backgroundColor: const AppColors.navyBright,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFFcbd5e1),
+                      disabledBackgroundColor: const AppColors.gray300,
                       disabledForegroundColor: Colors.white70,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -699,7 +700,7 @@ class _ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: onTap == null ? const Color(0xFFe5e7eb) : const Color(0xFFdbeafe),
+      color: onTap == null ? const AppColors.gray200 : const AppColors.blue100,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
@@ -713,8 +714,8 @@ class _ActionChip extends StatelessWidget {
                 icon,
                 size: 18,
                 color: onTap == null
-                    ? const Color(0xFF9ca3af)
-                    : const Color(0xFF1e40af),
+                    ? const AppColors.gray400
+                    : const AppColors.navyBright,
               ),
               const SizedBox(width: 6),
               Text(
@@ -723,8 +724,8 @@ class _ActionChip extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: onTap == null
-                      ? const Color(0xFF9ca3af)
-                      : const Color(0xFF1e40af),
+                      ? const AppColors.gray400
+                      : const AppColors.navyBright,
                 ),
               ),
             ],
@@ -746,14 +747,14 @@ class _EmptyComposeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFe5e7eb)),
+        border: Border.all(color: const AppColors.gray200),
       ),
       child: const Column(
         children: [
           Icon(
             Icons.add_photo_alternate_outlined,
             size: 36,
-            color: Color(0xFF9ca3af),
+            color: AppColors.gray400,
           ),
           SizedBox(height: 10),
           Text(
@@ -761,7 +762,7 @@ class _EmptyComposeCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF6b7280),
+              color: AppColors.gray500,
             ),
           ),
           SizedBox(height: 4),
@@ -769,7 +770,7 @@ class _EmptyComposeCard extends StatelessWidget {
             'Tire uma foto, escolha da galeria ou envie um PDF. '
             'O processamento começa na hora.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
+            style: TextStyle(fontSize: 12, color: AppColors.gray400),
           ),
         ],
       ),
@@ -798,7 +799,7 @@ class _DocumentProgressTile extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -807,7 +808,7 @@ class _DocumentProgressTile extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.picture_as_pdf_rounded,
-                      color: Color(0xFFb84545),
+                      color: AppColors.red,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -821,7 +822,7 @@ class _DocumentProgressTile extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF0f1729),
+                              color: AppColors.gray900,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -833,10 +834,10 @@ class _DocumentProgressTile extends StatelessWidget {
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
                               color: item.phase == _ItemPhase.failed
-                                  ? const Color(0xFFb84545)
+                                  ? const AppColors.red
                                   : item.canView
-                                  ? const Color(0xFF1e40af)
-                                  : const Color(0xFF1e40af),
+                                  ? const AppColors.navyBright
+                                  : const AppColors.navyBright,
                             ),
                           ),
                         ],
@@ -864,10 +865,10 @@ class _DocumentProgressTile extends StatelessWidget {
                           ? 0
                           : item.progress.clamp(0.05, 1),
                       minHeight: 4,
-                      backgroundColor: const Color(0xFFe5e7eb),
+                      backgroundColor: const AppColors.gray200,
                       color: item.phase == _ItemPhase.failed
-                          ? const Color(0xFFb84545)
-                          : const Color(0xFF1e40af),
+                          ? const AppColors.red
+                          : const AppColors.navyBright,
                     ),
                   ),
                 ],
@@ -900,7 +901,7 @@ class _ImageProgressTile extends StatelessWidget {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFe5e7eb)),
+              border: Border.all(color: const AppColors.gray200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -926,11 +927,11 @@ class _ImageProgressTile extends StatelessWidget {
                         fit: BoxFit.cover,
                         width: double.infinity,
                         errorBuilder: (_, _, _) => const ColoredBox(
-                          color: Color(0xFFf1f5f9),
+                          color: AppColors.gray100,
                           child: Center(
                             child: Icon(
                               Icons.broken_image_outlined,
-                              color: Color(0xFF9ca3af),
+                              color: AppColors.gray400,
                             ),
                           ),
                         ),
@@ -950,7 +951,7 @@ class _ImageProgressTile extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0f1729),
+                          color: AppColors.gray900,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -960,8 +961,8 @@ class _ImageProgressTile extends StatelessWidget {
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: item.phase == _ItemPhase.failed
-                              ? const Color(0xFFb84545)
-                              : const Color(0xFF1e40af),
+                              ? const AppColors.red
+                              : const AppColors.navyBright,
                         ),
                       ),
                       if (item.isBusy || item.phase == _ItemPhase.failed) ...[
@@ -973,10 +974,10 @@ class _ImageProgressTile extends StatelessWidget {
                                 ? 0
                                 : item.progress.clamp(0.05, 1),
                             minHeight: 4,
-                            backgroundColor: const Color(0xFFe5e7eb),
+                            backgroundColor: const AppColors.gray200,
                             color: item.phase == _ItemPhase.failed
-                                ? const Color(0xFFb84545)
-                                : const Color(0xFF1e40af),
+                                ? const AppColors.red
+                                : const AppColors.navyBright,
                           ),
                         ),
                       ],

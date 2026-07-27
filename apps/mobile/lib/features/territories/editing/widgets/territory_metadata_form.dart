@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/te
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/vertical_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TerritoryMetadataForm extends ConsumerStatefulWidget {
   final TerritoryDraft? initial;
@@ -94,12 +95,12 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: Text(
           widget.initial == null ? 'Novo território' : 'Editar informações',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -124,7 +125,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+                        borderSide: BorderSide(color: AppColors.gray200),
                       ),
                     ),
                   ),
@@ -169,7 +170,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
               child: FilledButton(
                 onPressed: _isValid ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -258,7 +259,7 @@ class _FormBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE1E4EA)),
+        border: Border.all(color: const AppColors.gray200),
       ),
       child: child,
     );
@@ -277,7 +278,7 @@ class _FieldLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 12.5,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF374151),
+        color: AppColors.gray700,
       ),
     );
   }

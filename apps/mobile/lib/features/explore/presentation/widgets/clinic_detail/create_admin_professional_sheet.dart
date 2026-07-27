@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Create or edit an administrative professional.
 ///
@@ -99,7 +100,7 @@ class _CreateAdminProfessionalSheetState
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFe5e7eb),
+                  color: const AppColors.gray200,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -111,7 +112,7 @@ class _CreateAdminProfessionalSheetState
               style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 4),
@@ -121,7 +122,7 @@ class _CreateAdminProfessionalSheetState
                   : _useApi
                   ? 'Preencha os dados de contato. O perfil será criado nesta clínica.'
                   : 'Preencha os dados de contato. O perfil será associado após a confirmação.',
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 12.5, color: AppColors.gray500),
             ),
             const SizedBox(height: 16),
             _field(_nameCtrl, 'Nome completo', TextInputType.name),
@@ -138,7 +139,7 @@ class _CreateAdminProfessionalSheetState
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
             const SizedBox(height: 4),
@@ -160,7 +161,7 @@ class _CreateAdminProfessionalSheetState
             FilledButton(
               onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -192,11 +193,11 @@ class _CreateAdminProfessionalSheetState
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF0f1729),
+          color: AppColors.gray900,
         ),
       ),
       value: value,
-      activeThumbColor: const Color(0xFF1e40af),
+      activeThumbColor: const AppColors.navyBright,
       onChanged: (next) => setState(() => onChanged(next)),
     );
   }
@@ -216,14 +217,14 @@ class _CreateAdminProfessionalSheetState
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: const Color(0xFFf8f9fb),
+        fillColor: const AppColors.surfaceTertiary,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+          borderSide: const BorderSide(color: AppColors.gray200),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+          borderSide: const BorderSide(color: AppColors.gray200),
         ),
       ),
     );

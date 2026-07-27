@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Admin-only full-screen form for creating a new AtlasMed product variant
 /// or editing an existing one — mirrors [TerritoryInfoForm]'s shape
@@ -214,12 +215,12 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     }.toList()..sort();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: Text(
           _isEditing ? 'Editar produto' : 'Novo produto',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -308,7 +309,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       'Não foi possível carregar os verticais.',
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFFdc2626),
+                        color: AppColors.error,
                       ),
                     ),
                     data: (sectors) => sectors.isEmpty
@@ -316,7 +317,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                             'Nenhum vertical cadastrado.',
                             style: TextStyle(
                               fontSize: 12.5,
-                              color: Color(0xFF9ca3af),
+                              color: AppColors.gray400,
                             ),
                           )
                         : Wrap(
@@ -450,7 +451,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       _error!,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFFdc2626),
+                        color: AppColors.error,
                       ),
                     ),
                   ],
@@ -462,7 +463,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
               child: FilledButton(
                 onPressed: _isValid && !_saving ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -504,7 +505,7 @@ class _FieldLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 12.5,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF374151),
+        color: AppColors.gray700,
       ),
     );
   }
@@ -521,7 +522,7 @@ class _SectionLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF9ca3af),
+        color: AppColors.gray400,
         letterSpacing: 0.5,
       ),
     );
@@ -547,10 +548,10 @@ class _TextInput extends StatelessWidget {
       controller: controller,
       textCapitalization: capitalization,
       keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 14, color: Color(0xFF0f1729)),
+      style: const TextStyle(fontSize: 14, color: AppColors.gray900),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF9ca3af)),
+        hintStyle: const TextStyle(color: AppColors.gray400),
         filled: true,
         fillColor: Colors.white,
         isDense: true,
@@ -560,7 +561,7 @@ class _TextInput extends StatelessWidget {
         ),
         border: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+          borderSide: BorderSide(color: AppColors.gray200),
         ),
       ),
     );
@@ -581,7 +582,7 @@ class _SuggestionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const Color(0xFF0a2f7f) : const Color(0xFFf3f4f6),
+      color: selected ? const AppColors.navyDeep : const AppColors.gray100,
       borderRadius: BorderRadius.circular(99),
       child: InkWell(
         onTap: onTap,
@@ -593,7 +594,7 @@ class _SuggestionChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const Color(0xFF374151),
+              color: selected ? Colors.white : const AppColors.gray700,
             ),
           ),
         ),

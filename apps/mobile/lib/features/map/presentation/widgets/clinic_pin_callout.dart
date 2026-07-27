@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Pin callout / info-window content. Rendered off-screen, rasterized, and
 /// attached to the map as a `PointAnnotation` so it tracks the pin natively.
@@ -41,7 +42,7 @@ class ClinicPinCalloutContent extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                   height: 1.15,
                 ),
               ),
@@ -78,7 +79,7 @@ class ClinicPinCalloutContent extends StatelessWidget {
                       '· ${establishment.specialtyLabel}',
                       style: const TextStyle(
                         fontSize: 11.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                       ),
                     ),
                 ],
@@ -90,19 +91,19 @@ class ClinicPinCalloutContent extends StatelessWidget {
                   const Icon(
                     Icons.near_me_rounded,
                     size: 12,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${establishment.distanceKm.toStringAsFixed(1)} km de distância',
                     style: const TextStyle(
                       fontSize: 11.5,
-                      color: Color(0xFF6b7280),
+                      color: AppColors.gray500,
                     ),
                   ),
                 ],
               ),
-              const Divider(height: 16, color: Color(0xFFf3f4f6)),
+              const Divider(height: 16, color: AppColors.gray100),
               const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -111,14 +112,14 @@ class ClinicPinCalloutContent extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1e40af),
+                      color: AppColors.navyBright,
                     ),
                   ),
                   SizedBox(width: 4),
                   Icon(
                     Icons.arrow_forward_rounded,
                     size: 13,
-                    color: Color(0xFF1e40af),
+                    color: AppColors.navyBright,
                   ),
                 ],
               ),
@@ -151,7 +152,7 @@ class ClinicPinCalloutCloseButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFe5e7eb)),
+        border: Border.all(color: const AppColors.gray200),
         boxShadow: const [
           BoxShadow(
             color: Color(0x40111827),
@@ -163,7 +164,7 @@ class ClinicPinCalloutCloseButton extends StatelessWidget {
       child: const Icon(
         Icons.close_rounded,
         size: 15,
-        color: Color(0xFF4b5563),
+        color: AppColors.gray600,
       ),
     );
   }

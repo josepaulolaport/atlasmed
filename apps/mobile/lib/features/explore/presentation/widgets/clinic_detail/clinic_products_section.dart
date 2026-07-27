@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Produtos em uso" — revenue, trend and share-of-clinic per product.
 /// Mocked in V1; backend aggregation from `orders` designed in Phase 2.
@@ -15,7 +16,7 @@ class ClinicProductsSection extends StatelessWidget {
       return const ClinicDetailCard(
         child: Text(
           'Nenhum produto em uso identificado',
-          style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+          style: TextStyle(fontSize: 13, color: AppColors.gray400),
         ),
       );
     }
@@ -42,8 +43,8 @@ class _ProductRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trendColor = product.isTrendingUp
-        ? const Color(0xFF16a373)
-        : const Color(0xFFb84545);
+        ? const AppColors.green
+        : const AppColors.red;
     final trendIcon = product.isTrendingUp
         ? Icons.trending_up_rounded
         : Icons.trending_down_rounded;
@@ -59,13 +60,13 @@ class _ProductRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
             ),
             Text(
               'R\$ ${product.revenueLast6m.toStringAsFixed(0)} / 6m',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
+              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
             ),
             const SizedBox(width: 8),
             Icon(trendIcon, size: 14, color: trendColor),
@@ -88,8 +89,8 @@ class _ProductRow extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: (product.sharePercent / 100).clamp(0, 1),
                   minHeight: 6,
-                  backgroundColor: const Color(0xFFf3f4f6),
-                  valueColor: const AlwaysStoppedAnimation(Color(0xFF1e40af)),
+                  backgroundColor: const AppColors.gray100,
+                  valueColor: const AlwaysStoppedAnimation(AppColors.navyBright),
                 ),
               ),
             ),
@@ -99,7 +100,7 @@ class _ProductRow extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1e40af),
+                color: AppColors.navyBright,
               ),
             ),
           ],
@@ -107,7 +108,7 @@ class _ProductRow extends StatelessWidget {
         const SizedBox(height: 2),
         const Text(
           'Share na clínica',
-          style: TextStyle(fontSize: 10.5, color: Color(0xFF9ca3af)),
+          style: TextStyle(fontSize: 10.5, color: AppColors.gray400),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Shown once a polygon part is selected — offers what the user can do
 /// with that part. "Excluir" (delete this part) only ever renders when
@@ -65,7 +66,7 @@ class EditorContextualBar extends StatelessWidget {
               icon: Icons.delete_outline_rounded,
               label: 'Excluir',
               selected: false,
-              color: const Color(0xFFDC2626),
+              color: const AppColors.error,
               onTap: onDeleteArea,
             ),
         ],
@@ -93,11 +94,11 @@ class _ActionChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     final tint = !enabled
-        ? const Color(0xFFD1D5DB)
+        ? const AppColors.gray300
         : (color ??
-              (selected ? const Color(0xFF0A2F7F) : const Color(0xFF374151)));
+              (selected ? const AppColors.navyDeep : const AppColors.gray700));
     return Material(
-      color: selected ? const Color(0xFFEEF2FF) : Colors.transparent,
+      color: selected ? const AppColors.blue50 : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

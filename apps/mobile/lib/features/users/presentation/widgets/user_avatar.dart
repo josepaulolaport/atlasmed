@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Circular avatar for a managed [User] — shows the real `avatarUrl` when
 /// present (with bearer-token auth, same as the drawer header), falling
@@ -14,14 +15,14 @@ class UserAvatar extends StatelessWidget {
   final double size;
 
   static const _palette = <Color>[
-    Color(0xFF0A2F7F),
-    Color(0xFF1D7A5F),
-    Color(0xFFB45309),
-    Color(0xFF7C3AED),
-    Color(0xFFBE185D),
-    Color(0xFF0E7490),
+    AppColors.navyDeep,
+    AppColors.green600,
+    AppColors.amberDark,
+    AppColors.purple,
+    AppColors.pink,
+    AppColors.blue600,
     Color(0xFF4338CA),
-    Color(0xFF9A3412),
+    AppColors.orange,
   ];
 
   Color get _backgroundColor {

@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/manager_picker_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class TerritoryInfoForm extends ConsumerStatefulWidget {
   final Territory territory;
@@ -85,12 +86,12 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FB),
+      backgroundColor: const AppColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: const AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const Color(0xFF111827),
+        foregroundColor: const AppColors.gray950,
         title: const Text(
           'Editar informações',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -115,7 +116,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
-                        borderSide: BorderSide(color: Color(0xFFE1E4EA)),
+                        borderSide: BorderSide(color: AppColors.gray200),
                       ),
                     ),
                   ),
@@ -139,7 +140,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE1E4EA)),
+                      border: Border.all(color: const AppColors.gray200),
                     ),
                     child: Row(
                       children: [
@@ -149,13 +150,13 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF111827),
+                              color: AppColors.gray950,
                             ),
                           ),
                         ),
                         Switch(
                           value: _isActive,
-                          activeThumbColor: const Color(0xFF0a2f7f),
+                          activeThumbColor: const AppColors.navyDeep,
                           onChanged: (value) =>
                               setState(() => _isActive = value),
                         ),
@@ -170,7 +171,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
               child: FilledButton(
                 onPressed: _isValid && !_saving ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -213,7 +214,7 @@ class _FieldLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 12.5,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF374151),
+        color: AppColors.gray700,
       ),
     );
   }

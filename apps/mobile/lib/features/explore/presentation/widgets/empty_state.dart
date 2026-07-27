@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class EmptyState extends StatelessWidget {
   /// Explore tabs: `'clinic'` | `'doctor'`.
@@ -50,7 +51,7 @@ class EmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: const BoxDecoration(
-                color: Color(0xFFf3f4f6),
+                color: AppColors.gray100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -58,7 +59,7 @@ class EmptyState extends StatelessWidget {
                     ? Icons.search_off_rounded
                     : Icons.person_off_outlined,
                 size: 32,
-                color: const Color(0xFF9ca3af),
+                color: const AppColors.gray400,
               ),
             ),
             const SizedBox(height: 20),
@@ -68,7 +69,7 @@ class EmptyState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 6),
@@ -77,7 +78,7 @@ class EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
                 height: 1.5,
               ),
             ),

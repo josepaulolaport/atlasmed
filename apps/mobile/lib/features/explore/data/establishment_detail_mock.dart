@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builde
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Side-scroll roster page size — enough for a few swipes without chatty fetches.
 const int facilityRosterPageSize = 12;
@@ -143,10 +144,10 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
     photos: PhotoGallerySummary(
       count: 5,
       thumbnailColors: const [
-        Color(0xFF5eead4),
-        Color(0xFFd1d5db),
-        Color(0xFF1f2937),
-        Color(0xFF93c5fd),
+        AppColors.green,
+        AppColors.gray300,
+        AppColors.gray800,
+        AppColors.blueLight,
         Color(0xFFfbbf24),
       ],
       lastUpdatedAt: DateTime(2026, 2, 10),

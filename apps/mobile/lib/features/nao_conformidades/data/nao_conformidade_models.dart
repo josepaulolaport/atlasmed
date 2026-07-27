@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Target of a field-change suggestion (clinic vs doctor profile).
 enum NaoConformidadeTargetType { clinic, doctor }
@@ -74,11 +75,11 @@ extension NaoConformidadeStatusX on NaoConformidadeStatus {
   Color get color {
     switch (this) {
       case NaoConformidadeStatus.pending:
-        return const Color(0xFFd97706);
+        return const AppColors.amber;
       case NaoConformidadeStatus.accepted:
-        return const Color(0xFF059669);
+        return const AppColors.green600;
       case NaoConformidadeStatus.rejected:
-        return const Color(0xFFdc2626);
+        return const AppColors.error;
     }
   }
 

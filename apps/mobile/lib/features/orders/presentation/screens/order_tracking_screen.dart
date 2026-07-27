@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -110,7 +111,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
               ),
               child: const Icon(
                 Icons.warning_rounded,
-                color: Color(0xFFb84545),
+                color: AppColors.red,
               ),
             ),
             const SizedBox(height: 14),
@@ -128,7 +129,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFb84545),
+              backgroundColor: const AppColors.red,
               foregroundColor: Colors.white,
             ),
             onPressed: () => context.pop(true),
@@ -196,16 +197,16 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
     return orderAsync.when(
       loading: () => Scaffold(
-        backgroundColor: const Color(0xFFf7f8fb),
+        backgroundColor: const AppColors.background,
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (err, stack) => Scaffold(
-        backgroundColor: const Color(0xFFf7f8fb),
+        backgroundColor: const AppColors.background,
         body: Center(
           child: Text(
             'Não foi possível carregar o pedido.\n$err',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF6b7280)),
+            style: const TextStyle(color: AppColors.gray500),
           ),
         ),
       ),
@@ -241,7 +242,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
         );
 
         return Scaffold(
-          backgroundColor: const Color(0xFFf7f8fb),
+          backgroundColor: const AppColors.background,
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -250,7 +251,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     border: Border(
-                      bottom: BorderSide(color: Color(0xFFeef0f3)),
+                      bottom: BorderSide(color: AppColors.surfaceSecondary),
                     ),
                   ),
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
@@ -268,7 +269,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.2,
-                                color: Color(0xFF8a94a6),
+                                color: AppColors.gray400,
                               ),
                             ),
                             SizedBox(height: 2),
@@ -277,7 +278,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF0f1729),
+                                color: AppColors.gray900,
                               ),
                             ),
                           ],
@@ -289,7 +290,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFeef0f3)),
+                            border: Border.all(color: const AppColors.surfaceSecondary),
                             borderRadius: BorderRadius.circular(12),
                             color: Colors.white,
                           ),
@@ -304,7 +305,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                             child: const Icon(
                               Icons.refresh_rounded,
                               size: 18,
-                              color: Color(0xFF0a2f7f),
+                              color: AppColors.navyDeep,
                             ),
                           ),
                         ),
@@ -470,7 +471,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               decoration: const BoxDecoration(
                                 border: Border(
                                   top: BorderSide(
-                                    color: Color(0xFFd8dde5),
+                                    color: AppColors.gray200,
                                     width: 1,
                                     style: BorderStyle.solid,
                                   ),
@@ -493,7 +494,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFeef2ff),
+                                color: const AppColors.blue50,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.center,
@@ -512,7 +513,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                                     style: const TextStyle(
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.w700,
-                                      color: Color(0xFF0f1729),
+                                      color: AppColors.gray900,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -520,7 +521,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                                     order.clinic.address,
                                     style: const TextStyle(
                                       fontSize: 12.5,
-                                      color: Color(0xFF5b6474),
+                                      color: AppColors.gray600,
                                       height: 1.35,
                                     ),
                                   ),
@@ -538,9 +539,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               child: OutlinedButton(
                                 onPressed: _showCancel,
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFFb84545),
+                                  foregroundColor: const AppColors.red,
                                   side: const BorderSide(
-                                    color: Color(0xFFe9b7b7),
+                                    color: AppColors.red100,
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 14,
@@ -557,7 +558,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                             child: FilledButton(
                               onPressed: () => context.go('/splash'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF0a2f7f),
+                                backgroundColor: const AppColors.navyDeep,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
@@ -590,7 +591,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
             label,
             style: TextStyle(
               fontSize: 12.5,
-              color: const Color(0xFF6b7280),
+              color: const AppColors.gray500,
               fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
@@ -599,7 +600,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           value,
           style: TextStyle(
             fontSize: 12.5,
-            color: const Color(0xFF0f1729),
+            color: const AppColors.gray900,
             fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
@@ -637,7 +638,7 @@ class _SectionCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
               letterSpacing: 0.6,
             ),
           ),
@@ -689,7 +690,7 @@ class _TimelineRow extends StatelessWidget {
                   color: isDone ? color : Colors.white,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isDone ? color : const Color(0xFFd7dce3),
+                    color: isDone ? color : const AppColors.gray200,
                     width: 1.2,
                   ),
                   boxShadow: isCurrent
@@ -714,7 +715,7 @@ class _TimelineRow extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF667085),
+                            color: AppColors.gray400,
                           ),
                         ),
                 ),
@@ -727,7 +728,7 @@ class _TimelineRow extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isDone
                           ? color.withValues(alpha: 0.25)
-                          : const Color(0xFFe5e7eb),
+                          : const AppColors.gray200,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -747,7 +748,7 @@ class _TimelineRow extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -755,7 +756,7 @@ class _TimelineRow extends StatelessWidget {
                   timestamp,
                   style: const TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFF8a94a6),
+                    color: AppColors.gray400,
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -763,7 +764,7 @@ class _TimelineRow extends StatelessWidget {
                   description,
                   style: const TextStyle(
                     fontSize: 12.5,
-                    color: Color(0xFF5b6474),
+                    color: AppColors.gray600,
                     height: 1.35,
                   ),
                 ),
@@ -800,7 +801,7 @@ class _DriverCard extends StatelessWidget {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [Color(0xFF0a2f7f), Color(0xFF1e40af)],
+                  colors: [AppColors.navyDeep, AppColors.navyBright],
                 ),
               ),
               child: Center(
@@ -823,7 +824,7 @@ class _DriverCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
+                      color: AppColors.gray900,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -831,7 +832,7 @@ class _DriverCard extends StatelessWidget {
                     '${driver.vehicle} · ⭐ ${driver.rating.toStringAsFixed(1)}',
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF5b6474),
+                      color: AppColors.gray600,
                     ),
                   ),
                 ],
@@ -840,7 +841,7 @@ class _DriverCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: const Color(0xFFeef2ff),
+                color: const AppColors.blue50,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -848,7 +849,7 @@ class _DriverCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1e40af),
+                  color: AppColors.navyBright,
                 ),
               ),
             ),
@@ -868,7 +869,7 @@ class _DriverCard extends StatelessWidget {
               child: FilledButton(
                 onPressed: () {},
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Ligar'),
@@ -895,7 +896,7 @@ class _ProductRow extends StatelessWidget {
           height: 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: const Color(0xFFeef2ff),
+            color: const AppColors.blue50,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text('💊', style: TextStyle(fontSize: 18)),
@@ -910,7 +911,7 @@ class _ProductRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13.8,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+                  color: AppColors.gray900,
                 ),
               ),
               const SizedBox(height: 2),
@@ -918,7 +919,7 @@ class _ProductRow extends StatelessWidget {
                 '${item.code} · ${item.quantity} ${item.unit}',
                 style: const TextStyle(
                   fontSize: 11.8,
-                  color: Color(0xFF6b7280),
+                  color: AppColors.gray500,
                 ),
               ),
             ],
@@ -930,7 +931,7 @@ class _ProductRow extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF0f1729),
+            color: AppColors.gray900,
           ),
         ),
       ],

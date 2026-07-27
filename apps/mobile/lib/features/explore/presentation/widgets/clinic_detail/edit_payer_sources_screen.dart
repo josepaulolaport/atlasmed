@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Full-screen editor for Fontes Pagadoras (payer mix).
 /// Returns the updated [List<PayerShare>] on save, or `null` if cancelled.
@@ -129,10 +130,10 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
     final hasZero = _hasZeroShare;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: const AppColors.surfaceTertiary,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0f1729),
+        foregroundColor: const AppColors.gray900,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         title: const Text(
@@ -151,7 +152,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddSheet,
-        backgroundColor: const Color(0xFF1e40af),
+        backgroundColor: const AppColors.navyBright,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Adicionar'),
@@ -169,7 +170,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                   widget.facilityName,
                   style: const TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -178,7 +179,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                   'A soma deve ser 100% para salvar.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                     height: 1.4,
                   ),
                 ),
@@ -193,7 +194,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
               ],
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFeef0f3)),
+          const Divider(height: 1, color: AppColors.surfaceSecondary),
           Expanded(
             child: _payers.isEmpty
                 ? _EmptyEditor(onAdd: _openAddSheet)
@@ -208,8 +209,8 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                           icon: const Icon(Icons.add_rounded, size: 18),
                           label: const Text('Adicionar fonte'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF1e40af),
-                            side: const BorderSide(color: Color(0xFFbfdbfe)),
+                            foregroundColor: const AppColors.navyBright,
+                            side: const BorderSide(color: AppColors.blueLight),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
@@ -356,8 +357,8 @@ class _TotalChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ok = isEmpty || (balanced && !hasZeroShare);
-    final bg = ok ? const Color(0xFFecfdf5) : const Color(0xFFfef2f2);
-    final fg = ok ? const Color(0xFF047857) : const Color(0xFFb84545);
+    final bg = ok ? const Color(0xFFecfdf5) : const AppColors.red50;
+    final fg = ok ? const AppColors.green600 : const AppColors.red;
     final String label;
     if (isEmpty) {
       label = 'Nenhuma fonte — salve para limpar o cadastro';
@@ -400,7 +401,7 @@ class _TotalChip extends StatelessWidget {
             TextButton(
               onPressed: onDistribute,
               style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF1e40af),
+                foregroundColor: const AppColors.navyBright,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -433,7 +434,7 @@ class _EmptyEditor extends StatelessWidget {
             const Icon(
               Icons.pie_chart_outline_rounded,
               size: 40,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
             const SizedBox(height: 14),
             const Text(
@@ -441,7 +442,7 @@ class _EmptyEditor extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
             const SizedBox(height: 6),
@@ -451,7 +452,7 @@ class _EmptyEditor extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
                 height: 1.4,
               ),
             ),
@@ -461,7 +462,7 @@ class _EmptyEditor extends StatelessWidget {
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Adicionar fonte'),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1e40af),
+                backgroundColor: const AppColors.navyBright,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
@@ -503,7 +504,7 @@ class _PayerEditCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isZero ? const Color(0xFFfecaca) : const Color(0xFFeef0f3),
+          color: isZero ? const AppColors.red100 : const AppColors.surfaceSecondary,
         ),
       ),
       child: Row(
@@ -523,7 +524,7 @@ class _PayerEditCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 if (isZero)
@@ -532,7 +533,7 @@ class _PayerEditCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFdc2626),
+                      color: AppColors.error,
                     ),
                   ),
               ],
@@ -542,7 +543,7 @@ class _PayerEditCard extends StatelessWidget {
           IconButton(
             onPressed: onRemove,
             icon: const Icon(Icons.delete_outline_rounded, size: 20),
-            color: const Color(0xFF9ca3af),
+            color: const AppColors.gray400,
             tooltip: 'Remover',
           ),
         ],
@@ -587,7 +588,7 @@ class _PercentStepper extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
             decoration: const InputDecoration(
               isDense: true,
@@ -596,7 +597,7 @@ class _PercentStepper extends StatelessWidget {
               suffixStyle: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
               contentPadding: EdgeInsets.symmetric(vertical: 8),
             ),
@@ -624,10 +625,10 @@ class _StepButton extends StatelessWidget {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: const Color(0xFFf3f4f6),
+          color: const AppColors.gray100,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 18, color: const Color(0xFF4b5563)),
+        child: Icon(icon, size: 18, color: const AppColors.gray600),
       ),
     );
   }
@@ -684,7 +685,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFe5e7eb),
+              color: const AppColors.gray200,
               borderRadius: BorderRadius.circular(4),
             ),
           ),
@@ -698,14 +699,14 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
+                    color: AppColors.gray900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'Selecione uma ou mais fontes. Os percentuais serão '
                   'ajustados automaticamente.',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+                  style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
                 ),
                 const SizedBox(height: 14),
                 TextField(
@@ -717,7 +718,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     hintText: 'Buscar fonte pagadora…',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
                     filled: true,
-                    fillColor: const Color(0xFFf3f4f6),
+                    fillColor: const AppColors.gray100,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -740,7 +741,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 13.5,
-                          color: Color(0xFF9ca3af),
+                          color: AppColors.gray400,
                         ),
                       ),
                     ),
@@ -750,7 +751,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     separatorBuilder: (_, _) => const Divider(
                       height: 1,
                       indent: 20,
-                      color: Color(0xFFeef0f3),
+                      color: AppColors.surfaceSecondary,
                     ),
                     itemBuilder: (_, i) {
                       final entry = filtered[i];
@@ -772,10 +773,10 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                           style: const TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF0f1729),
+                            color: AppColors.gray900,
                           ),
                         ),
-                        activeColor: const Color(0xFF1e40af),
+                        activeColor: const AppColors.navyBright,
                       );
                     },
                   ),
@@ -788,7 +789,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
               12 + MediaQuery.paddingOf(context).bottom,
             ),
             decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
+              border: Border(top: BorderSide(color: AppColors.gray200)),
               color: Colors.white,
             ),
             child: SizedBox(
@@ -803,8 +804,8 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                         Navigator.pop(context, picked);
                       },
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1e40af),
-                  disabledBackgroundColor: const Color(0xFFe5e7eb),
+                  backgroundColor: const AppColors.navyBright,
+                  disabledBackgroundColor: const AppColors.gray200,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

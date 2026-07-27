@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// API keys on `PATCH /api/v1/professionals/:id` that the doctor detail UI can edit.
 enum DoctorEditableField {
@@ -129,7 +131,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFe5e7eb),
+                color: const AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -139,7 +141,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
           ),
           const SizedBox(height: 4),
@@ -149,7 +151,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.4,
-              color: Color(0xFF9ca3af),
+              color: AppColors.gray400,
             ),
           ),
           const SizedBox(height: 12),
@@ -161,7 +163,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
             decoration: InputDecoration(
               hintText: _hint,
               filled: true,
-              fillColor: const Color(0xFFf8f9fb),
+              fillColor: const AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -172,13 +174,13 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
           const SizedBox(height: 8),
           const Text(
             'Deixe em branco para limpar o valor.',
-            style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
+            style: TextStyle(fontSize: 11.5, color: AppColors.gray400),
           ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF1e40af),
+              backgroundColor: const AppColors.navyBright,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

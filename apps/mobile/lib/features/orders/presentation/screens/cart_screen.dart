@@ -6,12 +6,13 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart'
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
 
-  static const _bg = Color(0xFFf7f8fb);
-  static const _navy = Color(0xFF0a2f7f);
+  static const _bg = AppColors.background;
+  static const _navy = AppColors.navyDeep;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
@@ -110,7 +111,7 @@ class _Header extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF9ca3af),
+                    color: AppColors.gray400,
                     letterSpacing: 0.7,
                   ),
                 ),
@@ -122,7 +123,7 @@ class _Header extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0a2f7f),
+                        color: AppColors.navyDeep,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -130,7 +131,7 @@ class _Header extends StatelessWidget {
                       '$totalQty itens',
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFF9ca3af),
+                        color: AppColors.gray400,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -158,7 +159,7 @@ class _CartItemCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [
@@ -173,7 +174,7 @@ class _CartItemCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1f2937),
+                    color: AppColors.gray800,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -181,7 +182,7 @@ class _CartItemCard extends StatelessWidget {
                   item.productSubtitle,
                   style: const TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFF6b7280),
+                    color: AppColors.gray500,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -190,7 +191,7 @@ class _CartItemCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0a2f7f),
+                    color: AppColors.navyDeep,
                   ),
                 ),
               ],
@@ -217,7 +218,7 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(color: const AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +228,7 @@ class _SummaryCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1f2937),
+              color: AppColors.gray800,
             ),
           ),
           const SizedBox(height: 12),
@@ -241,7 +242,7 @@ class _SummaryCard extends StatelessWidget {
                       '${item.productName} × ${item.qty}',
                       style: const TextStyle(
                         fontSize: 12.5,
-                        color: Color(0xFF6b7280),
+                        color: AppColors.gray500,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -250,7 +251,7 @@ class _SummaryCard extends StatelessWidget {
                     brl(item.unitPrice * item.qty),
                     style: const TextStyle(
                       fontSize: 12.5,
-                      color: Color(0xFF1f2937),
+                      color: AppColors.gray800,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -258,7 +259,7 @@ class _SummaryCard extends StatelessWidget {
               ),
             );
           }),
-          const Divider(height: 20, color: Color(0xFFeef0f3)),
+          const Divider(height: 20, color: AppColors.surfaceSecondary),
           Row(
             children: [
               const Expanded(
@@ -267,7 +268,7 @@ class _SummaryCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1f2937),
+                    color: AppColors.gray800,
                   ),
                 ),
               ),
@@ -276,7 +277,7 @@ class _SummaryCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF0a2f7f),
+                  color: AppColors.navyDeep,
                 ),
               ),
             ],
@@ -305,7 +306,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1f2937),
+                color: AppColors.gray800,
               ),
             ),
             const SizedBox(height: 12),
@@ -314,7 +315,7 @@ class _EmptyState extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: onBackToProducts,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0a2f7f),
+                  backgroundColor: const AppColors.navyDeep,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

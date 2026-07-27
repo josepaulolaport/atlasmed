@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/immersive_photo_gallery_screen.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Immersive Cadastro attachment viewer.
 ///
@@ -372,9 +373,9 @@ class _UnsupportedCanvas extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1e293b),
+                  color: const AppColors.gray800,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: const AppColors.gray700),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -385,8 +386,8 @@ class _UnsupportedCanvas extends StatelessWidget {
                           : Icons.insert_drive_file_rounded,
                       size: 48,
                       color: isPdf
-                          ? const Color(0xFFb84545)
-                          : const Color(0xFF93c5fd),
+                          ? const AppColors.red
+                          : const AppColors.blueLight,
                     ),
                     const SizedBox(height: 16),
                     Padding(
@@ -420,7 +421,7 @@ class _UnsupportedCanvas extends StatelessWidget {
               child: FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1e40af),
+                  backgroundColor: const AppColors.navyBright,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

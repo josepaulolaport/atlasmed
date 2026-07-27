@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class SortRow extends StatelessWidget {
   final String sort;
@@ -90,7 +91,7 @@ class _SortChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFe5e7eb)),
+          border: Border.all(color: const AppColors.gray200),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -98,7 +99,7 @@ class _SortChip extends StatelessWidget {
             const Icon(
               Icons.swap_vert_rounded,
               size: 12,
-              color: Color(0xFF0f1729),
+              color: AppColors.gray900,
             ),
             const SizedBox(width: 5),
             Text(
@@ -106,7 +107,7 @@ class _SortChip extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF0f1729),
+                color: AppColors.gray900,
               ),
             ),
           ],
@@ -129,9 +130,9 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFeef2ff),
+          color: const AppColors.blue50,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0xFFc7d2fe)),
+          border: Border.all(color: const AppColors.blueLight),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -141,11 +142,11 @@ class _FilterChip extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF1e3a8a),
+                color: AppColors.blueDarker,
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(Icons.close_rounded, size: 9, color: Color(0xFF1e3a8a)),
+            const Icon(Icons.close_rounded, size: 9, color: AppColors.blueDarker),
           ],
         ),
       ),
