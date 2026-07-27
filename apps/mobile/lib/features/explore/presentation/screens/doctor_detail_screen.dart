@@ -19,6 +19,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_profile_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/quick_actions.dart';
 import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -229,7 +230,91 @@ class _DoctorDetailContent extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _DoctorHeader(detail: detail),
-                  _DoctorQuickActions(detail: detail),
+                  DetailQuickActions(
+                    themeColor: detail.primaryColor,
+                    actions: [
+                      QuickActionItem(
+                        icon: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: detail.primaryColor.withAlpha(38),
+                          ),
+                          child: Icon(
+                            Icons.phone_rounded,
+                            size: 18,
+                            color: detail.primaryColor,
+                          ),
+                        ),
+                        label: const Text('Ligar'),
+                        onTap: () => launchContactUrl(
+                          context,
+                          url: callUrl(detail.phone),
+                          contactLabel: 'telefone',
+                        ),
+                      ),
+                      QuickActionItem(
+                        icon: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: detail.primaryColor.withAlpha(38),
+                          ),
+                          child: Icon(
+                            Icons.chat_rounded,
+                            size: 18,
+                            color: detail.primaryColor,
+                          ),
+                        ),
+                        label: const Text('WhatsApp'),
+                        onTap: () => launchContactUrl(
+                          context,
+                          url: whatsappUrl(detail.whatsapp),
+                          contactLabel: 'WhatsApp',
+                        ),
+                      ),
+                      QuickActionItem(
+                        icon: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: detail.primaryColor.withAlpha(38),
+                          ),
+                          child: Icon(
+                            Icons.email_rounded,
+                            size: 18,
+                            color: detail.primaryColor,
+                          ),
+                        ),
+                        label: const Text('E-mail'),
+                        onTap: () => launchContactUrl(
+                          context,
+                          url: emailUrl(detail.email),
+                          contactLabel: 'e-mail',
+                        ),
+                      ),
+                      QuickActionItem(
+                        icon: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: detail.primaryColor.withAlpha(38),
+                          ),
+                          child: Icon(
+                            Icons.event_rounded,
+                            size: 18,
+                            color: detail.primaryColor,
+                          ),
+                        ),
+                        label: const Text('Nova visita'),
+                        onTap: null,
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   if (facilityId != null &&
                       facilityId!.isNotEmpty &&
@@ -693,141 +778,6 @@ class _DoctorHeader extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ======================================================================
-// 2. DoctorQuickActions — call, whatsapp, email, new visit
-// ======================================================================
-
-class _DoctorQuickActions extends StatelessWidget {
-  final Professional detail;
-  const _DoctorQuickActions({required this.detail});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: .loose,
-      children: [
-        Positioned.fill(
-          child: Column(
-            children: [
-              Expanded(child: Container(color: detail.primaryColor)),
-              Expanded(child: Container(color: AppColors.surfaceTertiary)),
-            ],
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: AppColors.surfaceSecondary),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.gray900.withValues(alpha: 0.08),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              _QuickAction(
-                label: 'Ligar',
-                icon: Icons.phone_rounded,
-                color: detail.primaryColor,
-                onTap: () => launchContactUrl(
-                  context,
-                  url: callUrl(detail.phone),
-                  contactLabel: 'telefone',
-                ),
-              ),
-              _QuickAction(
-                label: 'WhatsApp',
-                icon: Icons.chat_rounded,
-                color: detail.primaryColor.withValues(alpha: 0.7),
-                onTap: () => launchContactUrl(
-                  context,
-                  url: whatsappUrl(detail.whatsapp),
-                  contactLabel: 'WhatsApp',
-                ),
-              ),
-              _QuickAction(
-                label: 'E-mail',
-                icon: Icons.email_rounded,
-                color: detail.primaryColor.withValues(alpha: 0.7),
-                onTap: () => launchContactUrl(
-                  context,
-                  url: emailUrl(detail.email),
-                  contactLabel: 'e-mail',
-                ),
-              ),
-              _QuickAction(
-                label: 'Nova visita',
-                icon: Icons.event_rounded,
-                color: detail.primaryColor.withValues(alpha: 0.7),
-                onTap: () {},
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onTap;
-  const _QuickAction({
-    required this.label,
-    required this.color,
-    required this.icon,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDisabled = onTap == null;
-    return Expanded(
-      child: InkWell(
-        onTap: isDisabled ? null : onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDisabled ? AppColors.gray100 : color.withAlpha(38),
-                ),
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: isDisabled ? AppColors.gray300 : color,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.1,
-                  color: isDisabled ? AppColors.gray300 : AppColors.gray900,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
