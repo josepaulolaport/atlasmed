@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -260,8 +261,7 @@ class _DoctorDetailContent extends ConsumerWidget {
                     repository: notesRepository,
                     builder: (context, notes, repository) {
                       return _DoctorNotes(
-                        notes: notes ?? const [],
-                        isLoading: true,
+                        notes: notes,
                         onAddNote: () =>
                             _showAddNoteSheet(context, ref, repository),
                       );
@@ -1661,15 +1661,10 @@ class _DoctorVisits extends StatelessWidget {
 // ======================================================================
 
 class _DoctorNotes extends StatelessWidget {
-  final List<ProfessionalNote> notes;
-  final bool isLoading;
+  final List<ProfessionalNote>? notes;
   final VoidCallback onAddNote;
 
-  const _DoctorNotes({
-    required this.notes,
-    required this.isLoading,
-    required this.onAddNote,
-  });
+  const _DoctorNotes({required this.notes, required this.onAddNote});
 
   @override
   Widget build(BuildContext context) {
@@ -1681,7 +1676,6 @@ class _DoctorNotes extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border.all(color: const Color(0xFFedeff3)),
@@ -1694,109 +1688,112 @@ class _DoctorNotes extends StatelessWidget {
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                if (isLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (notes.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Nenhuma nota adicionada ainda.',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: Color(0xFF6b7280),
+            child: Builder(
+              builder: (context) {
+                final notes = this.notes;
+                if (notes == null) {
+                  return ListTile(
+                    leading: AtlasShimmer.size(.square(24)),
+                    title: AtlasShimmer.size(.new(120, 12)),
+                    subtitle: AtlasShimmer.size(.new(120, 12)),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    if (notes.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Text('Nenhuma nota adicionada ainda.'),
                       ),
-                    ),
-                  )
-                else
-                  ...List.generate(notes.length, (i) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        border: i < notes.length - 1
-                            ? const Border(
-                                bottom: BorderSide(color: Color(0xFFeef0f3)),
-                              )
-                            : null,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFeef2ff),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${i + 1}',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1e40af),
+
+                    ...List.generate(notes.length, (i) {
+                      final item = notes[i];
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          border: i < notes.length - 1
+                              ? const Border(
+                                  bottom: BorderSide(color: Color(0xFFeef0f3)),
+                                )
+                              : null,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFeef2ff),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${i + 1}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1e40af),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              notes[i].note,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: Color(0xFF374151),
-                                height: 1.45,
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                item.note,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: Color(0xFF374151),
+                                  height: 1.45,
+                                ),
                               ),
                             ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: onAddNote,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFFc7d2fe),
+                            width: 1,
+                            style: BorderStyle.solid,
                           ),
-                        ],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.add_rounded,
+                                size: 14,
+                                color: Color(0xFF1e40af),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Adicionar nota',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1e40af),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    );
-                  }),
-                const SizedBox(height: 4),
-                InkWell(
-                  onTap: onAddNote,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: const Color(0xFFc7d2fe),
-                        width: 1,
-                        style: BorderStyle.solid,
-                      ),
-                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.add_rounded,
-                            size: 14,
-                            color: Color(0xFF1e40af),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Adicionar nota',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1e40af),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ),
