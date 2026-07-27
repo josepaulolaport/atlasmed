@@ -34,7 +34,8 @@ Future<DoctorDetail?> showEditDoctorFieldSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _EditDoctorFieldSheet(detail: detail, field: field, ref: ref),
+    builder: (_) =>
+        _EditDoctorFieldSheet(detail: detail, field: field, ref: ref),
   );
 }
 
@@ -67,7 +68,8 @@ class _EditDoctorFieldSheetBody extends StatefulWidget {
   final WidgetRef ref;
 
   @override
-  State<_EditDoctorFieldSheetBody> createState() => _EditDoctorFieldSheetBodyState();
+  State<_EditDoctorFieldSheetBody> createState() =>
+      _EditDoctorFieldSheetBodyState();
 }
 
 class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
@@ -89,28 +91,26 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
   String _initialValue() {
     final d = widget.detail;
     return switch (widget.field) {
-      DoctorEditableField.mobilePhone => d.phone ?? '',
-      DoctorEditableField.email => d.email ?? '',
-      DoctorEditableField.birthDate => d.birthday ?? '',
-      DoctorEditableField.favoriteTeam => d.team ?? '',
-      DoctorEditableField.hobbies => d.interests ?? '',
-      DoctorEditableField.languages => d.language ?? '',
+      .mobilePhone => d.phone ?? '',
+      .email => d.email ?? '',
+      .birthDate => d.birthday ?? '',
+      .favoriteTeam => d.team ?? '',
+      .hobbies => d.interests ?? '',
+      .languages => d.language ?? '',
     };
   }
 
   TextInputType get _keyboardType => switch (widget.field) {
-    DoctorEditableField.mobilePhone => TextInputType.phone,
-    DoctorEditableField.email => TextInputType.emailAddress,
-    DoctorEditableField.birthDate => TextInputType.datetime,
-    DoctorEditableField.favoriteTeam ||
-    DoctorEditableField.hobbies ||
-    DoctorEditableField.languages => TextInputType.text,
+    .mobilePhone => .phone,
+    .email => .emailAddress,
+    .birthDate => .datetime,
+    .favoriteTeam || .hobbies || .languages => .text,
   };
 
   String get _hint => switch (widget.field) {
-    DoctorEditableField.birthDate => 'AAAA-MM-DD ou DD/MM/AAAA',
-    DoctorEditableField.email => 'nome@exemplo.com',
-    DoctorEditableField.mobilePhone => 'Telefone com DDD',
+    .birthDate => 'AAAA-MM-DD ou DD/MM/AAAA',
+    .email => 'nome@exemplo.com',
+    .mobilePhone => 'Telefone com DDD',
     _ => 'Novo valor para ${widget.field.label}',
   };
 
@@ -157,9 +157,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
             controller: _controller,
             autofocus: true,
             keyboardType: _keyboardType,
-            textCapitalization: widget.field == DoctorEditableField.email
-                ? TextCapitalization.none
-                : TextCapitalization.sentences,
+            textCapitalization: widget.field == .email ? .none : .sentences,
             decoration: InputDecoration(
               hintText: _hint,
               filled: true,
