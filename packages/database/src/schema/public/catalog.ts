@@ -36,8 +36,8 @@ export const products = pgTable(
     requiresSterilization: boolean("requires_sterilization").notNull().default(false),
     anvisaRegistration: text("anvisa_registration"),
     ncm: text("ncm"),
-    imageUrl: text("image_url"),
     pictureUrl: text("picture_url"),
+    pictureBlurhash: text("picture_blurhash"),
     // Pricing and coding columns
     simproCode: text("simpro_code").notNull(),
     brasindiceCode: text("brasindice_code").notNull(),

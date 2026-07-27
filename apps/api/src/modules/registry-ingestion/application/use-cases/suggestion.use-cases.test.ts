@@ -290,6 +290,7 @@ describe("Suggestion use cases", () => {
       consultantSince: null,
       managerName: null,
       imageUrl: null,
+      imageBlurhash: null,
       sourceProvider: null,
       externalSourceId: null,
       sourceContentHash: null,

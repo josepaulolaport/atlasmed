@@ -74,6 +74,7 @@ async function serializeProfessionalProfile(
     email: professional.email ?? undefined,
     websiteUrl: professional.websiteUrl ?? undefined,
     imageUrl: professional.imageUrl ?? undefined,
+    imageBlurhash: professional.imageBlurhash ?? undefined,
     primarySpecialtyLabel: professional.specialty ?? undefined,
     specialty: professional.specialty ?? undefined,
     crmCouncil: professional.crmCouncil ?? undefined,

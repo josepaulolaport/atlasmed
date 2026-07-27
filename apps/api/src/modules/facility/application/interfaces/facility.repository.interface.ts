@@ -83,6 +83,7 @@ export interface FacilityRecord {
   managerName: string | null;
   /** Profile / header image URL (`facilities.image_url`). */
   imageUrl: string | null;
+  imageBlurhash: string | null;
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -191,6 +192,7 @@ export interface FacilityRepository {
       lat?: number | null;
       lng?: number | null;
       imageUrl?: string | null;
+      imageBlurhash?: string | null;
       billingEmail?: string | null;
       taxIdType?: "PJ" | "PF";
       conformityStatus?: FacilityConformityStatus;

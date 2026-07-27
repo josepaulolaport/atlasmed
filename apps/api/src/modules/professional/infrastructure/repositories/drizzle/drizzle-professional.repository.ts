@@ -46,6 +46,7 @@ function mapProfessional(
     email: professional.email,
     websiteUrl: professional.websiteUrl,
     imageUrl: professional.imageUrl,
+    imageBlurhash: professional.imageBlurhash ?? null,
     favoriteTeam: professional.favoriteTeam,
     favoriteSport: professional.favoriteSport,
     languages: professional.languages,
@@ -122,6 +123,7 @@ function buildPersonCreateData(data: ProfessionalCreateInput) {
     email: data.email ?? null,
     websiteUrl: data.websiteUrl ?? null,
     imageUrl: data.imageUrl ?? null,
+    imageBlurhash: data.imageBlurhash ?? null,
     favoriteTeam: data.favoriteTeam ?? null,
     favoriteSport: data.favoriteSport ?? null,
     languages: data.languages ?? null,
@@ -148,6 +150,7 @@ function buildPersonUpdateData(data: ProfessionalUpdateInput) {
   if (data.email !== undefined) patch.email = data.email;
   if (data.websiteUrl !== undefined) patch.websiteUrl = data.websiteUrl;
   if (data.imageUrl !== undefined) patch.imageUrl = data.imageUrl;
+  if (data.imageBlurhash !== undefined) patch.imageBlurhash = data.imageBlurhash;
   if (data.favoriteTeam !== undefined) patch.favoriteTeam = data.favoriteTeam;
   if (data.favoriteSport !== undefined) patch.favoriteSport = data.favoriteSport;
   if (data.languages !== undefined) patch.languages = data.languages;

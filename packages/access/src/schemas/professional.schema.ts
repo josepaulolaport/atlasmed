@@ -147,6 +147,7 @@ export interface ProfessionalProfile {
   email?: string;
   websiteUrl?: string;
   imageUrl?: string;
+  imageBlurhash?: string;
   primarySpecialtyLabel?: string;
   specialty?: string;
   crmCouncil?: string;
