@@ -54,13 +54,13 @@ class DashboardTerritoryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (data.mode == 'overview')
+          if (data.mode == TerritoryMode.overview)
             _TerritoryMiniMap(
               // Admin overview: Brazil basemap only — no territory polygons.
               features: const [],
               label: data.label ?? 'Brasil · visão geral',
             )
-          else if (data.showMap && data.features.isNotEmpty)
+          else if (data.mode.showMap && data.features.isNotEmpty)
             _TerritoryMiniMap(
               features: data.features,
               label: data.label ?? 'Território',

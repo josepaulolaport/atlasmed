@@ -45,6 +45,23 @@ class DashboardTerritoryFeature {
   }
 }
 
+/// Visualisation mode for the territory card on the dashboard.
+enum TerritoryMode {
+  overview,
+  assigned,
+  empty;
+
+  bool get showMap => this == TerritoryMode.overview || this == TerritoryMode.assigned;
+
+  static TerritoryMode fromJson(String value) {
+    return switch (value) {
+      'overview' => TerritoryMode.overview,
+      'assigned' => TerritoryMode.assigned,
+      'empty' || _ => TerritoryMode.empty,
+    };
+  }
+}
+
 class DashboardTerritorySummary {
   const DashboardTerritorySummary({
     required this.mode,
@@ -55,19 +72,16 @@ class DashboardTerritorySummary {
     this.label,
   });
 
-  /// `overview` | `assigned` | `empty`
-  final String mode;
+  final TerritoryMode mode;
   final String? label;
   final int clinicCount;
   final int doctorCount;
   final int coveragePercent;
   final List<DashboardTerritoryFeature> features;
 
-  bool get showMap => mode == 'overview' || mode == 'assigned';
-
   factory DashboardTerritorySummary.fromJson(Map<String, dynamic> json) {
     return DashboardTerritorySummary(
-      mode: json['mode'] as String? ?? 'empty',
+      mode: TerritoryMode.fromJson(json['mode'] as String? ?? 'empty'),
       label: json['label'] as String?,
       clinicCount: json['clinicCount'] as int? ?? 0,
       doctorCount: json['doctorCount'] as int? ?? 0,

@@ -8,18 +8,25 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 
 class DashboardRepository extends Repository<DashboardSummary>
     with SessionEnvironmentMixin<DashboardSummary> {
-  DashboardRepository()
-    : super(
-        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/dashboard/summary'),
+  DashboardRepository({required String verticalId})
+    : _verticalId = verticalId,
+      super(
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/dashboard/summary'
+        ).replace(queryParameters: {'verticalId': verticalId}),
+        resolveOnCreate: false,
       );
 
-  Future<DashboardSummary> fetchSummary({required String verticalId}) async {
-    final uri = endpoint.replace(queryParameters: {'verticalId': verticalId});
+  final String _verticalId;
+
+  /// Fetches the summary for the configured vertical and emits the result
+  /// into the repository stream so [RepositoryBuilder] picks it up.
+  Future<DashboardSummary> fetchSummary() async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: uri,
+        url: endpoint,
         method: RepositoryHttpMethod.get,
-        headers: {'X-AtlasMed-Vertical-Id': verticalId},
+        headers: {'X-AtlasMed-Vertical-Id': _verticalId},
       ),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -28,6 +35,12 @@ class DashboardRepository extends Repository<DashboardSummary>
       );
     }
     final json = jsonDecode(response.body) as Map<String, dynamic>;
-    return DashboardSummary.fromJson(json);
+    final summary = DashboardSummary.fromJson(json);
+    // Push into the stream so RepositoryBuilder consumers react.
+    await emit(data: summary, datasource: RepositoryDatasource.remote);
+    return summary;
   }
+
+  @override
+  Future<DashboardSummary?> refresh() => fetchSummary().then((v) => v);
 }

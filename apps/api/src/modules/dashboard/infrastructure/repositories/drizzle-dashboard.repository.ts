@@ -1,5 +1,11 @@
 import { db } from "../../../../infrastructure/database/db";
-import { sql } from "drizzle-orm";
+import {
+  facilityVerticalProfiles,
+  facilityProfessionals,
+  territories,
+  userTerritoryAssignments,
+} from "@atlasmed/database";
+import { sql, eq, and, inArray } from "drizzle-orm";
 
 export type PurchaseStatusBuckets = {
   active: number;
@@ -27,44 +33,35 @@ export class DrizzleDashboardRepository {
     verticalId: string;
     facilityIds: string[] | null;
   }): Promise<PurchaseStatusBuckets> {
-    const facilityFilter =
-      input.facilityIds === null
-        ? sql`TRUE`
-        : input.facilityIds.length === 0
-          ? sql`FALSE`
-          : sql`fvp.facility_id IN (${sql.join(
-              input.facilityIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`;
+    const where = input.facilityIds === null
+      ? eq(facilityVerticalProfiles.verticalId, input.verticalId)
+      : input.facilityIds.length === 0
+        ? and(
+            eq(facilityVerticalProfiles.verticalId, input.verticalId),
+            sql`FALSE`,
+          )
+        : and(
+            eq(facilityVerticalProfiles.verticalId, input.verticalId),
+            inArray(facilityVerticalProfiles.facilityId, input.facilityIds),
+          );
 
-    const rows = (await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (
-          WHERE fvp.purchase_status IN ('HIGH_BUYER', 'REGULAR_BUYER')
-        )::int AS active,
-        COUNT(*) FILTER (
-          WHERE fvp.purchase_status = 'LOW_BUYER'
-        )::int AS inactive,
-        COUNT(*) FILTER (
-          WHERE fvp.purchase_status = 'NON_BUYER'
-             OR fvp.purchase_status IS NULL
-        )::int AS never_bought,
-        COUNT(*)::int AS total
-      FROM facility_vertical_profiles fvp
-      WHERE fvp.vertical_id = ${input.verticalId}
-        AND ${facilityFilter}
-    `)) as unknown as Array<{
-      active: number;
-      inactive: number;
-      never_bought: number;
-      total: number;
-    }>;
+    const [row] = await db
+      .select({
+        active:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseStatus} IN ('HIGH_BUYER', 'REGULAR_BUYER'))::int`,
+        inactive:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseStatus} = 'LOW_BUYER')::int`,
+        neverBought:
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseStatus} = 'NON_BUYER' OR ${facilityVerticalProfiles.purchaseStatus} IS NULL)::int`,
+        total: sql<number>`COUNT(*)::int`,
+      })
+      .from(facilityVerticalProfiles)
+      .where(where);
 
-    const row = Array.isArray(rows) ? rows[0] : undefined;
     return {
       active: Number(row?.active ?? 0),
       inactive: Number(row?.inactive ?? 0),
-      neverBought: Number(row?.never_bought ?? 0),
+      neverBought: Number(row?.neverBought ?? 0),
       total: Number(row?.total ?? 0),
     };
   }
@@ -73,26 +70,26 @@ export class DrizzleDashboardRepository {
     verticalId: string;
     facilityIds: string[] | null;
   }): Promise<number> {
-    const facilityFilter =
+    const joinCondition = and(
+      eq(facilityVerticalProfiles.facilityId, facilityProfessionals.facilityId),
+      eq(facilityVerticalProfiles.verticalId, input.verticalId),
+    );
+
+    const where =
       input.facilityIds === null
-        ? sql`TRUE`
+        ? undefined
         : input.facilityIds.length === 0
           ? sql`FALSE`
-          : sql`fp.facility_id IN (${sql.join(
-              input.facilityIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`;
+          : inArray(facilityProfessionals.facilityId, input.facilityIds);
 
-    const rows = (await db.execute(sql`
-      SELECT COUNT(DISTINCT fp.professional_id)::int AS n
-      FROM facility_professionals fp
-      INNER JOIN facility_vertical_profiles fvp
-        ON fvp.facility_id = fp.facility_id
-       AND fvp.vertical_id = ${input.verticalId}
-      WHERE ${facilityFilter}
-    `)) as unknown as Array<{ n: number }>;
+    const [row] = await db
+      .select({
+        n: sql<number>`COUNT(DISTINCT ${facilityProfessionals.professionalId})::int`,
+      })
+      .from(facilityProfessionals)
+      .innerJoin(facilityVerticalProfiles, joinCondition)
+      .where(where);
 
-    const row = Array.isArray(rows) ? rows[0] : undefined;
     return Number(row?.n ?? 0);
   }
 
@@ -101,26 +98,26 @@ export class DrizzleDashboardRepository {
     userId: string;
     verticalId: string;
   }): Promise<DashboardTerritoryFeature[]> {
-    const rows = (await db.execute(sql`
-      SELECT
-        t.id,
-        t.name,
-        CASE
-          WHEN t.boundary IS NULL THEN NULL
-          ELSE ST_AsGeoJSON(t.boundary)::text
-        END AS boundary
-      FROM user_territory_assignments uta
-      INNER JOIN territories t ON t.id = uta.territory_id
-      WHERE uta.user_id = ${input.userId}
-        AND t.vertical_id = ${input.verticalId}
-      ORDER BY t.name
-    `)) as unknown as Array<{
-      id: string;
-      name: string;
-      boundary: string | null;
-    }>;
+    const rows = await db
+      .select({
+        id: territories.id,
+        name: territories.name,
+        boundary: sql<string | null>`CASE WHEN ${territories.boundary} IS NULL THEN NULL ELSE ST_AsGeoJSON(${territories.boundary})::text END`,
+      })
+      .from(userTerritoryAssignments)
+      .innerJoin(
+        territories,
+        eq(territories.id, userTerritoryAssignments.territoryId),
+      )
+      .where(
+        and(
+          eq(userTerritoryAssignments.userId, input.userId),
+          eq(territories.verticalId, input.verticalId),
+        ),
+      )
+      .orderBy(territories.name);
 
-    return (Array.isArray(rows) ? rows : []).map((r) => ({
+    return rows.map((r) => ({
       id: r.id,
       name: r.name,
       boundary: r.boundary ? (JSON.parse(r.boundary) as unknown) : null,
@@ -131,23 +128,23 @@ export class DrizzleDashboardRepository {
   async listVerticalTerritoryFeatures(
     verticalId: string,
   ): Promise<DashboardTerritoryFeature[]> {
-    const rows = (await db.execute(sql`
-      SELECT
-        t.id,
-        t.name,
-        ST_AsGeoJSON(t.boundary)::text AS boundary
-      FROM territories t
-      WHERE t.vertical_id = ${verticalId}
-        AND t.boundary IS NOT NULL
-      ORDER BY t.name
-      LIMIT 200
-    `)) as unknown as Array<{
-      id: string;
-      name: string;
-      boundary: string | null;
-    }>;
+    const rows = await db
+      .select({
+        id: territories.id,
+        name: territories.name,
+        boundary: sql<string>`ST_AsGeoJSON(${territories.boundary})::text`,
+      })
+      .from(territories)
+      .where(
+        and(
+          eq(territories.verticalId, verticalId),
+          sql`${territories.boundary} IS NOT NULL`,
+        ),
+      )
+      .orderBy(territories.name)
+      .limit(200);
 
-    return (Array.isArray(rows) ? rows : []).map((r) => ({
+    return rows.map((r) => ({
       id: r.id,
       name: r.name,
       boundary: r.boundary ? (JSON.parse(r.boundary) as unknown) : null,
