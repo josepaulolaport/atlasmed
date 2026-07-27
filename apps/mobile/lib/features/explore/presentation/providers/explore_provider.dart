@@ -11,11 +11,12 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_t
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_visits_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/api_repository_providers.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
@@ -35,9 +36,12 @@ api.Clinic _parseClinicDetail(String json) {
 // ── Clinic detail repository ────────────────────────────────
 class _ClinicDetailRepository extends Repository<api.Clinic>
     with SessionEnvironmentMixin<api.Clinic> {
-  _ClinicDetailRepository({required String id})
+  _ClinicDetailRepository({required String id, String? verticalId})
     : super(
-        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/facilities/$id'),
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$id'
+          '${verticalId == null || verticalId.isEmpty ? '' : '?verticalId=${Uri.encodeQueryComponent(verticalId)}'}',
+        ),
         resolveOnCreate: false,
         name: 'ClinicDetailRepository',
       );
@@ -64,13 +68,13 @@ class _DoctorDetailRepository extends Repository<ApiDoctor>
 }
 
 // ── Detail fetch helpers (no Riverpod family; called per request) ──
-Future<ClinicDetail> _fetchClinicDetail(String id) async {
+Future<ClinicDetail> _fetchClinicDetail(String id, {String? verticalId}) async {
   // Mock nearby pins (`near-*` / `:empty`) are disabled on the real API.
   if (id.startsWith('near-') || id.endsWith(':empty')) {
     throw Exception('Clinic not found: $id');
   }
 
-  final repo = _ClinicDetailRepository(id: id);
+  final repo = _ClinicDetailRepository(id: id, verticalId: verticalId);
   try {
     // Always hit the network — currentValueOrResolve() returns hydrated cache
     // and skips refresh, which leaves stale admin fields after NC approve.
@@ -194,8 +198,11 @@ DoctorDetail doctorDetailFromApi(ApiDoctor apiDoctor) {
 final clinicDetailProvider = FutureProvider.family<ClinicDetail, String>((
   ref,
   id,
-) {
-  return _fetchClinicDetail(id);
+) async {
+  final verticalId = await ref.watch(
+    effectiveFacilityVerticalIdProvider.future,
+  );
+  return _fetchClinicDetail(id, verticalId: verticalId);
 });
 
 // ── Doctor detail provider ──────────────────────────────────
@@ -411,15 +418,6 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     _clinicPage = 1;
     _clinicHasMore = true;
     await _fetchClinicsPage(page: 1);
-    if (state.errorMessage != null) {
-      state = state.copyWith(
-        clinics: [
-          for (final item in state.clinics)
-            if (item.id == mapped.id) mapped else item,
-        ],
-      );
-      throw StateError(state.errorMessage!);
-    }
   }
 
   @override
@@ -561,7 +559,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       effectiveFacilityVerticalIdProvider.future,
     );
     final facilitySort = _facilitySort;
-    final repo = ClinicsRepository(
+    final query = ClinicsQuery(
       page: p,
       limit: 20,
       searchQuery: state.query.isNotEmpty ? state.query : null,
@@ -581,8 +579,8 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       sort: facilitySort.sort,
       order: facilitySort.order,
       verticalId: verticalId,
-      resolveOnCreate: false,
     );
+    final repo = _ref.read(clinicsRepositoryProvider(query));
     try {
       final result = await repo.currentValueOrResolve();
       if (generation != null && generation != _refreshGeneration) return;
@@ -603,7 +601,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         _clinicHasMore = result.pagination.page < result.pagination.totalPages;
       }
     } finally {
-      repo.dispose();
+      // The Riverpod repository provider owns this repository's lifecycle.
     }
   }
 

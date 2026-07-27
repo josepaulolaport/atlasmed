@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
     as api;
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,6 +67,75 @@ void main() {
     );
 
     expect(find.text('Suspensa'), findsOneWidget);
+  });
+
+  testWidgets('shows a compact purchase funnel stage when available', (
+    tester,
+  ) async {
+    final clinic = Clinic.fromApi(
+      const api.Clinic(
+        id: 'clinic-recurrence',
+        name: 'Clínica Recorrente',
+        professionalCount: 1,
+      ),
+    );
+
+    // The list model receives the snapshot from the facilities endpoint.
+    final withRecurrence = Clinic(
+      id: clinic.id,
+      name: clinic.name,
+      city: clinic.city,
+      neighborhood: clinic.neighborhood,
+      distanceKm: clinic.distanceKm,
+      commercialStatus: clinic.commercialStatus,
+      lastVisitDays: clinic.lastVisitDays,
+      doctorCount: clinic.doctorCount,
+      isPriority: clinic.isPriority,
+      products: clinic.products,
+      purchaseRecurrence: const PurchaseRecurrenceSnapshot(
+        intervalDays: 30,
+        sampleSize: 2,
+        funnelStage: PurchaseFunnelStage.churn,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClinicRow(clinic: withRecurrence, onTap: () {}),
+        ),
+      ),
+    );
+
+    expect(find.text('Churn'), findsOneWidget);
+  });
+
+  testWidgets('does not show a funnel chip when recurrence is unavailable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClinicRow(
+            clinic: const Clinic(
+              id: 'clinic-without-recurrence',
+              name: 'Clínica sem perfil',
+              city: '',
+              neighborhood: '',
+              distanceKm: null,
+              commercialStatus: null,
+              lastVisitDays: null,
+              doctorCount: 0,
+              isPriority: false,
+              products: [],
+            ),
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Churn'), findsNothing);
   });
 
   group('Clinic location label', () {

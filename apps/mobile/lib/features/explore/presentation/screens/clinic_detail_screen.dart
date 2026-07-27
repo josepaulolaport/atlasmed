@@ -9,8 +9,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dar
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/api_repository_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
@@ -34,7 +34,6 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_payer_sources_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_section.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
@@ -221,11 +220,11 @@ String _friendlyLoadError(Object error) {
   if (raw.contains('not found') || raw.contains('404')) {
     return 'Este estabelecimento não foi encontrado ou não está disponível.';
   }
-  if (raw.contains('401') ||
-      raw.contains('403') ||
-      raw.contains('unauthorized') ||
-      raw.contains('forbidden')) {
-    return 'Sua sessão expirou ou você não tem permissão. Faça login novamente.';
+  if (raw.contains('403') || raw.contains('forbidden')) {
+    return 'Você não tem permissão para acessar este estabelecimento.';
+  }
+  if (raw.contains('401') || raw.contains('unauthorized')) {
+    return 'Sua sessão expirou. Faça login novamente.';
   }
   return 'Algo deu errado ao buscar os dados. Tente novamente em instantes.';
 }
@@ -362,32 +361,30 @@ Future<void> _openPurchaseRecurrenceEditor(
         child: PurchaseRecurrenceForm(
           initialValue: detail.purchaseRecurrence,
           onSave: (command) async {
-            final repository = FacilityPurchaseRecurrenceRepository();
-            try {
-              await savePurchaseRecurrence(
-                command: command,
-                update: (command) =>
-                    repository.updatePurchaseRecurrence(detail.id, command),
-                close: () {
-                  if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-                },
-                refreshDetail: () {
-                  ref.invalidate(clinicDetailProvider(detail.id));
-                },
-                refreshExplore: ref
-                    .read(exploreProvider.notifier)
-                    .refreshAfterClinicUpdate,
-                showSynchronizationWarning: (message) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(message)));
-                  }
-                },
-              );
-            } finally {
-              repository.dispose();
-            }
+            final repository = ref.read(
+              facilityPurchaseRecurrenceRepositoryProvider,
+            );
+            await savePurchaseRecurrence(
+              command: command,
+              update: (command) =>
+                  repository.updatePurchaseRecurrence(detail.id, command),
+              close: () {
+                if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+              },
+              refreshDetail: () {
+                ref.invalidate(clinicDetailProvider(detail.id));
+              },
+              refreshExplore: ref
+                  .read(exploreProvider.notifier)
+                  .refreshAfterClinicUpdate,
+              showSynchronizationWarning: (message) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(message)));
+                }
+              },
+            );
           },
         ),
       ),

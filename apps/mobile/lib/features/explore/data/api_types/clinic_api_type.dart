@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 /// Shared API response types for the explore feature's clinic domain.

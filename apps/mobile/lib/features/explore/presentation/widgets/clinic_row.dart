@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 
@@ -130,6 +131,11 @@ class ClinicRow extends StatelessWidget {
                           ),
                           small: true,
                         ),
+                      if (clinic.purchaseRecurrence?.funnelStage != null)
+                        _PurchaseFunnelChip(
+                          stage: clinic.purchaseRecurrence!.funnelStage!,
+                          intervalDays: clinic.purchaseRecurrence!.intervalDays,
+                        ),
                       if (clinic.lastVisitDays != null)
                         _MetaItem(
                           icon: Icons.access_time_rounded,
@@ -149,6 +155,42 @@ class ClinicRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PurchaseFunnelChip extends StatelessWidget {
+  const _PurchaseFunnelChip({required this.stage, required this.intervalDays});
+
+  final PurchaseFunnelStage stage;
+  final int intervalDays;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: stage.backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            stage.label,
+            style: TextStyle(
+              color: stage.color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            'A cada $intervalDays dias',
+            style: TextStyle(color: stage.color, fontSize: 10),
+          ),
+        ],
       ),
     );
   }

@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
@@ -28,7 +28,7 @@ void main() {
                 city: 'São Paulo',
                 neighborhood: 'Centro',
                 distanceKm: 1,
-                commercialStatus: CommercialStatus.active,
+                commercialStatus: CommercialStatusFilter.active,
                 lastVisitDays: null,
                 doctorCount: 2,
                 isPriority: false,
@@ -61,10 +61,8 @@ void main() {
             child: FilterSheet(
               kind: 'clinic',
               filters: const {},
-              proximityEnabled: false,
-              requestingProximity: false,
-              onProximityToggle: () {},
-              onApply: (value) => applied = value,
+              radiusKm: null,
+              onApply: (value, _) => applied = value,
             ),
           ),
         ),

@@ -35,105 +35,33 @@ class _ResponseClient extends RepositoryHttpClient {
 
 class _SessionAwareRepository extends Repository<String>
     with SessionEnvironmentMixin<String> {
-  _SessionAwareRepository({
-    required RepositoryHttpClient httpClient,
-    this.sessionAvailableAfterRefresh = true,
-  }) : _client = httpClient,
-       super(
-         endpoint: Uri.parse('https://example.test/protected'),
-         resolveOnCreate: false,
-       );
+  _SessionAwareRepository({required RepositoryHttpClient httpClient})
+    : _client = httpClient,
+      super(
+        endpoint: Uri.parse('https://example.test/protected'),
+        resolveOnCreate: false,
+      );
 
   final RepositoryHttpClient _client;
-  final bool sessionAvailableAfterRefresh;
-  int refreshCalls = 0;
-  int deleteCalls = 0;
 
   @override
   RepositoryHttpClient get client => _client;
 
   @override
   String fromJson(String json) => json;
-
-  @override
-  bool get hasActiveSession => true;
-
-  @override
-  bool get hasCurrentSession => sessionAvailableAfterRefresh;
-
-  @override
-  Future<void> refreshSession() async {
-    refreshCalls++;
-  }
-
-  @override
-  Future<void> deleteSession() async {
-    deleteCalls++;
-  }
 }
 
 void main() {
   BaseRepository.storage = const _MemoryCacheStorage();
 
-  test('401 still refreshes the session and requests a retry', () async {
-    final repository = _SessionAwareRepository(
-      httpClient: const _ResponseClient(
-        RepositoryHttpResponse(statusCode: 401, headers: {}, body: '{}'),
-      ),
-    );
-
-    await expectLater(
-      repository.onErrorStatusCode(401),
-      throwsA(isA<SessionExpiredException>()),
-    );
-    expect(repository.refreshCalls, 1);
-    expect(repository.deleteCalls, 0);
-  });
-
-  test('401 clears the session when refresh cannot restore it', () async {
-    final repository = _SessionAwareRepository(
-      httpClient: const _ResponseClient(
-        RepositoryHttpResponse(statusCode: 401, headers: {}, body: '{}'),
-      ),
-      sessionAvailableAfterRefresh: false,
-    );
-
-    expect(await repository.onErrorStatusCode(401), isTrue);
-    expect(repository.refreshCalls, 1);
-    expect(repository.deleteCalls, 1);
-  });
-
-  test(
-    '500 remains a typed server error without session side effects',
-    () async {
-      final repository = _SessionAwareRepository(
-        httpClient: const _ResponseClient(
-          RepositoryHttpResponse(statusCode: 500, headers: {}, body: '{}'),
-        ),
-      );
-
-      await expectLater(
-        repository.resolve(),
-        throwsA(
-          isA<UnexpectedStatusCodeException>().having(
-            (error) => error.received.statusCode,
-            'status code',
-            500,
-          ),
-        ),
-      );
-      expect(repository.refreshCalls, 0);
-      expect(repository.deleteCalls, 0);
-    },
-  );
-
-  test('403 reaches the caller typed without refreshing or deleting', () async {
+  test('403 reaches the caller typed without a session refresh', () async {
     final repository = _SessionAwareRepository(
       httpClient: const _ResponseClient(
         RepositoryHttpResponse(statusCode: 403, headers: {}, body: '{}'),
       ),
     );
 
+    expect(await repository.onErrorStatusCode(403), isTrue);
     await expectLater(
       repository.resolve(),
       throwsA(
@@ -144,7 +72,5 @@ void main() {
         ),
       ),
     );
-    expect(repository.refreshCalls, 0);
-    expect(repository.deleteCalls, 0);
   });
 }

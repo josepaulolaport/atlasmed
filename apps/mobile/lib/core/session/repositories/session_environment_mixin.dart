@@ -23,7 +23,8 @@ class SessionExpiredException implements Exception {
 ///
 /// Automatically:
 /// - Injects `Authorization: Bearer <token>` via [tokenBuilder]
-/// - Handles 401/403 by refreshing or logging out
+/// - Handles 401 by refreshing or logging out; preserves 403 as authorization
+///   failures so callers can surface permission-specific feedback.
 /// - Retries on [SessionExpiredException] and [NetworkUnavailableException]
 /// - Skips refresh when no active session exists
 mixin SessionEnvironmentMixin<T> on Repository<T> {

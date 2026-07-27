@@ -1,10 +1,11 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/unexpected_status_code_exception.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
 /// Radius chip options for Explorar clinics (km). Clear = no `radiusKm`.
 const List<double> exploreRadiusKmOptions = [5, 10, 25, 50, 100];
@@ -50,15 +51,15 @@ class ClinicsRepository extends Repository<PaginatedClinics>
                    .map((stage) => stage.apiValue)
                    .join(','),
              if (purchaseProfile != null)
-               'purchaseProfile': purchaseProfile!.apiValue,
+               'purchaseProfile': purchaseProfile.apiValue,
              if (purchaseIntervalMinDays != null)
                'purchaseIntervalMinDays': purchaseIntervalMinDays.toString(),
              if (purchaseIntervalMaxDays != null)
                'purchaseIntervalMaxDays': purchaseIntervalMaxDays.toString(),
              if (verticalId != null && verticalId.trim().isNotEmpty)
                'verticalId': verticalId.trim(),
-             if (sort != null) 'sort': sort!.apiValue,
-             if (order != null) 'order': order!.name,
+             if (sort != null) 'sort': sort.apiValue,
+             if (order != null) 'order': order.name,
            },
          ),
          name: 'ClinicsRepository',

@@ -120,7 +120,7 @@ void main() {
       baseUrl: 'https://api.example.test',
       page: 1,
       limit: 20,
-      commercialStatus: CommercialStatus.suspended,
+      commercialStatus: CommercialStatus.suspended.apiValue,
     );
 
     expect(endpoint.queryParameters['commercialStatus'], 'SUSPENDED');
