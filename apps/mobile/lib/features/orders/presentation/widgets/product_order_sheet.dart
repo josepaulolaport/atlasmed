@@ -105,7 +105,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: const AppColors.gray200,
+              color: AppColors.gray200,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -188,8 +188,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     ),
                     decoration: BoxDecoration(
                       color: widget.clinicId != null
-                          ? const AppColors.blue50
-                          : const AppColors.amber50,
+                          ? AppColors.blue50
+                          : AppColors.amber50,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: widget.clinicId != null
@@ -259,7 +259,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: const AppColors.surfaceSecondary),
+                      border: Border.all(color: AppColors.surfaceSecondary),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -311,12 +311,12 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                               decoration: BoxDecoration(
                                 border: Border.all(
                                   color: active
-                                      ? const AppColors.navyDeep
-                                      : const AppColors.surfaceSecondary,
+                                      ? AppColors.navyDeep
+                                      : AppColors.surfaceSecondary,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 color: active
-                                    ? const AppColors.blue50
+                                    ? AppColors.blue50
                                     : Colors.white,
                               ),
                               child: Text(
@@ -326,8 +326,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: active
-                                      ? const AppColors.navyDeep
-                                      : const AppColors.gray500,
+                                      ? AppColors.navyDeep
+                                      : AppColors.gray500,
                                 ),
                               ),
                             ),
@@ -357,7 +357,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const AppColors.green50,
+                            color: AppColors.green50,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: const Row(
@@ -425,8 +425,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: _mode == 'custom'
-                              ? const AppColors.navyDeep
-                              : const AppColors.gray900,
+                              ? AppColors.navyDeep
+                              : AppColors.gray900,
                         ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
@@ -456,7 +456,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                   if (suggestion != null && suggestion.history.length > 1)
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: const AppColors.surfaceSecondary),
+                        border: Border.all(color: AppColors.surfaceSecondary),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ExpansionTile(
@@ -547,7 +547,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const AppColors.blue50,
+                                        color: AppColors.blue50,
                                         borderRadius: BorderRadius.circular(
                                           999,
                                         ),
@@ -624,7 +624,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                   child: ElevatedButton(
                     onPressed: _confirm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const AppColors.navyDeep,
+                      backgroundColor: AppColors.navyDeep,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -666,9 +666,9 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          border: Border.all(color: const AppColors.surfaceSecondary),
+          border: Border.all(color: AppColors.surfaceSecondary),
           borderRadius: BorderRadius.circular(10),
-          color: const AppColors.background,
+          color: AppColors.background,
         ),
         child: Center(
           child: Text(
@@ -677,8 +677,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: enabled
-                  ? const AppColors.navyDeep
-                  : const AppColors.gray300,
+                  ? AppColors.navyDeep
+                  : AppColors.gray300,
             ),
           ),
         ),
@@ -721,10 +721,10 @@ class _PriceRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: active ? const AppColors.navyDeep : const AppColors.surfaceSecondary,
+            color: active ? AppColors.navyDeep : AppColors.surfaceSecondary,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: active ? const AppColors.blue50 : Colors.white,
+          color: active ? AppColors.blue50 : Colors.white,
         ),
         child: Row(
           children: [
@@ -735,8 +735,8 @@ class _PriceRow extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: active
-                      ? const AppColors.navyDeep
-                      : const AppColors.gray300,
+                      ? AppColors.navyDeep
+                      : AppColors.gray300,
                 ),
                 color: Colors.white,
               ),
@@ -766,8 +766,8 @@ class _PriceRow extends StatelessWidget {
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: active
-                              ? const AppColors.navyDeep
-                              : const AppColors.gray900,
+                              ? AppColors.navyDeep
+                              : AppColors.gray900,
                         ),
                       ),
                       if (badge != null) ...[
@@ -779,8 +779,8 @@ class _PriceRow extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: badgeGood
-                                ? const AppColors.green50
-                                : const AppColors.gray100,
+                                ? AppColors.green50
+                                : AppColors.gray100,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -789,8 +789,8 @@ class _PriceRow extends StatelessWidget {
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: badgeGood
-                                  ? const AppColors.green600
-                                  : const AppColors.gray500,
+                                  ? AppColors.green600
+                                  : AppColors.gray500,
                             ),
                           ),
                         ),
@@ -803,8 +803,8 @@ class _PriceRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11.5,
                       color: hintWarn
-                          ? const AppColors.amber
-                          : const AppColors.gray500,
+                          ? AppColors.amber
+                          : AppColors.gray500,
                       height: 1.4,
                     ),
                   ),
@@ -831,8 +831,8 @@ class _PriceRow extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: active
-                          ? const AppColors.navyDeep
-                          : const AppColors.gray900,
+                          ? AppColors.navyDeep
+                          : AppColors.gray900,
                     ),
                   ),
                 ],
@@ -869,7 +869,7 @@ Widget _agreementBadge(SuggestionKind kind) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
     decoration: BoxDecoration(
-      color: const AppColors.gray100,
+      color: AppColors.gray100,
       borderRadius: BorderRadius.circular(5),
     ),
     child: Text(

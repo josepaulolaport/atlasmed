@@ -184,7 +184,7 @@ class _FilterPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? const AppColors.navyBright : const AppColors.surfaceSecondary,
+          color: selected ? AppColors.navyBright : AppColors.surfaceSecondary,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -192,7 +192,7 @@ class _FilterPill extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: selected ? Colors.white : const AppColors.gray500,
+            color: selected ? Colors.white : AppColors.gray500,
           ),
         ),
       ),
@@ -269,7 +269,7 @@ class _VisitEntryRow extends StatelessWidget {
                     Expanded(
                       child: Container(
                         width: 1,
-                        color: const AppColors.surfaceSecondary,
+                        color: AppColors.surfaceSecondary,
                       ),
                     ),
                 ],
@@ -305,7 +305,7 @@ class _VisitEntryRow extends StatelessWidget {
                           const SizedBox(width: 6),
                           CircleAvatar(
                             radius: 10,
-                            backgroundColor: const AppColors.blueLight,
+                            backgroundColor: AppColors.blueLight,
                             child: Text(
                               entry.consultantInitials!,
                               style: const TextStyle(

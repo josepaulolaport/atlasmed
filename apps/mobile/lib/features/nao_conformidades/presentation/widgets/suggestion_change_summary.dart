@@ -26,13 +26,13 @@ class SuggestionChangeSummary extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: isDeactivation
-                    ? const AppColors.red50
-                    : const AppColors.blueLight,
+                    ? AppColors.red50
+                    : AppColors.blueLight,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDeactivation
-                      ? const AppColors.red100
-                      : const AppColors.blueLight,
+                      ? AppColors.red100
+                      : AppColors.blueLight,
                 ),
               ),
               child: Row(
@@ -44,8 +44,8 @@ class SuggestionChangeSummary extends StatelessWidget {
                         : Icons.label_outline_rounded,
                     size: 12,
                     color: isDeactivation
-                        ? const AppColors.error
-                        : const AppColors.navyBright,
+                        ? AppColors.error
+                        : AppColors.navyBright,
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -56,8 +56,8 @@ class SuggestionChangeSummary extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: isDeactivation
-                          ? const AppColors.error
-                          : const AppColors.navyBright,
+                          ? AppColors.error
+                          : AppColors.navyBright,
                     ),
                   ),
                 ],
@@ -72,7 +72,7 @@ class SuggestionChangeSummary extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 11.5 : 12,
               fontWeight: FontWeight.w600,
-              color: const AppColors.gray500,
+              color: AppColors.gray500,
             ),
           ),
           const SizedBox(height: 3),
@@ -90,7 +90,7 @@ class SuggestionChangeSummary extends StatelessWidget {
             muted: false,
             strike: false,
             compact: compact,
-            emphasizeColor: const AppColors.error,
+            emphasizeColor: AppColors.error,
           ),
         ] else ...[
           _ValueLine(
@@ -143,7 +143,7 @@ class _ValueLine extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 11.5 : 12,
               fontWeight: FontWeight.w600,
-              color: const AppColors.gray400,
+              color: AppColors.gray400,
             ),
           ),
           TextSpan(
@@ -152,10 +152,10 @@ class _ValueLine extends StatelessWidget {
               fontSize: compact ? 12 : 13,
               fontWeight: muted ? FontWeight.w500 : FontWeight.w700,
               color: muted
-                  ? const AppColors.gray500
-                  : (emphasizeColor ?? const AppColors.green600),
+                  ? AppColors.gray500
+                  : (emphasizeColor ?? AppColors.green600),
               decoration: strike ? TextDecoration.lineThrough : null,
-              decorationColor: const AppColors.error,
+              decorationColor: AppColors.error,
             ),
           ),
         ],

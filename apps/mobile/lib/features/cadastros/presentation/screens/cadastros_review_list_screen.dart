@@ -34,7 +34,7 @@ class _CadastrosReviewListScreenState
         .$1;
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,7 +180,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const AppColors.navyDeep : Colors.white,
+      color: selected ? AppColors.navyDeep : Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -191,8 +191,8 @@ class _FilterChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
-                  ? const AppColors.navyDeep
-                  : const AppColors.gray200,
+                  ? AppColors.navyDeep
+                  : AppColors.gray200,
             ),
           ),
           child: Text(
@@ -200,7 +200,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const AppColors.gray600,
+              color: selected ? Colors.white : AppColors.gray600,
             ),
           ),
         ),
@@ -228,7 +228,7 @@ class _ReviewListCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

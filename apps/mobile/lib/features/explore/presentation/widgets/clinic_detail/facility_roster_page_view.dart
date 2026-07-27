@@ -108,7 +108,7 @@ class FacilityRosterPaginationSkeleton extends StatelessWidget {
     child: AtlasShimmer(
       child: Container(
         decoration: BoxDecoration(
-          color: const AppColors.surfaceSecondary,
+          color: AppColors.surfaceSecondary,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.all(14),
@@ -166,7 +166,7 @@ class _RosterSkeletonBlock extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        color: const AppColors.surfaceSecondary,
+        color: AppColors.surfaceSecondary,
       ),
     );
   }

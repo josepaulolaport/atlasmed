@@ -73,9 +73,9 @@ class _Chip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? const AppColors.navyDeep : Colors.white,
+          color: selected ? AppColors.navyDeep : Colors.white,
           border: Border.all(
-            color: selected ? const AppColors.navyDeep : const AppColors.gray200,
+            color: selected ? AppColors.navyDeep : AppColors.gray200,
           ),
           borderRadius: BorderRadius.circular(999),
         ),
@@ -84,7 +84,7 @@ class _Chip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const AppColors.gray700,
+            color: selected ? Colors.white : AppColors.gray700,
           ),
         ),
       ),

@@ -114,7 +114,7 @@ class SortSheet extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: on
-                                ? const AppColors.blue50
+                                ? AppColors.blue50
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -127,12 +127,12 @@ class SortSheet extends StatelessWidget {
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: on
-                                        ? const AppColors.navyBright
-                                        : const AppColors.gray300,
+                                        ? AppColors.navyBright
+                                        : AppColors.gray300,
                                     width: 2,
                                   ),
                                   color: on
-                                      ? const AppColors.navyBright
+                                      ? AppColors.navyBright
                                       : Colors.white,
                                 ),
                               )

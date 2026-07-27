@@ -41,7 +41,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final product = _product;
     if (family == null || product == null || _familyProducts.isEmpty) {
       return Scaffold(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
@@ -75,7 +75,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -156,7 +156,7 @@ class _ConcentrationSwitcher extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const AppColors.gray200),
+          border: Border.all(color: AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -169,7 +169,7 @@ class _ConcentrationSwitcher extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: product.id == selectedId
-                          ? const AppColors.navyDeep
+                          ? AppColors.navyDeep
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(999),
                     ),
@@ -183,7 +183,7 @@ class _ConcentrationSwitcher extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: product.id == selectedId
                             ? Colors.white
-                            : const AppColors.navyDeep,
+                            : AppColors.navyDeep,
                       ),
                     ),
                   ),
@@ -208,7 +208,7 @@ class _HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -255,7 +255,7 @@ class _HeroCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const AppColors.green,
+                          color: AppColors.green,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: const Text(
@@ -273,9 +273,9 @@ class _HeroCard extends StatelessWidget {
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const AppColors.blue50,
+                        color: AppColors.blue50,
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: const AppColors.blueLight),
+                        border: Border.all(color: AppColors.blueLight),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -307,9 +307,9 @@ class _HeroCard extends StatelessWidget {
             width: 88,
             height: 96,
             decoration: BoxDecoration(
-              color: const AppColors.background,
+              color: AppColors.background,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
             ),
             child: const Icon(
               Icons.medication_liquid_outlined,
@@ -363,8 +363,8 @@ class _TabBar extends StatelessWidget {
                               ? FontWeight.w700
                               : FontWeight.w500,
                           color: tab == active
-                              ? const AppColors.navyDeep
-                              : const AppColors.gray400,
+                              ? AppColors.navyDeep
+                              : AppColors.gray400,
                         ),
                       ),
                     ),
@@ -373,7 +373,7 @@ class _TabBar extends StatelessWidget {
                       height: 2.5,
                       decoration: BoxDecoration(
                         color: tab == active
-                            ? const AppColors.navyDeep
+                            ? AppColors.navyDeep
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(99),
                       ),
@@ -481,7 +481,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,7 +579,7 @@ class _CompareButton extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.navyDeep,
+              backgroundColor: AppColors.navyDeep,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

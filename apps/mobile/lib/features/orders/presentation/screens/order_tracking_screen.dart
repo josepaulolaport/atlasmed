@@ -129,7 +129,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.red,
+              backgroundColor: AppColors.red,
               foregroundColor: Colors.white,
             ),
             onPressed: () => context.pop(true),
@@ -197,11 +197,11 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
     return orderAsync.when(
       loading: () => Scaffold(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (err, stack) => Scaffold(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         body: Center(
           child: Text(
             'Não foi possível carregar o pedido.\n$err',
@@ -242,7 +242,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
         );
 
         return Scaffold(
-          backgroundColor: const AppColors.background,
+          backgroundColor: AppColors.background,
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -290,7 +290,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            border: Border.all(color: const AppColors.surfaceSecondary),
+                            border: Border.all(color: AppColors.surfaceSecondary),
                             borderRadius: BorderRadius.circular(12),
                             color: Colors.white,
                           ),
@@ -494,7 +494,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const AppColors.blue50,
+                                color: AppColors.blue50,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.center,
@@ -539,7 +539,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                               child: OutlinedButton(
                                 onPressed: _showCancel,
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const AppColors.red,
+                                  foregroundColor: AppColors.red,
                                   side: const BorderSide(
                                     color: AppColors.red100,
                                   ),
@@ -558,7 +558,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                             child: FilledButton(
                               onPressed: () => context.go('/splash'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: const AppColors.navyDeep,
+                                backgroundColor: AppColors.navyDeep,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
@@ -591,7 +591,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
             label,
             style: TextStyle(
               fontSize: 12.5,
-              color: const AppColors.gray500,
+              color: AppColors.gray500,
               fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
@@ -600,7 +600,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
           value,
           style: TextStyle(
             fontSize: 12.5,
-            color: const AppColors.gray900,
+            color: AppColors.gray900,
             fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
@@ -690,7 +690,7 @@ class _TimelineRow extends StatelessWidget {
                   color: isDone ? color : Colors.white,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isDone ? color : const AppColors.gray200,
+                    color: isDone ? color : AppColors.gray200,
                     width: 1.2,
                   ),
                   boxShadow: isCurrent
@@ -728,7 +728,7 @@ class _TimelineRow extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isDone
                           ? color.withValues(alpha: 0.25)
-                          : const AppColors.gray200,
+                          : AppColors.gray200,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -841,7 +841,7 @@ class _DriverCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: const AppColors.blue50,
+                color: AppColors.blue50,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
@@ -869,7 +869,7 @@ class _DriverCard extends StatelessWidget {
               child: FilledButton(
                 onPressed: () {},
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyDeep,
+                  backgroundColor: AppColors.navyDeep,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Ligar'),
@@ -896,7 +896,7 @@ class _ProductRow extends StatelessWidget {
           height: 38,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: const AppColors.blue50,
+            color: AppColors.blue50,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Text('💊', style: TextStyle(fontSize: 18)),

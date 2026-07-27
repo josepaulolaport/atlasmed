@@ -23,11 +23,11 @@ class MySuggestionsScreen extends ConsumerWidget {
     final asyncItems = ref.watch(mySuggestionsForClinicProvider(targetId));
 
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const AppColors.surfaceTertiary,
+        backgroundColor: AppColors.surfaceTertiary,
         elevation: 0,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         title: Text(
           asyncItems.maybeWhen(
             data: (items) => 'Não Conformidades · ${items.length}',
@@ -56,7 +56,7 @@ class MySuggestionsScreen extends ConsumerWidget {
                   onPressed: () =>
                       ref.invalidate(mySuggestionsForClinicProvider(targetId)),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const AppColors.navyBright,
+                    backgroundColor: AppColors.navyBright,
                   ),
                   child: const Text('Tentar novamente'),
                 ),
@@ -124,7 +124,7 @@ class _EmptyCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: const Text(
         'Você ainda não enviou não conformidades para este perfil.',
@@ -153,7 +153,7 @@ class _SuggestionCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

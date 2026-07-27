@@ -39,7 +39,7 @@ class ClinicContextSection extends StatelessWidget {
                   ? 'gerente responsável · desde ${_formatMonthYear(managerSince!)}'
                   : 'gerente responsável',
               avatarColor: const Color(0xFFecfdf5),
-              initialsColor: const AppColors.green600,
+              initialsColor: AppColors.green600,
             ),
           ],
           const Divider(height: 20, color: AppColors.gray100),
@@ -86,8 +86,8 @@ class _PersonRow extends StatelessWidget {
   const _PersonRow({
     required this.name,
     required this.roleLabel,
-    this.avatarColor = const AppColors.blueLight,
-    this.initialsColor = const AppColors.navyBright,
+    this.avatarColor = AppColors.blueLight,
+    this.initialsColor = AppColors.navyBright,
   });
 
   final String? name;
@@ -165,7 +165,7 @@ class _ContextRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: const AppColors.gray400),
+          Icon(icon, size: 16, color: AppColors.gray400),
           const SizedBox(width: 10),
           SizedBox(
             width: 80,

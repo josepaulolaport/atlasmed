@@ -103,7 +103,7 @@ class _ClinicDeactivationSheetBodyState
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -144,7 +144,7 @@ class _ClinicDeactivationSheetBodyState
             decoration: InputDecoration(
               hintText: 'Motivo da desativação',
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -162,7 +162,7 @@ class _ClinicDeactivationSheetBodyState
                 Navigator.of(context).pop(reason);
               },
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.error,
+                backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(

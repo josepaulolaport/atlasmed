@@ -131,7 +131,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -163,7 +163,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
             decoration: InputDecoration(
               hintText: _hint,
               filled: true,
-              fillColor: const AppColors.surfaceTertiary,
+              fillColor: AppColors.surfaceTertiary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -180,7 +180,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.navyBright,
+              backgroundColor: AppColors.navyBright,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

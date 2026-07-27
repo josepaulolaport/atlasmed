@@ -22,7 +22,7 @@ class SkeletonRow extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(avatarBorder),
-                color: const AppColors.surfaceSecondary,
+                color: AppColors.surfaceSecondary,
               ),
             ),
             const SizedBox(width: 12),
@@ -50,7 +50,7 @@ class SkeletonRow extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: const AppColors.surfaceSecondary,
+        color: AppColors.surfaceSecondary,
       ),
     );
   }

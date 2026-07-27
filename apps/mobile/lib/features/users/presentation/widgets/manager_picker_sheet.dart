@@ -102,7 +102,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                           icon: const Icon(Icons.close_rounded, size: 18),
                         ),
                   filled: true,
-                  fillColor: const AppColors.background,
+                  fillColor: AppColors.background,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: AppColors.surfaceSecondary),
@@ -201,7 +201,7 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                                       fontWeight: selected
                                           ? FontWeight.w700
                                           : FontWeight.w600,
-                                      color: const AppColors.gray900,
+                                      color: AppColors.gray900,
                                     ),
                                   ),
                                 ),
@@ -214,8 +214,8 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                                     style: TextStyle(
                                       fontSize: 12.5,
                                       color: manager.territoryName == null
-                                          ? const AppColors.gray400
-                                          : const AppColors.gray500,
+                                          ? AppColors.gray400
+                                          : AppColors.gray500,
                                     ),
                                   ),
                                 ),

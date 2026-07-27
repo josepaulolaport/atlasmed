@@ -54,7 +54,7 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                   label: const Text('Criar profissional'),
                   style: TextButton.styleFrom(
-                    foregroundColor: const AppColors.navyBright,
+                    foregroundColor: AppColors.navyBright,
                   ),
                 ),
               ),
@@ -115,7 +115,7 @@ class _ProfessionalCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: const AppColors.blueLight,
+                  color: AppColors.blueLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -268,8 +268,8 @@ class _ContactRow extends StatelessWidget {
             icon,
             size: 15,
             color: value != null
-                ? const AppColors.navyBright
-                : const AppColors.gray300,
+                ? AppColors.navyBright
+                : AppColors.gray300,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -279,8 +279,8 @@ class _ContactRow extends StatelessWidget {
                 fontSize: 12.5,
                 fontWeight: value != null ? FontWeight.w500 : FontWeight.w400,
                 color: value != null
-                    ? const AppColors.gray900
-                    : const AppColors.gray400,
+                    ? AppColors.gray900
+                    : AppColors.gray400,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -302,7 +302,7 @@ class _Flag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: const AppColors.blueLight,
+        color: AppColors.blueLight,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

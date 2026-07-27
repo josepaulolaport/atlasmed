@@ -76,7 +76,7 @@ class _NaoConformidadesListScreenState
         0;
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -84,7 +84,7 @@ class _NaoConformidadesListScreenState
             const AtlasTopBar(page: 'Não Conformidades'),
             Expanded(
               child: RefreshIndicator(
-                color: const AppColors.navyBright,
+                color: AppColors.navyBright,
                 backgroundColor: Colors.white,
                 strokeWidth: 2.6,
                 displacement: 48,
@@ -241,7 +241,7 @@ class _EmptyFilterState extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: const AppColors.blueLight,
+              color: AppColors.blueLight,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
@@ -303,7 +303,7 @@ class _ErrorState extends StatelessWidget {
             FilledButton(
               onPressed: onRetry,
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
               ),
               child: const Text('Tentar novamente'),
             ),
@@ -328,7 +328,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const AppColors.navyBright : Colors.white,
+      color: selected ? AppColors.navyBright : Colors.white,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -339,8 +339,8 @@ class _FilterChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
-                  ? const AppColors.navyBright
-                  : const AppColors.gray200,
+                  ? AppColors.navyBright
+                  : AppColors.gray200,
             ),
           ),
           child: Text(
@@ -348,7 +348,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const AppColors.gray700,
+              color: selected ? Colors.white : AppColors.gray700,
             ),
           ),
         ),
@@ -376,7 +376,7 @@ class _SuggestionListCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -215,12 +215,12 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     }.toList()..sort();
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const AppColors.gray950,
+        foregroundColor: AppColors.gray950,
         title: Text(
           _isEditing ? 'Editar produto' : 'Novo produto',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -463,7 +463,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
               child: FilledButton(
                 onPressed: _isValid && !_saving ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyDeep,
+                  backgroundColor: AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -582,7 +582,7 @@ class _SuggestionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const AppColors.navyDeep : const AppColors.gray100,
+      color: selected ? AppColors.navyDeep : AppColors.gray100,
       borderRadius: BorderRadius.circular(99),
       child: InkWell(
         onTap: onTap,
@@ -594,7 +594,7 @@ class _SuggestionChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const AppColors.gray700,
+              color: selected ? Colors.white : AppColors.gray700,
             ),
           ),
         ),

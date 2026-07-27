@@ -119,7 +119,7 @@ class _UsersSkeletonBar extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(4),
-        color: const AppColors.surfaceSecondary,
+        color: AppColors.surfaceSecondary,
       ),
     );
   }

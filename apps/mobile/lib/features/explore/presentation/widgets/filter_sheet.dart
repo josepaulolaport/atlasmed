@@ -164,7 +164,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const AppColors.gray200),
+                  border: Border.all(color: AppColors.gray200),
                   color: Colors.white,
                 ),
                 child: const Center(
@@ -217,7 +217,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 height: 46,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: const AppColors.navyBright,
+                  color: AppColors.navyBright,
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x4D1e40af),
@@ -496,7 +496,7 @@ class _ToggleChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? dotColor.withValues(alpha: 0.1)
-              : const AppColors.gray100,
+              : AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: selected ? dotColor : Colors.transparent),
         ),
@@ -517,7 +517,7 @@ class _ToggleChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: selected ? dotColor : const AppColors.gray700,
+                color: selected ? dotColor : AppColors.gray700,
               ),
             ),
           ],
@@ -545,10 +545,10 @@ class _SimpleChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? const AppColors.navyBright : const AppColors.gray100,
+          color: selected ? AppColors.navyBright : AppColors.gray100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? const AppColors.navyBright : Colors.transparent,
+            color: selected ? AppColors.navyBright : Colors.transparent,
           ),
         ),
         child: Text(
@@ -556,7 +556,7 @@ class _SimpleChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const AppColors.gray700,
+            color: selected ? Colors.white : AppColors.gray700,
           ),
         ),
       ),

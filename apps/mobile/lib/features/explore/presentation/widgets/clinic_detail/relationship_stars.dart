@@ -48,7 +48,7 @@ class RelationshipStars extends StatelessWidget {
             style: TextStyle(
               fontSize: _editable ? 13 : 11.5,
               fontWeight: FontWeight.w600,
-              color: const AppColors.gray500,
+              color: AppColors.gray500,
             ),
           ),
           SizedBox(width: _editable ? 10 : 6),

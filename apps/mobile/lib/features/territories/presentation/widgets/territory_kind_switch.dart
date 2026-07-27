@@ -18,7 +18,7 @@ class TerritoryKindSwitch extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: const AppColors.surfaceSecondary,
+        color: AppColors.surfaceSecondary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -50,8 +50,8 @@ class TerritoryKindSwitch extends StatelessWidget {
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: selected
-                        ? const AppColors.navyDeep
-                        : const AppColors.gray500,
+                        ? AppColors.navyDeep
+                        : AppColors.gray500,
                   ),
                 ),
               ),

@@ -49,9 +49,9 @@ class DoctorDetailScreen extends ConsumerWidget {
         : null;
 
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const AppColors.navyBright,
+        backgroundColor: AppColors.navyBright,
         foregroundColor: Colors.white,
       ),
       body: FutureBuilder<ApiDoctor?>(
@@ -152,11 +152,7 @@ class DoctorDetailScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.error_outline,
-                size: 48,
-                color: AppColors.red,
-              ),
+              const Icon(Icons.error_outline, size: 48, color: AppColors.red),
               const SizedBox(height: 12),
               const Text(
                 'Erro ao carregar',
@@ -222,8 +218,8 @@ class _DoctorDetailContent extends ConsumerWidget {
       children: [
         Column(
           children: [
-            Expanded(child: Container(color: const AppColors.navyBright)),
-            Expanded(child: Container(color: const AppColors.surfaceTertiary)),
+            Expanded(child: Container(color: AppColors.navyBright)),
+            Expanded(child: Container(color: AppColors.surfaceTertiary)),
           ],
         ),
         RefreshIndicator(
@@ -235,7 +231,7 @@ class _DoctorDetailContent extends ConsumerWidget {
           },
           child: SingleChildScrollView(
             child: ColoredBox(
-              color: const AppColors.surfaceTertiary,
+              color: AppColors.surfaceTertiary,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -581,7 +577,7 @@ class _DoctorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const AppColors.navyBright,
+      color: AppColors.navyBright,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -608,7 +604,7 @@ class _DoctorHeader extends StatelessWidget {
                           offset: const Offset(0, 6),
                         ),
                       ],
-                      color: const AppColors.navyBright,
+                      color: AppColors.navyBright,
                     ),
                     child: Center(
                       child: Text(
@@ -723,8 +719,8 @@ class _DoctorQuickActions extends StatelessWidget {
         Positioned.fill(
           child: Column(
             children: [
-              Expanded(child: Container(color: const AppColors.navyBright)),
-              Expanded(child: Container(color: const AppColors.surfaceTertiary)),
+              Expanded(child: Container(color: AppColors.navyBright)),
+              Expanded(child: Container(color: AppColors.surfaceTertiary)),
             ],
           ),
         ),
@@ -733,11 +729,11 @@ class _DoctorQuickActions extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: const AppColors.surfaceSecondary),
+            border: Border.all(color: AppColors.surfaceSecondary),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const AppColors.gray900.withValues(alpha: 0.08),
+                color: AppColors.gray900.withValues(alpha: 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -748,7 +744,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'Ligar',
                 icon: Icons.phone_rounded,
-                color: const AppColors.navyBright,
+                color: AppColors.navyBright,
                 onTap: () => launchContactUrl(
                   context,
                   url: callUrl(detail.phone),
@@ -758,7 +754,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'WhatsApp',
                 icon: Icons.chat_rounded,
-                color: const AppColors.navyBright.withValues(alpha: 0.7),
+                color: AppColors.navyBright.withValues(alpha: 0.7),
                 onTap: () => launchContactUrl(
                   context,
                   url: whatsappUrl(detail.whatsapp),
@@ -768,7 +764,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'E-mail',
                 icon: Icons.email_rounded,
-                color: const AppColors.navyBright.withValues(alpha: 0.7),
+                color: AppColors.navyBright.withValues(alpha: 0.7),
                 onTap: () => launchContactUrl(
                   context,
                   url: emailUrl(detail.email),
@@ -778,7 +774,7 @@ class _DoctorQuickActions extends StatelessWidget {
               _QuickAction(
                 label: 'Nova visita',
                 icon: Icons.event_rounded,
-                color: const AppColors.navyBright.withValues(alpha: 0.7),
+                color: AppColors.navyBright.withValues(alpha: 0.7),
                 onTap: () {},
               ),
             ],
@@ -816,14 +812,12 @@ class _QuickAction extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDisabled
-                      ? const AppColors.gray100
-                      : color.withAlpha(38),
+                  color: isDisabled ? AppColors.gray100 : color.withAlpha(38),
                 ),
                 child: Icon(
                   icon,
                   size: 18,
-                  color: isDisabled ? const AppColors.gray300 : color,
+                  color: isDisabled ? AppColors.gray300 : color,
                 ),
               ),
               const SizedBox(height: 5),
@@ -833,9 +827,7 @@ class _QuickAction extends StatelessWidget {
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.1,
-                  color: isDisabled
-                      ? const AppColors.gray300
-                      : const AppColors.gray900,
+                  color: isDisabled ? AppColors.gray300 : AppColors.gray900,
                 ),
               ),
             ],
@@ -882,19 +874,15 @@ class _SignalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color color, Color bg, IconData icon) = switch (signal.kind) {
-      'good' => (
-        const AppColors.green,
-        const AppColors.green50,
-        Icons.trending_up_rounded,
-      ),
+      'good' => (AppColors.green, AppColors.green50, Icons.trending_up_rounded),
       'warn' => (
-        const AppColors.amber,
-        const AppColors.amber50,
+        AppColors.amber,
+        AppColors.amber50,
         Icons.info_outline_rounded,
       ),
       _ => (
-        const AppColors.navyBright,
-        const AppColors.blueLight,
+        AppColors.navyBright,
+        AppColors.blueLight,
         Icons.lightbulb_outline_rounded,
       ),
     };
@@ -1118,11 +1106,11 @@ class _DoctorPrescribing extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1136,7 +1124,7 @@ class _DoctorPrescribing extends StatelessWidget {
                 return Column(
                   children: [
                     if (i > 0)
-                      Container(height: 1, color: const AppColors.surfaceSecondary),
+                      Container(height: 1, color: AppColors.surfaceSecondary),
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: Column(
@@ -1162,7 +1150,7 @@ class _DoctorPrescribing extends StatelessWidget {
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const AppColors.green50,
+                                    color: AppColors.green50,
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: const Text(
@@ -1191,8 +1179,8 @@ class _DoctorPrescribing extends StatelessWidget {
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   color: positive
-                                      ? const AppColors.green600
-                                      : const AppColors.red,
+                                      ? AppColors.green600
+                                      : AppColors.red,
                                 ),
                               ),
                             ],
@@ -1217,8 +1205,8 @@ class _DoctorPrescribing extends StatelessWidget {
                                       height: pct * 28,
                                       decoration: BoxDecoration(
                                         color: v == item.trend.last
-                                            ? const AppColors.navyBright
-                                            : const AppColors.blueLight,
+                                            ? AppColors.navyBright
+                                            : AppColors.blueLight,
                                         borderRadius: BorderRadius.circular(2),
                                       ),
                                     );
@@ -1256,14 +1244,14 @@ class _DoctorPrescribing extends StatelessWidget {
                                     Container(
                                       height: 5,
                                       decoration: BoxDecoration(
-                                        color: const AppColors.surfaceSecondary,
+                                        color: AppColors.surfaceSecondary,
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                       child: FractionallySizedBox(
                                         widthFactor: item.share / 100,
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            color: const AppColors.navyBright,
+                                            color: AppColors.navyBright,
                                             borderRadius: BorderRadius.circular(
                                               3,
                                             ),
@@ -1318,11 +1306,11 @@ class _DoctorClinics extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1353,7 +1341,9 @@ class _DoctorClinics extends StatelessWidget {
                           decoration: BoxDecoration(
                             border: i > 0
                                 ? const Border(
-                                    top: BorderSide(color: AppColors.surfaceSecondary),
+                                    top: BorderSide(
+                                      color: AppColors.surfaceSecondary,
+                                    ),
                                   )
                                 : null,
                           ),
@@ -1364,16 +1354,16 @@ class _DoctorClinics extends StatelessWidget {
                                 height: 34,
                                 decoration: BoxDecoration(
                                   color: c.isMain
-                                      ? const AppColors.blue50
-                                      : const AppColors.gray100,
+                                      ? AppColors.blue50
+                                      : AppColors.gray100,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   Icons.local_hospital_rounded,
                                   size: 16,
                                   color: c.isMain
-                                      ? const AppColors.navyBright
-                                      : const AppColors.gray500,
+                                      ? AppColors.navyBright
+                                      : AppColors.gray500,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -1474,11 +1464,11 @@ class _DoctorVisits extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1488,10 +1478,10 @@ class _DoctorVisits extends StatelessWidget {
               children: List.generate(visits.length, (i) {
                 final v = visits[i];
                 final outcomeColor = switch (v.outcome) {
-                  'positivo' => const AppColors.green,
-                  'misto' => const AppColors.amber,
-                  'neutro' => const AppColors.gray500,
-                  _ => const AppColors.gray500,
+                  'positivo' => AppColors.green,
+                  'misto' => AppColors.amber,
+                  'neutro' => AppColors.gray500,
+                  _ => AppColors.gray500,
                 };
                 return Padding(
                   padding: EdgeInsets.only(top: i > 0 ? 14 : 0),
@@ -1547,7 +1537,7 @@ class _DoctorVisits extends StatelessWidget {
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const AppColors.gray100,
+                                    color: AppColors.gray100,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -1706,11 +1696,11 @@ class _DoctorNotes extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: const AppColors.surfaceSecondary),
+              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: const AppColors.gray900.withValues(alpha: 0.03),
+                  color: AppColors.gray900.withValues(alpha: 0.03),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1742,7 +1732,9 @@ class _DoctorNotes extends StatelessWidget {
                         decoration: BoxDecoration(
                           border: i < notes.length - 1
                               ? const Border(
-                                  bottom: BorderSide(color: AppColors.surfaceSecondary),
+                                  bottom: BorderSide(
+                                    color: AppColors.surfaceSecondary,
+                                  ),
                                 )
                               : null,
                         ),
@@ -1753,7 +1745,7 @@ class _DoctorNotes extends StatelessWidget {
                               width: 18,
                               height: 18,
                               decoration: BoxDecoration(
-                                color: const AppColors.blue50,
+                                color: AppColors.blue50,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Center(
@@ -1790,7 +1782,7 @@ class _DoctorNotes extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: const AppColors.blueLight,
+                            color: AppColors.blueLight,
                             width: 1,
                             style: BorderStyle.solid,
                           ),

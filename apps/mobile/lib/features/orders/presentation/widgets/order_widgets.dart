@@ -146,9 +146,9 @@ class StepperWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
         borderRadius: BorderRadius.circular(10),
-        color: const AppColors.background,
+        color: AppColors.background,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -156,7 +156,7 @@ class StepperWidget extends StatelessWidget {
           _btn(
             '-',
             () => onChange(value - 1),
-            value > 0 ? const AppColors.navyDeep : const AppColors.gray300,
+            value > 0 ? AppColors.navyDeep : AppColors.gray300,
           ),
           SizedBox(
             width: 28,
@@ -170,7 +170,7 @@ class StepperWidget extends StatelessWidget {
               ),
             ),
           ),
-          _btn('+', () => onChange(value + 1), const AppColors.navyDeep),
+          _btn('+', () => onChange(value + 1), AppColors.navyDeep),
         ],
       ),
     );
@@ -214,9 +214,9 @@ class CartBadge extends StatelessWidget {
             ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
             : const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? const AppColors.navyDeep : Colors.transparent,
+          color: active ? AppColors.navyDeep : Colors.transparent,
           border: Border.all(
-            color: active ? const AppColors.navyDeep : const AppColors.surfaceSecondary,
+            color: active ? AppColors.navyDeep : AppColors.surfaceSecondary,
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -230,7 +230,7 @@ class CartBadge extends StatelessWidget {
                 Icon(
                   Icons.shopping_bag_outlined,
                   size: 18,
-                  color: active ? Colors.white : const AppColors.gray400,
+                  color: active ? Colors.white : AppColors.gray400,
                 ),
                 if (active)
                   Positioned(
@@ -299,8 +299,8 @@ class SelectorField extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
-          color: disabled ? const AppColors.background : Colors.white,
-          border: Border.all(color: const AppColors.surfaceSecondary),
+          color: disabled ? AppColors.background : Colors.white,
+          border: Border.all(color: AppColors.surfaceSecondary),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -324,8 +324,8 @@ class SelectorField extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       color: value != null
-                          ? const AppColors.gray800
-                          : const AppColors.gray300,
+                          ? AppColors.gray800
+                          : AppColors.gray300,
                       fontWeight: value != null
                           ? FontWeight.w500
                           : FontWeight.w400,
@@ -359,7 +359,7 @@ class BackChevron extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          border: Border.all(color: const AppColors.surfaceSecondary),
+          border: Border.all(color: AppColors.surfaceSecondary),
           borderRadius: BorderRadius.circular(10),
           color: Colors.white,
         ),

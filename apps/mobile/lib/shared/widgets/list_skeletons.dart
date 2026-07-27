@@ -13,7 +13,7 @@ class _SkeletonBar extends StatelessWidget {
     width: width,
     height: height,
     decoration: BoxDecoration(
-      color: const AppColors.surfaceSecondary,
+      color: AppColors.surfaceSecondary,
       borderRadius: BorderRadius.circular(4),
     ),
   );
@@ -56,7 +56,7 @@ class _ReviewCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +65,7 @@ class _ReviewCardPlaceholder extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const AppColors.surfaceSecondary,
+            color: AppColors.surfaceSecondary,
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -118,7 +118,7 @@ class _SuggestionCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +173,7 @@ class _OrderCardPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +226,8 @@ class InvitationListSkeleton extends StatelessWidget {
             const SizedBox(height: 7),
             const _SkeletonBar(width: 200, height: 11),
             if (index != 3) const SizedBox(height: 14),
-            if (index != 3) const Divider(height: 1, color: AppColors.surfaceSecondary),
+            if (index != 3)
+              const Divider(height: 1, color: AppColors.surfaceSecondary),
           ],
         ),
       ),
@@ -257,7 +258,7 @@ class _ProductRowPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Row(
       children: [
@@ -305,7 +306,7 @@ class _CompetitorRowPlaceholder extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: const Row(
       children: [
@@ -341,7 +342,7 @@ class CompetitorPickerListSkeleton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: const AppColors.background,
+            color: AppColors.background,
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Row(
@@ -407,7 +408,7 @@ class _SkeletonIconBox extends StatelessWidget {
     width: size,
     height: size,
     decoration: BoxDecoration(
-      color: const AppColors.surfaceSecondary,
+      color: AppColors.surfaceSecondary,
       borderRadius: BorderRadius.circular(radius),
     ),
   );

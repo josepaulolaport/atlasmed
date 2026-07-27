@@ -72,12 +72,12 @@ class ManageCompetitorsScreen extends ConsumerWidget {
     final comparisonAsync = ref.watch(catalogComparisonProvider(variantId));
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const AppColors.gray950,
+        foregroundColor: AppColors.gray950,
         title: const Text(
           'Gerenciar concorrentes',
           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -151,7 +151,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const AppColors.navyDeep,
+                    foregroundColor: AppColors.navyDeep,
                     side: const BorderSide(color: AppColors.navyDeep),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -180,7 +180,7 @@ class _CompetitorRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Row(
         children: [
@@ -324,7 +324,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -356,7 +356,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const AppColors.navyDeep,
+                    foregroundColor: AppColors.navyDeep,
                     side: const BorderSide(color: AppColors.navyDeep),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -397,7 +397,7 @@ class _AddCompetitorSheetState extends ConsumerState<_AddCompetitorSheet> {
                     itemBuilder: (context, index) {
                       final competitor = unlinked[index];
                       return Material(
-                        color: const AppColors.background,
+                        color: AppColors.background,
                         borderRadius: BorderRadius.circular(12),
                         child: InkWell(
                           onTap: _linking

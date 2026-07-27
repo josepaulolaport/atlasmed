@@ -112,7 +112,7 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -182,7 +182,7 @@ class _AtlasTopBarContent extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const AppColors.surfaceSecondary),
+          border: Border.all(color: AppColors.surfaceSecondary),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0A0f1729),
@@ -570,11 +570,11 @@ class _NavItems extends StatelessWidget {
     bool isActive,
     BuildContext context,
   ) {
-    final color = isActive ? const AppColors.navyDeep : const AppColors.gray700;
+    final color = isActive ? AppColors.navyDeep : AppColors.gray700;
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
-        color: isActive ? const AppColors.blue50 : Colors.transparent,
+        color: isActive ? AppColors.blue50 : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

@@ -153,7 +153,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     });
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: Column(
           children: [
             const AtlasTopBar(page: 'Mapa'),
@@ -357,7 +357,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryFillLayerId,
           sourceId: _territorySourceId,
           slot: 'bottom',
-          fillColor: const AppColors.blue600.toARGB32(),
+          fillColor: AppColors.blue600.toARGB32(),
           fillOpacity: 0.10,
         ),
       );
@@ -366,7 +366,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           id: _territoryLineLayerId,
           sourceId: _territorySourceId,
           slot: 'middle',
-          lineColor: const AppColors.blueDark.toARGB32(),
+          lineColor: AppColors.blueDark.toARGB32(),
           lineWidth: 2,
           lineOpacity: 0.85,
           lineJoin: LineJoin.ROUND,
@@ -999,7 +999,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const AppColors.gray300,
+                      color: AppColors.gray300,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -1109,8 +1109,8 @@ class _RecenterButton extends StatelessWidget {
           child: Icon(
             following ? Icons.my_location_rounded : Icons.navigation_rounded,
             color: following
-                ? const AppColors.navyBright
-                : const AppColors.gray900,
+                ? AppColors.navyBright
+                : AppColors.gray900,
             size: 22,
           ),
         ),
@@ -1133,9 +1133,9 @@ class _StackedClinicTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: const AppColors.surfaceTertiary,
+          color: AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const AppColors.gray200),
+          border: Border.all(color: AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -1218,7 +1218,7 @@ class _MapMessage extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 3),
               )
             else
-              Icon(icon, size: 42, color: const AppColors.gray500),
+              Icon(icon, size: 42, color: AppColors.gray500),
             const SizedBox(height: 16),
             Text(
               title,

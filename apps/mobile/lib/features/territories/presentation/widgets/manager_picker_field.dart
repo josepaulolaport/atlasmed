@@ -96,7 +96,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const AppColors.gray200),
+          border: Border.all(color: AppColors.gray200),
         ),
         child: Row(
           children: [
@@ -123,8 +123,8 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: hasSelection
-                      ? const AppColors.gray950
-                      : const AppColors.gray400,
+                      ? AppColors.gray950
+                      : AppColors.gray400,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),

@@ -66,7 +66,7 @@ class _TaxIdTypeSuggestionSheetBodyState
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -115,7 +115,7 @@ class _TaxIdTypeSuggestionSheetBodyState
                   ? null
                   : () => Navigator.of(context).pop(true),
               style: FilledButton.styleFrom(
-                backgroundColor: const AppColors.navyBright,
+                backgroundColor: AppColors.navyBright,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -146,7 +146,7 @@ class _TypeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const AppColors.blue100 : const AppColors.surfaceTertiary,
+      color: selected ? AppColors.blue100 : AppColors.surfaceTertiary,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -157,8 +157,8 @@ class _TypeChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected
-                  ? const AppColors.navyBright
-                  : const AppColors.gray200,
+                  ? AppColors.navyBright
+                  : AppColors.gray200,
             ),
           ),
           child: Column(
@@ -167,8 +167,8 @@ class _TypeChip extends StatelessWidget {
                 icon,
                 size: 22,
                 color: selected
-                    ? const AppColors.navyBright
-                    : const AppColors.gray500,
+                    ? AppColors.navyBright
+                    : AppColors.gray500,
               ),
               const SizedBox(height: 8),
               Text(
@@ -178,8 +178,8 @@ class _TypeChip extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: selected
-                      ? const AppColors.navyBright
-                      : const AppColors.gray600,
+                      ? AppColors.navyBright
+                      : AppColors.gray600,
                 ),
               ),
             ],

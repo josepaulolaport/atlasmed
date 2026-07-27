@@ -44,10 +44,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             if (hasAvatar)
               ListTile(
-                leading: const Icon(
-                  Icons.delete_outline,
-                  color: AppColors.red,
-                ),
+                leading: const Icon(Icons.delete_outline, color: AppColors.red),
                 title: const Text(
                   "Remover foto",
                   style: TextStyle(color: AppColors.red),
@@ -345,17 +342,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Row(
                   children: [
                     _StatCell(value: '${stats.clinics}', label: 'clínicas'),
-                    Container(
-                      width: 1,
-                      height: 28,
-                      color: AppColors.gray100,
-                    ),
+                    Container(width: 1, height: 28, color: AppColors.gray100),
                     _StatCell(value: '${stats.doctors}', label: 'médicos'),
-                    Container(
-                      width: 1,
-                      height: 28,
-                      color: AppColors.gray100,
-                    ),
+                    Container(width: 1, height: 28, color: AppColors.gray100),
                     _StatCell(
                       value: '${stats.coveragePct}%',
                       label: 'cobertura',
@@ -586,11 +575,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         borderRadius: BorderRadius.circular(9),
       ),
       child: Center(
-        child: Icon(
-          _prefIconData(label),
-          size: 14,
-          color: AppColors.navyDeep,
-        ),
+        child: Icon(_prefIconData(label), size: 14, color: AppColors.navyDeep),
       ),
     );
   }
@@ -623,11 +608,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           backgroundColor: Colors.white,
         ),
-        icon: const Icon(
-          Icons.logout_rounded,
-          size: 15,
-          color: AppColors.red,
-        ),
+        icon: const Icon(Icons.logout_rounded, size: 15, color: AppColors.red),
         label: const Text(
           'Sair da conta',
           style: TextStyle(
@@ -744,7 +725,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         onPressed: () => setState(() => _logoutConfirm = false),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: AppColors.surfaceSecondary),
+                          side: const BorderSide(
+                            color: AppColors.surfaceSecondary,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -1071,9 +1054,7 @@ class _StatCell extends StatelessWidget {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: highlight
-                  ? AppColors.green
-                  : AppColors.gray800,
+              color: highlight ? AppColors.green : AppColors.gray800,
             ),
           ),
           const SizedBox(height: 1),

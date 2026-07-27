@@ -75,7 +75,7 @@ class _NewOrderProductsScreenState
         .toList();
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -153,7 +153,7 @@ class _NewOrderProductsScreenState
                 width: double.infinity,
                 child: FloatingActionButton.extended(
                   heroTag: 'new-order-products-cta',
-                  backgroundColor: const AppColors.navyDeep,
+                  backgroundColor: AppColors.navyDeep,
                   foregroundColor: Colors.white,
                   onPressed: () => context.push('/orders/new/cart'),
                   label: Text('Ver carrinho · ${cart.totalQty} itens →'),
@@ -215,7 +215,7 @@ class _NewOrderProductsScreenState
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const AppColors.blue50,
+          color: AppColors.blue50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0x1F0a2f7f), width: 1.2),
         ),
@@ -262,8 +262,8 @@ class _NewOrderProductsScreenState
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: focused
-                  ? const AppColors.navyDeep
-                  : const AppColors.gray200,
+                  ? AppColors.navyDeep
+                  : AppColors.gray200,
               width: 1.5,
             ),
           ),
@@ -301,9 +301,9 @@ class _NewOrderProductsScreenState
             labelStyle: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: active ? Colors.white : const AppColors.gray500,
+              color: active ? Colors.white : AppColors.gray500,
             ),
-            selectedColor: const AppColors.navyDeep,
+            selectedColor: AppColors.navyDeep,
             backgroundColor: Colors.white,
             side: const BorderSide(color: AppColors.gray200, width: 1),
             shape: RoundedRectangleBorder(
@@ -342,7 +342,7 @@ class _ProductCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: inCart ? const AppColors.navyDeep : const AppColors.gray200,
+            color: inCart ? AppColors.navyDeep : AppColors.gray200,
             width: 1.5,
           ),
           boxShadow: inCart

@@ -217,7 +217,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
-                      color: const AppColors.gray200,
+                      color: AppColors.gray200,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -315,7 +315,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                     icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                     label: const Text('Criar perfil de médico'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const AppColors.navyBright,
+                      foregroundColor: AppColors.navyBright,
                       side: const BorderSide(color: AppColors.blue100),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -330,8 +330,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                   child: FilledButton(
                     onPressed: _selected.isEmpty || _saving ? null : _confirm,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const AppColors.navyBright,
-                      disabledBackgroundColor: const AppColors.gray200,
+                      backgroundColor: AppColors.navyBright,
+                      disabledBackgroundColor: AppColors.gray200,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -449,7 +449,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
             ].join(' · '),
             style: const TextStyle(fontSize: 12, color: AppColors.gray500),
           ),
-          activeColor: const AppColors.navyBright,
+          activeColor: AppColors.navyBright,
         );
       },
     );
@@ -566,9 +566,9 @@ class _ModalSearchFieldState extends State<_ModalSearchField> {
     return Container(
       height: 44,
       decoration: BoxDecoration(
-        color: const AppColors.surfaceTertiary,
+        color: AppColors.surfaceTertiary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.gray200),
+        border: Border.all(color: AppColors.gray200),
       ),
       child: Row(
         children: [
@@ -592,7 +592,7 @@ class _ModalSearchFieldState extends State<_ModalSearchField> {
           if (widget.value.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.close_rounded, size: 18),
-              color: const AppColors.gray500,
+              color: AppColors.gray500,
               onPressed: () => widget.onChanged(''),
             ),
         ],

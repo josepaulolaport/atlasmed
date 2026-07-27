@@ -413,7 +413,7 @@ class _Avatar extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const AppColors.navyBright,
+                      color: AppColors.navyBright,
                       width: 2,
                     ),
                   ),
@@ -421,7 +421,7 @@ class _Avatar extends StatelessWidget {
                     child: Icon(
                       taxIdType!.icon,
                       size: 11,
-                      color: const AppColors.navyBright,
+                      color: AppColors.navyBright,
                     ),
                   ),
                 ),
@@ -433,7 +433,7 @@ class _Avatar extends StatelessWidget {
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
-                  color: const AppColors.navyBright,
+                  color: AppColors.navyBright,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),

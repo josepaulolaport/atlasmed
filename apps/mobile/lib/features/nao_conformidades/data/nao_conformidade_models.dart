@@ -75,11 +75,11 @@ extension NaoConformidadeStatusX on NaoConformidadeStatus {
   Color get color {
     switch (this) {
       case NaoConformidadeStatus.pending:
-        return const AppColors.amber;
+        return AppColors.amber;
       case NaoConformidadeStatus.accepted:
-        return const AppColors.green600;
+        return AppColors.green600;
       case NaoConformidadeStatus.rejected:
-        return const AppColors.error;
+        return AppColors.error;
     }
   }
 

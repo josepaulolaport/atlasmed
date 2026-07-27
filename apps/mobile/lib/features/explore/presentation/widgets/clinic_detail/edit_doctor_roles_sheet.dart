@@ -69,7 +69,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const AppColors.gray200,
+                color: AppColors.gray200,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -96,7 +96,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: const AppColors.navyBright,
+              backgroundColor: AppColors.navyBright,
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -131,7 +131,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
         ),
       ),
       value: value,
-      activeThumbColor: const AppColors.navyBright,
+      activeThumbColor: AppColors.navyBright,
       onChanged: (next) => setState(() => onChanged(next)),
     );
   }

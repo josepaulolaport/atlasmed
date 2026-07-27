@@ -25,17 +25,17 @@ extension OrderStatusX on OrderStatus {
   Color get color {
     switch (this) {
       case OrderStatus.draft:
-        return const AppColors.gray500;
+        return AppColors.gray500;
       case OrderStatus.pending:
-        return const AppColors.amber;
+        return AppColors.amber;
       case OrderStatus.approved:
-        return const AppColors.navyBright;
+        return AppColors.navyBright;
       case OrderStatus.invoiced:
-        return const AppColors.green;
+        return AppColors.green;
       case OrderStatus.rejected:
-        return const AppColors.red;
+        return AppColors.red;
       case OrderStatus.noBilling:
-        return const AppColors.purple;
+        return AppColors.purple;
     }
   }
 

@@ -22,11 +22,11 @@ extension UserRoleNameX on UserRoleName {
       case UserRoleName.admin:
         return const Color(0xFF8b5cf6);
       case UserRoleName.manager:
-        return const AppColors.navyBright;
+        return AppColors.navyBright;
       case UserRoleName.rep:
-        return const AppColors.green;
+        return AppColors.green;
       case UserRoleName.ops:
-        return const AppColors.amber;
+        return AppColors.amber;
     }
   }
 }

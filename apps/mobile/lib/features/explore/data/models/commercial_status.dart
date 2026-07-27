@@ -19,18 +19,18 @@ abstract final class CommercialStatusFilter {
   };
 
   static Color color(String value) => switch (value) {
-    registered => const AppColors.blueAccent,
-    active => const AppColors.green,
-    suspended => const AppColors.amber,
-    inactive => const AppColors.gray500,
-    _ => const AppColors.gray500,
+    registered => AppColors.blueAccent,
+    active => AppColors.green,
+    suspended => AppColors.amber,
+    inactive => AppColors.gray500,
+    _ => AppColors.gray500,
   };
 
   static Color bg(String value) => switch (value) {
-    registered => const AppColors.blueLight,
-    active => const AppColors.green50,
-    suspended => const AppColors.amber50,
-    inactive => const AppColors.gray100,
-    _ => const AppColors.gray100,
+    registered => AppColors.blueLight,
+    active => AppColors.green50,
+    suspended => AppColors.amber50,
+    inactive => AppColors.gray100,
+    _ => AppColors.gray100,
   };
 }

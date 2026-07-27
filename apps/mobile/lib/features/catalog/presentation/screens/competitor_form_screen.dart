@@ -150,12 +150,12 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: const AppColors.background,
+        backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: const AppColors.gray950,
+        foregroundColor: AppColors.gray950,
         title: Text(
           _isEditing ? 'Editar concorrente' : 'Novo concorrente',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -290,7 +290,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
               child: FilledButton(
                 onPressed: _isValid && !_saving ? _submit : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const AppColors.navyDeep,
+                  backgroundColor: AppColors.navyDeep,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

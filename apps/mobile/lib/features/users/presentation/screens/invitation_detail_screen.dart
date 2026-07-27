@@ -21,7 +21,7 @@ class InvitationDetailScreen extends ConsumerWidget {
     final invitationAsync = ref.watch(invitationDetailProvider(invitationId));
 
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -192,7 +192,7 @@ class _InvitationDetailBody extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const AppColors.navyDeep,
+                    backgroundColor: AppColors.navyDeep,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: onEdit,
@@ -225,7 +225,7 @@ class _IdentityCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const AppColors.navyDeep.withValues(alpha: 0.08),
+                  color: AppColors.navyDeep.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -379,7 +379,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const AppColors.surfaceSecondary),
+        border: Border.all(color: AppColors.surfaceSecondary),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

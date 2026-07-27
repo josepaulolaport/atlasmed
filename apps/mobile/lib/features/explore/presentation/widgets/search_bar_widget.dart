@@ -27,7 +27,7 @@ class SearchBarWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const AppColors.gray200),
+              border: Border.all(color: AppColors.gray200),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A000000),
@@ -77,7 +77,7 @@ class SearchBarWidget extends StatelessWidget {
                       height: 20,
                       margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
-                        color: const AppColors.gray200,
+                        color: AppColors.gray200,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -98,9 +98,9 @@ class SearchBarWidget extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: filterCount > 0 ? const AppColors.navyBright : Colors.white,
+              color: filterCount > 0 ? AppColors.navyBright : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const AppColors.gray200),
+              border: Border.all(color: AppColors.gray200),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x0A000000),
@@ -117,7 +117,7 @@ class SearchBarWidget extends StatelessWidget {
                     size: 18,
                     color: filterCount > 0
                         ? Colors.white
-                        : const AppColors.navyBright,
+                        : AppColors.navyBright,
                   ),
                 ),
                 if (filterCount > 0)
@@ -129,7 +129,7 @@ class SearchBarWidget extends StatelessWidget {
                       height: 16,
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
-                        color: const AppColors.rose,
+                        color: AppColors.rose,
                         shape: BoxShape.circle,
                       ),
                       child: Center(

@@ -15,11 +15,11 @@ class ClinicAdminInfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.surfaceTertiary,
+      backgroundColor: AppColors.surfaceTertiary,
       appBar: AppBar(
-        backgroundColor: const AppColors.surfaceTertiary,
+        backgroundColor: AppColors.surfaceTertiary,
         elevation: 0,
-        foregroundColor: const AppColors.gray900,
+        foregroundColor: AppColors.gray900,
         title: const Text('Dados administrativos'),
       ),
       body: ListView(

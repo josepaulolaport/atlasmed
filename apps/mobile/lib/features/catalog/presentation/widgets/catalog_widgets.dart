@@ -70,7 +70,7 @@ class CatalogErrorState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Tentar novamente'),
               style: TextButton.styleFrom(
-                foregroundColor: const AppColors.navyBright,
+                foregroundColor: AppColors.navyBright,
               ),
             ),
           ],
@@ -113,7 +113,7 @@ class CatalogSearchBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const AppColors.gray200),
+                border: Border.all(color: AppColors.gray200),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x0A000000),
@@ -181,9 +181,9 @@ class CatalogSearchBar extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: filterCount > 0 ? const AppColors.navyBright : Colors.white,
+                color: filterCount > 0 ? AppColors.navyBright : Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const AppColors.gray200),
+                border: Border.all(color: AppColors.gray200),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x0A000000),
@@ -200,7 +200,7 @@ class CatalogSearchBar extends StatelessWidget {
                       size: 18,
                       color: filterCount > 0
                           ? Colors.white
-                          : const AppColors.navyBright,
+                          : AppColors.navyBright,
                     ),
                   ),
                   if (filterCount > 0)
@@ -350,7 +350,7 @@ class _ProductFilterSheetState extends State<_ProductFilterSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -440,7 +440,7 @@ class _ProductFilterSheetState extends State<_ProductFilterSheet> {
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const AppColors.navyBright,
+                    backgroundColor: AppColors.navyBright,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -527,7 +527,7 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? const AppColors.navyBright : const AppColors.gray100,
+      color: selected ? AppColors.navyBright : AppColors.gray100,
       borderRadius: BorderRadius.circular(99),
       child: InkWell(
         onTap: onTap,
@@ -539,7 +539,7 @@ class _FilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : const AppColors.gray700,
+              color: selected ? Colors.white : AppColors.gray700,
             ),
           ),
         ),
@@ -607,7 +607,7 @@ class _FilterSheetShell extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const AppColors.gray200,
+                  color: AppColors.gray200,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -664,8 +664,8 @@ class _FilterOptionRow extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected
-                        ? const AppColors.navyDeep
-                        : const AppColors.gray700,
+                        ? AppColors.navyDeep
+                        : AppColors.gray700,
                   ),
                 ),
               ),
@@ -704,7 +704,7 @@ class CatalogTabBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          color: const AppColors.surfaceSecondary,
+          color: AppColors.surfaceSecondary,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -751,8 +751,8 @@ class CatalogTabBar extends StatelessWidget {
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: selected
-                    ? const AppColors.navyDeep
-                    : const AppColors.gray500,
+                    ? AppColors.navyDeep
+                    : AppColors.gray500,
               ),
             ),
           ),

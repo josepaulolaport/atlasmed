@@ -61,7 +61,7 @@ class _TerritoriesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const AppColors.background,
+      backgroundColor: AppColors.background,
       floatingActionButton: floatingActionButton,
       body: SafeArea(
         // The map should bleed all the way to the bottom edge — only the
@@ -86,7 +86,7 @@ class _NewTerritoryButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return FloatingActionButton.extended(
-      backgroundColor: const AppColors.navyDeep,
+      backgroundColor: AppColors.navyDeep,
       foregroundColor: Colors.white,
       icon: const Icon(Icons.add_rounded),
       label: const Text('Novo território'),
@@ -209,7 +209,7 @@ class _VerticalFilterStatus extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const AppColors.gray200),
+        border: Border.all(color: AppColors.gray200),
       ),
       child: Row(
         children: [
@@ -913,7 +913,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                   icon: Icons.delete_outline,
                   label: 'Excluir',
                   onTap: onDelete,
-                  color: const AppColors.error,
+                  color: AppColors.error,
                 ),
             ],
           ),
@@ -938,7 +938,7 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = color ?? const AppColors.gray700;
+    final tint = color ?? AppColors.gray700;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -996,7 +996,7 @@ class _StateMessage extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 3),
               )
             else
-              Icon(icon, size: 42, color: const AppColors.gray500),
+              Icon(icon, size: 42, color: AppColors.gray500),
             const SizedBox(height: 16),
             Text(
               title,

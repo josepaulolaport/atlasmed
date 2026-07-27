@@ -49,7 +49,7 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Criar pedido'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const AppColors.navyBright,
+                foregroundColor: AppColors.navyBright,
                 side: const BorderSide(color: AppColors.blue100),
               ),
             ),
@@ -208,32 +208,32 @@ class _OrderCard extends StatelessWidget {
   (String, Color, Color) _style(String status) {
     switch (status) {
       case 'APPROVED':
-        return ('Aprovado', const AppColors.green, const AppColors.green50);
+        return ('Aprovado', AppColors.green, AppColors.green50);
       case 'INVOICED':
-        return ('Faturado', const AppColors.navyBright, const AppColors.blueLight);
+        return ('Faturado', AppColors.navyBright, AppColors.blueLight);
       case 'PENDING':
-        return ('Pendente', const AppColors.amber, const AppColors.amber50);
+        return ('Pendente', AppColors.amber, AppColors.amber50);
       case 'REJECTED':
-        return ('Rejeitado', const AppColors.red, const AppColors.red50);
+        return ('Rejeitado', AppColors.red, AppColors.red50);
       default:
-        return (status, const AppColors.gray500, const AppColors.gray100);
+        return (status, AppColors.gray500, AppColors.gray100);
     }
   }
 
   (String, Color, Color) _typeStyle(String type) {
     switch (type) {
       case 'SALE':
-        return ('Venda', const AppColors.gray600, const AppColors.gray100);
+        return ('Venda', AppColors.gray600, AppColors.gray100);
       case 'CONSIGNMENT':
         return (
           'Consignação',
-          const AppColors.gray600,
-          const AppColors.gray100,
+          AppColors.gray600,
+          AppColors.gray100,
         );
       case 'DONATION':
-        return ('Doação', const AppColors.gray600, const AppColors.gray100);
+        return ('Doação', AppColors.gray600, AppColors.gray100);
       default:
-        return ('Outro', const AppColors.gray600, const AppColors.gray100);
+        return ('Outro', AppColors.gray600, AppColors.gray100);
     }
   }
 }

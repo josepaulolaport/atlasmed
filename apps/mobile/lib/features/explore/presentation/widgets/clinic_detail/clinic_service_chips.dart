@@ -24,9 +24,9 @@ class ClinicServiceChips extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: const AppColors.blueLight,
+                  color: AppColors.blueLight,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const AppColors.blue100),
+                  border: Border.all(color: AppColors.blue100),
                 ),
                 child: Text(
                   s.label,

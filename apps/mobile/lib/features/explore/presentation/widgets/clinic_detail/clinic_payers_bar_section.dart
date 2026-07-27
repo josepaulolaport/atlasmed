@@ -42,7 +42,7 @@ class ClinicPayersBarSection extends StatelessWidget {
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text('Adicionar fonte'),
                   style: TextButton.styleFrom(
-                    foregroundColor: const AppColors.navyBright,
+                    foregroundColor: AppColors.navyBright,
                   ),
                 ),
               ),
@@ -166,7 +166,7 @@ class ClinicPayersBarSection extends StatelessWidget {
                 icon: const Icon(Icons.add_rounded, size: 18),
                 label: const Text('Adicionar fonte'),
                 style: TextButton.styleFrom(
-                  foregroundColor: const AppColors.navyBright,
+                  foregroundColor: AppColors.navyBright,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                 ),
               ),

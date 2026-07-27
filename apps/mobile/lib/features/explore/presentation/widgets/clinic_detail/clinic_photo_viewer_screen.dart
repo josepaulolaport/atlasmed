@@ -37,7 +37,7 @@ Future<void> openClinicPhotoViewer(
     placeholderBuilder: (context, i) {
       final colors = photos.thumbnailColors;
       final color = colors.isEmpty
-          ? const AppColors.gray800
+          ? AppColors.gray800
           : colors[i % colors.length];
       return ColoredBox(
         color: color,

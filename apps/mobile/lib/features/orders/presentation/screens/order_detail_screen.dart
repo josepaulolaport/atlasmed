@@ -55,7 +55,7 @@ class OrderDetailScreen extends ConsumerWidget {
             detail.status == OrderStatus.approved && detail.tracking.isNotEmpty;
 
         return Scaffold(
-          backgroundColor: const AppColors.background,
+          backgroundColor: AppColors.background,
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -177,7 +177,7 @@ class _CardShell extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const AppColors.surfaceSecondary),
+      border: Border.all(color: AppColors.surfaceSecondary),
     ),
     child: child,
   );
@@ -221,11 +221,11 @@ class _TimelineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final circleColor = step.done
-        ? const AppColors.green
-        : (step.current ? const AppColors.navyDeep : Colors.white);
+        ? AppColors.green
+        : (step.current ? AppColors.navyDeep : Colors.white);
     final borderColor = step.done || step.current
         ? circleColor
-        : const AppColors.gray200;
+        : AppColors.gray200;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -271,7 +271,7 @@ class _TimelineRow extends StatelessWidget {
                 ),
                 if (!last)
                   Expanded(
-                    child: Container(width: 2, color: const AppColors.surfaceSecondary),
+                    child: Container(width: 2, color: AppColors.surfaceSecondary),
                   ),
               ],
             ),
@@ -321,7 +321,7 @@ class _TrackingCard extends StatelessWidget {
           _MiniIcon(
             icon: Icons.local_shipping_outlined,
             bg: const Color(0x1A0a2f7f),
-            fg: const AppColors.navyDeep,
+            fg: AppColors.navyDeep,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -377,7 +377,7 @@ class _DestinationCard extends StatelessWidget {
               _MiniIcon(
                 icon: Icons.local_hospital_outlined,
                 bg: const Color(0x1A1e40af),
-                fg: const AppColors.navyBright,
+                fg: AppColors.navyBright,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -575,7 +575,7 @@ class _PaymentCard extends StatelessWidget {
         label,
         style: TextStyle(
           fontSize: 12.5,
-          color: bold ? const AppColors.gray900 : const AppColors.gray500,
+          color: bold ? AppColors.gray900 : AppColors.gray500,
           fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
@@ -583,7 +583,7 @@ class _PaymentCard extends StatelessWidget {
         value,
         style: TextStyle(
           fontSize: 12.5,
-          color: bold ? const AppColors.navyDeep : const AppColors.gray700,
+          color: bold ? AppColors.navyDeep : AppColors.gray700,
           fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
@@ -598,7 +598,7 @@ class _DeliveryBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final delivered = detail.status == OrderStatus.invoiced;
     final bg = delivered ? const Color(0x1F16a373) : const Color(0x1A0a2f7f);
-    final fg = delivered ? const AppColors.green600 : const AppColors.navyDeep;
+    final fg = delivered ? AppColors.green600 : AppColors.navyDeep;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -686,8 +686,8 @@ class _ActionButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         backgroundColor: filled ? Colors.white : Colors.white,
         foregroundColor: filled
-            ? const AppColors.gray950
-            : const AppColors.navyDeep,
+            ? AppColors.gray950
+            : AppColors.navyDeep,
         side: const BorderSide(color: AppColors.surfaceSecondary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
@@ -696,7 +696,7 @@ class _ActionButton extends StatelessWidget {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: filled ? const AppColors.gray950 : const AppColors.navyDeep,
+          color: filled ? AppColors.gray950 : AppColors.navyDeep,
         ),
       ),
     ),
