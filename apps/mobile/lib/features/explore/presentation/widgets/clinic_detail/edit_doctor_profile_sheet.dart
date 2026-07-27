@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -20,14 +20,14 @@ enum DoctorEditableField {
 
 /// Single-field editor for a doctor profile attribute.
 ///
-/// Returns the updated [DoctorDetail] on success, or `null` if dismissed.
-Future<DoctorDetail?> showEditDoctorFieldSheet(
+/// Returns the updated [Professional] on success, or `null` if dismissed.
+Future<Professional?> showEditDoctorFieldSheet(
   BuildContext context, {
-  required DoctorDetail detail,
+  required Professional detail,
   required DoctorEditableField field,
   required WidgetRef ref,
 }) {
-  return showModalBottomSheet<DoctorDetail>(
+  return showModalBottomSheet<Professional>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -47,7 +47,7 @@ class _EditDoctorFieldSheet extends ConsumerWidget {
     required this.ref,
   });
 
-  final DoctorDetail detail;
+  final Professional detail;
   final DoctorEditableField field;
   final WidgetRef ref;
 
@@ -64,7 +64,7 @@ class _EditDoctorFieldSheetBody extends StatefulWidget {
     required this.ref,
   });
 
-  final DoctorDetail detail;
+  final Professional detail;
   final DoctorEditableField field;
   final WidgetRef ref;
 
@@ -239,7 +239,7 @@ class _EditDoctorFieldSheetBodyState extends State<_EditDoctorFieldSheetBody> {
         value: raw.isEmpty ? null : raw,
       );
       if (!mounted) return;
-      Navigator.of(context).pop(DoctorDetail.fromApi(updated));
+      Navigator.of(context).pop(Professional.fromDTO(updated));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);

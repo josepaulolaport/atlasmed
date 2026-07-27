@@ -1,9 +1,9 @@
-// ── Doctor detail model ───────────────────────────────────────
+// ── Professional detail model ─────────────────────────────────
 
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 
-class DoctorDetail {
+class Professional {
   final String id;
   final String name;
   final String initials;
@@ -34,58 +34,58 @@ class DoctorDetail {
   final int relationshipBg;
 
   // Photos
-  final List<DoctorPhoto> gallery;
+  final List<GalleryItem> gallery;
 
   // Signals
-  final List<DoctorSignal> signals;
+  final List<ProfessionalSignal> signals;
 
   // Prescribing
-  final List<DoctorPrescribingItem> prescribing;
+  final List<PrescribingItem> prescribing;
 
   // Clinics
-  final List<DoctorClinic> clinics;
+  final List<ProfessionalClinic> clinics;
 
   // Visit history
-  final List<DoctorVisit> visits;
+  final List<ProfessionalVisit> visits;
 
   // Field notes
   final List<String> notes;
 
-  /// Maps an [ApiDoctor] from the detail endpoint into a [DoctorDetail].
-  factory DoctorDetail.fromApi(ApiDoctor apiDoctor) {
-    final name = apiDoctor.displayName;
+  /// Maps a [ProfessionalDTO] from the detail endpoint into a [Professional].
+  factory Professional.fromDTO(ProfessionalDTO dto) {
+    final name = dto.displayName;
     final nameParts = name.split(' ');
     final initials = nameParts.length >= 2
         ? '${nameParts.first[0]}${nameParts.last[0]}'
         : name.isNotEmpty
         ? name[0]
         : '?';
-    return DoctorDetail(
-      id: apiDoctor.id,
+    return Professional(
+      id: dto.id,
       name: name,
       initials: initials.toUpperCase(),
-      specialty: apiDoctor.specialty ?? '',
-      crm: apiDoctor.crm,
-      role: apiDoctor.specialty ?? '',
-      distanceKm: apiDoctor.distanceKm ?? 0,
-      phone: apiDoctor.phone,
-      email: apiDoctor.email,
+      specialty: dto.specialty ?? '',
+      crm: dto.crm,
+      role: dto.specialty ?? '',
+      distanceKm: dto.distanceKm ?? 0,
+      phone: dto.phone,
+      email: dto.email,
       whatsapp: null,
-      birthday: apiDoctor.birthDate == null
+      birthday: dto.birthDate == null
           ? null
-          : '${apiDoctor.birthDate!.year.toString().padLeft(4, '0')}-'
-                '${apiDoctor.birthDate!.month.toString().padLeft(2, '0')}-'
-                '${apiDoctor.birthDate!.day.toString().padLeft(2, '0')}',
+          : '${dto.birthDate!.year.toString().padLeft(4, '0')}-'
+                '${dto.birthDate!.month.toString().padLeft(2, '0')}-'
+                '${dto.birthDate!.day.toString().padLeft(2, '0')}',
       faculty: null,
       residency: null,
-      team: apiDoctor.favoriteTeam,
-      interests: apiDoctor.hobbies,
-      language: apiDoctor.languages,
+      team: dto.favoriteTeam,
+      interests: dto.hobbies,
+      language: dto.languages,
       statusLabel: '',
       relationshipLabel: '',
       notes: const [],
-      clinics: apiDoctor.facilities
-          .map((f) => DoctorClinic(id: f.id, name: f.name, role: '', days: ''))
+      clinics: dto.facilities
+          .map((f) => ProfessionalClinic(id: f.id, name: f.name, role: '', days: ''))
           .toList(growable: false),
       gallery: const [],
       signals: const [],
@@ -94,10 +94,10 @@ class DoctorDetail {
     );
   }
 
-  /// Hue (0-360) derived from the doctor's name for personalized colors.
+  /// Hue (0-360) derived from the professional's name for personalized colors.
   double get hue => (name.hashCode.abs() % 360).toDouble();
 
-  const DoctorDetail({
+  const Professional({
     required this.id,
     required this.name,
     required this.initials,
@@ -128,7 +128,7 @@ class DoctorDetail {
     this.notes = const [],
   });
 
-  DoctorDetail copyWith({
+  Professional copyWith({
     String? id,
     String? name,
     String? initials,
@@ -161,14 +161,14 @@ class DoctorDetail {
     String? relationshipLabel,
     int? relationshipColor,
     int? relationshipBg,
-    List<DoctorPhoto>? gallery,
-    List<DoctorSignal>? signals,
-    List<DoctorPrescribingItem>? prescribing,
-    List<DoctorClinic>? clinics,
-    List<DoctorVisit>? visits,
+    List<GalleryItem>? gallery,
+    List<ProfessionalSignal>? signals,
+    List<PrescribingItem>? prescribing,
+    List<ProfessionalClinic>? clinics,
+    List<ProfessionalVisit>? visits,
     List<String>? notes,
   }) {
-    return DoctorDetail(
+    return Professional(
       id: id ?? this.id,
       name: name ?? this.name,
       initials: initials ?? this.initials,
@@ -201,31 +201,31 @@ class DoctorDetail {
   }
 }
 
-class DoctorPhoto {
+class GalleryItem {
   final String label;
   final String date;
   final double hue;
 
-  const DoctorPhoto({
+  const GalleryItem({
     required this.label,
     required this.date,
     required this.hue,
   });
 }
 
-class DoctorSignal {
+class ProfessionalSignal {
   final String kind; // 'good', 'info', 'warn'
   final String title;
   final String body;
 
-  const DoctorSignal({
+  const ProfessionalSignal({
     required this.kind,
     required this.title,
     required this.body,
   });
 }
 
-class DoctorPrescribingItem {
+class PrescribingItem {
   final String product;
   final String volume;
   final List<int> trend;
@@ -233,7 +233,7 @@ class DoctorPrescribingItem {
   final int share;
   final bool isNew;
 
-  const DoctorPrescribingItem({
+  const PrescribingItem({
     required this.product,
     required this.volume,
     required this.trend,
@@ -243,7 +243,7 @@ class DoctorPrescribingItem {
   });
 }
 
-class DoctorClinic {
+class ProfessionalClinic {
   final String id;
   final String name;
   final String role;
@@ -251,7 +251,7 @@ class DoctorClinic {
   final bool isMain;
   final int statusColor;
 
-  const DoctorClinic({
+  const ProfessionalClinic({
     required this.id,
     required this.name,
     required this.role,
@@ -261,7 +261,7 @@ class DoctorClinic {
   });
 }
 
-class DoctorVisit {
+class ProfessionalVisit {
   final String date;
   final String time;
   final String duration;
@@ -275,7 +275,7 @@ class DoctorVisit {
   final String? orderValue;
   final List<String>? samples;
 
-  const DoctorVisit({
+  const ProfessionalVisit({
     required this.date,
     required this.time,
     required this.duration,
@@ -291,9 +291,9 @@ class DoctorVisit {
   });
 }
 
-/// Color helpers derived from [DoctorDetail.hue].
-extension DoctorDetailColors on DoctorDetail {
-  /// Primary color derived from the doctor's name (for avatar backgrounds,
+/// Color helpers derived from [Professional.hue].
+extension ProfessionalColors on Professional {
+  /// Primary color derived from the professional's name (for avatar backgrounds,
   /// headers, accents).
   Color get primaryColor => HSLColor.fromAHSL(1, hue, 0.55, 0.32).toColor();
 

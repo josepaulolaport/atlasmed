@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
@@ -30,7 +30,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 }
 
 class ExploreResultsList extends StatelessWidget {
-  final List<Either<Clinic, Doctor>> items;
+  final List<Either<FacilityEntry, ProfessionalEntry>> items;
   final bool hasMore;
   final bool isLoadingMore;
   final VoidCallback onLoadMore;
@@ -75,9 +75,9 @@ class ExploreResultsList extends StatelessWidget {
           }
 
           return items[index].fold(
-            (clinic) => ClinicRow(
-              clinic: clinic,
-              onTap: () => context.push('/explore/clinic/${clinic.id}'),
+            (facility) => ClinicRow(
+              clinic: facility,
+              onTap: () => context.push('/explore/clinic/${facility.id}'),
             ),
             (doctor) => DoctorRow(
               doctor: doctor,
@@ -127,11 +127,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final displayedList = isClinic
         ? state.filteredClinics
               .take(state.visibleCount)
-              .map((clinic) => Left<Clinic, Doctor>(clinic))
+              .map((clinic) => Left<FacilityEntry, ProfessionalEntry>(clinic))
               .toList()
         : state.filteredDoctors
               .take(state.visibleCount)
-              .map((doctor) => Right<Clinic, Doctor>(doctor))
+              .map((doctor) => Right<FacilityEntry, ProfessionalEntry>(doctor))
               .toList();
     final hasMore =
         state.visibleCount <

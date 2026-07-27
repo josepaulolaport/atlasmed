@@ -1,6 +1,6 @@
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
     as api;
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:flutter/material.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -17,13 +17,13 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
     this.onDoctorUpdated,
   });
 
-  final List<FacilityCrmDoctor> doctors;
+  final List<ProfessionalRoster> doctors;
   final String? facilityId;
   final bool hasMore;
   final bool isLoadingMore;
   final VoidCallback? onLoadMore;
   final VoidCallback? onAssociate;
-  final ValueChanged<FacilityCrmDoctor>? onDoctorUpdated;
+  final ValueChanged<ProfessionalRoster>? onDoctorUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -85,10 +85,10 @@ class _DoctorRow extends StatelessWidget {
     this.onDoctorUpdated,
   });
 
-  final FacilityCrmDoctor doctor;
+  final ProfessionalRoster doctor;
   final String? facilityId;
   final bool canEditRoles;
-  final ValueChanged<FacilityCrmDoctor>? onDoctorUpdated;
+  final ValueChanged<ProfessionalRoster>? onDoctorUpdated;
 
   @override
   Widget build(BuildContext context) {

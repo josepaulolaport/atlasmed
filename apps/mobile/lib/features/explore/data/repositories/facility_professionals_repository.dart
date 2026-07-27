@@ -1,7 +1,8 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_professional_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
@@ -58,14 +59,14 @@ class FacilityProfessionalsRepository
   PaginatedFacilityProfessionals fromJson(String json) =>
       PaginatedFacilityProfessionals.fromJson(json);
 
-  Future<FacilityRosterPage<FacilityCrmDoctor>> loadPage() async {
+  Future<FacilityRosterPage<ProfessionalRoster>> loadPage() async {
     final result = await currentValueOrResolve();
     if (result == null) {
       throw const FacilityProfessionalsException();
     }
     return FacilityRosterPage(
       items: result.items
-          .map((item) => item.toDomain())
+          .map((item) => ProfessionalRoster.fromRosterItem(item))
           .toList(growable: false),
       pagination: result.pagination,
     );

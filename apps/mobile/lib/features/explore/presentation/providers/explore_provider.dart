@@ -1,11 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
-    as api;
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
@@ -18,8 +17,8 @@ export 'package:atlasmed_mobile_app/features/location/presentation/providers/loc
 
 // ── Explore state ───────────────────────────────────────────
 class ExploreState {
-  final List<Clinic> clinics;
-  final List<Doctor> doctors;
+  final List<FacilityEntry> clinics;
+  final List<ProfessionalEntry> doctors;
 
   /// API pagination totals (not loaded-page length).
   final int clinicTotal;
@@ -58,8 +57,8 @@ class ExploreState {
   });
 
   ExploreState copyWith({
-    List<Clinic>? clinics,
-    List<Doctor>? doctors,
+    List<FacilityEntry>? clinics,
+    List<ProfessionalEntry>? doctors,
     int? clinicTotal,
     int? doctorTotal,
     bool? loading,
@@ -101,8 +100,8 @@ class ExploreState {
 
   /// Clinic list with client-side sort only (API already distance-orders when
   /// coords + sort=distance are sent).
-  List<Clinic> get filteredClinics {
-    var list = List<Clinic>.from(clinics);
+  List<FacilityEntry> get filteredClinics {
+    var list = List<FacilityEntry>.from(clinics);
 
     switch (sort) {
       case 'name-asc':
@@ -112,11 +111,8 @@ class ExploreState {
           (a, b) => _compareNullableDistance(a.distanceKm, b.distanceKm),
         );
       case 'oldest-visit':
-        list.sort((a, b) {
-          final aDays = a.lastVisitDays ?? 999999;
-          final bDays = b.lastVisitDays ?? 999999;
-          return bDays.compareTo(aDays);
-        });
+        // lastVisitDays não existe mais em FacilityEntry — ordena por nome.
+        list.sort((a, b) => a.name.compareTo(b.name));
       case 'purchase-funnel-asc':
       case 'purchase-funnel-desc':
       case 'purchase-interval-asc':
@@ -132,8 +128,8 @@ class ExploreState {
     return list;
   }
 
-  List<Doctor> get filteredDoctors {
-    var list = List<Doctor>.from(doctors);
+  List<ProfessionalEntry> get filteredDoctors {
+    var list = List<ProfessionalEntry>.from(doctors);
 
     switch (sort) {
       case 'name-asc':
@@ -175,8 +171,8 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   static const _searchDebounceDuration = Duration(milliseconds: 350);
   static const meaningfulMoveMeters = 150.0;
 
-  Future<void> refreshAfterClinicUpdate(api.Clinic clinic) async {
-    final mapped = Clinic.fromApi(clinic);
+  Future<void> refreshAfterClinicUpdate(FacilityDTO dto) async {
+    final mapped = FacilityEntry.fromDTO(dto);
     state = state.copyWith(
       clinics: [
         for (final item in state.clinics)
@@ -353,7 +349,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       final result = await repo.currentValueOrResolve();
       if (generation != null && generation != _refreshGeneration) return;
       if (result != null) {
-        final items = result.items.map(Clinic.fromApi).toList();
+        final items = result.items.map(FacilityEntry.fromDTO).toList();
         if (append) {
           state = state.copyWith(
             clinics: [...state.clinics, ...items],
@@ -394,7 +390,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       final result = await repo.currentValueOrResolve();
       if (generation != null && generation != _refreshGeneration) return;
       if (result != null) {
-        final items = result.items.map(Doctor.fromApi).toList();
+        final items = result.items.map(ProfessionalEntry.fromDTO).toList();
         if (append) {
           state = state.copyWith(
             doctors: [...state.doctors, ...items],

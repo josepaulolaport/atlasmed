@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_doctor_profile_sheet.dart';
@@ -9,13 +9,13 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Search + multi-select doctors to associate with a facility.
 /// Returns the selected doctors (already-associated + newly picked).
-Future<List<FacilityCrmDoctor>?> showAssociateDoctorsSheet(
+Future<List<ProfessionalRoster>?> showAssociateDoctorsSheet(
   BuildContext context, {
   required Set<String> alreadyAssociatedIds,
-  required List<FacilityCrmDoctor> alreadyAssociatedDoctors,
+  required List<ProfessionalRoster> alreadyAssociatedDoctors,
   String? facilityId,
 }) {
-  return showModalBottomSheet<List<FacilityCrmDoctor>>(
+  return showModalBottomSheet<List<ProfessionalRoster>>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -39,7 +39,7 @@ class _AssociateDoctorsSheet extends StatefulWidget {
   });
 
   final Set<String> alreadyAssociatedIds;
-  final List<FacilityCrmDoctor> alreadyAssociatedDoctors;
+  final List<ProfessionalRoster> alreadyAssociatedDoctors;
   final String? facilityId;
 
   @override
@@ -47,7 +47,7 @@ class _AssociateDoctorsSheet extends StatefulWidget {
 }
 
 class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
-  List<FacilityCrmDoctor> _pool = const [];
+  List<ProfessionalRoster> _pool = const [];
   final Set<String> _selected = {};
   String _query = '';
   bool _loading = true;
@@ -56,7 +56,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   Timer? _debounce;
 
   /// Cached copy of already-associated doctors for pinning at the top.
-  List<FacilityCrmDoctor> get _associated => widget.alreadyAssociatedDoctors;
+  List<ProfessionalRoster> get _associated => widget.alreadyAssociatedDoctors;
 
   bool get _useApi {
     final id = widget.facilityId;
@@ -87,7 +87,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
       if (!_useApi) {
         // Merge mock pool with already-associated doctors (for pinning).
         final base = mockAssociableDoctors();
-        final merged = <FacilityCrmDoctor>[...base];
+        final merged = <ProfessionalRoster>[...base];
         for (final d in _associated) {
           if (!merged.any((m) => m.id == d.id)) {
             merged.add(d);
@@ -106,7 +106,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         final pool = await repo.searchDoctors(search: search);
         // Merge pool with already-associated doctors (search may not
         // return them since they're already linked to this facility).
-        final merged = <FacilityCrmDoctor>[...pool];
+        final merged = <ProfessionalRoster>[...pool];
         for (final d in _associated) {
           if (!merged.any((m) => m.id == d.id)) {
             merged.add(d);
@@ -139,7 +139,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     });
   }
 
-  List<FacilityCrmDoctor> get _filtered {
+  List<ProfessionalRoster> get _filtered {
     if (_useApi) return _pool;
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return _pool;
@@ -154,7 +154,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   }
 
   /// Combined items list with section headers for the list view.
-  /// Items are either [String] section headers or [FacilityCrmDoctor] rows.
+  /// Items are either [String] section headers or [ProfessionalRoster] rows.
   List<Object> get _sectionedItems {
     final fd = _filtered;
     if (fd.isEmpty) return const [];
@@ -362,7 +362,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   }
 
   Widget _buildDoctorList(
-    List<FacilityCrmDoctor> filtered,
+    List<ProfessionalRoster> filtered,
     List<Object> sectioned,
   ) {
     return ListView.builder(
@@ -388,7 +388,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         }
 
         // Doctor row
-        final d = item as FacilityCrmDoctor;
+        final d = item as ProfessionalRoster;
         final selected = _selected.contains(d.id);
         final isAssociated = widget.alreadyAssociatedIds.contains(d.id);
         return CheckboxListTile(
@@ -494,7 +494,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
       final newlySelected = chosen
           .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
           .toList();
-      final associated = <FacilityCrmDoctor>[];
+      final associated = <ProfessionalRoster>[];
       for (final doctor in newlySelected) {
         await repo.associateDoctor(doctor.id);
         associated.add(doctor);

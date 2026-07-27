@@ -1,5 +1,4 @@
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
-    as api;
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
@@ -25,40 +24,40 @@ Future<List<NearbyEstablishment>> fetchNearbyFacilities({
   );
   try {
     final page = await repo.currentValueOrResolve();
-    final items = page?.items ?? const <api.Clinic>[];
+    final items = page?.items ?? const <FacilityDTO>[];
     return items
         .where(
-          (clinic) =>
-              excludeFacilityId.isEmpty || clinic.id != excludeFacilityId,
+          (facility) =>
+              excludeFacilityId.isEmpty || facility.id != excludeFacilityId,
         )
-        .where((clinic) => clinic.lat != null && clinic.lng != null)
-        .map(clinicToNearbyEstablishment)
+        .where((facility) => facility.lat != null && facility.lng != null)
+        .map(facilityToNearbyEstablishment)
         .toList(growable: false);
   } finally {
     repo.dispose();
   }
 }
 
-NearbyEstablishment clinicToNearbyEstablishment(api.Clinic clinic) {
+NearbyEstablishment facilityToNearbyEstablishment(FacilityDTO facility) {
   return NearbyEstablishment(
-    id: clinic.id,
-    name: clinic.name,
-    latitude: clinic.lat!,
-    longitude: clinic.lng!,
-    distanceKm: clinic.distanceKm ?? 0,
-    specialtyLabel: _specialtyLabel(clinic),
+    id: facility.id,
+    name: facility.name,
+    latitude: facility.lat!,
+    longitude: facility.lng!,
+    distanceKm: facility.distanceKm ?? 0,
+    specialtyLabel: _specialtyLabel(facility),
     status: ClinicStatus.active,
-    neighborhood: clinic.neighborhood,
-    streetAddress: clinic.streetAddress,
-    streetNumber: clinic.streetNumber,
-    addressComplement: clinic.addressComplement,
+    neighborhood: facility.neighborhood,
+    streetAddress: facility.streetAddress,
+    streetNumber: facility.streetNumber,
+    addressComplement: facility.addressComplement,
   );
 }
 
-String? _specialtyLabel(api.Clinic clinic) {
-  final neighborhood = clinic.neighborhood?.trim();
+String? _specialtyLabel(FacilityDTO facility) {
+  final neighborhood = facility.neighborhood?.trim();
   if (neighborhood != null && neighborhood.isNotEmpty) return neighborhood;
-  final city = clinic.city?.trim();
+  final city = facility.city?.trim();
   if (city != null && city.isNotEmpty) return city;
   return null;
 }

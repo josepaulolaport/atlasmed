@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
@@ -7,7 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicRow extends StatelessWidget {
-  final Clinic clinic;
+  final FacilityEntry clinic;
   final VoidCallback onTap;
 
   const ClinicRow({super.key, required this.clinic, required this.onTap});
@@ -43,20 +43,7 @@ class ClinicRow extends StatelessWidget {
                     color: AppColors.navyBright,
                   ),
                 ),
-                if (clinic.isPriority)
-                  Positioned(
-                    top: -3,
-                    right: -3,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: AppColors.rose,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
+                // Removed: isPriority flag no longer present on FacilityEntry
               ],
             ),
             const SizedBox(width: 12),
@@ -137,13 +124,7 @@ class ClinicRow extends StatelessWidget {
                           stage: clinic.purchaseRecurrence!.funnelStage!,
                           intervalDays: clinic.purchaseRecurrence!.intervalDays,
                         ),
-                      if (clinic.lastVisitDays != null)
-                        _MetaItem(
-                          icon: Icons.access_time_rounded,
-                          text: clinic.lastVisitDays == 0
-                              ? 'Hoje'
-                              : 'Há ${clinic.lastVisitDays} dia${clinic.lastVisitDays! > 1 ? 's' : ''}',
-                        ),
+                      // Removed: lastVisitDays no longer present on FacilityEntry
                       _MetaItem(
                         icon: Icons.person_outline_rounded,
                         text:
