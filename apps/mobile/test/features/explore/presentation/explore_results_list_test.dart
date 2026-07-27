@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -24,10 +25,9 @@ void main() {
     return MaterialApp(
       home: Scaffold(
         body: ExploreResultsList(
-          items: const [clinic],
+          items: const [Left(clinic)],
           hasMore: true,
           isLoadingMore: loadingMore,
-          isClinic: true,
           onLoadMore: () {},
           bottomInset: 0,
         ),
@@ -70,10 +70,9 @@ void main() {
           path: '/',
           builder: (_, _) => Scaffold(
             body: ExploreResultsList(
-              items: const [clinic],
+              items: const [Left(clinic)],
               hasMore: false,
               isLoadingMore: false,
-              isClinic: true,
               onLoadMore: () {},
               bottomInset: 0,
             ),
@@ -105,10 +104,9 @@ void main() {
           path: '/',
           builder: (_, _) => Scaffold(
             body: ExploreResultsList(
-              items: const [doctor],
+              items: const [Right(doctor)],
               hasMore: false,
               isLoadingMore: false,
-              isClinic: false,
               onLoadMore: () {},
               bottomInset: 0,
             ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -29,10 +30,9 @@ class ExploreScreen extends ConsumerStatefulWidget {
 }
 
 class ExploreResultsList extends StatelessWidget {
-  final List<Object> items;
+  final List<Either<Clinic, Doctor>> items;
   final bool hasMore;
   final bool isLoadingMore;
-  final bool isClinic;
   final VoidCallback onLoadMore;
   final double bottomInset;
 
@@ -41,7 +41,6 @@ class ExploreResultsList extends StatelessWidget {
     required this.items,
     required this.hasMore,
     required this.isLoadingMore,
-    required this.isClinic,
     required this.onLoadMore,
     required this.bottomInset,
   });
@@ -71,22 +70,19 @@ class ExploreResultsList extends StatelessWidget {
 
           if (index >= items.length) {
             return isLoadingMore
-                ? SkeletonRow(isDoctor: !isClinic)
+                ? SkeletonRow(isDoctor: items.last.isRight())
                 : const SizedBox.shrink();
           }
 
-          if (isClinic) {
-            final clinic = items[index] as Clinic;
-            return ClinicRow(
+          return items[index].fold(
+            (clinic) => ClinicRow(
               clinic: clinic,
               onTap: () => context.push('/explore/clinic/${clinic.id}'),
-            );
-          }
-
-          final doctor = items[index] as Doctor;
-          return DoctorRow(
-            doctor: doctor,
-            onTap: () => context.push('/explore/doctor/${doctor.id}'),
+            ),
+            (doctor) => DoctorRow(
+              doctor: doctor,
+              onTap: () => context.push('/explore/doctor/${doctor.id}'),
+            ),
           );
         },
       ),
@@ -129,11 +125,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     });
 
     final isClinic = state.activeTab == 'clinic';
-    final filteredList = isClinic
+    final displayedList = isClinic
         ? state.filteredClinics
-        : state.filteredDoctors;
-    final displayedList = filteredList.take(state.visibleCount).toList();
-    final hasMore = state.visibleCount < filteredList.length;
+              .take(state.visibleCount)
+              .map((clinic) => Left<Clinic, Doctor>(clinic))
+              .toList()
+        : state.filteredDoctors
+              .take(state.visibleCount)
+              .map((doctor) => Right<Clinic, Doctor>(doctor))
+              .toList();
+    final hasMore =
+        state.visibleCount <
+        (isClinic
+            ? state.filteredClinics.length
+            : state.filteredDoctors.length);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     final filterChips = buildFilterChips(state, notifier, isClinic);
@@ -177,7 +182,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         itemCount: 8,
                         itemBuilder: (_, _) => SkeletonRow(isDoctor: !isClinic),
                       )
-                    : filteredList.isEmpty
+                    : displayedList.isEmpty
                     ? EmptyState(query: state.query, kind: state.activeTab)
                     : RefreshIndicator(
                         onRefresh: () => ref
@@ -187,7 +192,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                           items: displayedList,
                           hasMore: hasMore,
                           isLoadingMore: state.loadingMore,
-                          isClinic: isClinic,
                           onLoadMore: notifier.loadMore,
                           bottomInset: bottomInset,
                         ),
