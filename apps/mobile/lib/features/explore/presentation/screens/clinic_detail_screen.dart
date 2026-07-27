@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
@@ -103,14 +104,35 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     final detailAsync = ref.watch(clinicDetailProvider(clinicId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
-      body: detailAsync.when(
-        // Keep showing the last clinic while NC approve (or pull-to-refresh)
-        // refetches — avoids a full-screen skeleton flash.
-        skipLoadingOnReload: true,
-        loading: () => _loadingSkeleton(context),
-        error: (err, _) => _errorView(context, clinicId, err),
-        data: (detail) => _ClinicDetailBody(detail: detail, clinicId: clinicId),
+      backgroundColor: const Color(0xFF1e40af),
+      // extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1e40af),
+        foregroundColor: Colors.white,
+        systemOverlayStyle: .light,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark_border_rounded),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Favoritos — em breve'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: ColoredBox(
+        color: const Color(0xFFf8f9fb),
+        child: detailAsync.when(
+          skipLoadingOnReload: true,
+          loading: () => _loadingSkeleton(context),
+          error: (err, _) => _errorView(context, clinicId, err),
+          data: (detail) =>
+              _ClinicDetailBody(detail: detail, clinicId: clinicId),
+        ),
       ),
     );
   }
@@ -358,7 +380,6 @@ class _ClinicDetailBody extends ConsumerWidget {
 
     return Column(
       children: [
-        ClinicHeaderSection(detail: detail, sections: sections),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
@@ -392,7 +413,11 @@ class _ClinicDetailBody extends ConsumerWidget {
                 ordersNotifier.retry(),
               ]);
             },
-            child: _ClinicDetailContent(detail: detail, clinicId: clinicId),
+            child: _ClinicDetailContent(
+              detail: detail,
+              clinicId: clinicId,
+              sections: sections,
+            ),
           ),
         ),
       ],
@@ -406,8 +431,12 @@ class _ClinicDetailBody extends ConsumerWidget {
 class _ClinicDetailContent extends ConsumerWidget {
   final ClinicDetail detail;
   final String clinicId;
-
-  const _ClinicDetailContent({required this.detail, required this.clinicId});
+  final EstablishmentDetailSections? sections;
+  const _ClinicDetailContent({
+    required this.detail,
+    required this.clinicId,
+    this.sections,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -431,6 +460,8 @@ class _ClinicDetailContent extends ConsumerWidget {
       ),
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       children: [
+        ClinicHeaderSection(detail: detail, sections: sections),
+        const SizedBox(height: 16),
         _QuickActions(detail: detail),
         ClinicTopShortcutsSection(
           facilityId: clinicId,

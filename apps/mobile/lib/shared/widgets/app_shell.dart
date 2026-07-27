@@ -34,6 +34,8 @@ class AppShellScreen extends StatefulWidget {
 class AppShellScreenState extends State<AppShellScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  static const Color _defaultShellChromeColor = Color(0xFFF7F8FB);
+
   /// Finds the nearest ancestor AppShellScreenState from the given context.
   static AppShellScreenState? of(BuildContext context) =>
       context.findAncestorStateOfType<AppShellScreenState>();
@@ -48,16 +50,18 @@ class AppShellScreenState extends State<AppShellScreen> {
   Widget build(BuildContext context) {
     final navigationShell = widget.navigationShell;
     final statusBarHeight = MediaQuery.paddingOf(context).top;
+    final chromeColor = _defaultShellChromeColor;
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: chromeColor,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.dark,
+    );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFFF7F8FB),
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
+      value: overlayStyle,
       child: Scaffold(
         key: _scaffoldKey,
-        backgroundColor: const Color(0xFFF7F8FB),
+        backgroundColor: _defaultShellChromeColor,
         drawer: AtlasDrawer(
           activeBranchIndex: navigationShell.currentIndex,
           onSelectBranch: (branchIndex) => navigationShell.goBranch(
@@ -74,9 +78,7 @@ class AppShellScreenState extends State<AppShellScreen> {
                 left: 0,
                 right: 0,
                 height: statusBarHeight,
-                child: const IgnorePointer(
-                  child: ColoredBox(color: Color(0xFFF7F8FB)),
-                ),
+                child: IgnorePointer(child: ColoredBox(color: chromeColor)),
               ),
           ],
         ),
