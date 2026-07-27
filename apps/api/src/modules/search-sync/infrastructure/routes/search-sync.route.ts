@@ -8,26 +8,26 @@ export const searchSyncRoutes = new Elysia()
   .use(auth)
   .use(requirePermission("manage", "SEARCH_SYNC"))
   .post(
-    "/search-sync",
+    "/sync",
     async ({ body, set }) => {
       set.status = 202;
       return searchSyncUseCases.start().execute(parseSearchSyncRequest(body));
     },
     {
       detail: {
-        summary: "Start a full search index rebuild",
+        summary: "Start an operations sync",
         tags: ["Search Sync"],
         security: [{ bearerAuth: [] }],
       },
-      body: t.Object({ entity: t.Union([t.Literal("facilities"), t.Literal("professionals")]) }),
+      body: t.Object({ entity: t.Union([t.Literal("facilities"), t.Literal("professionals"), t.Literal("orders")]) }),
     }
   )
   .get(
-    "/search-sync/:workflowId",
+    "/sync/:workflowId",
     ({ params }) => searchSyncUseCases.status().execute(params.workflowId),
     {
       detail: {
-        summary: "Get a search index rebuild status",
+        summary: "Get an operations sync status",
         tags: ["Search Sync"],
         security: [{ bearerAuth: [] }],
       },

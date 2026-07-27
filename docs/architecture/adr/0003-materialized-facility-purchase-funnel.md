@@ -79,7 +79,7 @@ A full facilities search rebuild uses the existing blue/green `search-sync-facil
 
 The stable Temporal schedule runs at minute zero of every hour with overlap policy `SKIP`. The operational freshness objective is one successful hourly reconciliation cycle: externally written order changes and clock-driven stage transitions should be reflected by the next completed hourly run. The midnight sweep may take longer than one cycle on a large data set and is the completeness repair, not the normal freshness path.
 
-The initial `BACKFILL` is started explicitly with a unique workflow ID and input `{ "mode": "BACKFILL" }`; it is not part of schedule provisioning.
+The initial `BACKFILL` is started explicitly through `POST /sync` with `{ "entity": "orders" }`, which starts `purchaseRecurrenceWorkflow` with `{ "mode": "BACKFILL" }` under the stable `purchase-recurrence-backfill` workflow ID; it is not part of schedule provisioning.
 
 ### Concurrency and future writer hook
 

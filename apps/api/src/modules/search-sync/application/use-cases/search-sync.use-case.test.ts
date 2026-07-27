@@ -6,13 +6,18 @@ import {
 } from "./search-sync.use-case";
 
 describe("search sync use cases", () => {
-  test("starts a full facilities rebuild without accepting selective ids", async () => {
+  test("starts full search rebuilds without accepting selective ids", async () => {
     const started: Array<"facilities" | "professionals"> = [];
     const useCase = new StartSearchSyncUseCase({
       start: async (entity) => {
         started.push(entity);
         return { workflowId: `search-sync-${entity}-full`, runId: "run-1", existing: false };
       },
+      startOrdersBackfill: async () => ({
+        workflowId: "purchase-recurrence-backfill",
+        runId: "run-orders",
+        existing: false,
+      }),
     });
 
     await expect(useCase.execute(parseSearchSyncRequest({ entity: "facilities" }))).resolves.toEqual({
@@ -24,6 +29,24 @@ describe("search sync use cases", () => {
     expect(() => parseSearchSyncRequest({ entity: "facilities", ids: ["x"] })).toThrow(
       "Request validation failed"
     );
+  });
+
+  test("starts the stable purchase-recurrence backfill for orders", async () => {
+    let ordersBackfillStarts = 0;
+    const useCase = new StartSearchSyncUseCase({
+      start: async () => ({ workflowId: "unexpected", runId: "unexpected", existing: false }),
+      startOrdersBackfill: async () => {
+        ordersBackfillStarts += 1;
+        return { workflowId: "purchase-recurrence-backfill", runId: "run-orders", existing: false };
+      },
+    });
+
+    await expect(useCase.execute(parseSearchSyncRequest({ entity: "orders" }))).resolves.toEqual({
+      workflowId: "purchase-recurrence-backfill",
+      runId: "run-orders",
+      existing: false,
+    });
+    expect(ordersBackfillStarts).toBe(1);
   });
 
   test("returns the Temporal status for a workflow id", async () => {
