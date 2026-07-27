@@ -33,6 +33,17 @@ enum FacilitySort {
 
 enum SortOrder { asc, desc }
 
+extension FacilitySortX on FacilitySort {
+  String get apiValue => switch (this) {
+    FacilitySort.relevance => 'relevance',
+    FacilitySort.distance => 'distance',
+    FacilitySort.name => 'name',
+    FacilitySort.purchaseFunnelStage => 'purchaseFunnelStage',
+    FacilitySort.purchaseIntervalDays => 'purchaseIntervalDays',
+    FacilitySort.lastPurchaseDate => 'lastPurchaseDate',
+  };
+}
+
 extension PurchaseRecurrenceSourceX on PurchaseRecurrenceSource {
   String get apiValue => switch (this) {
     PurchaseRecurrenceSource.defaultValue => 'DEFAULT',

@@ -44,7 +44,6 @@ class Clinic {
     this.createdAt,
     this.updatedAt,
     this.purchaseRecurrence,
-    this.commercialStatus,
   });
 
   factory Clinic.fromJson(String json) {
@@ -94,7 +93,6 @@ class Clinic {
       conformityStatus: readNullableString(map['conformityStatus']),
       createdAt: readNullableDateTime(map['createdAt']),
       updatedAt: readNullableDateTime(map['updatedAt']),
-      commercialStatus: commercialStatusFromApi(map['commercialStatus']),
       purchaseRecurrence: map['purchaseRecurrence'] is Map
           ? PurchaseRecurrenceSnapshot.fromMap(
               (map['purchaseRecurrence'] as Map).cast<String, dynamic>(),
@@ -122,7 +120,6 @@ class Clinic {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
-  final CommercialStatus? commercialStatus;
 
   // Detail fields from GET /facilities/:id (and list when present)
   final String? phone;

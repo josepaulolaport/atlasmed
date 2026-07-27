@@ -3,6 +3,8 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
 /// Radius chip options for Explorar clinics (km). Clear = no `radiusKm`.
 const List<double> exploreRadiusKmOptions = [5, 10, 25, 50, 100];
@@ -19,7 +21,12 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     this.radiusKm,
     this.commercialStatus,
     this.productIds,
+    this.purchaseFunnelStages = const [],
+    this.purchaseProfile,
+    this.purchaseIntervalMinDays,
+    this.purchaseIntervalMaxDays,
     this.sort,
+    this.order,
     this.verticalId,
     super.resolveOnCreate = false,
   }) : super(
@@ -38,9 +45,20 @@ class ClinicsRepository extends Repository<PaginatedClinics>
                'commercialStatus': commercialStatus.trim(),
              if (productIds != null && productIds.trim().isNotEmpty)
                'productIds': productIds.trim(),
+             if (purchaseFunnelStages.isNotEmpty)
+               'purchaseFunnelStage': purchaseFunnelStages
+                   .map((stage) => stage.apiValue)
+                   .join(','),
+             if (purchaseProfile != null)
+               'purchaseProfile': purchaseProfile!.apiValue,
+             if (purchaseIntervalMinDays != null)
+               'purchaseIntervalMinDays': purchaseIntervalMinDays.toString(),
+             if (purchaseIntervalMaxDays != null)
+               'purchaseIntervalMaxDays': purchaseIntervalMaxDays.toString(),
              if (verticalId != null && verticalId.trim().isNotEmpty)
                'verticalId': verticalId.trim(),
-             if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
+             if (sort != null) 'sort': sort!.apiValue,
+             if (order != null) 'order': order!.name,
            },
          ),
          name: 'ClinicsRepository',
@@ -54,7 +72,12 @@ class ClinicsRepository extends Repository<PaginatedClinics>
   final double? radiusKm;
   final String? commercialStatus;
   final String? productIds;
-  final String? sort;
+  final List<PurchaseFunnelStage> purchaseFunnelStages;
+  final PurchaseProfile? purchaseProfile;
+  final int? purchaseIntervalMinDays;
+  final int? purchaseIntervalMaxDays;
+  final FacilitySort? sort;
+  final SortOrder? order;
   final String? verticalId;
 
   /// Build the endpoint URI for this repository.
@@ -69,7 +92,12 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     double? radiusKm,
     String? commercialStatus,
     String? productIds,
-    String? sort,
+    List<PurchaseFunnelStage> purchaseFunnelStages = const [],
+    PurchaseProfile? purchaseProfile,
+    int? purchaseIntervalMinDays,
+    int? purchaseIntervalMaxDays,
+    FacilitySort? sort,
+    SortOrder? order,
     String? verticalId,
   }) {
     return buildEndpoint(
@@ -87,13 +115,96 @@ class ClinicsRepository extends Repository<PaginatedClinics>
           'commercialStatus': commercialStatus.trim(),
         if (productIds != null && productIds.trim().isNotEmpty)
           'productIds': productIds.trim(),
+        if (purchaseFunnelStages.isNotEmpty)
+          'purchaseFunnelStage': purchaseFunnelStages
+              .map((stage) => stage.apiValue)
+              .join(','),
+        if (purchaseProfile != null)
+          'purchaseProfile': purchaseProfile.apiValue,
+        if (purchaseIntervalMinDays != null)
+          'purchaseIntervalMinDays': purchaseIntervalMinDays.toString(),
+        if (purchaseIntervalMaxDays != null)
+          'purchaseIntervalMaxDays': purchaseIntervalMaxDays.toString(),
         if (verticalId != null && verticalId.trim().isNotEmpty)
           'verticalId': verticalId.trim(),
-        if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
+        if (sort != null) 'sort': sort.apiValue,
+        if (order != null) 'order': order.name,
       },
     );
   }
 
   @override
   PaginatedClinics fromJson(String json) => PaginatedClinics.fromJson(json);
+}
+
+/// Sends the typed recurrence command through the existing authenticated
+/// repository transport. It is separate from paginated listing because PATCH
+/// returns one facility DTO.
+class FacilityPurchaseRecurrenceRepository extends Repository<Clinic>
+    with SessionEnvironmentMixin<Clinic> {
+  FacilityPurchaseRecurrenceRepository({String? baseUrl})
+    : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+      super(
+        endpoint: Uri.parse(
+          '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities',
+        ),
+        resolveOnCreate: false,
+        name: 'FacilityPurchaseRecurrenceRepository',
+      );
+
+  final String _baseUrl;
+  RepositoryHttpRequest? _pendingRequest;
+
+  @override
+  Clinic fromJson(String json) => Clinic.fromJson(json);
+
+  RepositoryHttpRequest buildPatchRequest(
+    String facilityId,
+    PurchaseRecurrenceCommand command,
+  ) => makePatchRequest(_baseUrl, facilityId, command);
+
+  static RepositoryHttpRequest makePatchRequest(
+    String baseUrl,
+    String facilityId,
+    PurchaseRecurrenceCommand command,
+  ) {
+    command.validate();
+    return RepositoryHttpRequest(
+      url: Uri.parse('$baseUrl/api/v1/facilities/$facilityId'),
+      method: RepositoryHttpMethod.patch,
+      headers: const {'Content-Type': 'application/json'},
+      body: command.toJson(),
+    );
+  }
+
+  Future<Clinic> updatePurchaseRecurrence(
+    String facilityId,
+    PurchaseRecurrenceCommand command,
+  ) async {
+    _pendingRequest = buildPatchRequest(facilityId, command);
+    try {
+      final result = await refresh();
+      if (result == null) {
+        throw StateError('A atualização não retornou o estabelecimento.');
+      }
+      return result;
+    } finally {
+      _pendingRequest = null;
+    }
+  }
+
+  @override
+  Future<String?> resolve() async {
+    final request = _pendingRequest;
+    if (request == null) return null;
+    final response = await client.call(request: request);
+    if (successfulCondition(response.statusCode, response.body)) {
+      return response.body;
+    }
+    final shouldThrow = await onErrorStatusCode(response.statusCode);
+    if (shouldThrow) {
+      throw UnexpectedStatusCodeException(sent: request, received: response);
+    }
+    return response.body;
+  }
 }

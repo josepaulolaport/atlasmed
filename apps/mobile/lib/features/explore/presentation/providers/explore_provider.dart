@@ -125,6 +125,7 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       cpf: apiClinic.cpf,
       commercialStatus: apiClinic.commercialStatus,
       conformityStatus: apiClinic.conformityStatus,
+      purchaseRecurrence: apiClinic.purchaseRecurrence,
     );
   } finally {
     repo.dispose();
@@ -341,6 +342,14 @@ class ExploreState {
           final bDays = b.lastVisitDays ?? 999999;
           return bDays.compareTo(aDays);
         });
+      case 'purchase-funnel-asc':
+      case 'purchase-funnel-desc':
+      case 'purchase-interval-asc':
+      case 'purchase-interval-desc':
+      case 'last-purchase-asc':
+      case 'last-purchase-desc':
+        // These are canonical server sorts; preserve API pagination order.
+        break;
       default:
         break;
     }
@@ -391,6 +400,28 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   static const _searchDebounceDuration = Duration(milliseconds: 350);
   static const meaningfulMoveMeters = 150.0;
 
+  Future<void> refreshAfterClinicUpdate(api.Clinic clinic) async {
+    final mapped = Clinic.fromApi(clinic);
+    state = state.copyWith(
+      clinics: [
+        for (final item in state.clinics)
+          if (item.id == mapped.id) mapped else item,
+      ],
+    );
+    _clinicPage = 1;
+    _clinicHasMore = true;
+    await _fetchClinicsPage(page: 1);
+    if (state.errorMessage != null) {
+      state = state.copyWith(
+        clinics: [
+          for (final item in state.clinics)
+            if (item.id == mapped.id) mapped else item,
+        ],
+      );
+      throw StateError(state.errorMessage!);
+    }
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -408,6 +439,55 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     if (list == null || list.isEmpty) return null;
     return list.first;
   }
+
+  List<PurchaseFunnelStage> get _purchaseFunnelStages =>
+      (state.filters['purchaseFunnelStage'] ?? const [])
+          .map(purchaseFunnelStageFromApi)
+          .whereType<PurchaseFunnelStage>()
+          .toList(growable: false);
+
+  PurchaseProfile? get _purchaseProfile {
+    final value = state.filters['purchaseProfile']?.first;
+    return purchaseProfileFromApi(value);
+  }
+
+  int? _purchaseIntervalBound(String key) =>
+      int.tryParse(state.filters[key]?.first ?? '');
+
+  ({FacilitySort? sort, SortOrder? order}) get _facilitySort =>
+      switch (state.sort) {
+        'distance' => (
+          sort: _origin == null ? null : FacilitySort.distance,
+          order: SortOrder.asc,
+        ),
+        'name-asc' => (sort: FacilitySort.name, order: SortOrder.asc),
+        'name-desc' => (sort: FacilitySort.name, order: SortOrder.desc),
+        'purchase-funnel-asc' => (
+          sort: FacilitySort.purchaseFunnelStage,
+          order: SortOrder.asc,
+        ),
+        'purchase-funnel-desc' => (
+          sort: FacilitySort.purchaseFunnelStage,
+          order: SortOrder.desc,
+        ),
+        'purchase-interval-asc' => (
+          sort: FacilitySort.purchaseIntervalDays,
+          order: SortOrder.asc,
+        ),
+        'purchase-interval-desc' => (
+          sort: FacilitySort.purchaseIntervalDays,
+          order: SortOrder.desc,
+        ),
+        'last-purchase-asc' => (
+          sort: FacilitySort.lastPurchaseDate,
+          order: SortOrder.asc,
+        ),
+        'last-purchase-desc' => (
+          sort: FacilitySort.lastPurchaseDate,
+          order: SortOrder.desc,
+        ),
+        _ => (sort: null, order: null),
+      };
 
   DeviceLocation? get _origin =>
       state.origin ?? _ref.read(locationSessionProvider).location;
@@ -480,6 +560,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     final verticalId = await _ref.read(
       effectiveFacilityVerticalIdProvider.future,
     );
+    final facilitySort = _facilitySort;
     final repo = ClinicsRepository(
       page: p,
       limit: 20,
@@ -489,7 +570,16 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       radiusKm: state.radiusKm,
       commercialStatus: _commercialStatus,
       productIds: _commaJoin(state.filters['products']),
-      sort: origin != null && state.sort == 'distance' ? 'distance' : null,
+      purchaseFunnelStages: _purchaseFunnelStages,
+      purchaseProfile: _purchaseProfile,
+      purchaseIntervalMinDays: _purchaseIntervalBound(
+        'purchaseIntervalMinDays',
+      ),
+      purchaseIntervalMaxDays: _purchaseIntervalBound(
+        'purchaseIntervalMaxDays',
+      ),
+      sort: facilitySort.sort,
+      order: facilitySort.order,
       verticalId: verticalId,
       resolveOnCreate: false,
     );

@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/contact_action
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
@@ -493,7 +494,9 @@ class _ClinicDetailContent extends ConsumerWidget {
         const ClinicSectionHeader(title: 'Compras'),
         PurchaseRecurrenceSection(
           value: detail.purchaseRecurrence,
-          onEdit: () => _openPurchaseRecurrenceEditor(context, ref, detail),
+          onEdit: canMutate
+              ? () => _openPurchaseRecurrenceEditor(context, ref, detail)
+              : null,
         ),
         ClinicSectionHeader(
           title: 'Profissionais administrativos',

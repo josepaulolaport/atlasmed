@@ -5,11 +5,11 @@ class PurchaseRecurrenceSection extends StatelessWidget {
   const PurchaseRecurrenceSection({
     super.key,
     required this.value,
-    required this.onEdit,
+    this.onEdit,
   });
 
   final PurchaseRecurrenceSnapshot? value;
-  final VoidCallback onEdit;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
