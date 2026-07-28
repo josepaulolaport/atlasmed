@@ -39,7 +39,7 @@ void main() {
               city: '',
               neighborhood: '',
               distanceKm: 0,
-              commercialStatus: 'ACTIVE',
+              commercialStatus: 'REGISTERED',
               doctorCount: 1,
             ),
             onTap: () {},

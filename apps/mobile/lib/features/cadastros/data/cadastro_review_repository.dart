@@ -89,7 +89,11 @@ class CadastroReviewRepository
       submittedAt: item['submittedAt'] != null
           ? DateTime.tryParse(item['submittedAt'] as String) ?? DateTime.now()
           : DateTime.now(),
-      submittedByName: 'Representante',
+      submittedByName: () {
+        final raw = item['submittedByName'];
+        if (raw is String && raw.trim().isNotEmpty) return raw.trim();
+        return 'Representante';
+      }(),
       taxIdType: taxIdType,
       taxId: facility['taxId'] as String?,
       address: facility['address'] as String?,

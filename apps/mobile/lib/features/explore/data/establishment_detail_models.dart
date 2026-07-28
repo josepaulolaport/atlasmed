@@ -243,28 +243,28 @@ class NearbyEstablishment {
 
 // ── Facility status signals (commercial/purchase/conformity — real DB enums) ──
 
-/// Mirrors `commercial_status` on `facilities`: REGISTERED | ACTIVE | SUSPENDED | INACTIVE.
-enum FacilityCommercialStatus { registered, active, suspended, inactive }
+/// Mirrors `commercial_status` on profiles: UNREGISTERED | REGISTERED | SUSPENDED | CLOSED.
+enum FacilityCommercialStatus { unregistered, registered, suspended, closed }
 
 extension FacilityCommercialStatusX on FacilityCommercialStatus {
   String get label {
     return switch (this) {
-      .registered => 'Registrada',
-      .active => 'Ativa',
+      .unregistered => 'Pré-cadastro',
+      .registered => 'Operante',
       .suspended => 'Suspensa',
-      .inactive => 'Inativa',
+      .closed => 'Encerrada',
     };
   }
 
   Color get color {
     switch (this) {
-      case FacilityCommercialStatus.registered:
+      case FacilityCommercialStatus.unregistered:
         return AppColors.blueAccent;
-      case FacilityCommercialStatus.active:
+      case FacilityCommercialStatus.registered:
         return AppColors.green;
       case FacilityCommercialStatus.suspended:
         return AppColors.amber;
-      case FacilityCommercialStatus.inactive:
+      case FacilityCommercialStatus.closed:
         return AppColors.gray500;
     }
   }
@@ -276,7 +276,7 @@ enum FacilityPurchaseStatus { nonBuyer, lowBuyer, regularBuyer, highBuyer }
 
 extension FacilityPurchaseStatusX on FacilityPurchaseStatus {
   /// Short labels for the header "Compra: …" chip — avoid repeating "Compra"
-  /// and never reuse commercial-status wording like "Inativa".
+  /// and never reuse commercial-status wording like "Encerrada".
   String get label {
     switch (this) {
       case FacilityPurchaseStatus.nonBuyer:
@@ -367,14 +367,14 @@ FacilityTaxIdType? parseFacilityTaxIdType(String? raw) {
 
 FacilityCommercialStatus? parseFacilityCommercialStatus(String? raw) {
   switch (raw?.trim().toUpperCase()) {
+    case 'UNREGISTERED':
+      return FacilityCommercialStatus.unregistered;
     case 'REGISTERED':
       return FacilityCommercialStatus.registered;
-    case 'ACTIVE':
-      return FacilityCommercialStatus.active;
     case 'SUSPENDED':
       return FacilityCommercialStatus.suspended;
-    case 'INACTIVE':
-      return FacilityCommercialStatus.inactive;
+    case 'CLOSED':
+      return FacilityCommercialStatus.closed;
     default:
       return null;
   }

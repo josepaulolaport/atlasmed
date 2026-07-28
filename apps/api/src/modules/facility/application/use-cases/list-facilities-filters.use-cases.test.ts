@@ -30,7 +30,7 @@ describe("ListFacilitiesUseCase filters", () => {
     const result = await new ListFacilitiesUseCase({ facilityRepository: repository }).execute({
       userId: "user-1",
       page: 2, limit: 10, latitude: -23.55, longitude: -46.63, radiusKm: 5,
-      commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"],
+      commercialStatus: "REGISTERED", productIds: ["product-a", "product-b"],
       purchaseFunnelStages: ["PURCHASE_WINDOW", "CHURN"], purchaseProfile: "AUTOMATIC",
       purchaseIntervalMinDays: 15, purchaseIntervalMaxDays: 90,
       sort: "purchaseFunnelStage", order: "desc",
@@ -40,7 +40,7 @@ describe("ListFacilitiesUseCase filters", () => {
 
     expect(repository.findAll).toHaveBeenCalledWith(expect.objectContaining({
       page: 2, limit: 10, latitude: -23.55, longitude: -46.63, radiusKm: 5,
-      commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"], sort: "purchaseFunnelStage", order: "desc",
+      commercialStatus: "REGISTERED", productIds: ["product-a", "product-b"], sort: "purchaseFunnelStage", order: "desc",
       purchaseFunnelStages: ["PURCHASE_WINDOW", "CHURN"], purchaseProfile: "AUTOMATIC",
       purchaseIntervalMinDays: 15, purchaseIntervalMaxDays: 90,
       userId: "user-1",

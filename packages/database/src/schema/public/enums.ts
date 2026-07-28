@@ -49,10 +49,10 @@ export const conformityRecordStatusEnum = pgEnum("conformity_record_status", [
 ]);
 
 export const commercialStatusEnum = pgEnum("commercial_status", [
+  "UNREGISTERED",
   "REGISTERED",
-  "ACTIVE",
   "SUSPENDED",
-  "INACTIVE",
+  "CLOSED",
 ]);
 
 export const purchaseStatusEnum = pgEnum("purchase_status", [

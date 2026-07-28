@@ -105,7 +105,12 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool compact;
   final List<Widget>? actions;
 
-  const AtlasAppBar({super.key, this.page = '', this.compact = false, this.actions});
+  const AtlasAppBar({
+    super.key,
+    this.page = '',
+    this.compact = false,
+    this.actions,
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(48);

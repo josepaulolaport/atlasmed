@@ -24,28 +24,28 @@ class AtlasButton {
         ),
         child: switch (icon) {
           null => DefaultTextStyle(
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.navyBright,
-              ),
-              child: label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.navyBright,
             ),
+            child: label,
+          ),
           _ => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                icon,
-                const SizedBox(width: 8),
-                DefaultTextStyle(
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.navyBright,
-                  ),
-                  child: label,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              icon,
+              const SizedBox(width: 8),
+              DefaultTextStyle(
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.navyBright,
                 ),
-              ],
-            ),
+                child: label,
+              ),
+            ],
+          ),
         },
       ),
     );

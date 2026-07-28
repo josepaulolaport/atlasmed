@@ -133,7 +133,7 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
     ],
     nearbyEstablishments: _mockNearby(baseLat, baseLng, facilityId),
     statusSignals: FacilityStatusSignals(
-      commercialStatus: FacilityCommercialStatus.active,
+      commercialStatus: FacilityCommercialStatus.registered,
       purchaseStatus: FacilityPurchaseStatus.nonBuyer,
       conformityStatus: FacilityConformityStatus.complete,
       lastPurchaseAt: now.subtract(const Duration(days: 68)),
@@ -433,7 +433,7 @@ EstablishmentDetailSections mockEmptyEstablishmentDetailSections(
 List<EstablishmentDocument> _mockDocuments(DateTime now) => [
   EstablishmentDocument(
     id: 'carta_cnpj',
-    title: 'Carta de CNPJ',
+    title: 'Cartão de CNPJ',
     description: 'Comprovante de inscrição e situação cadastral do CNPJ.',
     status: EstablishmentDocumentStatus.approved,
     submittedAt: now.subtract(const Duration(days: 210)),

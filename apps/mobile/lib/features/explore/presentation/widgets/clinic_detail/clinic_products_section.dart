@@ -17,7 +17,8 @@ class ClinicProductsSection extends StatelessWidget {
       return const ClinicaEmptySection(
         icon: Icons.inventory_2_outlined,
         title: 'Nenhum produto em uso',
-        description: 'Produtos aparecerão aqui quando houver pedidos registrados.',
+        description:
+            'Produtos aparecerão aqui quando houver pedidos registrados.',
       );
     }
 

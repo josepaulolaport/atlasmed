@@ -446,7 +446,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
-    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: FacilityPurchaseBucket;
     productIds?: string[];
     purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
@@ -574,7 +574,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
-    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: FacilityPurchaseBucket;
     productIds?: string[];
     purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];

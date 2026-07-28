@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
@@ -93,7 +94,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // ── Header · identity ────────────────────────
                   sessionProfile.when(
                     loading: _buildHeaderSkeleton,
@@ -327,7 +327,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: 'Território', action: 'Abrir mapa'),
+        _SectionHeader(
+          title: 'Território',
+          action: 'Abrir mapa',
+          onAction: () => context.go('/map'),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(10),
@@ -1002,7 +1006,8 @@ class _ProfileChevron extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final String? action;
-  const _SectionHeader({required this.title, this.action});
+  final VoidCallback? onAction;
+  const _SectionHeader({required this.title, this.action, this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -1022,7 +1027,7 @@ class _SectionHeader extends StatelessWidget {
           ),
           if (action != null)
             InkWell(
-              onTap: () {},
+              onTap: onAction,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

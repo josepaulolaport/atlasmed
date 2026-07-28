@@ -406,7 +406,7 @@ async function main() {
         verticalId: dermId,
         territoryId: patchId,
         isActive: true,
-        commercialStatus: "REGISTERED",
+        commercialStatus: "UNREGISTERED",
       });
     }
     profilesUpserted += 1;

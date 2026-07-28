@@ -37,8 +37,8 @@ class EmptyState extends StatelessWidget {
               'Toque em + no canto inferior para buscar e associar médicos a esta clínica.',
             'facility-admin' =>
               'Toque em + no canto inferior para buscar e associar profissionais a esta clínica.',
-            'doctor' => 'Nenhum médico encontrado na sua região.',
-            _ => 'Nenhuma clínica encontrada na sua região.',
+            'doctor' => 'Nenhum médico encontrado.',
+            _ => 'Nenhuma clínica encontrada.',
           };
 
     return Center(

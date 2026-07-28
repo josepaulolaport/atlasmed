@@ -1,10 +1,8 @@
-import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/dashboard_territory_card.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/widgets/purchase_status_donut_card.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/vertical_selector.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -120,19 +118,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           final verticalId = ref.read(
                             dashboardSelectedVerticalIdProvider,
                           );
-                          if (verticalId != null) {
-                            ref
-                                    .read(
-                                      selectedFacilityVerticalIdProvider
-                                          .notifier,
-                                    )
-                                    .state =
-                                verticalId;
-                          }
-                          ref
-                              .read(exploreProvider.notifier)
-                              .applyPurchaseBucket(bucket);
-                          context.go('/explore');
+                          final uri = Uri(
+                            path: '/dashboard/facilities/$bucket',
+                            queryParameters: {'verticalId': ?verticalId},
+                          );
+                          context.push(uri.toString());
                         },
                       ),
                       const SizedBox(height: 12),

@@ -181,42 +181,48 @@ class _ProfessionalCard extends StatelessWidget {
                   )
                 : null,
           ),
-          const Spacer(),
-          const Divider(height: 1, color: AppColors.gray100),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => RepresentativeDetailScreen(
-                  professional: professional,
-                  facilityName: facilityName,
-                  facilityId: facilityId,
-                ),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Ver perfil completo',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.navyBright,
+          Expanded(
+            child: Column(
+              children: [
+                const Spacer(),
+                const Divider(height: 1, color: AppColors.gray100),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RepresentativeDetailScreen(
+                        professional: professional,
+                        facilityName: facilityName,
+                        facilityId: facilityId,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: AppColors.navyBright,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          'Ver perfil completo',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navyBright,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: AppColors.navyBright,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const Spacer(),
+              ],
             ),
           ),
         ],

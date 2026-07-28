@@ -1,29 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-enum CommercialStatus { registered, active, suspended, inactive }
+enum CommercialStatus { unregistered, registered, suspended, closed }
 
 extension CommercialStatusX on CommercialStatus {
   String get apiValue => switch (this) {
+    CommercialStatus.unregistered => 'UNREGISTERED',
     CommercialStatus.registered => 'REGISTERED',
-    CommercialStatus.active => 'ACTIVE',
     CommercialStatus.suspended => 'SUSPENDED',
-    CommercialStatus.inactive => 'INACTIVE',
+    CommercialStatus.closed => 'CLOSED',
   };
 
   String get label => switch (this) {
-    CommercialStatus.registered => 'Cadastrado',
-    CommercialStatus.active => 'Ativo',
-    CommercialStatus.suspended => 'Suspenso',
-    CommercialStatus.inactive => 'Inativo',
+    CommercialStatus.unregistered => 'Pré-cadastro',
+    CommercialStatus.registered => 'Operante',
+    CommercialStatus.suspended => 'Suspensa',
+    CommercialStatus.closed => 'Encerrada',
   };
 }
 
 CommercialStatus? commercialStatusFromApi(Object? value) => switch (value) {
+  'UNREGISTERED' => CommercialStatus.unregistered,
   'REGISTERED' => CommercialStatus.registered,
-  'ACTIVE' => CommercialStatus.active,
   'SUSPENDED' => CommercialStatus.suspended,
-  'INACTIVE' => CommercialStatus.inactive,
+  'CLOSED' => CommercialStatus.closed,
   _ => null,
 };
 

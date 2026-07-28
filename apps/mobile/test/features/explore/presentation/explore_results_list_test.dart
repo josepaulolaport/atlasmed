@@ -16,7 +16,7 @@ void main() {
     city: 'São Paulo',
     neighborhood: 'Centro',
     distanceKm: 1,
-    commercialStatus: 'ACTIVE',
+    commercialStatus: 'REGISTERED',
     doctorCount: 1,
   );
 

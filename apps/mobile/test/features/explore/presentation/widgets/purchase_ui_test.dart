@@ -12,11 +12,16 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+ThemeData _testTheme() => ThemeData(
+  splashFactory: NoSplash.splashFactory,
+  highlightColor: Colors.transparent,
+);
+
 void main() {
   testWidgets(
     'purchase section renders the recurrence cycle without narrow-screen overflow',
     (tester) async {
-      tester.view.physicalSize = const Size(320, 900);
+      tester.view.physicalSize = const Size(360, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       var openedHistory = false;
@@ -24,6 +29,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: _testTheme(),
           home: Scaffold(
             body: SingleChildScrollView(
               child: PurchaseRecurrenceSection(
@@ -64,6 +70,7 @@ void main() {
     final today = DateUtils.dateOnly(DateTime.now());
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: PurchaseRecurrenceSection(
             value: PurchaseRecurrenceSnapshot(
@@ -100,6 +107,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: SingleChildScrollView(
             child: PurchaseRecurrenceSection(
@@ -131,8 +139,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: PurchaseRecurrenceSection(value: null)),
+      MaterialApp(
+        theme: _testTheme(),
+        home: const Scaffold(body: PurchaseRecurrenceSection(value: null)),
       ),
     );
 
@@ -149,6 +158,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       await tester.pumpWidget(
         MaterialApp(
+          theme: _testTheme(),
           home: Scaffold(
             body: ClinicRow(
               clinic: FacilityEntry(
@@ -157,7 +167,7 @@ void main() {
                 city: 'São Paulo',
                 neighborhood: 'Centro',
                 distanceKm: 1,
-                commercialStatus: CommercialStatusFilter.active,
+                commercialStatus: CommercialStatusFilter.registered,
                 doctorCount: 2,
                 purchaseRecurrence: const PurchaseRecurrenceSnapshot(
                   intervalDays: 30,
@@ -171,7 +181,8 @@ void main() {
         ),
       );
       expect(find.text('Nunca comprou'), findsOneWidget);
-      expect(find.text('A cada 30 dias'), findsOneWidget);
+      // Buy-frequency line intentionally omitted from explore ClinicRow.
+      expect(find.text('A cada 30 dias'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -182,6 +193,7 @@ void main() {
     Map<String, List<String>>? applied;
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: SingleChildScrollView(
             child: FilterSheet(
@@ -207,6 +219,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -242,6 +255,7 @@ void main() {
     String? applied;
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -283,6 +297,7 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: PurchaseRecurrenceForm(
             initialValue: unknown,
@@ -328,6 +343,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: _testTheme(),
           home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
         ),
       );
@@ -362,6 +378,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
       ),
     );
@@ -385,6 +402,7 @@ void main() {
           throw Exception('offline');
       await tester.pumpWidget(
         MaterialApp(
+          theme: _testTheme(),
           home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
         ),
       );

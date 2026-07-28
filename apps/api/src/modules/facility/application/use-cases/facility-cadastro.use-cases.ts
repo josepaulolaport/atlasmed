@@ -672,7 +672,7 @@ export class ListCadastroSubmissionsUseCase {
         });
 
       const data = await Promise.all(
-        items.map(async ({ document, submission }) => {
+        items.map(async ({ document, submission, submittedByName }) => {
           const facility = await this.deps.facilityRepository.findById(
             submission.facilityId
           );
@@ -727,6 +727,8 @@ export class ListCadastroSubmissionsUseCase {
             submissionStatus: submission.status,
             uiStatus: mapSubmissionDocumentUiStatus(document.status),
             submittedAt: submission.submittedAt?.toISOString(),
+            submittedByUserId: submission.submittedByUserId ?? undefined,
+            submittedByName: submittedByName ?? undefined,
             validatedAt:
               document.status === "APPROVED"
                 ? document.updatedAt.toISOString()

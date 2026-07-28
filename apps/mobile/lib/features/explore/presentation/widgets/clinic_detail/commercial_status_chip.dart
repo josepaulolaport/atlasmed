@@ -14,6 +14,8 @@ class FacilityCommercialStatusChip extends StatelessWidget {
         color: status.color.withValues(alpha: 0.36),
         borderRadius: BorderRadius.circular(20),
       ),
+      // No Flexible here: chip sits in a Wrap; Flex parentData + min-sized
+      // Row races Flutter semantics (`!semantics.parentDataDirty`).
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -26,17 +28,15 @@ class FacilityCommercialStatusChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              status.label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: status.color,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          Text(
+            status.label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: status.color,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

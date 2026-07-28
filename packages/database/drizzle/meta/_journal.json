@@ -246,6 +246,34 @@
       "when": 1785174529077,
       "tag": "0034_mature_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1785198128099,
+      "tag": "0035_rename_commercial_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1785198131001,
+      "tag": "0036_rename_commercial_status_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1785198244672,
+      "tag": "0037_commercial_status_inactive_to_unregistered",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1785199641408,
+      "tag": "0038_cartao_cnpj_label",
+      "breakpoints": true
     }
   ]
 }

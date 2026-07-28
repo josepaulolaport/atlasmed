@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
@@ -59,7 +60,32 @@ class ClinicHeaderSection extends ConsumerWidget {
         );
       }
     });
-
+    // Prefer live commercial/conformity from facility DTO. Purchase is only
+    // shown when the API (or an explicit section payload) provides it.
+    final sectionSignals = sections?.statusSignals;
+    final liveCommercial = parseFacilityCommercialStatus(
+      detail.commercial?.commercialStatus,
+    );
+    final liveConformity = parseFacilityConformityStatus(
+      detail.commercial?.conformityStatus,
+    );
+    final signals =
+        sectionSignals == null &&
+            liveCommercial == null &&
+            liveConformity == null
+        ? null
+        : FacilityStatusSignals(
+            commercialStatus:
+                liveCommercial ??
+                sectionSignals?.commercialStatus ??
+                FacilityCommercialStatus.unregistered,
+            purchaseStatus: sectionSignals?.purchaseStatus,
+            conformityStatus:
+                liveConformity ??
+                sectionSignals?.conformityStatus ??
+                FacilityConformityStatus.incomplete,
+            lastPurchaseAt: sectionSignals?.lastPurchaseAt,
+          );
     final specialties = sections?.specialtiesLabel;
     // Identity / contact / address / PF-PJ prefer the live facility DTO.
     final fullAddress = detail.address?.formattedAddress;
@@ -140,6 +166,33 @@ class ClinicHeaderSection extends ConsumerWidget {
                         ],
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (signals != null) ...[
+                      FacilityCommercialStatusChip(
+                        status: signals.commercialStatus,
+                      ),
+                      if (signals.purchaseStatus != null)
+                        _SignalChip(
+                          category: 'Compra',
+                          label: signals.purchaseStatus!.label,
+                          dotColor: signals.purchaseStatus!.color,
+                        ),
+                    ] else
+                      _SignalChip(
+                        category: 'Status',
+                        label:
+                            detail.commercial?.statusLabel.label ??
+                            'Sem status',
+                        dotColor:
+                            detail.commercial?.statusLabel.color ??
+                            const Color(0xFF9ca3af),
+                      ),
                   ],
                 ),
                 if (fullAddress != null) ...[
@@ -431,6 +484,67 @@ class _Initials extends StatelessWidget {
   }
 }
 
+class _SignalChip extends StatelessWidget {
+  const _SignalChip({
+    required this.category,
+    required this.label,
+    required this.dotColor,
+  });
+
+  /// Short legend naming what this chip's dot/value represents, e.g.
+  /// "Status", "Compra" — shown muted before the value so the pill reads
+  /// as "categoria: valor" instead of a bare status word with no context.
+  final String category;
+  final String label;
+  final Color dotColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0x26FFFFFF),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$category: ',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xB3FFFFFF),
+                  ),
+                ),
+                TextSpan(
+                  text: label,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HeaderContactAction extends StatelessWidget {
   const _HeaderContactAction({
     required this.icon,
@@ -452,9 +566,10 @@ class _HeaderContactAction extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: const Color(0xCCFFFFFF)),
           const SizedBox(width: 5),
-          // `Wrap` still bounds each child to its own max width, so a long
-          // e-mail without a shrink/ellipsis path can overflow this Row.
-          Flexible(
+          // Bound width without Flexible — Flex parentData inside Wrap
+          // children trips `!semantics.parentDataDirty` during rebuilds.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
             child: Text(
               label,
               style: const TextStyle(

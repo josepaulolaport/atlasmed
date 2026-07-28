@@ -138,6 +138,7 @@ export interface CadastroSubmissionRepository {
     items: Array<{
       document: SubmissionDocumentRecord;
       submission: CadastroSubmissionRecord;
+      submittedByName: string | null;
     }>;
     total: number;
   }>;

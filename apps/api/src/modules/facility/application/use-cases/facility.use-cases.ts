@@ -47,7 +47,7 @@ export class ListFacilitiesUseCase {
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
-    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: "active" | "inactive" | "neverBought";
     productIds?: string[];
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];

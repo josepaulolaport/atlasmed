@@ -408,7 +408,7 @@ describe("Facility HTTP auth integration", () => {
       .values({
         facilityId,
         verticalId: vertical.id,
-        commercialStatus: "REGISTERED",
+        commercialStatus: "UNREGISTERED",
         isActive: true,
       })
       .onConflictDoUpdate({
@@ -417,7 +417,7 @@ describe("Facility HTTP auth integration", () => {
           facilityVerticalProfiles.verticalId,
         ],
         set: {
-          commercialStatus: "REGISTERED",
+          commercialStatus: "UNREGISTERED",
           isActive: true,
           updatedAt: new Date(),
         },
@@ -547,7 +547,7 @@ describe("Facility HTTP auth integration", () => {
     };
     expect(emailBody.complete).toBe(true);
     expect(emailBody.conformityStatus).toBe("COMPLETE");
-    expect(emailBody.commercialStatus).toBe("ACTIVE");
+    expect(emailBody.commercialStatus).toBe("REGISTERED");
 
     const facilityRes = await authRequest(
       app,
@@ -561,7 +561,7 @@ describe("Facility HTTP auth integration", () => {
       billingEmail?: string | null;
     };
     expect(facilityBody.conformityStatus).toBe("COMPLETE");
-    expect(facilityBody.commercialStatus).toBe("ACTIVE");
+    expect(facilityBody.commercialStatus).toBe("REGISTERED");
     expect(facilityBody.billingEmail).toBe("financeiro@clinica.test");
   });
 });
