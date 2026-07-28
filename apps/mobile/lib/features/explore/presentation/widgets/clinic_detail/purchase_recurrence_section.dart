@@ -23,6 +23,7 @@ class PurchaseRecurrenceSection extends StatelessWidget {
         child: _EmptyPurchaseRecurrence(),
       );
     }
+    final presentation = _PurchasePresentation.from(recurrence);
 
     return ClinicDetailCard(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -31,20 +32,8 @@ class PurchaseRecurrenceSection extends StatelessWidget {
         crossAxisAlignment: .start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-            child: Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              crossAxisAlignment: .center,
-              children: [
-                if (recurrence.funnelStage != null)
-                  _StageBadge(stage: recurrence.funnelStage!),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: _PurchaseTimeline(recurrence: recurrence),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+            child: _PurchaseTimeline(presentation: presentation),
           ),
           const Divider(
             height: 1,
@@ -52,7 +41,7 @@ class PurchaseRecurrenceSection extends StatelessWidget {
             endIndent: 16,
             color: AppColors.gray200,
           ),
-          _PurchaseMetrics(recurrence: recurrence),
+          _PurchaseMetrics(recurrence: recurrence, presentation: presentation),
           const Divider(
             height: 1,
             indent: 16,
@@ -114,52 +103,283 @@ class _EmptyPurchaseRecurrence extends StatelessWidget {
   }
 }
 
-class _StageBadge extends StatelessWidget {
-  const _StageBadge({required this.stage});
+enum _PurchaseScenario {
+  neverPurchased,
+  beforeWindow,
+  inWindow,
+  dueToday,
+  overdue,
+  churn,
+  inactive,
+}
 
-  final PurchaseFunnelStage stage;
+class _PurchasePresentation {
+  const _PurchasePresentation({
+    required this.scenario,
+    required this.today,
+    required this.lastPurchase,
+    required this.expectedPurchase,
+    required this.status,
+    required this.timingLabel,
+    required this.timingValue,
+    required this.accentColor,
+    required this.statusIcon,
+    required this.timingIcon,
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    final label = switch (stage) {
-      PurchaseFunnelStage.purchaseWindow => 'Janela de compra',
-      PurchaseFunnelStage.outsideWindow => 'Fora da janela',
-      _ => stage.label,
-    };
+  factory _PurchasePresentation.from(PurchaseRecurrenceSnapshot recurrence) {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final lastPurchase = recurrence.lastPurchaseDate == null
+        ? null
+        : DateUtils.dateOnly(recurrence.lastPurchaseDate!);
+    final expectedPurchase =
+        lastPurchase == null || recurrence.intervalDays <= 0
+        ? null
+        : DateTime(
+            lastPurchase.year,
+            lastPurchase.month,
+            lastPurchase.day + recurrence.intervalDays,
+          );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: stage.backgroundColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: stage.color.withValues(alpha: 0.18)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: stage.color,
-          fontSize: 11.5,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+    if (recurrence.funnelStage == .neverPurchased || lastPurchase == null) {
+      return _PurchasePresentation(
+        scenario: .neverPurchased,
+        today: today,
+        lastPurchase: null,
+        expectedPurchase: null,
+        status: 'Sem histórico',
+        timingLabel: 'Próximo passo',
+        timingValue: 'Agendar visita',
+        accentColor: AppColors.gray600,
+        statusIcon: Icons.history_toggle_off_rounded,
+        timingIcon: Icons.calendar_month_rounded,
+      );
+    }
+
+    final daysFromPrediction = expectedPurchase == null
+        ? 0
+        : expectedPurchase.difference(today).inDays;
+    final daysSincePurchase = today.difference(lastPurchase).inDays;
+
+    if (recurrence.funnelStage == PurchaseFunnelStage.inactive) {
+      return _PurchasePresentation(
+        scenario: _PurchaseScenario.inactive,
+        today: today,
+        lastPurchase: lastPurchase,
+        expectedPurchase: expectedPurchase,
+        status: 'Clínica inativa',
+        timingLabel: 'Sem comprar',
+        timingValue: _daysLabel(daysSincePurchase),
+        accentColor: AppColors.redDark,
+        statusIcon: Icons.pause_circle_outline_rounded,
+        timingIcon: Icons.schedule_rounded,
+      );
+    }
+
+    if (recurrence.funnelStage == PurchaseFunnelStage.churn) {
+      return _PurchasePresentation(
+        scenario: _PurchaseScenario.churn,
+        today: today,
+        lastPurchase: lastPurchase,
+        expectedPurchase: expectedPurchase,
+        status: 'Risco de churn',
+        timingLabel: 'Desde a previsão',
+        timingValue: _daysLabel(daysFromPrediction.abs()),
+        accentColor: AppColors.redDark,
+        statusIcon: Icons.trending_down_rounded,
+        timingIcon: Icons.schedule_rounded,
+      );
+    }
+
+    if (expectedPurchase != null && today.isAfter(expectedPurchase)) {
+      return _PurchasePresentation(
+        scenario: _PurchaseScenario.overdue,
+        today: today,
+        lastPurchase: lastPurchase,
+        expectedPurchase: expectedPurchase,
+        status: 'Recompra atrasada',
+        timingLabel: 'Atraso',
+        timingValue: _daysLabel(daysFromPrediction.abs()),
+        accentColor: AppColors.amberDark,
+        statusIcon: Icons.error_outline_rounded,
+        timingIcon: Icons.schedule_rounded,
+      );
+    }
+
+    if (expectedPurchase != null &&
+        DateUtils.isSameDay(today, expectedPurchase)) {
+      return _PurchasePresentation(
+        scenario: _PurchaseScenario.dueToday,
+        today: today,
+        lastPurchase: lastPurchase,
+        expectedPurchase: expectedPurchase,
+        status: 'Recompra prevista',
+        timingLabel: 'Previsão',
+        timingValue: 'Hoje',
+        accentColor: AppColors.green600,
+        statusIcon: Icons.check_circle_outline_rounded,
+        timingIcon: Icons.today_rounded,
+      );
+    }
+
+    if (recurrence.funnelStage == PurchaseFunnelStage.outsideWindow) {
+      final daysUntilWindow = recurrence.nextTransitionDate == null
+          ? null
+          : DateUtils.dateOnly(
+              recurrence.nextTransitionDate!,
+            ).difference(today).inDays;
+      return _PurchasePresentation(
+        scenario: _PurchaseScenario.beforeWindow,
+        today: today,
+        lastPurchase: lastPurchase,
+        expectedPurchase: expectedPurchase,
+        status: 'Antes da janela',
+        timingLabel: 'Próximo marco',
+        timingValue: daysUntilWindow == null
+            ? 'Acompanhar'
+            : daysUntilWindow <= 0
+            ? 'Janela hoje'
+            : 'Janela em ${_daysLabel(daysUntilWindow)}',
+        accentColor: AppColors.blue600,
+        statusIcon: Icons.hourglass_top_rounded,
+        timingIcon: Icons.calendar_month_rounded,
+      );
+    }
+
+    return _PurchasePresentation(
+      scenario: _PurchaseScenario.inWindow,
+      today: today,
+      lastPurchase: lastPurchase,
+      expectedPurchase: expectedPurchase,
+      status: 'Janela de compra',
+      timingLabel: 'Previsão',
+      timingValue: expectedPurchase == null
+          ? 'Não disponível'
+          : 'Em ${_daysLabel(daysFromPrediction)}',
+      accentColor: AppColors.green600,
+      statusIcon: Icons.shopping_bag_outlined,
+      timingIcon: Icons.calendar_month_rounded,
     );
+  }
+
+  final _PurchaseScenario scenario;
+  final DateTime today;
+  final DateTime? lastPurchase;
+  final DateTime? expectedPurchase;
+  final String status;
+  final String timingLabel;
+  final String timingValue;
+  final Color accentColor;
+  final IconData statusIcon;
+  final IconData timingIcon;
+
+  bool get isPastPrediction =>
+      scenario == _PurchaseScenario.overdue ||
+      scenario == _PurchaseScenario.churn ||
+      scenario == _PurchaseScenario.inactive;
+
+  Color get timingAccentColor => scenario == _PurchaseScenario.neverPurchased
+      ? AppColors.navyBright
+      : accentColor;
+
+  List<_TimelinePointData> get timelinePoints {
+    if (scenario == _PurchaseScenario.neverPurchased) {
+      return [
+        const _TimelinePointData(
+          label: 'Última compra',
+          value: 'Nunca',
+          marker: _TimelineMarkerState.never,
+        ),
+        _TimelinePointData(
+          label: 'Hoje',
+          value: _formatLongDate(today),
+          marker: _TimelineMarkerState.today,
+          accentColor: AppColors.navyBright,
+        ),
+        const _TimelinePointData(
+          label: 'Próxima compra',
+          value: 'Agendar visita',
+          marker: _TimelineMarkerState.next,
+          accentColor: AppColors.navyBright,
+        ),
+      ];
+    }
+
+    if (isPastPrediction) {
+      return [
+        _TimelinePointData(
+          label: 'Última compra',
+          value: _formatLongDate(lastPurchase),
+          marker: _TimelineMarkerState.previous,
+        ),
+        _TimelinePointData(
+          label: 'Compra prevista',
+          value: _formatLongDate(expectedPurchase),
+          marker: _TimelineMarkerState.missed,
+          accentColor: accentColor,
+        ),
+        _TimelinePointData(
+          label: 'Hoje',
+          value: _formatLongDate(today),
+          marker: _TimelineMarkerState.today,
+          accentColor: accentColor,
+        ),
+      ];
+    }
+
+    return [
+      _TimelinePointData(
+        label: 'Última compra',
+        value: _formatLongDate(lastPurchase),
+        marker: _TimelineMarkerState.previous,
+      ),
+      _TimelinePointData(
+        label: 'Hoje',
+        value: _formatLongDate(today),
+        marker: _TimelineMarkerState.today,
+        accentColor: AppColors.navyBright,
+      ),
+      _TimelinePointData(
+        label: scenario == _PurchaseScenario.dueToday
+            ? 'Previsão'
+            : 'Próxima compra',
+        value: scenario == _PurchaseScenario.dueToday
+            ? 'Para hoje'
+            : _formatLongDate(expectedPurchase),
+        marker: _TimelineMarkerState.next,
+        accentColor: scenario == _PurchaseScenario.dueToday
+            ? AppColors.green600
+            : null,
+      ),
+    ];
   }
 }
 
-class _PurchaseTimeline extends StatelessWidget {
-  const _PurchaseTimeline({required this.recurrence});
+class _TimelinePointData {
+  const _TimelinePointData({
+    required this.label,
+    required this.value,
+    required this.marker,
+    this.accentColor,
+  });
 
-  final PurchaseRecurrenceSnapshot recurrence;
+  final String label;
+  final String value;
+  final _TimelineMarkerState marker;
+  final Color? accentColor;
+}
+
+class _PurchaseTimeline extends StatelessWidget {
+  const _PurchaseTimeline({required this.presentation});
+
+  final _PurchasePresentation presentation;
 
   @override
   Widget build(BuildContext context) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final lastPurchase = recurrence.lastPurchaseDate;
-    final nextPurchase = lastPurchase == null || recurrence.intervalDays <= 0
-        ? null
-        : DateUtils.dateOnly(
-            lastPurchase.add(Duration(days: recurrence.intervalDays)),
-          );
+    final points = presentation.timelinePoints;
+    final overdue = presentation.isPastPrediction;
+    final neverPurchased =
+        presentation.scenario == _PurchaseScenario.neverPurchased;
 
     return Column(
       children: [
@@ -178,33 +398,48 @@ class _PurchaseTimeline extends StatelessWidget {
                     left: firstCenter,
                     top: 25,
                     width: middleCenter - firstCenter,
-                    child: const _TimelineConnector(),
+                    child: _TimelineConnector(
+                      dashed: neverPurchased,
+                      color: neverPurchased
+                          ? AppColors.gray300
+                          : AppColors.navyBright,
+                    ),
                   ),
                   Positioned(
                     left: middleCenter,
                     top: 25,
                     width: lastCenter - middleCenter,
-                    child: const _TimelineConnector(dashed: true),
+                    child: _TimelineConnector(
+                      dashed: !overdue,
+                      color: overdue
+                          ? presentation.accentColor
+                          : neverPurchased
+                          ? AppColors.gray300
+                          : AppColors.navyBright.withValues(alpha: 0.38),
+                    ),
                   ),
                   Positioned(
                     left: firstCenter - 22,
                     top: 4,
-                    child: const _TimelineMarker(
-                      state: _TimelineMarkerState.previous,
+                    child: _TimelineMarker(
+                      state: points[0].marker,
+                      color: points[0].accentColor,
                     ),
                   ),
                   Positioned(
                     left: middleCenter - 22,
                     top: 4,
-                    child: const _TimelineMarker(
-                      state: _TimelineMarkerState.today,
+                    child: _TimelineMarker(
+                      state: points[1].marker,
+                      color: points[1].accentColor,
                     ),
                   ),
                   Positioned(
                     left: lastCenter - 22,
                     top: 4,
-                    child: const _TimelineMarker(
-                      state: _TimelineMarkerState.next,
+                    child: _TimelineMarker(
+                      state: points[2].marker,
+                      color: points[2].accentColor,
                     ),
                   ),
                 ],
@@ -215,25 +450,14 @@ class _PurchaseTimeline extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _TimelineLabel(
-                label: 'Última compra',
-                date: _formatLongDate(lastPurchase),
+            for (final point in points)
+              Expanded(
+                child: _TimelineLabel(
+                  label: point.label,
+                  value: point.value,
+                  accentColor: point.accentColor,
+                ),
               ),
-            ),
-            Expanded(
-              child: _TimelineLabel(
-                label: 'Hoje',
-                date: _formatLongDate(today),
-                highlighted: true,
-              ),
-            ),
-            Expanded(
-              child: _TimelineLabel(
-                label: 'Próxima compra',
-                date: _formatLongDate(nextPurchase),
-              ),
-            ),
           ],
         ),
       ],
@@ -241,19 +465,33 @@ class _PurchaseTimeline extends StatelessWidget {
   }
 }
 
-enum _TimelineMarkerState { previous, today, next }
+enum _TimelineMarkerState { previous, today, next, missed, never }
 
 class _TimelineMarker extends StatelessWidget {
-  const _TimelineMarker({required this.state});
+  const _TimelineMarker({required this.state, this.color});
 
   final _TimelineMarkerState state;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final highlighted = state != _TimelineMarkerState.previous;
-    final color = state == _TimelineMarkerState.next
-        ? AppColors.blueAccent
-        : AppColors.navyBright;
+    final highlighted = switch (state) {
+      _TimelineMarkerState.today ||
+      _TimelineMarkerState.next ||
+      _TimelineMarkerState.missed => true,
+      _TimelineMarkerState.previous || _TimelineMarkerState.never => false,
+    };
+    final resolvedColor =
+        color ??
+        switch (state) {
+          _TimelineMarkerState.next => AppColors.blueAccent,
+          _TimelineMarkerState.missed => AppColors.amberDark,
+          _TimelineMarkerState.never => AppColors.gray400,
+          _ => AppColors.navyBright,
+        };
+    final background = state == _TimelineMarkerState.missed
+        ? AppColors.amber50
+        : AppColors.blueLight;
 
     return SizedBox(
       width: 44,
@@ -261,7 +499,7 @@ class _TimelineMarker extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: highlighted ? AppColors.blueLight : Colors.transparent,
+          color: highlighted ? background : Colors.transparent,
         ),
         child: Center(
           child: Container(
@@ -270,7 +508,7 @@ class _TimelineMarker extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white,
-              border: Border.all(color: color, width: 2.5),
+              border: Border.all(color: resolvedColor, width: 2.5),
             ),
             child: state == _TimelineMarkerState.today
                 ? Center(
@@ -279,7 +517,7 @@ class _TimelineMarker extends StatelessWidget {
                       height: 8,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: color,
+                        color: resolvedColor,
                       ),
                     ),
                   )
@@ -292,28 +530,36 @@ class _TimelineMarker extends StatelessWidget {
 }
 
 class _TimelineConnector extends StatelessWidget {
-  const _TimelineConnector({this.dashed = false});
+  const _TimelineConnector({
+    this.dashed = false,
+    this.color = AppColors.navyBright,
+  });
 
   final bool dashed;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     if (!dashed) {
-      return Container(height: 2.5, color: AppColors.navyBright);
+      return Container(height: 2.5, color: color);
     }
 
     return SizedBox(
       height: 3,
-      child: CustomPaint(painter: _DashedLinePainter()),
+      child: CustomPaint(painter: _DashedLinePainter(color: color)),
     );
   }
 }
 
 class _DashedLinePainter extends CustomPainter {
+  const _DashedLinePainter({required this.color});
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.navyBright.withValues(alpha: 0.38)
+      ..color = color
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
     const dashWidth = 6.0;
@@ -336,13 +582,13 @@ class _DashedLinePainter extends CustomPainter {
 class _TimelineLabel extends StatelessWidget {
   const _TimelineLabel({
     required this.label,
-    required this.date,
-    this.highlighted = false,
+    required this.value,
+    this.accentColor,
   });
 
   final String label;
-  final String date;
-  final bool highlighted;
+  final String value;
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -352,19 +598,20 @@ class _TimelineLabel extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: highlighted ? AppColors.navyBright : AppColors.gray500,
+            color: accentColor ?? AppColors.gray500,
             fontSize: 11.5,
-            fontWeight: highlighted ? FontWeight.w600 : FontWeight.w500,
+            fontWeight: accentColor == null ? FontWeight.w500 : FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          date,
+          value,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppColors.gray700,
+          style: TextStyle(
+            color: accentColor ?? AppColors.gray700,
             fontSize: 11.5,
             height: 1.25,
+            fontWeight: accentColor == null ? FontWeight.w400 : FontWeight.w600,
           ),
         ),
       ],
@@ -373,12 +620,19 @@ class _TimelineLabel extends StatelessWidget {
 }
 
 class _PurchaseMetrics extends StatelessWidget {
-  const _PurchaseMetrics({required this.recurrence});
+  const _PurchaseMetrics({
+    required this.recurrence,
+    required this.presentation,
+  });
 
   final PurchaseRecurrenceSnapshot recurrence;
+  final _PurchasePresentation presentation;
 
   @override
   Widget build(BuildContext context) {
+    final neverPurchased =
+        presentation.scenario == _PurchaseScenario.neverPurchased;
+
     return Column(
       children: [
         IntrinsicHeight(
@@ -387,9 +641,10 @@ class _PurchaseMetrics extends StatelessWidget {
             children: [
               Expanded(
                 child: _MetricItem(
-                  icon: Icons.sync_rounded,
-                  label: 'Recorrência média',
-                  value: _daysLabel(recurrence.intervalDays),
+                  icon: presentation.statusIcon,
+                  label: 'Situação atual',
+                  value: presentation.status,
+                  accentColor: presentation.accentColor,
                 ),
               ),
               const VerticalDivider(
@@ -401,11 +656,10 @@ class _PurchaseMetrics extends StatelessWidget {
               ),
               Expanded(
                 child: _MetricItem(
-                  icon: Icons.show_chart_rounded,
-                  label: 'Intervalo observado',
-                  value: recurrence.observedIntervalDays == null
-                      ? 'Não disponível'
-                      : _daysLabel(recurrence.observedIntervalDays!),
+                  icon: presentation.timingIcon,
+                  label: presentation.timingLabel,
+                  value: presentation.timingValue,
+                  accentColor: presentation.timingAccentColor,
                 ),
               ),
             ],
@@ -423,10 +677,15 @@ class _PurchaseMetrics extends StatelessWidget {
             children: [
               Expanded(
                 child: _MetricItem(
-                  icon: Icons.layers_outlined,
-                  label: 'Base da previsão',
-                  value:
-                      '${recurrence.sampleSize} ${recurrence.sampleSize == 1 ? 'intervalo' : 'intervalos'}',
+                  icon: neverPurchased
+                      ? Icons.shopping_cart_outlined
+                      : Icons.sync_rounded,
+                  label: neverPurchased
+                      ? 'Compras registradas'
+                      : 'Ciclo utilizado',
+                  value: neverPurchased
+                      ? '0'
+                      : _daysLabel(recurrence.intervalDays),
                 ),
               ),
               const VerticalDivider(
@@ -438,9 +697,13 @@ class _PurchaseMetrics extends StatelessWidget {
               ),
               Expanded(
                 child: _MetricItem(
-                  icon: Icons.storage_rounded,
-                  label: 'Origem',
-                  value: _sourceLabel(recurrence.source),
+                  icon: neverPurchased
+                      ? Icons.auto_graph_rounded
+                      : Icons.layers_outlined,
+                  label: neverPurchased ? 'Previsão' : 'Base da previsão',
+                  value: neverPurchased
+                      ? 'Após a primeira compra'
+                      : '${recurrence.sampleSize} ${recurrence.sampleSize == 1 ? 'intervalo' : 'intervalos'}',
                 ),
               ),
             ],
@@ -456,11 +719,13 @@ class _MetricItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.accentColor,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -469,7 +734,7 @@ class _MetricItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _MetricIcon(icon: icon),
+          _MetricIcon(icon: icon, color: accentColor),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -489,8 +754,8 @@ class _MetricItem extends StatelessWidget {
                   value,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.gray900,
+                  style: TextStyle(
+                    color: accentColor ?? AppColors.gray900,
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
@@ -506,32 +771,26 @@ class _MetricItem extends StatelessWidget {
 }
 
 class _MetricIcon extends StatelessWidget {
-  const _MetricIcon({required this.icon});
+  const _MetricIcon({required this.icon, this.color});
 
   final IconData icon;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 38,
       height: 38,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.blueLight,
+        color: color?.withValues(alpha: 0.1) ?? AppColors.blueLight,
       ),
-      child: Icon(icon, color: AppColors.navyBright, size: 20),
+      child: Icon(icon, color: color ?? AppColors.navyBright, size: 20),
     );
   }
 }
 
 String _daysLabel(int days) => '$days ${days == 1 ? 'dia' : 'dias'}';
-
-String _sourceLabel(PurchaseRecurrenceSource? source) => switch (source) {
-  PurchaseRecurrenceSource.calculated => 'Histórico de compras',
-  PurchaseRecurrenceSource.manual => 'Configuração manual',
-  PurchaseRecurrenceSource.defaultValue => 'Padrão do sistema',
-  null => 'Não informada',
-};
 
 String _formatLongDate(DateTime? date) {
   if (date == null) return 'Não disponível';
