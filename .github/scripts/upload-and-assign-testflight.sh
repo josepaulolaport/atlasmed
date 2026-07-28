@@ -12,13 +12,13 @@ IPA="${1:?ipa path required}"
 BETA_GROUP="${BETA_GROUP:-Main}"
 
 echo "Uploading $IPA (bundle=$BUNDLE_ID version=$MARKETING_VERSION+$BUILD_NUMBER)"
-xcrun altool --upload-package "$IPA" \
+# --upload-app still works with API key and does not require --apple-id.
+# (Newer --upload-package requires apple-id + asc-public-id.)
+xcrun altool --upload-app \
+  --file "$IPA" \
   --type ios \
   --apiKey "$APP_STORE_CONNECT_KEY_ID" \
-  --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
-  --bundle-id "$BUNDLE_ID" \
-  --bundle-short-version-string "$MARKETING_VERSION" \
-  --bundle-version "$BUILD_NUMBER"
+  --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
 
 python3 -m pip install --quiet PyJWT cryptography
 
