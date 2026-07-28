@@ -64,6 +64,8 @@ const EnvironmentSchema = Type.Object({
   LOG_FORMAT: Type.Optional(Type.Union([Type.Literal("pretty"), Type.Literal("json")])),
 
   STORAGE_ENDPOINT: OptionalString(),
+  /** Public S3/MinIO base URL used when signing client-facing URLs. Falls back to STORAGE_ENDPOINT. */
+  STORAGE_PUBLIC_ENDPOINT: OptionalString(),
   STORAGE_ACCESS_KEY_ID: OptionalString(),
   STORAGE_SECRET_ACCESS_KEY: OptionalString(),
   STORAGE_BUCKET: OptionalString(),

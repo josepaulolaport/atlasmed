@@ -11,7 +11,11 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { environment } from "../../app/config/environment";
-import { getStorageClient, isStorageConfigured } from "./storage.client";
+import {
+  getPresignStorageClient,
+  getStorageClient,
+  isStorageConfigured,
+} from "./storage.client";
 
 export class StorageService {
   isConfigured(): boolean {
@@ -71,7 +75,7 @@ export class StorageService {
 
   async signedGetUrl(key: string, ttlSeconds = 3600): Promise<string> {
     return getSignedUrl(
-      getStorageClient(),
+      getPresignStorageClient(),
       new GetObjectCommand({
         Bucket: this.bucket(),
         Key: key,
@@ -86,7 +90,7 @@ export class StorageService {
     ttlSeconds = 3600
   ): Promise<string> {
     return getSignedUrl(
-      getStorageClient(),
+      getPresignStorageClient(),
       new PutObjectCommand({
         Bucket: this.bucket(),
         Key: key,
@@ -148,7 +152,7 @@ export class StorageService {
     ttlSeconds = 3600
   ): Promise<string> {
     return getSignedUrl(
-      getStorageClient(),
+      getPresignStorageClient(),
       new UploadPartCommand({
         Bucket: this.bucket(),
         Key: key,
