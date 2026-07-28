@@ -173,11 +173,13 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       body: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
         repository: repo,
         builder: (context, data, repository) {
-          if (data == null) {
+          final detail = data?.facility;
+          // Zip can emit before GET /facilities/:id resolves (empty header race).
+          if (detail == null || detail.id.isEmpty) {
             return _loadingSkeleton(context);
           }
           return _ClinicDetailBody(
-            detail: data.facility,
+            detail: detail,
             clinicId: clinicId,
             integrations: data,
             repository: repository,
