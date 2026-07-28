@@ -361,12 +361,13 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           ),
           if (_needsVerticals) ...[
             const SizedBox(height: 20),
-            _FieldLabel('Verticais'),
+            _FieldLabel('Linhas comerciais'),
             const SizedBox(height: 8),
             sectorsAsync.when(
               loading: () => const CircularProgressIndicator(),
-              error: (_, _) =>
-                  const Text('Não foi possível carregar os verticais.'),
+              error: (_, _) => const Text(
+                'Não foi possível carregar as linhas comerciais.',
+              ),
               data: (sectors) => Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -543,7 +544,9 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
 
     if (_needsVerticals && _verticalAssignments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione ao menos um vertical.')),
+        const SnackBar(
+          content: Text('Selecione ao menos uma linha comercial.'),
+        ),
       );
       return;
     }
@@ -723,7 +726,7 @@ class _VerticalAssignmentBlock extends StatelessWidget {
             _PickerButton(
               label: assignment.managerName ?? 'Selecionar gerente',
               subtitle: assignment.managerId == null
-                  ? 'Gerentes deste vertical'
+                  ? 'Gerentes desta linha comercial'
                   : null,
               icon: Icons.person_outline_rounded,
               onTap: onPickManager,

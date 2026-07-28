@@ -3,6 +3,7 @@ import { businessVerticals, roles, users } from "@atlasmed/database";
 import { eq, or } from "drizzle-orm";
 import { hash } from "argon2";
 import { ROLE_PRIORITY_BY_NAME } from "../../modules/access/application/constants/role-priority.constants";
+import { syncPriorityFacilityServices } from "../../modules/facility/application/services/priority-facility-services.sync";
 
 interface SeedConfig {
   adminEmail: string;
@@ -24,19 +25,30 @@ interface OpsUserConfig {
 async function ensureBusinessVerticals() {
   console.log("\n🏷️  Ensuring business verticals...");
 
+  // Adjective form ("linha ortopédica") — distinct from clinic specialty nouns.
   const defs = [
-    { id: "bv_ortopedia_p0", code: "ORTOPEDIA", name: "Ortopedia" },
-    { id: "bv_dermatologia_p1", code: "DERMATOLOGIA", name: "Dermatologia" },
+    { id: "bv_ortopedia_p0", code: "ORTOPEDIA", name: "Ortopédica" },
+    { id: "bv_dermatologia_p1", code: "DERMATOLOGIA", name: "Dermatológica" },
   ] as const;
 
   for (const def of defs) {
     const existing = await db
-      .select({ id: businessVerticals.id })
+      .select({ id: businessVerticals.id, name: businessVerticals.name })
       .from(businessVerticals)
       .where(eq(businessVerticals.code, def.code))
       .limit(1);
     if (existing[0]) {
-      console.log(`   ✓ Vertical "${def.code}" already present`);
+      if (existing[0].name !== def.name) {
+        await db
+          .update(businessVerticals)
+          .set({ name: def.name, updatedAt: new Date() })
+          .where(eq(businessVerticals.id, existing[0].id));
+        console.log(
+          `   ✓ Vertical "${def.code}" renamed → ${def.name}`,
+        );
+      } else {
+        console.log(`   ✓ Vertical "${def.code}" already present`);
+      }
       continue;
     }
     await db.insert(businessVerticals).values({
@@ -183,6 +195,12 @@ async function seed() {
 
     await createRoles();
     await ensureBusinessVerticals();
+
+    console.log("\n🏥 Syncing priority specialty services…");
+    const specialtySync = await syncPriorityFacilityServices(db);
+    console.log(
+      `   ✓ services=${specialtySync.servicesUpserted} links=${specialtySync.linksInserted} removed=${specialtySync.linksRemoved}`,
+    );
 
     const adminConfig: SeedConfig = {
       adminEmail: process.env.SEED_ADMIN_EMAIL || "admin@atlasmed.com",

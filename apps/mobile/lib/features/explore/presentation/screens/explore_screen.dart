@@ -8,14 +8,16 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_services_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specialty_filter_drawer.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
@@ -142,6 +144,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             : state.filteredDoctors.length);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
+    if (isClinic &&
+        (state.filters['serviceCodes']?.isNotEmpty ?? false)) {
+      unawaited(
+        ref.read(facilityServicesRepositoryProvider).currentValueOrResolve(),
+      );
+    }
+
     final filterChips = buildFilterChips(state, notifier, isClinic);
     final filterCount = filterChips.length;
 
@@ -221,6 +230,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     ExploreState state,
     ExploreNotifier notifier,
   ) async {
+    // Doctor filters are specialty-only → open dedicated drawer.
+    if (state.activeTab == 'doctor') {
+      final result = await SpecialtyFilterDrawer.show(
+        context,
+        kind: 'doctor',
+        selected: Set<String>.from(state.filters['specialties'] ?? const []),
+      );
+      if (!mounted || result == null) return;
+      final next = Map<String, List<String>>.from(state.filters)
+        ..['specialties'] = result.toList(growable: false);
+      notifier.applyFilters(filters: next, clearRadius: true);
+      return;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -301,13 +324,22 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           ),
         );
       }
-      for (final key in (state.filters['purchaseFunnelStage'] ?? [])) {
+      final serviceCatalog = ref
+          .watch(facilityServicesRepositoryProvider)
+          .currentValue;
+      final serviceLabels = {
+        for (final option in serviceCatalog ?? const [])
+          option.serviceCode: option.label,
+      };
+      for (final code in (state.filters['serviceCodes'] ?? [])) {
         chips.add(
           FilterChipData(
-            label: purchaseFunnelStageFromApi(key)?.label ?? key,
+            label: serviceLabels[code] ?? code,
             onRemove: () {
               final next = Map<String, List<String>>.from(state.filters);
-              next['purchaseFunnelStage'] = [];
+              next['serviceCodes'] = (next['serviceCodes'] ?? [])
+                  .where((x) => x != code)
+                  .toList();
               notifier.applyFilters(
                 filters: next,
                 radiusKm: state.radiusKm,
@@ -331,7 +363,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       for (final s in (state.filters['specialties'] ?? [])) {
         chips.add(
           FilterChipData(
-            label: s,
+            label: FacilityServiceLabels.formatName(s),
             onRemove: () {
               final next = Map<String, List<String>>.from(state.filters);
               next['specialties'] = (next['specialties'] ?? [])

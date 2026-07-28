@@ -451,6 +451,17 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                   ),
           ),
         ),
+        // pt-BR alias (same builder — redirect would drop `extra`).
+        GoRoute(
+          path: '/territories/criar',
+          builder: (_, state) => TerritoryEditorScreen(
+            target: state.extra is TerritoryEditorTarget
+                ? state.extra as TerritoryEditorTarget
+                : const TerritoryEditorTarget.creating(
+                    initialKind: TerritoryKind.managerZone,
+                  ),
+          ),
+        ),
         GoRoute(path: '/catalog', builder: (_, _) => const CatalogHomeScreen()),
         GoRoute(
           path: '/catalog/price-index',

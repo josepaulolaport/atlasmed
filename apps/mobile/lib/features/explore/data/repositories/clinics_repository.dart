@@ -23,6 +23,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     this.commercialStatus,
     this.purchaseBucket,
     this.productIds,
+    this.serviceCodes,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -48,6 +49,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
                'purchaseBucket': purchaseBucket.trim(),
              if (productIds != null && productIds.trim().isNotEmpty)
                'productIds': productIds.trim(),
+             if (serviceCodes != null && serviceCodes.trim().isNotEmpty)
+               'serviceCodes': serviceCodes.trim(),
              if (purchaseFunnelStages.isNotEmpty)
                'purchaseFunnelStage': purchaseFunnelStages
                    .map((stage) => stage.apiValue)
@@ -76,6 +79,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
   final String? commercialStatus;
   final String? purchaseBucket;
   final String? productIds;
+  final String? serviceCodes;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
@@ -97,6 +101,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     String? commercialStatus,
     String? purchaseBucket,
     String? productIds,
+    String? serviceCodes,
     List<PurchaseFunnelStage> purchaseFunnelStages = const [],
     PurchaseProfile? purchaseProfile,
     int? purchaseIntervalMinDays,
@@ -122,6 +127,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
           'purchaseBucket': purchaseBucket.trim(),
         if (productIds != null && productIds.trim().isNotEmpty)
           'productIds': productIds.trim(),
+        if (serviceCodes != null && serviceCodes.trim().isNotEmpty)
+          'serviceCodes': serviceCodes.trim(),
         if (purchaseFunnelStages.isNotEmpty)
           'purchaseFunnelStage': purchaseFunnelStages
               .map((stage) => stage.apiValue)

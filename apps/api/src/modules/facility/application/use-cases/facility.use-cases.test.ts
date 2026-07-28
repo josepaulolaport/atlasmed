@@ -77,6 +77,7 @@ function fakeRepository(
     findAll,
     findAllByIds: async () => [],
     findById: async () => null,
+    listServiceCatalog: async () => [],
     findByExternalId: async () => null,
     findSourceTrackedByProvider: async () => [],
     create: async () => facilityRecord("created"),

@@ -61,6 +61,9 @@ export function serializeFacility(
     ...(verticalContext.commercialStatus !== undefined
       ? { commercialStatus: verticalContext.commercialStatus }
       : {}),
+    ...(verticalContext.purchaseStatus !== undefined
+      ? { purchaseStatus: verticalContext.purchaseStatus }
+      : {}),
     ...(verticalContext.verticalProfiles
       ? {
           verticalProfiles: verticalContext.verticalProfiles.map(serializeVerticalProfile),

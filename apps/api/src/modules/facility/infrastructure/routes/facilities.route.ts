@@ -44,6 +44,7 @@ const listFacilitiesRoute = new Elysia()
         commercialStatus: t.Optional(t.String()),
         purchaseBucket: t.Optional(t.String()),
         productIds: t.Optional(t.String()),
+        serviceCodes: t.Optional(t.String()),
         purchaseFunnelStage: t.Optional(t.String()),
         purchaseProfile: t.Optional(t.String()),
         purchaseIntervalMinDays: t.Optional(t.String()),
@@ -53,6 +54,23 @@ const listFacilitiesRoute = new Elysia()
         verticalId: t.Optional(t.String()),
       }),
     }
+  );
+
+const listFacilityServicesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/facilities/services",
+    async () => {
+      return facilityUseCases.listFacilityServices().execute();
+    },
+    {
+      detail: {
+        summary: "List CNES facility service catalog for filters",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
   );
 
 const createFacilityRoute = new Elysia()
@@ -1140,6 +1158,8 @@ const createFacilityVisitRoute = new Elysia()
 export const facilitiesRoute = new Elysia()
   .use(cadastroSubmissionsRoute)
   .use(listFacilitiesRoute)
+  // Before `/facilities/:id` so `services` is not captured as an id.
+  .use(listFacilityServicesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
   .use(updateFacilityRoute)

@@ -57,6 +57,34 @@ describe("facility list SQL", () => {
     ]));
   });
 
+  it("maps Desempenho purchaseBucket to purchase_funnel_stage (not purchase_status)", () => {
+    const active = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      purchaseBucket: "active",
+    }));
+    expect(active.sql).toContain('"facilities"."purchase_funnel_stage" in');
+    expect(active.sql).not.toContain("purchase_status");
+    expect(active.params).toContain("PURCHASE_WINDOW");
+    expect(active.params).not.toContain("OUTSIDE_WINDOW");
+
+    const inactive = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      purchaseBucket: "inactive",
+    }));
+    expect(inactive.params).toEqual(
+      expect.arrayContaining(["OUTSIDE_WINDOW", "CHURN"]),
+    );
+
+    const neverBought = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      purchaseBucket: "neverBought",
+    }));
+    expect(neverBought.sql).toContain("is null");
+    expect(neverBought.params).toEqual(
+      expect.arrayContaining(["NEVER_PURCHASED", "INACTIVE"]),
+    );
+  });
+
   it("uses business stage order followed by stable name and id", () => {
     const orderBy = buildFacilityListOrderBy({ sort: "purchaseFunnelStage", order: "desc" });
     const shapes = orderBy.map((expression) => sqlShape(expression).sql);

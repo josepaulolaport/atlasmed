@@ -274,6 +274,13 @@
       "when": 1785199641408,
       "tag": "0038_cartao_cnpj_label",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1785212951794,
+      "tag": "0039_rename_linha_comercial_display_names",
+      "breakpoints": true
     }
   ]
 }

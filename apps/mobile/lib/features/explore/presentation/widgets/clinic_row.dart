@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
@@ -15,6 +16,9 @@ class ClinicRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final funnelStage = clinic.purchaseRecurrence?.funnelStage;
+    final serviceChip = FacilityServiceLabels.chipSummary(
+      clinic.displayServices,
+    );
 
     return InkWell(
       onTap: onTap,
@@ -54,7 +58,9 @@ class ClinicRow extends StatelessWidget {
                 children: [
                   Text(
                     clinic.name,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -143,10 +149,26 @@ class ClinicRow extends StatelessWidget {
                       ],
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      if (serviceChip.label != null) ...[
+                        _ServiceChip(label: serviceChip.label!),
+                        if (serviceChip.overflow > 0)
+                          _ServiceChip(label: '+${serviceChip.overflow}'),
+                      ] else
+                        const _ServiceChip(
+                          label: 'Sem especialidade',
+                          muted: true,
+                        ),
+                    ],
+                  ),
                   if (clinic.commercialStatus != null ||
                       funnelStage != null ||
                       clinic.lastVisitDays != null) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
@@ -186,6 +208,42 @@ class ClinicRow extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ServiceChip extends StatelessWidget {
+  const _ServiceChip({required this.label, this.muted = false});
+
+  final String label;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = muted
+        ? AppColors.gray100
+        : AppColors.navyBright.withValues(alpha: 0.08);
+    final border = muted
+        ? AppColors.gray200
+        : AppColors.navyBright.withValues(alpha: 0.18);
+    final fg = muted ? AppColors.gray500 : AppColors.navyDeep;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          color: fg,
+          height: 1.1,
         ),
       ),
     );

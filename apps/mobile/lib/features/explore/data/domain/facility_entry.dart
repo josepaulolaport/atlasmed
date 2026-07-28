@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 /// Lightweight facility model for explore list/search results.
@@ -17,6 +18,8 @@ class FacilityEntry {
   final int? lastVisitDays;
   final int doctorCount;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
+  final List<ClinicService> services;
+  final List<FacilityVerticalProfileDTO> verticalProfiles;
 
   const FacilityEntry({
     required this.id,
@@ -28,7 +31,16 @@ class FacilityEntry {
     this.lastVisitDays,
     required this.doctorCount,
     this.purchaseRecurrence,
+    this.services = const [],
+    this.verticalProfiles = const [],
   });
+
+  /// CNES services, or vertical names when CNES list empty.
+  List<ClinicService> get displayServices =>
+      FacilityServiceLabels.resolveDisplayServices(
+        services: services,
+        verticalProfiles: verticalProfiles,
+      );
 
   String? get locationLabel {
     final normalizedNeighborhood = neighborhood?.trim() ?? '';
@@ -71,6 +83,10 @@ class FacilityEntry {
       lastVisitDays: lastVisitDays,
       doctorCount: dto.professionalCount,
       purchaseRecurrence: dto.purchaseRecurrence,
+      services: dto.services
+          .where((s) => s.serviceName.trim().isNotEmpty)
+          .toList(growable: false),
+      verticalProfiles: dto.verticalProfiles,
     );
   }
 }

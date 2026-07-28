@@ -810,8 +810,12 @@ class _ClinicDetailContent extends ConsumerWidget {
                       facilityName: detail.name,
                       location: location,
                       nearbyEstablishments: nearby,
+                      clinicVerticalIds: detail.verticalProfiles
+                          .map((p) => p.verticalId)
+                          .toSet(),
                     ),
                   ),
+
                 ClinicSectionHeader(
                   title: 'Histórico de pedidos',
                   badge: effectiveOrders.isEmpty
@@ -821,7 +825,8 @@ class _ClinicDetailContent extends ConsumerWidget {
                       ? null
                       : _HeaderLinkButton(
                           label: 'Ver todos',
-                          onTap: () => context.push('/orders'),
+                          // Shell branch route — must go(), not push().
+                          onTap: () => context.go('/orders'),
                         ),
                 ),
                 if (ordersState.loading && effectiveOrders.isEmpty)

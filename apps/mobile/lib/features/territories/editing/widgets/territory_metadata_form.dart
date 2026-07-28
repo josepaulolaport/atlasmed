@@ -130,7 +130,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const _FieldLabel('Vertical de negócio'),
+                  const _FieldLabel('Linha comercial'),
                   const SizedBox(height: 6),
                   _VerticalPicker(
                     selectedVerticalId: _verticalId,
@@ -214,7 +214,7 @@ class _VerticalPicker extends ConsumerWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
             SizedBox(width: 10),
-            Text('Carregando verticais...'),
+            Text('Carregando linhas comerciais...'),
           ],
         ),
       ),
@@ -222,7 +222,9 @@ class _VerticalPicker extends ConsumerWidget {
         child: Row(
           children: [
             const Expanded(
-              child: Text('Não foi possível carregar os verticais.'),
+              child: Text(
+                'Não foi possível carregar as linhas comerciais.',
+              ),
             ),
             TextButton(
               onPressed: () => ref.invalidate(businessVerticalsProvider),
@@ -234,13 +236,15 @@ class _VerticalPicker extends ConsumerWidget {
       data: (verticals) {
         if (verticals.isEmpty) {
           return const _FormBox(
-            child: Text('Nenhum vertical disponível para criação.'),
+            child: Text('Nenhuma linha comercial disponível para criação.'),
           );
         }
         return VerticalSelector(
           verticals: verticals,
           selectedVerticalId: selectedVerticalId,
           onChanged: onChanged,
+          // Parent form already shows "Linha comercial" field label.
+          label: '',
         );
       },
     );

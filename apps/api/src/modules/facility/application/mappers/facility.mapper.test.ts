@@ -61,7 +61,13 @@ function baseFacility(
     deactivatedAt: null,
     createdAt: now,
     updatedAt: now,
-    services: [{ serviceCode: "123", classificationCode: "01" }],
+    services: [
+      {
+        serviceCode: "123",
+        classificationCode: "01",
+        serviceName: "SERVICO DE TESTE",
+      },
+    ],
     professionalCount: 4,
     lastVisitAt: null,
     distanceKm: 1.2,
@@ -103,9 +109,15 @@ describe("serializeFacility", () => {
       territoryName: "Zona Sul",
       professionalCount: 4,
       distanceKm: 1.2,
-      services: [{ serviceCode: "123", classificationCode: "01" }],
+      services: [
+      {
+        serviceCode: "123",
+        classificationCode: "01",
+        serviceName: "SERVICO DE TESTE",
+      },
+    ],
     });
-    expect(dto).not.toHaveProperty("purchaseStatus");
+    expect(dto.purchaseStatus).toBe("REGULAR_BUYER");
     expect(dto.createdAt).toBe(now.toISOString());
   });
 

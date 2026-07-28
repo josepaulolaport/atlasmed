@@ -51,6 +51,14 @@ NearbyEstablishment facilityToNearbyEstablishment(FacilityDTO facility) {
     streetAddress: facility.streetAddress,
     streetNumber: facility.streetNumber,
     addressComplement: facility.addressComplement,
+    verticals: facility.verticalProfiles
+        .map(
+          (p) => NearbyVerticalBadge(
+            id: p.verticalId,
+            name: p.verticalName.isNotEmpty ? p.verticalName : p.verticalId,
+          ),
+        )
+        .toList(growable: false),
   );
 }
 

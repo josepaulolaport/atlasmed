@@ -14,6 +14,7 @@ class ClinicsQuery {
     this.commercialStatus,
     this.purchaseBucket,
     this.productIds,
+    this.serviceCodes,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -32,6 +33,7 @@ class ClinicsQuery {
   final String? commercialStatus;
   final String? purchaseBucket;
   final String? productIds;
+  final String? serviceCodes;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
@@ -52,6 +54,7 @@ class ClinicsQuery {
         other.commercialStatus == commercialStatus &&
         other.purchaseBucket == purchaseBucket &&
         other.productIds == productIds &&
+        other.serviceCodes == serviceCodes &&
         _sameStages(other.purchaseFunnelStages, purchaseFunnelStages) &&
         other.purchaseProfile == purchaseProfile &&
         other.purchaseIntervalMinDays == purchaseIntervalMinDays &&
@@ -72,6 +75,7 @@ class ClinicsQuery {
     commercialStatus,
     purchaseBucket,
     productIds,
+    serviceCodes,
     Object.hashAll(purchaseFunnelStages),
     purchaseProfile,
     purchaseIntervalMinDays,
@@ -105,6 +109,7 @@ final clinicsRepositoryProvider = Provider.autoDispose
         commercialStatus: query.commercialStatus,
         purchaseBucket: query.purchaseBucket,
         productIds: query.productIds,
+        serviceCodes: query.serviceCodes,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,
         purchaseIntervalMinDays: query.purchaseIntervalMinDays,

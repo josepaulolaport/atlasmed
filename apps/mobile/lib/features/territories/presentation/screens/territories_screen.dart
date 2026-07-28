@@ -88,7 +88,7 @@ class _NewTerritoryButton extends ConsumerWidget {
         final kind = ref.read(selectedTerritoryKindProvider);
         final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
         context.push(
-          '/territories/criar',
+          '/territories/create',
           extra: TerritoryEditorTarget.creating(
             initialKind: kind,
             initialVerticalId: verticalId,
@@ -129,10 +129,11 @@ class _TerritoriesBody extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               verticalsAsync.when(
-                loading: () =>
-                    const _VerticalFilterStatus('Carregando verticais...'),
+                loading: () => const _VerticalFilterStatus(
+                  'Carregando linhas comerciais...',
+                ),
                 error: (_, _) => _VerticalFilterStatus(
-                  'Não foi possível carregar os verticais.',
+                  'Não foi possível carregar as linhas comerciais.',
                   actionLabel: 'Tentar novamente',
                   onAction: () => ref.invalidate(businessVerticalsProvider),
                 ),
@@ -174,7 +175,7 @@ class _TerritoriesBody extends ConsumerWidget {
                   icon: Icons.layers_clear_outlined,
                   title: 'Nenhum território encontrado',
                   message:
-                      'Não há territórios cadastrados para esse vertical e tipo.',
+                      'Não há territórios cadastrados para essa linha e tipo.',
                 );
               }
               return _TerritoriesMap(

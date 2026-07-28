@@ -16,6 +16,30 @@ export type FacilityPurchaseBucket = (typeof PURCHASE_BUCKETS)[number];
 export type FacilitySearchSort = (typeof SORTS)[number];
 export type FacilitySearchOrder = (typeof ORDERS)[number];
 
+/**
+ * Desempenho donut buckets → `facilities.purchase_funnel_stage`.
+ * Keep in sync with `DrizzleDashboardRepository.countPurchaseBuckets`.
+ */
+export function purchaseBucketToFunnelFilter(bucket: FacilityPurchaseBucket): {
+  stages: FacilityPurchaseFunnelStage[];
+  includeNull: boolean;
+} {
+  switch (bucket) {
+    case "active":
+      return { stages: ["PURCHASE_WINDOW"], includeNull: false };
+    case "inactive":
+      return {
+        stages: ["OUTSIDE_WINDOW", "CHURN"],
+        includeNull: false,
+      };
+    case "neverBought":
+      return {
+        stages: ["NEVER_PURCHASED", "INACTIVE"],
+        includeNull: true,
+      };
+  }
+}
+
 export interface ListFacilitiesQuery {
   latitude?: number;
   longitude?: number;
@@ -24,6 +48,7 @@ export interface ListFacilitiesQuery {
   /** Purchase-status bucket from Desempenho donut drill-down. */
   purchaseBucket?: FacilityPurchaseBucket;
   productIds?: string[];
+  serviceCodes?: string[];
   purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
   purchaseProfile?: FacilityPurchaseProfileFilter;
   purchaseIntervalMinDays?: number;
@@ -44,6 +69,9 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
   const radiusKm = query.radiusKm === undefined ? undefined : Number(query.radiusKm);
   const productIds = typeof query.productIds === "string"
     ? query.productIds.split(",").map((id) => id.trim()).filter(Boolean)
+    : undefined;
+  const serviceCodes = typeof query.serviceCodes === "string"
+    ? query.serviceCodes.split(",").map((id) => id.trim()).filter(Boolean)
     : undefined;
   const purchaseFunnelStages = typeof query.purchaseFunnelStage === "string"
     ? query.purchaseFunnelStage.split(",").map((stage) => stage.trim()).filter(Boolean)
@@ -77,6 +105,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     });
   }
   if (query.productIds !== undefined && (!productIds || productIds.length === 0)) issues.push({ field: "productIds", message: "productIds must be a comma-separated list of product IDs" });
+  if (query.serviceCodes !== undefined && (!serviceCodes || serviceCodes.length === 0)) issues.push({ field: "serviceCodes", message: "serviceCodes must be a comma-separated list of CNES service codes" });
   if (query.purchaseFunnelStage !== undefined && (!purchaseFunnelStages?.length || purchaseFunnelStages.some((stage) => !PURCHASE_FUNNEL_STAGES.includes(stage as FacilityPurchaseFunnelStage)))) issues.push({ field: "purchaseFunnelStage", message: "purchaseFunnelStage is invalid" });
   if (purchaseProfile !== undefined && (typeof purchaseProfile !== "string" || !PURCHASE_PROFILES.includes(purchaseProfile as FacilityPurchaseProfileFilter))) issues.push({ field: "purchaseProfile", message: "purchaseProfile is invalid" });
   if (purchaseIntervalMinDays !== undefined && (!Number.isInteger(purchaseIntervalMinDays) || purchaseIntervalMinDays < 1 || purchaseIntervalMinDays > 3650)) issues.push({ field: "purchaseIntervalMinDays", message: "purchaseIntervalMinDays must be an integer between 1 and 3650" });
@@ -95,6 +124,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     commercialStatus: commercialStatus as FacilityCommercialStatus | undefined,
     purchaseBucket: purchaseBucket as FacilityPurchaseBucket | undefined,
     productIds,
+    serviceCodes,
     purchaseFunnelStages: purchaseFunnelStages as FacilityPurchaseFunnelStage[] | undefined,
     purchaseProfile: purchaseProfile as FacilityPurchaseProfileFilter | undefined,
     purchaseIntervalMinDays,

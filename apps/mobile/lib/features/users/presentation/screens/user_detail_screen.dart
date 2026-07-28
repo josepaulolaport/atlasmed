@@ -478,7 +478,7 @@ class _AssignmentsSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionCard(
-          title: 'Verticais',
+          title: 'Linhas comerciais',
           trailing: canManage
               ? TextButton(
                   onPressed: () async {
@@ -490,7 +490,7 @@ class _AssignmentsSection extends ConsumerWidget {
               : null,
           child: verticalAssignments.isEmpty
               ? const Text(
-                  'Nenhum vertical atribuído.',
+                  'Nenhuma linha comercial atribuída.',
                   style: TextStyle(fontSize: 13, color: AppColors.gray400),
                 )
               : Wrap(
@@ -575,7 +575,7 @@ class _VerticalAssignmentCardState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Não foi possível atualizar o vertical.'),
+            content: Text('Não foi possível atualizar a linha comercial.'),
           ),
         );
       }

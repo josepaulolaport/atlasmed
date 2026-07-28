@@ -25,10 +25,14 @@ class SortSheet extends StatelessWidget {
         _SortOption('name-desc', 'Nome Z–A', 'Ordem alfabética inversa'),
         if (hasLocation)
           _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
-        _SortOption('purchase-funnel-asc', 'Etapa do funil', 'Ordem crescente'),
+        _SortOption(
+          'purchase-funnel-asc',
+          'Status de compras',
+          'Ordem crescente',
+        ),
         _SortOption(
           'purchase-funnel-desc',
-          'Etapa do funil — inversa',
+          'Status de compras — inverso',
           'Ordem decrescente',
         ),
         _SortOption(

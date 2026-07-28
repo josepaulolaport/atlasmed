@@ -1,6 +1,8 @@
 export interface FacilityService {
   serviceCode: string;
   classificationCode: string;
+  /** Human-readable CNES service name from `services.service_name`. */
+  serviceName: string;
 }
 
 export type FacilityCommercialStatus =
@@ -146,6 +148,8 @@ export interface FacilityRepository {
     purchaseBucket?: "active" | "inactive" | "neverBought";
     /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
     productIds?: string[];
+    /** CNES service codes — facility must offer at least one. */
+    serviceCodes?: string[];
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
@@ -167,6 +171,7 @@ export interface FacilityRepository {
     commercialStatus?: FacilityCommercialStatus;
     purchaseBucket?: "active" | "inactive" | "neverBought";
     productIds?: string[];
+    serviceCodes?: string[];
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
@@ -178,6 +183,11 @@ export interface FacilityRepository {
   }): Promise<FacilityListRecord[]>;
 
   findById(id: string): Promise<FacilityRecord | null>;
+
+  /** CNES service catalog for Explorar filters (code + name). */
+  listServiceCatalog(): Promise<
+    Array<{ serviceCode: string; serviceName: string }>
+  >;
 
   findByExternalId(
     sourceProvider: string,

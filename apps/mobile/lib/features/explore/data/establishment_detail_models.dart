@@ -188,6 +188,14 @@ class FacilityOrderItemSummary {
   double get lineTotal => quantity * unitPrice;
 }
 
+/// Vertical badge on a nearby clinic card.
+class NearbyVerticalBadge {
+  const NearbyVerticalBadge({required this.id, required this.name});
+
+  final String id;
+  final String name;
+}
+
 /// Another establishment within proximity search.
 class NearbyEstablishment {
   const NearbyEstablishment({
@@ -202,6 +210,7 @@ class NearbyEstablishment {
     this.streetAddress,
     this.streetNumber,
     this.addressComplement,
+    this.verticals = const [],
   });
 
   final String id;
@@ -213,6 +222,9 @@ class NearbyEstablishment {
   /// e.g. "Ortopedia", "Multi", "Derm · Ped".
   final String? specialtyLabel;
   final ClinicStatus status;
+
+  /// Business verticals this facility is profiled in (for map card badges).
+  final List<NearbyVerticalBadge> verticals;
 
   // Mirrors `neighborhood` / `street_address` / `street_number` /
   // `address_complement` on `facilities`.
@@ -259,7 +271,8 @@ extension FacilityCommercialStatusX on FacilityCommercialStatus {
   Color get color {
     switch (this) {
       case FacilityCommercialStatus.unregistered:
-        return AppColors.blueAccent;
+        // Slate — readable as a glass-chip dot on navy; distinct from specialty navy.
+        return AppColors.gray300;
       case FacilityCommercialStatus.registered:
         return AppColors.green;
       case FacilityCommercialStatus.suspended:
@@ -275,8 +288,8 @@ extension FacilityCommercialStatusX on FacilityCommercialStatus {
 enum FacilityPurchaseStatus { nonBuyer, lowBuyer, regularBuyer, highBuyer }
 
 extension FacilityPurchaseStatusX on FacilityPurchaseStatus {
-  /// Short labels for the header "Compra: …" chip — avoid repeating "Compra"
-  /// and never reuse commercial-status wording like "Encerrada".
+  /// Short labels for the header "Status: …" chip (purchase intensity).
+  /// Never reuse commercial-status wording like "Encerrada".
   String get label {
     switch (this) {
       case FacilityPurchaseStatus.nonBuyer:
@@ -375,6 +388,21 @@ FacilityCommercialStatus? parseFacilityCommercialStatus(String? raw) {
       return FacilityCommercialStatus.suspended;
     case 'CLOSED':
       return FacilityCommercialStatus.closed;
+    default:
+      return null;
+  }
+}
+
+FacilityPurchaseStatus? parseFacilityPurchaseStatus(String? raw) {
+  switch (raw?.trim().toUpperCase()) {
+    case 'NON_BUYER':
+      return FacilityPurchaseStatus.nonBuyer;
+    case 'LOW_BUYER':
+      return FacilityPurchaseStatus.lowBuyer;
+    case 'REGULAR_BUYER':
+      return FacilityPurchaseStatus.regularBuyer;
+    case 'HIGH_BUYER':
+      return FacilityPurchaseStatus.highBuyer;
     default:
       return null;
   }

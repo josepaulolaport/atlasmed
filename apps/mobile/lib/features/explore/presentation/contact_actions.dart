@@ -56,6 +56,31 @@ Uri? emailUrl(String? email) {
 enum _MapsApp { waze, googleMaps }
 
 /// Candidate deep links for a maps app, native first then https fallback.
+///
+/// When both coords and a street address exist, address is always included
+/// (`q` / `daddr` / `destination`) so Waze/Google populate the search field;
+/// coords stay on Waze via `ll` for pin accuracy.
+@visibleForTesting
+List<Uri> mapsAppRouteUrls({
+  required String app,
+  double? latitude,
+  double? longitude,
+  String? address,
+}) {
+  final mapsApp = switch (app) {
+    'waze' => _MapsApp.waze,
+    'googleMaps' => _MapsApp.googleMaps,
+    _ => null,
+  };
+  if (mapsApp == null) return const [];
+  return _mapsAppRouteUrls(
+    app: mapsApp,
+    latitude: latitude,
+    longitude: longitude,
+    address: address,
+  );
+}
+
 List<Uri> _mapsAppRouteUrls({
   required _MapsApp app,
   double? latitude,
@@ -68,36 +93,50 @@ List<Uri> _mapsAppRouteUrls({
 
   switch (app) {
     case _MapsApp.waze:
-      if (hasCoords) {
-        return [
-          Uri(
-            scheme: 'waze',
-            queryParameters: {'ll': '$latitude,$longitude', 'navigate': 'yes'},
-          ),
-          Uri.https('waze.com', '/ul', {
-            'll': '$latitude,$longitude',
-            'navigate': 'yes',
-          }),
-        ];
-      }
+      final params = <String, String>{'navigate': 'yes'};
+      if (hasCoords) params['ll'] = '$latitude,$longitude';
+      if (query.isNotEmpty) params['q'] = query;
       return [
-        Uri(scheme: 'waze', queryParameters: {'q': query, 'navigate': 'yes'}),
-        Uri.https('waze.com', '/ul', {'q': query, 'navigate': 'yes'}),
+        Uri(scheme: 'waze', queryParameters: params),
+        Uri.https('waze.com', '/ul', params),
       ];
     case _MapsApp.googleMaps:
-      final destination = hasCoords ? '$latitude,$longitude' : query;
+      // Prefer human-readable address in the destination field; keep a
+      // coords fallback so navigation still works if geocoding fails.
+      final addressDestination = query.isNotEmpty ? query : null;
+      final coordDestination =
+          hasCoords ? '$latitude,$longitude' : null;
+      final primary = addressDestination ?? coordDestination!;
       return [
         Uri(
           scheme: 'comgooglemaps',
-          queryParameters: {'daddr': destination, 'directionsmode': 'driving'},
+          queryParameters: {
+            'daddr': primary,
+            'directionsmode': 'driving',
+          },
         ),
+        if (addressDestination != null && coordDestination != null)
+          Uri(
+            scheme: 'comgooglemaps',
+            queryParameters: {
+              'daddr': coordDestination,
+              'directionsmode': 'driving',
+            },
+          ),
         // Android Google Maps navigation scheme.
-        if (hasCoords)
-          Uri(scheme: 'google.navigation', queryParameters: {'q': destination}),
+        Uri(
+          scheme: 'google.navigation',
+          queryParameters: {'q': primary},
+        ),
         Uri.https('www.google.com', '/maps/dir/', {
           'api': '1',
-          'destination': destination,
+          'destination': primary,
         }),
+        if (addressDestination != null && coordDestination != null)
+          Uri.https('www.google.com', '/maps/dir/', {
+            'api': '1',
+            'destination': coordDestination,
+          }),
       ];
   }
 }

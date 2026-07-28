@@ -27,7 +27,7 @@ class DetailQuickActions extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Container(
-            clipBehavior: .antiAlias,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border.all(color: AppColors.surfaceSecondary),
@@ -43,7 +43,7 @@ class DetailQuickActions extends StatelessWidget {
             child: Material(
               color: Colors.transparent,
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: actions.map((a) => Expanded(child: a)).toList(),
               ),
             ),
@@ -66,13 +66,16 @@ class QuickActionItem extends StatelessWidget {
     this.onTap,
   });
 
+  static const double _labelHeight = 14;
+
   @override
   Widget build(BuildContext context) {
     final isDisabled = onTap == null;
     return InkWell(
       onTap: isDisabled ? null : onTap,
       child: Padding(
-        padding: .all(12),
+        // Tight horizontal padding so 5 labels (esp. WhatsApp) fit one line.
+        padding: const EdgeInsets.fromLTRB(2, 12, 2, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -83,14 +86,23 @@ class QuickActionItem extends StatelessWidget {
               child: icon,
             ),
             const SizedBox(height: 5),
-            DefaultTextStyle(
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.1,
-                color: isDisabled ? AppColors.gray300 : AppColors.gray900,
+            SizedBox(
+              height: _labelHeight,
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: DefaultTextStyle(
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1.0,
+                    letterSpacing: 0,
+                    color: isDisabled ? AppColors.gray300 : AppColors.gray900,
+                  ),
+                  child: label,
+                ),
               ),
-              child: label,
             ),
           ],
         ),

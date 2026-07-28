@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -110,22 +111,12 @@ extension PurchaseFunnelStageX on PurchaseFunnelStage {
     PurchaseFunnelStage.inactive => 'INACTIVE',
   };
 
-  String get label => switch (this) {
-    PurchaseFunnelStage.neverPurchased => 'Nunca comprou',
-    PurchaseFunnelStage.outsideWindow => 'Fora do período',
-    PurchaseFunnelStage.purchaseWindow => 'Período de compra',
-    PurchaseFunnelStage.churn => 'Churn',
-    PurchaseFunnelStage.inactive => 'Inativo',
-  };
+  /// Badge / chip label — Desempenho bucket convention (not raw funnel name).
+  String get label =>
+      PurchaseBucketFilter.labelForFunnelApi(apiValue) ?? apiValue;
 
-  Color get color => switch (this) {
-    // Match Desempenho donut "Nunca compraram" (#dc2626).
-    PurchaseFunnelStage.neverPurchased => const Color(0xFFdc2626),
-    PurchaseFunnelStage.outsideWindow => AppColors.blue600,
-    PurchaseFunnelStage.purchaseWindow => AppColors.green600,
-    PurchaseFunnelStage.churn => AppColors.amberDark,
-    PurchaseFunnelStage.inactive => AppColors.redDark,
-  };
+  Color get color =>
+      PurchaseBucketFilter.colorForFunnelApi(apiValue) ?? AppColors.gray500;
 
   Color get backgroundColor => color.withValues(alpha: 0.1);
 }

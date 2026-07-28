@@ -37,7 +37,7 @@ class ClinicPinCalloutContent extends StatelessWidget {
             children: [
               Text(
                 establishment.name,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 13.5,

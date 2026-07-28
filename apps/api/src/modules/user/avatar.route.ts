@@ -54,9 +54,11 @@ export const avatarRoute = new Elysia({
     if (typeof key !== "string" || !/^avatars\/[a-z0-9_-]+\/[a-z0-9-]+\.(jpg|png|webp)$/.test(key)) {
       throw new ValidationError([{ field: "key", message: "Invalid avatar key" }]);
     }
+    // Missing object → 404 (stale avatar_url in DB), not opaque 500.
+    const bytes = await avatarStorage.download(key);
     set.headers["content-type"] = avatarContentType(key);
     set.headers["cache-control"] = "private, max-age=3600";
-    return await avatarStorage.download(key);
+    return bytes;
   }, {
     detail: { summary: "Download profile avatar", tags: ["User"], security: [{ bearerAuth: [] }] },
   });

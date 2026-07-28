@@ -8,9 +8,12 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/nearby_vertical_badges.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
@@ -20,6 +23,9 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 ///
 /// Proximity is establishment-centered: slider changes refetch
 /// `GET /facilities` with this facility's lat/lng as the origin.
+///
+/// When both the clinic and the user have 2+ shared business verticals,
+/// a chip bar lets the user choose which vertical(s) to show.
 class ClinicNearbyMapScreen extends ConsumerStatefulWidget {
   const ClinicNearbyMapScreen({
     super.key,
@@ -27,6 +33,7 @@ class ClinicNearbyMapScreen extends ConsumerStatefulWidget {
     required this.facilityName,
     required this.center,
     required this.allNearby,
+    this.clinicVerticalIds = const {},
     this.initialFocusId,
   });
 
@@ -36,6 +43,9 @@ class ClinicNearbyMapScreen extends ConsumerStatefulWidget {
 
   /// Seed from the detail preview (same radius as the initial slider).
   final List<NearbyEstablishment> allNearby;
+
+  /// Vertical ids on the origin clinic — intersected with the user's.
+  final Set<String> clinicVerticalIds;
 
   /// When set (e.g. opened from a "Ver mais" on one of the inline nearby
   /// cards), the map centers/zooms on this establishment and opens its
@@ -137,17 +147,55 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   /// in theory fire again later (e.g. a style reload).
   bool _initialFocusHandled = false;
 
-  /// Pins/cards always respect the slider immediately via [distanceKm],
-  /// even while a wider-radius fetch is still the in-memory cache.
-  List<NearbyEstablishment> get _visible =>
-      filterNearbyByRadius(_nearby, _radiusKm);
+  Set<String> _sharedFor(List<String> userVerticalIds) =>
+      sharedNearbyVerticalIds(
+        clinicVerticalIds: widget.clinicVerticalIds,
+        userVerticalIds: userVerticalIds,
+      );
 
-  NearbyFacilitiesQuery get _query => NearbyFacilitiesQuery(
+  String? _verticalIdFor({
+    required Set<String> shared,
+    required String? selected,
+    required String? fallback,
+  }) => resolveNearbyVerticalId(
+    sharedVerticalIds: shared,
+    selectedVerticalId: selected,
+    fallbackEffectiveId: fallback,
+  );
+
+  List<NearbyEstablishment> _scoped(
+    List<NearbyEstablishment> items, {
+    required Set<String> shared,
+    required String? verticalId,
+  }) => applyNearbyVerticalScope(
+    items: items,
+    sharedVerticalIds: shared,
+    queryVerticalId: verticalId,
+  );
+
+  NearbyFacilitiesQuery _queryFor(String? verticalId) => NearbyFacilitiesQuery(
     facilityId: widget.facilityId,
     latitude: widget.center.latitude,
     longitude: widget.center.longitude,
     radiusKm: _committedRadiusKm,
+    verticalId: verticalId,
   );
+
+  /// Imperative pin/card helpers — uses [ref.read] (not watch).
+  List<NearbyEstablishment> get _visible {
+    final userVerticalIds =
+        ref.read(currentUserVerticalIdsProvider).valueOrNull ?? const [];
+    final shared = _sharedFor(userVerticalIds);
+    final verticalId = _verticalIdFor(
+      shared: shared,
+      selected: ref.read(selectedFacilityVerticalIdProvider),
+      fallback: ref.read(effectiveFacilityVerticalIdProvider).valueOrNull,
+    );
+    return filterNearbyByRadius(
+      _scoped(_nearby, shared: shared, verticalId: verticalId),
+      _radiusKm,
+    );
+  }
 
   @override
   void initState() {
@@ -168,23 +216,43 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
-    final nearbyAsync = ref.watch(facilityNearbyProvider(_query));
+    final userVerticalIds =
+        ref.watch(currentUserVerticalIdsProvider).valueOrNull ?? const [];
+    final shared = _sharedFor(userVerticalIds);
+    final selected = ref.watch(selectedFacilityVerticalIdProvider);
+    final fallback =
+        ref.watch(effectiveFacilityVerticalIdProvider).valueOrNull;
+    final verticalId = _verticalIdFor(
+      shared: shared,
+      selected: selected,
+      fallback: fallback,
+    );
+    final query = _queryFor(verticalId);
+    final nearbyAsync = ref.watch(facilityNearbyProvider(query));
     ref.listen<AsyncValue<List<NearbyEstablishment>>>(
-      facilityNearbyProvider(_query),
+      facilityNearbyProvider(query),
       (previous, next) {
         next.whenData((items) {
           if (!mounted) return;
           setState(() => _nearby = items);
           unawaited(_syncClinicPins());
+          final visibleNow = filterNearbyByRadius(
+            _scoped(items, shared: shared, verticalId: verticalId),
+            _radiusKm,
+          );
           if (_selected != null &&
-              !_visible.any((e) => e.id == _selected!.id)) {
+              !visibleNow.any((e) => e.id == _selected!.id)) {
             _dismissCallout();
           }
         });
       },
     );
     final visible = filterNearbyByRadius(
-      nearbyAsync.valueOrNull ?? _nearby,
+      _scoped(
+        nearbyAsync.valueOrNull ?? _nearby,
+        shared: shared,
+        verticalId: verticalId,
+      ),
       _radiusKm,
     );
 
@@ -226,6 +294,10 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                 ),
               ],
             ),
+          ),
+          FacilityVerticalFilterBar(
+            allowedVerticalIds: shared.isEmpty ? null : shared,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           ),
           Expanded(
             child: _mapUnavailable || AppConfig.mapboxAccessToken.isEmpty
@@ -1288,7 +1360,7 @@ class _StackedEstablishmentTile extends StatelessWidget {
                 children: [
                   Text(
                     establishment.name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13.5,
@@ -1296,6 +1368,10 @@ class _StackedEstablishmentTile extends StatelessWidget {
                       color: AppColors.gray900,
                     ),
                   ),
+                  if (establishment.verticals.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    NearbyVerticalBadges(verticals: establishment.verticals),
+                  ],
                   if (establishment.specialtyLabel != null) ...[
                     const SizedBox(height: 2),
                     Text(
@@ -1414,7 +1490,7 @@ class _RadiusPanel extends StatelessWidget {
             if (establishments.isNotEmpty) ...[
               const SizedBox(height: 10),
               SizedBox(
-                height: 128,
+                height: 152,
                 child: ListView.separated(
                   controller: scrollController,
                   scrollDirection: Axis.horizontal,
@@ -1474,12 +1550,10 @@ class _NearbyEstablishmentCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 8,
                   height: 8,
-                  margin: const EdgeInsets.only(top: 3),
                   decoration: BoxDecoration(
                     color: establishment.status.color,
                     shape: BoxShape.circle,
@@ -1489,8 +1563,9 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     establishment.name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -1501,6 +1576,10 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (establishment.verticals.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              NearbyVerticalBadges(verticals: establishment.verticals),
+            ],
             if (establishment.specialtyLabel != null) ...[
               const SizedBox(height: 3),
               Text(
@@ -1514,7 +1593,7 @@ class _NearbyEstablishmentCard extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 establishment.shortAddress!,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 10.5,

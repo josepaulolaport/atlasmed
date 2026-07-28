@@ -163,7 +163,7 @@ class _InvitationDetailBody extends StatelessWidget {
                   const _SectionCard(
                     title: 'Atribuições',
                     child: Text(
-                      'Nenhum vertical atribuído neste convite.',
+                      'Nenhuma linha comercial neste convite.',
                       style: TextStyle(
                         fontSize: 13.5,
                         color: AppColors.gray500,

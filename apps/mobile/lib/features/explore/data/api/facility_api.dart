@@ -9,16 +9,46 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurr
 class ClinicService {
   final String serviceCode;
   final String classificationCode;
+  final String serviceName;
 
   const ClinicService({
     required this.serviceCode,
     required this.classificationCode,
+    this.serviceName = '',
   });
 
   factory ClinicService.fromMap(Map<String, dynamic> map) {
     return ClinicService(
       serviceCode: readString(map['serviceCode']),
       classificationCode: readString(map['classificationCode']),
+      serviceName: readString(map['serviceName']),
+    );
+  }
+}
+
+/// Active vertical profile on a facility (subset of API `verticalProfiles`).
+class FacilityVerticalProfileDTO {
+  const FacilityVerticalProfileDTO({
+    required this.verticalId,
+    required this.verticalName,
+    this.verticalCode,
+    this.commercialStatus,
+    this.purchaseStatus,
+  });
+
+  final String verticalId;
+  final String verticalName;
+  final String? verticalCode;
+  final String? commercialStatus;
+  final String? purchaseStatus;
+
+  factory FacilityVerticalProfileDTO.fromMap(Map<String, dynamic> map) {
+    return FacilityVerticalProfileDTO(
+      verticalId: readString(map['verticalId']),
+      verticalName: readString(map['verticalName']),
+      verticalCode: readNullableString(map['verticalCode']),
+      commercialStatus: readNullableString(map['commercialStatus']),
+      purchaseStatus: readNullableString(map['purchaseStatus']),
     );
   }
 }
@@ -53,6 +83,7 @@ class FacilityDTO {
   final String? territoryName;
   final String? territoryAssignmentStatus;
   final String? commercialStatus;
+  final String? purchaseStatus;
   final String? conformityStatus;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
   final int professionalCount;
@@ -64,6 +95,7 @@ class FacilityDTO {
   final double? distanceKm;
   final String? lastVisitAt;
   final List<ClinicService> services;
+  final List<FacilityVerticalProfileDTO> verticalProfiles;
   final String? createdAt;
   final String? updatedAt;
 
@@ -95,6 +127,7 @@ class FacilityDTO {
     this.territoryName,
     this.territoryAssignmentStatus,
     this.commercialStatus,
+    this.purchaseStatus,
     this.conformityStatus,
     this.purchaseRecurrence,
     this.consultantName,
@@ -105,6 +138,7 @@ class FacilityDTO {
     this.distanceKm,
     this.lastVisitAt,
     this.services = const [],
+    this.verticalProfiles = const [],
     this.createdAt,
     this.updatedAt,
   });
@@ -145,6 +179,7 @@ class FacilityDTO {
         map['territoryAssignmentStatus'],
       ),
       commercialStatus: readNullableString(map['commercialStatus']),
+      purchaseStatus: readNullableString(map['purchaseStatus']),
       conformityStatus: readNullableString(map['conformityStatus']),
       purchaseRecurrence: map['purchaseRecurrence'] is Map
           ? PurchaseRecurrenceSnapshot.fromMap(
@@ -162,6 +197,10 @@ class FacilityDTO {
       services: readObjectList(
         map['services'],
       ).map(ClinicService.fromMap).toList(growable: false),
+      verticalProfiles: readObjectList(map['verticalProfiles'])
+          .map(FacilityVerticalProfileDTO.fromMap)
+          .where((p) => p.verticalId.isNotEmpty)
+          .toList(growable: false),
       createdAt: readNullableString(map['createdAt']),
       updatedAt: readNullableString(map['updatedAt']),
     );

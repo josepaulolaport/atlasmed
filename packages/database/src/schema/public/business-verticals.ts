@@ -10,7 +10,7 @@ import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { users } from "./users";
 
-/** Commercial business vertical (e.g. Ortopedia, Dermatologia). Not a medical specialty. */
+/** Commercial business vertical (e.g. Ortopédica, Dermatológica). Not a medical specialty. */
 export const businessVerticals = pgTable(
   "business_verticals",
   {

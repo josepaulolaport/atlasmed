@@ -2,14 +2,17 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/business_ve
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Horizontal row of business-vertical chips.
+/// Horizontal row of business-vertical chips, labeled as "Linha comercial".
 class VerticalSelector extends StatelessWidget {
   final List<BusinessVertical> verticals;
   final String? selectedVerticalId;
   final ValueChanged<String?> onChanged;
 
-  /// When true, prepends a "Todas" chip that clears the selection (union).
+  /// When true, prepends a "Todas as linhas" chip that clears selection (union).
   final bool allowAll;
+
+  /// Section legend above the chips. Pass empty to hide.
+  final String label;
 
   const VerticalSelector({
     super.key,
@@ -17,6 +20,7 @@ class VerticalSelector extends StatelessWidget {
     required this.selectedVerticalId,
     required this.onChanged,
     this.allowAll = false,
+    this.label = 'Linha comercial',
   });
 
   @override
@@ -24,8 +28,7 @@ class VerticalSelector extends StatelessWidget {
     if (verticals.isEmpty) return const SizedBox.shrink();
 
     final itemCount = verticals.length + (allowAll ? 1 : 0);
-
-    return SizedBox(
+    final chips = SizedBox(
       height: 34,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
@@ -35,7 +38,7 @@ class VerticalSelector extends StatelessWidget {
           if (allowAll && index == 0) {
             final selected = selectedVerticalId == null;
             return _Chip(
-              label: 'Todas',
+              label: 'Todas as linhas',
               selected: selected,
               onTap: () => onChanged(null),
             );
@@ -49,6 +52,26 @@ class VerticalSelector extends StatelessWidget {
           );
         },
       ),
+    );
+
+    if (label.isEmpty) return chips;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.gray500,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        chips,
+      ],
     );
   }
 }
