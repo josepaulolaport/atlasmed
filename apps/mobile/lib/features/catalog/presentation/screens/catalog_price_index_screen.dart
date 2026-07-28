@@ -66,10 +66,10 @@ class _CatalogPriceIndexScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Catálogo'),
       body: SafeArea(
         child: Column(
           children: [
-            const AtlasTopBar(page: 'Catálogo'),
             const CatalogTabBar(active: CatalogTab.tabelaCompleta),
             CatalogSearchBar(
               controller: _searchController,

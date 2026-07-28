@@ -103,8 +103,9 @@ void openAppDrawer(BuildContext context) =>
 class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String page;
   final bool compact;
+  final List<Widget>? actions;
 
-  const AtlasAppBar({super.key, this.page = '', this.compact = false});
+  const AtlasAppBar({super.key, this.page = '', this.compact = false, this.actions});
 
   @override
   Size get preferredSize => const Size.fromHeight(48);
@@ -123,6 +124,7 @@ class AtlasAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       titleSpacing: 0,
       title: _AtlasTopBarContent(page: page, compact: compact),
+      actions: actions,
       systemOverlayStyle: .dark,
     );
   }

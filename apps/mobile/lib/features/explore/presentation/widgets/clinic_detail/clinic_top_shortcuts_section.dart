@@ -163,7 +163,6 @@ class _ShortcutCard extends StatelessWidget {
                   backgroundColor: AppColors.navyBright.createSecondary(),
                   child: Icon(icon, size: 16, color: AppColors.navyBright),
                 ),
-
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

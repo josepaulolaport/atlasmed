@@ -11,10 +11,10 @@ class OrdersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Pedidos'),
       body: SafeArea(
         child: Column(
           children: [
-            const AtlasTopBar(page: 'Pedidos'),
             const Expanded(
               child: Center(
                 child: Column(

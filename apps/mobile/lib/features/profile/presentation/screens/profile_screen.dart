@@ -85,6 +85,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Perfil'),
       body: Stack(
         children: [
           SafeArea(
@@ -92,8 +93,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Top bar ──────────────────────────────────
-                  const AtlasTopBar(page: 'Perfil'),
 
                   // ── Header · identity ────────────────────────
                   sessionProfile.when(

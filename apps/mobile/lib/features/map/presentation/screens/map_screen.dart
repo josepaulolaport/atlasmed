@@ -154,9 +154,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Mapa'),
       body: Column(
         children: [
-          const AtlasTopBar(page: 'Mapa'),
           const FacilityVerticalFilterBar(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
           ),

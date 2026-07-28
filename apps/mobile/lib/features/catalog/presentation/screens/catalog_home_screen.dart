@@ -155,10 +155,10 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
               onPressed: () => _openNewProductForm(families),
             )
           : null,
+      appBar: const AtlasAppBar(page: 'Catálogo'),
       body: SafeArea(
         child: Column(
           children: [
-            const AtlasTopBar(page: 'Catálogo'),
             const CatalogTabBar(active: CatalogTab.produtos),
             CatalogSearchBar(
               controller: _searchController,

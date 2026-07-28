@@ -35,11 +35,11 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
 
     return asyncSuggestion.when(
       loading: () => Scaffold(
+        appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
-              const AtlasTopBar(page: 'Não Conformidades', compact: true),
               const Expanded(
                 child: Center(
                   child: CircularProgressIndicator(color: AppColors.navyBright),
@@ -79,11 +79,11 @@ class _NotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            const AtlasTopBar(page: 'Não Conformidades', compact: true),
             const Expanded(
               child: Center(
                 child: Text(
@@ -112,11 +112,11 @@ class _DetailBody extends ConsumerWidget {
     final showDecisionBar = canReview && suggestion.isPending;
 
     return Scaffold(
+      appBar: const AtlasAppBar(page: 'Não Conformidades', compact: true),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            const AtlasTopBar(page: 'Não Conformidades', compact: true),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),

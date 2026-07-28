@@ -35,11 +35,11 @@ class _CadastrosReviewListScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Cadastros'),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AtlasTopBar(page: 'Cadastros'),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {

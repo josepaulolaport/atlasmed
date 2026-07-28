@@ -30,10 +30,37 @@ class ClinicPayersBarSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const SizedBox(height: 8),
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: AppColors.navyBright.createSecondary(),
+              child: Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 36,
+                color: AppColors.navyBright,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Nenhuma fonte pagadora',
+              style: const TextStyle(
+                fontSize: 17,
+                height: 1.25,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2,
+              ),
+              textAlign: .center,
+            ),
+            const SizedBox(height: 4),
             const Text(
-              'Nenhuma fonte pagadora cadastrada',
+              'Cadastre convênios ou pagamentos particulares',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w400,
+                color: AppColors.gray500,
+              ),
             ),
             if (onEdit != null) ...[
               const SizedBox(height: 12),

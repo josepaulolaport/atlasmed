@@ -77,11 +77,11 @@ class _NaoConformidadesListScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Não Conformidades'),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AtlasTopBar(page: 'Não Conformidades'),
             Expanded(
               child: RefreshIndicator(
                 color: AppColors.navyBright,
