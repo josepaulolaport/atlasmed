@@ -28,6 +28,8 @@ jobs:
 
       - name: Setup Flutter (FVM)
         uses: kuhnroyal/flutter-fvm-config-action/setup@v3
+        with:
+          path: apps/mobile
 
       - name: Install Flutter deps
         working-directory: apps/mobile
