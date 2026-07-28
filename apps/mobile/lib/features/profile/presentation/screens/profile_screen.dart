@@ -94,7 +94,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   // ── Header · identity ────────────────────────
                   sessionProfile.when(
                     loading: _buildHeaderSkeleton,

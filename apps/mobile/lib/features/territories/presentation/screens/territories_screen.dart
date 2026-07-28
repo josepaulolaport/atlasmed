@@ -66,11 +66,7 @@ class _TerritoriesPage extends StatelessWidget {
       appBar: const AtlasAppBar(page: 'Territórios'),
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            Expanded(child: child),
-          ],
-        ),
+        child: Column(children: [Expanded(child: child)]),
       ),
     );
   }
