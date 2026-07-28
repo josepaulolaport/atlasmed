@@ -549,6 +549,13 @@ export class DrizzleCadastroSubmissionRepository
     return mapDocumentFile(row!, asset ?? undefined);
   }
 
+  async deleteDocumentFileByFileAssetId(fileAssetId: string) {
+    await db
+      .delete(documentFiles)
+      .where(eq(documentFiles.fileAssetId, fileAssetId));
+    await db.delete(fileAssets).where(eq(fileAssets.id, fileAssetId));
+  }
+
   async reorderDocumentFiles(input: {
     submissionDocumentId: string;
     ordered: Array<{

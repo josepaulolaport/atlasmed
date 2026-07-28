@@ -193,6 +193,8 @@ export interface CadastroSubmissionRepository {
     position: number;
     role: CadastroDocumentFileRole;
   }): Promise<DocumentFileRecord>;
+  /** Removes the document↔file link, then the file asset row. */
+  deleteDocumentFileByFileAssetId(fileAssetId: string): Promise<void>;
   reorderDocumentFiles(input: {
     submissionDocumentId: string;
     ordered: Array<{ fileAssetId: string; position: number; role: CadastroDocumentFileRole }>;

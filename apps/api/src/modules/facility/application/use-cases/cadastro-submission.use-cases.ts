@@ -91,6 +91,25 @@ async function markDocumentReadyIfAllFilesReady(
   }
 }
 
+const INCOMPLETE_UPLOAD_STATUSES = new Set(["PENDING_UPLOAD", "UPLOADING"]);
+
+/**
+ * Drop abandoned initiate→PUT attempts that never finished.
+ * Those ghosts block submit ("Aguarde o processamento…") even when later
+ * uploads succeeded (e.g. after a storage outage).
+ */
+async function pruneIncompleteDocumentUploads(
+  repo: CadastroSubmissionRepository,
+  documentId: string
+) {
+  const files = await repo.listDocumentFiles(documentId);
+  for (const file of files) {
+    const status = file.fileAsset?.status;
+    if (!status || !INCOMPLETE_UPLOAD_STATUSES.has(status)) continue;
+    await repo.deleteDocumentFileByFileAssetId(file.fileAssetId);
+  }
+}
+
 /** Validate uploaded bytes and mark the file READY (or FAILED). */
 async function processUploadedCadastroFile(input: {
   repo: CadastroSubmissionRepository;
@@ -800,6 +819,10 @@ export class SubmitCadastroSubmissionUseCase {
         });
         continue;
       }
+      await pruneIncompleteDocumentUploads(
+        this.deps.cadastroRepository,
+        doc.id
+      );
       const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
       if (files.length === 0) {
         issues.push({
@@ -1157,6 +1180,10 @@ export class SubmitCadastroRequirementUseCase {
       ]);
     }
 
+    await pruneIncompleteDocumentUploads(
+      this.deps.cadastroRepository,
+      document.id
+    );
     const files = await this.deps.cadastroRepository.listDocumentFiles(document.id);
     if (files.length === 0) {
       throw new ValidationError([
