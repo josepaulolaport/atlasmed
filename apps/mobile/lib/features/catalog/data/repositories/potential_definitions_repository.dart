@@ -114,13 +114,16 @@ class PotentialDefinitionsRepository {
     String? key,
     int? sortOrder,
   }) async {
-    final response =
-        await _send(_uri('/potential-definitions'), RepositoryHttpMethod.post, {
-          'verticalId': verticalId,
-          'label': label,
-          'key': ?key,
-          'sortOrder': ?sortOrder,
-        });
+    final response = await _send(
+      _uri('/potential-definitions'),
+      RepositoryHttpMethod.post,
+      {
+        'verticalId': verticalId,
+        'label': label,
+        'key': ?key,
+        'sortOrder': ?sortOrder,
+      },
+    );
     _throwIfError(response);
     return PotentialDefinition.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -135,10 +138,7 @@ class PotentialDefinitionsRepository {
     final response = await _send(
       _uri('/potential-definitions/$id'),
       RepositoryHttpMethod.patch,
-      {
-        'label': ?label,
-        'sortOrder': ?sortOrder,
-      },
+      {'label': ?label, 'sortOrder': ?sortOrder},
     );
     _throwIfError(response);
     return PotentialDefinition.fromJson(
