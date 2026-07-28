@@ -50,6 +50,7 @@ services:
       - MEILISEARCH_URL=http://atlasmed-meilisearch:7700
       - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}
       - STORAGE_ENDPOINT=http://atlasmed-minio:9000
+      - STORAGE_PUBLIC_ENDPOINT=${STORAGE_PUBLIC_ENDPOINT:-https://storage.tdomains.uk}
       - STORAGE_ACCESS_KEY_ID=${MINIO_ROOT_USER}
       - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
@@ -99,6 +100,7 @@ services:
       - MEILISEARCH_URL=http://atlasmed-meilisearch:7700
       - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}
       - STORAGE_ENDPOINT=http://atlasmed-minio:9000
+      - STORAGE_PUBLIC_ENDPOINT=${STORAGE_PUBLIC_ENDPOINT:-https://storage.tdomains.uk}
       - STORAGE_ACCESS_KEY_ID=${MINIO_ROOT_USER}
       - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
@@ -207,8 +209,14 @@ services:
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      # Public base URL for clients (presigned PUT/GET). Console stays cluster-private.
+      - MINIO_SERVER_URL=${STORAGE_PUBLIC_ENDPOINT:-https://storage.tdomains.uk}
     volumes:
       - atlasmed_minio_data:/data
+    x-caddy: |
+      storage.tdomains.uk {
+        reverse_proxy {{upstreams 9000}}
+      }
 
 volumes:
   atlasmed_temporal_postgres_data:

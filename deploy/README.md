@@ -86,7 +86,7 @@ Production backend services deploy to Uncloud with `deploy/uncloud.compose.yml`.
 | `atlasmed-temporal-db` | private | Postgres only for Temporal metadata. The app Postgres remains remote. |
 | `atlasmed-redis` | private | BullMQ, cache, and rate limiting. |
 | `atlasmed-meilisearch` | private | Search index. |
-| `atlasmed-minio` | private | S3-compatible storage for app files and CNES archives. |
+| `atlasmed-minio` | `https://storage.tdomains.uk` (S3 API) | S3-compatible storage for app files and CNES archives. Console stays private. Presigned URLs use `STORAGE_PUBLIC_ENDPOINT`; API still talks to MinIO on the internal `STORAGE_ENDPOINT`. |
 
 All service names use the `atlasmed-` prefix to avoid collisions with other services already running in the cluster.
 All production services are pinned to the Uncloud machine named `atlasmed` via `x-machines: atlasmed`.
