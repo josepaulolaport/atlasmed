@@ -448,7 +448,7 @@ export class InitiateCadastroFileUploadUseCase {
 
     const position =
       input.position ??
-      (await this.deps.cadastroRepository.countDocumentFiles(document.id)) + 1;
+      (await this.deps.cadastroRepository.nextDocumentFilePosition(document.id));
     const role = input.role ?? "PAGE";
 
     await this.deps.cadastroRepository.createDocumentFile({
