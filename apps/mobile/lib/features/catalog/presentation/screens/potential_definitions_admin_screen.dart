@@ -88,9 +88,9 @@ class _PotentialDefinitionsAdminScreenState
       await _load();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível criar')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Não foi possível criar')));
     }
   }
 
@@ -120,9 +120,9 @@ class _PotentialDefinitionsAdminScreenState
       await _load();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível salvar')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Não foi possível salvar')));
     }
   }
 
@@ -152,9 +152,9 @@ class _PotentialDefinitionsAdminScreenState
       await _load();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível remover')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Não foi possível remover')));
     }
   }
 
@@ -244,9 +244,7 @@ class _PotentialDefinitionsAdminScreenState
               },
             ),
             if (_verticalId == null || (_loading && _defs.isEmpty))
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_error != null)
               Expanded(
                 child: Center(
@@ -375,10 +373,7 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
                   padding: EdgeInsets.all(16),
                   child: Text(
                     'Vincular produto',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
                 Expanded(
@@ -423,9 +418,9 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
       await _load();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Falha ao desvincular')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Falha ao desvincular')));
     }
   }
 

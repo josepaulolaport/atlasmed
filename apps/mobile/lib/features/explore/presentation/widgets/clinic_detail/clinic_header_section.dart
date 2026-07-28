@@ -179,11 +179,7 @@ class ClinicHeaderSection extends ConsumerWidget {
                         onNavy: true,
                       );
                     }
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: chips,
-                    );
+                    return Wrap(spacing: 8, runSpacing: 8, children: chips);
                   },
                 ),
                 if (fullAddress != null) ...[

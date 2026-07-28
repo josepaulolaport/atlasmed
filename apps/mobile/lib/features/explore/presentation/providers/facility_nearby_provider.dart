@@ -126,8 +126,11 @@ final facilityNearbyPreviewProvider =
         userVerticalIds: userVerticalIds,
       );
       // Prefer clinic-local Linha over Explorar "Todas".
-      final clinicLinha = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
-      final selected = clinicLinha ?? ref.watch(selectedFacilityVerticalIdProvider);
+      final clinicLinha = ref.watch(
+        clinicDetailActiveLinhaIdProvider(facilityId),
+      );
+      final selected =
+          clinicLinha ?? ref.watch(selectedFacilityVerticalIdProvider);
       final fallback = await ref.watch(
         effectiveFacilityVerticalIdProvider.future,
       );

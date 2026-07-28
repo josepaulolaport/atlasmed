@@ -58,10 +58,7 @@ class FacilityPotentialRepository extends Repository<FacilityPotentialsPage>
           'verticalId': verticalId,
           'values': values
               .map(
-                (v) => {
-                  'definitionId': v.definitionId,
-                  'quantity': v.quantity,
-                },
+                (v) => {'definitionId': v.definitionId, 'quantity': v.quantity},
               )
               .toList(growable: false),
         },

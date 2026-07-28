@@ -69,9 +69,8 @@ class PotentialDefinitionsRepository {
     tokenBuilder: SessionEnvironment.instance.tokenBuilder,
   );
 
-  Uri _uri(String path, [Map<String, String>? query]) => Uri.parse(
-    '$_baseUrl/api/v1$path',
-  ).replace(queryParameters: query);
+  Uri _uri(String path, [Map<String, String>? query]) =>
+      Uri.parse('$_baseUrl/api/v1$path').replace(queryParameters: query);
 
   Future<RepositoryHttpResponse> _send(
     Uri url,
@@ -88,9 +87,7 @@ class PotentialDefinitionsRepository {
 
   void _throwIfError(RepositoryHttpResponse response) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw PotentialDefinitionsException(
-        'Erro ${response.statusCode}',
-      );
+      throw PotentialDefinitionsException('Erro ${response.statusCode}');
     }
   }
 
@@ -106,9 +103,7 @@ class PotentialDefinitionsRepository {
     return data
         .whereType<Map>()
         .map(
-          (row) => PotentialDefinition.fromJson(
-            Map<String, dynamic>.from(row),
-          ),
+          (row) => PotentialDefinition.fromJson(Map<String, dynamic>.from(row)),
         )
         .toList(growable: false);
   }
@@ -119,16 +114,13 @@ class PotentialDefinitionsRepository {
     String? key,
     int? sortOrder,
   }) async {
-    final response = await _send(
-      _uri('/potential-definitions'),
-      RepositoryHttpMethod.post,
-      {
-        'verticalId': verticalId,
-        'label': label,
-        if (key != null) 'key': key,
-        if (sortOrder != null) 'sortOrder': sortOrder,
-      },
-    );
+    final response =
+        await _send(_uri('/potential-definitions'), RepositoryHttpMethod.post, {
+          'verticalId': verticalId,
+          'label': label,
+          if (key != null) 'key': key,
+          if (sortOrder != null) 'sortOrder': sortOrder,
+        });
     _throwIfError(response);
     return PotentialDefinition.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
@@ -174,9 +166,8 @@ class PotentialDefinitionsRepository {
     return data
         .whereType<Map>()
         .map(
-          (row) => LinkedPotentialProduct.fromJson(
-            Map<String, dynamic>.from(row),
-          ),
+          (row) =>
+              LinkedPotentialProduct.fromJson(Map<String, dynamic>.from(row)),
         )
         .toList(growable: false);
   }
@@ -201,4 +192,3 @@ class PotentialDefinitionsRepository {
     _throwIfError(response);
   }
 }
-

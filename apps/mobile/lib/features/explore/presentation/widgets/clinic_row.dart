@@ -168,7 +168,8 @@ class ClinicRow extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (statusChips.isNotEmpty || clinic.lastVisitDays != null) ...[
+                  if (statusChips.isNotEmpty ||
+                      clinic.lastVisitDays != null) ...[
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,

@@ -75,11 +75,15 @@ class ClinicPotentialSection extends ConsumerWidget {
                 children: [
                   Text(
                     'Não foi possível carregar potencial.',
-                    style: const TextStyle(fontSize: 13, color: AppColors.gray500),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.gray500,
+                    ),
                   ),
                   TextButton(
-                    onPressed: () =>
-                        ref.invalidate(clinicDetailPotentialsProvider(facilityId)),
+                    onPressed: () => ref.invalidate(
+                      clinicDetailPotentialsProvider(facilityId),
+                    ),
                     child: const Text('Tentar de novo'),
                   ),
                 ],
@@ -281,7 +285,10 @@ class _EditPotentialSheetState extends State<_EditPotentialSheet> {
     });
     final values = <({String definitionId, double? quantity})>[];
     for (final item in widget.items) {
-      final raw = _controllers[item.definitionId]!.text.trim().replaceAll(',', '.');
+      final raw = _controllers[item.definitionId]!.text.trim().replaceAll(
+        ',',
+        '.',
+      );
       if (raw.isEmpty) {
         values.add((definitionId: item.definitionId, quantity: null));
         continue;
@@ -351,9 +358,7 @@ class _EditPotentialSheetState extends State<_EditPotentialSheet> {
                           decimal: true,
                         ),
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9.,]'),
-                          ),
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                         ],
                         decoration: InputDecoration(
                           labelText: item.label,

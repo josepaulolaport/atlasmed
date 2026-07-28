@@ -18,7 +18,9 @@ final facilityPotentialsProvider = FutureProvider.autoDispose
 /// Resolves active Linha then loads potentials for the clinic.
 final clinicDetailPotentialsProvider = FutureProvider.autoDispose
     .family<FacilityPotentialsPage?, String>((ref, facilityId) async {
-      final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
+      final verticalId = ref.watch(
+        clinicDetailActiveLinhaIdProvider(facilityId),
+      );
       if (verticalId == null || verticalId.isEmpty) return null;
       return ref.watch(
         facilityPotentialsProvider((

@@ -29,7 +29,8 @@ List<Widget> buildFacilityStatusChips({
     final withCommercial = verticalProfiles
         .where(
           (p) =>
-              p.commercialStatus != null && p.commercialStatus!.trim().isNotEmpty,
+              p.commercialStatus != null &&
+              p.commercialStatus!.trim().isNotEmpty,
         )
         .toList(growable: false);
     if (withCommercial.length > 1) {

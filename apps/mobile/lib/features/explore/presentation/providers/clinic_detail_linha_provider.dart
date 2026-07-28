@@ -56,8 +56,7 @@ String? resolveClinicDetailActiveLinhaId({
 }) {
   if (options.isEmpty) return effectiveFallback;
   if (options.length == 1) return options.first.id;
-  bool inOptions(String? id) =>
-      id != null && options.any((v) => v.id == id);
+  bool inOptions(String? id) => id != null && options.any((v) => v.id == id);
   if (inOptions(clinicOverride)) return clinicOverride;
   if (inOptions(entryVerticalId)) return entryVerticalId;
   if (inOptions(exploreSelected)) return exploreSelected;
@@ -71,8 +70,12 @@ final clinicDetailActiveLinhaIdProvider = Provider.autoDispose
       final userOptions =
           ref.watch(currentUserFacilityVerticalOptionsProvider).valueOrNull ??
           const <BusinessVertical>[];
-      final knownIds = ref.watch(clinicDetailKnownProfileIdsProvider(facilityId));
-      final override = ref.watch(clinicDetailSelectedLinhaIdProvider(facilityId));
+      final knownIds = ref.watch(
+        clinicDetailKnownProfileIdsProvider(facilityId),
+      );
+      final override = ref.watch(
+        clinicDetailSelectedLinhaIdProvider(facilityId),
+      );
       final entryVerticalId = ref.watch(
         clinicDetailEntryVerticalIdProvider(facilityId),
       );

@@ -70,13 +70,14 @@ class FacilityOrdersNotifier extends StateNotifier<FacilityOrdersState> {
   Future<void> retry() => _load();
 }
 
-final facilityOrdersProvider =
-    StateNotifierProvider.autoDispose.family<
-      FacilityOrdersNotifier,
-      FacilityOrdersState,
-      String
-    >((ref, facilityId) {
-      final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
+final facilityOrdersProvider = StateNotifierProvider.autoDispose
+    .family<FacilityOrdersNotifier, FacilityOrdersState, String>((
+      ref,
+      facilityId,
+    ) {
+      final verticalId = ref.watch(
+        clinicDetailActiveLinhaIdProvider(facilityId),
+      );
       return FacilityOrdersNotifier(
         facilityId: facilityId,
         verticalId: verticalId,

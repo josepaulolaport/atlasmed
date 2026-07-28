@@ -33,10 +33,7 @@ class FacilityPotentialItem {
 }
 
 class FacilityPotentialsPage {
-  const FacilityPotentialsPage({
-    required this.verticalId,
-    required this.items,
-  });
+  const FacilityPotentialsPage({required this.verticalId, required this.items});
 
   final String verticalId;
   final List<FacilityPotentialItem> items;
