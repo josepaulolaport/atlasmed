@@ -201,6 +201,8 @@ export interface CadastroSubmissionRepository {
   }): Promise<DocumentFileRecord[]>;
   sumDocumentFileSizes(documentId: string): Promise<number>;
   countDocumentFiles(documentId: string): Promise<number>;
+  /** Next free 1-based position (max existing + 1). Safe after mid-list deletes. */
+  nextDocumentFilePosition(documentId: string): Promise<number>;
 
   createUploadSession(input: {
     fileAssetId: string;

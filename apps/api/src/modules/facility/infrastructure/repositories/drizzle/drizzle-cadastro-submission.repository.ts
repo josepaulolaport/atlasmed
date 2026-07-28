@@ -609,6 +609,16 @@ export class DrizzleCadastroSubmissionRepository
     return Number(row?.value ?? 0);
   }
 
+  async nextDocumentFilePosition(documentId: string) {
+    const [row] = await db
+      .select({
+        value: sql<number>`coalesce(max(${documentFiles.position}), 0)`,
+      })
+      .from(documentFiles)
+      .where(eq(documentFiles.submissionDocumentId, documentId));
+    return Number(row?.value ?? 0) + 1;
+  }
+
   async createUploadSession(input: {
     fileAssetId: string;
     storageUploadId: string;
