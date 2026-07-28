@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
@@ -11,40 +12,180 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+ThemeData _testTheme() => ThemeData(
+  splashFactory: NoSplash.splashFactory,
+  highlightColor: Colors.transparent,
+);
+
 void main() {
-  testWidgets('clinic row shows never-purchased stage without buy frequency', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ClinicRow(
-            clinic: FacilityEntry(
-              id: '1',
-              name: 'Clínica com nome muito comprido para tela estreita',
-              city: 'São Paulo',
-              neighborhood: 'Centro',
-              distanceKm: 1,
-              commercialStatus: CommercialStatusFilter.registered,
-              doctorCount: 2,
-              purchaseRecurrence: const PurchaseRecurrenceSnapshot(
-                intervalDays: 30,
-                sampleSize: 0,
-                funnelStage: PurchaseFunnelStage.neverPurchased,
+  testWidgets(
+    'purchase section renders the recurrence cycle without narrow-screen overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      var openedHistory = false;
+      final today = DateUtils.dateOnly(DateTime.now());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: _testTheme(),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PurchaseRecurrenceSection(
+                value: PurchaseRecurrenceSnapshot(
+                  intervalDays: 30,
+                  observedIntervalDays: 31,
+                  sampleSize: 6,
+                  source: PurchaseRecurrenceSource.calculated,
+                  funnelStage: PurchaseFunnelStage.purchaseWindow,
+                  lastPurchaseDate: today.subtract(const Duration(days: 24)),
+                ),
+                onViewHistory: () => openedHistory = true,
               ),
             ),
-            onTap: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('Ciclo de recompra'), findsNothing);
+      expect(find.text('Janela de compra'), findsOneWidget);
+      expect(find.text('Última compra'), findsOneWidget);
+      expect(find.text('Hoje'), findsOneWidget);
+      expect(find.text('Próxima compra'), findsOneWidget);
+      expect(find.text('30 dias'), findsOneWidget);
+      expect(find.text('Em 6 dias'), findsOneWidget);
+      expect(find.text('6 intervalos'), findsOneWidget);
+      expect(find.text('Ver histórico de compras'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Ver histórico de compras'));
+      expect(openedHistory, isTrue);
+    },
+  );
+
+  testWidgets('purchase section orders an overdue prediction before today', (
+    tester,
+  ) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme(),
+        home: Scaffold(
+          body: PurchaseRecurrenceSection(
+            value: PurchaseRecurrenceSnapshot(
+              intervalDays: 30,
+              observedIntervalDays: 30,
+              sampleSize: 4,
+              source: PurchaseRecurrenceSource.calculated,
+              funnelStage: PurchaseFunnelStage.purchaseWindow,
+              lastPurchaseDate: today.subtract(const Duration(days: 40)),
+            ),
+            onViewHistory: () {},
           ),
         ),
       ),
     );
-    expect(find.text('Nunca comprou'), findsOneWidget);
-    expect(find.text('A cada 30 dias'), findsNothing);
+
+    expect(find.text('Recompra atrasada'), findsOneWidget);
+    expect(find.text('Atraso'), findsOneWidget);
+    expect(find.text('10 dias'), findsOneWidget);
+    expect(find.text('Compra prevista'), findsOneWidget);
+    expect(
+      tester.getCenter(find.text('Compra prevista')).dx,
+      lessThan(tester.getCenter(find.text('Hoje')).dx),
+    );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('never-purchased section keeps the timeline and guides a visit', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme(),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PurchaseRecurrenceSection(
+              value: const PurchaseRecurrenceSnapshot(
+                intervalDays: 30,
+                sampleSize: 0,
+                source: PurchaseRecurrenceSource.defaultValue,
+                funnelStage: PurchaseFunnelStage.neverPurchased,
+              ),
+              onViewHistory: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Nunca'), findsOneWidget);
+    expect(find.text('Agendar visita'), findsNWidgets(2));
+    expect(find.text('Sem histórico'), findsOneWidget);
+    expect(find.text('Compras registradas'), findsOneWidget);
+    expect(find.text('Após a primeira compra'), findsOneWidget);
+    expect(find.text('30 dias'), findsNothing);
+    expect(find.text('0 intervalos'), findsNothing);
+    expect(find.text('Nunca comprou'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('purchase section preserves the unavailable state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: _testTheme(),
+        home: const Scaffold(body: PurchaseRecurrenceSection(value: null)),
+      ),
+    );
+
+    expect(find.text('Perfil de compras não disponível'), findsOneWidget);
+    expect(find.text('Ciclo de recompra'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'clinic row shows stage, interval and never-purchased copy without overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: _testTheme(),
+          home: Scaffold(
+            body: ClinicRow(
+              clinic: FacilityEntry(
+                id: '1',
+                name: 'Clínica com nome muito comprido para tela estreita',
+                city: 'São Paulo',
+                neighborhood: 'Centro',
+                distanceKm: 1,
+                commercialStatus: CommercialStatusFilter.registered,
+                doctorCount: 2,
+                purchaseRecurrence: const PurchaseRecurrenceSnapshot(
+                  intervalDays: 30,
+                  sampleSize: 0,
+                  funnelStage: PurchaseFunnelStage.neverPurchased,
+                ),
+              ),
+              onTap: () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Nunca comprou'), findsOneWidget);
+      // Buy-frequency line intentionally omitted from explore ClinicRow.
+      expect(find.text('A cada 30 dias'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('filter sheet applies multiple stages and one profile', (
     tester,
@@ -52,6 +193,7 @@ void main() {
     Map<String, List<String>>? applied;
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: SingleChildScrollView(
             child: FilterSheet(
@@ -77,6 +219,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -112,6 +255,7 @@ void main() {
     String? applied;
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -153,6 +297,7 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(
           body: PurchaseRecurrenceForm(
             initialValue: unknown,
@@ -198,6 +343,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: _testTheme(),
           home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
         ),
       );
@@ -232,6 +378,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: _testTheme(),
         home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
       ),
     );
@@ -255,6 +402,7 @@ void main() {
           throw Exception('offline');
       await tester.pumpWidget(
         MaterialApp(
+          theme: _testTheme(),
           home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
         ),
       );

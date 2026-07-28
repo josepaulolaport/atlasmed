@@ -17,29 +17,25 @@ class UsersScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AtlasAppBar(
+        page: 'Usuários',
+        actions: canManage
+            ? [
+                IconButton(
+                  onPressed: () => context.push('/users/invitations'),
+                  icon: const Icon(
+                    Icons.mail_outline_rounded,
+                    color: AppColors.gray900,
+                  ),
+                  tooltip: 'Ver convites',
+                ),
+              ]
+            : null,
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            Stack(
-              children: [
-                const AtlasTopBar(page: 'Usuários'),
-                if (canManage)
-                  Positioned(
-                    right: 6,
-                    top: 0,
-                    bottom: 0,
-                    child: IconButton(
-                      onPressed: () => context.push('/users/invitations'),
-                      icon: const Icon(
-                        Icons.mail_outline_rounded,
-                        color: AppColors.gray900,
-                      ),
-                      tooltip: 'Ver convites',
-                    ),
-                  ),
-              ],
-            ),
             Expanded(
               child: canManage ? const _UsersList() : const _AccessRestricted(),
             ),

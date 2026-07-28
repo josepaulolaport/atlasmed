@@ -10,8 +10,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
@@ -99,20 +99,7 @@ class ClinicHeaderSection extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(16, top + 4, 16, 18),
-      decoration: const BoxDecoration(
-        color: AppColors.navyBright,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x261e3a8a),
-            blurRadius: 14,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
+      decoration: const BoxDecoration(color: AppColors.navyBright),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

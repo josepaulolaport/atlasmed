@@ -21,11 +21,11 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
 
     if (submission == null) {
       return Scaffold(
+        appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Column(
             children: [
-              const AtlasTopBar(page: 'Cadastros', compact: true),
               const Expanded(
                 child: Center(
                   child: Text(
@@ -49,11 +49,11 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
         submission.isPending && ref.watch(canReviewCadastroProvider);
 
     return Scaffold(
+      appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            const AtlasTopBar(page: 'Cadastros', compact: true),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),

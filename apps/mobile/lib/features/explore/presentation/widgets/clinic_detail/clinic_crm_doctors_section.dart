@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Médicos" — snapping PageView of compact cards, each focused on
@@ -42,30 +42,13 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (doctors.isEmpty && !hasMore) {
-      return ClinicDetailCard(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          child: Column(
-            children: [
-              const Text(
-                'Nenhum médico associado a este estabelecimento',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.gray400),
-              ),
-              if (onAssociate != null) ...[
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: onAssociate,
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: const Text('Associar médicos'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.navyBright,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+      return ClinicaEmptySection(
+        icon: Icons.medical_services_outlined,
+        title: 'Nenhum médico associado',
+        description: 'Associe médicos que atuam neste estabelecimento.',
+        onAction: onAssociate,
+        actionLabel: const Text('Associar médicos'),
+        actionIcon: Icons.person_add_alt_1_rounded,
       );
     }
 

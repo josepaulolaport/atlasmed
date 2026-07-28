@@ -20,6 +20,7 @@ import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purchase_recurrence_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/quick_actions.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
@@ -511,8 +512,122 @@ class _ClinicDetailContent extends ConsumerWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 16),
-                _QuickActions(detail: detail),
+                DetailQuickActions(
+                  themeColor: AppColors.navyBright,
+                  actions: [
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
+                        child: const Icon(
+                          Icons.phone_rounded,
+                          size: 18,
+                          color: AppColors.navyBright,
+                        ),
+                      ),
+                      label: const Text('Ligar'),
+                      onTap: () => launchContactUrl(
+                        context,
+                        url: callUrl(detail.contact?.phone),
+                        contactLabel: 'telefone',
+                      ),
+                    ),
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
+                        child: const Icon(
+                          Icons.chat_rounded,
+                          size: 18,
+                          color: AppColors.navyBright,
+                        ),
+                      ),
+                      label: const Text('WhatsApp'),
+                      onTap: () => launchContactUrl(
+                        context,
+                        url: whatsappUrl(
+                          detail.contact?.whatsapp ?? detail.contact?.phone,
+                        ),
+                        contactLabel: 'WhatsApp',
+                      ),
+                    ),
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
+                        child: const Icon(
+                          Icons.directions_rounded,
+                          size: 18,
+                          color: AppColors.navyBright,
+                        ),
+                      ),
+                      label: const Text('Rota'),
+                      onTap: () => launchMapsRoute(
+                        context,
+                        latitude: detail.address?.lat,
+                        longitude: detail.address?.lng,
+                        address: detail.address?.formattedAddress,
+                      ),
+                    ),
+                    if (ref.watch(canCreateVisitProvider))
+                      QuickActionItem(
+                        icon: CircleAvatar(
+                          backgroundColor: AppColors.navyBright
+                              .createSecondary(),
+                          radius: 18,
+                          child: const Icon(
+                            Icons.calendar_month_rounded,
+                            size: 18,
+                            color: AppColors.navyBright,
+                          ),
+                        ),
+                        label: const Text('Visita'),
+                        onTap: () async {
+                          try {
+                            final repo = ref.read(
+                              clinicVisitsRepositoryProvider(detail.id),
+                            );
+                            await repo.createVisit();
+                            ref.invalidate(
+                              clinicVisitsRepositoryProvider(detail.id),
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Visita registrada com sucesso',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Erro ao registrar visita'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
+                        child: const Icon(
+                          Icons.note_add_rounded,
+                          size: 18,
+                          color: AppColors.navyBright,
+                        ),
+                      ),
+                      label: const Text('Pedido'),
+                      onTap: () => context.push('/orders/new'),
+                    ),
+                  ],
+                ),
                 ClinicTopShortcutsSection(
                   facilityId: clinicId,
                   facilityName: detail.name,
@@ -918,159 +1033,6 @@ class _SectionErrorCard extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-// ===============================================================
-// QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
-// ===============================================================
-class _QuickActions extends ConsumerWidget {
-  final Facility detail;
-  const _QuickActions({required this.detail});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final canVisit = ref.watch(canCreateVisitProvider);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _ActionButton(
-            icon: Icons.phone_rounded,
-            label: 'Ligar',
-            onTap: () => launchContactUrl(
-              context,
-              url: callUrl(detail.contact?.phone),
-              contactLabel: 'telefone',
-            ),
-          ),
-          _ActionButton(
-            icon: Icons.chat_rounded,
-            label: 'WhatsApp',
-            onTap: () => launchContactUrl(
-              context,
-              url: whatsappUrl(
-                detail.contact?.whatsapp ?? detail.contact?.phone,
-              ),
-              contactLabel: 'WhatsApp',
-            ),
-          ),
-          _ActionButton(
-            icon: Icons.directions_rounded,
-            label: 'Rota',
-            onTap: () => launchMapsRoute(
-              context,
-              latitude: detail.address?.lat,
-              longitude: detail.address?.lng,
-              address: detail.address?.formattedAddress,
-            ),
-          ),
-          if (canVisit)
-            _ActionButton(
-              icon: Icons.calendar_month_rounded,
-              label: 'Visita',
-              onTap: () async {
-                try {
-                  final repo = ref.read(
-                    clinicVisitsRepositoryProvider(detail.id),
-                  );
-                  await repo.createVisit();
-                  ref.invalidate(clinicVisitsRepositoryProvider(detail.id));
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Visita registrada com sucesso'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                } catch (_) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Erro ao registrar visita'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
-          _ActionButton(
-            icon: Icons.note_add_rounded,
-            label: 'Pedido',
-            onTap: () => context.push('/orders/new'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(28),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.gray100),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Icon(icon, size: 20, color: AppColors.navyBright),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppColors.gray600,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

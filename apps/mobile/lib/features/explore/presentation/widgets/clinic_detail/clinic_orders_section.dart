@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Pedidos recentes" — snapping PageView of cards, mirroring the médicos
@@ -34,27 +34,12 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
     final orders = widget.orders;
 
     if (orders.isEmpty) {
-      return ClinicDetailCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Nenhum pedido registrado para este estabelecimento',
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => context.push('/orders/new'),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Criar pedido'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.navyBright,
-                side: const BorderSide(color: AppColors.blue100),
-              ),
-            ),
-          ],
-        ),
+      return ClinicaEmptySection(
+        icon: Icons.receipt_long_outlined,
+        title: 'Nenhum pedido registrado',
+        description: 'Crie o primeiro pedido para este estabelecimento.',
+        onAction: () => context.push('/orders/new'),
+        actionLabel: const Text('Criar pedido'),
       );
     }
 

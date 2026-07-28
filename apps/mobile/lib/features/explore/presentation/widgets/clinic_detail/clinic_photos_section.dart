@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Fotos da clínica" row — kept for a future manage-photos entry point.
@@ -14,27 +15,12 @@ class ClinicPhotosSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = photos;
     if (p == null || p.count == 0) {
-      return ClinicDetailCard(
-        child: Row(
-          children: [
-            const Icon(
-              Icons.photo_library_outlined,
-              size: 20,
-              color: AppColors.gray400,
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Nenhuma foto cadastrada',
-                style: TextStyle(fontSize: 13, color: AppColors.gray400),
-              ),
-            ),
-            TextButton(
-              onPressed: () => _showComingSoon(context),
-              child: const Text('Adicionar'),
-            ),
-          ],
-        ),
+      return ClinicaEmptySection(
+        icon: Icons.photo_library_outlined,
+        title: 'Nenhuma foto cadastrada',
+        description: 'Adicione fotos da clínica para enriquecer o perfil.',
+        onAction: () => _showComingSoon(context),
+        actionLabel: const Text('Adicionar'),
       );
     }
 

@@ -149,7 +149,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Churn'), findsOneWidget);
+    expect(find.text('Risco de churn'), findsOneWidget);
   });
 
   testWidgets('does not show a funnel chip when recurrence is unavailable', (
@@ -174,7 +174,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Churn'), findsNothing);
+    expect(find.text('Risco de churn'), findsNothing);
   });
 
   group('Clinic location label', () {
