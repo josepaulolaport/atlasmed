@@ -5,6 +5,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Notas de campo" — private, facility-scoped notes only the current user sees.
@@ -81,27 +83,28 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
   Widget build(BuildContext context) {
     final notes = widget.notes;
 
+    if (notes.isEmpty) {
+      return ClinicaEmptySection(
+        icon: Icons.note_alt_outlined,
+        title: 'Nenhuma nota registrada',
+        description: 'Adicione notas internas sobre a clínica.',
+        onAction: widget.canAdd ? _addNote : null,
+        actionLabel: const Text('Adicionar nota'),
+      );
+    }
+
     return ClinicDetailCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (notes.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                'Nenhuma nota registrada — só você verá as notas adicionadas aqui.',
-                style: TextStyle(fontSize: 13, color: AppColors.gray400),
-              ),
-            )
-          else
-            for (final (i, note) in notes.indexed) ...[
-              if (i > 0) const SizedBox(height: 10),
-              _NoteRow(index: i + 1, note: note),
-            ],
+          for (final (i, note) in notes.indexed) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _NoteRow(index: i + 1, note: note),
+          ],
           if (widget.canAdd) ...[
             const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: _saving ? null : _addNote,
+            AtlasButton.outline(
+              onPressed: _saving ? () {} : _addNote,
               icon: _saving
                   ? const SizedBox(
                       width: 18,
@@ -110,14 +113,6 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
                     )
                   : const Icon(Icons.add_rounded, size: 18),
               label: const Text('Adicionar nota'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.navyBright,
-                side: const BorderSide(color: AppColors.blue100),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
             ),
           ],
         ],

@@ -73,3 +73,55 @@ class AppTheme {
     scaffoldBackgroundColor: AppColors.background,
   );
 }
+
+extension ColorX on Color {
+  Color createSecondary() {
+    final hsl = HSLColor.fromColor(this);
+
+    const hueShift = -7.107505070993938;
+    const saturationTowardsMax = 1.0;
+    const lightnessTowardsWhite = 0.9442622950819672;
+
+    final hue = (hsl.hue + hueShift + 360) % 360;
+
+    final saturation =
+        hsl.saturation + (1 - hsl.saturation) * saturationTowardsMax;
+
+    final lightness =
+        hsl.lightness + (1 - hsl.lightness) * lightnessTowardsWhite;
+
+    return HSLColor.fromAHSL(
+      hsl.alpha,
+      hue,
+      saturation.clamp(0.0, 1.0),
+      lightness.clamp(0.0, 1.0),
+    ).toColor();
+  }
+}
+
+extension ColorFilterX on ColorFilter {
+  static ColorFilter grayscale() {
+    return ColorFilter.matrix(<double>[
+      0.2126,
+      0.7152,
+      0.0722,
+      0,
+      0,
+      0.2126,
+      0.7152,
+      0.0722,
+      0,
+      0,
+      0.2126,
+      0.7152,
+      0.0722,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+    ]);
+  }
+}

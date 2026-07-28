@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Histórico de visitas" — stats row, sentiment filter pills and a rich
@@ -32,11 +33,10 @@ class _ClinicVisitHistorySectionState extends State<ClinicVisitHistorySection> {
   @override
   Widget build(BuildContext context) {
     if (widget.entries.isEmpty) {
-      return const ClinicDetailCard(
-        child: Text(
-          'Nenhuma visita registrada',
-          style: TextStyle(fontSize: 13, color: AppColors.gray400),
-        ),
+      return const ClinicaEmptySection(
+        icon: Icons.checklist_outlined,
+        title: 'Nenhuma visita registrada',
+        description: 'Registre visitas à clínica para acompanhamento.',
       );
     }
 

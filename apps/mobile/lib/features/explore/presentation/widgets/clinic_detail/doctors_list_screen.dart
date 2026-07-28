@@ -221,79 +221,15 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                child: SearchBarWidget(
-                  value: _query,
-                  onChanged: (q) => setState(() => _query = q),
-                  onFilter: _showFilterSheet,
-                  filterCount: _filterCount,
-                  hintText: 'Buscar médico, especialidade…',
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
-                child: SortRow(
-                  sort: _sort,
-                  onSortTap: _showSortSheet,
-                  filterChips: _filterChips,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-                child: Text(
-                  filtered.length == 1
-                      ? '1 médico'
-                      : '${filtered.length} médicos',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.gray500,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: filtered.isEmpty
-                    ? EmptyState(query: _query, kind: 'facility-doctor')
-                    : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (_, i) {
-                          final d = filtered[i];
-                          return DoctorRow(
-                            showDistance: false,
-                            showRelationship: true,
-                            phone: d.phone,
-                            relationshipScore: d.relationshipScore,
-                            badges: _badgesFor(d),
-                            doctor: ProfessionalEntry(
-                              id: d.id,
-                              name: d.name,
-                              initials: d.initials,
-                              hue: d.hue,
-                              specialty: d.specialty ?? '',
-                              crm: d.crm ?? '',
-                              distanceKm: 0,
-                            ),
-                            onEditRoles:
-                                ref.watch(canMutateProfessionalProvider)
-                                ? () => _editRoles(d)
-                                : null,
-                            onTap: () {
-                              final facilityId = widget.facilityId;
-                              final uri =
-                                  facilityId == null || facilityId.isEmpty
-                                  ? '/explore/doctor/${d.id}'
-                                  : '/explore/doctor/${d.id}?facilityId=$facilityId';
-                              context.push(uri);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+            child: SearchBarWidget(
+              value: _query,
+              onChanged: (q) => setState(() => _query = q),
+              onFilter: _showFilterSheet,
+              filterCount: _filterCount,
+              hintText: 'Buscar médico, especialidade…',
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
@@ -310,7 +246,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF6b7280),
+                color: AppColors.gray500,
               ),
             ),
           ),

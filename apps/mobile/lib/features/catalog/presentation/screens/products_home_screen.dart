@@ -48,11 +48,11 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Produtos'),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AtlasTopBar(page: 'Produtos'),
             Expanded(
               child: CustomScrollView(
                 physics: const BouncingScrollPhysics(),

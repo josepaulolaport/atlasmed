@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -37,33 +37,13 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (professionals.isEmpty && !hasMore) {
-      return ClinicDetailCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Nenhum contato administrativo cadastrado',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
-            ),
-            if (onAssociate != null) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onAssociate,
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                label: const Text('Criar profissional'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.navyBright,
-                  side: const BorderSide(color: AppColors.blue100),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+      return ClinicaEmptySection(
+        icon: Icons.badge_outlined,
+        title: 'Nenhum contato administrativo cadastrado',
+        description: 'Adicione contatos da clínica para gestão e comunicação.',
+        onAction: onAssociate,
+        actionLabel: const Text('Criar profissional'),
+        actionIcon: Icons.person_add_alt_1_rounded,
       );
     }
 

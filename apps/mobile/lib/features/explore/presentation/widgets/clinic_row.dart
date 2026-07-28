@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicRow extends StatelessWidget {
@@ -88,55 +86,61 @@ class ClinicRow extends StatelessWidget {
                       ],
                     ),
                   ],
-                  if (clinic.distanceKm != null) ...[
+                  if (clinic.distanceKm != null || clinic.doctorCount > 0) ...[
                     const SizedBox(height: 3),
-                    Text(
-                      '${clinic.distanceKm!.toStringAsFixed(1)} km',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.gray500,
-                      ),
+                    Row(
+                      children: [
+                        if (clinic.distanceKm != null) ...[
+                          const Icon(
+                            Icons.near_me_rounded,
+                            size: 11,
+                            color: AppColors.gray500,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${clinic.distanceKm!.toStringAsFixed(1)} km',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray500,
+                            ),
+                          ),
+                        ],
+                        if (clinic.distanceKm != null && clinic.doctorCount > 0)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
+                              '•',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.gray400,
+                              ),
+                            ),
+                          ),
+                        if (clinic.doctorCount > 0) ...[
+                          const Icon(
+                            Icons.person_outline_rounded,
+                            size: 11,
+                            color: AppColors.gray500,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray500,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (clinic.commercialStatus != null)
-                        StatusChip(
-                          label: CommercialStatusFilter.label(
-                            clinic.commercialStatus!,
-                          ),
-                          color: CommercialStatusFilter.color(
-                            clinic.commercialStatus!,
-                          ),
-                          bg: CommercialStatusFilter.bg(
-                            clinic.commercialStatus!,
-                          ),
-                          small: true,
-                        ),
-                      if (clinic.purchaseRecurrence?.funnelStage != null)
-                        _PurchaseFunnelChip(
-                          stage: clinic.purchaseRecurrence!.funnelStage!,
-                          intervalDays: clinic.purchaseRecurrence!.intervalDays,
-                        ),
-                      if (clinic.lastVisitDays != null)
-                        _MetaItem(
-                          icon: Icons.access_time_rounded,
-                          text: clinic.lastVisitDays == 0
-                              ? 'Hoje'
-                              : 'Há ${clinic.lastVisitDays} dia${clinic.lastVisitDays == 1 ? '' : 's'}',
-                        ),
-                      _MetaItem(
-                        icon: Icons.person_outline_rounded,
-                        text:
-                            '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
-                      ),
-                    ],
-                  ),
+                  // TODO(yanncabral): uncomment when the filters are back
+                  // if (clinic.purchaseRecurrence?.funnelStage != null)
+                  //   const SizedBox(height: 8),
+                  // if (clinic.purchaseRecurrence?.funnelStage != null)
+                  //   _RecompraContainer(recurrence: clinic.purchaseRecurrence!),
                 ],
               ),
             ),
@@ -147,60 +151,112 @@ class ClinicRow extends StatelessWidget {
   }
 }
 
-class _PurchaseFunnelChip extends StatelessWidget {
-  const _PurchaseFunnelChip({required this.stage, required this.intervalDays});
+enum _RecompraLabelStyle { normal, atrasado, churn, inativo }
 
-  final PurchaseFunnelStage stage;
-  final int intervalDays;
+extension on _RecompraLabelStyle {
+  Color get color => switch (this) {
+    _RecompraLabelStyle.normal => AppColors.green600,
+    _RecompraLabelStyle.atrasado => AppColors.amberDark,
+    _RecompraLabelStyle.churn => AppColors.redDark,
+    _RecompraLabelStyle.inativo => AppColors.gray500,
+  };
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: stage.backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            stage.label,
-            style: TextStyle(
-              color: stage.color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            'A cada $intervalDays dias',
-            style: TextStyle(color: stage.color, fontSize: 10),
-          ),
-        ],
-      ),
-    );
+  Color get bg => color.withValues(alpha: 0.08);
+  Color get border => color.withValues(alpha: 0.2);
+}
+
+_RecompraLabelStyle? _resolveStyle(PurchaseRecurrenceSnapshot pr) {
+  switch (pr.funnelStage) {
+    case PurchaseFunnelStage.purchaseWindow:
+      return _RecompraLabelStyle.normal;
+    case PurchaseFunnelStage.outsideWindow:
+      return _RecompraLabelStyle.atrasado;
+    case PurchaseFunnelStage.churn:
+      return _RecompraLabelStyle.churn;
+    case PurchaseFunnelStage.neverPurchased:
+    case PurchaseFunnelStage.inactive:
+      return _RecompraLabelStyle.inativo;
+    case null:
+      return null;
   }
 }
 
-class _MetaItem extends StatelessWidget {
-  final IconData icon;
-  final String text;
+String? _resolveLabel(PurchaseRecurrenceSnapshot pr) {
+  final now = DateTime.now();
+  switch (pr.funnelStage) {
+    case PurchaseFunnelStage.purchaseWindow:
+      if (pr.nextTransitionDate != null) {
+        final days = pr.nextTransitionDate!.difference(now).inDays;
+        if (days >= 0) {
+          return 'Recompra prevista em $days dia${days == 1 ? '' : 's'}';
+        }
+      }
+      if (pr.lastPurchaseDate != null && pr.intervalDays > 0) {
+        final daysSince = now.difference(pr.lastPurchaseDate!).inDays;
+        final remaining = pr.intervalDays - daysSince;
+        if (remaining >= 0) {
+          return 'Recompra prevista em $remaining dia${remaining == 1 ? '' : 's'}';
+        }
+      }
+      return 'Período de compra';
+    case PurchaseFunnelStage.outsideWindow:
+      if (pr.lastPurchaseDate != null) {
+        final daysSince = now.difference(pr.lastPurchaseDate!).inDays;
+        return 'Recompra atrasada há $daysSince dia${daysSince == 1 ? '' : 's'}';
+      }
+      return 'Fora do período';
+    case PurchaseFunnelStage.churn:
+      return 'Risco de churn';
+    case PurchaseFunnelStage.neverPurchased:
+    case PurchaseFunnelStage.inactive:
+      return 'Inativo';
+    case null:
+      return null;
+  }
+}
 
-  const _MetaItem({required this.icon, required this.text});
+// ignore: unused_element
+class _RecompraContainer extends StatelessWidget {
+  final PurchaseRecurrenceSnapshot recurrence;
+
+  const _RecompraContainer({required this.recurrence});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 11, color: AppColors.gray500),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: const TextStyle(fontSize: 11.5, color: AppColors.gray500),
-        ),
-      ],
+    final style = _resolveStyle(recurrence);
+    final label = _resolveLabel(recurrence);
+    if (style == null || label == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: style.bg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: style.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: style.color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: style.color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
