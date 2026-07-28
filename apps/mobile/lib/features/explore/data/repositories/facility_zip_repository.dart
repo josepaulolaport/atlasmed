@@ -30,7 +30,12 @@ class FacilityZipRepository extends ZipRepository<FacilityWithIntegrations> {
         repositories: [
           ClinicDetailRepository(id: facilityId, verticalId: verticalId),
           FacilityPhotosRepository(facilityId),
-          FacilityOrdersRepository(facilityId: facilityId, page: 1, limit: 5),
+          FacilityOrdersRepository(
+            facilityId: facilityId,
+            page: 1,
+            limit: 5,
+            verticalId: verticalId,
+          ),
           FacilityPayerSharesRepository(facilityId),
           FacilityRepresentativesRepository(facilityId),
         ],

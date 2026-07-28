@@ -57,6 +57,22 @@ describe("facility list SQL", () => {
     ]));
   });
 
+  it("requires every selected serviceCodes (AND), not any-of (OR)", () => {
+    const { sql, params } = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      serviceCodes: ["AM-ORTOPEDIA", "AM-DERMATOLOGIA", "AM-ORTOPEDIA"],
+    }));
+
+    expect(sql).toContain('"facility_services"."service_code" in');
+    expect(sql).toContain("group by");
+    expect(sql).toContain("count(distinct");
+    expect(sql).toMatch(/=\s*\$?\d+|=\s*2/);
+    // Deduped codes → HAVING count = 2
+    expect(params).toEqual(
+      expect.arrayContaining(["AM-ORTOPEDIA", "AM-DERMATOLOGIA", 2]),
+    );
+  });
+
   it("maps Desempenho purchaseBucket to purchase_funnel_stage (not purchase_status)", () => {
     const active = sqlShape(buildFacilityListConditions({
       scope: { isGlobal: true },
@@ -109,11 +125,14 @@ describe("facility list SQL", () => {
       expect.stringContaining('"facilities"."name" asc'),
       expect.stringContaining('"facilities"."id" asc'),
     ]);
-    expect(lastAsc[0]).toContain('"facilities"."last_valid_purchase_date" asc nulls last');
-    expect(lastDesc[0]).toContain('"facilities"."last_valid_purchase_date" desc nulls last');
-    expect(lastAsc.slice(1)).toEqual(lastDesc.slice(1));
-    expect(lastAsc[1]).toContain('"facilities"."name" asc');
-    expect(lastAsc[2]).toContain('"facilities"."id" asc');
+    // Nulls last via leading `is null` bool sort (not SQL NULLS LAST).
+    expect(lastAsc[0]).toContain('"facilities"."last_valid_purchase_date" is null');
+    expect(lastDesc[0]).toContain('"facilities"."last_valid_purchase_date" is null');
+    expect(lastAsc[1]).toContain('"facilities"."last_valid_purchase_date" asc');
+    expect(lastDesc[1]).toContain('"facilities"."last_valid_purchase_date" desc');
+    expect(lastAsc.slice(2)).toEqual(lastDesc.slice(2));
+    expect(lastAsc[2]).toContain('"facilities"."name" asc');
+    expect(lastAsc[3]).toContain('"facilities"."id" asc');
   });
 });
 

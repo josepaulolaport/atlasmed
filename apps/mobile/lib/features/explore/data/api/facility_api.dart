@@ -34,6 +34,7 @@ class FacilityVerticalProfileDTO {
     this.verticalCode,
     this.commercialStatus,
     this.purchaseStatus,
+    this.purchaseRecurrence,
   });
 
   final String verticalId;
@@ -41,6 +42,7 @@ class FacilityVerticalProfileDTO {
   final String? verticalCode;
   final String? commercialStatus;
   final String? purchaseStatus;
+  final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
   factory FacilityVerticalProfileDTO.fromMap(Map<String, dynamic> map) {
     return FacilityVerticalProfileDTO(
@@ -49,6 +51,11 @@ class FacilityVerticalProfileDTO {
       verticalCode: readNullableString(map['verticalCode']),
       commercialStatus: readNullableString(map['commercialStatus']),
       purchaseStatus: readNullableString(map['purchaseStatus']),
+      purchaseRecurrence: map['purchaseRecurrence'] is Map
+          ? PurchaseRecurrenceSnapshot.fromMap(
+              (map['purchaseRecurrence'] as Map).cast<String, dynamic>(),
+            )
+          : null,
     );
   }
 }

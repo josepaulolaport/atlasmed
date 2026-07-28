@@ -23,6 +23,35 @@ export type FacilityConformityStatus =
   | "EXPIRING_SOON"
   | "NON_CONFORMING";
 
+export type FacilityPurchaseFunnelStage =
+  | "NEVER_PURCHASED"
+  | "OUTSIDE_WINDOW"
+  | "PURCHASE_WINDOW"
+  | "CHURN"
+  | "INACTIVE";
+
+/** Purchase recurrence materialized on a facility×vertical profile. */
+export interface FacilityVerticalProfilePurchaseRecurrence {
+  observedPurchaseIntervalDays: number | null;
+  purchaseIntervalDays: number;
+  purchaseIntervalSource: "DEFAULT" | "CALCULATED" | "MANUAL";
+  manualPurchaseProfile:
+    | "WEEKLY"
+    | "BIWEEKLY"
+    | "MONTHLY"
+    | "BIMONTHLY"
+    | "QUARTERLY"
+    | "SEMIANNUAL"
+    | "ANNUAL"
+    | "CUSTOM"
+    | null;
+  manualPurchaseIntervalDays: number | null;
+  lastValidPurchaseDate: string | null;
+  purchaseRecurrenceSampleSize: number;
+  purchaseFunnelStage: FacilityPurchaseFunnelStage;
+  nextPurchaseFunnelTransitionDate: string | null;
+}
+
 export interface FacilityVerticalProfileRecord {
   verticalId: string;
   verticalCode?: string;
@@ -32,6 +61,8 @@ export interface FacilityVerticalProfileRecord {
   purchaseStatus: FacilityPurchaseStatus | null;
   /** Profile membership territory (source of truth; not facilities.territory_id). */
   territoryId?: string | null;
+  /** Per-linha funnel/recurrence (orders of this verticalId). */
+  purchaseRecurrence?: FacilityVerticalProfilePurchaseRecurrence;
 }
 
 export interface FacilityRecord {
@@ -130,7 +161,6 @@ export interface FacilitySourceUpsertInput {
   sourceLastSeenAt: Date;
 }
 
-export type FacilityPurchaseFunnelStage = "NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE";
 export type FacilityPurchaseProfileFilter = "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
 export type FacilityListSort = "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
 export type FacilityListOrder = "asc" | "desc";

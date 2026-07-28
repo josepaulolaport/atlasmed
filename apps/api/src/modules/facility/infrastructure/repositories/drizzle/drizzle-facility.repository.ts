@@ -188,6 +188,19 @@ async function loadVerticalProfiles(
       commercialStatus: facilityVerticalProfiles.commercialStatus,
       purchaseStatus: facilityVerticalProfiles.purchaseStatus,
       territoryId: facilityVerticalProfiles.territoryId,
+      observedPurchaseIntervalDays:
+        facilityVerticalProfiles.observedPurchaseIntervalDays,
+      purchaseIntervalDays: facilityVerticalProfiles.purchaseIntervalDays,
+      purchaseIntervalSource: facilityVerticalProfiles.purchaseIntervalSource,
+      manualPurchaseProfile: facilityVerticalProfiles.manualPurchaseProfile,
+      manualPurchaseIntervalDays:
+        facilityVerticalProfiles.manualPurchaseIntervalDays,
+      lastValidPurchaseDate: facilityVerticalProfiles.lastValidPurchaseDate,
+      purchaseRecurrenceSampleSize:
+        facilityVerticalProfiles.purchaseRecurrenceSampleSize,
+      purchaseFunnelStage: facilityVerticalProfiles.purchaseFunnelStage,
+      nextPurchaseFunnelTransitionDate:
+        facilityVerticalProfiles.nextPurchaseFunnelTransitionDate,
     })
     .from(facilityVerticalProfiles)
     .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))
@@ -204,6 +217,17 @@ async function loadVerticalProfiles(
       commercialStatus: row.commercialStatus,
       purchaseStatus: row.purchaseStatus,
       territoryId: row.territoryId,
+      purchaseRecurrence: {
+        observedPurchaseIntervalDays: row.observedPurchaseIntervalDays,
+        purchaseIntervalDays: row.purchaseIntervalDays,
+        purchaseIntervalSource: row.purchaseIntervalSource,
+        manualPurchaseProfile: row.manualPurchaseProfile,
+        manualPurchaseIntervalDays: row.manualPurchaseIntervalDays,
+        lastValidPurchaseDate: row.lastValidPurchaseDate,
+        purchaseRecurrenceSampleSize: row.purchaseRecurrenceSampleSize,
+        purchaseFunnelStage: row.purchaseFunnelStage,
+        nextPurchaseFunnelTransitionDate: row.nextPurchaseFunnelTransitionDate,
+      },
     });
     map.set(row.facilityId, list);
   }
@@ -414,35 +438,147 @@ export function buildFacilityListConditions(params: {
   }
   if (params.purchaseBucket) {
     // Must match dashboard countPurchaseBuckets (funnel stages, not purchaseStatus).
+    // When vertical scope is set, filter on profile stage (any matching profile).
     const bucket = purchaseBucketToFunnelFilter(params.purchaseBucket);
-    conditions.push(
-      bucket.includeNull
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      const stageCond = bucket.includeNull
         ? or(
-            inArray(facilities.purchaseFunnelStage, bucket.stages),
-            isNull(facilities.purchaseFunnelStage),
+            inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages),
+            isNull(facilityVerticalProfiles.purchaseFunnelStage),
           )!
-        : inArray(facilities.purchaseFunnelStage, bucket.stages),
-    );
+        : inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages);
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                stageCond,
+              ),
+            ),
+        ),
+      );
+    } else {
+      conditions.push(
+        bucket.includeNull
+          ? or(
+              inArray(facilities.purchaseFunnelStage, bucket.stages),
+              isNull(facilities.purchaseFunnelStage),
+            )!
+          : inArray(facilities.purchaseFunnelStage, bucket.stages),
+      );
+    }
   }
   if (params.productIds?.length) conditions.push(inArray(facilities.id, db.select({ facilityId: orders.facilityId })
     .from(orders).innerJoin(orderItems, eq(orderItems.orderId, orders.id))
     .where(inArray(orderItems.productId, params.productIds))));
   if (params.serviceCodes?.length) {
+    // AND: clinic must offer every selected specialty (not any-of / OR).
+    const codes = [...new Set(params.serviceCodes)];
     conditions.push(
       inArray(
         facilities.id,
         db
           .select({ facilityId: facilityServices.facilityId })
           .from(facilityServices)
-          .where(inArray(facilityServices.serviceCode, params.serviceCodes)),
+          .where(inArray(facilityServices.serviceCode, codes))
+          .groupBy(facilityServices.facilityId)
+          .having(
+            sql`count(distinct ${facilityServices.serviceCode}) = ${codes.length}`,
+          ),
       ),
     );
   }
-  if (params.purchaseFunnelStages?.length) conditions.push(inArray(facilities.purchaseFunnelStage, params.purchaseFunnelStages));
-  if (params.purchaseProfile === "AUTOMATIC") conditions.push(isNull(facilities.manualPurchaseProfile));
-  else if (params.purchaseProfile) conditions.push(eq(facilities.manualPurchaseProfile, params.purchaseProfile));
-  if (params.purchaseIntervalMinDays !== undefined) conditions.push(gte(facilities.purchaseIntervalDays, params.purchaseIntervalMinDays));
-  if (params.purchaseIntervalMaxDays !== undefined) conditions.push(lte(facilities.purchaseIntervalDays, params.purchaseIntervalMaxDays));
+  if (params.purchaseFunnelStages?.length) {
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                inArray(
+                  facilityVerticalProfiles.purchaseFunnelStage,
+                  params.purchaseFunnelStages,
+                ),
+              ),
+            ),
+        ),
+      );
+    } else {
+      conditions.push(
+        inArray(facilities.purchaseFunnelStage, params.purchaseFunnelStages),
+      );
+    }
+  }
+  if (params.purchaseProfile === "AUTOMATIC") {
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                isNull(facilityVerticalProfiles.manualPurchaseProfile),
+              ),
+            ),
+        ),
+      );
+    } else {
+      conditions.push(isNull(facilities.manualPurchaseProfile));
+    }
+  } else if (params.purchaseProfile) {
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                eq(
+                  facilityVerticalProfiles.manualPurchaseProfile,
+                  params.purchaseProfile,
+                ),
+              ),
+            ),
+        ),
+      );
+    } else {
+      conditions.push(
+        eq(facilities.manualPurchaseProfile, params.purchaseProfile),
+      );
+    }
+  }
+  if (params.purchaseIntervalMinDays !== undefined) {
+    conditions.push(
+      gte(facilities.purchaseIntervalDays, params.purchaseIntervalMinDays),
+    );
+  }
+  if (params.purchaseIntervalMaxDays !== undefined) {
+    conditions.push(
+      lte(facilities.purchaseIntervalDays, params.purchaseIntervalMaxDays),
+    );
+  }
   return and(...conditions);
 }
 

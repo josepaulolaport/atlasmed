@@ -281,6 +281,20 @@
       "when": 1785212951794,
       "tag": "0039_rename_linha_comercial_display_names",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1785214095568,
+      "tag": "0040_facility_vertical_profile_purchase_funnel",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1785218689333,
+      "tag": "0041_facility_potential_and_estetica",
+      "breakpoints": true
     }
   ]
 }

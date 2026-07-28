@@ -8,5 +8,6 @@ export * from "./facilities";
 export * from "./cadastro-submissions";
 export * from "./field-suggestions";
 export * from "./catalog";
+export * from "./facility-potential";
 export * from "./orders";
 export * from "./visits";

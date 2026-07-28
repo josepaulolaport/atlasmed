@@ -73,52 +73,82 @@ export class PurchaseRecurrenceService {
     return configurationFor(command);
   }
 
-  async recalculateFacility(facilityId: string, today: string): Promise<PurchaseRecurrenceSnapshot> {
-    const saved = await this.repository.withLockedFacility(facilityId, async (facility) => {
-      const snapshot = calculatePurchaseRecurrence({
-        purchaseDates: facility.purchaseDates,
-        configuration: facility.configuration,
-        today,
-      });
-      return { configuration: facility.configuration, snapshot, result: snapshot };
-    });
+  async recalculateFacility(
+    facilityId: string,
+    verticalId: string,
+    today: string,
+  ): Promise<PurchaseRecurrenceSnapshot> {
+    const saved = await this.repository.withLockedProfile(
+      facilityId,
+      verticalId,
+      async (facility) => {
+        const snapshot = calculatePurchaseRecurrence({
+          purchaseDates: facility.purchaseDates,
+          configuration: facility.configuration,
+          today,
+        });
+        return { configuration: facility.configuration, snapshot, result: snapshot };
+      },
+    );
     if (!saved) throw new ResourceNotFoundError("Facility", facilityId);
     return saved.result;
   }
 
   async updateFacility(
     facilityId: string,
+    verticalId: string,
     input: {
       fields: FacilityUpdateFields;
       configuration: ManualPurchaseConfiguration;
       today: string;
     },
   ): Promise<FacilityRecord> {
-    const saved = await this.repository.withLockedFacility(facilityId, async (facility) => {
-      const snapshot = calculatePurchaseRecurrence({
-        purchaseDates: facility.purchaseDates,
-        configuration: input.configuration,
-        today: input.today,
-      });
-      return { configuration: input.configuration, snapshot, result: undefined };
-    }, input.fields);
+    const saved = await this.repository.withLockedProfile(
+      facilityId,
+      verticalId,
+      async (facility) => {
+        const snapshot = calculatePurchaseRecurrence({
+          purchaseDates: facility.purchaseDates,
+          configuration: input.configuration,
+          today: input.today,
+        });
+        return { configuration: input.configuration, snapshot, result: undefined };
+      },
+      input.fields,
+    );
     if (!saved) throw new ResourceNotFoundError("Facility", facilityId);
     return saved.facility;
   }
 
   async configurePurchaseRecurrence(
     facilityId: string,
+    verticalId: string,
     command: PurchaseRecurrenceCommand,
     scope: ScopeContext,
     today: string,
   ): Promise<PurchaseRecurrenceSnapshot> {
     assertResourceInScope(scope, "facility", facilityId);
     const configuration = this.prepareConfiguration(command);
-    const saved = await this.repository.withLockedFacility(facilityId, async (facility) => {
-      const snapshot = calculatePurchaseRecurrence({ purchaseDates: facility.purchaseDates, configuration, today });
-      return { configuration, snapshot, result: snapshot };
-    });
+    const saved = await this.repository.withLockedProfile(
+      facilityId,
+      verticalId,
+      async (facility) => {
+        const snapshot = calculatePurchaseRecurrence({
+          purchaseDates: facility.purchaseDates,
+          configuration,
+          today,
+        });
+        return { configuration, snapshot, result: snapshot };
+      },
+    );
     if (!saved) throw new ResourceNotFoundError("Facility", facilityId);
     return saved.result;
+  }
+
+  async recalculateAllProfiles(
+    facilityId: string,
+    today: string,
+  ): Promise<{ changed: boolean } | null> {
+    return this.repository.recalculateAllProfiles(facilityId, today);
   }
 }

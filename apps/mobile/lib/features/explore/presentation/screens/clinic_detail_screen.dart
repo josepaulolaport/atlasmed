@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
@@ -11,6 +12,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dar
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
@@ -32,11 +34,13 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_crm_doctors_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_deactivation_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_linha_bar.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_orders_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_payers_bar_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_potential_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_top_shortcuts_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/doctors_list_screen.dart';
@@ -51,7 +55,14 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class ClinicDetailScreen extends ConsumerStatefulWidget {
   final String clinicId;
 
-  const ClinicDetailScreen({super.key, required this.clinicId});
+  /// Linha from navigation (Desempenho / Explorar filter), if any.
+  final String? initialVerticalId;
+
+  const ClinicDetailScreen({
+    super.key,
+    required this.clinicId,
+    this.initialVerticalId,
+  });
 
   @override
   ConsumerState<ClinicDetailScreen> createState() => _ClinicDetailScreenState();
@@ -62,11 +73,32 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
   /// Avoid refetch storms when resume + didPopNext fire close together.
   static const _minRefreshGap = Duration(seconds: 15);
   DateTime? _lastVisibilityRefreshAt;
+  var _seededEntryVertical = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _seedEntryVerticalIfNeeded() {
+    if (_seededEntryVertical) return;
+    final entryId = widget.initialVerticalId;
+    if (entryId == null || entryId.isEmpty) {
+      _seededEntryVertical = true;
+      return;
+    }
+    _seededEntryVertical = true;
+    // Must not write providers during build/initState — schedule after frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+              .read(
+                clinicDetailEntryVerticalIdProvider(widget.clinicId).notifier,
+              )
+              .state =
+          entryId;
+    });
   }
 
   @override
@@ -113,6 +145,7 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    _seedEntryVerticalIfNeeded();
     final clinicId = widget.clinicId;
     final repo = ref.watch(facilityZipRepositoryProvider(clinicId));
 
@@ -338,6 +371,12 @@ Future<void> _openPurchaseRecurrenceEditor(
   WidgetRef ref,
   Facility detail,
 ) async {
+  final profiles = detail.verticalProfiles;
+  final verticalId =
+      ref.read(clinicDetailActiveLinhaIdProvider(detail.id)) ??
+      (profiles.length == 1 ? profiles.first.verticalId : null);
+  if (!context.mounted) return;
+
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -348,6 +387,7 @@ Future<void> _openPurchaseRecurrenceEditor(
         ),
         child: PurchaseRecurrenceForm(
           initialValue: detail.purchaseRecurrence,
+          verticalId: verticalId,
           onSave: (command) async {
             final repository = ref.read(
               facilityPurchaseRecurrenceRepositoryProvider,
@@ -465,12 +505,42 @@ class _ClinicDetailContent extends ConsumerWidget {
     final doctorsRoster = ref.watch(facilityDoctorsRosterProvider(clinicId));
     final payersState = ref.watch(facilityPayersProvider(clinicId));
     final ordersState = ref.watch(facilityOrdersProvider(clinicId));
+
+    final userLinhaOptions =
+        ref.watch(currentUserFacilityVerticalOptionsProvider).valueOrNull ??
+        const [];
+    final linhaOptions = clinicDetailLinhaOptions(
+      userOptions: userLinhaOptions,
+      clinicProfiles: detail.verticalProfiles,
+    );
+    final clinicProfileIds = detail.verticalProfiles
+        .map((p) => p.verticalId)
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final knownIds = ref.watch(clinicDetailKnownProfileIdsProvider(clinicId));
+    if (clinicProfileIds.isNotEmpty &&
+        !_sameIdSet(knownIds, clinicProfileIds)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ref.read(clinicDetailKnownProfileIdsProvider(clinicId).notifier).state =
+            clinicProfileIds;
+      });
+    }
+    final activeLinhaId = ref.watch(clinicDetailActiveLinhaIdProvider(clinicId));
+    final showLinhaSwitcher = shouldShowClinicDetailLinhaSwitcher(linhaOptions);
+    final payersApplyToLinha = isClinicLinhaOrtopedia(
+      profiles: detail.verticalProfiles,
+      activeVerticalId: activeLinhaId,
+    );
+
     // Prefer zipped data (from FacilityZipRepository) over individual providers.
-    final effectivePayers =
+    final rawPayers =
         (integrations?.payerShares != null &&
             integrations!.payerShares.isNotEmpty)
         ? integrations!.payerShares
         : payersState.payers;
+    final effectivePayers =
+        payersApplyToLinha ? rawPayers : const <PayerShare>[];
     final effectivePayersSummary = buildPayerMixSummary(effectivePayers);
     final effectiveOrders =
         (integrations?.orders != null && integrations!.orders.isNotEmpty)
@@ -481,6 +551,11 @@ class _ClinicDetailContent extends ConsumerWidget {
     final canMutate = ref.watch(canMutateFacilityProvider);
     final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
 
+    void onLinhaChanged(String id) {
+      ref.read(clinicDetailSelectedLinhaIdProvider(clinicId).notifier).state =
+          id;
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -490,11 +565,13 @@ class _ClinicDetailContent extends ConsumerWidget {
             Expanded(child: Container(color: AppColors.surfaceTertiary)),
           ],
         ),
-        SingleChildScrollView(
-          child: ColoredBox(
-            color: AppColors.surfaceTertiary,
-            child: Column(
-              children: [
+        CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: ColoredBox(
+                color: AppColors.surfaceTertiary,
+                child: Column(
+                  children: [
                 RepositoryBuilder<
                   FacilityZipRepository,
                   FacilityWithIntegrations
@@ -750,44 +827,70 @@ class _ClinicDetailContent extends ConsumerWidget {
                           }
                         : null,
                   ),
-                ClinicSectionHeader(
-                  title: 'Fontes Pagadoras',
-                  trailing: !canMutate || effectivePayers.isEmpty
-                      ? null
-                      : _HeaderLinkButton(
-                          label: 'Editar',
-                          onTap: () => _openPayerSourcesEditor(
-                            context,
-                            ref,
-                            clinicId: clinicId,
-                            facilityName: detail.name,
-                            payers: effectivePayers,
-                          ),
-                        ),
+                  const ClinicSectionHeader(title: 'Notas de campo'),
+                  ClinicFieldNotesSection(facilityId: clinicId),
+                  ],
                 ),
-                if (payersState.loading && effectivePayers.isEmpty)
-                  const _SectionLoadingCard()
-                else if (payersState.error != null && effectivePayers.isEmpty)
-                  _SectionErrorCard(
-                    message: _friendlyLoadError(payersState.error!),
-                    onRetry: () => ref
-                        .read(facilityPayersProvider(clinicId).notifier)
-                        .retry(),
-                  )
-                else
-                  ClinicPayersBarSection(
-                    payers: effectivePayers,
-                    summary: effectivePayersSummary,
-                    onEdit: canMutate
-                        ? () => _openPayerSourcesEditor(
-                            context,
-                            ref,
-                            clinicId: clinicId,
-                            facilityName: detail.name,
-                            payers: effectivePayers,
-                          )
-                        : null,
+              ),
+            ),
+            if (showLinhaSwitcher && activeLinhaId != null)
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: ClinicDetailLinhaHeaderDelegate(
+                  options: linhaOptions,
+                  selectedVerticalId: activeLinhaId,
+                  onChanged: onLinhaChanged,
+                ),
+              ),
+            SliverToBoxAdapter(
+              child: ColoredBox(
+                color: AppColors.surfaceTertiary,
+                child: Column(
+                  children: [
+                ClinicPotentialSection(
+                  facilityId: clinicId,
+                  canEdit: canMutate,
+                ),
+                if (payersApplyToLinha) ...[
+                  ClinicSectionHeader(
+                    title: 'Fontes Pagadoras',
+                    trailing: !canMutate || effectivePayers.isEmpty
+                        ? null
+                        : _HeaderLinkButton(
+                            label: 'Editar',
+                            onTap: () => _openPayerSourcesEditor(
+                              context,
+                              ref,
+                              clinicId: clinicId,
+                              facilityName: detail.name,
+                              payers: effectivePayers,
+                            ),
+                          ),
                   ),
+                  if (payersState.loading && effectivePayers.isEmpty)
+                    const _SectionLoadingCard()
+                  else if (payersState.error != null && effectivePayers.isEmpty)
+                    _SectionErrorCard(
+                      message: _friendlyLoadError(payersState.error!),
+                      onRetry: () => ref
+                          .read(facilityPayersProvider(clinicId).notifier)
+                          .retry(),
+                    )
+                  else
+                    ClinicPayersBarSection(
+                      payers: effectivePayers,
+                      summary: effectivePayersSummary,
+                      onEdit: canMutate
+                          ? () => _openPayerSourcesEditor(
+                              context,
+                              ref,
+                              clinicId: clinicId,
+                              facilityName: detail.name,
+                              payers: effectivePayers,
+                            )
+                          : null,
+                    ),
+                ],
                 const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
                 if (location == null)
                   const ClinicDetailCard(
@@ -843,8 +946,6 @@ class _ClinicDetailContent extends ConsumerWidget {
                     orders: effectiveOrders,
                     facilityId: clinicId,
                   ),
-                const ClinicSectionHeader(title: 'Notas de campo'),
-                ClinicFieldNotesSection(facilityId: clinicId),
                 const ClinicSectionHeader(title: 'Equipe responsável'),
                 sectionsAsync.when(
                   loading: () => const _SectionLoadingCard(),
@@ -911,9 +1012,11 @@ class _ClinicDetailContent extends ConsumerWidget {
                         ?.commercialStatus,
                   ),
                 SizedBox(height: MediaQuery.of(context).padding.bottom),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -1126,6 +1229,12 @@ class _ClinicDeactivateButton extends ConsumerWidget {
       ),
     );
   }
+}
+
+bool _sameIdSet(Set<String> a, Set<String> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  return a.containsAll(b);
 }
 
 // ===============================================================

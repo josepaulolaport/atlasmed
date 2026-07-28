@@ -77,13 +77,15 @@ class FacilityOrdersRepository extends Repository<FacilityOrdersPage>
     required this.facilityId,
     this.page = 1,
     this.limit = 5,
+    this.verticalId,
     String? baseUrl,
     RepositoryHttpClient? client,
   }) : _injectedClient = client,
        super(
          endpoint: Uri.parse(
            '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/orders'
-           '?page=$page&limit=$limit',
+           '?page=$page&limit=$limit'
+           '${verticalId != null && verticalId.isNotEmpty ? '&verticalId=$verticalId' : ''}',
          ),
          name: 'FacilityOrdersRepository',
        );
@@ -91,6 +93,7 @@ class FacilityOrdersRepository extends Repository<FacilityOrdersPage>
   final String facilityId;
   final int page;
   final int limit;
+  final String? verticalId;
   final RepositoryHttpClient? _injectedClient;
 
   @override

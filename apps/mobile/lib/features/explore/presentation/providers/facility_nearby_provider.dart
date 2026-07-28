@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -124,14 +125,16 @@ final facilityNearbyPreviewProvider =
         clinicVerticalIds: dto.verticalProfiles.map((p) => p.verticalId),
         userVerticalIds: userVerticalIds,
       );
-      final selected = ref.watch(selectedFacilityVerticalIdProvider);
+      // Prefer clinic-local Linha over Explorar "Todas".
+      final clinicLinha = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
+      final selected = clinicLinha ?? ref.watch(selectedFacilityVerticalIdProvider);
       final fallback = await ref.watch(
         effectiveFacilityVerticalIdProvider.future,
       );
       final verticalId = resolveNearbyVerticalId(
         sharedVerticalIds: shared,
         selectedVerticalId: selected,
-        fallbackEffectiveId: fallback,
+        fallbackEffectiveId: fallback ?? clinicLinha,
       );
 
       final items = await fetchNearbyFacilities(

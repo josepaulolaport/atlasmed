@@ -221,23 +221,34 @@ class PurchaseRecurrenceSnapshot {
 }
 
 sealed class PurchaseRecurrenceCommand {
-  const PurchaseRecurrenceCommand();
+  const PurchaseRecurrenceCommand({this.verticalId});
+
+  /// Linha comercial — required by API when clinic has multiple profiles.
+  final String? verticalId;
 
   void validate() {}
-  Map<String, dynamic> toJson();
+
+  Map<String, dynamic> toJson() {
+    validate();
+    return {
+      'purchaseRecurrence': recurrenceBody(),
+      if (verticalId != null && verticalId!.trim().isNotEmpty)
+        'verticalId': verticalId!.trim(),
+    };
+  }
+
+  Map<String, dynamic> recurrenceBody();
 }
 
 class AutomaticPurchaseRecurrence extends PurchaseRecurrenceCommand {
-  const AutomaticPurchaseRecurrence();
+  const AutomaticPurchaseRecurrence({super.verticalId});
 
   @override
-  Map<String, dynamic> toJson() => {
-    'purchaseRecurrence': {'mode': 'AUTOMATIC'},
-  };
+  Map<String, dynamic> recurrenceBody() => {'mode': 'AUTOMATIC'};
 }
 
 class PresetPurchaseRecurrence extends PurchaseRecurrenceCommand {
-  const PresetPurchaseRecurrence(this.profile);
+  const PresetPurchaseRecurrence(this.profile, {super.verticalId});
 
   final PurchaseProfile profile;
 
@@ -254,16 +265,14 @@ class PresetPurchaseRecurrence extends PurchaseRecurrenceCommand {
   }
 
   @override
-  Map<String, dynamic> toJson() {
-    validate();
-    return {
-      'purchaseRecurrence': {'mode': 'PRESET', 'profile': profile.apiValue},
-    };
-  }
+  Map<String, dynamic> recurrenceBody() => {
+    'mode': 'PRESET',
+    'profile': profile.apiValue,
+  };
 }
 
 class CustomPurchaseRecurrence extends PurchaseRecurrenceCommand {
-  const CustomPurchaseRecurrence(this.intervalDays);
+  const CustomPurchaseRecurrence(this.intervalDays, {super.verticalId});
 
   final int intervalDays;
 
@@ -279,10 +288,8 @@ class CustomPurchaseRecurrence extends PurchaseRecurrenceCommand {
   }
 
   @override
-  Map<String, dynamic> toJson() {
-    validate();
-    return {
-      'purchaseRecurrence': {'mode': 'CUSTOM', 'intervalDays': intervalDays},
-    };
-  }
+  Map<String, dynamic> recurrenceBody() => {
+    'mode': 'CUSTOM',
+    'intervalDays': intervalDays,
+  };
 }

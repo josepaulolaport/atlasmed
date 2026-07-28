@@ -174,6 +174,8 @@ const updateFacilityRoute = new Elysia()
         lat: t.Optional(t.Union([t.Number(), t.Null()])),
         lng: t.Optional(t.Union([t.Number(), t.Null()])),
         purchaseRecurrence: t.Optional(purchaseRecurrenceType),
+        /** Linha comercial — required when clinic has multiple vertical profiles. */
+        verticalId: t.Optional(t.String()),
       }),
     }
   );
@@ -1082,6 +1084,7 @@ const listFacilityOrdersRoute = new Elysia()
         page: query.page ? Number(query.page) : 1,
         limit: query.limit ? Number(query.limit) : 5,
         includeItemPreviews: true,
+        verticalId: query.verticalId,
         actor: { userId, roleName: authContext.roleName },
         scope,
       });
@@ -1095,6 +1098,7 @@ const listFacilityOrdersRoute = new Elysia()
       query: t.Object({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
+        verticalId: t.Optional(t.String()),
       }),
     }
   );

@@ -140,7 +140,7 @@ describe("serializeFacility", () => {
       baseFacility({ lastValidPurchaseDate: null, purchaseIntervalDays: 30 }),
     );
 
-    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBeNull();
+    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBeNull();
   });
 
   it("calculates nextEstimatedPurchaseDate from last purchase date + interval", () => {
@@ -151,7 +151,7 @@ describe("serializeFacility", () => {
       }),
     );
 
-    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBe(
+    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
       "2026-01-14T00:00:00.000Z",
     );
   });
@@ -164,7 +164,7 @@ describe("serializeFacility", () => {
       }),
     );
 
-    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBe(
+    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
       "2026-01-17T00:00:00.000Z",
     );
   });

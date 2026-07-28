@@ -12,6 +12,7 @@ import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart'
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/nearby_vertical_badges.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
@@ -181,15 +182,27 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     verticalId: verticalId,
   );
 
+  String? _mapSelectedVerticalId() {
+    final clinicLinha = ref.read(
+      clinicDetailActiveLinhaIdProvider(widget.facilityId),
+    );
+    return clinicLinha ?? ref.read(selectedFacilityVerticalIdProvider);
+  }
+
   /// Imperative pin/card helpers — uses [ref.read] (not watch).
   List<NearbyEstablishment> get _visible {
     final userVerticalIds =
         ref.read(currentUserVerticalIdsProvider).valueOrNull ?? const [];
     final shared = _sharedFor(userVerticalIds);
+    final clinicLinha = ref.read(
+      clinicDetailActiveLinhaIdProvider(widget.facilityId),
+    );
     final verticalId = _verticalIdFor(
       shared: shared,
-      selected: ref.read(selectedFacilityVerticalIdProvider),
-      fallback: ref.read(effectiveFacilityVerticalIdProvider).valueOrNull,
+      selected: _mapSelectedVerticalId(),
+      fallback:
+          ref.read(effectiveFacilityVerticalIdProvider).valueOrNull ??
+          clinicLinha,
     );
     return filterNearbyByRadius(
       _scoped(_nearby, shared: shared, verticalId: verticalId),
@@ -219,8 +232,14 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     final userVerticalIds =
         ref.watch(currentUserVerticalIdsProvider).valueOrNull ?? const [];
     final shared = _sharedFor(userVerticalIds);
-    final selected = ref.watch(selectedFacilityVerticalIdProvider);
-    final fallback = ref.watch(effectiveFacilityVerticalIdProvider).valueOrNull;
+    final clinicLinha = ref.watch(
+      clinicDetailActiveLinhaIdProvider(widget.facilityId),
+    );
+    final selected =
+        clinicLinha ?? ref.watch(selectedFacilityVerticalIdProvider);
+    final fallback =
+        ref.watch(effectiveFacilityVerticalIdProvider).valueOrNull ??
+        clinicLinha;
     final verticalId = _verticalIdFor(
       shared: shared,
       selected: selected,
@@ -297,6 +316,20 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
           FacilityVerticalFilterBar(
             allowedVerticalIds: shared.isEmpty ? null : shared,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            allowAll: false,
+            syncExploreSelection: false,
+            selectedVerticalId: clinicLinha,
+            onChanged: (id) {
+              if (id == null) return;
+              ref
+                      .read(
+                        clinicDetailSelectedLinhaIdProvider(
+                          widget.facilityId,
+                        ).notifier,
+                      )
+                      .state =
+                  id;
+            },
           ),
           Expanded(
             child: _mapUnavailable || AppConfig.mapboxAccessToken.isEmpty

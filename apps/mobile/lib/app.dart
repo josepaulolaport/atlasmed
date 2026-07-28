@@ -22,6 +22,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/scre
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_comparison_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_price_index_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/potential_definitions_admin_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -347,8 +348,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         GoRoute(
           path: '/explore/clinic/:id',
-          builder: (_, state) =>
-              ClinicDetailScreen(clinicId: state.pathParameters['id']!),
+          builder: (_, state) => ClinicDetailScreen(
+            clinicId: state.pathParameters['id']!,
+            initialVerticalId: state.uri.queryParameters['verticalId'],
+          ),
         ),
         GoRoute(
           path: '/explore/doctor/:id',
@@ -463,6 +466,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           ),
         ),
         GoRoute(path: '/catalog', builder: (_, _) => const CatalogHomeScreen()),
+        GoRoute(
+          path: '/catalog/potential-definitions',
+          builder: (_, _) => const PotentialDefinitionsAdminScreen(),
+        ),
         GoRoute(
           path: '/catalog/price-index',
           builder: (_, _) => const CatalogPriceIndexScreen(),

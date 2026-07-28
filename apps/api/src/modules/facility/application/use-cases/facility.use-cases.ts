@@ -268,7 +268,17 @@ export class GetFacilityUseCase {
       }
     }
 
-    return serializeFacility(clinic, listScope.verticalIds);
+    // Detail: scope commercial/funnel to active Linha, but expose every
+    // user-assigned profile so the mobile Linha switcher can flip Orto↔Derm.
+    const assignedVerticalIds = input.scope.assignedVerticalIds ?? [];
+    const exposeProfileVerticalIds =
+      assignedVerticalIds.length > 0
+        ? assignedVerticalIds
+        : listScope.verticalIds;
+
+    return serializeFacility(clinic, listScope.verticalIds, {
+      exposeProfileVerticalIds,
+    });
   }
 }
 
@@ -312,6 +322,8 @@ export class UpdateFacilityUseCase {
     lat?: number | null;
     lng?: number | null;
     purchaseRecurrence?: PurchaseRecurrenceCommand;
+    /** Required when updating purchaseRecurrence for multi-vertical clinics. */
+    verticalId?: string;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -327,13 +339,28 @@ export class UpdateFacilityUseCase {
       if (!this.deps.purchaseRecurrenceService) {
         throw new ValidationError([{ field: "purchaseRecurrence", message: "Purchase recurrence is unavailable" }]);
       }
+      const profiles = (existing.verticalProfiles ?? []).filter((p) => p.isActive);
+      const verticalId =
+        input.verticalId
+        ?? input.scope.activeVerticalId
+        ?? (profiles.length === 1 ? profiles[0]!.verticalId : undefined);
+      if (!verticalId) {
+        throw new ValidationError([{
+          field: "verticalId",
+          message: "verticalId is required when configuring purchase recurrence",
+        }]);
+      }
       const configuration = this.deps.purchaseRecurrenceService.prepareConfiguration(input.purchaseRecurrence);
-      const clinic = await this.deps.purchaseRecurrenceService.updateFacility(input.facilityId, {
-        fields: { name: input.name, manuallyEditedAt: new Date() },
-        configuration,
-        today: new Date().toISOString().slice(0, 10),
-      });
-      return serializeFacility(clinic);
+      const clinic = await this.deps.purchaseRecurrenceService.updateFacility(
+        input.facilityId,
+        verticalId,
+        {
+          fields: { name: input.name, manuallyEditedAt: new Date() },
+          configuration,
+          today: new Date().toISOString().slice(0, 10),
+        },
+      );
+      return serializeFacility(clinic, [verticalId]);
     }
 
     const coordinates = this.deps.facilityGeocodingService

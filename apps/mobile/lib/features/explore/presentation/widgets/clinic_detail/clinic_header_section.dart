@@ -8,13 +8,12 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_service_chips.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_status_chips.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -163,16 +162,15 @@ class ClinicHeaderSection extends ConsumerWidget {
                 else
                   ClinicServiceChips.empty(onNavy: true),
                 const SizedBox(height: 10),
-                // Same StatusChip labels/colors as Explorar clinic rows
-                // (commercial + purchase funnel bucket — not purchase_status).
                 Builder(
                   builder: (context) {
-                    final commercialApi = detail.commercial?.commercialStatus
-                        ?.trim();
-                    final funnel = detail.purchaseRecurrence?.funnelStage;
-                    final hasCommercial =
-                        commercialApi != null && commercialApi.isNotEmpty;
-                    if (!hasCommercial && funnel == null) {
+                    final chips = buildFacilityStatusChips(
+                      commercialStatus: detail.commercial?.commercialStatus,
+                      purchaseRecurrence: detail.purchaseRecurrence,
+                      verticalProfiles: detail.verticalProfiles,
+                      onNavy: true,
+                    );
+                    if (chips.isEmpty) {
                       return StatusChip(
                         label: 'Sem status',
                         color: AppColors.gray400,
@@ -184,24 +182,7 @@ class ClinicHeaderSection extends ConsumerWidget {
                     return Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: [
-                        if (hasCommercial)
-                          StatusChip(
-                            label: CommercialStatusFilter.label(commercialApi),
-                            color: CommercialStatusFilter.color(commercialApi),
-                            bg: CommercialStatusFilter.bg(commercialApi),
-                            small: true,
-                            onNavy: true,
-                          ),
-                        if (funnel != null)
-                          StatusChip(
-                            label: funnel.label,
-                            color: funnel.color,
-                            bg: funnel.backgroundColor,
-                            small: true,
-                            onNavy: true,
-                          ),
-                      ],
+                      children: chips,
                     );
                   },
                 ),

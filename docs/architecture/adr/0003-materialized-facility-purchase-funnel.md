@@ -2,7 +2,16 @@
 
 ## Status
 
-Accepted
+Accepted — **amended 2026-07-28**: funnel is per Linha comercial (`facility_vertical_profiles`), not facility-global.
+
+### Amendment (per-vertical materialization)
+
+- Eligible orders are filtered by `(facility_id, vertical_id)`.
+- Snapshot columns live on `facility_vertical_profiles` (same fields as originally on `facilities`).
+- API list/detail expose top-level `purchaseRecurrence` from the matching profile(s): single profile or multi-profile **consensus**; when stages disagree, omit top-level and keep per-profile `verticalProfiles[].purchaseRecurrence`.
+- `facilities.*` funnel columns remain a **rollup** (most actionable stage across active profiles) for Meili / legacy sort until search is vertical-aware.
+- Manual configure / PATCH requires `verticalId` when the clinic has more than one active profile.
+- Worker backfill/reconcile recalculates every active profile for each facility, then refreshes the facility rollup.
 
 ## Context
 

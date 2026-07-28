@@ -48,6 +48,7 @@ export interface ListFacilitiesQuery {
   /** Purchase-status bucket from Desempenho donut drill-down. */
   purchaseBucket?: FacilityPurchaseBucket;
   productIds?: string[];
+  /** CNES/Atlas specialty codes — AND semantics (clinic must have all). */
   serviceCodes?: string[];
   purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
   purchaseProfile?: FacilityPurchaseProfileFilter;

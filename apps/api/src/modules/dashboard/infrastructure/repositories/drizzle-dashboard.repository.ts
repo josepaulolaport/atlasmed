@@ -41,6 +41,7 @@ export class DrizzleDashboardRepository {
 
     const conditions = [
       eq(facilityVerticalProfiles.verticalId, input.verticalId),
+      eq(facilityVerticalProfiles.isActive, true),
     ];
     if (input.facilityIds !== null) {
       conditions.push(
@@ -51,17 +52,17 @@ export class DrizzleDashboardRepository {
     const [row] = await db
       .select({
         active:
-          sql<number>`COUNT(*) FILTER (WHERE ${facilities.purchaseFunnelStage} = 'PURCHASE_WINDOW')::int`,
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} = 'PURCHASE_WINDOW')::int`,
         inactive:
-          sql<number>`COUNT(*) FILTER (WHERE ${facilities.purchaseFunnelStage} IN ('OUTSIDE_WINDOW', 'CHURN'))::int`,
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IN ('OUTSIDE_WINDOW', 'CHURN'))::int`,
         neverBought:
-          sql<number>`COUNT(*) FILTER (WHERE ${facilities.purchaseFunnelStage} IN ('NEVER_PURCHASED', 'INACTIVE') OR ${facilities.purchaseFunnelStage} IS NULL)::int`,
+          sql<number>`COUNT(*) FILTER (WHERE ${facilityVerticalProfiles.purchaseFunnelStage} IN ('NEVER_PURCHASED', 'INACTIVE') OR ${facilityVerticalProfiles.purchaseFunnelStage} IS NULL)::int`,
         total: sql<number>`COUNT(*)::int`,
       })
-      .from(facilities)
+      .from(facilityVerticalProfiles)
       .innerJoin(
-        facilityVerticalProfiles,
-        eq(facilityVerticalProfiles.facilityId, facilities.id),
+        facilities,
+        eq(facilities.id, facilityVerticalProfiles.facilityId),
       )
       .where(and(...conditions));
 

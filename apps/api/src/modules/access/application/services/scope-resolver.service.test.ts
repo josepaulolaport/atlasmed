@@ -70,7 +70,7 @@ describe("ScopeResolver", () => {
         findVerticalIdsByUserId: mock(async () => ["vertical-derm"]),
         listActiveVerticals: mock(async () => [
           { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopédica" },
-          { id: "vertical-derm", code: "DERMATOLOGIA", name: "Dermatológica" },
+          { id: "vertical-derm", code: "DERMATOLOGIA", name: "Estética" },
         ]),
       }),
     }).resolve("admin-1", Role.ADMIN);

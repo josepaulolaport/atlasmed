@@ -22,6 +22,7 @@
     "db:seed": "bun src/infrastructure/database/seed.ts",
     "db:seed:sp-territories": "bun src/scripts/seed-sp-demo-territories.ts",
     "db:seed:dermatologia": "bun src/scripts/seed-dermatologia-demo.ts",
+    "db:seed:potential-definitions": "bun src/scripts/seed-potential-definitions.ts",
     "db:sync:priority-services": "bun src/scripts/sync-priority-facility-services.ts",
     "db:import:mcp-test": "bun src/scripts/import-mcp-test-data.ts",
     "db:import:mcp-test:all": "ATLASMED_ALLOW_DATA_LOSS=1 bun src/scripts/import-mcp-test-data.ts --all --admin-email=admin@demo.atlasmed.local",

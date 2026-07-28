@@ -14,6 +14,7 @@ import { searchSync } from "../modules/search-sync";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
 import { orders } from "../modules/orders";
+import { potential } from "../modules/potential";
 import { visits } from "../modules/visits";
 import { dashboard } from "../modules/dashboard";
 import { user as avatarUser } from "../modules/user";
@@ -137,6 +138,7 @@ const app = new Elysia()
       .use(territory)
       .use(maps)
       .use(orders)
+      .use(potential)
       .use(visits)
       .use(dashboard),
   );

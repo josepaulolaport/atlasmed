@@ -28,7 +28,7 @@ async function ensureBusinessVerticals() {
   // Adjective form ("linha ortopédica") — distinct from clinic specialty nouns.
   const defs = [
     { id: "bv_ortopedia_p0", code: "ORTOPEDIA", name: "Ortopédica" },
-    { id: "bv_dermatologia_p1", code: "DERMATOLOGIA", name: "Dermatológica" },
+    { id: "bv_dermatologia_p1", code: "DERMATOLOGIA", name: "Estética" },
   ] as const;
 
   for (const def of defs) {

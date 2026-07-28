@@ -24,12 +24,43 @@ function calculateNextEstimatedPurchaseDate(
   return nextDate.toISOString();
 }
 
+function serializePurchaseRecurrence(recurrence: {
+  observedPurchaseIntervalDays: number | null;
+  purchaseIntervalDays: number;
+  purchaseIntervalSource: string;
+  manualPurchaseProfile: string | null;
+  manualPurchaseIntervalDays: number | null;
+  lastValidPurchaseDate: string | null;
+  purchaseRecurrenceSampleSize: number;
+  purchaseFunnelStage: string;
+  nextPurchaseFunnelTransitionDate: string | null;
+}) {
+  return {
+    observedIntervalDays: recurrence.observedPurchaseIntervalDays,
+    intervalDays: recurrence.purchaseIntervalDays,
+    source: recurrence.purchaseIntervalSource,
+    profile: recurrence.manualPurchaseProfile,
+    manualIntervalDays: recurrence.manualPurchaseIntervalDays,
+    lastPurchaseDate: recurrence.lastValidPurchaseDate,
+    nextEstimatedPurchaseDate: calculateNextEstimatedPurchaseDate(
+      recurrence.lastValidPurchaseDate,
+      recurrence.purchaseIntervalDays,
+    ),
+    sampleSize: recurrence.purchaseRecurrenceSampleSize,
+    funnelStage: recurrence.purchaseFunnelStage,
+    nextTransitionDate: recurrence.nextPurchaseFunnelTransitionDate,
+  };
+}
+
 export function serializeFacility(
   clinic: FacilityRecord | FacilityListRecord,
   verticalIds?: string[],
+  options?: { exposeProfileVerticalIds?: string[] },
 ) {
   const list = clinic as FacilityListRecord;
-  const verticalContext = applyVerticalProfileContext(clinic, verticalIds);
+  const verticalContext = applyVerticalProfileContext(clinic, verticalIds, {
+    exposeProfileVerticalIds: options?.exposeProfileVerticalIds,
+  });
 
   return {
     id: clinic.id,
@@ -70,21 +101,13 @@ export function serializeFacility(
         }
       : {}),
     conformityStatus: clinic.conformityStatus,
-    purchaseRecurrence: {
-      observedIntervalDays: clinic.observedPurchaseIntervalDays,
-      intervalDays: clinic.purchaseIntervalDays,
-      source: clinic.purchaseIntervalSource,
-      profile: clinic.manualPurchaseProfile,
-      manualIntervalDays: clinic.manualPurchaseIntervalDays,
-      lastPurchaseDate: clinic.lastValidPurchaseDate,
-      nextEstimatedPurchaseDate: calculateNextEstimatedPurchaseDate(
-        clinic.lastValidPurchaseDate,
-        clinic.purchaseIntervalDays,
-      ),
-      sampleSize: clinic.purchaseRecurrenceSampleSize,
-      funnelStage: clinic.purchaseFunnelStage,
-      nextTransitionDate: clinic.nextPurchaseFunnelTransitionDate,
-    },
+    ...(verticalContext.purchaseRecurrence
+      ? {
+          purchaseRecurrence: serializePurchaseRecurrence(
+            verticalContext.purchaseRecurrence,
+          ),
+        }
+      : {}),
     professionalCount: list.professionalCount ?? 0,
     lastVisitAt: list.lastVisitAt?.toISOString() ?? undefined,
     consultantName: clinic.consultantName,
@@ -108,6 +131,11 @@ function serializeVerticalProfile(profile: FacilityVerticalProfileRecord) {
     commercialStatus: profile.commercialStatus ?? undefined,
     purchaseStatus: profile.purchaseStatus ?? undefined,
     territoryId: profile.territoryId ?? undefined,
+    ...(profile.purchaseRecurrence
+      ? {
+          purchaseRecurrence: serializePurchaseRecurrence(profile.purchaseRecurrence),
+        }
+      : {}),
   };
 }
 

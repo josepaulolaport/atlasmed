@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
-
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_status_chips.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicRow extends StatelessWidget {
@@ -15,7 +12,11 @@ class ClinicRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final funnelStage = clinic.purchaseRecurrence?.funnelStage;
+    final statusChips = buildFacilityStatusChips(
+      commercialStatus: clinic.commercialStatus,
+      purchaseRecurrence: clinic.purchaseRecurrence,
+      verticalProfiles: clinic.verticalProfiles,
+    );
     final serviceChip = FacilityServiceLabels.chipSummary(
       clinic.displayServices,
     );
@@ -96,104 +97,85 @@ class ClinicRow extends StatelessWidget {
                       ],
                     ),
                   ],
-                  if (clinic.distanceKm != null || clinic.doctorCount > 0) ...[
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        if (clinic.distanceKm != null) ...[
-                          const Icon(
-                            Icons.near_me_rounded,
-                            size: 11,
-                            color: AppColors.gray500,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${clinic.distanceKm!.toStringAsFixed(1)} km',
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.gray500,
-                            ),
-                          ),
-                        ],
-                        if (clinic.distanceKm != null && clinic.doctorCount > 0)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 6),
-                            child: Text(
-                              '•',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.gray400,
-                              ),
-                            ),
-                          ),
-                        if (clinic.doctorCount > 0) ...[
-                          const Icon(
-                            Icons.person_outline_rounded,
-                            size: 11,
-                            color: AppColors.gray500,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.gray500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
+                  const SizedBox(height: 3),
+                  Row(
                     children: [
-                      if (serviceChip.label != null) ...[
-                        _ServiceChip(label: serviceChip.label!),
-                        if (serviceChip.overflow > 0)
-                          _ServiceChip(label: '+${serviceChip.overflow}'),
-                      ] else
-                        const _ServiceChip(
-                          label: 'Sem especialidade',
-                          muted: true,
+                      if (clinic.distanceKm != null) ...[
+                        const Icon(
+                          Icons.near_me_rounded,
+                          size: 11,
+                          color: AppColors.gray500,
                         ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${clinic.distanceKm!.toStringAsFixed(1)} km',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.gray500,
+                          ),
+                        ),
+                      ],
+                      if (clinic.distanceKm != null)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6),
+                          child: Text(
+                            '•',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.gray400,
+                            ),
+                          ),
+                        ),
+                      const Icon(
+                        Icons.person_outline_rounded,
+                        size: 11,
+                        color: AppColors.gray500,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (serviceChip.label != null) ...[
+                                _ServiceChip(label: serviceChip.label!),
+                                if (serviceChip.overflow > 0)
+                                  _ServiceChip(
+                                    label: '+${serviceChip.overflow}',
+                                  ),
+                              ] else
+                                const _ServiceChip(
+                                  label: 'Sem especialidade',
+                                  muted: true,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  if (clinic.commercialStatus != null ||
-                      funnelStage != null ||
-                      clinic.lastVisitDays != null) ...[
+                  if (statusChips.isNotEmpty || clinic.lastVisitDays != null) ...[
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (clinic.commercialStatus != null)
-                          StatusChip(
-                            label: CommercialStatusFilter.label(
-                              clinic.commercialStatus!,
-                            ),
-                            color: CommercialStatusFilter.color(
-                              clinic.commercialStatus!,
-                            ),
-                            bg: CommercialStatusFilter.bg(
-                              clinic.commercialStatus!,
-                            ),
-                            small: true,
-                          ),
-                        if (funnelStage != null)
-                          StatusChip(
-                            label: funnelStage.label,
-                            color: funnelStage.color,
-                            bg: funnelStage.backgroundColor,
-                            small: true,
-                          ),
+                        ...statusChips,
                         if (clinic.lastVisitDays != null)
                           _MetaItem(
                             icon: Icons.access_time_rounded,

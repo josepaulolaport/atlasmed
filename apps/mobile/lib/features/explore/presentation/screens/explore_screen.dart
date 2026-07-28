@@ -40,6 +40,10 @@ class ExploreResultsList extends StatelessWidget {
   final VoidCallback onLoadMore;
   final double bottomInset;
 
+  /// When set (e.g. Desempenho Linha), passed into clinic detail as
+  /// `?verticalId=` so Potencial / sticky Linha open on the right profile.
+  final String? preferredVerticalId;
+
   const ExploreResultsList({
     super.key,
     required this.items,
@@ -47,6 +51,7 @@ class ExploreResultsList extends StatelessWidget {
     required this.isLoadingMore,
     required this.onLoadMore,
     required this.bottomInset,
+    this.preferredVerticalId,
   });
 
   @override
@@ -81,7 +86,20 @@ class ExploreResultsList extends StatelessWidget {
           return items[index].fold(
             (facility) => ClinicRow(
               clinic: facility,
-              onTap: () => context.push('/explore/clinic/${facility.id}'),
+              onTap: () {
+                final id = facility.id;
+                final verticalId = preferredVerticalId;
+                if (verticalId != null && verticalId.isNotEmpty) {
+                  context.push(
+                    Uri(
+                      path: '/explore/clinic/$id',
+                      queryParameters: {'verticalId': verticalId},
+                    ).toString(),
+                  );
+                } else {
+                  context.push('/explore/clinic/$id');
+                }
+              },
             ),
             (doctor) => DoctorRow(
               doctor: doctor,
