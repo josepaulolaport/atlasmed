@@ -12,7 +12,7 @@ class FacilityEntry {
   final String city;
   final double? distanceKm;
 
-  /// API `commercialStatus` (`REGISTERED` / `ACTIVE` / `SUSPENDED` / `INACTIVE`).
+  /// API `commercialStatus` (`UNREGISTERED` / `REGISTERED` / `SUSPENDED` / `CLOSED`).
   final String? commercialStatus;
   final int? lastVisitDays;
   final int doctorCount;

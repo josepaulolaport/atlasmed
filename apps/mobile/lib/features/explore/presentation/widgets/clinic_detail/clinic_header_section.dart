@@ -78,7 +78,7 @@ class ClinicHeaderSection extends ConsumerWidget {
             commercialStatus:
                 liveCommercial ??
                 sectionSignals?.commercialStatus ??
-                FacilityCommercialStatus.registered,
+                FacilityCommercialStatus.unregistered,
             purchaseStatus: sectionSignals?.purchaseStatus,
             conformityStatus:
                 liveConformity ??
@@ -528,31 +528,29 @@ class _SignalChip extends StatelessWidget {
             decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
-          Flexible(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '$category: ',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xB3FFFFFF),
-                    ),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$category: ',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xB3FFFFFF),
                   ),
-                  TextSpan(
-                    text: label,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                ),
+                TextSpan(
+                  text: label,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
-                ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -581,9 +579,10 @@ class _HeaderContactAction extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: const Color(0xCCFFFFFF)),
           const SizedBox(width: 5),
-          // `Wrap` still bounds each child to its own max width, so a long
-          // e-mail without a shrink/ellipsis path can overflow this Row.
-          Flexible(
+          // Bound width without Flexible — Flex parentData inside Wrap
+          // children trips `!semantics.parentDataDirty` during rebuilds.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
             child: Text(
               label,
               style: const TextStyle(

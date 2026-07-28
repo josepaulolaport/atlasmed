@@ -121,7 +121,6 @@ class ClinicRow extends StatelessWidget {
                       if (clinic.purchaseRecurrence?.funnelStage != null)
                         _PurchaseFunnelChip(
                           stage: clinic.purchaseRecurrence!.funnelStage!,
-                          intervalDays: clinic.purchaseRecurrence!.intervalDays,
                         ),
                       if (clinic.lastVisitDays != null)
                         _MetaItem(
@@ -148,36 +147,26 @@ class ClinicRow extends StatelessWidget {
 }
 
 class _PurchaseFunnelChip extends StatelessWidget {
-  const _PurchaseFunnelChip({required this.stage, required this.intervalDays});
+  const _PurchaseFunnelChip({required this.stage});
 
   final PurchaseFunnelStage stage;
-  final int intervalDays;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: stage.backgroundColor,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            stage.label,
-            style: TextStyle(
-              color: stage.color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            'A cada $intervalDays dias',
-            style: TextStyle(color: stage.color, fontSize: 10),
-          ),
-        ],
+      child: Text(
+        stage.label,
+        style: TextStyle(
+          color: stage.color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
+        ),
       ),
     );
   }

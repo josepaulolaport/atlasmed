@@ -13,7 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets(
-    'clinic row shows stage, interval and never-purchased copy without overflow',
+    'clinic row shows never-purchased stage without buy frequency',
     (tester) async {
       tester.view.physicalSize = const Size(320, 640);
       tester.view.devicePixelRatio = 1;
@@ -28,7 +28,7 @@ void main() {
                 city: 'São Paulo',
                 neighborhood: 'Centro',
                 distanceKm: 1,
-                commercialStatus: CommercialStatusFilter.active,
+                commercialStatus: CommercialStatusFilter.registered,
                 doctorCount: 2,
                 purchaseRecurrence: const PurchaseRecurrenceSnapshot(
                   intervalDays: 30,
@@ -42,7 +42,7 @@ void main() {
         ),
       );
       expect(find.text('Nunca comprou'), findsOneWidget);
-      expect(find.text('A cada 30 dias'), findsOneWidget);
+      expect(find.text('A cada 30 dias'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

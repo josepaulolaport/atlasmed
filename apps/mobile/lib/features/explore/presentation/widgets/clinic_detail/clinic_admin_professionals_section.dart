@@ -38,31 +38,28 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (professionals.isEmpty && !hasMore) {
       return ClinicDetailCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Nenhum contato administrativo cadastrado',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
-            ),
-            if (onAssociate != null) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onAssociate,
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                label: const Text('Criar profissional'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.navyBright,
-                  side: const BorderSide(color: AppColors.blue100),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            children: [
+              const Text(
+                'Nenhum contato administrativo cadastrado',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.gray400),
+              ),
+              if (onAssociate != null) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: onAssociate,
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                  label: const Text('Criar profissional'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.navyBright,
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       );
     }
@@ -201,42 +198,48 @@ class _ProfessionalCard extends StatelessWidget {
                   )
                 : null,
           ),
-          const Spacer(),
-          const Divider(height: 1, color: AppColors.gray100),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => RepresentativeDetailScreen(
-                  professional: professional,
-                  facilityName: facilityName,
-                  facilityId: facilityId,
-                ),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Ver perfil completo',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.navyBright,
+          Expanded(
+            child: Column(
+              children: [
+                const Spacer(),
+                const Divider(height: 1, color: AppColors.gray100),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RepresentativeDetailScreen(
+                        professional: professional,
+                        facilityName: facilityName,
+                        facilityId: facilityId,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: AppColors.navyBright,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          'Ver perfil completo',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navyBright,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: AppColors.navyBright,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const Spacer(),
+              ],
             ),
           ),
         ],

@@ -4,10 +4,10 @@ export interface FacilityService {
 }
 
 export type FacilityCommercialStatus =
+  | "UNREGISTERED"
   | "REGISTERED"
-  | "ACTIVE"
   | "SUSPENDED"
-  | "INACTIVE";
+  | "CLOSED";
 
 export type FacilityPurchaseStatus =
   | "NON_BUYER"

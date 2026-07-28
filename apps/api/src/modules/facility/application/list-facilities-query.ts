@@ -1,6 +1,6 @@
 import { ValidationError } from "../../../shared/errors";
 
-const COMMERCIAL_STATUSES = ["REGISTERED", "ACTIVE", "SUSPENDED", "INACTIVE"] as const;
+const COMMERCIAL_STATUSES = ["UNREGISTERED", "REGISTERED", "SUSPENDED", "CLOSED"] as const;
 const PURCHASE_FUNNEL_STAGES = ["NEVER_PURCHASED", "OUTSIDE_WINDOW", "PURCHASE_WINDOW", "CHURN", "INACTIVE"] as const;
 const PURCHASE_PROFILES = ["AUTOMATIC", "WEEKLY", "BIWEEKLY", "MONTHLY", "BIMONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL", "CUSTOM"] as const;
 const SORTS = ["relevance", "distance", "name", "purchaseFunnelStage", "purchaseIntervalDays", "lastPurchaseDate"] as const;

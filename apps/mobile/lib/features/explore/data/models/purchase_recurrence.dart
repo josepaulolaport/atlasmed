@@ -119,7 +119,8 @@ extension PurchaseFunnelStageX on PurchaseFunnelStage {
   };
 
   Color get color => switch (this) {
-    PurchaseFunnelStage.neverPurchased => AppColors.gray600,
+    // Match Desempenho donut "Nunca compraram" (#dc2626).
+    PurchaseFunnelStage.neverPurchased => const Color(0xFFdc2626),
     PurchaseFunnelStage.outsideWindow => AppColors.blue600,
     PurchaseFunnelStage.purchaseWindow => AppColors.green600,
     PurchaseFunnelStage.churn => AppColors.amberDark,

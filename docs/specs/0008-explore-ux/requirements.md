@@ -43,7 +43,7 @@
 10. **GPS freshness on Explorar:** refresh position (a) when entering Explorar, (b) on pull-to-refresh, (c) periodically while the Explorar screen is open (interval TBD in design; suggested 60–120s).
 11. **No proximity toggle.** Location is app precondition; radius is a normal clearable clinic filter.
 12. **Reuse existing list APIs** for geo. Prefer extending query params over a new search stack.
-13. **Clinic filter “Status”** maps to API `commercialStatus`: `REGISTERED` \| `ACTIVE` \| `SUSPENDED` \| `INACTIVE` with pt-BR labels (not the old `ativa` / `negociacao` slugs).
+13. **Clinic filter “Status”** maps to API `commercialStatus`: `UNREGISTERED` \| `REGISTERED` \| `SUSPENDED` \| `CLOSED` with pt-BR labels (Pré-cadastro / Operante / Suspensa / Encerrada).
 
 ## Suggested distance bands (clinics + doctors UI)
 
@@ -67,7 +67,7 @@ Exact km cutoffs can be tuned in design; principle is band headers on a globally
 
 | Filter | UI | API |
 |---|---|---|
-| Status | Single/multi TBD; label “Status” | `commercialStatus` = `REGISTERED` / `ACTIVE` / `SUSPENDED` / `INACTIVE` |
+| Status | Single/multi TBD; label “Status” | `commercialStatus` = `UNREGISTERED` / `REGISTERED` / `SUSPENDED` / `CLOSED` |
 | Distância (raio) | Chips 5 / 10 / 25 / 50 / 100 km; clearable | `radiusKm` when set; omit when cleared |
 
 **Strong candidates (pick next — need API support check / small API adds)**
@@ -137,7 +137,7 @@ Distance **display + default sort** still use `latitude`/`longitude` (and `sort=
 
 ### Status filter
 
-15. WHEN the user filters by Status THEN the client SHALL send API `commercialStatus` values (`REGISTERED` \| `ACTIVE` \| `SUSPENDED` \| `INACTIVE`) with pt-BR labels in the UI.
+15. WHEN the user filters by Status THEN the client SHALL send API `commercialStatus` values (`UNREGISTERED` \| `REGISTERED` \| `SUSPENDED` \| `CLOSED`) with pt-BR labels in the UI.
 
 ## Locked decisions (was open — closed 2026-07-23)
 

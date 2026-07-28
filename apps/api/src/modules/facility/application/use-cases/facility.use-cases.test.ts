@@ -242,7 +242,7 @@ describe("ListFacilitiesUseCase", () => {
       search: "  12345678000199  ",
       page: 2,
       limit: 2,
-      commercialStatus: "ACTIVE",
+      commercialStatus: "REGISTERED",
       productIds: ["product-1"],
       scope: {
         isGlobal: false,
@@ -262,7 +262,7 @@ describe("ListFacilitiesUseCase", () => {
     expect(searchCalls).toBe(1);
     expect(hydratedIds).toEqual(["facility-2", "facility-1"]);
     expect(receivedParams).toMatchObject({
-      commercialStatus: "ACTIVE",
+      commercialStatus: "REGISTERED",
       productIds: ["product-1"],
       scope: { isGlobal: false, facilityIds: ["facility-1", "facility-2"] },
     });
@@ -318,7 +318,7 @@ describe("ListFacilitiesUseCase", () => {
 
     await useCase.execute(withRole({
       search: "central",
-      commercialStatus: "ACTIVE",
+      commercialStatus: "REGISTERED",
       latitude: -23.55,
       longitude: -46.63,
       radiusKm: 5,
@@ -365,7 +365,7 @@ describe("ListFacilitiesUseCase", () => {
 
     await useCase.execute(withRole({
       search: "central",
-      commercialStatus: "ACTIVE",
+      commercialStatus: "REGISTERED",
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 1_000 }, (_, index) => `facility-${index}-${"x".repeat(20)}`), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
 

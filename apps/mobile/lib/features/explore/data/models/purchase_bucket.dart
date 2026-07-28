@@ -1,4 +1,4 @@
-/// Desempenho donut → Explorar list filter (`purchaseFunnelStage` query param).
+/// Desempenho donut → clinics list (`purchaseBucket` API filter).
 ///
 /// Mapeia os 3 buckets do dashboard para os estágios do funil de compra
 /// (`PURCHASE_WINDOW`, `OUTSIDE_WINDOW`, `CHURN`, `NEVER_PURCHASED`,
@@ -14,8 +14,8 @@ abstract final class PurchaseBucketFilter {
   static const values = [active, inactive, neverBought];
 
   static String label(String value) => switch (value) {
-    active => 'No funil',
-    inactive => 'Risco',
+    active => 'Ativas',
+    inactive => 'Inativas',
     neverBought => 'Nunca compraram',
     _ => value,
   };

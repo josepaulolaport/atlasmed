@@ -131,7 +131,7 @@ void main() {
       'id': 'facility-1',
       'name': 'Clínica Central',
       'professionalCount': 0,
-      'commercialStatus': 'ACTIVE',
+      'commercialStatus': 'REGISTERED',
     });
     final absent = FacilityDTO.fromMap({
       'id': 'facility-2',
@@ -139,7 +139,7 @@ void main() {
       'professionalCount': 0,
     });
 
-    expect(active.commercialStatus, 'ACTIVE');
+    expect(active.commercialStatus, 'REGISTERED');
     expect(absent.commercialStatus, isNull);
   });
 

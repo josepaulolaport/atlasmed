@@ -16,9 +16,9 @@ export function isBillingEmailComplete(billingEmail: string | null | undefined):
 
 /**
  * When every tax-type-applicable file doc is APPROVED/VALIDATED and billingEmail
- * is set, flip conformityStatus=COMPLETE and commercialStatus=ACTIVE on the
+ * is set, flip conformityStatus=COMPLETE and commercialStatus=REGISTERED on the
  * facility vertical profile. Otherwise force conformityStatus=INCOMPLETE and
- * commercialStatus=SUSPENDED when it was ACTIVE.
+ * commercialStatus=SUSPENDED when it was REGISTERED (operante).
  */
 export class FacilityCadastroCompletionService {
   constructor(private readonly deps: Dependencies) {}
@@ -29,7 +29,7 @@ export class FacilityCadastroCompletionService {
   ): Promise<{
     complete: boolean;
     conformityStatus: "INCOMPLETE" | "COMPLETE";
-    commercialStatus: "ACTIVE" | "SUSPENDED" | null;
+    commercialStatus: "REGISTERED" | "SUSPENDED" | null;
   }> {
     const facility = await this.deps.facilityRepository.findById(facilityId);
     if (!facility) {
@@ -90,12 +90,12 @@ export class FacilityCadastroCompletionService {
       await this.deps.facilityRepository.updateVerticalProfileCommercialStatus({
         facilityId,
         verticalId,
-        commercialStatus: "ACTIVE",
+        commercialStatus: "REGISTERED",
       });
       return {
         complete: true,
         conformityStatus: "COMPLETE",
-        commercialStatus: "ACTIVE",
+        commercialStatus: "REGISTERED",
       };
     }
 
@@ -109,7 +109,7 @@ export class FacilityCadastroCompletionService {
       await this.deps.facilityRepository.update(facilityId, patch);
     }
 
-    if (currentCommercialStatus === "ACTIVE") {
+    if (currentCommercialStatus === "REGISTERED") {
       await this.deps.facilityRepository.updateVerticalProfileCommercialStatus({
         facilityId,
         verticalId,
@@ -121,7 +121,7 @@ export class FacilityCadastroCompletionService {
       complete: false,
       conformityStatus: "INCOMPLETE",
       commercialStatus:
-        currentCommercialStatus === "ACTIVE" ||
+        currentCommercialStatus === "REGISTERED" ||
         currentCommercialStatus === "SUSPENDED"
           ? "SUSPENDED"
           : null,

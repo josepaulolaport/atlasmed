@@ -518,33 +518,6 @@ class _ClinicDetailContent extends ConsumerWidget {
                   facilityName: detail.name,
                   detail: detail,
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Compras',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0f1729),
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      if (canMutate)
-                        _HeaderLinkButton(
-                          label: 'Editar',
-                          onTap: () => _openPurchaseRecurrenceEditor(
-                            context,
-                            ref,
-                            detail,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
                 ClinicSectionHeader(
                   title: 'Administrativo',
                   badge: adminsRoster.total == 0
@@ -780,6 +753,33 @@ class _ClinicDetailContent extends ConsumerWidget {
                         : null,
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Compras',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0f1729),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      if (canMutate)
+                        _HeaderLinkButton(
+                          label: 'Editar',
+                          onTap: () => _openPurchaseRecurrenceEditor(
+                            context,
+                            ref,
+                            detail,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
                 if (canSuggest) const _SuggestEditBanner(),
                 if (canSuggest)
                   _ClinicDeactivateButton(
@@ -1138,7 +1138,7 @@ class _ClinicDeactivateButton extends ConsumerWidget {
             ref: ref,
             clinicId: clinicId,
             clinicName: clinicName,
-            currentStatus: commercialStatus ?? FacilityCommercialStatus.active,
+            currentStatus: commercialStatus ?? FacilityCommercialStatus.registered,
           ),
           icon: const Icon(Icons.power_settings_new_rounded, size: 18),
           label: const Text('Solicitar desativação'),

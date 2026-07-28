@@ -25,6 +25,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
@@ -337,6 +338,13 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         // Details and flows use the root navigator so the drawer cannot capture
         // the edge-swipe back gesture.
+        GoRoute(
+          path: '/dashboard/facilities/:bucket',
+          builder: (_, state) => PurchaseBucketFacilitiesScreen(
+            bucket: state.pathParameters['bucket']!,
+            verticalId: state.uri.queryParameters['verticalId'],
+          ),
+        ),
         GoRoute(
           path: '/explore/clinic/:id',
           builder: (_, state) =>

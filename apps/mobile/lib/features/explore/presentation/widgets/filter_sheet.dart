@@ -19,12 +19,20 @@ class FilterSheet extends ConsumerStatefulWidget {
   final void Function(Map<String, List<String>> filters, double? radiusKm)
   onApply;
 
+  /// Desempenho drill-down: hide commercial-status chips.
+  final bool hideCommercialStatus;
+
+  /// Desempenho drill-down: bucket already locks funnel stages.
+  final bool hidePurchaseFunnel;
+
   const FilterSheet({
     super.key,
     required this.kind,
     required this.filters,
     required this.radiusKm,
     required this.onApply,
+    this.hideCommercialStatus = false,
+    this.hidePurchaseFunnel = false,
   });
 
   @override
@@ -86,9 +94,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
 
   int get _count {
     var n =
-        (_local['status']?.length ?? 0) +
+        (widget.hideCommercialStatus ? 0 : (_local['status']?.length ?? 0)) +
         (_local['specialties']?.length ?? 0) +
-        (_local['purchaseFunnelStage']?.length ?? 0) +
+        (widget.hidePurchaseFunnel
+            ? 0
+            : (_local['purchaseFunnelStage']?.length ?? 0)) +
         (_local['purchaseProfile']?.length ?? 0) +
         (_minimumIntervalController.text.isEmpty ? 0 : 1) +
         (_maximumIntervalController.text.isEmpty ? 0 : 1);
@@ -113,6 +123,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                       _ClinicFilters(
                         local: _local,
                         radiusKm: _radiusKm,
+                        hideCommercialStatus: widget.hideCommercialStatus,
+                        hidePurchaseFunnel: widget.hidePurchaseFunnel,
                         onSelectStatus: (v) => _selectSingle('status', v),
                         onToggleFunnelStage: (v) =>
                             _toggleMulti('purchaseFunnelStage', v),
@@ -201,6 +213,12 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 }
                 final next = Map<String, List<String>>.from(_local)
                   ..remove('products');
+                if (widget.hideCommercialStatus) {
+                  next.remove('status');
+                }
+                if (widget.hidePurchaseFunnel) {
+                  next.remove('purchaseFunnelStage');
+                }
                 if (minimum == null) {
                   next.remove('purchaseIntervalMinDays');
                 } else {
@@ -248,6 +266,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
 class _ClinicFilters extends StatelessWidget {
   final Map<String, List<String>> local;
   final double? radiusKm;
+  final bool hideCommercialStatus;
+  final bool hidePurchaseFunnel;
   final ValueChanged<String> onSelectStatus;
   final ValueChanged<String> onToggleFunnelStage;
   final ValueChanged<String> onSelectProfile;
@@ -259,6 +279,8 @@ class _ClinicFilters extends StatelessWidget {
   const _ClinicFilters({
     required this.local,
     required this.radiusKm,
+    this.hideCommercialStatus = false,
+    this.hidePurchaseFunnel = false,
     required this.onSelectStatus,
     required this.onToggleFunnelStage,
     required this.onSelectProfile,
@@ -274,42 +296,46 @@ class _ClinicFilters extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionHeader(title: 'Status'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: CommercialStatusFilter.values.map((value) {
-              final on = (local['status'] ?? []).contains(value);
-              final color = CommercialStatusFilter.color(value);
-              return _ToggleChip(
-                label: CommercialStatusFilter.label(value),
-                dotColor: color,
-                selected: on,
-                onTap: () => onSelectStatus(value),
-              );
-            }).toList(),
+        if (!hideCommercialStatus) ...[
+          const _SectionHeader(title: 'Status'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: CommercialStatusFilter.values.map((value) {
+                final on = (local['status'] ?? []).contains(value);
+                final color = CommercialStatusFilter.color(value);
+                return _ToggleChip(
+                  label: CommercialStatusFilter.label(value),
+                  dotColor: color,
+                  selected: on,
+                  onTap: () => onSelectStatus(value),
+                );
+              }).toList(),
+            ),
           ),
-        ),
-        const _SectionHeader(title: 'Recorrência de compras'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: PurchaseFunnelStage.values.map((stage) {
-              final selected = (local['purchaseFunnelStage'] ?? []).contains(
-                stage.apiValue,
-              );
-              return _SimpleChip(
-                label: stage.label,
-                selected: selected,
-                onTap: () => onToggleFunnelStage(stage.apiValue),
-              );
-            }).toList(),
+        ],
+        if (!hidePurchaseFunnel) ...[
+          const _SectionHeader(title: 'Recorrência de compras'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: PurchaseFunnelStage.values.map((stage) {
+                final selected = (local['purchaseFunnelStage'] ?? []).contains(
+                  stage.apiValue,
+                );
+                return _SimpleChip(
+                  label: stage.label,
+                  selected: selected,
+                  onTap: () => onToggleFunnelStage(stage.apiValue),
+                );
+              }).toList(),
+            ),
           ),
-        ),
+        ],
         const _SectionHeader(title: 'Perfil de compra'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),

@@ -27,7 +27,7 @@
 - [x] Clinics: default omit `radiusKm`; chips `5|10|25|50|100`; clear removes param
 - [x] Doctors: lat/lng only — never `radiusKm`
 - [x] Pass API `sort=distance` when coords present (clinics)
-- [x] Status filter → `REGISTERED|ACTIVE|SUSPENDED|INACTIVE` with pt-BR labels (single)
+- [x] Status filter → `UNREGISTERED|REGISTERED|SUSPENDED|CLOSED` with pt-BR labels (single)
 - [x] Produtos filter deferred (removed from Explorar filter sheet)
 - [x] Nullable `distanceKm` on models/cards — never display fake `0.0`
 - [x] Distance band section headers on sorted lists

@@ -31,9 +31,6 @@ mixin SessionEnvironmentMixin<T> on Repository<T> {
   bool get _isSessionEnvironment => this is SessionEnvironment;
   bool get _requiresAuthentication => !_isSessionEnvironment;
 
-  bool get _hasActiveSession =>
-      SessionEnvironment.instance.currentValue != null;
-
   @override
   late final RepositoryHttpClient client = createPlatformHttpClient(
     tokenBuilder: tokenBuilder,
@@ -60,10 +57,15 @@ mixin SessionEnvironmentMixin<T> on Repository<T> {
   }
 
   @override
-  Future<T?> refresh() {
-    // Skip refresh if there's no active session
-    if (_requiresAuthentication && !_hasActiveSession) {
-      return Future.value(currentValue);
+  Future<T?> refresh() async {
+    // Wait for hydration/login before short-circuiting. A sync null
+    // [currentValue] right after login used to skip the HTTP call entirely
+    // (Explorar clínicas stayed empty while médicos loaded).
+    if (_requiresAuthentication) {
+      final session = await SessionEnvironment.instance.currentValueOrResolve();
+      if (session == null) {
+        return currentValue;
+      }
     }
     return super.refresh();
   }

@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 
@@ -314,6 +315,9 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     _clinicHasMore = true;
     _doctorHasMore = true;
 
+    // Ensure bearer token is hydrated before parallel list fetches.
+    await SessionEnvironment.instance.currentValueOrResolve();
+
     await Future.wait([
       _fetchClinicsPage(page: 1, generation: generation),
       _fetchDoctorsPage(page: 1, generation: generation),
@@ -330,34 +334,34 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }) async {
     final p = page ?? _clinicPage;
     final origin = _origin;
-    final verticalId = await _ref.read(
-      effectiveFacilityVerticalIdProvider.future,
-    );
-    final facilitySort = _facilitySort;
-    final query = ClinicsQuery(
-      page: p,
-      limit: 20,
-      searchQuery: state.query.isNotEmpty ? state.query : null,
-      latitude: origin?.latitude,
-      longitude: origin?.longitude,
-      radiusKm: state.radiusKm,
-      commercialStatus: _commercialStatus,
-      purchaseBucket: _purchaseBucket,
-      productIds: _commaJoin(state.filters['products']),
-      purchaseFunnelStages: _purchaseFunnelStages,
-      purchaseProfile: _purchaseProfile,
-      purchaseIntervalMinDays: _purchaseIntervalBound(
-        'purchaseIntervalMinDays',
-      ),
-      purchaseIntervalMaxDays: _purchaseIntervalBound(
-        'purchaseIntervalMaxDays',
-      ),
-      sort: facilitySort.sort,
-      order: facilitySort.order,
-      verticalId: verticalId,
-    );
-    final repo = _ref.read(clinicsRepositoryProvider(query));
     try {
+      final verticalId = await _ref.read(
+        effectiveFacilityVerticalIdProvider.future,
+      );
+      final facilitySort = _facilitySort;
+      final query = ClinicsQuery(
+        page: p,
+        limit: 20,
+        searchQuery: state.query.isNotEmpty ? state.query : null,
+        latitude: origin?.latitude,
+        longitude: origin?.longitude,
+        radiusKm: state.radiusKm,
+        commercialStatus: _commercialStatus,
+        purchaseBucket: _purchaseBucket,
+        productIds: _commaJoin(state.filters['products']),
+        purchaseFunnelStages: _purchaseFunnelStages,
+        purchaseProfile: _purchaseProfile,
+        purchaseIntervalMinDays: _purchaseIntervalBound(
+          'purchaseIntervalMinDays',
+        ),
+        purchaseIntervalMaxDays: _purchaseIntervalBound(
+          'purchaseIntervalMaxDays',
+        ),
+        sort: facilitySort.sort,
+        order: facilitySort.order,
+        verticalId: verticalId,
+      );
+      final repo = _ref.read(clinicsRepositoryProvider(query));
       final result = await repo.currentValueOrResolve();
       if (generation != null && generation != _refreshGeneration) return;
       if (result != null) {
@@ -376,8 +380,8 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         _clinicPage = result.pagination.page;
         _clinicHasMore = result.pagination.page < result.pagination.totalPages;
       }
-    } finally {
-      // The Riverpod repository provider owns this repository's lifecycle.
+    } catch (_) {
+      // Keep existing clinics; doctors must still load in parallel.
     }
   }
 
@@ -420,8 +424,8 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         _doctorPage = result.pagination.page;
         _doctorHasMore = result.pagination.page < result.pagination.totalPages;
       }
-    } finally {
-      // The Riverpod repository provider owns this repository's lifecycle.
+    } catch (_) {
+      // Keep existing doctors; clinics must still load in parallel.
     }
   }
 

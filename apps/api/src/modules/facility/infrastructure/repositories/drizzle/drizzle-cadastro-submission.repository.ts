@@ -9,6 +9,7 @@ import {
   submissionDocuments,
   uploadParts,
   uploadSessions,
+  users,
 } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
@@ -34,6 +35,20 @@ function mapSubmission(
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function formatUserDisplayName(parts: {
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+}): string | null {
+  const full = [parts.firstName, parts.lastName]
+    .filter((p): p is string => !!p && p.trim().length > 0)
+    .join(" ")
+    .trim();
+  if (full.length > 0) return full;
+  const username = parts.username?.trim();
+  return username && username.length > 0 ? username : null;
 }
 
 function mapDocument(
@@ -303,6 +318,9 @@ export class DrizzleCadastroSubmissionRepository
           document: submissionDocuments,
           requirement: conformityRequirements,
           submission: cadastroSubmissions,
+          submittedByFirstName: users.firstName,
+          submittedByLastName: users.lastName,
+          submittedByUsername: users.username,
         })
         .from(submissionDocuments)
         .innerJoin(
@@ -313,6 +331,7 @@ export class DrizzleCadastroSubmissionRepository
           conformityRequirements,
           eq(submissionDocuments.requirementId, conformityRequirements.id)
         )
+        .leftJoin(users, eq(cadastroSubmissions.submittedByUserId, users.id))
         .where(where)
         .orderBy(
           desc(cadastroSubmissions.submittedAt),
@@ -329,6 +348,11 @@ export class DrizzleCadastroSubmissionRepository
       items: rows.map((r) => ({
         document: mapDocument(r.document, r.requirement),
         submission: mapSubmission(r.submission),
+        submittedByName: formatUserDisplayName({
+          firstName: r.submittedByFirstName,
+          lastName: r.submittedByLastName,
+          username: r.submittedByUsername,
+        }),
       })),
       total: Number(totals[0]?.value ?? 0),
     };

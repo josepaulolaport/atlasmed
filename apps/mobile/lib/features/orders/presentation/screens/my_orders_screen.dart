@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dar
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -34,7 +35,9 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: const AtlasAppBar(page: 'Pedidos'),
       body: SafeArea(
+        top: false,
         child: Stack(
           children: [
             Column(

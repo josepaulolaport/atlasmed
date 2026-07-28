@@ -57,7 +57,7 @@
 >
 > **v26 note:** Avatar tap opens photo actions (ver fotos / tirar foto / escolher da galeria) and uploads via `POST /facilities/:id/photos` multipart.
 >
-> **v27 note — Facility Cadastro (PF/PJ docs + billing email):** Reuses `conformity_requirements` / `conformity_records` (no parallel `facility_documents` table). Schema adds `facilities.billing_email`, `conformity_requirements.applies_to_tax_id_type`, and file/reviewer columns on records. Seeded catalog: **PF** → Identidade, CRM, Comprovante de Endereço; **PJ** → Carta de CNPJ, Licença Sanitária; plus required **Email Administrativo** (`billingEmail`). APIs: `GET /facilities/:id/cadastro`, `PUT …/billing-email`, multipart `POST …/cadastro/requirements/:requirementId/submit`, `GET /facilities/cadastro/files/*`, ops `POST …/cadastro/records/:recordId/approve|reject`, `GET /cadastro/submissions`. When all applicable file docs are `VALIDATED` and billing email is set → `conformityStatus=COMPLETE` and `commercialStatus=ACTIVE`. Facility DTO exposes `commercialStatus`, `conformityStatus`, `billingEmail`. Mobile Cadastro + ops Cadastros queue are live; header Sinais prefer live commercial/conformity (purchase still mocked).
+> **v27 note — Facility Cadastro (PF/PJ docs + billing email):** Reuses `conformity_requirements` / `conformity_records` (no parallel `facility_documents` table). Schema adds `facilities.billing_email`, `conformity_requirements.applies_to_tax_id_type`, and file/reviewer columns on records. Seeded catalog: **PF** → Identidade, CRM, Comprovante de Endereço; **PJ** → Cartão de CNPJ, Licença Sanitária; plus required **Email Administrativo** (`billingEmail`). APIs: `GET /facilities/:id/cadastro`, `PUT …/billing-email`, multipart `POST …/cadastro/requirements/:requirementId/submit`, `GET /facilities/cadastro/files/*`, ops `POST …/cadastro/records/:recordId/approve|reject`, `GET /cadastro/submissions`. When all applicable file docs are `VALIDATED` and billing email is set → `conformityStatus=COMPLETE` and `commercialStatus=ACTIVE`. Facility DTO exposes `commercialStatus`, `conformityStatus`, `billingEmail`. Mobile Cadastro + ops Cadastros queue are live; header Sinais prefer live commercial/conformity (purchase still mocked).
 
 ## User Story
 
@@ -338,7 +338,7 @@ Use existing `contact_actions.dart` helpers.
 
 WHEN the detail screen loads THEN the header and the "Sinais" section SHALL show:
 
-- `commercialStatus` (`REGISTERED` \| `ACTIVE` \| `SUSPENDED` \| `INACTIVE`) — pt-BR label + color, also drives the header status chip and avatar ring color.
+- `commercialStatus` (`UNREGISTERED` \| `REGISTERED` \| `SUSPENDED` \| `CLOSED`) — pt-BR label + color (Pré-cadastro / Operante / Suspensa / Encerrada), also drives the header status chip and avatar ring color.
 - `purchaseStatus` (`NON_BUYER` \| `LOW_BUYER` \| `REGULAR_BUYER` \| `HIGH_BUYER`) — shown as "Tipo de cliente", pt-BR label + color.
 - `conformityStatus` (`INCOMPLETE` \| `COMPLETE` \| `EXPIRING_SOON` \| `NON_CONFORMING`) — pt-BR label + color.
 - `lastPurchaseAt` and a derived "há N dias sem pedido" caption.

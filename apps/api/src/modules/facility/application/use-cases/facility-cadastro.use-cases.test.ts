@@ -175,7 +175,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
 const verticalId = "vertical-1";
 
 function verticalProfileRepositoryMocks(
-  commercialStatus: "ACTIVE" | "SUSPENDED" | "REGISTERED" | null = null,
+  commercialStatus: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | null = null,
 ) {
   return {
     ensureVerticalProfile: mock(async () => {}),
@@ -234,14 +234,14 @@ describe("FacilityCadastroCompletionService", () => {
     const result = await service.evaluateAndApply("facility-1", verticalId);
     expect(result.complete).toBe(true);
     expect(result.conformityStatus).toBe("COMPLETE");
-    expect(result.commercialStatus).toBe("ACTIVE");
+    expect(result.commercialStatus).toBe("REGISTERED");
     expect(update).toHaveBeenCalledWith("facility-1", {
       conformityStatus: "COMPLETE",
     });
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
       facilityId: "facility-1",
       verticalId,
-      commercialStatus: "ACTIVE",
+      commercialStatus: "REGISTERED",
     });
   });
 
@@ -279,7 +279,7 @@ describe("FacilityCadastroCompletionService", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("forces commercial off ACTIVE when completion regresses", async () => {
+  it("forces commercial off REGISTERED when completion regresses", async () => {
     const update = mock(async () => facility());
     const updateVerticalProfileCommercialStatus = mock(async () => {});
     const service = new FacilityCadastroCompletionService({
@@ -289,10 +289,10 @@ describe("FacilityCadastroCompletionService", () => {
             taxIdType: "PJ",
             billingEmail: "fin@ex.com",
             conformityStatus: "COMPLETE",
-            commercialStatus: "ACTIVE",
+            commercialStatus: "REGISTERED",
           }),
         update,
-        ...verticalProfileRepositoryMocks("ACTIVE"),
+        ...verticalProfileRepositoryMocks("REGISTERED"),
         updateVerticalProfileCommercialStatus,
       } as unknown as FacilityRepository,
       conformityRepository: {
@@ -394,7 +394,7 @@ describe("FacilityCadastroCompletionService", () => {
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
       facilityId: "facility-1",
       verticalId,
-      commercialStatus: "ACTIVE",
+      commercialStatus: "REGISTERED",
     });
   });
 });

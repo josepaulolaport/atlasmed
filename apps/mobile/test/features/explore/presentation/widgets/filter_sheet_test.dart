@@ -27,15 +27,42 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Ativa'));
+    await tester.tap(find.text('Operante'));
     await tester.pump();
     await tester.tap(find.text('Aplicar (1)'));
     await tester.pump();
 
     expect(appliedFilters, {
-      'status': ['ACTIVE'],
+      'status': ['REGISTERED'],
     });
     expect(appliedRadius, isNull);
+  });
+
+  testWidgets('hides status and funnel when drill-down flags set', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: FilterSheet(
+              kind: 'clinic',
+              filters: const {},
+              radiusKm: null,
+              hideCommercialStatus: true,
+              hidePurchaseFunnel: true,
+              onApply: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.text('STATUS'), findsNothing);
+    expect(find.text('RECORRÊNCIA DE COMPRAS'), findsNothing);
+    expect(find.text('PERFIL DE COMPRA'), findsOneWidget);
+    expect(find.text('Automático'), findsOneWidget);
   });
 
   testWidgets('radius chip is clearable on second tap before apply', (

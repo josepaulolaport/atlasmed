@@ -13,7 +13,7 @@ class PurchaseStatusDonutCard extends StatelessWidget {
 
   final DashboardPurchaseStatus data;
 
-  /// Opens Explorar with the matching purchase-status bucket filter.
+  /// Opens dedicated clinics list for this purchase-status bucket.
   final ValueChanged<String>? onBucketTap;
 
   static const _activeColor = Color(0xFF16a373);
@@ -89,7 +89,7 @@ class PurchaseStatusDonutCard extends StatelessWidget {
           Row(
             children: [
               const Text(
-                'FUNIL DE COMPRAS',
+                'STATUS DE COMPRAS',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
