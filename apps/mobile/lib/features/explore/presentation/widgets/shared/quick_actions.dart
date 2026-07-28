@@ -69,32 +69,30 @@ class QuickActionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDisabled = onTap == null;
-    return Expanded(
-      child: InkWell(
-        onTap: isDisabled ? null : onTap,
-        child: Padding(
-          padding: .all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ColorFiltered(
-                colorFilter: isDisabled
-                    ? ColorFilterX.grayscale()
-                    : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
-                child: icon,
+    return InkWell(
+      onTap: isDisabled ? null : onTap,
+      child: Padding(
+        padding: .all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ColorFiltered(
+              colorFilter: isDisabled
+                  ? ColorFilterX.grayscale()
+                  : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+              child: icon,
+            ),
+            const SizedBox(height: 5),
+            DefaultTextStyle(
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
+                color: isDisabled ? AppColors.gray300 : AppColors.gray900,
               ),
-              const SizedBox(height: 5),
-              DefaultTextStyle(
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.1,
-                  color: isDisabled ? AppColors.gray300 : AppColors.gray900,
-                ),
-                child: label,
-              ),
-            ],
-          ),
+              child: label,
+            ),
+          ],
         ),
       ),
     );
