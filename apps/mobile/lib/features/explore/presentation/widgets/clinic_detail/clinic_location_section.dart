@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dar
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_nearby_map_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/nearby_vertical_badges.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -22,12 +23,16 @@ class ClinicLocationSection extends StatefulWidget {
     required this.facilityName,
     required this.location,
     required this.nearbyEstablishments,
+    this.clinicVerticalIds = const {},
   });
 
   final String facilityId;
   final String facilityName;
   final EstablishmentLocation location;
   final List<NearbyEstablishment> nearbyEstablishments;
+
+  /// Vertical ids on the current clinic (for nearby map filter + badges).
+  final Set<String> clinicVerticalIds;
 
   @override
   State<ClinicLocationSection> createState() => _ClinicLocationSectionState();
@@ -65,16 +70,36 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
                         key: ValueKey('clinic-mini-$_miniMapGeneration'),
                         location: widget.location,
                       ),
+                // Absorb Mapbox gestures; tap opens this clinic's location map.
                 Positioned.fill(
-                  child: GestureDetector(
-                    onTap: () {
-                      if (nearby.isEmpty) {
-                        _openLocationMap();
-                      } else {
-                        _openNearbyMap(focusId: nearby.first.id);
-                      }
-                    },
-                    behavior: HitTestBehavior.opaque,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _openLocationMap,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    shape: const CircleBorder(),
+                    elevation: 1,
+                    shadowColor: Colors.black26,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _openLocationMap,
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.open_in_full_rounded,
+                          size: 18,
+                          color: AppColors.gray800,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -104,7 +129,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
             )
           else
             SizedBox(
-              height: 132,
+              height: 152,
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 scrollDirection: Axis.horizontal,
@@ -130,9 +155,8 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
     );
   }
 
-  /// "Expandir" and tapping the mini preview both just show this
-  /// establishment's own pin, full-screen — no nearby pins, no radius
-  /// controls. That richer view is [_openNearbyMap] below.
+  /// Minimap tap + expand control → this clinic only, full-screen.
+  /// Nearby pins / radius live behind [_openNearbyMap].
   Future<void> _openLocationMap() async {
     await _openFullMap(
       ClinicLocationMapScreen(
@@ -152,6 +176,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
         facilityName: widget.facilityName,
         center: widget.location,
         allNearby: widget.nearbyEstablishments,
+        clinicVerticalIds: widget.clinicVerticalIds,
         initialFocusId: focusId,
       ),
     );
@@ -205,12 +230,10 @@ class _NearbyClinicCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 8,
                   height: 8,
-                  margin: const EdgeInsets.only(top: 3),
                   decoration: BoxDecoration(
                     color: establishment.status.color,
                     shape: BoxShape.circle,
@@ -220,8 +243,9 @@ class _NearbyClinicCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     establishment.name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: const TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -232,6 +256,10 @@ class _NearbyClinicCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (establishment.verticals.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              NearbyVerticalBadges(verticals: establishment.verticals),
+            ],
             if (establishment.specialtyLabel != null) ...[
               const SizedBox(height: 3),
               Text(
@@ -245,7 +273,7 @@ class _NearbyClinicCard extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 establishment.shortAddress!,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 10.5,

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { parseListFacilitiesQuery } from "./list-facilities-query";
+import {
+  parseListFacilitiesQuery,
+  purchaseBucketToFunnelFilter,
+} from "./list-facilities-query";
 
 describe("parseListFacilitiesQuery", () => {
   it("requires both coordinates, bounds them, and parses comma-separated product IDs", () => {
@@ -50,5 +53,20 @@ describe("parseListFacilitiesQuery", () => {
       purchaseBucket: "active",
     });
     expect(() => parseListFacilitiesQuery({ purchaseBucket: "OTHER" })).toThrow();
+  });
+
+  it("maps purchaseBucket to the same funnel stages as the Desempenho donut", () => {
+    expect(purchaseBucketToFunnelFilter("active")).toEqual({
+      stages: ["PURCHASE_WINDOW"],
+      includeNull: false,
+    });
+    expect(purchaseBucketToFunnelFilter("inactive")).toEqual({
+      stages: ["OUTSIDE_WINDOW", "CHURN"],
+      includeNull: false,
+    });
+    expect(purchaseBucketToFunnelFilter("neverBought")).toEqual({
+      stages: ["NEVER_PURCHASED", "INACTIVE"],
+      includeNull: true,
+    });
   });
 });

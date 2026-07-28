@@ -153,3 +153,6 @@ coverage
 
 # CodeDB index (AI tooling)
 codedb.snapshot
+
+# Local DB dumps / ETL backups (never commit)
+.local-backups/

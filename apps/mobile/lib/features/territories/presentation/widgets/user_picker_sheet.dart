@@ -258,7 +258,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
         }
         if (candidates.isEmpty) {
           return const _EmptyState(
-            message: 'Nenhum gerente com zona ativa neste vertical.',
+            message: 'Nenhum gerente com zona ativa nesta linha comercial.',
           );
         }
         return ListView.builder(

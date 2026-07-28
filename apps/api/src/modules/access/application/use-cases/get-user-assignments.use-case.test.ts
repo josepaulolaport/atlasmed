@@ -78,7 +78,7 @@ describe("GetUserAssignmentsUseCase", () => {
       ),
       listActiveVerticals: mock(() =>
         Promise.resolve([
-          { id: "vertical-1", code: "ORTOPEDIA", name: "Ortopedia" },
+          { id: "vertical-1", code: "ORTOPEDIA", name: "Ortopédica" },
         ]),
       ),
     });

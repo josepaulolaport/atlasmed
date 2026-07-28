@@ -16,6 +16,7 @@ import {
   DeleteFacilityUseCase,
   GetFacilityUseCase,
   ListFacilitiesUseCase,
+  ListFacilityServicesUseCase,
   UpdateFacilityUseCase,
 } from "./application/use-cases/facility.use-cases";
 import {
@@ -163,6 +164,8 @@ const facilityMembershipDeps = {
 
 export const facilityUseCases = {
   listFacilities: () => new ListFacilitiesUseCase(facilityMembershipDeps),
+  listFacilityServices: () =>
+    new ListFacilityServicesUseCase(facilityMembershipDeps),
   getFacility: () => new GetFacilityUseCase(facilityMembershipDeps),
   createFacility: () => new CreateFacilityUseCase(facilityMembershipDeps),
   updateFacility: () => new UpdateFacilityUseCase(facilityMembershipDeps),

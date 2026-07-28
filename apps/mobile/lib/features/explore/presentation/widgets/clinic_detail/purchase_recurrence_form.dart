@@ -13,10 +13,14 @@ class PurchaseRecurrenceForm extends StatefulWidget {
     super.key,
     required this.onSave,
     this.initialValue,
+    this.verticalId,
   });
 
   final PurchaseRecurrenceSave onSave;
   final PurchaseRecurrenceSnapshot? initialValue;
+
+  /// Linha comercial for multi-profile clinics (API `verticalId`).
+  final String? verticalId;
 
   @override
   State<PurchaseRecurrenceForm> createState() => _PurchaseRecurrenceFormState();
@@ -59,12 +63,16 @@ class _PurchaseRecurrenceFormState extends State<PurchaseRecurrenceForm> {
       return;
     }
     final selection = _selection!;
+    final verticalId = widget.verticalId;
     final command = switch (selection) {
-      PurchaseProfile.automatic => const AutomaticPurchaseRecurrence(),
+      PurchaseProfile.automatic => AutomaticPurchaseRecurrence(
+        verticalId: verticalId,
+      ),
       PurchaseProfile.custom => CustomPurchaseRecurrence(
         int.parse(_daysController.text),
+        verticalId: verticalId,
       ),
-      _ => PresetPurchaseRecurrence(selection),
+      _ => PresetPurchaseRecurrence(selection, verticalId: verticalId),
     };
     setState(() {
       _saving = true;

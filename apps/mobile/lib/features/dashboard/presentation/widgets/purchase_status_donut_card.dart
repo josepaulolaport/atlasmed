@@ -16,9 +16,9 @@ class PurchaseStatusDonutCard extends StatelessWidget {
   /// Opens dedicated clinics list for this purchase-status bucket.
   final ValueChanged<String>? onBucketTap;
 
-  static const _activeColor = Color(0xFF16a373);
-  static const _inactiveColor = Color(0xFFc6861b);
-  static const _neverColor = Color(0xFFdc2626);
+  static const _activeColor = PurchaseBucketFilter.activeColor;
+  static const _inactiveColor = PurchaseBucketFilter.inactiveColor;
+  static const _neverColor = PurchaseBucketFilter.neverColor;
 
   @override
   Widget build(BuildContext context) {

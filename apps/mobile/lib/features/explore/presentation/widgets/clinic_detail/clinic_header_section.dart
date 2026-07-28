@@ -8,10 +8,13 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/commercial_status_chip.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_service_chips.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_status_chips.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
@@ -60,33 +63,14 @@ class ClinicHeaderSection extends ConsumerWidget {
         );
       }
     });
-    // Prefer live commercial/conformity from facility DTO. Purchase is only
-    // shown when the API (or an explicit section payload) provides it.
-    final sectionSignals = sections?.statusSignals;
-    final liveCommercial = parseFacilityCommercialStatus(
-      detail.commercial?.commercialStatus,
+    final clinicServices = FacilityServiceLabels.resolveDisplayServices(
+      services: detail.services,
+      verticalProfiles: detail.verticalProfiles,
     );
-    final liveConformity = parseFacilityConformityStatus(
-      detail.commercial?.conformityStatus,
-    );
-    final signals =
-        sectionSignals == null &&
-            liveCommercial == null &&
-            liveConformity == null
-        ? null
-        : FacilityStatusSignals(
-            commercialStatus:
-                liveCommercial ??
-                sectionSignals?.commercialStatus ??
-                FacilityCommercialStatus.unregistered,
-            purchaseStatus: sectionSignals?.purchaseStatus,
-            conformityStatus:
-                liveConformity ??
-                sectionSignals?.conformityStatus ??
-                FacilityConformityStatus.incomplete,
-            lastPurchaseAt: sectionSignals?.lastPurchaseAt,
-          );
-    final specialties = sections?.specialtiesLabel;
+    final orderedServices = FacilityServiceLabels.prioritize(clinicServices);
+    final specialties = orderedServices.isEmpty
+        ? sections?.specialtiesLabel
+        : null;
     // Identity / contact / address / PF-PJ prefer the live facility DTO.
     final fullAddress = detail.address?.formattedAddress;
     final taxIdType = parseFacilityTaxIdType(detail.registration?.taxIdType);
@@ -169,31 +153,34 @@ class ClinicHeaderSection extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (signals != null) ...[
-                      FacilityCommercialStatusChip(
-                        status: signals.commercialStatus,
-                      ),
-                      if (signals.purchaseStatus != null)
-                        _SignalChip(
-                          category: 'Compra',
-                          label: signals.purchaseStatus!.label,
-                          dotColor: signals.purchaseStatus!.color,
-                        ),
-                    ] else
-                      _SignalChip(
-                        category: 'Status',
-                        label:
-                            detail.commercial?.statusLabel.label ??
-                            'Sem status',
-                        dotColor:
-                            detail.commercial?.statusLabel.color ??
-                            const Color(0xFF9ca3af),
-                      ),
-                  ],
+                if (orderedServices.isNotEmpty)
+                  ClinicServiceChips(
+                    services: orderedServices,
+                    maxVisible: 4,
+                    onNavy: true,
+                  )
+                else
+                  ClinicServiceChips.empty(onNavy: true),
+                const SizedBox(height: 10),
+                Builder(
+                  builder: (context) {
+                    final chips = buildFacilityStatusChips(
+                      commercialStatus: detail.commercial?.commercialStatus,
+                      purchaseRecurrence: detail.purchaseRecurrence,
+                      verticalProfiles: detail.verticalProfiles,
+                      onNavy: true,
+                    );
+                    if (chips.isEmpty) {
+                      return StatusChip(
+                        label: 'Sem status',
+                        color: AppColors.gray400,
+                        bg: AppColors.gray100,
+                        small: true,
+                        onNavy: true,
+                      );
+                    }
+                    return Wrap(spacing: 8, runSpacing: 8, children: chips);
+                  },
                 ),
                 if (fullAddress != null) ...[
                   const SizedBox(height: 12),
@@ -481,67 +468,6 @@ class _Initials extends StatelessWidget {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
     return value.isNotEmpty ? value[0].toUpperCase() : '?';
-  }
-}
-
-class _SignalChip extends StatelessWidget {
-  const _SignalChip({
-    required this.category,
-    required this.label,
-    required this.dotColor,
-  });
-
-  /// Short legend naming what this chip's dot/value represents, e.g.
-  /// "Status", "Compra" — shown muted before the value so the pill reads
-  /// as "categoria: valor" instead of a bare status word with no context.
-  final String category;
-  final String label;
-  final Color dotColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0x26FFFFFF),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '$category: ',
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xB3FFFFFF),
-                  ),
-                ),
-                TextSpan(
-                  text: label,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
   }
 }
 

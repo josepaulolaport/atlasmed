@@ -6,6 +6,7 @@ import { ValidationError } from "../../../../shared/errors";
 import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { buildMeiliFilter, eqFilter, geoRadiusFilter, gteFilter, inFilter, isNullFilter, lteFilter } from "../../../../infrastructure/search/meili-filter";
+import { purchaseBucketToFunnelFilter } from "../list-facilities-query";
 import { serializeFacility } from "../mappers/facility.mapper";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
 
@@ -50,6 +51,7 @@ export class ListFacilitiesUseCase {
     commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: "active" | "inactive" | "neverBought";
     productIds?: string[];
+    serviceCodes?: string[];
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
@@ -84,6 +86,7 @@ export class ListFacilitiesUseCase {
         commercialStatus: input.commercialStatus,
         purchaseBucket: input.purchaseBucket,
         productIds: input.productIds,
+        serviceCodes: input.serviceCodes,
         purchaseFunnelStages: input.purchaseFunnelStages,
         purchaseProfile: input.purchaseProfile,
         purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -108,13 +111,27 @@ export class ListFacilitiesUseCase {
     let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
     try {
       // commercialStatus remains canonical-Postgres-only; recurrence filters are indexed.
+      const purchaseBucketFunnel = input.purchaseBucket
+        ? purchaseBucketToFunnelFilter(input.purchaseBucket)
+        : undefined;
+      const purchaseBucketMeiliFilter = purchaseBucketFunnel
+        ? purchaseBucketFunnel.includeNull
+          ? {
+              expression: `(purchaseFunnelStage IN [${[...purchaseBucketFunnel.stages]
+                .sort()
+                .map((stage) => `'${stage}'`)
+                .join(", ")}] OR purchaseFunnelStage IS NULL)`,
+            }
+          : inFilter("purchaseFunnelStage", purchaseBucketFunnel.stages)
+        : undefined;
       const canonicalFilters = [
         input.radiusKm !== undefined && input.latitude !== undefined && input.longitude !== undefined
           ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
           : undefined,
+        // Explicit stage filter wins; otherwise Desempenho bucket.
         input.purchaseFunnelStages?.length
           ? inFilter("purchaseFunnelStage", input.purchaseFunnelStages)
-          : undefined,
+          : purchaseBucketMeiliFilter,
         input.purchaseProfile === "AUTOMATIC"
           ? isNullFilter("manualPurchaseProfile")
           : input.purchaseProfile
@@ -142,7 +159,10 @@ export class ListFacilitiesUseCase {
         const { facilities, total } = await this.deps.facilityRepository.findAll({
           page, limit, search, latitude: input.latitude, longitude: input.longitude,
           radiusKm: input.radiusKm, commercialStatus: input.commercialStatus,
-          productIds: input.productIds, purchaseFunnelStages: input.purchaseFunnelStages,
+          purchaseBucket: input.purchaseBucket,
+          productIds: input.productIds,
+          serviceCodes: input.serviceCodes,
+          purchaseFunnelStages: input.purchaseFunnelStages,
           purchaseProfile: input.purchaseProfile, purchaseIntervalMinDays: input.purchaseIntervalMinDays,
           purchaseIntervalMaxDays: input.purchaseIntervalMaxDays, sort, order,
           userId: input.userId,
@@ -185,6 +205,7 @@ export class ListFacilitiesUseCase {
             commercialStatus: input.commercialStatus,
             purchaseBucket: input.purchaseBucket,
             productIds: input.productIds,
+            serviceCodes: input.serviceCodes,
             purchaseFunnelStages: input.purchaseFunnelStages,
             purchaseProfile: input.purchaseProfile,
             purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -202,6 +223,20 @@ export class ListFacilitiesUseCase {
     return {
       data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+    };
+  }
+}
+
+export class ListFacilityServicesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute() {
+    const catalog = await this.deps.facilityRepository.listServiceCatalog();
+    return {
+      data: catalog.map((row) => ({
+        serviceCode: row.serviceCode,
+        serviceName: row.serviceName,
+      })),
     };
   }
 }
@@ -233,7 +268,17 @@ export class GetFacilityUseCase {
       }
     }
 
-    return serializeFacility(clinic, listScope.verticalIds);
+    // Detail: scope commercial/funnel to active Linha, but expose every
+    // user-assigned profile so the mobile Linha switcher can flip Orto↔Derm.
+    const assignedVerticalIds = input.scope.assignedVerticalIds ?? [];
+    const exposeProfileVerticalIds =
+      assignedVerticalIds.length > 0
+        ? assignedVerticalIds
+        : listScope.verticalIds;
+
+    return serializeFacility(clinic, listScope.verticalIds, {
+      exposeProfileVerticalIds,
+    });
   }
 }
 
@@ -277,6 +322,8 @@ export class UpdateFacilityUseCase {
     lat?: number | null;
     lng?: number | null;
     purchaseRecurrence?: PurchaseRecurrenceCommand;
+    /** Required when updating purchaseRecurrence for multi-vertical clinics. */
+    verticalId?: string;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -292,13 +339,28 @@ export class UpdateFacilityUseCase {
       if (!this.deps.purchaseRecurrenceService) {
         throw new ValidationError([{ field: "purchaseRecurrence", message: "Purchase recurrence is unavailable" }]);
       }
+      const profiles = (existing.verticalProfiles ?? []).filter((p) => p.isActive);
+      const verticalId =
+        input.verticalId
+        ?? input.scope.activeVerticalId
+        ?? (profiles.length === 1 ? profiles[0]!.verticalId : undefined);
+      if (!verticalId) {
+        throw new ValidationError([{
+          field: "verticalId",
+          message: "verticalId is required when configuring purchase recurrence",
+        }]);
+      }
       const configuration = this.deps.purchaseRecurrenceService.prepareConfiguration(input.purchaseRecurrence);
-      const clinic = await this.deps.purchaseRecurrenceService.updateFacility(input.facilityId, {
-        fields: { name: input.name, manuallyEditedAt: new Date() },
-        configuration,
-        today: new Date().toISOString().slice(0, 10),
-      });
-      return serializeFacility(clinic);
+      const clinic = await this.deps.purchaseRecurrenceService.updateFacility(
+        input.facilityId,
+        verticalId,
+        {
+          fields: { name: input.name, manuallyEditedAt: new Date() },
+          configuration,
+          today: new Date().toISOString().slice(0, 10),
+        },
+      );
+      return serializeFacility(clinic, [verticalId]);
     }
 
     const coordinates = this.deps.facilityGeocodingService

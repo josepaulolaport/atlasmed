@@ -1,0 +1,21 @@
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "observed_purchase_interval_days" integer;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "purchase_interval_days" integer DEFAULT 30 NOT NULL;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "purchase_interval_source" "purchase_interval_source" DEFAULT 'DEFAULT' NOT NULL;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "manual_purchase_profile" "purchase_profile";--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "manual_purchase_interval_days" integer;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "last_valid_purchase_date" date;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "purchase_recurrence_sample_size" smallint DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "purchase_funnel_stage" "purchase_funnel_stage" DEFAULT 'NEVER_PURCHASED' NOT NULL;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "next_purchase_funnel_transition_date" date;--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD COLUMN "purchase_recurrence_calculated_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "facility_vertical_profiles_vertical_funnel_stage_idx" ON "facility_vertical_profiles" USING btree ("vertical_id","purchase_funnel_stage");--> statement-breakpoint
+CREATE INDEX "facility_vertical_profiles_next_funnel_transition_idx" ON "facility_vertical_profiles" USING btree ("next_purchase_funnel_transition_date","id") WHERE "facility_vertical_profiles"."is_active" = true and "facility_vertical_profiles"."next_purchase_funnel_transition_date" is not null;--> statement-breakpoint
+CREATE INDEX "orders_valid_purchase_facility_vertical_ordered_at_idx" ON "orders" USING btree ("facility_id","vertical_id","ordered_at" DESC NULLS LAST) WHERE "orders"."status" in ('APPROVED', 'INVOICED') and "orders"."type" in ('SALE', 'CONSIGNMENT');--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD CONSTRAINT "facility_vertical_profiles_observed_purchase_interval_days_check" CHECK ("facility_vertical_profiles"."observed_purchase_interval_days" is null or "facility_vertical_profiles"."observed_purchase_interval_days" between 1 and 3650);--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD CONSTRAINT "facility_vertical_profiles_purchase_interval_days_check" CHECK ("facility_vertical_profiles"."purchase_interval_days" between 1 and 3650);--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD CONSTRAINT "facility_vertical_profiles_manual_purchase_interval_days_check" CHECK ("facility_vertical_profiles"."manual_purchase_interval_days" is null or "facility_vertical_profiles"."manual_purchase_interval_days" between 1 and 3650);--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD CONSTRAINT "facility_vertical_profiles_manual_purchase_profile_days_check" CHECK (("facility_vertical_profiles"."manual_purchase_profile" = 'CUSTOM' and "facility_vertical_profiles"."manual_purchase_interval_days" is not null)
+        or ("facility_vertical_profiles"."manual_purchase_profile" is distinct from 'CUSTOM' and "facility_vertical_profiles"."manual_purchase_interval_days" is null));--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD CONSTRAINT "facility_vertical_profiles_purchase_recurrence_sample_size_check" CHECK ("facility_vertical_profiles"."purchase_recurrence_sample_size" between 0 and 12);--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" ADD CONSTRAINT "facility_vertical_profiles_purchase_interval_source_check" CHECK (("facility_vertical_profiles"."purchase_interval_source" = 'MANUAL' and "facility_vertical_profiles"."manual_purchase_profile" is not null)
+        or ("facility_vertical_profiles"."purchase_interval_source" <> 'MANUAL' and "facility_vertical_profiles"."manual_purchase_profile" is null));

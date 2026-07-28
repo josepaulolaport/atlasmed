@@ -19,7 +19,8 @@ abstract final class CommercialStatusFilter {
   };
 
   static Color color(String value) => switch (value) {
-    unregistered => AppColors.blueAccent,
+    // Slate — keeps Pré-cadastro distinct from navy specialty chips + blue accents.
+    unregistered => AppColors.gray600,
     registered => AppColors.green,
     suspended => AppColors.amber,
     closed => AppColors.gray500,
@@ -27,7 +28,7 @@ abstract final class CommercialStatusFilter {
   };
 
   static Color bg(String value) => switch (value) {
-    unregistered => AppColors.blueLight,
+    unregistered => AppColors.gray100,
     registered => AppColors.green50,
     suspended => AppColors.amber50,
     closed => AppColors.gray100,

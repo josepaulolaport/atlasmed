@@ -1,4 +1,4 @@
-/// Commercial business vertical (e.g. Ortopedia).
+/// Commercial business vertical (e.g. Ortopédica).
 ///
 /// Mirrors the business vertical DTO from `GET /access/business-verticals`
 /// (`{ id, code, name }`).

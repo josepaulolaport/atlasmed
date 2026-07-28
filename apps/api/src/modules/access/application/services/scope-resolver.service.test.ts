@@ -69,8 +69,8 @@ describe("ScopeResolver", () => {
       scopeRepository: emptyScopeRepository({
         findVerticalIdsByUserId: mock(async () => ["vertical-derm"]),
         listActiveVerticals: mock(async () => [
-          { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopedia" },
-          { id: "vertical-derm", code: "DERMATOLOGIA", name: "Dermatologia" },
+          { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopédica" },
+          { id: "vertical-derm", code: "DERMATOLOGIA", name: "Estética" },
         ]),
       }),
     }).resolve("admin-1", Role.ADMIN);
@@ -85,7 +85,7 @@ describe("ScopeResolver", () => {
       scopeRepository: emptyScopeRepository({
         findVerticalIdsByUserId: mock(async () => []),
         listActiveVerticals: mock(async () => [
-          { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopedia" },
+          { id: "vertical-a", code: "ORTOPEDIA", name: "Ortopédica" },
         ]),
       }),
     }).resolve("admin-1", Role.ADMIN);

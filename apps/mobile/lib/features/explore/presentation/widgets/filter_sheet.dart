@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_specialties_repository.dart';
 
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/specialties_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specialty_filter_drawer.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class FilterSheet extends ConsumerStatefulWidget {
@@ -92,13 +91,27 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     });
   }
 
+  Future<void> _openSpecialtyDrawer() async {
+    final key = widget.kind == 'clinic' ? 'serviceCodes' : 'specialties';
+    final result = await SpecialtyFilterDrawer.show(
+      context,
+      kind: widget.kind,
+      selected: Set<String>.from(_local[key] ?? const []),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _local[key] = result.toList(growable: false);
+    });
+  }
+
   int get _count {
     var n =
         (widget.hideCommercialStatus ? 0 : (_local['status']?.length ?? 0)) +
         (_local['specialties']?.length ?? 0) +
+        (_local['serviceCodes']?.length ?? 0) +
         (widget.hidePurchaseFunnel
             ? 0
-            : (_local['purchaseFunnelStage']?.length ?? 0)) +
+            : (_local['purchaseBucket']?.length ?? 0)) +
         (_local['purchaseProfile']?.length ?? 0) +
         (_minimumIntervalController.text.isEmpty ? 0 : 1) +
         (_maximumIntervalController.text.isEmpty ? 0 : 1);
@@ -126,10 +139,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                         hideCommercialStatus: widget.hideCommercialStatus,
                         hidePurchaseFunnel: widget.hidePurchaseFunnel,
                         onSelectStatus: (v) => _selectSingle('status', v),
-                        onToggleFunnelStage: (v) =>
-                            _toggleMulti('purchaseFunnelStage', v),
+                        onTogglePurchaseBucket: (v) =>
+                            _toggleMulti('purchaseBucket', v),
                         onSelectProfile: (v) =>
                             _selectSingle('purchaseProfile', v),
+                        onOpenSpecialty: _openSpecialtyDrawer,
                         minimumIntervalController: _minimumIntervalController,
                         maximumIntervalController: _maximumIntervalController,
                         onIntervalChanged: () => setState(() {}),
@@ -140,9 +154,12 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                         },
                       )
                     else
-                      _DoctorFilters(
-                        local: _local,
-                        onToggle: (v) => _toggleMulti('specialties', v),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                        child: _SpecialtyNavRow(
+                          count: _local['specialties']?.length ?? 0,
+                          onTap: _openSpecialtyDrawer,
+                        ),
                       ),
                   ],
                 ),
@@ -216,8 +233,10 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                 if (widget.hideCommercialStatus) {
                   next.remove('status');
                 }
+                // UI is bucket-based; drop legacy funnel-stage filter keys.
+                next.remove('purchaseFunnelStage');
                 if (widget.hidePurchaseFunnel) {
-                  next.remove('purchaseFunnelStage');
+                  next.remove('purchaseBucket');
                 }
                 if (minimum == null) {
                   next.remove('purchaseIntervalMinDays');
@@ -269,8 +288,9 @@ class _ClinicFilters extends StatelessWidget {
   final bool hideCommercialStatus;
   final bool hidePurchaseFunnel;
   final ValueChanged<String> onSelectStatus;
-  final ValueChanged<String> onToggleFunnelStage;
+  final ValueChanged<String> onTogglePurchaseBucket;
   final ValueChanged<String> onSelectProfile;
+  final VoidCallback onOpenSpecialty;
   final TextEditingController minimumIntervalController;
   final TextEditingController maximumIntervalController;
   final VoidCallback onIntervalChanged;
@@ -282,8 +302,9 @@ class _ClinicFilters extends StatelessWidget {
     this.hideCommercialStatus = false,
     this.hidePurchaseFunnel = false,
     required this.onSelectStatus,
-    required this.onToggleFunnelStage,
+    required this.onTogglePurchaseBucket,
     required this.onSelectProfile,
+    required this.onOpenSpecialty,
     required this.minimumIntervalController,
     required this.maximumIntervalController,
     required this.onIntervalChanged,
@@ -316,21 +337,31 @@ class _ClinicFilters extends StatelessWidget {
             ),
           ),
         ],
+        const _SectionHeader(title: 'Especialidade'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: _SpecialtyNavRow(
+            count: local['serviceCodes']?.length ?? 0,
+            onTap: onOpenSpecialty,
+          ),
+        ),
         if (!hidePurchaseFunnel) ...[
-          const _SectionHeader(title: 'Recorrência de compras'),
+          const _SectionHeader(title: 'Status de compras'),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: PurchaseFunnelStage.values.map((stage) {
-                final selected = (local['purchaseFunnelStage'] ?? []).contains(
-                  stage.apiValue,
+              children: PurchaseBucketFilter.values.map((bucket) {
+                final selected = (local['purchaseBucket'] ?? []).contains(
+                  bucket,
                 );
-                return _SimpleChip(
-                  label: stage.label,
+                final color = PurchaseBucketFilter.color(bucket);
+                return _ToggleChip(
+                  label: PurchaseBucketFilter.label(bucket),
+                  dotColor: color,
                   selected: selected,
-                  onTap: () => onToggleFunnelStage(stage.apiValue),
+                  onTap: () => onTogglePurchaseBucket(bucket),
                 );
               }).toList(),
             ),
@@ -402,86 +433,69 @@ class _ClinicFilters extends StatelessWidget {
   }
 }
 
-class _DoctorFilters extends ConsumerWidget {
-  final Map<String, List<String>> local;
-  final ValueChanged<String> onToggle;
+class _SpecialtyNavRow extends StatelessWidget {
+  const _SpecialtyNavRow({required this.count, required this.onTap});
 
-  const _DoctorFilters({required this.local, required this.onToggle});
+  final int count;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selected = Set<String>.from(local['specialties'] ?? const <String>[]);
-    final specialtiesRepo = ref.watch(
-      professionalSpecialtiesRepositoryProvider,
-    );
+  Widget build(BuildContext context) {
+    final subtitle = count == 0
+        ? 'Todas'
+        : '$count selecionada${count == 1 ? '' : 's'}';
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(title: 'Especialidade'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: _SpecialtiesContent(
-            selected: selected,
-            onToggle: onToggle,
-            specialtiesRepo: specialtiesRepo,
+    return Material(
+      color: AppColors.surfaceTertiary,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.gray200),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.medical_services_outlined,
+                size: 18,
+                color: AppColors.navyBright,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Escolher especialidades',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: count > 0
+                            ? AppColors.navyBright
+                            : AppColors.gray500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.gray400),
+            ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _SpecialtiesContent extends ConsumerWidget {
-  const _SpecialtiesContent({
-    required this.selected,
-    required this.onToggle,
-    required this.specialtiesRepo,
-  });
-
-  final Set<String> selected;
-  final ValueChanged<String> onToggle;
-  final ProfessionalSpecialtiesRepository specialtiesRepo;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return RepositoryBuilder<ProfessionalSpecialtiesRepository, List<String>>(
-      repository: specialtiesRepo,
-      builder: (context, snapshot, repository) {
-        if (snapshot == null) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Carregando especialidades…',
-              style: TextStyle(fontSize: 13, color: AppColors.gray500),
-            ),
-          );
-        }
-
-        final options = <String>{...snapshot, ...selected}.toList()
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-        if (options.isEmpty) {
-          return const Text(
-            'Nenhuma especialidade disponível no seu escopo.',
-            style: TextStyle(fontSize: 13, color: AppColors.gray500),
-          );
-        }
-
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.map((s) {
-            final on = selected.contains(s);
-            return _SimpleChip(
-              label: s,
-              selected: on,
-              onTap: () => onToggle(s),
-            );
-          }).toList(),
-        );
-      },
+      ),
     );
   }
 }

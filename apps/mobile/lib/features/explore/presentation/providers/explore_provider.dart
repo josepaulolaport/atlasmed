@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
@@ -30,7 +31,7 @@ class ExploreState {
   final String query;
 
   /// Clinic: `status` (commercialStatus), `purchaseBucket` (Desempenho),
-  /// `products` (product UUIDs). Doctor: `specialties`.
+  /// `products` (product UUIDs), `serviceCodes` (CNES). Doctor: `specialties`.
   final Map<String, List<String>> filters;
   final String sort;
   final int visibleCount;
@@ -200,11 +201,32 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     return list.first;
   }
 
-  List<PurchaseFunnelStage> get _purchaseFunnelStages =>
-      (state.filters['purchaseFunnelStage'] ?? const [])
+  List<String> get _selectedPurchaseBuckets =>
+      (state.filters['purchaseBucket'] ?? const [])
+          .where(PurchaseBucketFilter.values.contains)
+          .toList(growable: false);
+
+  /// One selected bucket → `purchaseBucket` API. Several → expand to stages.
+  String? get _purchaseBucket {
+    final buckets = _selectedPurchaseBuckets;
+    return buckets.length == 1 ? buckets.first : null;
+  }
+
+  List<PurchaseFunnelStage> get _purchaseFunnelStages {
+    final buckets = _selectedPurchaseBuckets;
+    if (buckets.length > 1) {
+      return buckets
+          .expand(PurchaseBucketFilter.funnelApiValues)
           .map(purchaseFunnelStageFromApi)
           .whereType<PurchaseFunnelStage>()
           .toList(growable: false);
+    }
+    // Legacy funnel-stage filter key (older saved state).
+    return (state.filters['purchaseFunnelStage'] ?? const [])
+        .map(purchaseFunnelStageFromApi)
+        .whereType<PurchaseFunnelStage>()
+        .toList(growable: false);
+  }
 
   PurchaseProfile? get _purchaseProfile {
     final value = state.filters['purchaseProfile']?.first;
@@ -213,13 +235,6 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
 
   int? _purchaseIntervalBound(String key) =>
       int.tryParse(state.filters[key]?.first ?? '');
-
-  /// Desempenho purchase bucket (`active` | `inactive` | `neverBought`).
-  String? get _purchaseBucket {
-    final list = state.filters['purchaseBucket'];
-    if (list == null || list.isEmpty) return null;
-    return list.first;
-  }
 
   ({FacilitySort? sort, SortOrder? order}) get _facilitySort =>
       switch (state.sort) {
@@ -349,6 +364,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         commercialStatus: _commercialStatus,
         purchaseBucket: _purchaseBucket,
         productIds: _commaJoin(state.filters['products']),
+        serviceCodes: _commaJoin(state.filters['serviceCodes']),
         purchaseFunnelStages: _purchaseFunnelStages,
         purchaseProfile: _purchaseProfile,
         purchaseIntervalMinDays: _purchaseIntervalBound(
@@ -477,21 +493,16 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }
 
   /// Open Explorar clinic tab with a Desempenho purchase-status bucket.
-  /// Maps legacy bucket names to purchaseFunnelStage filter values.
   void applyPurchaseBucket(String bucket) {
-    final funnelStages = switch (bucket) {
-      'active' => ['PURCHASE_WINDOW', 'OUTSIDE_WINDOW'],
-      'inactive' => ['CHURN'],
-      'neverBought' => ['NEVER_PURCHASED', 'INACTIVE'],
-      _ => <String>[],
-    };
     state = state.copyWith(
       activeTab: 'clinic',
       filters: {
         ...state.filters,
         'status': const <String>[],
-        'purchaseFunnelStage': funnelStages,
-        'purchaseBucket': const <String>[],
+        'purchaseFunnelStage': const <String>[],
+        'purchaseBucket': PurchaseBucketFilter.values.contains(bucket)
+            ? <String>[bucket]
+            : const <String>[],
       },
       resetVisible: true,
     );

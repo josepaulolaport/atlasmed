@@ -117,7 +117,7 @@ class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
                 hasSelection
                     ? '${_manager?.name ?? 'Carregando...'}${_zoneName != null ? ' ($_zoneName)' : ''}'
                     : widget.verticalId == null
-                    ? 'Escolha o vertical primeiro'
+                    ? 'Escolha a linha comercial primeiro'
                     : 'Selecionar gerente',
                 style: TextStyle(
                   fontSize: 14,

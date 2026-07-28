@@ -124,8 +124,8 @@ class _EditUserAssignmentsScreenState
                   Expanded(
                     child: Text(
                       _user == null
-                          ? 'Gerenciar verticais'
-                          : 'Verticais · ${_user!.displayName}',
+                          ? 'Gerenciar linhas comerciais'
+                          : 'Linhas · ${_user!.displayName}',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 15,
@@ -151,7 +151,7 @@ class _EditUserAssignmentsScreenState
     if (_loadError != null || _user == null) {
       return const Center(
         child: Text(
-          'Não foi possível carregar os verticais.',
+          'Não foi possível carregar as linhas comerciais.',
           style: TextStyle(color: AppColors.gray500),
         ),
       );
@@ -166,7 +166,7 @@ class _EditUserAssignmentsScreenState
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'Esta função não possui verticais atribuíveis.',
+            'Esta função não possui linhas comerciais atribuíveis.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.gray500),
           ),
@@ -178,8 +178,8 @@ class _EditUserAssignmentsScreenState
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
         const Text(
-          'Selecione os verticais deste usuário. Gerente e territórios '
-          'são definidos em cada card na ficha do usuário.',
+          'Selecione as linhas comerciais deste usuário. Gerente e '
+          'territórios são definidos em cada card na ficha do usuário.',
           style: TextStyle(
             fontSize: 13.5,
             color: AppColors.gray500,
@@ -188,7 +188,7 @@ class _EditUserAssignmentsScreenState
         ),
         const SizedBox(height: 16),
         const Text(
-          'Verticais',
+          'Linhas comerciais',
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
@@ -199,7 +199,7 @@ class _EditUserAssignmentsScreenState
         sectorsAsync.when(
           loading: () => const CircularProgressIndicator(),
           error: (_, _) =>
-              const Text('Não foi possível carregar os verticais.'),
+              const Text('Não foi possível carregar as linhas comerciais.'),
           data: (sectors) => Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -259,7 +259,7 @@ class _EditUserAssignmentsScreenState
                       color: Colors.white,
                     ),
                   )
-                : const Text('Salvar verticais'),
+                : const Text('Salvar linhas'),
           ),
         ),
       ],
@@ -274,16 +274,16 @@ class _EditUserAssignmentsScreenState
           .replaceVerticalAssignments(widget.userId, _orderedAssignments);
       ref.invalidate(userAssignmentsProvider(widget.userId));
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Verticais atualizados.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Linhas comerciais atualizadas.')),
+        );
         context.pop();
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Não foi possível salvar os verticais.'),
+            content: Text('Não foi possível salvar as linhas comerciais.'),
           ),
         );
       }

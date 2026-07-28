@@ -14,6 +14,7 @@ export interface FacilityUpdateFields {
 export interface LockedFacilityPurchaseRecurrence {
   purchaseDates: string[];
   configuration: ManualPurchaseConfiguration;
+  verticalId: string;
 }
 
 export interface DesiredPurchaseRecurrenceUpdate<T> {
@@ -23,11 +24,22 @@ export interface DesiredPurchaseRecurrenceUpdate<T> {
 }
 
 export interface FacilityPurchaseRecurrenceRepository {
-  withLockedFacility<T>(
+  /**
+   * Lock one facility×vertical profile, recalc from orders of that vertical,
+   * persist profile + facility rollup. Optional facility display fields.
+   */
+  withLockedProfile<T>(
     facilityId: string,
+    verticalId: string,
     callback: (
       facility: LockedFacilityPurchaseRecurrence,
     ) => Promise<DesiredPurchaseRecurrenceUpdate<T>>,
     fields?: FacilityUpdateFields,
   ): Promise<{ result: T; facility: FacilityRecord } | null>;
+
+  /** Recalc every active profile for a facility (worker backfill/reconcile). */
+  recalculateAllProfiles(
+    facilityId: string,
+    today: string,
+  ): Promise<{ changed: boolean } | null>;
 }

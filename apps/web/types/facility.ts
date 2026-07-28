@@ -17,6 +17,7 @@ export type FacilityTaxIdType = "PJ" | "PF";
 export interface FacilityServiceItem {
   serviceCode: string;
   classificationCode: string;
+  serviceName?: string;
 }
 
 export interface Facility {

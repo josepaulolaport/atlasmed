@@ -24,6 +24,7 @@ class Facility {
   final String? imageUrl;
   final String? imageBlurhash;
   final List<ClinicService> services;
+  final List<FacilityVerticalProfileDTO> verticalProfiles;
   final String? createdAt;
   final String? updatedAt;
 
@@ -41,6 +42,7 @@ class Facility {
     this.imageUrl,
     this.imageBlurhash,
     this.services = const [],
+    this.verticalProfiles = const [],
     this.createdAt,
     this.updatedAt,
   });
@@ -79,6 +81,7 @@ class Facility {
       ),
       commercial: FacilityCommercial(
         commercialStatus: dto.commercialStatus,
+        purchaseStatus: dto.purchaseStatus,
         conformityStatus: dto.conformityStatus,
         doctorCount: dto.professionalCount,
       ),
@@ -108,6 +111,7 @@ class Facility {
       imageUrl: dto.imageUrl,
       imageBlurhash: dto.imageBlurhash,
       services: dto.services,
+      verticalProfiles: dto.verticalProfiles,
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt,
     );
@@ -194,11 +198,13 @@ class FacilityContact {
 
 class FacilityCommercial {
   final String? commercialStatus;
+  final String? purchaseStatus;
   final String? conformityStatus;
   final int doctorCount;
 
   const FacilityCommercial({
     this.commercialStatus,
+    this.purchaseStatus,
     this.conformityStatus,
     this.doctorCount = 0,
   });
@@ -207,7 +213,7 @@ class FacilityCommercial {
   /// Falls back to a default label when null.
   StatusLabel get statusLabel {
     return switch (commercialStatus?.toUpperCase()) {
-      'UNREGISTERED' => StatusLabel('Pré-cadastro', const Color(0xFF3b82f6)),
+      'UNREGISTERED' => StatusLabel('Pré-cadastro', const Color(0xFF4B5563)),
       'REGISTERED' => StatusLabel('Operante', const Color(0xFF16a373)),
       'SUSPENDED' => StatusLabel('Suspensa', const Color(0xFFc6861b)),
       'CLOSED' => StatusLabel('Encerrada', const Color(0xFF6b7280)),

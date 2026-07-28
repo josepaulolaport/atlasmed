@@ -24,7 +24,6 @@ void main() {
       tester.view.physicalSize = const Size(360, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
-      var openedHistory = false;
       final today = DateUtils.dateOnly(DateTime.now());
 
       await tester.pumpWidget(
@@ -41,7 +40,6 @@ void main() {
                   funnelStage: PurchaseFunnelStage.purchaseWindow,
                   lastPurchaseDate: today.subtract(const Duration(days: 24)),
                 ),
-                onViewHistory: () => openedHistory = true,
               ),
             ),
           ),
@@ -56,11 +54,8 @@ void main() {
       expect(find.text('30 dias'), findsOneWidget);
       expect(find.text('Em 6 dias'), findsOneWidget);
       expect(find.text('6 intervalos'), findsOneWidget);
-      expect(find.text('Ver histórico de compras'), findsOneWidget);
+      expect(find.text('Ver histórico de compras'), findsNothing);
       expect(tester.takeException(), isNull);
-
-      await tester.tap(find.text('Ver histórico de compras'));
-      expect(openedHistory, isTrue);
     },
   );
 
@@ -81,7 +76,6 @@ void main() {
               funnelStage: PurchaseFunnelStage.purchaseWindow,
               lastPurchaseDate: today.subtract(const Duration(days: 40)),
             ),
-            onViewHistory: () {},
           ),
         ),
       ),
@@ -117,7 +111,6 @@ void main() {
                 source: PurchaseRecurrenceSource.defaultValue,
                 funnelStage: PurchaseFunnelStage.neverPurchased,
               ),
-              onViewHistory: () {},
             ),
           ),
         ),
@@ -180,7 +173,7 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Nunca comprou'), findsOneWidget);
+      expect(find.text('Nunca compraram'), findsOneWidget);
       // Buy-frequency line intentionally omitted from explore ClinicRow.
       expect(find.text('A cada 30 dias'), findsNothing);
       expect(tester.takeException(), isNull);
@@ -206,11 +199,12 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('Churn'));
-    await tester.tap(find.text('Período de compra'));
+    await tester.tap(find.text('Inativas'));
+    await tester.tap(find.text('Ativas'));
     await tester.tap(find.text('Mensal'));
     await tester.tap(find.textContaining('Aplicar'));
-    expect(applied?['purchaseFunnelStage'], ['CHURN', 'PURCHASE_WINDOW']);
+    expect(applied?['purchaseBucket'], ['inactive', 'active']);
+    expect(applied?['purchaseFunnelStage'], isNull);
     expect(applied?['purchaseProfile'], ['MONTHLY']);
   });
 
@@ -280,7 +274,7 @@ void main() {
     );
     await tester.tap(find.text('Open sort'));
     await tester.pumpAndSettle();
-    expect(find.text('Etapa do funil'), findsOneWidget);
+    expect(find.text('Status de compras'), findsOneWidget);
     expect(find.text('Intervalo de compras'), findsOneWidget);
     await tester.tap(find.text('Intervalo de compras'));
     expect(applied, 'purchase-interval-asc');

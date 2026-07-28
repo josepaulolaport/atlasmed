@@ -2,17 +2,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurr
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class PurchaseRecurrenceSection extends StatelessWidget {
-  const PurchaseRecurrenceSection({
-    super.key,
-    required this.value,
-    this.onViewHistory,
-  });
+  const PurchaseRecurrenceSection({super.key, required this.value});
 
   final PurchaseRecurrenceSnapshot? value;
-  final VoidCallback? onViewHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -42,41 +36,6 @@ class PurchaseRecurrenceSection extends StatelessWidget {
             color: AppColors.gray200,
           ),
           _PurchaseMetrics(recurrence: recurrence, presentation: presentation),
-          const Divider(
-            height: 1,
-            indent: 16,
-            endIndent: 16,
-            color: AppColors.gray200,
-          ),
-          Semantics(
-            button: true,
-            label: 'Ver histórico de compras',
-            child: InkWell(
-              onTap: onViewHistory ?? () => context.push('/orders'),
-              child: const Padding(
-                padding: EdgeInsets.fromLTRB(16, 14, 12, 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Ver histórico de compras',
-                        style: TextStyle(
-                          color: AppColors.navyBright,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.gray400,
-                      size: 22,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );

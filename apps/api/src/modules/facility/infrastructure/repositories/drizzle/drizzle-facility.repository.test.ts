@@ -57,6 +57,50 @@ describe("facility list SQL", () => {
     ]));
   });
 
+  it("requires every selected serviceCodes (AND), not any-of (OR)", () => {
+    const { sql, params } = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      serviceCodes: ["AM-ORTOPEDIA", "AM-DERMATOLOGIA", "AM-ORTOPEDIA"],
+    }));
+
+    expect(sql).toContain('"facility_services"."service_code" in');
+    expect(sql).toContain("group by");
+    expect(sql).toContain("count(distinct");
+    expect(sql).toMatch(/=\s*\$?\d+|=\s*2/);
+    // Deduped codes → HAVING count = 2
+    expect(params).toEqual(
+      expect.arrayContaining(["AM-ORTOPEDIA", "AM-DERMATOLOGIA", 2]),
+    );
+  });
+
+  it("maps Desempenho purchaseBucket to purchase_funnel_stage (not purchase_status)", () => {
+    const active = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      purchaseBucket: "active",
+    }));
+    expect(active.sql).toContain('"facilities"."purchase_funnel_stage" in');
+    expect(active.sql).not.toContain("purchase_status");
+    expect(active.params).toContain("PURCHASE_WINDOW");
+    expect(active.params).not.toContain("OUTSIDE_WINDOW");
+
+    const inactive = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      purchaseBucket: "inactive",
+    }));
+    expect(inactive.params).toEqual(
+      expect.arrayContaining(["OUTSIDE_WINDOW", "CHURN"]),
+    );
+
+    const neverBought = sqlShape(buildFacilityListConditions({
+      scope: { isGlobal: true },
+      purchaseBucket: "neverBought",
+    }));
+    expect(neverBought.sql).toContain("is null");
+    expect(neverBought.params).toEqual(
+      expect.arrayContaining(["NEVER_PURCHASED", "INACTIVE"]),
+    );
+  });
+
   it("uses business stage order followed by stable name and id", () => {
     const orderBy = buildFacilityListOrderBy({ sort: "purchaseFunnelStage", order: "desc" });
     const shapes = orderBy.map((expression) => sqlShape(expression).sql);
@@ -81,11 +125,14 @@ describe("facility list SQL", () => {
       expect.stringContaining('"facilities"."name" asc'),
       expect.stringContaining('"facilities"."id" asc'),
     ]);
-    expect(lastAsc[0]).toContain('"facilities"."last_valid_purchase_date" asc nulls last');
-    expect(lastDesc[0]).toContain('"facilities"."last_valid_purchase_date" desc nulls last');
-    expect(lastAsc.slice(1)).toEqual(lastDesc.slice(1));
-    expect(lastAsc[1]).toContain('"facilities"."name" asc');
-    expect(lastAsc[2]).toContain('"facilities"."id" asc');
+    // Nulls last via leading `is null` bool sort (not SQL NULLS LAST).
+    expect(lastAsc[0]).toContain('"facilities"."last_valid_purchase_date" is null');
+    expect(lastDesc[0]).toContain('"facilities"."last_valid_purchase_date" is null');
+    expect(lastAsc[1]).toContain('"facilities"."last_valid_purchase_date" asc');
+    expect(lastDesc[1]).toContain('"facilities"."last_valid_purchase_date" desc');
+    expect(lastAsc.slice(2)).toEqual(lastDesc.slice(2));
+    expect(lastAsc[2]).toContain('"facilities"."name" asc');
+    expect(lastAsc[3]).toContain('"facilities"."id" asc');
   });
 });
 

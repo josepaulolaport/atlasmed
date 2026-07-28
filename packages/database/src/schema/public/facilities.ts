@@ -524,8 +524,9 @@ export const facilityConsultantAssignments = pgTable(
 );
 
 /**
- * Vertical-specific commercial profile for a global facility.
- * A facility may have one profile per business vertical.
+ * Vertical-specific commercial + purchase-funnel profile for a facility.
+ * Funnel/recurrence is computed from orders of this verticalId only.
+ * Facility-level funnel columns remain a Meili/legacy rollup.
  */
 export const facilityVerticalProfiles = pgTable(
   "facility_vertical_profiles",
@@ -544,6 +545,24 @@ export const facilityVerticalProfiles = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     commercialStatus: commercialStatusEnum("commercial_status"),
     purchaseStatus: purchaseStatusEnum("purchase_status"),
+    observedPurchaseIntervalDays: integer("observed_purchase_interval_days"),
+    purchaseIntervalDays: integer("purchase_interval_days").notNull().default(30),
+    purchaseIntervalSource: purchaseIntervalSourceEnum("purchase_interval_source")
+      .notNull()
+      .default("DEFAULT"),
+    manualPurchaseProfile: purchaseProfileEnum("manual_purchase_profile"),
+    manualPurchaseIntervalDays: integer("manual_purchase_interval_days"),
+    lastValidPurchaseDate: date("last_valid_purchase_date"),
+    purchaseRecurrenceSampleSize: smallint("purchase_recurrence_sample_size")
+      .notNull()
+      .default(0),
+    purchaseFunnelStage: purchaseFunnelStageEnum("purchase_funnel_stage")
+      .notNull()
+      .default("NEVER_PURCHASED"),
+    nextPurchaseFunnelTransitionDate: date("next_purchase_funnel_transition_date"),
+    purchaseRecurrenceCalculatedAt: timestamp("purchase_recurrence_calculated_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -556,6 +575,41 @@ export const facilityVerticalProfiles = pgTable(
     index("facility_vertical_profiles_vertical_id_idx").on(t.verticalId),
     index("facility_vertical_profiles_territory_id_idx").on(t.territoryId),
     index("facility_vertical_profiles_commercial_status_idx").on(t.commercialStatus),
+    index("facility_vertical_profiles_vertical_funnel_stage_idx").on(
+      t.verticalId,
+      t.purchaseFunnelStage,
+    ),
+    index("facility_vertical_profiles_next_funnel_transition_idx")
+      .on(t.nextPurchaseFunnelTransitionDate, t.id)
+      .where(
+        sql`${t.isActive} = true and ${t.nextPurchaseFunnelTransitionDate} is not null`,
+      ),
+    check(
+      "facility_vertical_profiles_observed_purchase_interval_days_check",
+      sql`${t.observedPurchaseIntervalDays} is null or ${t.observedPurchaseIntervalDays} between 1 and 3650`,
+    ),
+    check(
+      "facility_vertical_profiles_purchase_interval_days_check",
+      sql`${t.purchaseIntervalDays} between 1 and 3650`,
+    ),
+    check(
+      "facility_vertical_profiles_manual_purchase_interval_days_check",
+      sql`${t.manualPurchaseIntervalDays} is null or ${t.manualPurchaseIntervalDays} between 1 and 3650`,
+    ),
+    check(
+      "facility_vertical_profiles_manual_purchase_profile_days_check",
+      sql`(${t.manualPurchaseProfile} = 'CUSTOM' and ${t.manualPurchaseIntervalDays} is not null)
+        or (${t.manualPurchaseProfile} is distinct from 'CUSTOM' and ${t.manualPurchaseIntervalDays} is null)`,
+    ),
+    check(
+      "facility_vertical_profiles_purchase_recurrence_sample_size_check",
+      sql`${t.purchaseRecurrenceSampleSize} between 0 and 12`,
+    ),
+    check(
+      "facility_vertical_profiles_purchase_interval_source_check",
+      sql`(${t.purchaseIntervalSource} = 'MANUAL' and ${t.manualPurchaseProfile} is not null)
+        or (${t.purchaseIntervalSource} <> 'MANUAL' and ${t.manualPurchaseProfile} is null)`,
+    ),
   ]
 );
 

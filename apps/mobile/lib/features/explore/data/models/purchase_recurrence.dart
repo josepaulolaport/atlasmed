@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -110,22 +111,12 @@ extension PurchaseFunnelStageX on PurchaseFunnelStage {
     PurchaseFunnelStage.inactive => 'INACTIVE',
   };
 
-  String get label => switch (this) {
-    PurchaseFunnelStage.neverPurchased => 'Nunca comprou',
-    PurchaseFunnelStage.outsideWindow => 'Fora do período',
-    PurchaseFunnelStage.purchaseWindow => 'Período de compra',
-    PurchaseFunnelStage.churn => 'Churn',
-    PurchaseFunnelStage.inactive => 'Inativo',
-  };
+  /// Badge / chip label — Desempenho bucket convention (not raw funnel name).
+  String get label =>
+      PurchaseBucketFilter.labelForFunnelApi(apiValue) ?? apiValue;
 
-  Color get color => switch (this) {
-    // Match Desempenho donut "Nunca compraram" (#dc2626).
-    PurchaseFunnelStage.neverPurchased => const Color(0xFFdc2626),
-    PurchaseFunnelStage.outsideWindow => AppColors.blue600,
-    PurchaseFunnelStage.purchaseWindow => AppColors.green600,
-    PurchaseFunnelStage.churn => AppColors.amberDark,
-    PurchaseFunnelStage.inactive => AppColors.redDark,
-  };
+  Color get color =>
+      PurchaseBucketFilter.colorForFunnelApi(apiValue) ?? AppColors.gray500;
 
   Color get backgroundColor => color.withValues(alpha: 0.1);
 }
@@ -230,23 +221,34 @@ class PurchaseRecurrenceSnapshot {
 }
 
 sealed class PurchaseRecurrenceCommand {
-  const PurchaseRecurrenceCommand();
+  const PurchaseRecurrenceCommand({this.verticalId});
+
+  /// Linha comercial — required by API when clinic has multiple profiles.
+  final String? verticalId;
 
   void validate() {}
-  Map<String, dynamic> toJson();
+
+  Map<String, dynamic> toJson() {
+    validate();
+    return {
+      'purchaseRecurrence': recurrenceBody(),
+      if (verticalId != null && verticalId!.trim().isNotEmpty)
+        'verticalId': verticalId!.trim(),
+    };
+  }
+
+  Map<String, dynamic> recurrenceBody();
 }
 
 class AutomaticPurchaseRecurrence extends PurchaseRecurrenceCommand {
-  const AutomaticPurchaseRecurrence();
+  const AutomaticPurchaseRecurrence({super.verticalId});
 
   @override
-  Map<String, dynamic> toJson() => {
-    'purchaseRecurrence': {'mode': 'AUTOMATIC'},
-  };
+  Map<String, dynamic> recurrenceBody() => {'mode': 'AUTOMATIC'};
 }
 
 class PresetPurchaseRecurrence extends PurchaseRecurrenceCommand {
-  const PresetPurchaseRecurrence(this.profile);
+  const PresetPurchaseRecurrence(this.profile, {super.verticalId});
 
   final PurchaseProfile profile;
 
@@ -263,16 +265,14 @@ class PresetPurchaseRecurrence extends PurchaseRecurrenceCommand {
   }
 
   @override
-  Map<String, dynamic> toJson() {
-    validate();
-    return {
-      'purchaseRecurrence': {'mode': 'PRESET', 'profile': profile.apiValue},
-    };
-  }
+  Map<String, dynamic> recurrenceBody() => {
+    'mode': 'PRESET',
+    'profile': profile.apiValue,
+  };
 }
 
 class CustomPurchaseRecurrence extends PurchaseRecurrenceCommand {
-  const CustomPurchaseRecurrence(this.intervalDays);
+  const CustomPurchaseRecurrence(this.intervalDays, {super.verticalId});
 
   final int intervalDays;
 
@@ -288,10 +288,8 @@ class CustomPurchaseRecurrence extends PurchaseRecurrenceCommand {
   }
 
   @override
-  Map<String, dynamic> toJson() {
-    validate();
-    return {
-      'purchaseRecurrence': {'mode': 'CUSTOM', 'intervalDays': intervalDays},
-    };
-  }
+  Map<String, dynamic> recurrenceBody() => {
+    'mode': 'CUSTOM',
+    'intervalDays': intervalDays,
+  };
 }

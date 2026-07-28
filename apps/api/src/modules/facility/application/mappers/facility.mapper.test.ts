@@ -61,7 +61,13 @@ function baseFacility(
     deactivatedAt: null,
     createdAt: now,
     updatedAt: now,
-    services: [{ serviceCode: "123", classificationCode: "01" }],
+    services: [
+      {
+        serviceCode: "123",
+        classificationCode: "01",
+        serviceName: "SERVICO DE TESTE",
+      },
+    ],
     professionalCount: 4,
     lastVisitAt: null,
     distanceKm: 1.2,
@@ -103,9 +109,15 @@ describe("serializeFacility", () => {
       territoryName: "Zona Sul",
       professionalCount: 4,
       distanceKm: 1.2,
-      services: [{ serviceCode: "123", classificationCode: "01" }],
+      services: [
+      {
+        serviceCode: "123",
+        classificationCode: "01",
+        serviceName: "SERVICO DE TESTE",
+      },
+    ],
     });
-    expect(dto).not.toHaveProperty("purchaseStatus");
+    expect(dto.purchaseStatus).toBe("REGULAR_BUYER");
     expect(dto.createdAt).toBe(now.toISOString());
   });
 
@@ -128,7 +140,7 @@ describe("serializeFacility", () => {
       baseFacility({ lastValidPurchaseDate: null, purchaseIntervalDays: 30 }),
     );
 
-    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBeNull();
+    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBeNull();
   });
 
   it("calculates nextEstimatedPurchaseDate from last purchase date + interval", () => {
@@ -139,7 +151,7 @@ describe("serializeFacility", () => {
       }),
     );
 
-    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBe(
+    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
       "2026-01-14T00:00:00.000Z",
     );
   });
@@ -152,7 +164,7 @@ describe("serializeFacility", () => {
       }),
     );
 
-    expect(dto.purchaseRecurrence.nextEstimatedPurchaseDate).toBe(
+    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
       "2026-01-17T00:00:00.000Z",
     );
   });

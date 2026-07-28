@@ -44,6 +44,7 @@ const listFacilitiesRoute = new Elysia()
         commercialStatus: t.Optional(t.String()),
         purchaseBucket: t.Optional(t.String()),
         productIds: t.Optional(t.String()),
+        serviceCodes: t.Optional(t.String()),
         purchaseFunnelStage: t.Optional(t.String()),
         purchaseProfile: t.Optional(t.String()),
         purchaseIntervalMinDays: t.Optional(t.String()),
@@ -53,6 +54,23 @@ const listFacilitiesRoute = new Elysia()
         verticalId: t.Optional(t.String()),
       }),
     }
+  );
+
+const listFacilityServicesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/facilities/services",
+    async () => {
+      return facilityUseCases.listFacilityServices().execute();
+    },
+    {
+      detail: {
+        summary: "List CNES facility service catalog for filters",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
   );
 
 const createFacilityRoute = new Elysia()
@@ -156,6 +174,8 @@ const updateFacilityRoute = new Elysia()
         lat: t.Optional(t.Union([t.Number(), t.Null()])),
         lng: t.Optional(t.Union([t.Number(), t.Null()])),
         purchaseRecurrence: t.Optional(purchaseRecurrenceType),
+        /** Linha comercial — required when clinic has multiple vertical profiles. */
+        verticalId: t.Optional(t.String()),
       }),
     }
   );
@@ -1064,6 +1084,7 @@ const listFacilityOrdersRoute = new Elysia()
         page: query.page ? Number(query.page) : 1,
         limit: query.limit ? Number(query.limit) : 5,
         includeItemPreviews: true,
+        verticalId: query.verticalId,
         actor: { userId, roleName: authContext.roleName },
         scope,
       });
@@ -1077,6 +1098,7 @@ const listFacilityOrdersRoute = new Elysia()
       query: t.Object({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
+        verticalId: t.Optional(t.String()),
       }),
     }
   );
@@ -1140,6 +1162,8 @@ const createFacilityVisitRoute = new Elysia()
 export const facilitiesRoute = new Elysia()
   .use(cadastroSubmissionsRoute)
   .use(listFacilitiesRoute)
+  // Before `/facilities/:id` so `services` is not captured as an id.
+  .use(listFacilityServicesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
   .use(updateFacilityRoute)

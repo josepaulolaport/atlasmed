@@ -1175,8 +1175,9 @@ class _StackedClinicTile extends StatelessWidget {
                 children: [
                   Text(
                     establishment.name,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,

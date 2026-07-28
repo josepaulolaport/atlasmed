@@ -155,7 +155,17 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
               onPressed: () => _openNewProductForm(families),
             )
           : null,
-      appBar: const AtlasAppBar(page: 'Catálogo'),
+      appBar: AtlasAppBar(
+        page: 'Catálogo',
+        actions: [
+          if (isAdmin)
+            IconButton(
+              tooltip: 'Campos de potencial',
+              icon: const Icon(Icons.insights_outlined),
+              onPressed: () => context.push('/catalog/potential-definitions'),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [

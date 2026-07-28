@@ -1,44 +1,107 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
+/// Compact CNES service chips for clinic surfaces (header / body).
 class ClinicServiceChips extends StatelessWidget {
-  const ClinicServiceChips({super.key, required this.services});
+  const ClinicServiceChips({
+    super.key,
+    required this.services,
+    this.maxVisible = 6,
+    this.onNavy = false,
+  }) : emptyLabel = null;
 
-  final List<FacilityServiceChip> services;
+  const ClinicServiceChips.empty({super.key, this.onNavy = false})
+    : services = const [],
+      maxVisible = 0,
+      emptyLabel = 'Sem especialidade';
+
+  final List<ClinicService> services;
+  final int maxVisible;
+  final bool onNavy;
+  final String? emptyLabel;
 
   @override
   Widget build(BuildContext context) {
-    if (services.isEmpty) return const SizedBox.shrink();
+    if (services.isEmpty) {
+      return Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          _Chip(
+            label: emptyLabel ?? 'Sem especialidade',
+            onNavy: onNavy,
+            muted: true,
+          ),
+        ],
+      );
+    }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: services
-            .map(
-              (s) => Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.blueLight,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.blue100),
-                ),
-                child: Text(
-                  s.label,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.navyBright,
-                  ),
-                ),
-              ),
-            )
-            .toList(),
+    final ordered = FacilityServiceLabels.prioritize(services);
+    final visible = ordered.take(maxVisible).toList(growable: false);
+    final overflow = ordered.length - visible.length;
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final service in visible)
+          _Chip(
+            label: FacilityServiceLabels.formatName(service.serviceName),
+            onNavy: onNavy,
+          ),
+        if (overflow > 0) _Chip(label: '+$overflow', onNavy: onNavy),
+      ],
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.onNavy, this.muted = false});
+
+  final String label;
+  final bool onNavy;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bg;
+    final Color border;
+    final Color fg;
+    if (muted && onNavy) {
+      bg = Colors.white.withValues(alpha: 0.08);
+      border = Colors.white.withValues(alpha: 0.16);
+      fg = const Color(0xB3FFFFFF);
+    } else if (muted) {
+      bg = AppColors.gray100;
+      border = AppColors.gray200;
+      fg = AppColors.gray500;
+    } else if (onNavy) {
+      bg = Colors.white.withValues(alpha: 0.12);
+      border = Colors.white.withValues(alpha: 0.22);
+      fg = const Color(0xF2FFFFFF);
+    } else {
+      bg = AppColors.navyBright.withValues(alpha: 0.08);
+      border = AppColors.navyBright.withValues(alpha: 0.18);
+      fg = AppColors.navyDeep;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: fg,
+          height: 1.1,
+        ),
       ),
     );
   }

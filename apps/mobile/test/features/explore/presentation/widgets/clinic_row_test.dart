@@ -149,7 +149,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Churn'), findsOneWidget);
+    expect(find.text('Inativas'), findsOneWidget);
   });
 
   testWidgets('does not show a funnel chip when recurrence is unavailable', (
@@ -174,7 +174,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Churn'), findsNothing);
+    expect(find.text('Inativas'), findsNothing);
   });
 
   group('Clinic location label', () {

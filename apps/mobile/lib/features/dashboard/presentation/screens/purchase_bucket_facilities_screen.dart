@@ -146,6 +146,7 @@ class _PurchaseBucketFacilitiesScreenState
                         isLoadingMore: state.loadingMore,
                         onLoadMore: () => unawaited(notifier.loadMore()),
                         bottomInset: bottomInset,
+                        preferredVerticalId: widget.verticalId,
                       ),
                     ),
             ),

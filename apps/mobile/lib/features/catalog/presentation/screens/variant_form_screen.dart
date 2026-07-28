@@ -294,7 +294,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  const _FieldLabel('Verticais'),
+                  const _FieldLabel('Linhas comerciais'),
                   const SizedBox(height: 6),
                   sectorsAsync.when(
                     loading: () => const Padding(
@@ -306,7 +306,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       ),
                     ),
                     error: (_, _) => Text(
-                      'Não foi possível carregar os verticais.',
+                      'Não foi possível carregar as linhas comerciais.',
                       style: const TextStyle(
                         fontSize: 12.5,
                         color: AppColors.error,
@@ -314,7 +314,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ),
                     data: (sectors) => sectors.isEmpty
                         ? const Text(
-                            'Nenhum vertical cadastrado.',
+                            'Nenhuma linha comercial cadastrada.',
                             style: TextStyle(
                               fontSize: 12.5,
                               color: AppColors.gray400,

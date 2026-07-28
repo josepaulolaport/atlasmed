@@ -146,17 +146,20 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
     limit: number;
     today: string;
   }): Promise<string[]> {
-    return this.database
-      .select({ id: facilities.id })
-      .from(facilities)
+    // Due transitions live on profiles; return distinct facility ids.
+    const rows = await this.database
+      .selectDistinct({ id: facilityVerticalProfiles.facilityId })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
       .where(and(
         isNull(facilities.deactivatedAt),
-        lte(facilities.nextPurchaseFunnelTransitionDate, input.today),
-        input.cursor ? gt(facilities.id, input.cursor) : undefined,
+        eq(facilityVerticalProfiles.isActive, true),
+        lte(facilityVerticalProfiles.nextPurchaseFunnelTransitionDate, input.today),
+        input.cursor ? gt(facilityVerticalProfiles.facilityId, input.cursor) : undefined,
       ))
-      .orderBy(asc(facilities.id))
-      .limit(input.limit)
-      .then((rows) => rows.map((row) => row.id));
+      .orderBy(asc(facilityVerticalProfiles.facilityId))
+      .limit(input.limit);
+    return rows.map((row) => row.id);
   }
 
   async recalculateFacility(facilityId: string, today: string): Promise<{
@@ -165,86 +168,122 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
     document: FacilitySearchDocument | null;
   }> {
     return this.database.transaction(async (tx) => {
-      const lockedRows = await tx.execute(sql<{
-        id: string;
-        observed_purchase_interval_days: number | null;
-        purchase_interval_days: number;
-        purchase_interval_source: string;
-        manual_purchase_profile: PurchaseProfile | null;
-        manual_purchase_interval_days: number | null;
-        last_valid_purchase_date: string | Date | null;
-        purchase_recurrence_sample_size: number;
-        purchase_funnel_stage: string;
-        next_purchase_funnel_transition_date: string | Date | null;
-        purchase_recurrence_calculated_at: Date | null;
-      }>`
-        select id, observed_purchase_interval_days, purchase_interval_days,
-          purchase_interval_source, manual_purchase_profile, manual_purchase_interval_days,
-          last_valid_purchase_date, purchase_recurrence_sample_size, purchase_funnel_stage,
-          next_purchase_funnel_transition_date, purchase_recurrence_calculated_at
-        from ${facilities}
-        where ${facilities.id} = ${facilityId} and ${facilities.deactivatedAt} is null
-        for update
-      `);
-      const locked = lockedRows[0] as {
-        id: string;
-        observed_purchase_interval_days: number | null;
-        purchase_interval_days: number;
-        purchase_interval_source: string;
-        manual_purchase_profile: PurchaseProfile | null;
-        manual_purchase_interval_days: number | null;
-        last_valid_purchase_date: string | Date | null;
-        purchase_recurrence_sample_size: number;
-        purchase_funnel_stage: string;
-        next_purchase_funnel_transition_date: string | Date | null;
-        purchase_recurrence_calculated_at: Date | null;
-      } | undefined;
-      if (!locked) return { facilityId, changed: false, document: null };
+      const facilityAlive = await tx
+        .select({ id: facilities.id })
+        .from(facilities)
+        .where(and(eq(facilities.id, facilityId), isNull(facilities.deactivatedAt)))
+        .limit(1);
+      if (!facilityAlive[0]) {
+        return { facilityId, changed: false, document: null };
+      }
 
-      const purchaseDates = await tx
-        .select({ date: sql<string | Date>`(${orders.orderedAt} at time zone 'UTC')::date`.as("purchase_date") })
-        .from(orders)
+      const profiles = await tx
+        .select()
+        .from(facilityVerticalProfiles)
         .where(and(
-          eq(orders.facilityId, facilityId),
-          inArray(orders.status, ["APPROVED", "INVOICED"]),
-          inArray(orders.type, ["SALE", "CONSIGNMENT"]),
-        ))
-        .groupBy(sql`(${orders.orderedAt} at time zone 'UTC')::date`)
-        .orderBy(sql`(${orders.orderedAt} at time zone 'UTC')::date desc`)
-        .limit(13)
-        .then((rows) => rows.map((row) => normalizePostgresDate(row.date)).filter((date): date is string => date !== null));
+          eq(facilityVerticalProfiles.facilityId, facilityId),
+          eq(facilityVerticalProfiles.isActive, true),
+        ));
 
-      const snapshot = calculatePurchaseRecurrenceSnapshot({
-        purchaseDates,
-        manualProfile: locked.manual_purchase_profile,
-        manualIntervalDays: locked.manual_purchase_interval_days,
-        today,
-      });
-      const current = {
-        observedPurchaseIntervalDays: locked.observed_purchase_interval_days,
-        purchaseIntervalDays: locked.purchase_interval_days,
-        purchaseIntervalSource: locked.purchase_interval_source,
-        manualPurchaseProfile: locked.manual_purchase_profile,
-        manualPurchaseIntervalDays: locked.manual_purchase_interval_days,
-        lastValidPurchaseDate: locked.last_valid_purchase_date,
-        purchaseRecurrenceSampleSize: locked.purchase_recurrence_sample_size,
-        purchaseFunnelStage: locked.purchase_funnel_stage,
-        nextPurchaseFunnelTransitionDate: locked.next_purchase_funnel_transition_date,
+      let changed = false;
+      const urgency: Record<string, number> = {
+        PURCHASE_WINDOW: 5,
+        CHURN: 4,
+        OUTSIDE_WINDOW: 3,
+        INACTIVE: 2,
+        NEVER_PURCHASED: 1,
       };
-      // Persist the first calculation even when defaults already match so
-      // reconciliation freshness is observable and backfill is resumable.
-      const changed = locked.purchase_recurrence_calculated_at === null || !snapshotEquals(current, snapshot);
-      if (changed) {
+      let rollup: PurchaseRecurrenceSnapshot | null = null;
+
+      for (const profile of profiles) {
+        const purchaseDates = await tx
+          .select({ date: sql<string | Date>`(${orders.orderedAt} at time zone 'UTC')::date`.as("purchase_date") })
+          .from(orders)
+          .where(and(
+            eq(orders.facilityId, facilityId),
+            eq(orders.verticalId, profile.verticalId),
+            inArray(orders.status, ["APPROVED", "INVOICED"]),
+            inArray(orders.type, ["SALE", "CONSIGNMENT"]),
+          ))
+          .groupBy(sql`(${orders.orderedAt} at time zone 'UTC')::date`)
+          .orderBy(sql`(${orders.orderedAt} at time zone 'UTC')::date desc`)
+          .limit(13)
+          .then((rows) => rows
+            .map((row) => normalizePostgresDate(row.date))
+            .filter((date): date is string => date !== null));
+
+        const snapshot = calculatePurchaseRecurrenceSnapshot({
+          purchaseDates,
+          manualProfile: profile.manualPurchaseProfile as PurchaseProfile | null,
+          manualIntervalDays: profile.manualPurchaseIntervalDays,
+          today,
+        });
+        const current = {
+          observedPurchaseIntervalDays: profile.observedPurchaseIntervalDays,
+          purchaseIntervalDays: profile.purchaseIntervalDays,
+          purchaseIntervalSource: profile.purchaseIntervalSource,
+          manualPurchaseProfile: profile.manualPurchaseProfile,
+          manualPurchaseIntervalDays: profile.manualPurchaseIntervalDays,
+          lastValidPurchaseDate: profile.lastValidPurchaseDate,
+          purchaseRecurrenceSampleSize: profile.purchaseRecurrenceSampleSize,
+          purchaseFunnelStage: profile.purchaseFunnelStage,
+          nextPurchaseFunnelTransitionDate: profile.nextPurchaseFunnelTransitionDate,
+        };
+        const profileChanged =
+          profile.purchaseRecurrenceCalculatedAt === null
+          || !snapshotEquals(current, snapshot);
+        if (profileChanged) {
+          changed = true;
+          await tx.update(facilityVerticalProfiles).set({
+            observedPurchaseIntervalDays: snapshot.observedPurchaseIntervalDays,
+            purchaseIntervalDays: snapshot.purchaseIntervalDays,
+            purchaseIntervalSource: snapshot.purchaseIntervalSource,
+            manualPurchaseProfile: snapshot.manualPurchaseProfile,
+            manualPurchaseIntervalDays: snapshot.manualPurchaseIntervalDays,
+            lastValidPurchaseDate: snapshot.lastValidPurchaseDate,
+            purchaseRecurrenceSampleSize: snapshot.purchaseRecurrenceSampleSize,
+            purchaseFunnelStage: snapshot.purchaseFunnelStage,
+            nextPurchaseFunnelTransitionDate: snapshot.nextPurchaseFunnelTransitionDate,
+            purchaseRecurrenceCalculatedAt: new Date(),
+            updatedAt: new Date(),
+          }).where(eq(facilityVerticalProfiles.id, profile.id));
+        }
+
+        const candidate = profileChanged ? snapshot : {
+          observedPurchaseIntervalDays: profile.observedPurchaseIntervalDays,
+          purchaseIntervalDays: profile.purchaseIntervalDays,
+          purchaseIntervalSource: profile.purchaseIntervalSource as PurchaseRecurrenceSnapshot["purchaseIntervalSource"],
+          manualPurchaseProfile: profile.manualPurchaseProfile as PurchaseRecurrenceSnapshot["manualPurchaseProfile"],
+          manualPurchaseIntervalDays: profile.manualPurchaseIntervalDays,
+          lastValidPurchaseDate: normalizePostgresDate(profile.lastValidPurchaseDate),
+          purchaseRecurrenceSampleSize: profile.purchaseRecurrenceSampleSize,
+          purchaseFunnelStage: profile.purchaseFunnelStage as PurchaseRecurrenceSnapshot["purchaseFunnelStage"],
+          nextPurchaseFunnelTransitionDate: normalizePostgresDate(profile.nextPurchaseFunnelTransitionDate),
+        };
+        if (
+          !rollup
+          || (urgency[candidate.purchaseFunnelStage] ?? 0) > (urgency[rollup.purchaseFunnelStage] ?? 0)
+          || (
+            (urgency[candidate.purchaseFunnelStage] ?? 0) === (urgency[rollup.purchaseFunnelStage] ?? 0)
+            && (candidate.lastValidPurchaseDate ?? "") > (rollup.lastValidPurchaseDate ?? "")
+          )
+        ) {
+          rollup = candidate;
+        }
+      }
+
+      if (rollup && (changed || profiles.some((p) => p.purchaseRecurrenceCalculatedAt === null))) {
+        changed = true;
         await tx.update(facilities).set({
-          observedPurchaseIntervalDays: snapshot.observedPurchaseIntervalDays,
-          purchaseIntervalDays: snapshot.purchaseIntervalDays,
-          purchaseIntervalSource: snapshot.purchaseIntervalSource,
-          manualPurchaseProfile: snapshot.manualPurchaseProfile,
-          manualPurchaseIntervalDays: snapshot.manualPurchaseIntervalDays,
-          lastValidPurchaseDate: snapshot.lastValidPurchaseDate,
-          purchaseRecurrenceSampleSize: snapshot.purchaseRecurrenceSampleSize,
-          purchaseFunnelStage: snapshot.purchaseFunnelStage,
-          nextPurchaseFunnelTransitionDate: snapshot.nextPurchaseFunnelTransitionDate,
+          observedPurchaseIntervalDays: rollup.observedPurchaseIntervalDays,
+          purchaseIntervalDays: rollup.purchaseIntervalDays,
+          purchaseIntervalSource: rollup.purchaseIntervalSource,
+          manualPurchaseProfile: rollup.manualPurchaseProfile,
+          manualPurchaseIntervalDays: rollup.manualPurchaseIntervalDays,
+          lastValidPurchaseDate: rollup.lastValidPurchaseDate,
+          purchaseRecurrenceSampleSize: rollup.purchaseRecurrenceSampleSize,
+          purchaseFunnelStage: rollup.purchaseFunnelStage,
+          nextPurchaseFunnelTransitionDate: rollup.nextPurchaseFunnelTransitionDate,
           purchaseRecurrenceCalculatedAt: new Date(),
           updatedAt: new Date(),
         }).where(eq(facilities.id, facilityId));
@@ -271,16 +310,6 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         deactivatedAt: facilities.deactivatedAt,
         isActiveInRegistry: facilities.isActiveInRegistry,
       }).from(facilities).where(eq(facilities.id, facilityId)).limit(1);
-      const profiles = await tx
-        .select({
-          verticalId: facilityVerticalProfiles.verticalId,
-          territoryId: facilityVerticalProfiles.territoryId,
-        })
-        .from(facilityVerticalProfiles)
-        .where(and(
-          eq(facilityVerticalProfiles.facilityId, facilityId),
-          eq(facilityVerticalProfiles.isActive, true),
-        ));
       return {
         facilityId,
         changed,

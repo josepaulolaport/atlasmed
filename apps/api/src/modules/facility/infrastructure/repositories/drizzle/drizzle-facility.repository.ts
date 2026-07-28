@@ -10,20 +10,26 @@ import {
   visits,
   orders,
   orderItems,
+  services as cnesServices,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
-import type { FacilityPurchaseBucket } from "../../../application/list-facilities-query";
+import {
+  purchaseBucketToFunnelFilter,
+  type FacilityPurchaseBucket,
+} from "../../../application/list-facilities-query";
 import type {
   FacilityCommercialStatus,
   FacilityListRecord,
   FacilityListScopeFilter,
   FacilityRecord,
   FacilityRepository,
+  FacilityService,
   FacilitySourceUpsertInput,
   FacilityVerticalProfileRecord,
 } from "../../../application/interfaces/facility.repository.interface";
+import { compareFacilityServices } from "../../../application/utils/facility-service-display.utils";
 
 type FacilityRow = typeof facilities.$inferSelect;
 
@@ -58,7 +64,7 @@ export function mapFacility(
   options: {
     lat?: number | null;
     lng?: number | null;
-    services?: Array<{ serviceCode: string; classificationCode: string }>;
+    services?: FacilityService[];
     consultantName?: string | null;
     consultantSince?: Date | null;
     managerName?: string | null;
@@ -182,6 +188,19 @@ async function loadVerticalProfiles(
       commercialStatus: facilityVerticalProfiles.commercialStatus,
       purchaseStatus: facilityVerticalProfiles.purchaseStatus,
       territoryId: facilityVerticalProfiles.territoryId,
+      observedPurchaseIntervalDays:
+        facilityVerticalProfiles.observedPurchaseIntervalDays,
+      purchaseIntervalDays: facilityVerticalProfiles.purchaseIntervalDays,
+      purchaseIntervalSource: facilityVerticalProfiles.purchaseIntervalSource,
+      manualPurchaseProfile: facilityVerticalProfiles.manualPurchaseProfile,
+      manualPurchaseIntervalDays:
+        facilityVerticalProfiles.manualPurchaseIntervalDays,
+      lastValidPurchaseDate: facilityVerticalProfiles.lastValidPurchaseDate,
+      purchaseRecurrenceSampleSize:
+        facilityVerticalProfiles.purchaseRecurrenceSampleSize,
+      purchaseFunnelStage: facilityVerticalProfiles.purchaseFunnelStage,
+      nextPurchaseFunnelTransitionDate:
+        facilityVerticalProfiles.nextPurchaseFunnelTransitionDate,
     })
     .from(facilityVerticalProfiles)
     .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))
@@ -198,6 +217,17 @@ async function loadVerticalProfiles(
       commercialStatus: row.commercialStatus,
       purchaseStatus: row.purchaseStatus,
       territoryId: row.territoryId,
+      purchaseRecurrence: {
+        observedPurchaseIntervalDays: row.observedPurchaseIntervalDays,
+        purchaseIntervalDays: row.purchaseIntervalDays,
+        purchaseIntervalSource: row.purchaseIntervalSource,
+        manualPurchaseProfile: row.manualPurchaseProfile,
+        manualPurchaseIntervalDays: row.manualPurchaseIntervalDays,
+        lastValidPurchaseDate: row.lastValidPurchaseDate,
+        purchaseRecurrenceSampleSize: row.purchaseRecurrenceSampleSize,
+        purchaseFunnelStage: row.purchaseFunnelStage,
+        nextPurchaseFunnelTransitionDate: row.nextPurchaseFunnelTransitionDate,
+      },
     });
     map.set(row.facilityId, list);
   }
@@ -333,6 +363,44 @@ async function loadLastVisitAt(
   return new Map(rows.map((row) => [row.facilityId, row.lastVisitAt]));
 }
 
+/** Batch-load CNES services (with names), prioritized for UI chips. */
+async function loadFacilityServicesByFacilityIds(
+  facilityIds: string[],
+): Promise<Map<string, FacilityService[]>> {
+  const result = new Map<string, FacilityService[]>();
+  if (facilityIds.length === 0) return result;
+
+  const rows = await db
+    .select({
+      facilityId: facilityServices.facilityId,
+      serviceCode: facilityServices.serviceCode,
+      classificationCode: facilityServices.classificationCode,
+      serviceName: cnesServices.serviceName,
+    })
+    .from(facilityServices)
+    .innerJoin(
+      cnesServices,
+      eq(cnesServices.serviceCode, facilityServices.serviceCode),
+    )
+    .where(inArray(facilityServices.facilityId, facilityIds));
+
+  for (const row of rows) {
+    const list = result.get(row.facilityId) ?? [];
+    list.push({
+      serviceCode: row.serviceCode,
+      classificationCode: row.classificationCode,
+      serviceName: row.serviceName,
+    });
+    result.set(row.facilityId, list);
+  }
+
+  for (const [facilityId, list] of result) {
+    list.sort(compareFacilityServices);
+    result.set(facilityId, list);
+  }
+  return result;
+}
+
 
 export function buildFacilityListConditions(params: {
   scope: FacilityListScopeFilter;
@@ -340,6 +408,7 @@ export function buildFacilityListConditions(params: {
   commercialStatus?: FacilityCommercialStatus;
   purchaseBucket?: FacilityPurchaseBucket;
   productIds?: string[];
+  serviceCodes?: string[];
   purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
   purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
   purchaseIntervalMinDays?: number;
@@ -368,49 +437,148 @@ export function buildFacilityListConditions(params: {
       ))));
   }
   if (params.purchaseBucket) {
-    const purchaseStatusFilter =
-      params.purchaseBucket === "active"
-        ? inArray(facilityVerticalProfiles.purchaseStatus, [
-            "HIGH_BUYER",
-            "REGULAR_BUYER",
-          ])
-        : params.purchaseBucket === "inactive"
-          ? eq(facilityVerticalProfiles.purchaseStatus, "LOW_BUYER")
-          : or(
-              eq(facilityVerticalProfiles.purchaseStatus, "NON_BUYER"),
-              isNull(facilityVerticalProfiles.purchaseStatus),
-            );
-    conditions.push(
-      inArray(
-        facilities.id,
-        db
-          .select({ facilityId: facilityVerticalProfiles.facilityId })
-          .from(facilityVerticalProfiles)
-          .where(
-            and(
-              purchaseStatusFilter,
-              eq(facilityVerticalProfiles.isActive, true),
-              ...(params.scope.verticalIds?.length
-                ? [
-                    inArray(
-                      facilityVerticalProfiles.verticalId,
-                      params.scope.verticalIds,
-                    ),
-                  ]
-                : []),
+    // Must match dashboard countPurchaseBuckets (funnel stages, not purchaseStatus).
+    // When vertical scope is set, filter on profile stage (any matching profile).
+    const bucket = purchaseBucketToFunnelFilter(params.purchaseBucket);
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      const stageCond = bucket.includeNull
+        ? or(
+            inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages),
+            isNull(facilityVerticalProfiles.purchaseFunnelStage),
+          )!
+        : inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages);
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                stageCond,
+              ),
             ),
-          ),
-      ),
-    );
+        ),
+      );
+    } else {
+      conditions.push(
+        bucket.includeNull
+          ? or(
+              inArray(facilities.purchaseFunnelStage, bucket.stages),
+              isNull(facilities.purchaseFunnelStage),
+            )!
+          : inArray(facilities.purchaseFunnelStage, bucket.stages),
+      );
+    }
   }
   if (params.productIds?.length) conditions.push(inArray(facilities.id, db.select({ facilityId: orders.facilityId })
     .from(orders).innerJoin(orderItems, eq(orderItems.orderId, orders.id))
     .where(inArray(orderItems.productId, params.productIds))));
-  if (params.purchaseFunnelStages?.length) conditions.push(inArray(facilities.purchaseFunnelStage, params.purchaseFunnelStages));
-  if (params.purchaseProfile === "AUTOMATIC") conditions.push(isNull(facilities.manualPurchaseProfile));
-  else if (params.purchaseProfile) conditions.push(eq(facilities.manualPurchaseProfile, params.purchaseProfile));
-  if (params.purchaseIntervalMinDays !== undefined) conditions.push(gte(facilities.purchaseIntervalDays, params.purchaseIntervalMinDays));
-  if (params.purchaseIntervalMaxDays !== undefined) conditions.push(lte(facilities.purchaseIntervalDays, params.purchaseIntervalMaxDays));
+  if (params.serviceCodes?.length) {
+    // AND: clinic must offer every selected specialty (not any-of / OR).
+    const codes = [...new Set(params.serviceCodes)];
+    conditions.push(
+      inArray(
+        facilities.id,
+        db
+          .select({ facilityId: facilityServices.facilityId })
+          .from(facilityServices)
+          .where(inArray(facilityServices.serviceCode, codes))
+          .groupBy(facilityServices.facilityId)
+          .having(
+            sql`count(distinct ${facilityServices.serviceCode}) = ${codes.length}`,
+          ),
+      ),
+    );
+  }
+  if (params.purchaseFunnelStages?.length) {
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                inArray(
+                  facilityVerticalProfiles.purchaseFunnelStage,
+                  params.purchaseFunnelStages,
+                ),
+              ),
+            ),
+        ),
+      );
+    } else {
+      conditions.push(
+        inArray(facilities.purchaseFunnelStage, params.purchaseFunnelStages),
+      );
+    }
+  }
+  if (params.purchaseProfile === "AUTOMATIC") {
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                isNull(facilityVerticalProfiles.manualPurchaseProfile),
+              ),
+            ),
+        ),
+      );
+    } else {
+      conditions.push(isNull(facilities.manualPurchaseProfile));
+    }
+  } else if (params.purchaseProfile) {
+    const verticalIds = params.scope.verticalIds;
+    if (verticalIds && verticalIds.length > 0) {
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.isActive, true),
+                inArray(facilityVerticalProfiles.verticalId, verticalIds),
+                eq(
+                  facilityVerticalProfiles.manualPurchaseProfile,
+                  params.purchaseProfile,
+                ),
+              ),
+            ),
+        ),
+      );
+    } else {
+      conditions.push(
+        eq(facilities.manualPurchaseProfile, params.purchaseProfile),
+      );
+    }
+  }
+  if (params.purchaseIntervalMinDays !== undefined) {
+    conditions.push(
+      gte(facilities.purchaseIntervalDays, params.purchaseIntervalMinDays),
+    );
+  }
+  if (params.purchaseIntervalMaxDays !== undefined) {
+    conditions.push(
+      lte(facilities.purchaseIntervalDays, params.purchaseIntervalMaxDays),
+    );
+  }
   return and(...conditions);
 }
 
@@ -449,6 +617,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: FacilityPurchaseBucket;
     productIds?: string[];
+    serviceCodes?: string[];
     purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
@@ -518,7 +687,13 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       deriveProfileTerritoryId(profilesByFacility.get(id) ?? []),
     );
 
-    const [profCounts, consultantMap, territoryNameById, lastVisitAtByFacility] = await Promise.all([
+    const [
+      profCounts,
+      consultantMap,
+      territoryNameById,
+      lastVisitAtByFacility,
+      servicesByFacility,
+    ] = await Promise.all([
       db
         .select({
           facilityId: facilityProfessionals.facilityId,
@@ -535,6 +710,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       loadConsultantInfo(ids),
       loadTerritoryNames(derivedTerritoryIds),
       loadLastVisitAt(ids, params.userId),
+      loadFacilityServicesByFacilityIds(ids),
     ]);
 
     const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
@@ -549,6 +725,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           ...mapFacility(row, {
             lat: row.lat,
             lng: row.lng,
+            services: servicesByFacility.get(row.id) ?? [],
             consultantName: consultant?.name ?? null,
             consultantSince: consultant?.since ?? null,
             managerName: consultant?.managerName ?? null,
@@ -577,6 +754,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: FacilityPurchaseBucket;
     productIds?: string[];
+    serviceCodes?: string[];
     purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
@@ -599,6 +777,25 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return rows;
   }
 
+  async listServiceCatalog(): Promise<
+    Array<{ serviceCode: string; serviceName: string }>
+  > {
+    const rows = await db
+      .select({
+        serviceCode: cnesServices.serviceCode,
+        serviceName: cnesServices.serviceName,
+      })
+      .from(cnesServices)
+      .orderBy(asc(cnesServices.serviceName));
+
+    return rows
+      .map((row) => ({
+        serviceCode: row.serviceCode,
+        serviceName: row.serviceName,
+      }))
+      .sort(compareFacilityServices);
+  }
+
   async findById(id: string): Promise<FacilityRecord | null> {
     const [facility] = await db
       .select({
@@ -616,24 +813,19 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     const profiles = profilesByFacility.get(id) ?? [];
     const territoryId = deriveProfileTerritoryId(profiles);
 
-    const [services, consultantMap, territoryNameById] = await Promise.all([
-      db
-        .select({
-          serviceCode: facilityServices.serviceCode,
-          classificationCode: facilityServices.classificationCode,
-        })
-        .from(facilityServices)
-        .where(eq(facilityServices.facilityId, id)),
-      loadConsultantInfo([id]),
-      loadTerritoryNames([territoryId]),
-    ]);
+    const [servicesByFacility, consultantMap, territoryNameById] =
+      await Promise.all([
+        loadFacilityServicesByFacilityIds([id]),
+        loadConsultantInfo([id]),
+        loadTerritoryNames([territoryId]),
+      ]);
 
     const consultant = consultantMap.get(id);
     const derived = deriveProfileCommercialFields(profiles);
     return mapFacility(facility, {
       lat: facility.lat,
       lng: facility.lng,
-      services,
+      services: servicesByFacility.get(id) ?? [],
       consultantName: consultant?.name ?? null,
       consultantSince: consultant?.since ?? null,
       managerName: consultant?.managerName ?? null,
