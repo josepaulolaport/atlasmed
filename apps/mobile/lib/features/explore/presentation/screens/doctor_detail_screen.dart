@@ -234,13 +234,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                     themeColor: detail.primaryColor,
                     actions: [
                       QuickActionItem(
-                        icon: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: detail.primaryColor.withAlpha(38),
-                          ),
+                        icon: CircleAvatar(
+                          backgroundColor: detail.primaryColor
+                              .createSecondary(),
+                          radius: 18,
                           child: Icon(
                             Icons.phone_rounded,
                             size: 18,
@@ -255,13 +252,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                         ),
                       ),
                       QuickActionItem(
-                        icon: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: detail.primaryColor.withAlpha(38),
-                          ),
+                        icon: CircleAvatar(
+                          backgroundColor: detail.primaryColor
+                              .createSecondary(),
+                          radius: 18,
                           child: Icon(
                             Icons.chat_rounded,
                             size: 18,
@@ -276,13 +270,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                         ),
                       ),
                       QuickActionItem(
-                        icon: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: detail.primaryColor.withAlpha(38),
-                          ),
+                        icon: CircleAvatar(
+                          backgroundColor: detail.primaryColor
+                              .createSecondary(),
+                          radius: 18,
                           child: Icon(
                             Icons.email_rounded,
                             size: 18,
@@ -297,13 +288,10 @@ class _DoctorDetailContent extends ConsumerWidget {
                         ),
                       ),
                       QuickActionItem(
-                        icon: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: detail.primaryColor.withAlpha(38),
-                          ),
+                        icon: CircleAvatar(
+                          backgroundColor: detail.primaryColor
+                              .createSecondary(),
+                          radius: 18,
                           child: Icon(
                             Icons.event_rounded,
                             size: 18,

@@ -516,13 +516,9 @@ class _ClinicDetailContent extends ConsumerWidget {
                   themeColor: AppColors.navyBright,
                   actions: [
                     QuickActionItem(
-                      icon: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.navyBright.withAlpha(38),
-                        ),
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
                         child: const Icon(
                           Icons.phone_rounded,
                           size: 18,
@@ -537,13 +533,9 @@ class _ClinicDetailContent extends ConsumerWidget {
                       ),
                     ),
                     QuickActionItem(
-                      icon: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.navyBright.withAlpha(38),
-                        ),
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
                         child: const Icon(
                           Icons.chat_rounded,
                           size: 18,
@@ -560,13 +552,9 @@ class _ClinicDetailContent extends ConsumerWidget {
                       ),
                     ),
                     QuickActionItem(
-                      icon: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.navyBright.withAlpha(38),
-                        ),
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
                         child: const Icon(
                           Icons.directions_rounded,
                           size: 18,
@@ -583,13 +571,10 @@ class _ClinicDetailContent extends ConsumerWidget {
                     ),
                     if (ref.watch(canCreateVisitProvider))
                       QuickActionItem(
-                        icon: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.navyBright.withAlpha(38),
-                          ),
+                        icon: CircleAvatar(
+                          backgroundColor: AppColors.navyBright
+                              .createSecondary(),
+                          radius: 18,
                           child: const Icon(
                             Icons.calendar_month_rounded,
                             size: 18,
@@ -629,13 +614,9 @@ class _ClinicDetailContent extends ConsumerWidget {
                         },
                       ),
                     QuickActionItem(
-                      icon: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.navyBright.withAlpha(38),
-                        ),
+                      icon: CircleAvatar(
+                        backgroundColor: AppColors.navyBright.createSecondary(),
+                        radius: 18,
                         child: const Icon(
                           Icons.note_add_rounded,
                           size: 18,

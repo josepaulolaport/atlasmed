@@ -79,16 +79,8 @@ class QuickActionItem extends StatelessWidget {
             children: [
               ColorFiltered(
                 colorFilter: isDisabled
-                    ? const ColorFilter.matrix(<double>[
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0.2126, 0.7152, 0.0722, 0, 0,
-                        0, 0, 0, 0.5, 0,
-                      ])
-                    : const ColorFilter.mode(
-                        Colors.transparent,
-                        BlendMode.dst,
-                      ),
+                    ? ColorFilterX.grayscale()
+                    : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
                 child: icon,
               ),
               const SizedBox(height: 5),
