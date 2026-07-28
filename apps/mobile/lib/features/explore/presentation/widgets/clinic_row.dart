@@ -14,7 +14,7 @@ class ClinicRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recurrence = clinic.purchaseRecurrence;
+    final funnelStage = clinic.purchaseRecurrence?.funnelStage;
 
     return InkWell(
       onTap: onTap,
@@ -144,6 +144,7 @@ class ClinicRow extends StatelessWidget {
                     ),
                   ],
                   if (clinic.commercialStatus != null ||
+                      funnelStage != null ||
                       clinic.lastVisitDays != null) ...[
                     const SizedBox(height: 8),
                     Wrap(
@@ -164,6 +165,13 @@ class ClinicRow extends StatelessWidget {
                             ),
                             small: true,
                           ),
+                        if (funnelStage != null)
+                          StatusChip(
+                            label: funnelStage.label,
+                            color: funnelStage.color,
+                            bg: funnelStage.backgroundColor,
+                            small: true,
+                          ),
                         if (clinic.lastVisitDays != null)
                           _MetaItem(
                             icon: Icons.access_time_rounded,
@@ -174,131 +182,11 @@ class ClinicRow extends StatelessWidget {
                       ],
                     ),
                   ],
-                  if (recurrence?.funnelStage != null) ...[
-                    const SizedBox(height: 8),
-                    _RecompraContainer(recurrence: recurrence!),
-                  ],
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-enum _RecompraLabelStyle { normal, atrasado, churn, inativo, nuncaComprou }
-
-extension on _RecompraLabelStyle {
-  Color get color => switch (this) {
-    _RecompraLabelStyle.normal => AppColors.green600,
-    _RecompraLabelStyle.atrasado => AppColors.amberDark,
-    _RecompraLabelStyle.churn => AppColors.redDark,
-    _RecompraLabelStyle.inativo => AppColors.gray500,
-    // Match Desempenho donut "Nunca compraram".
-    _RecompraLabelStyle.nuncaComprou => const Color(0xFFdc2626),
-  };
-
-  Color get bg => color.withValues(alpha: 0.08);
-  Color get border => color.withValues(alpha: 0.2);
-}
-
-_RecompraLabelStyle? _resolveStyle(PurchaseRecurrenceSnapshot pr) {
-  switch (pr.funnelStage) {
-    case PurchaseFunnelStage.purchaseWindow:
-      return _RecompraLabelStyle.normal;
-    case PurchaseFunnelStage.outsideWindow:
-      return _RecompraLabelStyle.atrasado;
-    case PurchaseFunnelStage.churn:
-      return _RecompraLabelStyle.churn;
-    case PurchaseFunnelStage.neverPurchased:
-      return _RecompraLabelStyle.nuncaComprou;
-    case PurchaseFunnelStage.inactive:
-      return _RecompraLabelStyle.inativo;
-    case null:
-      return null;
-  }
-}
-
-String? _resolveLabel(PurchaseRecurrenceSnapshot pr) {
-  final now = DateTime.now();
-  switch (pr.funnelStage) {
-    case PurchaseFunnelStage.purchaseWindow:
-      if (pr.nextTransitionDate != null) {
-        final days = pr.nextTransitionDate!.difference(now).inDays;
-        if (days >= 0) {
-          return 'Recompra prevista em $days dia${days == 1 ? '' : 's'}';
-        }
-      }
-      if (pr.lastPurchaseDate != null && pr.intervalDays > 0) {
-        final daysSince = now.difference(pr.lastPurchaseDate!).inDays;
-        final remaining = pr.intervalDays - daysSince;
-        if (remaining >= 0) {
-          return 'Recompra prevista em $remaining dia${remaining == 1 ? '' : 's'}';
-        }
-      }
-      return 'Período de compra';
-    case PurchaseFunnelStage.outsideWindow:
-      if (pr.lastPurchaseDate != null) {
-        final daysSince = now.difference(pr.lastPurchaseDate!).inDays;
-        return 'Recompra atrasada há $daysSince dia${daysSince == 1 ? '' : 's'}';
-      }
-      return 'Fora do período';
-    case PurchaseFunnelStage.churn:
-      return 'Risco de churn';
-    case PurchaseFunnelStage.neverPurchased:
-      return 'Nunca comprou';
-    case PurchaseFunnelStage.inactive:
-      return 'Inativo';
-    case null:
-      return null;
-  }
-}
-
-class _RecompraContainer extends StatelessWidget {
-  final PurchaseRecurrenceSnapshot recurrence;
-
-  const _RecompraContainer({required this.recurrence});
-
-  @override
-  Widget build(BuildContext context) {
-    final style = _resolveStyle(recurrence);
-    final label = _resolveLabel(recurrence);
-    if (style == null || label == null) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: style.bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: style.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: style.color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: style.color,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

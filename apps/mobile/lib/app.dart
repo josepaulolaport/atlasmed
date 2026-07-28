@@ -151,7 +151,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           if (!locationSession.isUsable) {
             return isLocationGate ? null : '/location-gate';
           }
-          return (isSplash || isLocationGate) ? '/explore' : null;
+          return (isSplash || isLocationGate) ? '/dashboard' : null;
         }
         return isSplash ? null : '/splash';
       },
