@@ -136,10 +136,11 @@ class ClinicRow extends StatelessWidget {
                       ],
                     ),
                   ],
-                  if (clinic.purchaseRecurrence?.funnelStage != null)
-                    const SizedBox(height: 8),
-                  if (clinic.purchaseRecurrence?.funnelStage != null)
-                    _RecompraContainer(recurrence: clinic.purchaseRecurrence!),
+                  // TODO(yanncabral): uncomment when the filters are back
+                  // if (clinic.purchaseRecurrence?.funnelStage != null)
+                  //   const SizedBox(height: 8),
+                  // if (clinic.purchaseRecurrence?.funnelStage != null)
+                  //   _RecompraContainer(recurrence: clinic.purchaseRecurrence!),
                 ],
               ),
             ),
@@ -154,11 +155,11 @@ enum _RecompraLabelStyle { normal, atrasado, churn, inativo }
 
 extension on _RecompraLabelStyle {
   Color get color => switch (this) {
-        _RecompraLabelStyle.normal => AppColors.green600,
-        _RecompraLabelStyle.atrasado => AppColors.amberDark,
-        _RecompraLabelStyle.churn => AppColors.redDark,
-        _RecompraLabelStyle.inativo => AppColors.gray500,
-      };
+    _RecompraLabelStyle.normal => AppColors.green600,
+    _RecompraLabelStyle.atrasado => AppColors.amberDark,
+    _RecompraLabelStyle.churn => AppColors.redDark,
+    _RecompraLabelStyle.inativo => AppColors.gray500,
+  };
 
   Color get bg => color.withValues(alpha: 0.08);
   Color get border => color.withValues(alpha: 0.2);
@@ -186,12 +187,16 @@ String? _resolveLabel(PurchaseRecurrenceSnapshot pr) {
     case PurchaseFunnelStage.purchaseWindow:
       if (pr.nextTransitionDate != null) {
         final days = pr.nextTransitionDate!.difference(now).inDays;
-        if (days >= 0) return 'Recompra prevista em $days dia${days == 1 ? '' : 's'}';
+        if (days >= 0) {
+          return 'Recompra prevista em $days dia${days == 1 ? '' : 's'}';
+        }
       }
       if (pr.lastPurchaseDate != null && pr.intervalDays > 0) {
         final daysSince = now.difference(pr.lastPurchaseDate!).inDays;
         final remaining = pr.intervalDays - daysSince;
-        if (remaining >= 0) return 'Recompra prevista em $remaining dia${remaining == 1 ? '' : 's'}';
+        if (remaining >= 0) {
+          return 'Recompra prevista em $remaining dia${remaining == 1 ? '' : 's'}';
+        }
       }
       return 'Período de compra';
     case PurchaseFunnelStage.outsideWindow:
@@ -210,6 +215,7 @@ String? _resolveLabel(PurchaseRecurrenceSnapshot pr) {
   }
 }
 
+// ignore: unused_element
 class _RecompraContainer extends StatelessWidget {
   final PurchaseRecurrenceSnapshot recurrence;
 
