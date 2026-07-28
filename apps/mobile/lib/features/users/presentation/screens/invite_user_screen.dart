@@ -365,9 +365,8 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
             const SizedBox(height: 8),
             sectorsAsync.when(
               loading: () => const CircularProgressIndicator(),
-              error: (_, _) => const Text(
-                'Não foi possível carregar as linhas comerciais.',
-              ),
+              error: (_, _) =>
+                  const Text('Não foi possível carregar as linhas comerciais.'),
               data: (sectors) => Wrap(
                 spacing: 8,
                 runSpacing: 8,

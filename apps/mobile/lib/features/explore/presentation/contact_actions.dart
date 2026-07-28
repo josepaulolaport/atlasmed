@@ -104,16 +104,12 @@ List<Uri> _mapsAppRouteUrls({
       // Prefer human-readable address in the destination field; keep a
       // coords fallback so navigation still works if geocoding fails.
       final addressDestination = query.isNotEmpty ? query : null;
-      final coordDestination =
-          hasCoords ? '$latitude,$longitude' : null;
+      final coordDestination = hasCoords ? '$latitude,$longitude' : null;
       final primary = addressDestination ?? coordDestination!;
       return [
         Uri(
           scheme: 'comgooglemaps',
-          queryParameters: {
-            'daddr': primary,
-            'directionsmode': 'driving',
-          },
+          queryParameters: {'daddr': primary, 'directionsmode': 'driving'},
         ),
         if (addressDestination != null && coordDestination != null)
           Uri(
@@ -124,10 +120,7 @@ List<Uri> _mapsAppRouteUrls({
             },
           ),
         // Android Google Maps navigation scheme.
-        Uri(
-          scheme: 'google.navigation',
-          queryParameters: {'q': primary},
-        ),
+        Uri(scheme: 'google.navigation', queryParameters: {'q': primary}),
         Uri.https('www.google.com', '/maps/dir/', {
           'api': '1',
           'destination': primary,

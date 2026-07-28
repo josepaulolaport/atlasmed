@@ -58,11 +58,7 @@ class ClinicServiceChips extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.onNavy,
-    this.muted = false,
-  });
+  const _Chip({required this.label, required this.onNavy, this.muted = false});
 
   final String label;
   final bool onNavy;

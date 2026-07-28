@@ -491,10 +491,7 @@ class _SpecialtyNavRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.gray400,
-              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.gray400),
             ],
           ),
         ),

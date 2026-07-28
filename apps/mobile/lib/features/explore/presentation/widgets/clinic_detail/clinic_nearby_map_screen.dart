@@ -220,8 +220,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         ref.watch(currentUserVerticalIdsProvider).valueOrNull ?? const [];
     final shared = _sharedFor(userVerticalIds);
     final selected = ref.watch(selectedFacilityVerticalIdProvider);
-    final fallback =
-        ref.watch(effectiveFacilityVerticalIdProvider).valueOrNull;
+    final fallback = ref.watch(effectiveFacilityVerticalIdProvider).valueOrNull;
     final verticalId = _verticalIdFor(
       shared: shared,
       selected: selected,

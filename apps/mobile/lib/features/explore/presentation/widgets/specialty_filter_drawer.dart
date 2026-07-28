@@ -39,10 +39,8 @@ class SpecialtyFilterDrawer extends ConsumerStatefulWidget {
       isScrollControlled: true,
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => SpecialtyFilterDrawer(
-        kind: kind,
-        initialSelected: selected,
-      ),
+      builder: (_) =>
+          SpecialtyFilterDrawer(kind: kind, initialSelected: selected),
     );
   }
 
@@ -182,10 +180,8 @@ class _SpecialtyFilterDrawerState extends ConsumerState<SpecialtyFilterDrawer> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: () => Navigator.pop(
-                          context,
-                          Set<String>.from(_selected),
-                        ),
+                        onPressed: () =>
+                            Navigator.pop(context, Set<String>.from(_selected)),
                         child: Text(
                           _selected.isEmpty
                               ? 'Aplicar'

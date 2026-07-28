@@ -93,14 +93,8 @@ class FacilityServiceLabels {
     final copy = List<ClinicService>.from(services);
     copy.sort((a, b) {
       final rank =
-          priorityRank(
-            serviceCode: a.serviceCode,
-            serviceName: a.serviceName,
-          ) -
-          priorityRank(
-            serviceCode: b.serviceCode,
-            serviceName: b.serviceName,
-          );
+          priorityRank(serviceCode: a.serviceCode, serviceName: a.serviceName) -
+          priorityRank(serviceCode: b.serviceCode, serviceName: b.serviceName);
       if (rank != 0) return rank;
       return formatName(a.serviceName).compareTo(formatName(b.serviceName));
     });

@@ -167,8 +167,8 @@ class ClinicHeaderSection extends ConsumerWidget {
                 // (commercial + purchase funnel bucket — not purchase_status).
                 Builder(
                   builder: (context) {
-                    final commercialApi =
-                        detail.commercial?.commercialStatus?.trim();
+                    final commercialApi = detail.commercial?.commercialStatus
+                        ?.trim();
                     final funnel = detail.purchaseRecurrence?.funnelStage;
                     final hasCommercial =
                         commercialApi != null && commercialApi.isNotEmpty;

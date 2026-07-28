@@ -222,9 +222,7 @@ class _VerticalPicker extends ConsumerWidget {
         child: Row(
           children: [
             const Expanded(
-              child: Text(
-                'Não foi possível carregar as linhas comerciais.',
-              ),
+              child: Text('Não foi possível carregar as linhas comerciais.'),
             ),
             TextButton(
               onPressed: () => ref.invalidate(businessVerticalsProvider),

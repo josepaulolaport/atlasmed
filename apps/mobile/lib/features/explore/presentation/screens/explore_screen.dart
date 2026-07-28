@@ -144,8 +144,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             : state.filteredDoctors.length);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    if (isClinic &&
-        (state.filters['serviceCodes']?.isNotEmpty ?? false)) {
+    if (isClinic && (state.filters['serviceCodes']?.isNotEmpty ?? false)) {
       unawaited(
         ref.read(facilityServicesRepositoryProvider).currentValueOrResolve(),
       );

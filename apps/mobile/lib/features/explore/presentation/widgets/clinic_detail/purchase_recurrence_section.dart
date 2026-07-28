@@ -4,10 +4,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class PurchaseRecurrenceSection extends StatelessWidget {
-  const PurchaseRecurrenceSection({
-    super.key,
-    required this.value,
-  });
+  const PurchaseRecurrenceSection({super.key, required this.value});
 
   final PurchaseRecurrenceSnapshot? value;
 
