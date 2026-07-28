@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ClinicCrmDoctorsSection extends StatelessWidget {
@@ -29,25 +29,13 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (doctors.isEmpty && !hasMore) {
-      return ClinicDetailCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Nenhum médico associado a este estabelecimento',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
-            ),
-            if (onAssociate != null) ...[
-              const SizedBox(height: 12),
-              AtlasButton.outline(
-                onPressed: onAssociate!,
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                label: const Text('Associar médicos'),
-              ),
-            ],
-          ],
-        ),
+      return ClinicaEmptySection(
+        icon: Icons.medical_services_outlined,
+        title: 'Nenhum médico associado',
+        description: 'Associe médicos que atuam neste estabelecimento.',
+        onAction: onAssociate,
+        actionLabel: const Text('Associar médicos'),
+        actionIcon: Icons.person_add_alt_1_rounded,
       );
     }
 
