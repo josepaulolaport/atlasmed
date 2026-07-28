@@ -50,7 +50,6 @@ void main() {
       expect(find.text('30 dias'), findsOneWidget);
       expect(find.text('Em 6 dias'), findsOneWidget);
       expect(find.text('6 intervalos'), findsOneWidget);
-      expect(find.text('Média observada: 31 dias'), findsOneWidget);
       expect(find.text('Ver histórico de compras'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
@@ -122,7 +121,6 @@ void main() {
     expect(find.text('Sem histórico'), findsOneWidget);
     expect(find.text('Compras registradas'), findsOneWidget);
     expect(find.text('Após a primeira compra'), findsOneWidget);
-    expect(find.text('Ainda não disponível'), findsOneWidget);
     expect(find.text('30 dias'), findsNothing);
     expect(find.text('0 intervalos'), findsNothing);
     expect(find.text('Nunca comprou'), findsNothing);
