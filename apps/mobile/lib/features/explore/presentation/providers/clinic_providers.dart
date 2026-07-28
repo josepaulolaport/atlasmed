@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_page_cache.dart';
 
 class ClinicsQuery {
   const ClinicsQuery({
@@ -41,6 +42,28 @@ class ClinicsQuery {
   final FacilitySort? sort;
   final SortOrder? order;
   final String? verticalId;
+
+  ClinicsQuery copyWith({int? page}) {
+    return ClinicsQuery(
+      page: page ?? this.page,
+      limit: limit,
+      searchQuery: searchQuery,
+      latitude: latitude,
+      longitude: longitude,
+      radiusKm: radiusKm,
+      commercialStatus: commercialStatus,
+      purchaseBucket: purchaseBucket,
+      productIds: productIds,
+      serviceCodes: serviceCodes,
+      purchaseFunnelStages: purchaseFunnelStages,
+      purchaseProfile: purchaseProfile,
+      purchaseIntervalMinDays: purchaseIntervalMinDays,
+      purchaseIntervalMaxDays: purchaseIntervalMaxDays,
+      sort: sort,
+      order: order,
+      verticalId: verticalId,
+    );
+  }
 
   @override
   bool operator ==(Object other) {
@@ -96,10 +119,57 @@ class ClinicsQuery {
   bool differsFrom(ClinicsQuery other) => this != other;
 }
 
+final clinicsPageProvider = StreamProvider.autoDispose
+    .family<PaginatedFacilities, ClinicsQuery>((ref, query) async* {
+      final sessionTag = await ref.watch(exploreSessionCacheTagProvider.future);
+      if (sessionTag == null) return;
+      final repository = ref.watch(
+        _clinicsPageRepositoryProvider((query: query, sessionTag: sessionTag)),
+      );
+      keepExplorePageAlive(ref);
+
+      final currentValue = repository.currentValue;
+      if (currentValue != null) yield currentValue;
+
+      await for (final repositoryState in repository.stream) {
+        final data = repositoryState.map(ready: (state) => state.data);
+        if (data != null && !identical(data, currentValue)) yield data;
+      }
+    });
+
 final clinicsRepositoryProvider = Provider.autoDispose
     .family<ClinicsRepository, ClinicsQuery>((ref, query) {
-      ref.watch(sessionProvider);
       final repository = ClinicsRepository(
+        page: query.page,
+        limit: query.limit,
+        searchQuery: query.searchQuery,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radiusKm: query.radiusKm,
+        commercialStatus: query.commercialStatus,
+        purchaseBucket: query.purchaseBucket,
+        productIds: query.productIds,
+        serviceCodes: query.serviceCodes,
+        purchaseFunnelStages: query.purchaseFunnelStages,
+        purchaseProfile: query.purchaseProfile,
+        purchaseIntervalMinDays: query.purchaseIntervalMinDays,
+        purchaseIntervalMaxDays: query.purchaseIntervalMaxDays,
+        sort: query.sort,
+        order: query.order,
+        verticalId: query.verticalId,
+      );
+      ref.onDispose(repository.dispose);
+      return repository;
+    });
+
+final _clinicsPageRepositoryProvider = Provider.autoDispose
+    .family<ClinicsRepository, ({ClinicsQuery query, String sessionTag})>((
+      ref,
+      request,
+    ) {
+      final query = request.query;
+      final repository = ClinicsRepository(
+        cacheTag: request.sessionTag,
         page: query.page,
         limit: query.limit,
         searchQuery: query.searchQuery,

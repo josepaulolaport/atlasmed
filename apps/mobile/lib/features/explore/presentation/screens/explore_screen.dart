@@ -6,15 +6,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_query_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_services_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/explore_paged_results.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/specialty_filter_drawer.dart';
@@ -33,26 +37,25 @@ class ExploreScreen extends ConsumerStatefulWidget {
   ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
 }
 
+/// Compatibility list used by focused clinic surfaces such as Desempenho.
+/// The main Explore screen uses [ClinicsPagedResults]/[DoctorsPagedResults].
 class ExploreResultsList extends StatelessWidget {
-  final List<Either<FacilityEntry, ProfessionalEntry>> items;
-  final bool hasMore;
-  final bool isLoadingMore;
-  final VoidCallback onLoadMore;
-  final double bottomInset;
-
-  /// When set (e.g. Desempenho Linha), passed into clinic detail as
-  /// `?verticalId=` so Potencial / sticky Linha open on the right profile.
-  final String? preferredVerticalId;
-
   const ExploreResultsList({
-    super.key,
     required this.items,
     required this.hasMore,
     required this.isLoadingMore,
     required this.onLoadMore,
     required this.bottomInset,
     this.preferredVerticalId,
+    super.key,
   });
+
+  final List<Either<FacilityEntry, ProfessionalEntry>> items;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final VoidCallback onLoadMore;
+  final double bottomInset;
+  final String? preferredVerticalId;
 
   @override
   Widget build(BuildContext context) {
@@ -76,29 +79,26 @@ class ExploreResultsList extends StatelessWidget {
           if (index == items.length + (hasMore ? 1 : 0)) {
             return SizedBox(height: bottomInset);
           }
-
           if (index >= items.length) {
             return isLoadingMore
                 ? SkeletonRow(isDoctor: items.last.isRight())
                 : const SizedBox.shrink();
           }
-
           return items[index].fold(
-            (facility) => ClinicRow(
-              clinic: facility,
+            (clinic) => ClinicRow(
+              clinic: clinic,
               onTap: () {
-                final id = facility.id;
                 final verticalId = preferredVerticalId;
                 if (verticalId != null && verticalId.isNotEmpty) {
                   context.push(
                     Uri(
-                      path: '/explore/clinic/$id',
+                      path: '/explore/clinic/${clinic.id}',
                       queryParameters: {'verticalId': verticalId},
                     ).toString(),
                   );
-                } else {
-                  context.push('/explore/clinic/$id');
+                  return;
                 }
+                context.push('/explore/clinic/${clinic.id}');
               },
             ),
             (doctor) => DoctorRow(
@@ -107,6 +107,37 @@ class ExploreResultsList extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _QueryLoadingList extends StatelessWidget {
+  const _QueryLoadingList({required this.isDoctor});
+
+  final bool isDoctor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: 8,
+      itemBuilder: (_, _) => SkeletonRow(isDoctor: isDoctor),
+    );
+  }
+}
+
+class _QueryError extends StatelessWidget {
+  const _QueryError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TextButton.icon(
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh_rounded),
+        label: const Text('Tentar novamente'),
       ),
     );
   }
@@ -140,26 +171,22 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final state = ref.watch(exploreProvider);
     final notifier = ref.read(exploreProvider.notifier);
 
-    ref.listen<String?>(selectedFacilityVerticalIdProvider, (previous, next) {
-      if (previous == next) return;
-      unawaited(notifier.refreshGpsAndList());
-    });
-
     final isClinic = state.activeTab == 'clinic';
-    final displayedList = isClinic
-        ? state.filteredClinics
-              .take(state.visibleCount)
-              .map((clinic) => Left<FacilityEntry, ProfessionalEntry>(clinic))
-              .toList()
-        : state.filteredDoctors
-              .take(state.visibleCount)
-              .map((doctor) => Right<FacilityEntry, ProfessionalEntry>(doctor))
-              .toList();
-    final hasMore =
-        state.visibleCount <
-        (isClinic
-            ? state.filteredClinics.length
-            : state.filteredDoctors.length);
+    final clinicsQuery = ref.watch(clinicsQueryProvider);
+    final doctorsQuery = ref.watch(doctorsQueryProvider);
+    final clinicTotal = clinicsQuery.maybeWhen(
+      data: (query) => ref
+          .watch(clinicsPageProvider(query.copyWith(page: 1)))
+          .valueOrNull
+          ?.pagination
+          .total,
+      orElse: () => null,
+    );
+    final doctorTotal = ref
+        .watch(doctorsPageProvider(doctorsQuery.copyWith(page: 1)))
+        .valueOrNull
+        ?.pagination
+        .total;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     if (isClinic && (state.filters['serviceCodes']?.isNotEmpty ?? false)) {
@@ -184,8 +211,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           TabToggle(
             value: state.activeTab,
             onChanged: notifier.setTab,
-            clinicCount: state.clinicTotal,
-            doctorCount: state.doctorTotal,
+            clinicCount: clinicTotal ?? 0,
+            doctorCount: doctorTotal ?? 0,
             trailing: ExploreSortChip(
               sort: state.sort,
               onTap: () => _showSortSheet(state, notifier),
@@ -202,23 +229,24 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               ),
             ),
           Expanded(
-            child: state.loading
-                ? ListView.builder(
-                    itemCount: 8,
-                    itemBuilder: (_, _) => SkeletonRow(isDoctor: !isClinic),
-                  )
-                : displayedList.isEmpty
-                ? EmptyState(query: state.query, kind: state.activeTab)
-                : RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(exploreProvider.notifier).refreshGpsAndList(),
-                    child: ExploreResultsList(
-                      items: displayedList,
-                      hasMore: hasMore,
-                      isLoadingMore: state.loadingMore,
-                      onLoadMore: notifier.loadMore,
+            child: isClinic
+                ? clinicsQuery.when(
+                    data: (query) => ClinicsPagedResults(
+                      query: query,
                       bottomInset: bottomInset,
+                      preferredVerticalId: query.verticalId,
+                      onRefresh: notifier.refreshGpsAndList,
                     ),
+                    loading: () => const _QueryLoadingList(isDoctor: false),
+                    error: (_, _) => _QueryError(
+                      onRetry: () =>
+                          ref.invalidate(effectiveFacilityVerticalIdProvider),
+                    ),
+                  )
+                : DoctorsPagedResults(
+                    query: doctorsQuery,
+                    bottomInset: bottomInset,
+                    onRefresh: notifier.refreshGpsAndList,
                   ),
           ),
         ],
@@ -332,6 +360,22 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             onRemove: () {
               final next = Map<String, List<String>>.from(state.filters);
               next['purchaseBucket'] = [];
+              notifier.applyFilters(
+                filters: next,
+                radiusKm: state.radiusKm,
+                clearRadius: state.radiusKm == null,
+              );
+            },
+          ),
+        );
+      }
+      for (final key in (state.filters['purchaseFunnelStage'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            label: purchaseFunnelStageFromApi(key)?.label ?? key,
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['purchaseFunnelStage'] = [];
               notifier.applyFilters(
                 filters: next,
                 radiusKm: state.radiusKm,

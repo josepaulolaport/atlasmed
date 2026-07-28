@@ -12,6 +12,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
     with SessionEnvironmentMixin<PaginatedProfessionals> {
   DoctorsRepository({
     String? baseUrl,
+    String? cacheTag,
     this.page = 1,
     this.limit = 20,
     this.searchQuery,
@@ -43,6 +44,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
            },
          ),
          name: 'DoctorsRepository',
+         tag: cacheTag,
        );
 
   final int page;
