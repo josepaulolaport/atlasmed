@@ -64,7 +64,7 @@ export function mapFacility(
   options: {
     lat?: number | null;
     lng?: number | null;
-    services?: Array<{ serviceCode: string; classificationCode: string }>;
+    services?: FacilityService[];
     consultantName?: string | null;
     consultantSince?: Date | null;
     managerName?: string | null;
