@@ -242,9 +242,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
             child: Text(
-              filtered.length == 1
-                  ? '1 médico'
-                  : '${filtered.length} médicos',
+              filtered.length == 1 ? '1 médico' : '${filtered.length} médicos',
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,

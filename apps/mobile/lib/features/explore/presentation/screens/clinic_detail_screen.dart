@@ -1138,7 +1138,8 @@ class _ClinicDeactivateButton extends ConsumerWidget {
             ref: ref,
             clinicId: clinicId,
             clinicName: clinicName,
-            currentStatus: commercialStatus ?? FacilityCommercialStatus.registered,
+            currentStatus:
+                commercialStatus ?? FacilityCommercialStatus.registered,
           ),
           icon: const Icon(Icons.power_settings_new_rounded, size: 18),
           label: const Text('Solicitar desativação'),

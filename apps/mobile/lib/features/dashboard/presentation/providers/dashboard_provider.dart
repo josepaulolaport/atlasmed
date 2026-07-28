@@ -15,9 +15,7 @@ final dashboardRepositoryProvider = Provider.autoDispose
     .family<DashboardRepository, String>((ref, verticalId) {
       final repo = DashboardRepository(verticalId: verticalId);
       ref.onDispose(repo.dispose);
-      unawaited(
-        repo.fetchSummary().then<void>((_) {}, onError: (_) {}),
-      );
+      unawaited(repo.fetchSummary().then<void>((_) {}, onError: (_) {}));
       return repo;
     });
 

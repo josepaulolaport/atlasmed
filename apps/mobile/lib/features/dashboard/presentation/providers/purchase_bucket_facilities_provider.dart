@@ -10,10 +10,7 @@ import 'package:atlasmed_mobile_app/features/location/presentation/providers/loc
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PurchaseBucketFacilitiesArgs {
-  const PurchaseBucketFacilitiesArgs({
-    required this.bucket,
-    this.verticalId,
-  });
+  const PurchaseBucketFacilitiesArgs({required this.bucket, this.verticalId});
 
   final String bucket;
   final String? verticalId;

@@ -12,40 +12,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets(
-    'clinic row shows never-purchased stage without buy frequency',
-    (tester) async {
-      tester.view.physicalSize = const Size(320, 640);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ClinicRow(
-              clinic: FacilityEntry(
-                id: '1',
-                name: 'Clínica com nome muito comprido para tela estreita',
-                city: 'São Paulo',
-                neighborhood: 'Centro',
-                distanceKm: 1,
-                commercialStatus: CommercialStatusFilter.registered,
-                doctorCount: 2,
-                purchaseRecurrence: const PurchaseRecurrenceSnapshot(
-                  intervalDays: 30,
-                  sampleSize: 0,
-                  funnelStage: PurchaseFunnelStage.neverPurchased,
-                ),
+  testWidgets('clinic row shows never-purchased stage without buy frequency', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClinicRow(
+            clinic: FacilityEntry(
+              id: '1',
+              name: 'Clínica com nome muito comprido para tela estreita',
+              city: 'São Paulo',
+              neighborhood: 'Centro',
+              distanceKm: 1,
+              commercialStatus: CommercialStatusFilter.registered,
+              doctorCount: 2,
+              purchaseRecurrence: const PurchaseRecurrenceSnapshot(
+                intervalDays: 30,
+                sampleSize: 0,
+                funnelStage: PurchaseFunnelStage.neverPurchased,
               ),
-              onTap: () {},
             ),
+            onTap: () {},
           ),
         ),
-      );
-      expect(find.text('Nunca comprou'), findsOneWidget);
-      expect(find.text('A cada 30 dias'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
+      ),
+    );
+    expect(find.text('Nunca comprou'), findsOneWidget);
+    expect(find.text('A cada 30 dias'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('filter sheet applies multiple stages and one profile', (
     tester,

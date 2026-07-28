@@ -120,9 +120,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           );
                           final uri = Uri(
                             path: '/dashboard/facilities/$bucket',
-                            queryParameters: {
-                              'verticalId': ?verticalId,
-                            },
+                            queryParameters: {'verticalId': ?verticalId},
                           );
                           context.push(uri.toString());
                         },
