@@ -155,10 +155,15 @@ class _ShortcutCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(
               children: [
-                Icon(icon, size: 19, color: AppColors.navyBright),
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppColors.navyBright.createSecondary(),
+                  child: Icon(icon, size: 16, color: AppColors.navyBright),
+                ),
+
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
