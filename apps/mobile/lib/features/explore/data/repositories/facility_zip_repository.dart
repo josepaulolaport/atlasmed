@@ -11,8 +11,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_
 import 'package:atlasmed_mobile_app/repository/repositories/zip_repository.dart';
 
 /// Tupla nomeada com Facility + todas as integrações carregadas separadamente.
+///
+/// [facility] is null while the detail request has not completed yet (zip race
+/// with photos/orders/payers). Callers must keep showing a loading state.
 typedef FacilityWithIntegrations = ({
-  Facility facility,
+  Facility? facility,
   List<PhotoGallerySummary> photos,
   List<FacilityOrderSummary> orders,
   List<PayerShare> payerShares,
@@ -49,9 +52,10 @@ class FacilityZipRepository extends ZipRepository<FacilityWithIntegrations> {
     final payerResponse = values[3] as FacilityPayerSharesResponse?;
     final repPage = values[4] as PaginatedFacilityRepresentatives?;
 
-    final facility = dto != null
-        ? Facility.fromDTO(dto)
-        : Facility(id: '', name: '');
+    // ZipRepository uses CombineLatestStream — side repos (photos/orders/…)
+    // often emit before clinic detail on slower networks (prod). Never invent
+    // an empty Facility; UI treats a null facility as still loading.
+    final facility = dto == null ? null : Facility.fromDTO(dto);
 
     return (
       facility: facility,
