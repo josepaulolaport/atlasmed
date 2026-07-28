@@ -141,11 +141,30 @@ if matched is None:
 
 group_id = matched["id"]
 group_name = matched["attributes"]["name"]
-print(f"Assigning build {build_id} → group '{group_name}' ({group_id})")
-api(
-    "POST",
-    f"/v1/betaGroups/{group_id}/relationships/builds",
-    {"data": [{"type": "builds", "id": build_id}]},
+is_internal = bool((matched.get("attributes") or {}).get("isInternalGroup"))
+print(
+    f"Target group '{group_name}' ({group_id}) internal={is_internal} build={build_id}"
 )
-print("Assigned OK")
+
+if is_internal:
+    # ASC rejects assigning builds to internal groups via the API.
+    # Internal Testers already receive VALID builds automatically.
+    print(
+        "Internal group — no API assign needed; build is available to Main/internal testers."
+    )
+else:
+    print(f"Assigning build {build_id} → external group '{group_name}'")
+    try:
+        api(
+            "POST",
+            f"/v1/builds/{build_id}/relationships/betaGroups",
+            {"data": [{"type": "betaGroups", "id": group_id}]},
+        )
+    except Exception:
+        api(
+            "POST",
+            f"/v1/betaGroups/{group_id}/relationships/builds",
+            {"data": [{"type": "builds", "id": build_id}]},
+        )
+    print("Assigned OK")
 PY
