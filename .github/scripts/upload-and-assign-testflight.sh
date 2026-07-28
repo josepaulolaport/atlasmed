@@ -14,12 +14,27 @@ BETA_GROUP="${BETA_GROUP:-Main}"
 echo "Uploading $IPA (bundle=$BUNDLE_ID version=$MARKETING_VERSION+$BUILD_NUMBER)"
 # --upload-app still works with API key and does not require --apple-id.
 # (Newer --upload-package requires apple-id + asc-public-id.)
+set +e
+UPLOAD_LOG="$(mktemp)"
 xcrun altool --upload-app \
   --file "$IPA" \
   --type ios \
   --apiKey "$APP_STORE_CONNECT_KEY_ID" \
-  --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+  --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" 2>&1 | tee "$UPLOAD_LOG"
+UPLOAD_RC=${PIPESTATUS[0]}
+set -e
+if [[ "$UPLOAD_RC" -ne 0 ]]; then
+  if grep -qiE 'already been uploaded|duplicate|Redundant' "$UPLOAD_LOG"; then
+    echo "Upload skipped — build already on App Store Connect"
+  else
+    exit "$UPLOAD_RC"
+  fi
+fi
 
+VENV="${RUNNER_TEMP:-/tmp}/asc-venv"
+python3 -m venv "$VENV"
+# shellcheck disable=SC1091
+source "$VENV/bin/activate"
 python3 -m pip install --quiet PyJWT cryptography
 
 python3 <<'PY'
