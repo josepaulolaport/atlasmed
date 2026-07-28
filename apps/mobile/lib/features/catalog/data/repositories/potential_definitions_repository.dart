@@ -118,8 +118,8 @@ class PotentialDefinitionsRepository {
         await _send(_uri('/potential-definitions'), RepositoryHttpMethod.post, {
           'verticalId': verticalId,
           'label': label,
-          if (key != null) 'key': key,
-          if (sortOrder != null) 'sortOrder': sortOrder,
+          'key': ?key,
+          'sortOrder': ?sortOrder,
         });
     _throwIfError(response);
     return PotentialDefinition.fromJson(
@@ -136,8 +136,8 @@ class PotentialDefinitionsRepository {
       _uri('/potential-definitions/$id'),
       RepositoryHttpMethod.patch,
       {
-        if (label != null) 'label': label,
-        if (sortOrder != null) 'sortOrder': sortOrder,
+        'label': ?label,
+        'sortOrder': ?sortOrder,
       },
     );
     _throwIfError(response);
