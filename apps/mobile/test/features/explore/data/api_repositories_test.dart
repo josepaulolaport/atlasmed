@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 
@@ -64,6 +65,29 @@ void main() {
       expect(clinic.neighborhood, 'Centro');
       expect(clinic.city, 'Rio de Janeiro');
       expect(clinic.state, 'RJ');
+    });
+  });
+
+  group('ClinicDetailRepository', () {
+    test('maps the API DTO to the facility domain at the repository seam', () {
+      final facility = ClinicDetailRepository.parse('''
+{
+  "id": "clinic-1",
+  "name": "Clínica Central",
+  "professionalCount": 7,
+  "streetAddress": "Rua das Flores",
+  "streetNumber": "42",
+  "city": "Rio de Janeiro",
+  "state": "RJ",
+  "consultantSince": "2026-01-02T00:00:00.000Z"
+}
+''');
+
+      expect(facility.id, 'clinic-1');
+      expect(facility.name, 'Clínica Central');
+      expect(facility.professionalCount, 7);
+      expect(facility.address?.formattedAddress, contains('Rua das Flores'));
+      expect(facility.territory?.consultantSince, DateTime.utc(2026, 1, 2));
     });
   });
 

@@ -4,7 +4,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_photos_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 
@@ -90,20 +89,17 @@ final clinicDetailRepositoryProvider = Provider.autoDispose
       return repository;
     });
 
-/// Photos are not Linha-scoped — stable across detail vertical swaps.
-final facilityPhotosRepositoryProvider = Provider.autoDispose
-    .family<FacilityPhotosRepository, String>((ref, id) {
-      final repository = FacilityPhotosRepository(id);
-      ref.onDispose(repository.dispose);
-      return repository;
-    });
-
-/// Detail + photos zip. Photos child survives Linha-driven detail recreate.
+/// Provides a [FacilityZipRepository] for a given facility [id].
+/// Combines every related read model consumed by the detail screen reactively.
+/// Automatically disposes the repository when the provider is no longer listened to.
 final facilityZipRepositoryProvider = Provider.autoDispose
     .family<FacilityZipRepository, String>((ref, id) {
-      final detail = ref.watch(clinicDetailRepositoryProvider(id));
-      final photos = ref.watch(facilityPhotosRepositoryProvider(id));
-      final repository = FacilityZipRepository(detail: detail, photos: photos);
+      final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(id));
+      final repository = FacilityZipRepository(
+        id,
+        detailRepository: ref.watch(clinicDetailRepositoryProvider(id)),
+        verticalId: verticalId,
+      );
       ref.onDispose(repository.dispose);
       return repository;
     });
