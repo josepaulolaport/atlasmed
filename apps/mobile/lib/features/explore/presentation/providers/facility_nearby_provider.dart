@@ -1,7 +1,59 @@
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+
+Set<String> sharedNearbyVerticalIds({
+  required Iterable<String> clinicVerticalIds,
+  required Iterable<String> userVerticalIds,
+}) {
+  final user = userVerticalIds.toSet();
+  if (user.isEmpty) return clinicVerticalIds.toSet();
+  return clinicVerticalIds.where(user.contains).toSet();
+}
+
+/// Resolves the vertical used by the nearby facilities query.
+String? resolveNearbyVerticalId({
+  required Set<String> sharedVerticalIds,
+  required String? selectedVerticalId,
+  String? fallbackEffectiveId,
+}) {
+  if (sharedVerticalIds.isEmpty) return fallbackEffectiveId;
+  if (sharedVerticalIds.length == 1) return sharedVerticalIds.single;
+  if (selectedVerticalId != null &&
+      sharedVerticalIds.contains(selectedVerticalId)) {
+    return selectedVerticalId;
+  }
+  return null;
+}
+
+/// Filters the "Todas" result to verticals shared by user and clinic.
+List<NearbyEstablishment> filterNearbyBySharedVerticals(
+  List<NearbyEstablishment> items,
+  Set<String> sharedVerticalIds,
+) {
+  if (sharedVerticalIds.isEmpty) return items;
+  return items
+      .where(
+        (item) => item.verticals.any(
+          (vertical) => sharedVerticalIds.contains(vertical.id),
+        ),
+      )
+      .toList(growable: false);
+}
+
+List<NearbyEstablishment> applyNearbyVerticalScope({
+  required List<NearbyEstablishment> items,
+  required Set<String> sharedVerticalIds,
+  required String? queryVerticalId,
+}) {
+  if (sharedVerticalIds.length > 1 && queryVerticalId == null) {
+    return filterNearbyBySharedVerticals(items, sharedVerticalIds);
+  }
+  return items;
+}
 
 /// Query key for establishment-centered proximity search.
 class NearbyFacilitiesQuery {
@@ -10,12 +62,14 @@ class NearbyFacilitiesQuery {
     required this.latitude,
     required this.longitude,
     required this.radiusKm,
+    this.verticalId,
   });
 
   final String facilityId;
   final double latitude;
   final double longitude;
   final double radiusKm;
+  final String? verticalId;
 
   @override
   bool operator ==(Object other) {
@@ -23,11 +77,13 @@ class NearbyFacilitiesQuery {
         other.facilityId == facilityId &&
         other.latitude == latitude &&
         other.longitude == longitude &&
-        other.radiusKm == radiusKm;
+        other.radiusKm == radiusKm &&
+        other.verticalId == verticalId;
   }
 
   @override
-  int get hashCode => Object.hash(facilityId, latitude, longitude, radiusKm);
+  int get hashCode =>
+      Object.hash(facilityId, latitude, longitude, radiusKm, verticalId);
 }
 
 /// Inline preview: nearby within [establishmentNearbyPreviewRadiusKm].
@@ -93,10 +149,16 @@ final facilityNearbyPreviewProvider =
         latitude: lat,
         longitude: lng,
         radiusKm: establishmentNearbyPreviewRadiusKm,
+        verticalId: verticalId,
+      );
+      return applyNearbyVerticalScope(
+        items: items,
+        sharedVerticalIds: shared,
+        queryVerticalId: verticalId,
       );
     });
 
-/// Full-screen map: refetch when radius (or origin) changes.
+/// Full-screen map: refetch when radius, origin or vertical changes.
 final facilityNearbyProvider =
     FutureProvider.family<List<NearbyEstablishment>, NearbyFacilitiesQuery>((
       ref,
@@ -111,5 +173,6 @@ final facilityNearbyProvider =
         latitude: query.latitude,
         longitude: query.longitude,
         radiusKm: query.radiusKm,
+        verticalId: query.verticalId,
       );
     });

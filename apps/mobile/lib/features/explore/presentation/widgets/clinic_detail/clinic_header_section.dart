@@ -8,9 +8,13 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_service_chips.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_status_chips.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
@@ -55,6 +59,11 @@ class ClinicHeaderSection extends ConsumerWidget {
       }
     });
 
+    final clinicServices = FacilityServiceLabels.resolveDisplayServices(
+      services: detail.services,
+      verticalProfiles: detail.verticalProfiles,
+    );
+    final orderedServices = FacilityServiceLabels.prioritize(clinicServices);
     // Identity / contact / address / PF-PJ prefer the live facility DTO.
     final fullAddress = detail.address?.formattedAddress;
     final taxIdType = parseFacilityTaxIdType(detail.registration?.taxIdType);
@@ -123,6 +132,36 @@ class ClinicHeaderSection extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                if (orderedServices.isNotEmpty)
+                  ClinicServiceChips(
+                    services: orderedServices,
+                    maxVisible: 4,
+                    onNavy: true,
+                  )
+                else
+                  ClinicServiceChips.empty(onNavy: true),
+                const SizedBox(height: 10),
+                Builder(
+                  builder: (context) {
+                    final chips = buildFacilityStatusChips(
+                      commercialStatus: detail.commercial?.commercialStatus,
+                      purchaseRecurrence: detail.purchaseRecurrence,
+                      verticalProfiles: detail.verticalProfiles,
+                      onNavy: true,
+                    );
+                    if (chips.isEmpty) {
+                      return StatusChip(
+                        label: 'Sem status',
+                        color: AppColors.gray400,
+                        bg: AppColors.gray100,
+                        small: true,
+                        onNavy: true,
+                      );
+                    }
+                    return Wrap(spacing: 8, runSpacing: 8, children: chips);
+                  },
                 ),
                 if (fullAddress != null) ...[
                   const SizedBox(height: 12),
@@ -434,9 +473,10 @@ class _HeaderContactAction extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: const Color(0xCCFFFFFF)),
           const SizedBox(width: 5),
-          // `Wrap` still bounds each child to its own max width, so a long
-          // e-mail without a shrink/ellipsis path can overflow this Row.
-          Flexible(
+          // Bound width without Flexible — Flex parentData inside Wrap
+          // children trips `!semantics.parentDataDirty` during rebuilds.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
             child: Text(
               label,
               style: const TextStyle(

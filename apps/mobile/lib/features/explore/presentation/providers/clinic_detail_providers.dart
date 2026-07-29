@@ -90,16 +90,12 @@ final clinicDetailRepositoryProvider = Provider.autoDispose
     });
 
 /// Provides a [FacilityZipRepository] for a given facility [id].
-/// Combines every related read model consumed by the detail screen reactively.
+/// Owns and combines the facility detail with every related read model.
 /// Automatically disposes the repository when the provider is no longer listened to.
 final facilityZipRepositoryProvider = Provider.autoDispose
     .family<FacilityZipRepository, String>((ref, id) {
       final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(id));
-      final repository = FacilityZipRepository(
-        id,
-        detailRepository: ref.watch(clinicDetailRepositoryProvider(id)),
-        verticalId: verticalId,
-      );
+      final repository = FacilityZipRepository(id, verticalId: verticalId);
       ref.onDispose(repository.dispose);
       return repository;
     });

@@ -107,15 +107,15 @@ bool isMockNearbyFacilityId(String facilityId) =>
 /// Facility-centered proximity repository used by the detail aggregate.
 ///
 /// Coordinates come from [detailRepository], so the caller only needs the
-/// facility id. Refreshing the detail repository automatically refreshes this
-/// repository through the dependency seam.
+/// facility id. The owning aggregate coordinates refresh order so proximity
+/// always uses the latest facility coordinates.
 class FacilityNearbyRepository
     extends BaseRepository<List<NearbyEstablishment>> {
   FacilityNearbyRepository({
     required this.facilityId,
     required this.detailRepository,
     this.verticalId,
-  }) : super(resolveOnCreate: false, dependencies: [detailRepository]);
+  }) : super(resolveOnCreate: false);
 
   final String facilityId;
   final ClinicDetailRepository detailRepository;

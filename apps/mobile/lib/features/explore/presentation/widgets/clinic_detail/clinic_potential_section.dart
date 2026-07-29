@@ -1,30 +1,30 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_potential_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_potential_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Potencial & share — per-Linha potential fields + AtlasMed qty + penetration.
-class ClinicPotentialSection extends ConsumerWidget {
+class ClinicPotentialSection extends StatelessWidget {
   const ClinicPotentialSection({
     super.key,
-    required this.facilityId,
+    required this.verticalId,
+    required this.page,
     required this.canEdit,
+    required this.onSave,
   });
 
-  final String facilityId;
+  final String? verticalId;
+  final FacilityPotentialsPage? page;
   final bool canEdit;
+  final Future<void> Function(
+    List<({String definitionId, double? quantity})> values,
+  )
+  onSave;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
-    final async = ref.watch(clinicDetailPotentialsProvider(facilityId));
-
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -33,12 +33,9 @@ class ClinicPotentialSection extends ConsumerWidget {
           trailing: !canEdit || verticalId == null
               ? null
               : TextButton(
-                  onPressed: () => _openEditor(
-                    context,
-                    ref,
-                    facilityId: facilityId,
-                    verticalId: verticalId,
-                  ),
+                  onPressed: page == null
+                      ? null
+                      : () => _openEditor(context, page!),
                   child: const Text(
                     'Editar potencial',
                     style: TextStyle(
@@ -56,61 +53,38 @@ class ClinicPotentialSection extends ConsumerWidget {
               style: TextStyle(fontSize: 13, color: AppColors.gray400),
             ),
           )
+        else if (page == null)
+          const ClinicDetailCard(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          )
+        else if (page!.items.isEmpty)
+          const ClinicDetailCard(
+            child: Text(
+              'Nenhum campo de potencial configurado para esta linha.',
+              style: TextStyle(fontSize: 13, color: AppColors.gray400),
+            ),
+          )
         else
-          async.when(
-            loading: () => const ClinicDetailCard(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              ),
-            ),
-            error: (err, _) => ClinicDetailCard(
-              child: Column(
-                children: [
-                  Text(
-                    'Não foi possível carregar potencial.',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.gray500,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => ref.invalidate(
-                      clinicDetailPotentialsProvider(facilityId),
-                    ),
-                    child: const Text('Tentar de novo'),
-                  ),
+          ClinicDetailCard(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            child: Column(
+              children: [
+                for (var i = 0; i < page!.items.length; i++) ...[
+                  if (i > 0)
+                    const Divider(height: 20, color: AppColors.gray100),
+                  _PotentialRow(item: page!.items[i]),
                 ],
-              ),
+              ],
             ),
-            data: (page) {
-              if (page == null || page.items.isEmpty) {
-                return const ClinicDetailCard(
-                  child: Text(
-                    'Nenhum campo de potencial configurado para esta linha.',
-                    style: TextStyle(fontSize: 13, color: AppColors.gray400),
-                  ),
-                );
-              }
-              return ClinicDetailCard(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-                child: Column(
-                  children: [
-                    for (var i = 0; i < page.items.length; i++) ...[
-                      if (i > 0)
-                        const Divider(height: 20, color: AppColors.gray100),
-                      _PotentialRow(item: page.items[i]),
-                    ],
-                  ],
-                ),
-              );
-            },
           ),
       ],
     );
@@ -118,35 +92,13 @@ class ClinicPotentialSection extends ConsumerWidget {
 
   Future<void> _openEditor(
     BuildContext context,
-    WidgetRef ref, {
-    required String facilityId,
-    required String verticalId,
-  }) async {
-    final page = await ref.read(
-      facilityPotentialsProvider((
-        facilityId: facilityId,
-        verticalId: verticalId,
-      )).future,
-    );
-    if (!context.mounted) return;
-    final saved = await showModalBottomSheet<bool>(
+    FacilityPotentialsPage page,
+  ) async {
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => _EditPotentialSheet(
-        facilityId: facilityId,
-        verticalId: verticalId,
-        items: page.items,
-      ),
+      builder: (_) => _EditPotentialSheet(items: page.items, onSave: onSave),
     );
-    if (saved == true) {
-      ref.invalidate(clinicDetailPotentialsProvider(facilityId));
-      ref.invalidate(
-        facilityPotentialsProvider((
-          facilityId: facilityId,
-          verticalId: verticalId,
-        )),
-      );
-    }
   }
 }
 
@@ -238,15 +190,13 @@ String _fmtQty(double? value) {
 }
 
 class _EditPotentialSheet extends StatefulWidget {
-  const _EditPotentialSheet({
-    required this.facilityId,
-    required this.verticalId,
-    required this.items,
-  });
+  const _EditPotentialSheet({required this.items, required this.onSave});
 
-  final String facilityId;
-  final String verticalId;
   final List<FacilityPotentialItem> items;
+  final Future<void> Function(
+    List<({String definitionId, double? quantity})> values,
+  )
+  onSave;
 
   @override
   State<_EditPotentialSheet> createState() => _EditPotentialSheetState();
@@ -304,13 +254,9 @@ class _EditPotentialSheetState extends State<_EditPotentialSheet> {
       values.add((definitionId: item.definitionId, quantity: parsed));
     }
 
-    final repo = FacilityPotentialRepository(
-      facilityId: widget.facilityId,
-      verticalId: widget.verticalId,
-    );
     try {
-      await repo.patchValues(values);
-      if (mounted) Navigator.of(context).pop(true);
+      await widget.onSave(values);
+      if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -318,8 +264,6 @@ class _EditPotentialSheetState extends State<_EditPotentialSheet> {
           _saving = false;
         });
       }
-    } finally {
-      repo.dispose();
     }
   }
 

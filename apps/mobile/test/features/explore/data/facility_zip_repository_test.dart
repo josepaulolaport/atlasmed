@@ -2,7 +2,9 @@ import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.d
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_payer_share_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_photos_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
@@ -10,7 +12,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('maps every clinic detail response into one domain aggregate', () {
-    final aggregate = facilityIntegrationsFromResponses(
+    final aggregate = facilityDetailDataFromResponses(
+      facility: const Facility(id: 'clinic-1', name: 'Clínica Central'),
       photos: const FacilityPhotosResponse(
         imageUrl: 'https://example.test/profile.jpg',
         photos: [],
@@ -94,10 +97,23 @@ void main() {
           distanceKm: 2,
         ),
       ],
+      potentials: const FacilityPotentialsPage(
+        verticalId: 'ortopedia',
+        items: [
+          FacilityPotentialItem(
+            definitionId: 'potential-1',
+            key: 'cirurgias',
+            label: 'Cirurgias',
+            sortOrder: 1,
+            atlasmedMonthlyAvgQty: 4,
+          ),
+        ],
+      ),
       administratorsLoadingMore: true,
       doctorsLoadingMore: true,
     );
 
+    expect(aggregate.facility?.name, 'Clínica Central');
     expect(aggregate.photos?.profileImageUrl, contains('profile.jpg'));
     expect(aggregate.orders?.single.id, 'order-1');
     expect(aggregate.payerShares?.single.name, 'Unimed');
@@ -105,13 +121,14 @@ void main() {
     expect(aggregate.doctorRoster.items.single.name, 'João Silva');
     expect(aggregate.notes?.single.text, 'Retornar amanhã');
     expect(aggregate.nearby?.single.id, 'clinic-2');
+    expect(aggregate.potentials?.items.single.label, 'Cirurgias');
     expect(aggregate.administratorsLoadingMore, isTrue);
     expect(aggregate.doctorsLoadingMore, isTrue);
   });
 
   test('keeps unloaded slices distinct from loaded empty slices', () {
-    const unloaded = FacilityIntegrations();
-    final loadedEmpty = facilityIntegrationsFromResponses(
+    const unloaded = FacilityDetailData();
+    final loadedEmpty = facilityDetailDataFromResponses(
       orders: const FacilityOrdersPage(orders: []),
       payers: const FacilityPayerSharesResponse(items: []),
       notes: const [],

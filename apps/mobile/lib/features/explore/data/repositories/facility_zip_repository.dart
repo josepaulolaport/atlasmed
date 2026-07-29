@@ -2,14 +2,17 @@ import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.d
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_payer_share_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_payer_shares_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_photos_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_potential_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/zip_repository.dart';
@@ -28,9 +31,10 @@ FacilityRosterPage<T> _emptyRoster<T>() {
   );
 }
 
-/// Complete domain aggregate consumed by the clinic detail screen.
-class FacilityIntegrations {
-  const FacilityIntegrations({
+/// Complete domain read model consumed by the clinic detail screen.
+class FacilityDetailData {
+  const FacilityDetailData({
+    this.facility,
     this.photos,
     this.orders,
     this.payerShares,
@@ -38,10 +42,12 @@ class FacilityIntegrations {
     this.doctors,
     this.notes,
     this.nearby,
+    this.potentials,
     this.administratorsLoadingMore = false,
     this.doctorsLoadingMore = false,
   });
 
+  final Facility? facility;
   final PhotoGallerySummary? photos;
   final List<FacilityOrderSummary>? orders;
   final List<PayerShare>? payerShares;
@@ -49,6 +55,7 @@ class FacilityIntegrations {
   final FacilityRosterPage<ProfessionalRoster>? doctors;
   final List<FacilityFieldNote>? notes;
   final List<NearbyEstablishment>? nearby;
+  final FacilityPotentialsPage? potentials;
   final bool administratorsLoadingMore;
   final bool doctorsLoadingMore;
 
@@ -58,7 +65,8 @@ class FacilityIntegrations {
   FacilityRosterPage<ProfessionalRoster> get doctorRoster =>
       doctors ?? _emptyRoster();
 
-  FacilityIntegrations copyWith({
+  FacilityDetailData copyWith({
+    Facility? facility,
     PhotoGallerySummary? photos,
     List<FacilityOrderSummary>? orders,
     List<PayerShare>? payerShares,
@@ -66,10 +74,12 @@ class FacilityIntegrations {
     FacilityRosterPage<ProfessionalRoster>? doctors,
     List<FacilityFieldNote>? notes,
     List<NearbyEstablishment>? nearby,
+    FacilityPotentialsPage? potentials,
     bool? administratorsLoadingMore,
     bool? doctorsLoadingMore,
   }) {
-    return FacilityIntegrations(
+    return FacilityDetailData(
+      facility: facility ?? this.facility,
       photos: photos ?? this.photos,
       orders: orders ?? this.orders,
       payerShares: payerShares ?? this.payerShares,
@@ -77,6 +87,7 @@ class FacilityIntegrations {
       doctors: doctors ?? this.doctors,
       notes: notes ?? this.notes,
       nearby: nearby ?? this.nearby,
+      potentials: potentials ?? this.potentials,
       administratorsLoadingMore:
           administratorsLoadingMore ?? this.administratorsLoadingMore,
       doctorsLoadingMore: doctorsLoadingMore ?? this.doctorsLoadingMore,
@@ -87,18 +98,19 @@ class FacilityIntegrations {
 /// Combines every read model needed by the clinic detail screen.
 ///
 /// DTO mapping, pagination accumulation and slice-specific mutations stay
-/// behind this interface. The screen only observes [FacilityIntegrations].
-class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
-  factory FacilityZipRepository(
-    String facilityId, {
-    required ClinicDetailRepository detailRepository,
-    String? verticalId,
-  }) {
+/// behind this interface. The screen only observes [FacilityDetailData].
+class FacilityZipRepository extends ZipRepository<FacilityDetailData> {
+  factory FacilityZipRepository(String facilityId, {String? verticalId}) {
+    final detail = ClinicDetailRepository(
+      id: facilityId,
+      verticalId: verticalId,
+    );
     final photos = FacilityPhotosRepository(facilityId);
     final orders = FacilityOrdersRepository(
       facilityId: facilityId,
       page: 1,
       limit: 5,
+      verticalId: verticalId,
     );
     final payers = FacilityPayerSharesRepository(facilityId);
     final administrators = FacilityRepresentativesRepository(
@@ -115,12 +127,19 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
     final notes = FacilityNotesRepository(facilityId);
     final nearby = FacilityNearbyRepository(
       facilityId: facilityId,
-      detailRepository: detailRepository,
+      detailRepository: detail,
       verticalId: verticalId,
     );
+    final potentials = verticalId == null || verticalId.isEmpty
+        ? null
+        : FacilityPotentialRepository(
+            facilityId: facilityId,
+            verticalId: verticalId,
+          );
 
     return FacilityZipRepository._(
       facilityId: facilityId,
+      detail: detail,
       photos: photos,
       orders: orders,
       payers: payers,
@@ -128,11 +147,13 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
       doctors: doctors,
       notes: notes,
       nearby: nearby,
+      potentials: potentials,
     );
   }
 
   FacilityZipRepository._({
     required this.facilityId,
+    required ClinicDetailRepository detail,
     required FacilityPhotosRepository photos,
     required FacilityOrdersRepository orders,
     required FacilityPayerSharesRepository payers,
@@ -140,12 +161,16 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
     required FacilityProfessionalsRepository doctors,
     required FacilityNotesRepository notes,
     required FacilityNearbyRepository nearby,
-  }) : _payers = payers,
+    required FacilityPotentialRepository? potentials,
+  }) : _detail = detail,
+       _payers = payers,
        _administrators = administrators,
        _doctors = doctors,
        _notes = notes,
+       _potentials = potentials,
        super(
          repositories: [
+           detail,
            photos,
            orders,
            payers,
@@ -153,14 +178,17 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
            doctors,
            notes,
            nearby,
+           ?potentials,
          ],
        );
 
   final String facilityId;
+  final ClinicDetailRepository _detail;
   final FacilityPayerSharesRepository _payers;
   final FacilityRepresentativesRepository _administrators;
   final FacilityProfessionalsRepository _doctors;
   final FacilityNotesRepository _notes;
+  final FacilityPotentialRepository? _potentials;
 
   final List<AdministrativeProfessional> _additionalAdministrators = [];
   final List<ProfessionalRoster> _additionalDoctors = [];
@@ -170,16 +198,21 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
   bool _doctorsLoadingMore = false;
 
   @override
-  FacilityIntegrations zipper(List<dynamic> values) {
-    final photosResponse = values[0] as FacilityPhotosResponse?;
-    final ordersPage = values[1] as FacilityOrdersPage?;
-    final payerResponse = values[2] as FacilityPayerSharesResponse?;
-    final administratorPage = values[3] as PaginatedFacilityRepresentatives?;
-    final doctorPage = values[4] as PaginatedFacilityProfessionals?;
-    final notes = values[5] as List<FacilityFieldNote>?;
-    final nearby = values[6] as List<NearbyEstablishment>?;
+  FacilityDetailData zipper(List<dynamic> values) {
+    final facility = values[0] as Facility?;
+    final photosResponse = values[1] as FacilityPhotosResponse?;
+    final ordersPage = values[2] as FacilityOrdersPage?;
+    final payerResponse = values[3] as FacilityPayerSharesResponse?;
+    final administratorPage = values[4] as PaginatedFacilityRepresentatives?;
+    final doctorPage = values[5] as PaginatedFacilityProfessionals?;
+    final notes = values[6] as List<FacilityFieldNote>?;
+    final nearby = values[7] as List<NearbyEstablishment>?;
+    final potentials = values.length > 8
+        ? values[8] as FacilityPotentialsPage?
+        : null;
 
-    return facilityIntegrationsFromResponses(
+    return facilityDetailDataFromResponses(
+      facility: facility,
       photos: photosResponse,
       orders: ordersPage,
       payers: payerResponse,
@@ -187,6 +220,7 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
       doctors: doctorPage,
       notes: notes,
       nearby: nearby,
+      potentials: potentials,
       additionalAdministrators: _additionalAdministrators,
       additionalDoctors: _additionalDoctors,
       administratorPagination: _administratorPagination,
@@ -269,6 +303,16 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
 
   Future<FacilityFieldNote> createNote(String text) => _notes.createNote(text);
 
+  Future<FacilityPotentialsPage> replacePotentialValues(
+    List<({String definitionId, double? quantity})> values,
+  ) async {
+    final repository = _potentials;
+    if (repository == null) throw const FacilityPotentialException();
+    final saved = await repository.patchValues(values);
+    await repository.refresh();
+    return saved;
+  }
+
   Future<void> _emitCurrent() async {
     final current = currentValue;
     if (current == null) return;
@@ -303,14 +347,24 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
   }
 
   @override
-  Future<FacilityIntegrations> refresh() async {
+  Future<FacilityDetailData> refresh() async {
     _additionalAdministrators.clear();
     _additionalDoctors.clear();
     _administratorPagination = null;
     _doctorPagination = null;
     _administratorsLoadingMore = false;
     _doctorsLoadingMore = false;
-    return super.refresh();
+
+    await _detail.refresh();
+    await Future.wait(
+      repositories
+          .where((repository) => !identical(repository, _detail))
+          .map((repository) => repository.refresh()),
+    );
+
+    return zipper(
+      repositories.map((repository) => repository.currentValue).toList(),
+    );
   }
 
   @override
@@ -322,7 +376,8 @@ class FacilityZipRepository extends ZipRepository<FacilityIntegrations> {
   }
 }
 
-FacilityIntegrations facilityIntegrationsFromResponses({
+FacilityDetailData facilityDetailDataFromResponses({
+  Facility? facility,
   FacilityPhotosResponse? photos,
   FacilityOrdersPage? orders,
   FacilityPayerSharesResponse? payers,
@@ -330,6 +385,7 @@ FacilityIntegrations facilityIntegrationsFromResponses({
   PaginatedFacilityProfessionals? doctors,
   List<FacilityFieldNote>? notes,
   List<NearbyEstablishment>? nearby,
+  FacilityPotentialsPage? potentials,
   Iterable<AdministrativeProfessional> additionalAdministrators = const [],
   Iterable<ProfessionalRoster> additionalDoctors = const [],
   Pagination? administratorPagination,
@@ -337,7 +393,8 @@ FacilityIntegrations facilityIntegrationsFromResponses({
   bool administratorsLoadingMore = false,
   bool doctorsLoadingMore = false,
 }) {
-  return FacilityIntegrations(
+  return FacilityDetailData(
+    facility: facility,
     photos: photos?.toSummary(),
     orders: orders?.orders,
     payerShares: payers?.toDomain(),
@@ -363,6 +420,7 @@ FacilityIntegrations facilityIntegrationsFromResponses({
           ),
     notes: notes,
     nearby: nearby,
+    potentials: potentials,
     administratorsLoadingMore: administratorsLoadingMore,
     doctorsLoadingMore: doctorsLoadingMore,
   );
