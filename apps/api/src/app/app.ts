@@ -2,7 +2,10 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
-import { httpExceptionPlugin } from "elysia-http-exception";
+import {
+  HttpException,
+  httpExceptionPlugin,
+} from "elysia-http-exception";
 import { healthRoute } from "../infrastructure/health/health.route";
 import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
@@ -110,6 +113,18 @@ const app = new Elysia()
       set.status = error.statusCode;
       return {
         error: error.toJSON(),
+      };
+    }
+
+    if (error instanceof HttpException) {
+      set.status = error.statusCode;
+      return {
+        error: {
+          code: error.code,
+          message: error.statusCode >= 500
+            ? "An unexpected error occurred. Please try again later."
+            : error.message,
+        },
       };
     }
 

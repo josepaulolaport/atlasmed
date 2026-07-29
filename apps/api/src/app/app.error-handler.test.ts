@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { HttpError } from "@atlasmed/access";
+import { BadRequestException } from "elysia-http-exception";
 import app from "./app";
 import { AppError } from "../shared/errors";
 
@@ -21,6 +22,9 @@ const errorTestApp = app
   })
   .get("/__test/errors/http", () => {
     throw new TestHttpError();
+  })
+  .get("/__test/errors/library", () => {
+    throw new BadRequestException("Library exception");
   })
   .get("/__test/errors/unexpected", () => {
     throw new Error("database password leaked");
@@ -105,6 +109,16 @@ describe("global error handler", () => {
     expect(await response.json()).toEqual({
       error: { code: "HTTP_TEST_ERROR", message: "HTTP test error" },
     });
+  });
+
+  it("preserves AtlasMed envelope for library HTTP exceptions", async () => {
+    const response = await request("/__test/errors/library");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: { code: "BAD_REQUEST", message: "Library exception" },
+    });
+    expect(response.headers.get("x-request-id")).toBeTruthy();
   });
 
   it("never exposes unexpected error details", async () => {
