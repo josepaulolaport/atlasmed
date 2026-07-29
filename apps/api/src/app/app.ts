@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
+import { httpExceptionPlugin } from "elysia-http-exception";
 import { healthRoute } from "../infrastructure/health/health.route";
 import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
@@ -28,6 +29,49 @@ import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 import { hasDuplicatePathSlashes } from "./request-path";
+
+type ValidationIssue = {
+  field: string;
+  message: string;
+};
+
+function normalizeValidationField(path: unknown): string {
+  if (typeof path !== "string") return "request";
+
+  const field = path
+    .replace(/^\//, "")
+    .split("/")
+    .filter(Boolean)
+    .join(".");
+
+  return field || "request";
+}
+
+function normalizeValidationIssues(error: unknown): ValidationIssue[] {
+  if (
+    !error ||
+    typeof error !== "object" ||
+    !("all" in error) ||
+    !Array.isArray(error.all)
+  ) {
+    return [{ field: "request", message: "Invalid value" }];
+  }
+
+  const issues = error.all.flatMap((issue) => {
+    if (!issue || typeof issue !== "object") return [];
+
+    const path = "path" in issue ? issue.path : undefined;
+
+    return [{
+      field: normalizeValidationField(path),
+      message: "Invalid value",
+    }];
+  });
+
+  return issues.length > 0
+    ? issues
+    : [{ field: "request", message: "Invalid value" }];
+}
 
 const configuredCorsOrigins = environment.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
@@ -69,43 +113,69 @@ const app = new Elysia()
       };
     }
 
-    // Handle Zod validation errors
     if (code === "VALIDATION") {
       set.status = 400;
       return {
         error: {
           code: "VALIDATION_ERROR",
           message: "Invalid request data",
-          details: error instanceof Error ? error.message : String(error),
+          issues: normalizeValidationIssues(error),
         },
       };
     }
 
-    // Elysia unknown route — not an internal failure
+    if (code === "PARSE") {
+      set.status = 400;
+      return {
+        error: {
+          code: "INVALID_JSON",
+          message: "Request body contains invalid JSON",
+        },
+      };
+    }
+
+    if (code === "INVALID_COOKIE_SIGNATURE") {
+      set.status = 400;
+      return {
+        error: {
+          code: "INVALID_COOKIE_SIGNATURE",
+          message: "Invalid cookie signature",
+        },
+      };
+    }
+
     if (code === "NOT_FOUND") {
       set.status = 404;
       return {
         error: {
-          code: "NOT_FOUND",
+          code: "ROUTE_NOT_FOUND",
           message: "Route not found",
         },
       };
     }
 
-    // Unhandled — observability plugin logs this as a 500
+    if (code === "INVALID_FILE_TYPE") {
+      set.status = 415;
+      return {
+        error: {
+          code: "INVALID_FILE_TYPE",
+          message: "Invalid file type",
+        },
+      };
+    }
+
+    // Unhandled — observability logs the original Error and stack once.
     set.status = 500;
     return {
       error: {
         code: "INTERNAL_SERVER_ERROR",
-        message:
-          environment.NODE_ENV === "development"
-            ? error instanceof Error
-              ? error.message
-              : String(error)
-            : "An unexpected error occurred. Please try again later.",
+        message: "An unexpected error occurred. Please try again later.",
       },
     };
   })
+  // Register after the AtlasMed handler so its global hook observes framework
+  // errors first while this app-level handler retains control of the envelope.
+  .use(httpExceptionPlugin())
   // Configure CORS for frontend access
   .use(
     cors({

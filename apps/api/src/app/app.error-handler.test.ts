@@ -1,124 +1,123 @@
 import { describe, expect, it } from "bun:test";
-import { Elysia } from "elysia";
-import {
-  ForbiddenError,
-  ServiceUnavailableError,
-  UnauthorizedError,
-} from "../shared/errors";
+import { HttpError } from "@atlasmed/access";
+import app from "./app";
 import { AppError } from "../shared/errors";
 
-class TestAppError extends AppError {
+class TestHttpError extends HttpError {
   constructor() {
-    super("TEST_ERROR", 418, "Test app error");
+    super("HTTP test error", 409, "HTTP_TEST_ERROR");
   }
 }
 
-function createErrorHandlerApp() {
-  return new Elysia().onError(({ code, error, set }) => {
-    if (error instanceof AppError) {
-      set.status = error.statusCode;
-      return { error: error.toClientJSON() };
-    }
+class TestAppError extends AppError {
+  constructor() {
+    super("TEST_ERROR", 418, "Test app error", { secret: "hidden" });
+  }
+}
 
-    if (code === "NOT_FOUND") {
-      set.status = 404;
-      return {
-        error: {
-          code: "NOT_FOUND",
-          message: "Route not found",
-        },
-      };
-    }
-
-    set.status = 500;
-    return {
-      error: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "An unexpected error occurred.",
-      },
-    };
+const errorTestApp = app
+  .get("/__test/errors/app", () => {
+    throw new TestAppError();
+  })
+  .get("/__test/errors/http", () => {
+    throw new TestHttpError();
+  })
+  .get("/__test/errors/unexpected", () => {
+    throw new Error("database password leaked");
   });
+
+async function request(path: string, init?: RequestInit) {
+  return errorTestApp.handle(new Request(`http://localhost${path}`, init));
 }
 
 describe("global error handler", () => {
-  it("returns 401 with structured body for UnauthorizedError", async () => {
-    const app = createErrorHandlerApp().get("/test", () => {
-      throw new UnauthorizedError("Missing token");
-    });
-
-    const response = await app.handle(new Request("http://localhost/test"));
-    const body = await response.json();
-
-    expect(response.status).toBe(401);
-    expect(body).toEqual({
-      error: {
-        code: "UNAUTHORIZED",
-        message: "Missing token",
-      },
-    });
-  });
-
-  it("returns 403 with structured body for ForbiddenError", async () => {
-    const app = createErrorHandlerApp().get("/test", () => {
-      throw new ForbiddenError("Insufficient permissions");
-    });
-
-    const response = await app.handle(new Request("http://localhost/test"));
-    const body = await response.json();
-
-    expect(response.status).toBe(403);
-    expect(body).toEqual({
-      error: {
-        code: "FORBIDDEN",
-        message: "Insufficient permissions",
-      },
-    });
-  });
-
-  it("returns 503 with structured body for ServiceUnavailableError", async () => {
-    const app = createErrorHandlerApp().get("/test", () => {
-      throw new ServiceUnavailableError("Search");
-    });
-
-    const response = await app.handle(new Request("http://localhost/test"));
-    const body = await response.json();
-
-    expect(response.status).toBe(503);
-    expect(body).toEqual({
-      error: {
-        code: "SERVICE_UNAVAILABLE",
-        message: "Search is temporarily unavailable",
-      },
-    });
-  });
-
-  it("preserves AppError response shape", async () => {
-    const app = createErrorHandlerApp().get("/test", () => {
-      throw new TestAppError();
-    });
-
-    const response = await app.handle(new Request("http://localhost/test"));
-    const body = (await response.json()) as {
-      error: { code: string; message: string };
-    };
-
-    expect(response.status).toBe(418);
-    expect(body.error.code).toBe("TEST_ERROR");
-    expect(body.error.message).toBe("Test app error");
-  });
-
-  it("returns 404 for unknown routes instead of 500", async () => {
-    const app = createErrorHandlerApp().get("/exists", () => ({ ok: true }));
-
-    const response = await app.handle(new Request("http://localhost/missing"));
-    const body = await response.json();
+  it("maps an unknown route to a sanitized 404 envelope", async () => {
+    const response = await request("/__test/route-does-not-exist");
 
     expect(response.status).toBe(404);
-    expect(body).toEqual({
+    expect(await response.json()).toEqual({
       error: {
-        code: "NOT_FOUND",
+        code: "ROUTE_NOT_FOUND",
         message: "Route not found",
       },
     });
+    expect(response.headers.get("x-request-id")).toBeTruthy();
+  });
+
+  it("normalizes validation issues without echoing found values or schemas", async () => {
+    const response = await request("/api/v1/session/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        identifier: 123,
+        password: "secret-token",
+        healthData: "sensitive diagnosis",
+      }),
+    });
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Invalid request data",
+        issues: [
+          { field: "identifier", message: "Invalid value" },
+        ],
+      },
+    });
+    expect(serialized).not.toContain("secret-token");
+    expect(serialized).not.toContain("sensitive diagnosis");
+    expect(serialized).not.toContain("found");
+    expect(serialized).not.toContain("schema");
+  });
+
+  it("maps malformed JSON to a stable parse error", async () => {
+    const response = await request("/api/v1/session/", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: '{"identifier":"patient@example.com","password":"secret',
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "INVALID_JSON",
+        message: "Request body contains invalid JSON",
+      },
+    });
+  });
+
+  it("preserves sanitized AppError status and body", async () => {
+    const response = await request("/__test/errors/app");
+
+    expect(response.status).toBe(418);
+    expect(await response.json()).toEqual({
+      error: { code: "TEST_ERROR", message: "Test app error" },
+    });
+  });
+
+  it("preserves shared HttpError status and body", async () => {
+    const response = await request("/__test/errors/http");
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: { code: "HTTP_TEST_ERROR", message: "HTTP test error" },
+    });
+  });
+
+  it("never exposes unexpected error details", async () => {
+    const response = await request("/__test/errors/unexpected");
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An unexpected error occurred. Please try again later.",
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("database password leaked");
   });
 });
