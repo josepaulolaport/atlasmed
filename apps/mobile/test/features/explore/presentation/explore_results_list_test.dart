@@ -1,77 +1,187 @@
-import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/explore_paged_results.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
-
-import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  const clinic = FacilityEntry(
+  const clinicsQuery = ClinicsQuery(limit: 20);
+  const doctorsQuery = DoctorsQuery(limit: 20);
+  const clinicDto = FacilityDTO(
     id: 'clinic-1',
     name: 'Clínica Central',
     city: 'São Paulo',
     neighborhood: 'Centro',
     distanceKm: 1,
-    commercialStatus: 'REGISTERED',
-    doctorCount: 1,
+    commercialStatus: 'ACTIVE',
+    professionalCount: 1,
+  );
+  const doctorDto = ProfessionalDTO(
+    id: 'doctor-1',
+    firstName: 'Dra.',
+    lastName: 'Ana',
+    fullName: 'Dra. Ana',
+    facilityIds: [],
+    specialty: 'Cardiologia',
+    crmNumber: '12345',
   );
 
-  Widget buildSubject({required bool loadingMore}) {
-    return MaterialApp(
-      home: Scaffold(
-        body: ExploreResultsList(
-          items: const [Left(clinic)],
-          hasMore: true,
-          isLoadingMore: loadingMore,
-          onLoadMore: () {},
-          bottomInset: 0,
+  testWidgets('renders a skeleton while a virtual page is loading', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          clinicsPageProvider.overrideWith((ref, query) {
+            if (query.page == 1) {
+              return Stream.value(
+                const PaginatedFacilities(
+                  items: [clinicDto],
+                  pagination: Pagination(
+                    page: 1,
+                    limit: 20,
+                    total: 21,
+                    totalPages: 2,
+                  ),
+                ),
+              );
+            }
+            return const Stream<PaginatedFacilities>.empty();
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ClinicsPagedResults(query: clinicsQuery, bottomInset: 0),
+          ),
         ),
       ),
     );
-  }
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('clinic-row-20')),
+      500,
+      scrollable: find.byType(Scrollable),
+      maxScrolls: 10,
+    );
+    await tester.pump();
 
-  testWidgets('renders one skeleton row only while the next page is loading', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildSubject(loadingMore: false));
-
-    expect(find.byType(SkeletonRow), findsNothing);
-
-    await tester.pumpWidget(buildSubject(loadingMore: true));
-
-    expect(find.byType(SkeletonRow), findsOneWidget);
-    expect(find.byType(AtlasShimmer), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(SkeletonRow), findsWidgets);
   });
 
-  const doctor = ProfessionalEntry(
-    id: 'doctor-1',
-    name: 'Dra. Ana',
-    initials: 'DA',
-    hue: 0,
-    specialty: 'Cardiologia',
-    crm: '12345',
-    distanceKm: null,
-  );
+  testWidgets('global index 20 renders page two offset zero', (tester) async {
+    final secondPageClinic = FacilityDTO(
+      id: 'clinic-page-2',
+      name: 'Clínica da página 2',
+      professionalCount: 0,
+    );
 
-  testWidgets('opens a clinic through the explore route', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          clinicsPageProvider.overrideWith((ref, query) {
+            if (query.page == 1) {
+              return Stream.value(
+                const PaginatedFacilities(
+                  items: [clinicDto],
+                  pagination: Pagination(
+                    page: 1,
+                    limit: 20,
+                    total: 21,
+                    totalPages: 2,
+                  ),
+                ),
+              );
+            }
+            return Stream.value(
+              PaginatedFacilities(
+                items: [secondPageClinic],
+                pagination: const Pagination(
+                  page: 2,
+                  limit: 20,
+                  total: 21,
+                  totalPages: 2,
+                ),
+              ),
+            );
+          }),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: ClinicsPagedResults(query: clinicsQuery, bottomInset: 0),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Clínica da página 2'),
+      500,
+      scrollable: find.byType(Scrollable),
+      maxScrolls: 10,
+    );
+
+    expect(find.text('Clínica da página 2'), findsOneWidget);
+  });
+
+  testWidgets('empty results remain pull-to-refresh capable', (tester) async {
+    var refreshCount = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          clinicsPageProvider.overrideWith(
+            (ref, query) => Stream.value(
+              const PaginatedFacilities(
+                items: [],
+                pagination: Pagination(
+                  page: 1,
+                  limit: 20,
+                  total: 0,
+                  totalPages: 0,
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: ClinicsPagedResults(
+              query: clinicsQuery,
+              bottomInset: 0,
+              onRefresh: () async => refreshCount++,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RefreshIndicator), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, 500));
+    await tester.pumpAndSettle();
+
+    expect(refreshCount, 1);
+  });
+
+  testWidgets('preserves selected vertical when opening a clinic', (
+    tester,
+  ) async {
     String? navigatedLocation;
     final router = GoRouter(
       initialLocation: '/',
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, _) => Scaffold(
-            body: ExploreResultsList(
-              items: const [Left(clinic)],
-              hasMore: false,
-              isLoadingMore: false,
-              onLoadMore: () {},
+          builder: (_, _) => const Scaffold(
+            body: ClinicsPagedResults(
+              query: clinicsQuery,
               bottomInset: 0,
+              preferredVerticalId: 'vertical-1',
             ),
           ),
         ),
@@ -85,7 +195,75 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          clinicsPageProvider.overrideWith(
+            (ref, query) => Stream.value(
+              const PaginatedFacilities(
+                items: [clinicDto],
+                pagination: Pagination(
+                  page: 1,
+                  limit: 20,
+                  total: 1,
+                  totalPages: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clínica Central'));
+    await tester.pumpAndSettle();
+
+    expect(navigatedLocation, '/explore/clinic/clinic-1?verticalId=vertical-1');
+  });
+
+  testWidgets('opens a clinic through the explore route', (tester) async {
+    String? navigatedLocation;
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(
+            body: ClinicsPagedResults(query: clinicsQuery, bottomInset: 0),
+          ),
+        ),
+        GoRoute(
+          path: '/explore/clinic/:id',
+          builder: (_, state) {
+            navigatedLocation = state.uri.toString();
+            return const SizedBox();
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          clinicsPageProvider.overrideWith(
+            (ref, query) => Stream.value(
+              const PaginatedFacilities(
+                items: [clinicDto],
+                pagination: Pagination(
+                  page: 1,
+                  limit: 20,
+                  total: 1,
+                  totalPages: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Clínica Central'));
     await tester.pumpAndSettle();
 
@@ -99,14 +277,8 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, _) => Scaffold(
-            body: ExploreResultsList(
-              items: const [Right(doctor)],
-              hasMore: false,
-              isLoadingMore: false,
-              onLoadMore: () {},
-              bottomInset: 0,
-            ),
+          builder: (_, _) => const Scaffold(
+            body: DoctorsPagedResults(query: doctorsQuery, bottomInset: 0),
           ),
         ),
         GoRoute(
@@ -119,7 +291,27 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          doctorsPageProvider.overrideWith(
+            (ref, query) => Stream.value(
+              const PaginatedProfessionals(
+                items: [doctorDto],
+                pagination: Pagination(
+                  page: 1,
+                  limit: 20,
+                  total: 1,
+                  totalPages: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dra. Ana'));
     await tester.pumpAndSettle();
 

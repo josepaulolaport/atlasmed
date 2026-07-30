@@ -14,6 +14,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     with SessionEnvironmentMixin<PaginatedFacilities> {
   ClinicsRepository({
     String? baseUrl,
+    String? cacheTag,
     this.page = 1,
     this.limit = 20,
     this.searchQuery,
@@ -68,6 +69,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
            },
          ),
          name: 'ClinicsRepository',
+         tag: cacheTag,
        );
 
   final int page;

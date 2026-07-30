@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_page_cache.dart';
 
 class DoctorsQuery {
   const DoctorsQuery({
@@ -27,6 +28,21 @@ class DoctorsQuery {
   final String? specialty;
   final FacilitySort? sort;
   final SortOrder? order;
+
+  DoctorsQuery copyWith({int? page}) {
+    return DoctorsQuery(
+      page: page ?? this.page,
+      limit: limit,
+      searchQuery: searchQuery,
+      facilityId: facilityId,
+      latitude: latitude,
+      longitude: longitude,
+      radiusKm: radiusKm,
+      specialty: specialty,
+      sort: sort,
+      order: order,
+    );
+  }
 
   @override
   bool operator ==(Object other) {
@@ -58,6 +74,24 @@ class DoctorsQuery {
   );
 }
 
+final doctorsPageProvider = StreamProvider.autoDispose
+    .family<PaginatedProfessionals, DoctorsQuery>((ref, query) async* {
+      final sessionTag = await ref.watch(exploreSessionCacheTagProvider.future);
+      if (sessionTag == null) return;
+      final repository = ref.watch(
+        _doctorsPageRepositoryProvider((query: query, sessionTag: sessionTag)),
+      );
+      keepExplorePageAlive(ref);
+
+      final currentValue = repository.currentValue;
+      if (currentValue != null) yield currentValue;
+
+      await for (final repositoryState in repository.stream) {
+        final data = repositoryState.map(ready: (state) => state.data);
+        if (data != null && !identical(data, currentValue)) yield data;
+      }
+    });
+
 final doctorsRepositoryFlatProvider = Provider.autoDispose<DoctorsRepository>((
   ref,
 ) {
@@ -68,8 +102,30 @@ final doctorsRepositoryFlatProvider = Provider.autoDispose<DoctorsRepository>((
 
 final doctorsRepositoryProvider = Provider.autoDispose
     .family<DoctorsRepository, DoctorsQuery>((ref, query) {
-      ref.watch(sessionProvider);
       final repository = DoctorsRepository(
+        page: query.page,
+        limit: query.limit,
+        searchQuery: query.searchQuery,
+        facilityId: query.facilityId,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radiusKm: query.radiusKm,
+        specialty: query.specialty,
+        sort: query.sort,
+        order: query.order,
+      );
+      ref.onDispose(repository.dispose);
+      return repository;
+    });
+
+final _doctorsPageRepositoryProvider = Provider.autoDispose
+    .family<DoctorsRepository, ({DoctorsQuery query, String sessionTag})>((
+      ref,
+      request,
+    ) {
+      final query = request.query;
+      final repository = DoctorsRepository(
+        cacheTag: request.sessionTag,
         page: query.page,
         limit: query.limit,
         searchQuery: query.searchQuery,
