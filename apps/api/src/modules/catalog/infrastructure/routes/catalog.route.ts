@@ -286,6 +286,7 @@ const createFacilityShareRoute = new Elysia()
         facilityId: params.id,
         healthcareProviderId: body.healthcareProviderId,
         sharePercent: body.sharePercent,
+        isPackage: body.isPackage,
         scope,
       });
     },
@@ -298,6 +299,7 @@ const createFacilityShareRoute = new Elysia()
       body: t.Object({
         healthcareProviderId: t.String(),
         sharePercent: t.Number(),
+        isPackage: t.Optional(t.Boolean()),
       }),
     }
   );
@@ -326,6 +328,7 @@ const replaceFacilitySharesRoute = new Elysia()
           t.Object({
             healthcareProviderId: t.String(),
             sharePercent: t.Number(),
+            isPackage: t.Optional(t.Boolean()),
           })
         ),
       }),

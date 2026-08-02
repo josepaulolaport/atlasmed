@@ -1,0 +1,1 @@
+ALTER TABLE "facility_healthcare_provider_shares" ADD COLUMN "is_package" boolean DEFAULT false NOT NULL;

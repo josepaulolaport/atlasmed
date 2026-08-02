@@ -9,11 +9,13 @@ import type {
   HealthcareProviderType,
 } from "../interfaces/healthcare-provider.repository.interface";
 import type { FacilityHealthcareProviderShareRepository } from "../interfaces/facility-healthcare-provider-share.repository.interface";
+import type { FacilityVerticalAccessRepository } from "../interfaces/facility-vertical-access.repository.interface";
 import type {
   CompetitorProductRecord,
   CompetitorProductRepository,
 } from "../interfaces/competitor-product.repository.interface";
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
+import { assertPayerSharesOrtopediaAccess } from "../services/payer-shares-access.service";
 
 function productVisibleInVerticals(product: ProductRecord, verticalIds: string[]): boolean {
   return product.verticalIds.some((id) => verticalIds.includes(id));
@@ -341,28 +343,49 @@ export class UpdateHealthcareProviderUseCase {
   }
 }
 
+function serializeFacilityShare(share: {
+  id: string;
+  facilityId: string;
+  healthcareProviderId: string;
+  sharePercent: number;
+  isPackage: boolean;
+  source: "MANUAL" | "REGISTRY" | "IMPORT";
+  createdAt: Date;
+  updatedAt: Date;
+  healthcareProvider: { id: string; name: string; type: string };
+}) {
+  return {
+    id: share.id,
+    facilityId: share.facilityId,
+    healthcareProviderId: share.healthcareProviderId,
+    sharePercent: share.sharePercent,
+    isPackage: share.isPackage,
+    source: share.source,
+    healthcareProvider: share.healthcareProvider,
+    createdAt: share.createdAt.toISOString(),
+    updatedAt: share.updatedAt.toISOString(),
+  };
+}
+
 export class ListFacilityHealthcareProviderSharesUseCase {
   constructor(
     private readonly deps: {
       shareRepository: FacilityHealthcareProviderShareRepository;
+      facilityVerticalAccess: FacilityVerticalAccessRepository;
     }
   ) {}
 
   async execute(input: { facilityId: string; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
+    await assertPayerSharesOrtopediaAccess({
+      facilityId: input.facilityId,
+      scope: input.scope,
+      facilityVerticalAccess: this.deps.facilityVerticalAccess,
+    });
     const shares = await this.deps.shareRepository.findByFacility(input.facilityId);
 
     return {
-      data: shares.map((share) => ({
-        id: share.id,
-        facilityId: share.facilityId,
-        healthcareProviderId: share.healthcareProviderId,
-        sharePercent: share.sharePercent,
-        source: share.source,
-        healthcareProvider: share.healthcareProvider,
-        createdAt: share.createdAt.toISOString(),
-        updatedAt: share.updatedAt.toISOString(),
-      })),
+      data: shares.map(serializeFacilityShare),
     };
   }
 }
@@ -371,6 +394,7 @@ export class CreateFacilityHealthcareProviderShareUseCase {
   constructor(
     private readonly deps: {
       shareRepository: FacilityHealthcareProviderShareRepository;
+      facilityVerticalAccess: FacilityVerticalAccessRepository;
     }
   ) {}
 
@@ -378,9 +402,15 @@ export class CreateFacilityHealthcareProviderShareUseCase {
     facilityId: string;
     healthcareProviderId: string;
     sharePercent: number;
+    isPackage?: boolean;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
+    await assertPayerSharesOrtopediaAccess({
+      facilityId: input.facilityId,
+      scope: input.scope,
+      facilityVerticalAccess: this.deps.facilityVerticalAccess,
+    });
 
     if (input.sharePercent <= 0 || input.sharePercent > 100) {
       throw new ValidationError([
@@ -405,6 +435,7 @@ export class CreateFacilityHealthcareProviderShareUseCase {
       facilityId: input.facilityId,
       healthcareProviderId: input.healthcareProviderId,
       sharePercent: input.sharePercent,
+      isPackage: input.isPackage ?? false,
     });
 
     return {
@@ -412,6 +443,7 @@ export class CreateFacilityHealthcareProviderShareUseCase {
       facilityId: share.facilityId,
       healthcareProviderId: share.healthcareProviderId,
       sharePercent: share.sharePercent,
+      isPackage: share.isPackage,
       source: share.source,
       healthcareProvider: share.healthcareProvider,
       createdAt: share.createdAt.toISOString(),
@@ -423,15 +455,25 @@ export class ReplaceFacilityHealthcareProviderSharesUseCase {
   constructor(
     private readonly deps: {
       shareRepository: FacilityHealthcareProviderShareRepository;
+      facilityVerticalAccess: FacilityVerticalAccessRepository;
     }
   ) {}
 
   async execute(input: {
     facilityId: string;
     scope: ScopeContext;
-    shares: Array<{ healthcareProviderId: string; sharePercent: number }>;
+    shares: Array<{
+      healthcareProviderId: string;
+      sharePercent: number;
+      isPackage?: boolean;
+    }>;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
+    await assertPayerSharesOrtopediaAccess({
+      facilityId: input.facilityId,
+      scope: input.scope,
+      facilityVerticalAccess: this.deps.facilityVerticalAccess,
+    });
 
     const issues: Array<{ field: string; message: string }> = [];
     const seen = new Set<string>();
@@ -464,6 +506,13 @@ export class ReplaceFacilityHealthcareProviderSharesUseCase {
           message: "Share percent must be between 0 and 100",
         });
       }
+
+      if (share.isPackage !== undefined && typeof share.isPackage !== "boolean") {
+        issues.push({
+          field: `${field}.isPackage`,
+          message: "Must be a boolean",
+        });
+      }
     }
 
     const total = input.shares.reduce((sum, share) => sum + (share.sharePercent || 0), 0);
@@ -480,20 +529,15 @@ export class ReplaceFacilityHealthcareProviderSharesUseCase {
 
     const replaced = await this.deps.shareRepository.replaceByFacility(
       input.facilityId,
-      input.shares
+      input.shares.map((share) => ({
+        healthcareProviderId: share.healthcareProviderId,
+        sharePercent: share.sharePercent,
+        isPackage: share.isPackage ?? false,
+      }))
     );
 
     return {
-      data: replaced.map((share) => ({
-        id: share.id,
-        facilityId: share.facilityId,
-        healthcareProviderId: share.healthcareProviderId,
-        sharePercent: share.sharePercent,
-        source: share.source,
-        healthcareProvider: share.healthcareProvider,
-        createdAt: share.createdAt.toISOString(),
-        updatedAt: share.updatedAt.toISOString(),
-      })),
+      data: replaced.map(serializeFacilityShare),
     };
   }
 }

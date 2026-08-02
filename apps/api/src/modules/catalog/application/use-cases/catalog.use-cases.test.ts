@@ -21,7 +21,8 @@ import type {
 } from "../interfaces/competitor-product.repository.interface";
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
 import type { FacilityHealthcareProviderShareRepository } from "../interfaces/facility-healthcare-provider-share.repository.interface";
-import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import type { FacilityVerticalAccessRepository } from "../interfaces/facility-vertical-access.repository.interface";
+import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 
 function scopeWithVerticals(verticalIds: string[]): ScopeContext {
   return { ...createGlobalScopeContext(), assignedVerticalIds: verticalIds };
@@ -351,6 +352,7 @@ describe("product comparison and price index use cases", () => {
 
 describe("facility healthcare provider shares", () => {
   const facilityId = "facility-1";
+  const ortopediaId = "vertical-ortopedia";
 
   function shareRepository(
     overrides: Partial<FacilityHealthcareProviderShareRepository> = {}
@@ -363,13 +365,18 @@ describe("facility healthcare provider shares", () => {
       replaceByFacility: mock(
         async (
           _facilityId: string,
-          shares: Array<{ healthcareProviderId: string; sharePercent: number }>
+          shares: Array<{
+            healthcareProviderId: string;
+            sharePercent: number;
+            isPackage?: boolean;
+          }>
         ) =>
           shares.map((share, index) => ({
             id: `share-${index}`,
             facilityId,
             healthcareProviderId: share.healthcareProviderId,
             sharePercent: share.sharePercent,
+            isPackage: share.isPackage ?? false,
             source: "MANUAL" as const,
             createdAt: new Date("2024-01-01"),
             updatedAt: new Date("2024-01-01"),
@@ -385,23 +392,40 @@ describe("facility healthcare provider shares", () => {
     };
   }
 
+  function verticalAccess(
+    overrides: Partial<FacilityVerticalAccessRepository> = {}
+  ): FacilityVerticalAccessRepository {
+    return {
+      findVerticalIdByCode: mock(async () => ortopediaId),
+      hasActiveVerticalProfile: mock(async () => true),
+      ...overrides,
+    };
+  }
+
+  function ortopediaScope(): ScopeContext {
+    return scopeWithVerticals([ortopediaId]);
+  }
+
   it("replaces the full share mix when percentages sum to 100", async () => {
     const repo = shareRepository();
     const result = await new ReplaceFacilityHealthcareProviderSharesUseCase({
       shareRepository: repo,
+      facilityVerticalAccess: verticalAccess(),
     }).execute({
       facilityId,
-      scope: createGlobalScopeContext(),
+      scope: ortopediaScope(),
       shares: [
-        { healthcareProviderId: "hp-1", sharePercent: 60 },
+        { healthcareProviderId: "hp-1", sharePercent: 60, isPackage: true },
         { healthcareProviderId: "hp-2", sharePercent: 40 },
       ],
     });
 
     expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.isPackage).toBe(true);
+    expect(result.data[1]?.isPackage).toBe(false);
     expect(repo.replaceByFacility).toHaveBeenCalledWith(facilityId, [
-      { healthcareProviderId: "hp-1", sharePercent: 60 },
-      { healthcareProviderId: "hp-2", sharePercent: 40 },
+      { healthcareProviderId: "hp-1", sharePercent: 60, isPackage: true },
+      { healthcareProviderId: "hp-2", sharePercent: 40, isPackage: false },
     ]);
   });
 
@@ -409,9 +433,10 @@ describe("facility healthcare provider shares", () => {
     const repo = shareRepository();
     const result = await new ReplaceFacilityHealthcareProviderSharesUseCase({
       shareRepository: repo,
+      facilityVerticalAccess: verticalAccess(),
     }).execute({
       facilityId,
-      scope: createGlobalScopeContext(),
+      scope: ortopediaScope(),
       shares: [],
     });
 
@@ -423,11 +448,40 @@ describe("facility healthcare provider shares", () => {
     await expect(
       new ReplaceFacilityHealthcareProviderSharesUseCase({
         shareRepository: shareRepository(),
+        facilityVerticalAccess: verticalAccess(),
       }).execute({
         facilityId,
-        scope: createGlobalScopeContext(),
+        scope: ortopediaScope(),
         shares: [{ healthcareProviderId: "hp-1", sharePercent: 70 }],
       })
     ).rejects.toThrow(ValidationError);
+  });
+
+  it("forbids when user lacks Ortopedia vertical", async () => {
+    await expect(
+      new ReplaceFacilityHealthcareProviderSharesUseCase({
+        shareRepository: shareRepository(),
+        facilityVerticalAccess: verticalAccess(),
+      }).execute({
+        facilityId,
+        scope: scopeWithVerticals(["vertical-derm"]),
+        shares: [],
+      })
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("forbids when facility lacks Ortopedia profile", async () => {
+    await expect(
+      new ReplaceFacilityHealthcareProviderSharesUseCase({
+        shareRepository: shareRepository(),
+        facilityVerticalAccess: verticalAccess({
+          hasActiveVerticalProfile: mock(async () => false),
+        }),
+      }).execute({
+        facilityId,
+        scope: ortopediaScope(),
+        shares: [],
+      })
+    ).rejects.toThrow(ForbiddenError);
   });
 });

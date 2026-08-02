@@ -2,6 +2,7 @@ import { DrizzleBusinessVerticalRepository } from "./infrastructure/repositories
 import { DrizzleProductRepository } from "./infrastructure/repositories/drizzle/drizzle-product.repository";
 import { DrizzleHealthcareProviderRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-provider.repository";
 import { DrizzleFacilityHealthcareProviderShareRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-healthcare-provider-share.repository";
+import { DrizzleFacilityVerticalAccessRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-vertical-access.repository";
 import { DrizzleCompetitorProductRepository } from "./infrastructure/repositories/drizzle/drizzle-competitor-product.repository";
 import { DrizzleProductEquivalenceRepository } from "./infrastructure/repositories/drizzle/drizzle-product-equivalence.repository";
 import {
@@ -34,6 +35,7 @@ export const catalogRepositories = {
   product: new DrizzleProductRepository(),
   healthcareProvider: new DrizzleHealthcareProviderRepository(),
   facilityShare: new DrizzleFacilityHealthcareProviderShareRepository(),
+  facilityVerticalAccess: new DrizzleFacilityVerticalAccessRepository(),
   competitorProduct: new DrizzleCompetitorProductRepository(),
   productEquivalence: new DrizzleProductEquivalenceRepository(),
 };
@@ -70,14 +72,17 @@ export const catalogUseCases = {
   listFacilityShares: () =>
     new ListFacilityHealthcareProviderSharesUseCase({
       shareRepository: catalogRepositories.facilityShare,
+      facilityVerticalAccess: catalogRepositories.facilityVerticalAccess,
     }),
   createFacilityShare: () =>
     new CreateFacilityHealthcareProviderShareUseCase({
       shareRepository: catalogRepositories.facilityShare,
+      facilityVerticalAccess: catalogRepositories.facilityVerticalAccess,
     }),
   replaceFacilityShares: () =>
     new ReplaceFacilityHealthcareProviderSharesUseCase({
       shareRepository: catalogRepositories.facilityShare,
+      facilityVerticalAccess: catalogRepositories.facilityVerticalAccess,
     }),
   listCompetitorProducts: () =>
     new ListCompetitorProductsUseCase({

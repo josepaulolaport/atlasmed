@@ -49,9 +49,15 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
     administrators: mockAllFacilityAdministrators(facilityId),
     doctors: mockAllFacilityDoctors(facilityId),
     payers: const [
-      PayerShare(id: 'hp-1', name: 'Outras', sharePercent: 50),
+      PayerShare(
+        id: 'hp-1',
+        name: 'Outras',
+        sharePercent: 50,
+        type: 'OTHER',
+        isPackage: true,
+      ),
       PayerShare(id: 'hp-2', name: 'Sul América', sharePercent: 20),
-      PayerShare(id: 'hp-3', name: 'Amil', sharePercent: 10),
+      PayerShare(id: 'hp-3', name: 'Amil', sharePercent: 10, isPackage: true),
       PayerShare(id: 'hp-4', name: 'Bradesco Saúde', sharePercent: 10),
       PayerShare(id: 'hp-5', name: 'Porto Seguro Saúde', sharePercent: 10),
     ],

@@ -122,17 +122,27 @@ class AdministrativeProfessional {
   }
 }
 
-/// Healthcare provider share (convênio).
+/// Healthcare provider share (fonte pagadora / convênio).
 class PayerShare {
   const PayerShare({
     required this.id,
     required this.name,
     required this.sharePercent,
+    this.isPackage = false,
+    this.type,
   });
 
   final String id;
   final String name;
   final double sharePercent;
+
+  /// Facility-level pacote flag (`isPackage` on the share row).
+  final bool isPackage;
+
+  /// Catalog provider type: `PRIVATE` | `PUBLIC` | `MIXED` | `OTHER`.
+  final String? type;
+
+  bool get isOtherType => (type ?? '').toUpperCase() == 'OTHER';
 }
 
 /// Recent order summary for the establishment detail pedidos section.
