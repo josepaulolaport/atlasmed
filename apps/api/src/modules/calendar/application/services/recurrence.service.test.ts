@@ -217,4 +217,35 @@ describe("expandCalendarOccurrences", () => {
       "2026-03-09T13:00:00.000Z",
     ]);
   });
+
+  it("returns an empty expansion when the requested range ends before it starts", () => {
+    expect(
+      expandCalendarOccurrences(rule(), {
+        from: new Date("2026-02-01T00:00:00.000Z"),
+        to: new Date("2026-01-01T00:00:00.000Z"),
+      })
+    ).toEqual([]);
+  });
+
+  it("skips directly into a very large finite daily series", () => {
+    const startedAt = performance.now();
+    const occurrences = expandCalendarOccurrences(
+      rule({
+        anchorLocalDate: "0001-01-01",
+        recurrence: "DAILY",
+        recurrenceCount: 3_000_000,
+      }),
+      {
+        from: new Date("8000-01-01T00:00:00.000Z"),
+        to: new Date("8000-01-03T00:00:00.000Z"),
+      }
+    );
+    const elapsedMilliseconds = performance.now() - startedAt;
+
+    expect(occurrences.map((occurrence) => occurrence.localOccurrence)).toEqual([
+      "8000-01-01T09:30",
+      "8000-01-02T09:30",
+    ]);
+    expect(elapsedMilliseconds).toBeLessThan(1_000);
+  });
 });

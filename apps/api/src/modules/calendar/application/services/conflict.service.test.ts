@@ -316,4 +316,201 @@ describe("findCalendarConflicts", () => {
       existingOccurrenceKey: "2025-02-28T09:30[UTC]",
     });
   });
+
+  it("keeps each concrete pair when an unbounded long occurrence overlaps neighbors", () => {
+    const conflicts = findCalendarConflicts(
+      recurring("candidate", {
+        anchorLocalDate: "2026-01-01",
+        anchorLocalTime: "09:00",
+        durationMinutes: 2 * 24 * 60,
+        recurrence: "DAILY",
+      }),
+      [
+        recurring("existing", {
+          anchorLocalDate: "2026-01-01",
+          anchorLocalTime: "10:00",
+          durationMinutes: 60,
+          recurrence: "DAILY",
+        }),
+      ],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+
+    expect(conflicts).toContainEqual(
+      expect.objectContaining({
+        candidateOccurrenceKey: "2026-01-01T09:00[UTC]",
+        existingOccurrenceKey: "2026-01-02T10:00[UTC]",
+      })
+    );
+  });
+
+  it("returns the globally earliest 100 conflicts regardless of existing input order", () => {
+    const conflicts = findCalendarConflicts(
+      recurring("candidate", {
+        anchorLocalDate: "2026-01-01",
+        recurrence: "DAILY",
+      }),
+      [
+        recurring("later", {
+          anchorLocalDate: "2026-06-01",
+          recurrence: "DAILY",
+        }),
+        recurring("earlier", {
+          anchorLocalDate: "2026-01-01",
+          recurrence: "DAILY",
+        }),
+      ],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+
+    expect(conflicts).toHaveLength(100);
+    expect(new Set(conflicts.map((conflict) => conflict.existingId))).toEqual(
+      new Set(["earlier"])
+    );
+    expect(conflicts[99]?.candidateOccurrenceKey).toBe(
+      "2026-04-10T09:00[UTC]"
+    );
+  });
+
+  it("supports finite occurrence state on an otherwise unbounded series", () => {
+    const existing = recurring("existing", {
+      anchorLocalDate: "2026-01-01",
+      recurrence: "DAILY",
+    });
+    existing.cancelledOccurrenceKeys = ["2026-01-01T09:00[UTC]"];
+    existing.overrides = {
+      "2026-01-02T09:00[UTC]": {
+        status: "ACTIVE",
+        startsAt: new Date("2026-01-02T11:00:00.000Z"),
+        endsAt: new Date("2026-01-02T12:00:00.000Z"),
+      },
+    };
+
+    const conflicts = findCalendarConflicts(
+      recurring("candidate", {
+        anchorLocalDate: "2026-01-01",
+        anchorLocalTime: "09:30",
+        durationMinutes: 15,
+        recurrence: "DAILY",
+      }),
+      [existing],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+
+    expect(conflicts).toHaveLength(100);
+    expect(conflicts[0]?.existingOccurrenceKey).toBe("2026-01-03T09:00[UTC]");
+  });
+
+  it("considers a moved unbounded override beyond the other finite series end", () => {
+    const candidate = recurring("candidate", {
+      anchorLocalDate: "2026-01-01",
+      recurrence: "DAILY",
+    });
+    candidate.overrides = {
+      "2026-02-15T09:00[UTC]": {
+        status: "ACTIVE",
+        startsAt: new Date("2026-03-01T09:00:00.000Z"),
+        endsAt: new Date("2026-03-01T10:00:00.000Z"),
+      },
+    };
+
+    const conflicts = findCalendarConflicts(
+      candidate,
+      [
+        oneOff("existing", "2026-01-01", "12:00", 15, {
+          overrides: {
+            "2026-01-01T12:00[UTC]": {
+              status: "ACTIVE",
+              startsAt: new Date("2026-03-01T09:30:00.000Z"),
+              endsAt: new Date("2026-03-01T09:45:00.000Z"),
+            },
+          },
+        }),
+      ],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+
+    expect(conflicts).toContainEqual(
+      expect.objectContaining({
+        candidateOccurrenceKey: "2026-02-15T09:00[UTC]",
+        existingOccurrenceKey: "2026-01-01T12:00[UTC]",
+      })
+    );
+  });
+
+  it("includes an override moved after a finite series nominal end", () => {
+    const existing = recurring("existing", {
+      anchorLocalDate: "2026-01-01",
+      recurrence: "DAILY",
+      recurrenceCount: 2,
+    });
+    existing.overrides = {
+      "2026-01-02T09:00[UTC]": {
+        status: "ACTIVE",
+        startsAt: new Date("2026-02-15T09:00:00.000Z"),
+        endsAt: new Date("2026-02-15T10:00:00.000Z"),
+      },
+    };
+
+    const conflicts = findCalendarConflicts(
+      oneOff("candidate", "2026-02-15", "09:30", 15),
+      [existing],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]?.existingOccurrenceKey).toBe("2026-01-02T09:00[UTC]");
+  });
+
+  it("proves separated unbounded daily rules have no UTC conflicts quickly", () => {
+    const startedAt = performance.now();
+    const conflicts = findCalendarConflicts(
+      recurring("candidate", {
+        anchorLocalDate: "2026-01-01",
+        anchorLocalTime: "09:00",
+        durationMinutes: 30,
+        recurrence: "DAILY",
+      }),
+      [
+        recurring("existing", {
+          anchorLocalDate: "2026-01-01",
+          anchorLocalTime: "10:00",
+          durationMinutes: 30,
+          recurrence: "DAILY",
+        }),
+      ],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+    const elapsedMilliseconds = performance.now() - startedAt;
+
+    expect(conflicts).toEqual([]);
+    expect(elapsedMilliseconds).toBeLessThan(1_000);
+  });
+
+  it("proves separated unbounded daily rules have no DST-zone conflicts quickly", () => {
+    const startedAt = performance.now();
+    const conflicts = findCalendarConflicts(
+      recurring("candidate", {
+        anchorLocalDate: "2026-01-01",
+        anchorLocalTime: "09:00",
+        timeZone: "America/New_York",
+        durationMinutes: 30,
+        recurrence: "DAILY",
+      }),
+      [
+        recurring("existing", {
+          anchorLocalDate: "2026-01-01",
+          anchorLocalTime: "10:00",
+          timeZone: "America/New_York",
+          durationMinutes: 30,
+          recurrence: "DAILY",
+        }),
+      ],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+    const elapsedMilliseconds = performance.now() - startedAt;
+
+    expect(conflicts).toEqual([]);
+    expect(elapsedMilliseconds).toBeLessThan(2_000);
+  });
 });

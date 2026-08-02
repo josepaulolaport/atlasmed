@@ -35,6 +35,18 @@ export interface CalendarOccurrence {
   endsAt: Date;
 }
 
+export interface CalendarOccurrenceOverride {
+  status?: "ACTIVE" | "CANCELLED";
+  startsAt?: Date;
+  endsAt?: Date;
+}
+
+export interface EffectiveCalendarOccurrenceRule {
+  rule: CalendarRecurrenceRule;
+  cancelledOccurrenceKeys?: readonly string[];
+  overrides?: Readonly<Record<string, CalendarOccurrenceOverride>>;
+}
+
 interface LocalDate {
   year: number;
   month: number;
@@ -62,6 +74,13 @@ export function expandCalendarOccurrences(
   rule: CalendarRecurrenceRule,
   range: CalendarExpansionRange
 ): CalendarOccurrence[] {
+  if (
+    Number.isFinite(range.from.getTime()) &&
+    Number.isFinite(range.to.getTime()) &&
+    range.to <= range.from
+  ) {
+    return [];
+  }
   return [...iterateCalendarOccurrences(rule, range)];
 }
 
@@ -116,6 +135,101 @@ export function* iterateCalendarOccurrences(
 
     if (rule.recurrence === "NONE") break;
   }
+}
+
+/**
+ * Lazily merges base recurrence slots with finite cancellations and overrides.
+ * Override keys suppress their original base slots, while active moved slots
+ * are merged back by effective UTC start time without expanding the series.
+ */
+export function* iterateEffectiveCalendarOccurrences(
+  entry: EffectiveCalendarOccurrenceRule,
+  range: CalendarIterationRange
+): Generator<CalendarOccurrence> {
+  if (
+    !Number.isFinite(range.from.getTime()) ||
+    (range.to !== undefined && !Number.isFinite(range.to.getTime()))
+  ) {
+    throw new RangeError("Calendar expansion requires valid range dates");
+  }
+  if (range.to !== undefined && range.to <= range.from) return;
+
+  const cancelled = new Set(entry.cancelledOccurrenceKeys ?? []);
+  const suppressed = new Set(Object.keys(entry.overrides ?? {}));
+  const overrideOccurrences: CalendarOccurrence[] = [];
+
+  for (const [recurrenceKey, override] of Object.entries(entry.overrides ?? {})) {
+    if (cancelled.has(recurrenceKey) || override.status === "CANCELLED") continue;
+
+    const original = calendarOccurrenceFromRecurrenceKey(entry.rule, recurrenceKey);
+    if (!original) continue;
+    const startsAt = override.startsAt ?? original.startsAt;
+    const endsAt = override.endsAt ?? original.endsAt;
+    assertValidOverride(recurrenceKey, startsAt, endsAt);
+    if (endsAt <= range.from || (range.to !== undefined && startsAt >= range.to)) {
+      continue;
+    }
+    overrideOccurrences.push({ ...original, startsAt, endsAt });
+  }
+  overrideOccurrences.sort(compareOccurrences);
+
+  const baseIterator = iterateCalendarOccurrences(entry.rule, range);
+  let base = nextUnsuppressedBase(baseIterator, cancelled, suppressed);
+  let overrideIndex = 0;
+
+  while (base || overrideIndex < overrideOccurrences.length) {
+    const override = overrideOccurrences[overrideIndex];
+    if (!base || (override && compareOccurrences(override, base) <= 0)) {
+      yield override!;
+      overrideIndex += 1;
+    } else {
+      yield base;
+      base = nextUnsuppressedBase(baseIterator, cancelled, suppressed);
+    }
+  }
+}
+
+function nextUnsuppressedBase(
+  iterator: Generator<CalendarOccurrence>,
+  cancelled: ReadonlySet<string>,
+  suppressed: ReadonlySet<string>
+): CalendarOccurrence | undefined {
+  for (let next = iterator.next(); !next.done; next = iterator.next()) {
+    if (
+      !cancelled.has(next.value.recurrenceKey) &&
+      !suppressed.has(next.value.recurrenceKey)
+    ) {
+      return next.value;
+    }
+  }
+  return undefined;
+}
+
+function assertValidOverride(
+  recurrenceKey: string,
+  startsAt: Date,
+  endsAt: Date
+): void {
+  if (
+    !Number.isFinite(startsAt.getTime()) ||
+    !Number.isFinite(endsAt.getTime()) ||
+    startsAt >= endsAt
+  ) {
+    throw new RangeError(
+      `Calendar override ${recurrenceKey} requires startsAt < endsAt`
+    );
+  }
+}
+
+function compareOccurrences(
+  left: CalendarOccurrence,
+  right: CalendarOccurrence
+): number {
+  return (
+    left.startsAt.getTime() - right.startsAt.getTime() ||
+    left.endsAt.getTime() - right.endsAt.getTime() ||
+    left.recurrenceKey.localeCompare(right.recurrenceKey)
+  );
 }
 
 export function calendarRuleEnd(rule: CalendarRecurrenceRule): Date | undefined {
