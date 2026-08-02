@@ -202,8 +202,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     if (_statusFilters.isEmpty) return items;
     return items
         .where((e) {
-          final bucket =
-              e.purchaseBucket ?? PurchaseBucketFilter.neverBought;
+          final bucket = e.purchaseBucket ?? PurchaseBucketFilter.neverBought;
           return _statusFilters.contains(bucket);
         })
         .toList(growable: false);
@@ -527,7 +526,8 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     final last = _lastRadiusCommitAt;
     final forceCommit =
         enlarging &&
-        (last == null || DateTime.now().difference(last) >= _radiusCommitMaxWait);
+        (last == null ||
+            DateTime.now().difference(last) >= _radiusCommitMaxWait);
 
     if (forceCommit) {
       _commitRadiusKm(radius);
@@ -896,12 +896,12 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         interactionID: _pinInteractionId,
       );
       map.addInteraction(
-        TapInteraction(
-          FeaturesetDescriptor(layerId: _nearbyStackLayerId),
-          (feature, _) {
-            unawaited(_onStackFeatureTapped(feature));
-          },
-        ),
+        TapInteraction(FeaturesetDescriptor(layerId: _nearbyStackLayerId), (
+          feature,
+          _,
+        ) {
+          unawaited(_onStackFeatureTapped(feature));
+        }),
         interactionID: _stackInteractionId,
       );
       _clinicInteractionsRegistered = true;
@@ -943,7 +943,9 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         // Worst bucket among clinics that have status (skip origin if null).
         final worst = NearbyStackMarker.worstBucket(
           group
-              .where((e) => e.id != widget.facilityId || e.purchaseBucket != null)
+              .where(
+                (e) => e.id != widget.facilityId || e.purchaseBucket != null,
+              )
               .map((e) => e.purchaseBucket),
         );
         stackSpecs.add((bucket: worst, count: count));
@@ -1185,11 +1187,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     }
     if (members.isEmpty) return;
 
-    await _centerOn(
-      members.first.latitude,
-      members.first.longitude,
-      zoom: 15,
-    );
+    await _centerOn(members.first.latitude, members.first.longitude, zoom: 15);
     await _dismissCallout();
     if (!mounted) return;
     await _showStackedEstablishmentsSheet(members);
@@ -1231,7 +1229,11 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   /// Tapping a card zooms/centers on that pin and opens callout or stack sheet.
   Future<void> _onCardTapped(String id) => _focusOnEstablishment(id);
 
-  Future<void> _centerOn(double latitude, double longitude, {double? zoom}) async {
+  Future<void> _centerOn(
+    double latitude,
+    double longitude, {
+    double? zoom,
+  }) async {
     await _mapboxMap?.easeTo(
       CameraOptions(
         center: Point(coordinates: Position(longitude, latitude)),

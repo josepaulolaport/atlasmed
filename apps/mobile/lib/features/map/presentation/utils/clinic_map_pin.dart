@@ -69,31 +69,31 @@ final class ClinicMapPin {
 
   /// Mapbox expression: `focused` (1/0) + `purchaseBucket` → style image id.
   static List<Object> get iconImageExpression => [
-        'case',
-        [
-          '==',
-          ['get', 'focused'],
-          1,
-        ],
-        [
-          'match',
-          ['get', 'purchaseBucket'],
-          PurchaseBucketFilter.active,
-          focusActiveImageId,
-          PurchaseBucketFilter.inactive,
-          focusInactiveImageId,
-          focusNeverBoughtImageId,
-        ],
-        [
-          'match',
-          ['get', 'purchaseBucket'],
-          PurchaseBucketFilter.active,
-          activeImageId,
-          PurchaseBucketFilter.inactive,
-          inactiveImageId,
-          neverBoughtImageId,
-        ],
-      ];
+    'case',
+    [
+      '==',
+      ['get', 'focused'],
+      1,
+    ],
+    [
+      'match',
+      ['get', 'purchaseBucket'],
+      PurchaseBucketFilter.active,
+      focusActiveImageId,
+      PurchaseBucketFilter.inactive,
+      focusInactiveImageId,
+      focusNeverBoughtImageId,
+    ],
+    [
+      'match',
+      ['get', 'purchaseBucket'],
+      PurchaseBucketFilter.active,
+      activeImageId,
+      PurchaseBucketFilter.inactive,
+      inactiveImageId,
+      neverBoughtImageId,
+    ],
+  ];
 
   static Future<void> ensureRegistered(
     StyleManager style, {
@@ -129,12 +129,7 @@ final class ClinicMapPin {
     await add(neverBoughtImageId, _neverBytes!, _singlePxW, _singlePxH);
     await add(focusActiveImageId, _focusActiveBytes!, _focusPxW, _focusPxH);
     await add(focusInactiveImageId, _focusInactiveBytes!, _focusPxW, _focusPxH);
-    await add(
-      focusNeverBoughtImageId,
-      _focusNeverBytes!,
-      _focusPxW,
-      _focusPxH,
-    );
+    await add(focusNeverBoughtImageId, _focusNeverBytes!, _focusPxW, _focusPxH);
   }
 
   static Future<Uint8List> singlePng({required double devicePixelRatio}) async {

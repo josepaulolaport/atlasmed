@@ -150,8 +150,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               _pointsRefreshing = false;
             });
             unawaited(_syncAnnotations());
-            if (_selected != null &&
-                !items.any((e) => e.id == _selected!.id)) {
+            if (_selected != null && !items.any((e) => e.id == _selected!.id)) {
               unawaited(_dismissCallout());
             }
           },
@@ -313,9 +312,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
     map.compass.updateSettings(CompassSettings(enabled: false));
     unawaited(
-      map.gestures.updateSettings(
-        GesturesSettings(pitchEnabled: false),
-      ),
+      map.gestures.updateSettings(GesturesSettings(pitchEnabled: false)),
     );
     try {
       map.addInteraction(TapInteraction.onMap(_onMapBackgroundTapped));
@@ -612,10 +609,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         _mountedClusterSourceConfigVersion = _clusterSourceConfigVersion;
       }
 
-      const clusterFilter = [
-        'has',
-        'point_count',
-      ];
+      const clusterFilter = ['has', 'point_count'];
       const unclusteredFilter = [
         '!',
         ['has', 'point_count'],
@@ -808,13 +802,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<
     Set<
-      ({
-        String sizeTier,
-        num total,
-        num active,
-        num inactive,
-        num neverBought,
-      })
+      ({String sizeTier, num total, num active, num inactive, num neverBought})
     >
   >
   _queryClusterPinSpecs(MapboxMap map) async {
@@ -928,7 +916,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       // Same / near-same coords → zoom never splits pins. Drawer immediately.
       // Must run before expansion zoom — Supercluster still returns higher zooms
       // for identical points all the way to clusterMaxZoom.
-      final coLocated = _areLeafGeometriesStacked(leafFc) ||
+      final coLocated =
+          _areLeafGeometriesStacked(leafFc) ||
           (items.length > 1 && _areStackedCoordinates(items));
       if (coLocated && items.length > 1) {
         await _centerOn(lat, lng);
@@ -958,8 +947,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
       // Only zoom when Mapbox reports a real expansion past current zoom.
       // Never fake +1.8 — that caused endless zoom on same-spot clusters.
-      final canExpand =
-          targetZoom != null && targetZoom > camera.zoom + 0.05;
+      final canExpand = targetZoom != null && targetZoom > camera.zoom + 0.05;
 
       if (canExpand) {
         await map.easeTo(
@@ -996,8 +984,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             pointCount.clamp(2, 200),
             0,
           );
-          final items =
-              _establishmentsFromClusterLeaves(leaves.featureCollection);
+          final items = _establishmentsFromClusterLeaves(
+            leaves.featureCollection,
+          );
           if (items.length > 1) {
             await _centerOn(lat, lng);
             if (!mounted) return;
@@ -1036,12 +1025,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final lat0 = items.first.latitude;
     final lng0 = items.first.longitude;
     for (var i = 1; i < items.length; i++) {
-      if (_distanceMeters(
-            lat0,
-            lng0,
-            items[i].latitude,
-            items[i].longitude,
-          ) >
+      if (_distanceMeters(lat0, lng0, items[i].latitude, items[i].longitude) >
           _stackDistanceMeters) {
         return false;
       }
@@ -1088,9 +1072,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   ) {
     const metersPerDegLat = 111320.0;
     final dLat = (lat1 - lat2) * metersPerDegLat;
-    final dLng = (lng1 - lng2) *
-        metersPerDegLat *
-        math.cos(lat1 * math.pi / 180.0);
+    final dLng =
+        (lng1 - lng2) * metersPerDegLat * math.cos(lat1 * math.pi / 180.0);
     return math.sqrt(dLat * dLat + dLng * dLng);
   }
 
@@ -1377,12 +1360,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return _clinics
         .where(
           (e) =>
-              _distanceMeters(
-                latitude,
-                longitude,
-                e.latitude,
-                e.longitude,
-              ) <=
+              _distanceMeters(latitude, longitude, e.latitude, e.longitude) <=
               _stackDistanceMeters,
         )
         .toList(growable: false);
@@ -1461,8 +1439,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   void _openEstablishment(String id) {
     // Pass map Linha as entry hint; detail bootstraps without forcing it when
     // clinic profiles don't include that Linha (avoids wrong-Linha 404).
-    final verticalId =
-        ref.read(effectiveFacilityVerticalIdProvider).valueOrNull;
+    final verticalId = ref
+        .read(effectiveFacilityVerticalIdProvider)
+        .valueOrNull;
     if (verticalId != null && verticalId.isNotEmpty) {
       context.push(
         Uri(
@@ -1477,10 +1456,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 class _MapStatusFilterBar extends StatelessWidget {
-  const _MapStatusFilterBar({
-    required this.selected,
-    required this.onToggle,
-  });
+  const _MapStatusFilterBar({required this.selected, required this.onToggle});
 
   final Set<String> selected;
   final ValueChanged<String> onToggle;
@@ -1600,11 +1576,7 @@ class _MapIconButton extends StatelessWidget {
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onPressed,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Center(child: child),
-        ),
+        child: SizedBox(width: 48, height: 48, child: Center(child: child)),
       ),
     );
     if (tooltip == null) return button;

@@ -17,10 +17,10 @@ class MapFacilityPointsPage {
 class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     with SessionEnvironmentMixin<MapFacilityPointsPage> {
   MapFacilityPointsRepository({String? baseUrl, this.verticalId})
-      : super(
-          endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
-          name: 'MapFacilityPointsRepository',
-        );
+    : super(
+        endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
+        name: 'MapFacilityPointsRepository',
+      );
 
   final String? verticalId;
 
@@ -39,10 +39,10 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
   }
 
   static ClinicStatus _statusForBucket(String bucket) => switch (bucket) {
-        PurchaseBucketFilter.active => ClinicStatus.active,
-        PurchaseBucketFilter.inactive => ClinicStatus.inactive,
-        _ => ClinicStatus.rejected,
-      };
+    PurchaseBucketFilter.active => ClinicStatus.active,
+    PurchaseBucketFilter.inactive => ClinicStatus.inactive,
+    _ => ClinicStatus.rejected,
+  };
 
   @override
   MapFacilityPointsPage fromJson(String json) {

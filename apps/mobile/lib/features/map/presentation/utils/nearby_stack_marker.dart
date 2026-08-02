@@ -59,28 +59,28 @@ final class NearbyStackMarker {
   }
 
   static List<Object> get iconImageExpression => [
-        'concat',
-        imageIdPrefix,
-        [
-          'coalesce',
-          ['get', 'purchaseBucket'],
-          PurchaseBucketFilter.neverBought,
-        ],
-        '-',
-        [
-          'case',
-          [
-            '>',
-            ['get', 'point_count'],
-            _maxExact,
-          ],
-          '99p',
-          [
-            'to-string',
-            ['get', 'point_count'],
-          ],
-        ],
-      ];
+    'concat',
+    imageIdPrefix,
+    [
+      'coalesce',
+      ['get', 'purchaseBucket'],
+      PurchaseBucketFilter.neverBought,
+    ],
+    '-',
+    [
+      'case',
+      [
+        '>',
+        ['get', 'point_count'],
+        _maxExact,
+      ],
+      '99p',
+      [
+        'to-string',
+        ['get', 'point_count'],
+      ],
+    ],
+  ];
 
   static Future<void> ensureImages(
     StyleManager style, {
@@ -97,10 +97,7 @@ final class NearbyStackMarker {
     }
 
     final needed = <({String bucket, num count})>{
-      (
-        bucket: PurchaseBucketFilter.neverBought,
-        count: 2,
-      ),
+      (bucket: PurchaseBucketFilter.neverBought, count: 2),
       ...specs,
     };
 
@@ -196,10 +193,6 @@ final class NearbyStackMarker {
     final image = await recorder.endRecording().toImage(w, h);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
-    return (
-      bytes: bytes!.buffer.asUint8List(),
-      width: w,
-      height: h,
-    );
+    return (bytes: bytes!.buffer.asUint8List(), width: w, height: h);
   }
 }

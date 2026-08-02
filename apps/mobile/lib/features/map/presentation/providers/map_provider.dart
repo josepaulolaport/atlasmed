@@ -40,12 +40,13 @@ final mapFacilityPointsRefreshProvider = StateProvider<int>((ref) => 0);
 
 /// All in-scope thin map pins. Reloads on vertical change / refresh bump /
 /// session change — not on pan/zoom.
-final liveMapFacilityPointsProvider =
-    FutureProvider<List<NearbyEstablishment>>((ref) async {
-      ref.watch(sessionProvider);
-      ref.watch(mapFacilityPointsRefreshProvider);
-      final verticalId = await ref.watch(
-        effectiveFacilityVerticalIdProvider.future,
-      );
-      return fetchMapFacilityPoints(verticalId: verticalId);
-    });
+final liveMapFacilityPointsProvider = FutureProvider<List<NearbyEstablishment>>(
+  (ref) async {
+    ref.watch(sessionProvider);
+    ref.watch(mapFacilityPointsRefreshProvider);
+    final verticalId = await ref.watch(
+      effectiveFacilityVerticalIdProvider.future,
+    );
+    return fetchMapFacilityPoints(verticalId: verticalId);
+  },
+);

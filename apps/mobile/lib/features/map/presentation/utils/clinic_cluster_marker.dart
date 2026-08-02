@@ -42,41 +42,42 @@ final class ClinicClusterMarker {
     double dotR,
     double totalFontSize,
     double pillFontSize,
-  }) layoutFor(String sizeTier) => switch (sizeTier) {
-        'l' => (
-          diameter: 72,
-          strokeWidth: 5.0,
-          pillH: 28,
-          pillPadX: 12,
-          pillMinExtra: 36,
-          pillOverlap: 12,
-          dotR: 3.2,
-          totalFontSize: 24,
-          pillFontSize: 13,
-        ),
-        'm' => (
-          diameter: 60,
-          strokeWidth: 4.4,
-          pillH: 24,
-          pillPadX: 10,
-          pillMinExtra: 30,
-          pillOverlap: 10,
-          dotR: 2.8,
-          totalFontSize: 20,
-          pillFontSize: 12,
-        ),
-        _ => (
-          diameter: 50,
-          strokeWidth: 3.8,
-          pillH: 22,
-          pillPadX: 9,
-          pillMinExtra: 26,
-          pillOverlap: 9,
-          dotR: 2.5,
-          totalFontSize: 17,
-          pillFontSize: 11,
-        ),
-      };
+  })
+  layoutFor(String sizeTier) => switch (sizeTier) {
+    'l' => (
+      diameter: 72,
+      strokeWidth: 5.0,
+      pillH: 28,
+      pillPadX: 12,
+      pillMinExtra: 36,
+      pillOverlap: 12,
+      dotR: 3.2,
+      totalFontSize: 24,
+      pillFontSize: 13,
+    ),
+    'm' => (
+      diameter: 60,
+      strokeWidth: 4.4,
+      pillH: 24,
+      pillPadX: 10,
+      pillMinExtra: 30,
+      pillOverlap: 10,
+      dotR: 2.8,
+      totalFontSize: 20,
+      pillFontSize: 12,
+    ),
+    _ => (
+      diameter: 50,
+      strokeWidth: 3.8,
+      pillH: 22,
+      pillPadX: 9,
+      pillMinExtra: 26,
+      pillOverlap: 9,
+      dotR: 2.5,
+      totalFontSize: 17,
+      pillFontSize: 11,
+    ),
+  };
 
   static String sizeTierForCount(int pointCount) {
     if (pointCount >= 50) return 'l';
@@ -113,67 +114,67 @@ final class ClinicClusterMarker {
   }
 
   static List<Object> _countKeyExpr(String property) => [
-        'case',
+    'case',
+    [
+      '>',
+      [
+        'to-number',
         [
-          '>',
-          [
-            'to-number',
-            [
-              'coalesce',
-              ['get', property],
-              0,
-            ],
-          ],
-          _maxExact,
+          'coalesce',
+          ['get', property],
+          0,
         ],
-        '99p',
+      ],
+      _maxExact,
+    ],
+    '99p',
+    [
+      'to-string',
+      [
+        'to-number',
         [
-          'to-string',
-          [
-            'to-number',
-            [
-              'coalesce',
-              ['get', property],
-              0,
-            ],
-          ],
+          'coalesce',
+          ['get', property],
+          0,
         ],
-      ];
+      ],
+    ],
+  ];
 
   /// Fully data-driven id — images registered lazily via [ensureImages].
   static List<Object> get iconImageExpression => [
-        'concat',
-        imageIdPrefix,
-        [
-          'step',
-          ['get', 'point_count'],
-          's',
-          10,
-          'm',
-          50,
-          'l',
-        ],
-        '-t',
-        [
-          'case',
-          [
-            '>',
-            ['get', 'point_count'],
-            _maxExact,
-          ],
-          '99p',
-          [
-            'to-string',
-            ['get', 'point_count'],
-          ],
-        ],
-        '-a',
-        _countKeyExpr('active'),
-        '-i',
-        _countKeyExpr('inactive'),
-        '-n',
-        _countKeyExpr('neverBought'),
-      ];
+    'concat',
+    imageIdPrefix,
+    [
+      'step',
+      ['get', 'point_count'],
+      's',
+      10,
+      'm',
+      50,
+      'l',
+    ],
+    '-t',
+    [
+      'case',
+      [
+        '>',
+        ['get', 'point_count'],
+        _maxExact,
+      ],
+      '99p',
+      [
+        'to-string',
+        ['get', 'point_count'],
+      ],
+    ],
+    '-a',
+    _countKeyExpr('active'),
+    '-i',
+    _countKeyExpr('inactive'),
+    '-n',
+    _countKeyExpr('neverBought'),
+  ];
 
   /// Warm cache + register a tiny fallback set (avoids blank first frame).
   static Future<void> ensureRegistered(
@@ -217,14 +218,9 @@ final class ClinicClusterMarker {
     StyleManager style, {
     required double devicePixelRatio,
     required Iterable<
-            ({
-              String sizeTier,
-              num total,
-              num active,
-              num inactive,
-              num neverBought,
-            })>
-        specs,
+      ({String sizeTier, num total, num active, num inactive, num neverBought})
+    >
+    specs,
   }) async {
     final dpr = devicePixelRatio.clamp(1.0, 3.0);
     for (final spec in specs) {
