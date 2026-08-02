@@ -8,6 +8,7 @@ function createClinicWriter(overrides: Record<string, unknown> = {}) {
     updateTerritoryMembership: mock(async () => {}),
     setProfileTerritory: mock(async () => {}),
     findClinicsForMembership: mock(async () => []),
+    findClinicsWithoutConsultant: mock(async () => []),
     ...overrides,
   };
 }

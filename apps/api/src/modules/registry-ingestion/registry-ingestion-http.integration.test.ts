@@ -43,7 +43,7 @@ async function insertFacilityInTerritory(params: {
   await db.insert(facilityVerticalProfiles).values({
     facilityId: facility.id,
     verticalId: params.verticalId,
-    territoryId: params.territoryId,
+    managerZoneId: params.territoryId,
     isActive: true,
   });
   return facility;

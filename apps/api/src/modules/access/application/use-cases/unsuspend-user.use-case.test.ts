@@ -28,7 +28,6 @@ describe("UnsuspendUserUseCase", () => {
   const suspendedUser = {
     id: "user-123",
     status: "SUSPENDED",
-    managerId: null,
   };
 
   beforeEach(() => {

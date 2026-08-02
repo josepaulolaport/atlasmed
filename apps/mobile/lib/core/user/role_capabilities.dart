@@ -18,10 +18,22 @@ bool canReadTerritories(UserRoleName role) =>
     role == UserRoleName.manager ||
     role == UserRoleName.ops;
 
+/// Spec 0006: admin creates zones + patches; manager creates patches only.
 bool canCreateTerritory(UserRoleName role) =>
     role == UserRoleName.admin || role == UserRoleName.manager;
 
+bool canCreateManagerZone(UserRoleName role) => role == UserRoleName.admin;
+
+bool canCreateRepPatch(UserRoleName role) =>
+    role == UserRoleName.admin || role == UserRoleName.manager;
+
+/// Spec 0006: admin updates zones + patches; manager updates patches only.
 bool canUpdateTerritory(UserRoleName role) =>
+    role == UserRoleName.admin || role == UserRoleName.manager;
+
+bool canUpdateManagerZone(UserRoleName role) => role == UserRoleName.admin;
+
+bool canUpdateRepPatch(UserRoleName role) =>
     role == UserRoleName.admin || role == UserRoleName.manager;
 
 bool canDeleteTerritory(UserRoleName role) => role == UserRoleName.admin;
@@ -30,6 +42,10 @@ bool canMutateFacility(UserRoleName role) =>
     role == UserRoleName.admin ||
     role == UserRoleName.manager ||
     role == UserRoleName.rep;
+
+/// Spec 0006: clinic ownership assign/unassign — manager + admin (phase 1).
+bool canAssignFacilityConsultant(UserRoleName role) =>
+    role == UserRoleName.admin || role == UserRoleName.manager;
 
 bool canMutateProfessional(UserRoleName role) => canMutateFacility(role);
 

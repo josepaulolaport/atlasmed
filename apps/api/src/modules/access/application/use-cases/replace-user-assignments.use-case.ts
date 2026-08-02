@@ -24,7 +24,6 @@ export class ReplaceUserAssignmentsUseCase {
     actorRole: Role;
     verticalAssignments: Array<{
       verticalId: string;
-      managerId?: string;
       territoryIds: string[];
     }>;
   }) {
@@ -50,13 +49,9 @@ export class ReplaceUserAssignmentsUseCase {
       });
     }
 
-    const firstManagerId =
-      params.verticalAssignments.find((v) => v.managerId)?.managerId ?? null;
-
     await this.deps.scopeRepository.replaceAssignments({
       userId: params.targetUserId,
       assignedByUserId: params.actorUserId,
-      managerId: roleName === Role.REP ? firstManagerId : null,
       verticalAssignments: params.verticalAssignments,
     });
 

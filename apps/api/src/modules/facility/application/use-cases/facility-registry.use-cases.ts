@@ -164,6 +164,11 @@ export class AssignFacilityConsultantUseCase {
   constructor(
     private readonly deps: {
       consultantAssignmentRepository: FacilityConsultantAssignmentRepository;
+      /** Spec 0006 restricted assign: assignee must cover clinic with a rep patch. */
+      assertAssigneeCoversFacility?: (input: {
+        userId: string;
+        facilityId: string;
+      }) => Promise<void>;
       onConsultantAssignmentChanged?: (userIds: string[]) => Promise<void>;
     }
   ) {}
@@ -193,6 +198,11 @@ export class AssignFacilityConsultantUseCase {
     }
     const verticalId = resolvedVerticalIds[0]!;
 
+    await this.deps.assertAssigneeCoversFacility?.({
+      userId: input.userId,
+      facilityId: input.facilityId,
+    });
+
     const previous =
       await this.deps.consultantAssignmentRepository.findCurrentByFacility(
         input.facilityId,
@@ -220,5 +230,38 @@ export class AssignFacilityConsultantUseCase {
       startedAt: assignment.startedAt.toISOString(),
       assignedByUserId: assignment.assignedByUserId ?? undefined,
     };
+  }
+}
+
+export class UnassignFacilityConsultantUseCase {
+  constructor(
+    private readonly deps: {
+      consultantAssignmentRepository: FacilityConsultantAssignmentRepository;
+      onConsultantAssignmentChanged?: (userIds: string[]) => Promise<void>;
+    }
+  ) {}
+
+  async execute(input: {
+    facilityId: string;
+    scope: ScopeContext;
+  }) {
+    assertResourceInScope(input.scope, "facility", input.facilityId);
+
+    const current =
+      await this.deps.consultantAssignmentRepository.findCurrentByFacility(
+        input.facilityId,
+      );
+    if (!current) {
+      throw new ResourceNotFoundError("FacilityConsultantAssignment", input.facilityId);
+    }
+
+    await this.deps.consultantAssignmentRepository.endActiveForFacilities({
+      facilityIds: [input.facilityId],
+      endReason: "manual_unassign",
+    });
+
+    await this.deps.onConsultantAssignmentChanged?.([current.userId]);
+
+    return { success: true as const, facilityId: input.facilityId, userId: current.userId };
   }
 }

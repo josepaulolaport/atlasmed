@@ -13,7 +13,6 @@ export interface InviteRecord {
   firstName: string | null;
   lastName: string | null;
   birthDate: Date | null;
-  managerId: string | null;
   managerTerritoryId: string | null;
   repTerritoryId: string | null;
   expiresAt: Date;
@@ -28,7 +27,6 @@ export interface InviteRecord {
 
 export interface InviteVerticalAssignmentParams {
   verticalId: string;
-  managerId?: string | undefined;
   territoryIds: string[];
 }
 
@@ -41,7 +39,6 @@ export interface CreateInviteParams {
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
-  managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
   /** Multi-vertical staging; empty keeps legacy single-territory columns only. */
@@ -79,7 +76,6 @@ export interface AcceptInviteTransactionResult {
 export interface InviteStagedVerticalAssignment {
   invitationId: string;
   verticalId: string;
-  managerId: string | null;
   territoryIds: string[];
 }
 
@@ -91,7 +87,6 @@ export interface UpdatePendingInviteParams {
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
-  managerId?: string | null | undefined;
   managerTerritoryId?: string | null | undefined;
   repTerritoryId?: string | null | undefined;
   verticalAssignments?: InviteVerticalAssignmentParams[];

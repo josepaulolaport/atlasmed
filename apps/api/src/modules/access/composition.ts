@@ -68,7 +68,6 @@ import { GetInvitationByIdUseCase } from "./application/use-cases/get-invitation
 import { UpdateInvitationUseCase } from "./application/use-cases/update-invitation.use-case";
 import { InvitationTerritoryValidatorService } from "./application/services/invitation-territory-validator.service";
 import { AvatarStorageAdapter } from "./infrastructure/avatar-storage/avatar-storage.adapter";
-import { AssignUserManagerUseCase } from "./application/use-cases/assign-user-manager.use-case";
 import { AssignUserTerritoryUseCase } from "./application/use-cases/assign-user-territory.use-case";
 import { RevokeUserTerritoryUseCase } from "./application/use-cases/revoke-user-territory.use-case";
 import { GetUserAssignmentsUseCase } from "./application/use-cases/get-user-assignments.use-case";
@@ -98,6 +97,7 @@ import {
   territoryHierarchyPort,
   territoryAssignmentPolicy,
   territoryRepositories,
+  territoryUseCases,
 } from "../territory/composition";
 import { ScopeService } from "./application/services/scope.service";
 import { AccessGrantService } from "./application/services/access-grant.service";
@@ -222,6 +222,7 @@ export const accessUseCases = {
       roleRepository: accessRepositories.role,
       territoryRepository: territoryRepositories.territory,
       territoryTypeRepository: territoryRepositories.territoryType,
+      territoryCrud: territoryUseCases.createTerritory(),
       auditLog: accessInfrastructure.auditLog,
       metrics: accessInfrastructure.metrics,
     }),
@@ -275,10 +276,10 @@ export const accessUseCases = {
       userRepository: accessRepositories.user,
       roleRepository: accessRepositories.role,
       territoryValidator: new InvitationTerritoryValidatorService({
-        userRepository: accessRepositories.user,
         territoryRepository: territoryRepositories.territory,
         territoryTypeRepository: territoryRepositories.territoryType,
       }),
+      territoryCrud: territoryUseCases.createTerritory(),
       getInvitationById: accessUseCases.getInvitationById(),
     }),
 
@@ -458,14 +459,6 @@ export const accessUseCases = {
       storage: new AvatarStorageAdapter(),
     }),
 
-  assignUserManager: () =>
-    new AssignUserManagerUseCase({
-      userRepository: accessRepositories.user,
-      scopeRepository: accessRepositories.scope,
-      scopeService: accessScopeServices.scope,
-      auditLog: accessInfrastructure.auditLog,
-    }),
-
   assignUserTerritory: () =>
     new AssignUserTerritoryUseCase({
       userRepository: accessRepositories.user,
@@ -496,7 +489,6 @@ export const accessUseCases = {
       userRepository: accessRepositories.user,
       scopeRepository: accessRepositories.scope,
       territoryValidator: new InvitationTerritoryValidatorService({
-        userRepository: accessRepositories.user,
         territoryRepository: territoryRepositories.territory,
         territoryTypeRepository: territoryRepositories.territoryType,
       }),

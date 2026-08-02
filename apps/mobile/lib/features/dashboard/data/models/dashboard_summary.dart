@@ -99,18 +99,19 @@ class DashboardTerritorySummary {
 
 class DashboardSummary {
   const DashboardSummary({
-    required this.verticalId,
     required this.purchaseStatus,
     required this.territory,
+    this.verticalId,
   });
 
-  final String verticalId;
+  /// Explicit filter when set; `null` = token-scoped union.
+  final String? verticalId;
   final DashboardPurchaseStatus purchaseStatus;
   final DashboardTerritorySummary territory;
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
     return DashboardSummary(
-      verticalId: json['verticalId'] as String,
+      verticalId: json['verticalId'] as String?,
       purchaseStatus: DashboardPurchaseStatus.fromJson(
         json['purchaseStatus'] as Map<String, dynamic>,
       ),

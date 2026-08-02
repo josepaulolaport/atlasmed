@@ -3,6 +3,7 @@ import {
   users,
   roles,
   invitations,
+  territories,
   userTerritoryAssignments,
   userVerticalAssignments,
   invitationVerticalAssignments,
@@ -46,7 +47,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           firstName: params.firstName ?? null,
           lastName: params.lastName ?? null,
           birthDate: params.birthDate ?? null,
-          managerId: params.managerId ?? null,
           managerTerritoryId: params.managerTerritoryId ?? null,
           repTerritoryId: params.repTerritoryId ?? null,
           expiresAt: params.expiresAt,
@@ -60,7 +60,6 @@ export class DrizzleInviteRepository implements InviteRepository {
         await tx.insert(invitationVerticalAssignments).values({
           invitationId: id,
           verticalId: vertical.verticalId,
-          managerId: vertical.managerId ?? null,
         });
 
         for (const territoryId of vertical.territoryIds) {
@@ -109,7 +108,6 @@ export class DrizzleInviteRepository implements InviteRepository {
       .select({
         invitationId: invitationVerticalAssignments.invitationId,
         verticalId: invitationVerticalAssignments.verticalId,
-        managerId: invitationVerticalAssignments.managerId,
       })
       .from(invitationVerticalAssignments)
       .where(inArray(invitationVerticalAssignments.invitationId, invitationIds));
@@ -134,7 +132,6 @@ export class DrizzleInviteRepository implements InviteRepository {
     return verticalRows.map((row) => ({
       invitationId: row.invitationId,
       verticalId: row.verticalId,
-      managerId: row.managerId ?? null,
       territoryIds:
         territoriesByKey.get(`${row.invitationId}:${row.verticalId}`) ?? [],
     }));
@@ -148,12 +145,10 @@ export class DrizzleInviteRepository implements InviteRepository {
     firstName?: string | undefined;
     lastName?: string | undefined;
     birthDate?: Date | undefined;
-    managerId?: string | null | undefined;
     managerTerritoryId?: string | null | undefined;
     repTerritoryId?: string | null | undefined;
     verticalAssignments?: Array<{
       verticalId: string;
-      managerId?: string | undefined;
       territoryIds: string[];
     }>;
   }) {
@@ -165,7 +160,6 @@ export class DrizzleInviteRepository implements InviteRepository {
       if (params.firstName !== undefined) updates.firstName = params.firstName;
       if (params.lastName !== undefined) updates.lastName = params.lastName;
       if (params.birthDate !== undefined) updates.birthDate = params.birthDate;
-      if (params.managerId !== undefined) updates.managerId = params.managerId;
       if (params.managerTerritoryId !== undefined) {
         updates.managerTerritoryId = params.managerTerritoryId;
       }
@@ -192,8 +186,7 @@ export class DrizzleInviteRepository implements InviteRepository {
           await tx.insert(invitationVerticalAssignments).values({
             invitationId: params.inviteId,
             verticalId: vertical.verticalId,
-            managerId: vertical.managerId ?? null,
-          });
+            });
           for (const territoryId of vertical.territoryIds) {
             await tx.insert(invitationTerritoryAssignments).values({
               invitationId: params.inviteId,
@@ -340,7 +333,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           firstName: invitations.firstName,
           lastName: invitations.lastName,
           birthDate: invitations.birthDate,
-          managerId: invitations.managerId,
           managerTerritoryId: invitations.managerTerritoryId,
           repTerritoryId: invitations.repTerritoryId,
           invitedByUserId: invitations.invitedByUserId,
@@ -399,7 +391,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           firstName: params.firstName,
           lastName: params.lastName,
           birthDate: params.birthDate,
-          managerId: inviteLock.managerId ?? null,
           emailVerified: Boolean(inviteLock.email),
           phoneVerified: Boolean(inviteLock.phoneNumber),
           status: "ACTIVE",
@@ -443,21 +434,40 @@ export class DrizzleInviteRepository implements InviteRepository {
             .values({
               userId: user.id,
               verticalId: vertical.verticalId,
-              managerId: vertical.managerId ?? null,
               assignedByUserId: inviteLock.invitedByUserId,
             })
             .onConflictDoNothing();
         }
 
-        const primaryManager =
-          stagedVerticals.map((v) => v.managerId).find((id): id is string => Boolean(id)) ??
-          inviteLock.managerId;
-        if (primaryManager && user.managerId !== primaryManager) {
-          await tx
-            .update(users)
-            .set({ managerId: primaryManager, updatedAt: new Date() })
-            .where(eq(users.id, user.id));
-          user.managerId = primaryManager;
+        // Territories without matching staged UVAs still imply a linha.
+        if (stagedTerritories.length > 0) {
+          const territoryIds = [
+            ...new Set(stagedTerritories.map((row) => row.territoryId)),
+          ];
+          const territoryVerticalRows =
+            territoryIds.length > 0
+              ? await tx
+                  .select({
+                    id: territories.id,
+                    verticalId: territories.verticalId,
+                  })
+                  .from(territories)
+                  .where(inArray(territories.id, territoryIds))
+              : [];
+          const stagedVerticalIds = new Set(
+            stagedVerticals.map((row) => row.verticalId),
+          );
+          for (const row of territoryVerticalRows) {
+            if (stagedVerticalIds.has(row.verticalId)) continue;
+            await tx
+              .insert(userVerticalAssignments)
+              .values({
+                userId: user.id,
+                verticalId: row.verticalId,
+                assignedByUserId: inviteLock.invitedByUserId,
+              })
+              .onConflictDoNothing();
+          }
         }
       } else {
         const assignedTerritoryIds: string[] = [];
@@ -478,6 +488,23 @@ export class DrizzleInviteRepository implements InviteRepository {
             assignedBy: inviteLock.invitedByUserId,
           });
           assignedTerritoryIds.push(inviteLock.repTerritoryId);
+        }
+
+        if (assignedTerritoryIds.length > 0) {
+          const territoryVerticalRows = await tx
+            .select({ verticalId: territories.verticalId })
+            .from(territories)
+            .where(inArray(territories.id, assignedTerritoryIds));
+          for (const row of territoryVerticalRows) {
+            await tx
+              .insert(userVerticalAssignments)
+              .values({
+                userId: user.id,
+                verticalId: row.verticalId,
+                assignedByUserId: inviteLock.invitedByUserId,
+              })
+              .onConflictDoNothing();
+          }
         }
       }
 

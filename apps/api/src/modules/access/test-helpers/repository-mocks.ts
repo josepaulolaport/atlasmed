@@ -136,7 +136,6 @@ export function createMockUserRepository(
     findByUsername: mock(() => Promise.resolve(null)),
     getMetadata: mock(() => Promise.resolve(null)),
     updateMetadata: mock(() => Promise.resolve()),
-    updateManagerId: mock(() => Promise.resolve({} as any)),
     ...overrides,
   };
 }

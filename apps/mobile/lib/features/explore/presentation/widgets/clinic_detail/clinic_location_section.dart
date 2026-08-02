@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/nearby_vertical_badges.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Inline map preview + horizontal "Clínicas no raio" card strip.
@@ -358,21 +359,23 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
     }
 
     MapboxOptions.setAccessToken(token);
-    return MapWidget(
-      key: ValueKey(
-        'clinic-mini-${widget.location.latitude}-${widget.location.longitude}',
+    return SizedMapHost(
+      builder: (context, width, height) => MapWidget(
+        key: ValueKey(
+          'clinic-mini-${widget.location.latitude}-${widget.location.longitude}',
+        ),
+        styleUri: MapboxStyles.STANDARD,
+        viewport: CameraViewportState(
+          center: _point(widget.location),
+          zoom: 13.5,
+        ),
+        onMapCreated: (map) {
+          _mapboxMap = map;
+          applyPreviewMapChrome(map);
+        },
+        onMapLoadErrorListener: (_) => setState(() => _unavailable = true),
+        onStyleLoadedListener: (_) => _addPin(),
       ),
-      styleUri: MapboxStyles.STANDARD,
-      viewport: CameraViewportState(
-        center: _point(widget.location),
-        zoom: 13.5,
-      ),
-      onMapCreated: (map) {
-        _mapboxMap = map;
-        map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
-      },
-      onMapLoadErrorListener: (_) => setState(() => _unavailable = true),
-      onStyleLoadedListener: (_) => _addPin(),
     );
   }
 

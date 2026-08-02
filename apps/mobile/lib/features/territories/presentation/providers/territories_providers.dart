@@ -32,12 +32,31 @@ final selectedTerritoryVerticalIdProvider = StateProvider<String?>((ref) {
   return null;
 });
 
+/// Spec 0006: when viewing patches, show only one rep's shapes (not all overlaps).
+final selectedGeographyRepUserIdProvider = StateProvider<String?>(
+  (ref) => null,
+);
+
 final territoriesProvider = FutureProvider<List<Territory>>((ref) async {
   final repository = ref.watch(territoryRepositoryProvider);
   final kind = ref.watch(selectedTerritoryKindProvider);
   final verticalId = ref.watch(selectedTerritoryVerticalIdProvider);
   return repository.getTerritories(
     territoryTypeSlug: kind.slug,
+    verticalId: verticalId,
+  );
+});
+
+/// Manager zones drawn under patches on the geography map.
+final managerZonesUnderlayProvider = FutureProvider<List<Territory>>((
+  ref,
+) async {
+  final kind = ref.watch(selectedTerritoryKindProvider);
+  if (kind != TerritoryKind.repPatch) return const [];
+  final repository = ref.watch(territoryRepositoryProvider);
+  final verticalId = ref.watch(selectedTerritoryVerticalIdProvider);
+  return repository.getTerritories(
+    territoryTypeSlug: TerritoryKind.managerZone.slug,
     verticalId: verticalId,
   );
 });

@@ -110,13 +110,21 @@ abstract interface class UsersRepository {
   /// `GET /access/users?role=MANAGER&verticalId=` — managers for a sector.
   Future<List<ManagerOption>> getManagerOptions({String? verticalId});
 
-  /// `GET /territories?verticalId=` — assignable territories, optionally
-  /// scoped to one sector (Manager invite).
+  /// `GET /territories?type=manager_zone&verticalId=` — manager zones.
   Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId});
 
-  /// `GET /territories?managerId=&verticalId=` — **authoritative** server-side
-  /// filter of patches valid inside that manager's zone (and sector), plus
-  /// the zone outline/name for the REP territory picker.
+  /// `GET /access/territories/:id/assignments` — first assignee display name.
+  Future<String?> getTerritoryAssigneeName(String territoryId);
+
+  /// `GET /territories?type=patch&managerTerritoryId=&verticalId=` — patches
+  /// under a manager zone (includes [TerritoryOption.isOccupied]).
+  Future<List<TerritoryOption>> getPatchesForZone({
+    required String managerZoneId,
+    String? verticalId,
+  });
+
+  /// Legacy: patches under a manager user via assignable-territories.
+  /// Prefer [getPatchesForZone] for territory-derived invite flow.
   Future<ManagerTerritoryScope> getTerritoriesForManager(
     String managerId, {
     String? verticalId,

@@ -97,15 +97,17 @@ class HttpInvitationsRepository implements InvitationsRepository {
 
   List<Map<String, dynamic>> _verticalAssignmentsBody(
     List<InviteVerticalAssignment> verticalAssignments,
-  ) => verticalAssignments
-      .map(
-        (s) => {
-          'verticalId': s.verticalId,
-          if (s.managerId != null) 'managerId': s.managerId,
-          'territoryIds': s.territoryIds,
-        },
-      )
-      .toList();
+  ) => verticalAssignments.map((s) {
+    final draft = s.newPatch;
+    if (draft != null) {
+      return {
+        'verticalId': s.verticalId,
+        'territoryIds': <String>[],
+        'newPatch': draft.toJson(),
+      };
+    }
+    return {'verticalId': s.verticalId, 'territoryIds': s.territoryIds};
+  }).toList();
 
   @override
   Future<List<UserInvitation>> getInvitations() async {

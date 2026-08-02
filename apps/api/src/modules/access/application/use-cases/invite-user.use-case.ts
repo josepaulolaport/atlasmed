@@ -7,6 +7,7 @@ import { InviteService } from "../services/invite.service";
 import { InvitationTerritoryValidatorService } from "../services/invitation-territory-validator.service";
 import type { TerritoryRepository } from "../../../territory/application/interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../../../territory/application/interfaces/territory-type.repository.interface";
+import type { TerritoryCrudUseCases } from "../../../territory/application/use-cases/territory-crud.use-cases";
 import {
   ValidationError,
   EmailAlreadyExistsError,
@@ -32,6 +33,7 @@ interface Dependencies {
   roleRepository: RoleRepository;
   territoryRepository?: TerritoryRepository;
   territoryTypeRepository?: TerritoryTypeRepository;
+  territoryCrud?: TerritoryCrudUseCases;
   emailService?: EmailService;
   messagingService?: MessagingService;
   auditLog: IAuditLog;
@@ -46,9 +48,6 @@ interface InviteUserParams {
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate: string;
-  managerId?: string | undefined;
-  managerTerritoryId?: string | undefined;
-  repTerritoryId?: string | undefined;
   verticalAssignments?: InviteVerticalAssignmentInput[];
 }
 
@@ -59,7 +58,6 @@ export class InviteUserUseCase {
   constructor(private readonly deps: Dependencies) {
     this.inviteService = new InviteService({ inviteRepository: deps.inviteRepository });
     this.territoryValidator = new InvitationTerritoryValidatorService({
-      userRepository: deps.userRepository,
       territoryRepository: deps.territoryRepository,
       territoryTypeRepository: deps.territoryTypeRepository,
     });
@@ -110,18 +108,21 @@ export class InviteUserUseCase {
       );
     }
 
+    const resolvedVerticals = await this.resolveNewPatches(
+      role.name,
+      params.verticalAssignments ?? [],
+    );
+
     const assignments = normalizeInviteAssignments({
       roleName: role.name,
-      managerId: params.managerId,
-      managerTerritoryId: params.managerTerritoryId,
-      repTerritoryId: params.repTerritoryId,
-      verticalAssignments: params.verticalAssignments,
+      verticalAssignments: resolvedVerticals,
     });
 
     await this.territoryValidator.validateInvitationTerritories({
       roleId: params.roleId,
       roleName: role.name,
-      managerId: assignments.managerId,
+      inviterUserId: params.invitedByUserId,
+      inviterRoleName: inviterRole.name,
       managerTerritoryId: assignments.managerTerritoryId,
       repTerritoryId: assignments.repTerritoryId,
       verticalAssignments: assignments.verticalAssignments,
@@ -156,10 +157,12 @@ export class InviteUserUseCase {
       firstName: params.firstName,
       lastName: params.lastName,
       birthDate: new Date(`${toDateOnlyString(params.birthDate)}T00:00:00.000Z`),
-      managerId: assignments.managerId,
       managerTerritoryId: assignments.managerTerritoryId,
       repTerritoryId: assignments.repTerritoryId,
-      verticalAssignments: assignments.verticalAssignments,
+      verticalAssignments: assignments.verticalAssignments.map((v) => ({
+        verticalId: v.verticalId,
+        territoryIds: v.territoryIds,
+      })),
     });
 
     await this.deps.auditLog.logInviteUser({
@@ -179,5 +182,86 @@ export class InviteUserUseCase {
       invite,
       token,
     };
+  }
+
+  private async resolveNewPatches(
+    roleName: string,
+    verticalAssignments: InviteVerticalAssignmentInput[],
+  ): Promise<InviteVerticalAssignmentInput[]> {
+    if (roleName !== Role.REP || verticalAssignments.length === 0) {
+      return verticalAssignments.map((v) => ({
+        verticalId: v.verticalId,
+        territoryIds: [...(v.territoryIds ?? [])],
+      }));
+    }
+
+    if (!this.deps.territoryCrud) {
+      for (const [index, v] of verticalAssignments.entries()) {
+        if (v.newPatch) {
+          throw new ValidationError([
+            {
+              field: `verticalAssignments.${index}.newPatch`,
+              message: "Patch creation is unavailable",
+            },
+          ]);
+        }
+      }
+      return verticalAssignments;
+    }
+
+    const resolved: InviteVerticalAssignmentInput[] = [];
+    for (const [index, vertical] of verticalAssignments.entries()) {
+      if (!vertical.newPatch) {
+        resolved.push({
+          verticalId: vertical.verticalId,
+          territoryIds: [...(vertical.territoryIds ?? [])],
+        });
+        continue;
+      }
+
+      const draft = vertical.newPatch;
+      const suffix = crypto.randomUUID().slice(0, 8);
+      const slug =
+        draft.slug?.trim() ||
+        `patch-${draft.name}`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .slice(0, 80) ||
+        `patch-${suffix}`;
+
+      try {
+        const created = await this.deps.territoryCrud.createTerritory({
+          name: draft.name,
+          slug: `${slug}-${suffix}`,
+          verticalId: vertical.verticalId,
+          typeSlug: "patch",
+          boundary: draft.boundary as {
+            type: "Polygon" | "MultiPolygon";
+            coordinates: unknown;
+          },
+        });
+
+        if (created.managerTerritoryId !== draft.managerZoneId) {
+          throw new ValidationError([
+            {
+              field: `verticalAssignments.${index}.newPatch.managerZoneId`,
+              message:
+                "Drawn patch must be contained within the selected manager zone",
+            },
+          ]);
+        }
+
+        resolved.push({
+          verticalId: vertical.verticalId,
+          territoryIds: [created.id],
+        });
+      } catch (error) {
+        if (error instanceof ValidationError) throw error;
+        throw error;
+      }
+    }
+
+    return resolved;
   }
 }

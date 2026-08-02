@@ -3,7 +3,7 @@ import { users } from "@atlasmed/database";
 
 export async function isIntegrationDatabaseReady(): Promise<boolean> {
   try {
-    await db.select({ managerId: users.managerId }).from(users).limit(1);
+    await db.select({ id: users.id }).from(users).limit(1);
     return true;
   } catch (error) {
     return false;

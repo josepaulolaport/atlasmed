@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
@@ -202,10 +203,12 @@ class _ClinicPagedRow extends ConsumerWidget {
         if (position.offset >= data.items.length) {
           return const SizedBox.shrink();
         }
-        final clinic = FacilityEntry.fromDTO(data.items[position.offset]);
+        final dto = data.items[position.offset];
+        final clinic = FacilityEntry.fromDTO(dto);
         return ClinicRow(
           clinic: clinic,
           onTap: () {
+            seedClinicDetailShellFromDto(ref, dto);
             final verticalId = preferredVerticalId;
             if (verticalId != null && verticalId.isNotEmpty) {
               context.push(

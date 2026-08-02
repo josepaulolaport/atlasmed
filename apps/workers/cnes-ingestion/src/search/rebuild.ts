@@ -293,7 +293,7 @@ async function loadActiveFacilityProfileIds(
     .select({
       facilityId: facilityVerticalProfiles.facilityId,
       verticalId: facilityVerticalProfiles.verticalId,
-      territoryId: facilityVerticalProfiles.territoryId,
+      territoryId: facilityVerticalProfiles.managerZoneId,
     })
     .from(facilityVerticalProfiles)
     .where(
@@ -380,7 +380,7 @@ async function loadActiveProfessionalAssociations(
     .select({
       professionalId: facilityProfessionals.professionalId,
       facilityId: facilityProfessionals.facilityId,
-      territoryId: facilityVerticalProfiles.territoryId,
+      territoryId: facilityVerticalProfiles.managerZoneId,
     })
     .from(facilityProfessionals)
     .innerJoin(facilities, eq(facilityProfessionals.facilityId, facilities.id))

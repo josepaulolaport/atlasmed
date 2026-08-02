@@ -4,6 +4,7 @@ import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories
 import { DrizzleTerritoryApprovalRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-approval.repository";
 import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
+import { DrizzleFacilityConsultantAssignmentRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
 import { TerritoryContainmentService } from "./application/services/territory-containment.service";
@@ -15,6 +16,7 @@ import { TerritoryApprovalUseCases } from "./application/use-cases/territory-app
 import { territoryMembershipQueue } from "../../infrastructure/jobs/territory-membership.queue";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 import { auditLogAdapter } from "../access/infrastructure/adapters/audit-log.adapter";
+import { isManagerZoneType } from "./application/constants/territory-roles.constants";
 
 export const territoryRepositories = {
   territory: new DrizzleTerritoryRepository(),
@@ -49,7 +51,16 @@ async function enqueueMembershipRecompute(territoryId?: string): Promise<void> {
 }
 
 async function onTerritoryBoundaryChanged(territoryId: string): Promise<void> {
-  await enqueueMembershipRecompute(territoryId);
+  // Spec 0006: clinic membership follows manager zones only. Patch boundary
+  // changes do not rewrite manager_zone_id (impact/deassign flow handles owners).
+  const territory = await territoryRepositories.territory.findById(territoryId);
+  const type = territory?.territoryType
+    ?? (territory
+      ? await territoryRepositories.territoryType.findById(territory.territoryTypeId)
+      : null);
+  if (type && isManagerZoneType(type)) {
+    await enqueueMembershipRecompute(territoryId);
+  }
   await invalidateScopeForTerritories([territoryId]);
 }
 
@@ -100,12 +111,16 @@ const territoryCrud = new TerritoryCrudUseCases({
 
 const territoryTypeCrud = new TerritoryTypeUseCases(territoryRepositories.territoryType);
 
+const consultantAssignmentRepository =
+  new DrizzleFacilityConsultantAssignmentRepository();
+
 function createBoundaryUseCases() {
   return new TerritoryBoundaryUseCases({
     territoryRepository: territoryRepositories.territory,
     territoryTypeRepository: territoryRepositories.territoryType,
     spatialRepository: territoryRepositories.spatial,
     containmentService: territoryContainmentService,
+    consultantAssignmentRepository,
     onBoundaryChanged: onTerritoryBoundaryChanged,
     onManagerTerritoryChanged: onManagerTerritoryChanged,
   });
@@ -130,6 +145,7 @@ export const territoryUseCases = {
   getTerritoryType: () => territoryTypeCrud,
   updateTerritoryType: () => territoryTypeCrud,
   getBoundary: () => createBoundaryUseCases(),
+  previewBoundaryImpact: () => createBoundaryUseCases(),
   saveBoundary: () => createBoundaryUseCases(),
   deleteBoundary: () => createBoundaryUseCases(),
   recomputeMembership: () =>

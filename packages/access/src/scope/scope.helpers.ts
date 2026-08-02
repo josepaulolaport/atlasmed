@@ -47,7 +47,8 @@ export function canMutateUser(
   }
 
   if (actorRole === Role.MANAGER) {
-    return target.managerId === actorId;
+    // Spec 0006: team = territory-derived managedUserIds (not users.manager_id).
+    return scope.managedUserIds.includes(target.id);
   }
 
   return false;

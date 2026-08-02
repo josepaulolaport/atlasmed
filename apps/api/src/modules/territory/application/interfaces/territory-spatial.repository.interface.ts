@@ -58,6 +58,29 @@ export interface TerritorySpatialRepository {
     options?: { excludeTerritoryId?: string }
   ): Promise<ClinicAssignmentTerritoryMatch[]>;
 
+  /** Spec 0006: true if user has an active rep patch covering the facility point. */
+  userHasRepPatchCoveringFacility(
+    userId: string,
+    facilityId: string
+  ): Promise<boolean>;
+
+  /**
+   * Spec 0006 boundary impact: assigned clinics that would lose coverage
+   * under the proposed geometry (manager zone leave, or rep loses all patch cover).
+   */
+  findAssignedClinicsImpactedByBoundary(input: {
+    territoryId: string;
+    mode: "manager_zone" | "rep_patch";
+    geoJson: GeoJsonGeometry;
+  }): Promise<
+    Array<{
+      facilityId: string;
+      facilityName: string;
+      consultantUserId: string;
+      consultantName: string;
+    }>
+  >;
+
   findOverlappingSiblingTerritories(input: {
     territoryId: string;
     territoryTypeId: string;

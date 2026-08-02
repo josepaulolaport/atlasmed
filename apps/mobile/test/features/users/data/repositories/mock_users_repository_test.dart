@@ -149,7 +149,8 @@ void main() {
       final assignments = await repository.getUserAssignments(
         'user-igor-santana',
       );
-      expect(assignments.managerId, isNull);
+      expect(assignments.managers, isEmpty);
+      expect(assignments.managerName, isNull);
       expect(assignments.territories, isEmpty);
       expect(assignments.isOperationallyActive, isFalse);
     });
@@ -174,29 +175,15 @@ void main() {
     );
 
     test(
-      'assignManager sets manager and assignManager(null) clears it',
+      'assignManager is a no-op (manager link is territory-derived)',
       () async {
         const userId = 'user-igor-santana';
         await repository.assignManager(userId, 'user-marcos-lima');
-        var assignments = await repository.getUserAssignments(userId);
-        expect(assignments.managerName, 'Marcos Lima');
-
-        await repository.assignManager(userId, null);
-        assignments = await repository.getUserAssignments(userId);
-        expect(assignments.managerId, isNull);
+        final assignments = await repository.getUserAssignments(userId);
+        expect(assignments.managers, isEmpty);
+        expect(assignments.managerName, isNull);
       },
     );
-
-    test('assignManager rejects a non-rep target', () async {
-      // user-fernanda-duarte is a manager — only reps can have a manager.
-      expect(
-        () => repository.assignManager(
-          'user-fernanda-duarte',
-          'user-marcos-lima',
-        ),
-        throwsStateError,
-      );
-    });
 
     test(
       'getUserAssignments seeds carry sector and map geometry for the map cards',
@@ -241,8 +228,10 @@ void main() {
           isTrue,
         );
 
-        final all = await repository.getTerritoryOptions();
-        expect(scope.territories.length, lessThan(all.length));
+        final allZones = await repository.getTerritoryOptions();
+        expect(allZones, isNotEmpty);
+        expect(allZones.every((z) => z.managerTerritoryId == null), isTrue);
+        expect(scope.territories, isNotEmpty);
       },
     );
 
@@ -284,15 +273,25 @@ void main() {
           InviteVerticalAssignment(
             verticalId: 'sector-oncologia',
             verticalName: 'Oncologia',
-            managerId: 'user-fernanda-duarte',
-            managerName: 'Fernanda Duarte',
+            managerDisplayName: 'Fernanda Duarte',
+            managers: [
+              AssignmentManagerRef(
+                id: 'user-fernanda-duarte',
+                name: 'Fernanda Duarte',
+              ),
+            ],
             territories: [],
           ),
           InviteVerticalAssignment(
             verticalId: 'sector-cardiologia',
             verticalName: 'Cardiologia',
-            managerId: 'user-fernanda-duarte',
-            managerName: 'Fernanda Duarte',
+            managerDisplayName: 'Fernanda Duarte',
+            managers: [
+              AssignmentManagerRef(
+                id: 'user-fernanda-duarte',
+                name: 'Fernanda Duarte',
+              ),
+            ],
             territories: [],
           ),
         ]);

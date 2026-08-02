@@ -83,38 +83,12 @@ export class GetInvitationsUseCase {
         : [];
     const territoryById = new Map(territories.map((t) => [t.id, t]));
 
-    const managerIds = [
-      ...new Set(
-        staged
-          .map((s) => s.managerId)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    const managers = await Promise.all(
-      managerIds.map((id) => this.dependencies.userRepository.findById(id)),
-    );
-    const managerNameById = new Map(
-      managers
-        .filter((m): m is NonNullable<typeof m> => Boolean(m))
-        .map((m) => {
-          const name = [m.firstName, m.lastName]
-            .filter(Boolean)
-            .join(" ")
-            .trim();
-          return [m.id, name || m.username] as const;
-        }),
-    );
-
     return {
       invitations: invitations.map((invite) => {
         const stagedRows = stagedByInvite.get(invite.id) ?? [];
         const verticalAssignments = stagedRows.map((row) => ({
           verticalId: row.verticalId,
           verticalName: verticalNameById.get(row.verticalId) ?? "—",
-          managerId: row.managerId,
-          managerName: row.managerId
-            ? managerNameById.get(row.managerId)
-            : undefined,
           territories: row.territoryIds.map((id) => {
             const t = territoryById.get(id);
             return {

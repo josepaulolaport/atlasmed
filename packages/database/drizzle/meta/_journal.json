@@ -302,6 +302,20 @@
       "when": 1785613366519,
       "tag": "0042_facility_share_is_package",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1785618000000,
+      "tag": "0043_clinic_manager_zone_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1785647565118,
+      "tag": "0044_drop_manager_id_columns",
+      "breakpoints": true
     }
   ]
 }

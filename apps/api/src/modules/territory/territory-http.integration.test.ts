@@ -206,7 +206,7 @@ describe("Territory HTTP scope integration", () => {
     await db.insert(facilityVerticalProfiles).values({
       facilityId: facility!.id,
       verticalId: fixtures.verticalId,
-      territoryId: fixtures.extraTerritoryId,
+      managerZoneId: fixtures.extraTerritoryId,
       isActive: true,
     });
 
@@ -229,7 +229,7 @@ describe("Territory HTTP scope integration", () => {
       .from(facilities)
       .where(eq(facilities.id, facility!.id));
     const [profile] = await db
-      .select({ territoryId: facilityVerticalProfiles.territoryId })
+      .select({ territoryId: facilityVerticalProfiles.managerZoneId })
       .from(facilityVerticalProfiles)
       .where(eq(facilityVerticalProfiles.facilityId, facility!.id));
     expect(profile?.territoryId).toBeNull();

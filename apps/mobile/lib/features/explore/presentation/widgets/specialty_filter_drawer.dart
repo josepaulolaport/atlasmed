@@ -88,11 +88,11 @@ class _SpecialtyFilterDrawerState extends ConsumerState<SpecialtyFilterDrawer> {
         maxChildSize: 0.94,
         expand: false,
         builder: (context, scrollController) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
+          // Material (not DecoratedBox) so ListTile ink/splash paints correctly.
+          return Material(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 Container(

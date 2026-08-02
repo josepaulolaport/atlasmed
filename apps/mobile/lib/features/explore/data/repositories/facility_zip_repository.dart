@@ -1,70 +1,42 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_payer_share_api_type.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_orders_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_payer_shares_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_photos_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/zip_repository.dart';
 
-/// Tupla nomeada com Facility + todas as integrações carregadas separadamente.
-///
-/// [facility] is null while the detail request has not completed yet (zip race
-/// with photos/orders/payers). Callers must keep showing a loading state.
+/// Detail + photos only. Orders / payers / reps live in dedicated Riverpod
+/// notifiers so Linha changes and section edits do not refetch the whole page.
 typedef FacilityWithIntegrations = ({
   Facility? facility,
   List<PhotoGallerySummary> photos,
-  List<FacilityOrderSummary> orders,
-  List<PayerShare> payerShares,
-  List<AdministrativeProfessional> representatives,
 });
 
-/// Combines detail + related data repositories into a single stream.
+/// Combines shared detail + photos repositories into one stream.
 ///
-/// Each sub-repository fetches one slice of the full facility profile.
-/// The [zipper] merges them into a [FacilityWithIntegrations] record
-/// whenever any sub-repository emits a new value.
+/// Children are owned by Riverpod providers — this zip must not create or
+/// dispose them. Linha-scoped detail swaps keep the photos repo alive.
 class FacilityZipRepository extends ZipRepository<FacilityWithIntegrations> {
-  FacilityZipRepository(String facilityId, {String? verticalId})
-    : super(
-        repositories: [
-          ClinicDetailRepository(id: facilityId, verticalId: verticalId),
-          FacilityPhotosRepository(facilityId),
-          FacilityOrdersRepository(
-            facilityId: facilityId,
-            page: 1,
-            limit: 5,
-            verticalId: verticalId,
-          ),
-          FacilityPayerSharesRepository(facilityId),
-          FacilityRepresentativesRepository(facilityId),
-        ],
-      );
+  FacilityZipRepository({required this.detail, required this.photos})
+    : super(repositories: [detail, photos]);
+
+  final ClinicDetailRepository detail;
+  final FacilityPhotosRepository photos;
+
+  Future<FacilityPhotosResponse?> refreshPhotos() => photos.refresh();
 
   @override
   FacilityWithIntegrations zipper(List<dynamic> values) {
     final dto = values[0] as FacilityDTO?;
     final photosResponse = values[1] as FacilityPhotosResponse?;
-    final ordersPage = values[2] as FacilityOrdersPage?;
-    final payerResponse = values[3] as FacilityPayerSharesResponse?;
-    final repPage = values[4] as PaginatedFacilityRepresentatives?;
 
-    // ZipRepository uses CombineLatestStream — side repos (photos/orders/…)
-    // often emit before clinic detail on slower networks (prod). Never invent
-    // an empty Facility; UI treats a null facility as still loading.
+    // ZipRepository uses CombineLatestStream — photos often emit before
+    // clinic detail on slower networks. Never invent an empty Facility.
     final facility = dto == null ? null : Facility.fromDTO(dto);
 
     return (
       facility: facility,
       photos: photosResponse != null ? [photosResponse.toSummary()] : const [],
-      orders: ordersPage?.orders ?? const [],
-      payerShares: payerResponse?.toDomain() ?? const [],
-      representatives:
-          repPage?.items.map((r) => r.toDomain()).toList(growable: false) ??
-          const [],
     );
   }
 }

@@ -5,7 +5,6 @@ export const replaceUserAssignmentsSchema = z.object({
     .array(
       z.object({
         verticalId: z.string().min(1),
-        managerId: z.string().min(1).optional(),
         territoryIds: z.array(z.string().min(1)).default([]),
       }),
     )

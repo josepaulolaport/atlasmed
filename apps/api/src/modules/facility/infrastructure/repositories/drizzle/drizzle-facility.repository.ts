@@ -188,7 +188,7 @@ async function loadVerticalProfiles(
       isActive: facilityVerticalProfiles.isActive,
       commercialStatus: facilityVerticalProfiles.commercialStatus,
       purchaseStatus: facilityVerticalProfiles.purchaseStatus,
-      territoryId: facilityVerticalProfiles.territoryId,
+      territoryId: facilityVerticalProfiles.managerZoneId,
       observedPurchaseIntervalDays:
         facilityVerticalProfiles.observedPurchaseIntervalDays,
       purchaseIntervalDays: facilityVerticalProfiles.purchaseIntervalDays,
@@ -272,7 +272,6 @@ async function loadConsultantInfo(
       firstName: users.firstName,
       lastName: users.lastName,
       startedAt: facilityConsultantAssignments.startedAt,
-      managerId: users.managerId,
     })
     .from(facilityConsultantAssignments)
     .innerJoin(users, eq(users.id, facilityConsultantAssignments.userId))
@@ -283,28 +282,36 @@ async function loadConsultantInfo(
       )
     );
 
-  const managerIds = [
-    ...new Set(
-      consultantRows
-        .map((row) => row.managerId)
-        .filter((id): id is string => typeof id === "string" && id.length > 0)
-    ),
-  ];
+  // Spec 0006: clinic gerente = zone UTA on manager_zone_id (not users.manager_id).
+  const zoneManagerRows = await db.execute(sql`
+    SELECT DISTINCT ON (fvp.facility_id)
+      fvp.facility_id AS facility_id,
+      mgr.first_name AS first_name,
+      mgr.last_name AS last_name
+    FROM facility_vertical_profiles fvp
+    INNER JOIN user_territory_assignments uta
+      ON uta.territory_id = fvp.manager_zone_id
+    INNER JOIN users mgr ON mgr.id = uta.user_id
+    WHERE fvp.facility_id IN (${sql.join(
+      facilityIds.map((id) => sql`${id}`),
+      sql`, `,
+    )})
+      AND fvp.is_active = true
+      AND fvp.manager_zone_id IS NOT NULL
+      AND mgr.deleted_at IS NULL
+    ORDER BY fvp.facility_id, fvp.updated_at DESC
+  `) as Array<{
+    facility_id: string;
+    first_name: string | null;
+    last_name: string | null;
+  }>;
 
-  const managerNameById = new Map<string, string | null>();
-  if (managerIds.length > 0) {
-    const managerRows = await db
-      .select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-      })
-      .from(users)
-      .where(inArray(users.id, managerIds));
-
-    for (const row of managerRows) {
-      managerNameById.set(row.id, displayName(row.firstName, row.lastName));
-    }
+  const zoneManagerNameByFacility = new Map<string, string | null>();
+  for (const row of zoneManagerRows) {
+    zoneManagerNameByFacility.set(
+      row.facility_id,
+      displayName(row.first_name, row.last_name),
+    );
   }
 
   return new Map(
@@ -313,9 +320,7 @@ async function loadConsultantInfo(
       {
         name: displayName(row.firstName, row.lastName),
         since: row.startedAt ?? null,
-        managerName: row.managerId
-          ? (managerNameById.get(row.managerId) ?? null)
-          : null,
+        managerName: zoneManagerNameByFacility.get(row.facilityId) ?? null,
       },
     ])
   );
@@ -1220,7 +1225,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {
     if (territoryIds.length === 0) return [];
 
-    // Membership = facility_vertical_profiles.territory_id only (legacy facilities.territoryId cut over).
+    // Membership = facility_vertical_profiles.manager_zone_id (Spec 0006).
     const profileRows = await db
       .select({ id: facilities.id })
       .from(facilities)
@@ -1232,7 +1237,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         and(
           isNull(facilities.deactivatedAt),
           eq(facilityVerticalProfiles.isActive, true),
-          inArray(facilityVerticalProfiles.territoryId, territoryIds),
+          inArray(facilityVerticalProfiles.managerZoneId, territoryIds),
         ),
       );
 

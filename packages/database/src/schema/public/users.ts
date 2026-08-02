@@ -61,7 +61,6 @@ export const users = pgTable(
     deletedAt: timestamp("deleted_at"),
     metadata: json("metadata"),
     roleId: text("role_id").notNull().references(() => roles.id),
-    managerId: text("manager_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -71,7 +70,6 @@ export const users = pgTable(
     index("users_phone_number_idx").on(t.phoneNumber),
     index("users_status_idx").on(t.status),
     index("users_deleted_at_idx").on(t.deletedAt),
-    index("users_manager_id_idx").on(t.managerId),
   ]
 );
 
@@ -176,7 +174,6 @@ export const invitations = pgTable(
     firstName: text("first_name"),
     lastName: text("last_name"),
     birthDate: timestamp("birth_date"),
-    managerId: text("manager_id").references(() => users.id, { onDelete: "set null" }),
     managerTerritoryId: text("manager_territory_id"),
     repTerritoryId: text("rep_territory_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -189,7 +186,6 @@ export const invitations = pgTable(
     index("invitations_status_idx").on(t.status),
     index("invitations_accepted_by_user_id_idx").on(t.acceptedByUserId),
     index("invitations_invited_by_user_id_idx").on(t.invitedByUserId),
-    index("invitations_manager_id_idx").on(t.managerId),
     index("invitations_manager_territory_id_idx").on(t.managerTerritoryId),
     index("invitations_rep_territory_id_idx").on(t.repTerritoryId),
   ]
@@ -232,17 +228,10 @@ export const rolesRelations = relations(roles, ({ many }) => ({
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   role: one(roles, { fields: [users.roleId], references: [roles.id] }),
-  manager: one(users, {
-    fields: [users.managerId],
-    references: [users.id],
-    relationName: "UserManager",
-  }),
-  directReports: many(users, { relationName: "UserManager" }),
   sessions: many(sessions),
   passwordResets: many(passwordResets),
   verificationTokens: many(verificationTokens),
   sentInvitations: many(invitations, { relationName: "InvitedByUser" }),
-  managerInvitations: many(invitations, { relationName: "InvitationManager" }),
   permissions: many(permissions),
 }));
 
@@ -264,11 +253,6 @@ export const invitationsRelations = relations(invitations, ({ one }) => ({
     fields: [invitations.invitedByUserId],
     references: [users.id],
     relationName: "InvitedByUser",
-  }),
-  manager: one(users, {
-    fields: [invitations.managerId],
-    references: [users.id],
-    relationName: "InvitationManager",
   }),
 }));
 

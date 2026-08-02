@@ -40,10 +40,6 @@ export const userVerticalAssignments = pgTable(
     verticalId: text("vertical_id")
       .notNull()
       .references(() => businessVerticals.id, { onDelete: "cascade" }),
-    /** Reporting manager for this vertical (REP). Null for managers/admin/ops. */
-    managerId: text("manager_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
     assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -57,7 +53,6 @@ export const userVerticalAssignments = pgTable(
     ),
     index("user_vertical_assignments_user_id_idx").on(t.userId),
     index("user_vertical_assignments_vertical_id_idx").on(t.verticalId),
-    index("user_vertical_assignments_manager_id_idx").on(t.managerId),
   ]
 );
 
@@ -78,11 +73,6 @@ export const userVerticalAssignmentsRelations = relations(
     vertical: one(businessVerticals, {
       fields: [userVerticalAssignments.verticalId],
       references: [businessVerticals.id],
-    }),
-    manager: one(users, {
-      fields: [userVerticalAssignments.managerId],
-      references: [users.id],
-      relationName: "UserVerticalManager",
     }),
     assignedBy: one(users, {
       fields: [userVerticalAssignments.assignedByUserId],

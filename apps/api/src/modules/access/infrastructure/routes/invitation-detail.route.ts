@@ -36,6 +36,7 @@ export const invitationDetailRoute = new Elysia({
 
       return accessUseCases.updateInvitation().execute({
         inviteId: params.id,
+        actorUserId: actor.id,
         actorRole: actor.role.name as Role,
         email: parsed.email,
         phoneNumber: parsed.phoneNumber,
@@ -43,9 +44,6 @@ export const invitationDetailRoute = new Elysia({
         firstName: parsed.firstName,
         lastName: parsed.lastName,
         birthDate: parsed.birthDate,
-        managerId: parsed.managerId,
-        managerTerritoryId: parsed.managerTerritoryId,
-        repTerritoryId: parsed.repTerritoryId,
         verticalAssignments: parsed.verticalAssignments,
       });
     },
@@ -64,15 +62,25 @@ export const invitationDetailRoute = new Elysia({
         birthDate: t.Optional(
           t.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
         ),
-        managerId: t.Optional(t.String()),
-        managerTerritoryId: t.Optional(t.String()),
-        repTerritoryId: t.Optional(t.String()),
         verticalAssignments: t.Optional(
           t.Array(
             t.Object({
               verticalId: t.String(),
-              managerId: t.Optional(t.String()),
-              territoryIds: t.Array(t.String()),
+              territoryIds: t.Optional(t.Array(t.String())),
+              newPatch: t.Optional(
+                t.Object({
+                  name: t.String({ minLength: 1 }),
+                  managerZoneId: t.String(),
+                  slug: t.Optional(t.String()),
+                  boundary: t.Object({
+                    type: t.Union([
+                      t.Literal("Polygon"),
+                      t.Literal("MultiPolygon"),
+                    ]),
+                    coordinates: t.Unknown(),
+                  }),
+                }),
+              ),
             }),
           ),
         ),

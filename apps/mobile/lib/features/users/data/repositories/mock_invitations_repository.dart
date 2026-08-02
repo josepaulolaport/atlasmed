@@ -21,11 +21,18 @@ class MockInvitationsRepository implements InvitationsRepository {
         ? null
         : verticalAssignments.first;
     final managerName = first?.managerName;
-    final territoryName = first == null || first.territories.isEmpty
-        ? null
-        : first.territories.length == 1
-        ? first.territories.first.name
-        : '${first.territories.length} territórios';
+    final String? territoryName;
+    if (first == null) {
+      territoryName = null;
+    } else if (first.newPatch != null) {
+      territoryName = first.newPatch!.name;
+    } else if (first.territories.isEmpty) {
+      territoryName = null;
+    } else if (first.territories.length == 1) {
+      territoryName = first.territories.first.name;
+    } else {
+      territoryName = '${first.territories.length} territórios';
+    }
     return (managerName: managerName, territoryName: territoryName);
   }
 

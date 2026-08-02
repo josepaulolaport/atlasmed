@@ -8,6 +8,8 @@ import {
   facilityVerticalProfiles,
   users,
   roles,
+  invitations,
+  invitationTerritoryAssignments,
 } from "@atlasmed/database";
 import { eq, and, ne, inArray, asc, isNull, sql } from "drizzle-orm";
 import type {
@@ -183,7 +185,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         facilityVerticalProfiles,
         and(
           eq(facilityVerticalProfiles.facilityId, facilities.id),
-          eq(facilityVerticalProfiles.territoryId, territoryId),
+          eq(facilityVerticalProfiles.managerZoneId, territoryId),
           eq(facilityVerticalProfiles.isActive, true),
         ),
       )
@@ -192,11 +194,27 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
   }
 
   async countAssignedUsers(territoryId: string): Promise<number> {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(userTerritoryAssignments)
-      .where(eq(userTerritoryAssignments.territoryId, territoryId));
-    return Number(result?.count ?? 0);
+    const [[uta], [staged]] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(userTerritoryAssignments)
+        .where(eq(userTerritoryAssignments.territoryId, territoryId)),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(invitationTerritoryAssignments)
+        .innerJoin(
+          invitations,
+          eq(invitationTerritoryAssignments.invitationId, invitations.id),
+        )
+        .where(
+          and(
+            eq(invitationTerritoryAssignments.territoryId, territoryId),
+            eq(invitations.status, "PENDING"),
+          ),
+        ),
+    ]);
+    // Live assignees + patches already locked on a pending invite.
+    return Number(uta?.count ?? 0) + Number(staged?.count ?? 0);
   }
 
   async create(input: CreateTerritoryInput): Promise<TerritoryRecord> {

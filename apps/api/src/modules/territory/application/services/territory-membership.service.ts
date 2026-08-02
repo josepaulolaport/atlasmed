@@ -40,6 +40,24 @@ export interface ClinicMembershipWriter {
     territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]>;
+
+  /**
+   * Spec 0006: clinics in manager zones with no active primary consultant.
+   * When managerZoneIds is omitted/empty and global is true, all zones.
+   */
+  findClinicsWithoutConsultant(params: {
+    managerZoneIds?: string[];
+    global: boolean;
+  }): Promise<
+    Array<{
+      id: string;
+      displayName: string;
+      lat: number | null;
+      lng: number | null;
+      managerZoneId: string;
+      managerZoneName: string | null;
+    }>
+  >;
 }
 
 interface Dependencies {

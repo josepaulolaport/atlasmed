@@ -7,6 +7,7 @@ class EditorSaveBar extends StatelessWidget {
   final bool saving;
   final VoidCallback onCancel;
   final VoidCallback onSave;
+  final String saveLabel;
 
   const EditorSaveBar({
     super.key,
@@ -14,6 +15,7 @@ class EditorSaveBar extends StatelessWidget {
     required this.saving,
     required this.onCancel,
     required this.onSave,
+    this.saveLabel = 'Salvar alterações',
   });
 
   @override
@@ -70,9 +72,9 @@ class EditorSaveBar extends StatelessWidget {
                         color: Colors.white,
                       ),
                     )
-                  : const Text(
-                      'Salvar alterações',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                  : Text(
+                      saveLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
             ),
           ),

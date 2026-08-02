@@ -7,6 +7,7 @@ import {
   InsufficientPermissionsError,
   UserNotFoundError,
 } from "../../../../shared/errors";
+import { MANAGER_ZONE_TYPE_SLUG } from "../../../territory/application/constants/territory-roles.constants";
 
 interface GetUserAssignmentsDependencies {
   userRepository: UserRepository;
@@ -18,13 +19,22 @@ interface GetUserAssignmentsDependencies {
 export interface AssignmentTerritoryDto {
   id: string;
   name: string;
+  managerZoneId?: string;
+  managerZoneName?: string;
   boundary?: unknown;
+}
+
+export interface AssignmentManagerDto {
+  id: string;
+  name: string;
 }
 
 export interface VerticalAssignmentDto {
   verticalId: string;
   verticalName: string;
-  managerId?: string;
+  /** Distinct managers via zone UTAs covering this vertical's territories. */
+  managers: AssignmentManagerDto[];
+  /** Compat summary — joined manager names (multi-manager safe). */
   managerName?: string;
   territories: AssignmentTerritoryDto[];
 }
@@ -74,60 +84,97 @@ export class GetUserAssignmentsUseCase {
         : [];
     const territoryById = new Map(territories.map((t) => [t.id, t]));
 
-    const managerIds = [
-      ...new Set(
-        verticalRows
-          .map((v) => v.managerId)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    const managers = await Promise.all(
-      managerIds.map((id) => this.deps.userRepository.findById(id)),
-    );
-    const managerNameById = new Map(
-      managers
-        .filter((m): m is NonNullable<typeof m> => Boolean(m))
-        .map((m) => {
-          const name = [m.firstName, m.lastName]
-            .filter(Boolean)
-            .join(" ")
-            .trim();
-          return [m.id, name || m.username] as const;
-        }),
-    );
+    const zoneIds = new Set<string>();
+    for (const t of territories) {
+      if (t.territoryType?.slug === MANAGER_ZONE_TYPE_SLUG) {
+        zoneIds.add(t.id);
+      } else if (t.managerTerritoryId) {
+        zoneIds.add(t.managerTerritoryId);
+      }
+    }
 
-    const territoryDtos: AssignmentTerritoryDto[] = [];
+    const zoneById = new Map<string, { id: string; name: string }>();
+    if (zoneIds.size > 0) {
+      const zones = await this.deps.territoryRepository.findByIds([
+        ...zoneIds,
+      ]);
+      for (const z of zones) {
+        zoneById.set(z.id, { id: z.id, name: z.name });
+      }
+    }
+
+    const managersByZoneId = new Map<string, AssignmentManagerDto[]>();
+    for (const zoneId of zoneIds) {
+      const assignees =
+        await this.deps.scopeRepository.findUserIdsByTerritoryId(zoneId);
+      const managers: AssignmentManagerDto[] = [];
+      for (const row of assignees) {
+        const mgr = await this.deps.userRepository.findById(row.userId);
+        if (!mgr || mgr.role.name !== Role.MANAGER) continue;
+        const name =
+          [mgr.firstName, mgr.lastName].filter(Boolean).join(" ").trim() ||
+          mgr.username;
+        managers.push({ id: mgr.id, name });
+      }
+      managersByZoneId.set(zoneId, managers);
+    }
+
+    const territoriesByVertical = new Map<string, AssignmentTerritoryDto[]>();
     for (const row of territoryRows) {
       const territory = territoryById.get(row.territoryId);
       if (!territory) continue;
       const boundary =
         await this.deps.spatialRepository.getBoundaryAsGeoJson(territory.id);
-      territoryDtos.push({
+      const zoneId =
+        territory.territoryType?.slug === MANAGER_ZONE_TYPE_SLUG
+          ? territory.id
+          : territory.managerTerritoryId ?? undefined;
+      const zone = zoneId ? zoneById.get(zoneId) : undefined;
+      const dto: AssignmentTerritoryDto = {
         id: territory.id,
         name: territory.name,
-        ...(boundary ? { boundary } : {}),
-      });
-    }
-
-    const verticalAssignments: VerticalAssignmentDto[] = verticalRows.map((row) => {
-      const managerId = row.managerId ?? undefined;
-      return {
-        verticalId: row.verticalId,
-        verticalName: verticalNameById.get(row.verticalId) ?? "—",
-        ...(managerId
-          ? {
-              managerId,
-              managerName: managerNameById.get(managerId),
-            }
+        ...(zone
+          ? { managerZoneId: zone.id, managerZoneName: zone.name }
           : {}),
-        territories:
-          verticalRows.length === 1 ? territoryDtos : [],
+        ...(boundary ? { boundary } : {}),
       };
-    });
-
-    if (verticalRows.length > 1 && territoryDtos.length > 0 && verticalAssignments[0]) {
-      verticalAssignments[0].territories = territoryDtos;
+      const list = territoriesByVertical.get(territory.verticalId) ?? [];
+      list.push(dto);
+      territoriesByVertical.set(territory.verticalId, list);
     }
+
+    // UVAs are source of truth; also surface verticals that only appear via
+    // territory UTAs (legacy accepts / partial backfills) so Desempenho/map work.
+    const verticalIds = new Set<string>([
+      ...verticalRows.map((row) => row.verticalId),
+      ...territoriesByVertical.keys(),
+    ]);
+
+    const verticalAssignments: VerticalAssignmentDto[] = [...verticalIds].map(
+      (verticalId) => {
+        const territoriesForVertical =
+          territoriesByVertical.get(verticalId) ?? [];
+        const managerMap = new Map<string, AssignmentManagerDto>();
+        for (const t of territoriesForVertical) {
+          if (!t.managerZoneId) continue;
+          for (const m of managersByZoneId.get(t.managerZoneId) ?? []) {
+            managerMap.set(m.id, m);
+          }
+        }
+        const managers = [...managerMap.values()];
+        const managerName =
+          managers.length > 0
+            ? managers.map((m) => m.name).join(", ")
+            : undefined;
+        return {
+          verticalId,
+          verticalName: verticalNameById.get(verticalId) ?? "—",
+          managers,
+          ...(managerName ? { managerName } : {}),
+          territories: territoriesForVertical,
+        };
+      },
+    );
 
     const roleName = user.role?.name ?? Role.REP;
     const isOperationallyActive =

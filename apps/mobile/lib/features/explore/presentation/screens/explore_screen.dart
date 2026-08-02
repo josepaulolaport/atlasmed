@@ -11,6 +11,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_stat
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
@@ -39,7 +40,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 
 /// Compatibility list used by focused clinic surfaces such as Desempenho.
 /// The main Explore screen uses [ClinicsPagedResults]/[DoctorsPagedResults].
-class ExploreResultsList extends StatelessWidget {
+class ExploreResultsList extends ConsumerWidget {
   const ExploreResultsList({
     required this.items,
     required this.hasMore,
@@ -58,7 +59,7 @@ class ExploreResultsList extends StatelessWidget {
   final String? preferredVerticalId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is ScrollEndNotification &&
@@ -88,6 +89,7 @@ class ExploreResultsList extends StatelessWidget {
             (clinic) => ClinicRow(
               clinic: clinic,
               onTap: () {
+                seedClinicDetailShellFromEntry(ref, clinic);
                 final verticalId = preferredVerticalId;
                 if (verticalId != null && verticalId.isNotEmpty) {
                   context.push(

@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart'
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/providers/map_provider.dart';
@@ -16,6 +17,7 @@ import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_clust
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -96,6 +98,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _calloutTapListenerRegistered = false;
   bool _pointsRefreshing = false;
 
+  static const _polygonGeometryFilter = <Object>[
+    'any',
+    [
+      '==',
+      ['geometry-type'],
+      'Polygon',
+    ],
+    [
+      '==',
+      ['geometry-type'],
+      'MultiPolygon',
+    ],
+  ];
+
+  final Set<String> _pendingMissingImageIds = {};
+  Timer? _missingImageFlush;
+
   /// Serializes style teardown/rebuild — styleLoaded + sync race otherwise
   /// removes a source still bound to layers.
   Future<void>? _ensureClinicLayersInFlight;
@@ -129,6 +148,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void dispose() {
     _clusterImageThrottle?.cancel();
+    _missingImageFlush?.cancel();
     super.dispose();
   }
 
@@ -221,29 +241,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   )
                 : Stack(
                     children: [
-                      MapWidget(
-                        key: ValueKey('mapa-ao-vivo-$_mapGeneration'),
-                        styleUri: MapboxStyles.STANDARD,
-                        viewport: _viewport,
-                        onMapCreated: _onMapCreated,
-                        onStyleLoadedListener: (_) async {
-                          _clinicLayersReady = false;
-                          _clinicInteractionsRegistered = false;
-                          _calloutManager = null;
-                          _calloutAnnotation = null;
-                          _calloutCloseAnnotation = null;
-                          _calloutTapListenerRegistered = false;
-                          await _enableLocationPuck();
-                          await _drawTerritory(
-                            ref.read(mapTerritoryProvider).valueOrNull,
-                          );
-                          await _ensureClinicLayers();
-                          await _syncAnnotations();
-                        },
-                        onMapLoadErrorListener: _onMapLoadError,
-                        onScrollListener: (_) => _stopFollowing(),
-                        onCameraChangeListener: (_) =>
-                            _scheduleClusterPinImages(),
+                      SizedMapHost(
+                        builder: (context, width, height) => MapWidget(
+                          key: ValueKey('mapa-ao-vivo-$_mapGeneration'),
+                          styleUri: MapboxStyles.STANDARD,
+                          viewport: _viewport,
+                          onMapCreated: _onMapCreated,
+                          onStyleLoadedListener: (_) async {
+                            _clinicLayersReady = false;
+                            _clinicInteractionsRegistered = false;
+                            _calloutManager = null;
+                            _calloutAnnotation = null;
+                            _calloutCloseAnnotation = null;
+                            _calloutTapListenerRegistered = false;
+                            _pendingMissingImageIds.clear();
+                            await _enableLocationPuck();
+                            await _drawTerritory(
+                              ref.read(mapTerritoryProvider).valueOrNull,
+                            );
+                            await _ensureClinicLayers();
+                            await _syncAnnotations();
+                          },
+                          onStyleImageMissingListener: _onStyleImageMissing,
+                          onMapLoadErrorListener: _onMapLoadError,
+                          onScrollListener: (_) => _stopFollowing(),
+                          onCameraChangeListener: (_) =>
+                              _scheduleClusterPinImages(),
+                        ),
                       ),
                       if (_pendingCapture != null)
                         Positioned(
@@ -375,34 +399,68 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  void _onStyleImageMissing(StyleImageMissingEventData event) {
+    final id = event.id;
+    if (!id.startsWith(ClinicClusterMarker.imageIdPrefix) &&
+        !id.startsWith('atlasmed-clinic-pin')) {
+      return;
+    }
+    _pendingMissingImageIds.add(id);
+    _missingImageFlush?.cancel();
+    _missingImageFlush = Timer(const Duration(milliseconds: 32), () {
+      unawaited(_flushMissingStyleImages());
+    });
+  }
+
+  Future<void> _flushMissingStyleImages() async {
+    final map = _mapboxMap;
+    if (map == null || !mounted || _pendingMissingImageIds.isEmpty) return;
+    final ids = _pendingMissingImageIds.toList(growable: false);
+    _pendingMissingImageIds.clear();
+    try {
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final clusterIds = ids
+          .where((id) => id.startsWith(ClinicClusterMarker.imageIdPrefix))
+          .toList(growable: false);
+      if (clusterIds.isNotEmpty) {
+        await ClinicClusterMarker.ensureImagesById(
+          map.style,
+          devicePixelRatio: dpr,
+          imageIds: clusterIds,
+        );
+      }
+      if (ids.any((id) => id.startsWith('atlasmed-clinic-pin'))) {
+        await ClinicMapPin.ensureRegistered(map.style, devicePixelRatio: dpr);
+      }
+    } catch (error, stack) {
+      _logMapIssue('style-image-missing', error, stack);
+    }
+  }
+
   Future<void> _drawTerritory(TerritoryGeometry? territory) async {
     final map = _mapboxMap;
     if (map == null) return;
-    if (territory == null) {
+    final safe = territory?.sanitized();
+    if (safe == null) {
       await _clearTerritoryOverlay();
       return;
     }
     try {
       final style = map.style;
+      final payload = jsonEncode(safe.toFeatureCollection());
       if (await style.styleSourceExists(_territorySourceId)) {
-        await style.setStyleSourceProperty(
-          _territorySourceId,
-          'data',
-          jsonEncode(territory.toFeatureCollection()),
-        );
+        await style.setStyleSourceProperty(_territorySourceId, 'data', payload);
         return;
       }
       await style.addSource(
-        GeoJsonSource(
-          id: _territorySourceId,
-          data: jsonEncode(territory.toFeatureCollection()),
-        ),
+        GeoJsonSource(id: _territorySourceId, data: payload),
       );
       await style.addLayer(
         FillLayer(
           id: _territoryFillLayerId,
           sourceId: _territorySourceId,
           slot: 'bottom',
+          filter: _polygonGeometryFilter,
           fillColor: AppColors.blue600.toARGB32(),
           fillOpacity: 0.10,
         ),
@@ -742,18 +800,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (!_clinicLayersReady || !mounted) return;
 
       final selectedId = _selected?.id;
-      final filtered = _statusFilters.isEmpty
-          ? _clinics
-          : _clinics
-                .where((e) {
-                  final bucket =
-                      e.purchaseBucket ?? PurchaseBucketFilter.neverBought;
-                  return _statusFilters.contains(bucket);
-                })
-                .toList(growable: false);
-
       final features = [
-        for (final e in filtered) _pinFeature(e, selectedId: selectedId),
+        for (final e in _visibleClinics) _pinFeature(e, selectedId: selectedId),
       ];
 
       await map.style.setStyleSourceProperty(
@@ -1005,7 +1053,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (featureCollection == null || featureCollection.isEmpty) {
       return const [];
     }
-    final byId = {for (final e in _clinics) e.id: e};
+    final byId = {for (final e in _visibleClinics) e.id: e};
     final out = <NearbyEstablishment>[];
     for (final raw in featureCollection) {
       if (raw == null) continue;
@@ -1119,7 +1167,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     MapContentGestureContext context,
   ) async {
     final map = _mapboxMap;
-    final byId = {for (final e in _clinics) e.id: e};
+    final byId = {for (final e in _visibleClinics) e.id: e};
 
     NearbyEstablishment? fromFeature() {
       final id = feature.properties['facilityId']?.toString();
@@ -1353,11 +1401,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  /// Clinics currently on the map (status chips applied). Stack drawer /
+  /// co-location must use this — not raw [_clinics] — or a filtered pin
+  /// still opens the full unfiltered stack.
+  List<NearbyEstablishment> get _visibleClinics {
+    if (_statusFilters.isEmpty) return _clinics;
+    return _clinics
+        .where((e) {
+          final bucket = e.purchaseBucket ?? PurchaseBucketFilter.neverBought;
+          return _statusFilters.contains(bucket);
+        })
+        .toList(growable: false);
+  }
+
   List<NearbyEstablishment> _establishmentsNear(
     double latitude,
     double longitude,
   ) {
-    return _clinics
+    return _visibleClinics
         .where(
           (e) =>
               _distanceMeters(latitude, longitude, e.latitude, e.longitude) <=
@@ -1437,6 +1498,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _openEstablishment(String id) {
+    for (final clinic in _clinics) {
+      if (clinic.id == id) {
+        seedClinicDetailShellFromNearby(ref, clinic);
+        break;
+      }
+    }
     // Pass map Linha as entry hint; detail bootstraps without forcing it when
     // clinic profiles don't include that Linha (avoids wrong-Linha 404).
     final verticalId = ref

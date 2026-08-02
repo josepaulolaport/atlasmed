@@ -316,7 +316,7 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         document: row ? mapFacilitySearchDocument({
           ...row,
           verticalIds: profiles.map((profile) => profile.verticalId),
-          territoryIds: [...new Set(profiles.flatMap((profile) => profile.territoryId ? [profile.territoryId] : []))],
+          territoryIds: [...new Set(profiles.flatMap((profile) => profile.managerZoneId ? [profile.managerZoneId] : []))],
           lastValidPurchaseDate: normalizePostgresDate(row.lastValidPurchaseDate),
         }) : null,
       };

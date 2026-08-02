@@ -7,8 +7,9 @@ import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/change_role_sheet.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manage_permissions_sheet.dart';
-import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manager_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_card.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manager_empty_zones_picker_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/rep_manager_zone_picker_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_picker_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_avatar.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_badges.dart';
@@ -584,61 +585,59 @@ class _VerticalAssignmentCardState
     }
   }
 
-  Future<void> _pickManager() async {
+  Future<void> _pickZone() async {
     if (!widget.canManage || _busy) return;
-    final managers = await ref.read(
-      managersForVerticalProvider(assignment.verticalId).future,
-    );
-    if (!mounted) return;
-    final id = await ManagerPickerSheet.show(
+    final zone = await RepManagerZonePickerScreen.pick(
       context,
-      managers: managers,
-      selectedId: assignment.managerId,
+      verticalId: assignment.verticalId,
+      initiallySelectedId: assignment.managerZoneId,
     );
-    if (id == null || !mounted) return;
-    ManagerOption? manager;
-    for (final m in managers) {
-      if (m.id == id) {
-        manager = m;
-        break;
-      }
-    }
+    if (zone == null || !mounted) return;
+    final managerName = zone.assignedUserName?.trim().isNotEmpty == true
+        ? zone.assignedUserName
+        : await ref
+              .read(usersRepositoryProvider)
+              .getTerritoryAssigneeName(zone.id);
+    if (!mounted) return;
     await _persist(
       assignment.copyWith(
-        managerId: id,
-        managerName: manager?.name,
-        // Manager change invalidates territory picks for this sector.
+        managerZoneId: zone.id,
+        managerZoneName: zone.name,
+        managerDisplayName: managerName,
+        managers: managerName == null
+            ? const []
+            : [AssignmentManagerRef(id: zone.id, name: managerName)],
         territories: const [],
       ),
     );
   }
 
-  Future<void> _clearManager() async {
+  Future<void> _clearZone() async {
     if (!widget.canManage || _busy) return;
-    await _persist(
-      assignment.copyWith(clearManager: true, territories: const []),
-    );
+    await _persist(assignment.copyWith(clearZone: true, territories: const []));
   }
 
   Future<void> _pickTerritories() async {
     if (!widget.canManage || _busy) return;
     final List<TerritoryOption>? picked;
     if (widget.showManager) {
-      final managerId = assignment.managerId;
-      if (managerId == null) {
+      final zoneId = assignment.managerZoneId;
+      if (zoneId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecione um gerente primeiro.')),
+          const SnackBar(
+            content: Text('Selecione a zona do gerente primeiro.'),
+          ),
         );
         return;
       }
-      picked = await TerritoryPickerScreen.pickForManager(
+      picked = await TerritoryPickerScreen.pickForZone(
         context,
-        managerId: managerId,
+        managerZoneId: zoneId,
         verticalId: assignment.verticalId,
         initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
       );
     } else {
-      picked = await TerritoryPickerScreen.pickForVertical(
+      picked = await ManagerEmptyZonesPickerScreen.pick(
         context,
         verticalId: assignment.verticalId,
         initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
@@ -672,7 +671,7 @@ class _VerticalAssignmentCardState
           if (_busy) const SizedBox(height: 10),
           if (widget.showManager) ...[
             const Text(
-              'Gerente',
+              'Zona do gerente',
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
@@ -688,7 +687,7 @@ class _VerticalAssignmentCardState
                   side: const BorderSide(color: AppColors.gray200),
                 ),
                 child: InkWell(
-                  onTap: _busy ? null : _pickManager,
+                  onTap: _busy ? null : _pickZone,
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -698,14 +697,16 @@ class _VerticalAssignmentCardState
                     child: Row(
                       children: [
                         const Icon(
-                          Icons.person_outline_rounded,
+                          Icons.map_outlined,
                           size: 20,
                           color: AppColors.navyDeep,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            assignment.managerName ?? 'Selecionar gerente',
+                            assignment.managerZoneName ??
+                                assignment.managerDisplayName ??
+                                'Selecionar zona',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -713,9 +714,9 @@ class _VerticalAssignmentCardState
                             ),
                           ),
                         ),
-                        if (assignment.managerId != null)
+                        if (assignment.managerZoneId != null)
                           IconButton(
-                            onPressed: _busy ? null : _clearManager,
+                            onPressed: _busy ? null : _clearZone,
                             visualDensity: VisualDensity.compact,
                             icon: const Icon(
                               Icons.close_rounded,
@@ -733,11 +734,44 @@ class _VerticalAssignmentCardState
                   ),
                 ),
               )
-            else
-              _DetailRow(
-                label: 'Gerente',
-                value: assignment.managerName ?? 'Sem gerente',
-              ),
+            else ...[
+              if (assignment.managers.length > 1) ...[
+                const Text(
+                  'Gerentes',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray500,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...assignment.managers.map(
+                  (m) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      m.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gray900,
+                      ),
+                    ),
+                  ),
+                ),
+                if (assignment.managerZoneName != null) ...[
+                  const SizedBox(height: 4),
+                  _DetailRow(label: 'Zona', value: assignment.managerZoneName!),
+                ],
+              ] else
+                _DetailRow(
+                  label: 'Zona / gerente',
+                  value:
+                      assignment.managerName ??
+                      assignment.managerZoneName ??
+                      assignment.managerDisplayName ??
+                      'Sem zona',
+                ),
+            ],
             const SizedBox(height: 12),
           ],
           Row(
@@ -763,8 +797,10 @@ class _VerticalAssignmentCardState
           ),
           if (assignment.territories.isEmpty)
             Text(
-              canManage && widget.showManager && assignment.managerId == null
-                  ? 'Selecione um gerente primeiro.'
+              canManage &&
+                      widget.showManager &&
+                      assignment.managerZoneId == null
+                  ? 'Selecione a zona do gerente primeiro.'
                   : 'Nenhum território selecionado.',
               style: const TextStyle(fontSize: 13, color: AppColors.gray400),
             )

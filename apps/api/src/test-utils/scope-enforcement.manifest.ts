@@ -104,7 +104,6 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
 /** Use-case files that accept scope in routes but are intentionally exempt from row guards. */
 export const SCOPE_ENFORCEMENT_EXEMPT = new Set<string>([
   // Admin-only assignment; CASL manage USER is the gate.
-  "modules/access/application/use-cases/assign-user-manager.use-case.ts",
   "modules/access/application/use-cases/assign-user-territory.use-case.ts",
   "modules/access/application/use-cases/get-user-assignments.use-case.ts",
   "modules/access/application/use-cases/revoke-user-territory.use-case.ts",

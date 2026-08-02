@@ -39,8 +39,13 @@ void main() {
           InviteVerticalAssignment(
             verticalId: 'sector-oncologia',
             verticalName: 'Oncologia',
-            managerId: 'user-fernanda-duarte',
-            managerName: 'Fernanda Duarte',
+            managerDisplayName: 'Fernanda Duarte',
+            managers: [
+              AssignmentManagerRef(
+                id: 'user-fernanda-duarte',
+                name: 'Fernanda Duarte',
+              ),
+            ],
             territories: [],
           ),
         ],
@@ -97,8 +102,13 @@ void main() {
         InviteVerticalAssignment(
           verticalId: 'sector-oncologia',
           verticalName: 'Oncologia',
-          managerId: 'user-fernanda-duarte',
-          managerName: 'Fernanda Duarte',
+          managerDisplayName: 'Fernanda Duarte',
+          managers: [
+            AssignmentManagerRef(
+              id: 'user-fernanda-duarte',
+              name: 'Fernanda Duarte',
+            ),
+          ],
           territories: [],
         ),
       ],

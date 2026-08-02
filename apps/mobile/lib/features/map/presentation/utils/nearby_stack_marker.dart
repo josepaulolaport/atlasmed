@@ -30,6 +30,33 @@ final class NearbyStackMarker {
     return '$imageIdPrefix$b-$countKey';
   }
 
+  static final _imageIdPattern = RegExp(
+    r'^atlasmed-nearby-stack-([a-zA-Z_]+)-(\d+|99p)$',
+  );
+
+  static ({String bucket, num count})? tryParseImageId(String id) {
+    final match = _imageIdPattern.firstMatch(id);
+    if (match == null) return null;
+    final bucket = match.group(1)!;
+    final raw = match.group(2)!;
+    final count = raw == '99p' ? _maxExact + 1 : num.parse(raw);
+    return (bucket: bucket, count: count);
+  }
+
+  static Future<void> ensureImagesById(
+    StyleManager style, {
+    required double devicePixelRatio,
+    required Iterable<String> imageIds,
+  }) async {
+    final specs = <({String bucket, num count})>[];
+    for (final id in imageIds) {
+      final parsed = tryParseImageId(id);
+      if (parsed != null) specs.add(parsed);
+    }
+    if (specs.isEmpty) return;
+    await ensureImages(style, devicePixelRatio: devicePixelRatio, specs: specs);
+  }
+
   static String countLabel(num count) {
     final n = count.round();
     if (n > _maxExact) return '99+';

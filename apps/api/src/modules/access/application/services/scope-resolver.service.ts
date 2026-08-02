@@ -157,10 +157,15 @@ export class ScopeResolver {
           )
         : [];
 
+    // Spec 0006: clinic membership is on manager zones. Do not expand zone→patches
+    // for clinic id resolution (patches no longer hold membership FKs).
+    const oversightZoneIds =
+      ownAssignments.length > 0 ? ownAssignments : [];
+
     const oversightClinicIds =
-      oversightTerritoryIds.length > 0
+      oversightZoneIds.length > 0
         ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
-            oversightTerritoryIds
+            oversightZoneIds
           )
         : [];
     const facilityIds = await this.mergeAssociatedFacilityIds(
@@ -169,10 +174,12 @@ export class ScopeResolver {
       assignedVerticalIds,
     );
 
+    // Analytics still uses report patch expansion for map/territory rollups;
+    // clinic analytics set uses zones derived from report patch parents when needed.
     const analyticsFacilityIds =
-      analyticsEffectiveTerritoryIds.length > 0
+      oversightZoneIds.length > 0
         ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
-            analyticsEffectiveTerritoryIds
+            oversightZoneIds
           )
         : [];
 
@@ -185,9 +192,11 @@ export class ScopeResolver {
       analyticsFacilityIds: [...new Set(analyticsFacilityIds)],
       managedUserIds,
       reportAssignedTerritoryIds: reportAssignments,
+      oversightZoneIds,
       assignedVerticalIds,
       isOperationallyActive:
         facilityIds.length > 0 ||
+        oversightZoneIds.length > 0 ||
         (managedUserIds.length > 0 &&
           (oversightTerritoryIds.length > 0 ||
             analyticsEffectiveTerritoryIds.length > 0)),

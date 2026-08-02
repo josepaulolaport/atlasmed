@@ -220,7 +220,6 @@ export async function seedScopeIntegrationFixtures(
       roleId: userRole.id,
       status: "ACTIVE",
       emailVerified: true,
-      managerId: manager.id,
     })
     .returning()
     .then((r) => r[0]!);
@@ -234,7 +233,6 @@ export async function seedScopeIntegrationFixtures(
       roleId: userRole.id,
       status: "ACTIVE",
       emailVerified: true,
-      managerId: otherManager.id,
     })
     .returning()
     .then((r) => r[0]!);
@@ -277,13 +275,13 @@ export async function seedScopeIntegrationFixtures(
     {
       facilityId: inScopeFacility.id,
       verticalId,
-      territoryId,
+      managerZoneId: territoryId,
       isActive: true,
     },
     {
       facilityId: outOfScopeFacility.id,
       verticalId,
-      territoryId: outOfScopeTerritoryId,
+      managerZoneId: outOfScopeTerritoryId,
       isActive: true,
     },
   ]);

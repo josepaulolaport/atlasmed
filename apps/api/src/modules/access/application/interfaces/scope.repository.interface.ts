@@ -62,10 +62,8 @@ export interface ScopeRepository {
   replaceAssignments(params: {
     userId: string;
     assignedByUserId: string;
-    managerId: string | null;
     verticalAssignments: Array<{
       verticalId: string;
-      managerId?: string | null;
       territoryIds: string[];
     }>;
   }): Promise<void>;

@@ -38,6 +38,11 @@ export interface ScopeContext {
   managedUserIds: string[];
   /** Manager only: unexpanded territory IDs assigned to direct reports. */
   reportAssignedTerritoryIds?: string[];
+  /**
+   * Spec 0006: manager oversight manager-zone ids for clinic geo filter.
+   * Prefer SQL `manager_zone_id IN oversightZoneIds` over giant facilityIds lists.
+   */
+  oversightZoneIds?: string[];
   isOperationallyActive: boolean;
   grantIds?: string[];
 }

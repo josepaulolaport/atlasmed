@@ -58,7 +58,7 @@ class ManagerOption extends Equatable {
           ),
     territoryBoundary: json['territoryBoundary'] == null
         ? null
-        : TerritoryGeometry.fromGeoJson(
+        : TerritoryGeometry.tryFromGeoJson(
             json['territoryBoundary'] as Map<String, dynamic>,
           ),
     verticalIds:
@@ -161,7 +161,7 @@ class TerritoryOption extends Equatable {
               ),
         boundary: json['boundary'] == null
             ? null
-            : TerritoryGeometry.fromGeoJson(
+            : TerritoryGeometry.tryFromGeoJson(
                 json['boundary'] as Map<String, dynamic>,
               ),
         isOccupied: json['isOccupied'] as bool? ?? false,

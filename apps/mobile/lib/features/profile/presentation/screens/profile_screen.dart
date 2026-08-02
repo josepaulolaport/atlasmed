@@ -324,6 +324,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Território ──────────────────────────────────────────────
   Widget _buildTerritory(TerritoryStats stats) {
+    final assignmentsAsync = ref.watch(profileAssignmentsProvider);
+    final managers = assignmentsAsync.valueOrNull?.managers ?? const [];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,6 +336,57 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onAction: () => context.go('/map'),
         ),
         const SizedBox(height: 8),
+        if (managers.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: AppColors.surfaceSecondary),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  managers.length > 1 ? 'Gerentes' : 'Gerente',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...managers.map(
+                  (manager) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.person_outline_rounded,
+                          size: 18,
+                          color: AppColors.navyDeep,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            manager.displayName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.gray900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(

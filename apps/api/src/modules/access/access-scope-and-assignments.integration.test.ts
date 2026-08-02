@@ -143,7 +143,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
 
     await db
       .update(users)
-      .set({ status: "ACTIVE", suspendedAt: null, managerId: fixtures.manager.id, updatedAt: new Date() })
+      .set({ status: "ACTIVE", suspendedAt: null, updatedAt: new Date() })
       .where(eq(users.id, fixtures.fieldUser.id));
 
     const token = await loginToken(fixtures.manager.email);

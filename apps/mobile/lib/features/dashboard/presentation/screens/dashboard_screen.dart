@@ -12,6 +12,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 /// Desempenho / Dashboard — purchase-status donut + territory card.
+///
+/// Default: no Linha filter — API returns token-scoped union. Selector only
+/// when user has 2+ linhas; picking one narrows the request.
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -20,62 +23,48 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  String? _fetchError;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initVertical());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _triggerFetch());
   }
 
-  /// Seeds [dashboardSelectedVerticalIdProvider] with the first accessible
-  /// vertical. Once set, [build] picks it up, [dashboardRepositoryProvider]
-  /// creates a new repo via family, and [build] also calls [ref.listen] to
-  /// auto-trigger the first fetch.
-  Future<void> _initVertical() async {
-    final options = await ref.read(dashboardVerticalOptionsProvider.future);
-    if (options.isEmpty) return;
-    ref.read(dashboardSelectedVerticalIdProvider.notifier).state =
-        options.first.id;
-  }
-
-  void _triggerFetch(String verticalId) {
-    ref.read(dashboardRepositoryProvider(verticalId)).fetchSummary();
+  Future<void> _triggerFetch() async {
+    final verticalId = ref.read(dashboardSelectedVerticalIdProvider);
+    setState(() => _fetchError = null);
+    try {
+      await ref.read(dashboardRepositoryProvider(verticalId)).fetchSummary();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _fetchError = 'Não foi possível carregar o desempenho.';
+      });
+    }
   }
 
   Future<void> _onRefresh() async {
-    final verticalId = ref.read(dashboardSelectedVerticalIdProvider);
-    if (verticalId == null) return;
-    await ref.read(dashboardRepositoryProvider(verticalId)).refresh();
+    ref.invalidate(dashboardVerticalOptionsProvider);
+    await _triggerFetch();
   }
 
   void _onVerticalChanged(String? id) {
-    if (id == null) return;
+    // [ref.listen] below kicks the fetch when selection changes.
     ref.read(dashboardSelectedVerticalIdProvider.notifier).state = id;
-    _triggerFetch(id);
   }
 
   @override
   Widget build(BuildContext context) {
     final optionsAsync = ref.watch(dashboardVerticalOptionsProvider);
     final selectedVerticalId = ref.watch(dashboardSelectedVerticalIdProvider);
+    final repository = ref.watch(
+      dashboardRepositoryProvider(selectedVerticalId),
+    );
 
-    // Once a vertical is selected, get its dedicated repository.
-    // Build falls through to the "waiting" state when still null.
-    final String? effectiveVerticalId =
-        selectedVerticalId ??
-        optionsAsync.maybeWhen(
-          data: (o) => o.isNotEmpty ? o.first.id : null,
-          orElse: () => null,
-        );
-
-    // Trigger a fetch whenever the repository instance changes
-    // (first creation or vertical switch).
     ref.listen<String?>(dashboardSelectedVerticalIdProvider, (prev, next) {
-      if (next != null && next != prev) _triggerFetch(next);
+      if (next != prev) _triggerFetch();
     });
-
-    final repository = effectiveVerticalId != null
-        ? ref.watch(dashboardRepositoryProvider(effectiveVerticalId))
-        : null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -84,6 +73,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         onRefresh: _onRefresh,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             optionsAsync.maybeWhen(
               data: (options) {
@@ -92,15 +82,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: VerticalSelector(
                     verticals: options,
-                    selectedVerticalId: selectedVerticalId ?? options.first.id,
-                    allowAll: false,
+                    selectedVerticalId: selectedVerticalId,
+                    allowAll: true,
                     onChanged: _onVerticalChanged,
                   ),
                 );
               },
               orElse: () => const SizedBox.shrink(),
             ),
-            if (repository != null)
+            if (_fetchError != null)
+              _DashboardMessage(
+                title: 'Falha ao carregar',
+                message: _fetchError!,
+                actionLabel: 'Tentar novamente',
+                onAction: _triggerFetch,
+              )
+            else
               RepositoryBuilder<DashboardRepository, DashboardSummary>(
                 repository: repository,
                 builder: (context, summary, repo) {
@@ -130,14 +127,53 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   );
                 },
-              )
-            else
-              const Padding(
-                padding: EdgeInsets.only(top: 80),
-                child: Center(child: CircularProgressIndicator()),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DashboardMessage extends StatelessWidget {
+  const _DashboardMessage({
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 64),
+      child: Column(
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.gray800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: AppColors.gray500),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            TextButton(onPressed: onAction, child: Text(actionLabel!)),
+          ],
+        ],
       ),
     );
   }

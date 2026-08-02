@@ -644,14 +644,4 @@ export class DrizzleUserRepository implements UserRepository {
       .set({ metadata, updatedAt: new Date() })
       .where(eq(users.id, userId));
   }
-
-  async updateManagerId(userId: string, managerId: string | null) {
-    await db
-      .update(users)
-      .set({ managerId, updatedAt: new Date() })
-      .where(eq(users.id, userId));
-
-    const result = await fetchUserWithRole(userId);
-    return result!;
-  }
 }

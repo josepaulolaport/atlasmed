@@ -23,24 +23,27 @@ export type DashboardTerritoryFeature = {
 
 export class DrizzleDashboardRepository {
   /**
-   * Purchase buckets for profiled facilities in one vertical, optionally
-   * restricted to a facility id set (non-global scopes).
+   * Purchase buckets for profiled facilities in the given verticals,
+   * optionally restricted to a facility id set (non-global scopes).
    *
    * active   = PURCHASE_WINDOW
    * inactive = OUTSIDE_WINDOW + CHURN
    * neverBought = NEVER_PURCHASED + INACTIVE (+ null)
    */
   async countPurchaseBuckets(input: {
-    verticalId: string;
+    verticalIds: string[];
     facilityIds: string[] | null;
   }): Promise<PurchaseStatusBuckets> {
+    if (input.verticalIds.length === 0) {
+      return { active: 0, inactive: 0, neverBought: 0, total: 0 };
+    }
     // Empty facilityIds → no facilities match → all buckets are zero.
     if (input.facilityIds !== null && input.facilityIds.length === 0) {
       return { active: 0, inactive: 0, neverBought: 0, total: 0 };
     }
 
     const conditions = [
-      eq(facilityVerticalProfiles.verticalId, input.verticalId),
+      inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
       eq(facilityVerticalProfiles.isActive, true),
     ];
     if (input.facilityIds !== null) {
@@ -75,12 +78,14 @@ export class DrizzleDashboardRepository {
   }
 
   async countDoctors(input: {
-    verticalId: string;
+    verticalIds: string[];
     facilityIds: string[] | null;
   }): Promise<number> {
+    if (input.verticalIds.length === 0) return 0;
+
     const joinCondition = and(
       eq(facilityVerticalProfiles.facilityId, facilityProfessionals.facilityId),
-      eq(facilityVerticalProfiles.verticalId, input.verticalId),
+      inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
     );
 
     if (input.facilityIds !== null && input.facilityIds.length === 0) {
@@ -103,11 +108,13 @@ export class DrizzleDashboardRepository {
     return Number(row?.n ?? 0);
   }
 
-  /** Territories assigned to the user that belong to the vertical. */
+  /** Territories assigned to the user that belong to any of the verticals. */
   async listAssignedTerritoryFeatures(input: {
     userId: string;
-    verticalId: string;
+    verticalIds: string[];
   }): Promise<DashboardTerritoryFeature[]> {
+    if (input.verticalIds.length === 0) return [];
+
     const rows = await db
       .select({
         id: territories.id,
@@ -122,7 +129,7 @@ export class DrizzleDashboardRepository {
       .where(
         and(
           eq(userTerritoryAssignments.userId, input.userId),
-          eq(territories.verticalId, input.verticalId),
+          inArray(territories.verticalId, input.verticalIds),
         ),
       )
       .orderBy(territories.name);
@@ -134,10 +141,12 @@ export class DrizzleDashboardRepository {
     }));
   }
 
-  /** All territories with boundaries for a vertical (ADMIN overview). */
+  /** All territories with boundaries for verticals (ADMIN overview). */
   async listVerticalTerritoryFeatures(
-    verticalId: string,
+    verticalIds: string[],
   ): Promise<DashboardTerritoryFeature[]> {
+    if (verticalIds.length === 0) return [];
+
     const rows = await db
       .select({
         id: territories.id,
@@ -147,7 +156,7 @@ export class DrizzleDashboardRepository {
       .from(territories)
       .where(
         and(
-          eq(territories.verticalId, verticalId),
+          inArray(territories.verticalId, verticalIds),
           isNotNull(territories.boundary),
         ),
       )

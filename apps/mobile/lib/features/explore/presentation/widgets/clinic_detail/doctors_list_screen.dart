@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_ro
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/doctor_clinic_actions_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
@@ -272,16 +273,10 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                           crm: d.crm ?? '',
                           distanceKm: 0,
                         ),
-                        onEditRoles: ref.watch(canMutateProfessionalProvider)
-                            ? () => _editRoles(d)
+                        onMoreActions: ref.watch(canMutateProfessionalProvider)
+                            ? () => _onMoreActions(d)
                             : null,
-                        onTap: () {
-                          final facilityId = widget.facilityId;
-                          final uri = facilityId == null || facilityId.isEmpty
-                              ? '/explore/doctor/${d.id}'
-                              : '/explore/doctor/${d.id}?facilityId=$facilityId';
-                          context.push(uri);
-                        },
+                        onTap: () => _openProfile(d),
                       );
                     },
                   ),
@@ -336,6 +331,28 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     }
     if (d.isPartner) badges.add('Sócio');
     return badges;
+  }
+
+  Future<void> _onMoreActions(ProfessionalRoster doctor) async {
+    final action = await showDoctorClinicActionsSheet(
+      context,
+      doctorName: doctor.name,
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case DoctorClinicAction.editRoles:
+        await _editRoles(doctor);
+      case DoctorClinicAction.viewProfile:
+        _openProfile(doctor);
+    }
+  }
+
+  void _openProfile(ProfessionalRoster doctor) {
+    final facilityId = widget.facilityId;
+    final uri = facilityId == null || facilityId.isEmpty
+        ? '/explore/doctor/${doctor.id}'
+        : '/explore/doctor/${doctor.id}?facilityId=$facilityId';
+    context.push(uri);
   }
 
   Future<void> _editRoles(ProfessionalRoster doctor) async {

@@ -47,7 +47,7 @@ export class SuspendUserUseCase {
       scope: params.scope,
       actorId: params.suspendedBy,
       actorRole: params.actorRole,
-      target: { id: user.id, managerId: user.managerId },
+      target: { id: user.id },
       action: "suspend",
     });
 
@@ -66,15 +66,7 @@ export class SuspendUserUseCase {
 
     await this.deps.authCache.invalidate(params.userId);
 
-    if (user.managerId) {
-      await this.deps.scopeService.invalidateForManagerChange({
-        userId: params.userId,
-        previousManagerId: user.managerId,
-        nextManagerId: user.managerId,
-      });
-    } else {
-      await this.deps.scopeService.invalidate(params.userId);
-    }
+    await this.deps.scopeService.invalidate(params.userId);
 
     await this.deps.auditLog.logUserStatusChange({
       userId: params.suspendedBy,

@@ -4,11 +4,18 @@ import type { TerritoryRepository } from "../interfaces/territory.repository.int
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
+import type { FacilityConsultantAssignmentRepository } from "../../../facility/application/interfaces/facility-consultant-assignment.repository.interface";
 import { applyTerritoryBoundary } from "../services/territory-boundary.application";
 import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
 import {
+  MANAGER_ZONE_TYPE_SLUG,
+  REP_PATCH_TYPE_SLUG,
+  isManagerZoneType,
+} from "../constants/territory-roles.constants";
+import {
   OperationNotAllowedError,
   ResourceNotFoundError,
+  ValidationError,
 } from "../../../../shared/errors";
 import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
 import { assertTerritorialJurisdiction } from "../services/territory-scope-policy.service";
@@ -18,8 +25,67 @@ interface Dependencies {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
+  consultantAssignmentRepository: FacilityConsultantAssignmentRepository;
   onBoundaryChanged?: (territoryId: string) => Promise<void>;
   onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
+}
+
+export type BoundaryImpactClinic = {
+  facilityId: string;
+  facilityName: string;
+  consultantUserId: string;
+  consultantName: string;
+};
+
+/** Spec 0006: accepted set must equal impact set exactly. */
+export function assertAcceptedImpactFacilityIds(
+  impactedFacilityIds: string[],
+  acceptedFacilityIds: string[] | undefined
+): void {
+  if (impactedFacilityIds.length === 0) {
+    if (acceptedFacilityIds && acceptedFacilityIds.length > 0) {
+      throw new ValidationError([
+        {
+          field: "acceptedFacilityIds",
+          message: "No clinics require deassignment for this boundary change",
+        },
+      ]);
+    }
+    return;
+  }
+
+  if (!acceptedFacilityIds || acceptedFacilityIds.length === 0) {
+    throw new ValidationError([
+      {
+        field: "acceptedFacilityIds",
+        message:
+          "Accept deassignment for every impacted clinic before saving the boundary",
+      },
+    ]);
+  }
+
+  const impacted = new Set(impactedFacilityIds);
+  const accepted = new Set(acceptedFacilityIds);
+
+  if (impacted.size !== accepted.size) {
+    throw new ValidationError([
+      {
+        field: "acceptedFacilityIds",
+        message: "Accepted clinics must match the full impact list exactly",
+      },
+    ]);
+  }
+
+  for (const id of impacted) {
+    if (!accepted.has(id)) {
+      throw new ValidationError([
+        {
+          field: "acceptedFacilityIds",
+          message: "Accepted clinics must match the full impact list exactly",
+        },
+      ]);
+    }
+  }
 }
 
 export class TerritoryBoundaryUseCases {
@@ -39,12 +105,55 @@ export class TerritoryBoundaryUseCases {
     return boundary;
   }
 
-  async saveBoundary(input: {
+  async previewBoundaryImpact(input: {
     territoryId: string;
     scope: ScopeContext;
     geoJson: GeoJsonGeometry;
   }) {
     const territory = await this.assertWritableBoundary(input.territoryId, input.scope);
+    const mode = await this.resolveImpactMode(territory);
+
+    if (!mode) {
+      return { mode: "other" as const, clinics: [] as BoundaryImpactClinic[] };
+    }
+
+    const clinics =
+      await this.deps.spatialRepository.findAssignedClinicsImpactedByBoundary({
+        territoryId: input.territoryId,
+        mode,
+        geoJson: input.geoJson,
+      });
+
+    return { mode, clinics };
+  }
+
+  async saveBoundary(input: {
+    territoryId: string;
+    scope: ScopeContext;
+    geoJson: GeoJsonGeometry;
+    acceptedFacilityIds?: string[];
+  }) {
+    const territory = await this.assertWritableBoundary(input.territoryId, input.scope);
+    const mode = await this.resolveImpactMode(territory);
+
+    if (mode) {
+      const clinics =
+        await this.deps.spatialRepository.findAssignedClinicsImpactedByBoundary({
+          territoryId: input.territoryId,
+          mode,
+          geoJson: input.geoJson,
+        });
+
+      const impactedIds = clinics.map((c) => c.facilityId);
+      assertAcceptedImpactFacilityIds(impactedIds, input.acceptedFacilityIds);
+
+      if (impactedIds.length > 0) {
+        await this.deps.consultantAssignmentRepository.endActiveForFacilities({
+          facilityIds: impactedIds,
+          endReason: "boundary_impact",
+        });
+      }
+    }
 
     const resolution = await applyTerritoryBoundary(
       {
@@ -84,6 +193,21 @@ export class TerritoryBoundaryUseCases {
     return { success: true };
   }
 
+  private async resolveImpactMode(
+    territory: Awaited<ReturnType<TerritoryRepository["findById"]>>
+  ): Promise<"manager_zone" | "rep_patch" | null> {
+    if (!territory) return null;
+
+    const type =
+      territory.territoryType ??
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+    if (!type) return null;
+
+    if (type.slug === MANAGER_ZONE_TYPE_SLUG) return "manager_zone";
+    if (type.slug === REP_PATCH_TYPE_SLUG) return "rep_patch";
+    return null;
+  }
+
   private async assertReadable(territoryId: string, scope: ScopeContext): Promise<void> {
     const territory = await this.deps.territoryRepository.findById(territoryId);
     if (!territory) {
@@ -114,6 +238,14 @@ export class TerritoryBoundaryUseCases {
     }
 
     assertTerritorialJurisdiction(scope, territoryId, "save_boundary");
+
+    // Spec 0006: only ADMIN (global scope) edits manager zone geometry.
+    if (!scope.isGlobal && type && isManagerZoneType(type)) {
+      throw new OperationNotAllowedError(
+        "save_boundary",
+        "Only admins can edit manager zone boundaries"
+      );
+    }
 
     return territory;
   }

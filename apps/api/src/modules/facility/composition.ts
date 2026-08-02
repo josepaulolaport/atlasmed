@@ -33,6 +33,7 @@ import {
   ConfirmRegistryProfessionalUseCase,
   ConfirmRegistryRepresentativeUseCase,
   ListFacilityConsultantAssignmentsUseCase,
+  UnassignFacilityConsultantUseCase,
 } from "./application/use-cases/facility-registry.use-cases";
 import {
   CreateFacilityConformityRecordUseCase,
@@ -268,8 +269,33 @@ export const facilityUseCases = {
   assignConsultant: () =>
     new AssignFacilityConsultantUseCase({
       consultantAssignmentRepository: facilityRepositories.consultantAssignment,
+      assertAssigneeCoversFacility: async ({ userId, facilityId }) => {
+        const { territoryRepositories } = await import("../territory/composition");
+        const { OperationNotAllowedError } = await import("../../shared/errors");
+        const covers =
+          await territoryRepositories.spatial.userHasRepPatchCoveringFacility(
+            userId,
+            facilityId,
+          );
+        if (!covers) {
+          throw new OperationNotAllowedError(
+            "assign_consultant",
+            "Representative must have a territory patch covering this clinic",
+          );
+        }
+      },
       onConsultantAssignmentChanged: async (userIds) => {
         // Lazy import avoids access ↔ facility composition cycle at module load.
+        const { accessScopeServices } = await import("../access/composition");
+        await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
+          userIds,
+        );
+      },
+    }),
+  unassignConsultant: () =>
+    new UnassignFacilityConsultantUseCase({
+      consultantAssignmentRepository: facilityRepositories.consultantAssignment,
+      onConsultantAssignmentChanged: async (userIds) => {
         const { accessScopeServices } = await import("../access/composition");
         await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
           userIds,

@@ -36,7 +36,7 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   /// Opens the full list / associate flow when the roster is empty.
   final VoidCallback? onAssociate;
 
-  /// Called after facility-scoped role flags are saved for a doctor.
+  /// Called after facility-scoped role flags are saved from the carousel.
   final ValueChanged<ProfessionalRoster>? onDoctorUpdated;
 
   @override
@@ -171,44 +171,22 @@ class _DoctorCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          if (canEditRoles)
-            InkWell(
-              onTap: () => _editRoles(context),
-              borderRadius: BorderRadius.circular(8),
-              child: badges.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 2),
-                      child: Text(
-                        'Definir papel',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.navyBright,
-                        ),
-                      ),
-                    )
-                  : Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        ...badges,
-                        const Icon(
-                          Icons.edit_outlined,
-                          size: 14,
-                          color: AppColors.navyBright,
-                        ),
-                      ],
-                    ),
-            )
-          else if (badges.isNotEmpty)
+          if (badges.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: badges,
             ),
+          ],
+          if (canEditRoles) ...[
+            const SizedBox(height: 8),
+            _AlterRoleButton(
+              label: badges.isEmpty ? 'Definir papel' : 'Alterar papel',
+              onTap: () => _editRoles(context),
+            ),
+          ],
           const SizedBox(height: 10),
           const Divider(height: 1, color: AppColors.gray100),
           const SizedBox(height: 8),
@@ -306,6 +284,47 @@ class _DoctorCard extends StatelessWidget {
     );
     if (updated == null) return;
     onDoctorUpdated?.call(updated);
+  }
+}
+
+class _AlterRoleButton extends StatelessWidget {
+  const _AlterRoleButton({required this.onTap, required this.label});
+
+  final VoidCallback onTap;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.blueLight,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.badge_outlined,
+                size: 16,
+                color: AppColors.navyBright,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyBright,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

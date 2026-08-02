@@ -256,14 +256,9 @@ async function assignUserToTerritory(params: {
 
 async function linkRepToManager(params: {
   repUserId: string;
-  managerId: string;
   ortopediaId: string;
 }): Promise<void> {
-  await db
-    .update(users)
-    .set({ managerId: params.managerId, updatedAt: new Date() })
-    .where(eq(users.id, params.repUserId));
-
+  // Spec 0006: manager link is territory-derived (zone UTA), not manager_id FK.
   const [uva] = await db
     .select({ id: userVerticalAssignments.id })
     .from(userVerticalAssignments)
@@ -275,16 +270,10 @@ async function linkRepToManager(params: {
     )
     .limit(1);
 
-  if (uva) {
-    await db
-      .update(userVerticalAssignments)
-      .set({ managerId: params.managerId, updatedAt: new Date() })
-      .where(eq(userVerticalAssignments.id, uva.id));
-  } else {
+  if (!uva) {
     await db.insert(userVerticalAssignments).values({
       userId: params.repUserId,
       verticalId: params.ortopediaId,
-      managerId: params.managerId,
     });
   }
 }
@@ -551,7 +540,6 @@ async function main() {
     });
     await linkRepToManager({
       repUserId: book.userId,
-      managerId: manager.id,
       ortopediaId,
     });
 

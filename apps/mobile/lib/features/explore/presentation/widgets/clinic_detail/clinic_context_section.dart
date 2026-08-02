@@ -11,6 +11,9 @@ class ClinicContextSection extends StatelessWidget {
     this.managerSince,
     this.regionZoneLabel,
     this.city,
+    this.canManageConsultant = false,
+    this.onAssignConsultant,
+    this.onUnassignConsultant,
   });
 
   final String? consultantName;
@@ -19,6 +22,11 @@ class ClinicContextSection extends StatelessWidget {
   final DateTime? managerSince;
   final String? regionZoneLabel;
   final String? city;
+  final bool canManageConsultant;
+  final VoidCallback? onAssignConsultant;
+  final VoidCallback? onUnassignConsultant;
+
+  bool get _hasConsultant => consultantName?.trim().isNotEmpty == true;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +39,27 @@ class ClinicContextSection extends StatelessWidget {
                 ? 'consultor responsável · desde ${_formatMonthYear(consultantSince!)}'
                 : 'consultor responsável',
           ),
+          if (canManageConsultant) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: onAssignConsultant,
+                  child: Text(
+                    _hasConsultant ? 'Trocar consultor' : 'Atribuir consultor',
+                  ),
+                ),
+                if (_hasConsultant && onUnassignConsultant != null)
+                  TextButton(
+                    onPressed: onUnassignConsultant,
+                    child: const Text(
+                      'Remover',
+                      style: TextStyle(color: AppColors.gray500),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           if (managerName != null && managerName!.trim().isNotEmpty) ...[
             const SizedBox(height: 14),
             _PersonRow(

@@ -102,4 +102,28 @@ export class DrizzleFacilityConsultantAssignmentRepository
 
     return mapAssignment(assignment!);
   }
+
+  async endActiveForFacilities(params: {
+    facilityIds: string[];
+    endReason: string;
+  }): Promise<number> {
+    if (params.facilityIds.length === 0) return 0;
+
+    const updated = await db
+      .update(facilityConsultantAssignments)
+      .set({
+        endedAt: new Date(),
+        endReason: params.endReason,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          inArray(facilityConsultantAssignments.facilityId, params.facilityIds),
+          isNull(facilityConsultantAssignments.endedAt),
+        ),
+      )
+      .returning({ id: facilityConsultantAssignments.id });
+
+    return updated.length;
+  }
 }

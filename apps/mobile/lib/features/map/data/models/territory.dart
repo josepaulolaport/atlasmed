@@ -22,9 +22,24 @@ class TerritoryGeometry {
   /// `Polygon` (rings of points) and `MultiPolygon` (polygons of rings of
   /// points), so both are normalized into this model's uniform
   /// "polygons of rings of points" shape.
+  ///
+  /// Rejects non-polygon types (e.g. LineString) — feeding those into a
+  /// Mapbox FillLayer triggers `FillBucket: adding non-polygon geometry`.
   factory TerritoryGeometry.fromGeoJson(Map<String, dynamic> json) {
-    final type = json['type'] as String;
-    final raw = json['coordinates'] as List<dynamic>;
+    final parsed = tryFromGeoJson(json);
+    if (parsed == null) {
+      throw FormatException(
+        'Expected Polygon/MultiPolygon with valid rings, got ${json['type']}',
+      );
+    }
+    return parsed;
+  }
+
+  /// Like [fromGeoJson] but returns `null` for LineString / empty / degenerate.
+  static TerritoryGeometry? tryFromGeoJson(Map<String, dynamic> json) {
+    final type = json['type'] as String?;
+    final raw = json['coordinates'];
+    if (raw is! List<dynamic>) return null;
 
     List<MapCoordinate> parseRing(List<dynamic> ring) => ring
         .map(
@@ -38,18 +53,73 @@ class TerritoryGeometry {
     List<List<MapCoordinate>> parsePolygon(List<dynamic> polygon) =>
         polygon.map((ring) => parseRing(ring as List<dynamic>)).toList();
 
+    final TerritoryGeometry rawGeom;
     if (type == 'MultiPolygon') {
-      return TerritoryGeometry._(
+      rawGeom = TerritoryGeometry._(
         type: 'MultiPolygon',
         coordinates: raw
             .map((polygon) => parsePolygon(polygon as List<dynamic>))
             .toList(),
       );
+    } else if (type == 'Polygon') {
+      rawGeom = TerritoryGeometry._(
+        type: 'Polygon',
+        coordinates: [parsePolygon(raw)],
+      );
+    } else {
+      return null;
     }
-    return TerritoryGeometry._(
-      type: 'Polygon',
-      coordinates: [parsePolygon(raw)],
-    );
+    return rawGeom.sanitized();
+  }
+
+  /// Drops empty / collinear / open-degenerate rings so FillLayers never see
+  /// LineString-shaped geometry. Returns `null` when nothing fillable remains.
+  TerritoryGeometry? sanitized() {
+    final polygons = <List<List<MapCoordinate>>>[];
+    for (final polygon in coordinates) {
+      final rings = <List<MapCoordinate>>[];
+      for (final ring in polygon) {
+        final closed = _closedFillableRing(ring);
+        if (closed != null) rings.add(closed);
+      }
+      if (rings.isNotEmpty) polygons.add(rings);
+    }
+    if (polygons.isEmpty) return null;
+    if (polygons.length == 1) {
+      return TerritoryGeometry.polygon(polygons.first);
+    }
+    return TerritoryGeometry.multiPolygon(polygons);
+  }
+
+  /// Closed ring with ≥3 distinct vertices and non-zero area, else null.
+  static List<MapCoordinate>? _closedFillableRing(List<MapCoordinate> ring) {
+    if (ring.length < 3) return null;
+
+    final deduped = <MapCoordinate>[];
+    for (final point in ring) {
+      if (deduped.isEmpty ||
+          deduped.last.longitude != point.longitude ||
+          deduped.last.latitude != point.latitude) {
+        deduped.add(point);
+      }
+    }
+    if (deduped.length >= 2 &&
+        deduped.first.longitude == deduped.last.longitude &&
+        deduped.first.latitude == deduped.last.latitude) {
+      deduped.removeLast();
+    }
+    if (deduped.length < 3) return null;
+
+    final closed = [...deduped, deduped.first];
+    // Shoelace on closed ring; reject collinear / zero-area.
+    var sum = 0.0;
+    for (var i = 0; i < closed.length - 1; i++) {
+      sum +=
+          closed[i].longitude * closed[i + 1].latitude -
+          closed[i + 1].longitude * closed[i].latitude;
+    }
+    if (sum.abs() < 1e-18) return null;
+    return closed;
   }
 
   MapBounds? get bounds {
@@ -119,13 +189,14 @@ class TerritoryGeometry {
   }
 
   Map<String, Object?> toFeatureCollection() {
+    final safe = sanitized() ?? this;
     return {
       'type': 'FeatureCollection',
       'features': [
         {
           'type': 'Feature',
           'properties': <String, Object?>{},
-          'geometry': toGeoJson(),
+          'geometry': safe.toGeoJson(),
         },
       ],
     };
