@@ -16,7 +16,6 @@ import { AlertCircle, ArrowLeft } from "lucide-react";
 import type { InviteUserRequest, RoleInfo } from "@/types/auth";
 import { canManageUsers } from "@/lib/permissions";
 import Link from "next/link";
-import { ManagerSelector } from "@/components/invite/manager-selector";
 import { TerritorySelector } from "@/components/invite/territory-selector";
 
 export default function InviteUserPage() {
@@ -29,19 +28,18 @@ export default function InviteUserPage() {
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [verticals, setVerticals] = useState<Array<{ id: string; code: string; name: string }>>([]);
   const [inviteVerticalId, setInviteVerticalId] = useState("");
+  const [territoryId, setTerritoryId] = useState<string | undefined>();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     watch,
-    setValue,
   } = useForm<InviteUserRequest>({
     resolver: zodResolver(inviteUserSchema),
   });
 
   const watchedRoleId = watch("roleId");
-  const watchedManagerId = watch("managerId");
 
   useEffect(() => {
     if (currentUser && !canManageUsers(currentUser.role.name)) {
@@ -58,7 +56,7 @@ export default function InviteUserPage() {
         setRoles(rolesData);
         setVerticals(verticalList);
         setInviteVerticalId((current) => current || verticalList[0]?.id || "");
-      } catch (err) {
+      } catch {
         toast({
           title: "Erro",
           description: "Falha ao carregar funções",
@@ -74,63 +72,60 @@ export default function InviteUserPage() {
 
   useEffect(() => {
     setSelectedRoleId(watchedRoleId || "");
-    
-    // Clear territory/manager fields when role changes
-    if (watchedRoleId) {
-      const role = roles.find((r) => r.id === watchedRoleId);
-      if (role) {
-        // Clear fields that don't apply to the new role
-        if (role.name !== "MANAGER") {
-          setValue("managerTerritoryId", undefined);
-        }
-        if (role.name !== "REP") {
-          setValue("managerId", undefined);
-          setValue("repTerritoryId", undefined);
-        }
-      }
-    }
-  }, [watchedRoleId, roles, setValue]);
+    setTerritoryId(undefined);
+  }, [watchedRoleId]);
 
   const getSelectedRole = (): RoleInfo | undefined => {
     return roles.find((r) => r.id === selectedRoleId);
-  };
-
-  const validateRoleRequirements = (data: InviteUserRequest): string[] => {
-    const errors: string[] = [];
-    const role = getSelectedRole();
-
-    if (!role) return errors;
-
-    if (role.name === "MANAGER" && !data.managerTerritoryId) {
-      errors.push("Território do gerente é obrigatório para função MANAGER");
-    }
-
-    if (role.name === "REP") {
-      if (!data.managerId) {
-        errors.push("Gerente é obrigatório para função REP");
-      }
-      if (!data.repTerritoryId) {
-        errors.push("Território do representante é obrigatório para função REP");
-      }
-    }
-
-    return errors;
   };
 
   const onSubmit = async (data: InviteUserRequest) => {
     setIsLoading(true);
     setError(null);
 
-    // Validate role-specific requirements
-    const validationErrors = validateRoleRequirements(data);
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join(". "));
+    const role = getSelectedRole();
+    if (!role) {
+      setError("Selecione uma função");
+      setIsLoading(false);
+      return;
+    }
+
+    if ((role.name === "MANAGER" || role.name === "REP") && !territoryId) {
+      setError(
+        role.name === "MANAGER"
+          ? "Zona do gerente é obrigatória"
+          : "Área (patch) livre é obrigatória",
+      );
+      setIsLoading(false);
+      return;
+    }
+
+    if ((role.name === "MANAGER" || role.name === "REP" || role.name === "OPS") && !inviteVerticalId) {
+      setError("Vertical é obrigatória");
       setIsLoading(false);
       return;
     }
 
     try {
-      await usersApi.inviteUser(data);
+      const payload: InviteUserRequest = {
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        roleId: data.roleId,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        birthDate: data.birthDate,
+        ...(role.name !== "ADMIN"
+          ? {
+              verticalAssignments: [
+                {
+                  verticalId: inviteVerticalId,
+                  territoryIds: territoryId ? [territoryId] : [],
+                },
+              ],
+            }
+          : {}),
+      };
+      await usersApi.inviteUser(payload);
       toast({
         title: "Sucesso",
         description: "Convite enviado com sucesso",
@@ -151,6 +146,7 @@ export default function InviteUserPage() {
   const selectedRole = getSelectedRole();
   const showManagerFields = selectedRole?.name === "MANAGER";
   const showRepFields = selectedRole?.name === "REP";
+  const showVertical = showManagerFields || showRepFields || selectedRole?.name === "OPS";
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -158,140 +154,95 @@ export default function InviteUserPage() {
         <Link href="/users">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para Usuários
+            Voltar
           </Button>
         </Link>
-        <h1 className="mt-4 text-3xl font-bold text-gray-900">Convidar usuário</h1>
-        <p className="mt-2 text-gray-600">
-          Envie um convite para um novo usuário entrar na plataforma
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-zinc-900">
+          Convidar usuário
+        </h1>
+        <p className="mt-2 text-sm text-zinc-600">
+          O vínculo com gerente passa pela zona/área territorial (sem FK de gerente).
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Detalhes do convite</CardTitle>
+          <CardTitle>Dados do convite</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {error && (
-              <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>{error}</p>
               </div>
             )}
 
-            {/* Contact Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Informações de Contato</h3>
-              
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Endereço de email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    {...register("email")}
-                    disabled={isLoading}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-red-600">{errors.email.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Telefone (Opcional)</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    placeholder="+5511999999999"
-                    {...register("phoneNumber")}
-                    disabled={isLoading}
-                  />
-                  {errors.phoneNumber && (
-                    <p className="text-sm text-red-600">
-                      {errors.phoneNumber.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <p className="text-xs text-gray-500">
-                O convite será enviado por email. O telefone pode ser usado para envio via WhatsApp.
-              </p>
-            </div>
-
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Informações Pessoais</h3>
-              
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">
-                    Primeiro Nome <span className="text-red-600">*</span>
-                  </Label>
-                  <Input
-                    id="firstName"
-                    placeholder="João"
-                    {...register("firstName")}
-                    disabled={isLoading}
-                  />
-                  {errors.firstName && (
-                    <p className="text-sm text-red-600">{errors.firstName.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">
-                    Sobrenome <span className="text-red-600">*</span>
-                  </Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Silva"
-                    {...register("lastName")}
-                    disabled={isLoading}
-                  />
-                  {errors.lastName && (
-                    <p className="text-sm text-red-600">{errors.lastName.message}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Role Selection */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Função e Permissões</h3>
-              
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="roleId">
-                  Função <span className="text-red-600">*</span>
-                </Label>
-                <select
-                  id="roleId"
-                  className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  {...register("roleId")}
-                  disabled={isLoading || loadingRoles}
-                >
-                  <option value="">Selecione uma função</option>
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.roleId && (
-                  <p className="text-sm text-red-600">{errors.roleId.message}</p>
+                <Label htmlFor="firstName">Nome *</Label>
+                <Input id="firstName" {...register("firstName")} disabled={isLoading} />
+                {errors.firstName && (
+                  <p className="text-sm text-red-600">{errors.firstName.message}</p>
                 )}
-                {selectedRole && (
-                  <p className="text-xs text-gray-600">
-                    {selectedRole.description || "Nenhuma descrição disponível"}
-                  </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Sobrenome *</Label>
+                <Input id="lastName" {...register("lastName")} disabled={isLoading} />
+                {errors.lastName && (
+                  <p className="text-sm text-red-600">{errors.lastName.message}</p>
                 )}
               </div>
             </div>
 
-            {/* Manager-specific fields */}
-            {(showManagerFields || showRepFields) && verticals.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input id="email" type="email" {...register("email")} disabled={isLoading} />
+                {errors.email && (
+                  <p className="text-sm text-red-600">{errors.email.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Telefone</Label>
+                <Input id="phoneNumber" {...register("phoneNumber")} disabled={isLoading} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthDate">Data de nascimento *</Label>
+              <Input
+                id="birthDate"
+                type="date"
+                {...register("birthDate")}
+                disabled={isLoading}
+              />
+              {errors.birthDate && (
+                <p className="text-sm text-red-600">{errors.birthDate.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="roleId">Função *</Label>
+              <select
+                id="roleId"
+                className="flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
+                {...register("roleId")}
+                disabled={isLoading || loadingRoles}
+              >
+                <option value="">Selecione uma função</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+              {errors.roleId && (
+                <p className="text-sm text-red-600">{errors.roleId.message}</p>
+              )}
+            </div>
+
+            {showVertical && verticals.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="invite-vertical">Vertical</Label>
                 <select
@@ -299,11 +250,10 @@ export default function InviteUserPage() {
                   value={inviteVerticalId}
                   onChange={(e) => {
                     setInviteVerticalId(e.target.value);
-                    setValue("managerTerritoryId", undefined);
-                    setValue("repTerritoryId", undefined);
+                    setTerritoryId(undefined);
                   }}
                   disabled={isLoading}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="flex h-10 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm"
                 >
                   {verticals.map((vertical) => (
                     <option key={vertical.id} value={vertical.id}>
@@ -311,55 +261,29 @@ export default function InviteUserPage() {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500">
-                  Territórios listados abaixo pertencem a esta vertical.
-                </p>
               </div>
             )}
 
             {showManagerFields && (
-              <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                <h3 className="text-lg font-medium text-blue-900">
-                  Atribuições de Gerente
-                </h3>
-                <TerritorySelector
-                  value={watch("managerTerritoryId")}
-                  onChange={(id) => setValue("managerTerritoryId", id)}
-                  territoryType="manager_zone"
-                  verticalId={inviteVerticalId}
-                  disabled={isLoading || !inviteVerticalId}
-                  error={errors.managerTerritoryId?.message}
-                  required
-                />
-              </div>
+              <TerritorySelector
+                value={territoryId}
+                onChange={setTerritoryId}
+                territoryType="manager_zone"
+                verticalId={inviteVerticalId}
+                disabled={isLoading || !inviteVerticalId}
+                required
+              />
             )}
 
-            {/* Rep-specific fields */}
             {showRepFields && (
-              <div className="space-y-4 rounded-lg border border-green-200 bg-green-50 p-4">
-                <h3 className="text-lg font-medium text-green-900">
-                  Atribuições de Representante
-                </h3>
-                
-                <ManagerSelector
-                  value={watch("managerId")}
-                  onChange={(id) => setValue("managerId", id)}
-                  disabled={isLoading}
-                  error={errors.managerId?.message}
-                  required
-                />
-
-                <TerritorySelector
-                  value={watch("repTerritoryId")}
-                  onChange={(id) => setValue("repTerritoryId", id)}
-                  territoryType="patch"
-                  managerTerritoryId={watchedManagerId}
-                  verticalId={inviteVerticalId}
-                  disabled={isLoading || !watchedManagerId || !inviteVerticalId}
-                  error={errors.repTerritoryId?.message}
-                  required
-                />
-              </div>
+              <TerritorySelector
+                value={territoryId}
+                onChange={setTerritoryId}
+                territoryType="patch"
+                verticalId={inviteVerticalId}
+                disabled={isLoading || !inviteVerticalId}
+                required
+              />
             )}
 
             <div className="flex gap-4 pt-4">
@@ -375,37 +299,6 @@ export default function InviteUserPage() {
           </form>
         </CardContent>
       </Card>
-
-      {/* Role Permissions Reference */}
-      {!loadingRoles && roles.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Referência de Funções</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 text-sm">
-              {roles.map((role) => (
-                <div key={role.id} className="border-b pb-3 last:border-0">
-                  <h4 className="font-medium text-gray-900">{role.name}</h4>
-                  <p className="text-gray-600">
-                    {role.description || "Nenhuma descrição disponível"}
-                  </p>
-                  {role.name === "MANAGER" && (
-                    <p className="mt-1 text-xs text-blue-600">
-                      • Requer atribuição de zona de gerente
-                    </p>
-                  )}
-                  {role.name === "REP" && (
-                    <p className="mt-1 text-xs text-green-600">
-                      • Requer gerente e território de representante
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

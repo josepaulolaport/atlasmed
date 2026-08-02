@@ -8,9 +8,11 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_manager.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/boundary_impact.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/unassigned_facility.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
 import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
@@ -109,9 +111,10 @@ class HttpTerritoryRepository implements TerritoryRepository {
       return null;
     }
     _throwIfError(boundaryResponse);
-    final boundary = TerritoryGeometry.fromGeoJson(
+    final boundary = TerritoryGeometry.tryFromGeoJson(
       jsonDecode(boundaryResponse.body) as Map<String, dynamic>,
     );
+    if (boundary == null) return null;
 
     String? assignedUserId;
     final assignmentsResponse = results[1];
@@ -134,14 +137,34 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<void> updateTerritoryGeometry(
+  Future<BoundaryImpactPreview> previewBoundaryImpact(
     String id,
     TerritoryGeometry geometry,
   ) async {
     final response = await _send(
+      _territoryUri('/territories/$id/boundary/impact'),
+      RepositoryHttpMethod.post,
+      geometry.toGeoJson(),
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return BoundaryImpactPreview.fromJson(decoded);
+  }
+
+  @override
+  Future<void> updateTerritoryGeometry(
+    String id,
+    TerritoryGeometry geometry, {
+    List<String>? acceptedFacilityIds,
+  }) async {
+    final body = <String, dynamic>{
+      ...Map<String, dynamic>.from(geometry.toGeoJson()),
+      'acceptedFacilityIds': ?acceptedFacilityIds,
+    };
+    final response = await _send(
       _territoryUri('/territories/$id/boundary'),
       RepositoryHttpMethod.put,
-      geometry.toGeoJson(),
+      body,
     );
     _throwIfError(response);
   }
@@ -239,6 +262,26 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
     final candidates = await Future.wait(zones.map(_assignableManagerForZone));
     return candidates.whereType<AssignableManager>().toList();
+  }
+
+  @override
+  Future<List<UnassignedFacility>> listUnassignedFacilities({
+    String? managerZoneId,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final response = await _get(
+      _territoryUri('/territories/unassigned-facilities', {
+        'page': '$page',
+        'limit': '$limit',
+        'managerZoneId': ?managerZoneId,
+      }),
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final rows = (decoded['data'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
+    return rows.map(UnassignedFacility.fromJson).toList();
   }
 
   Future<AssignableManager?> _assignableManagerForZone(

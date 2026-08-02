@@ -20,50 +20,69 @@ export class TerritoryMembershipUseCases {
     return this.deps.membershipService.recomputeAll();
   }
 
+  /**
+   * Spec 0006: clinics in oversight manager zones with no active consultant.
+   */
   async listUnassignedFacilities(input: {
     scope: ScopeContext;
     page?: number;
     limit?: number;
+    managerZoneId?: string;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
-    const clinics = await this.deps.clinicWriter.findClinicsForMembership();
 
-    const filtered = clinics.filter((clinic) => {
-      if (
-        clinic.territoryAssignmentStatus !== "unassigned" &&
-        clinic.territoryAssignmentStatus !== "ambiguous"
-      ) {
-        return false;
+    const oversightZoneIds = input.scope.oversightZoneIds ?? [];
+    let managerZoneIds: string[] | undefined;
+    let global = false;
+
+    if (input.scope.isGlobal) {
+      global = true;
+      if (input.managerZoneId) {
+        managerZoneIds = [input.managerZoneId];
+        global = false;
       }
-
-      if (input.scope.isGlobal) {
-        return true;
+    } else if (oversightZoneIds.length > 0) {
+      managerZoneIds = input.managerZoneId
+        ? oversightZoneIds.filter((id) => id === input.managerZoneId)
+        : oversightZoneIds;
+      if (input.managerZoneId && managerZoneIds.length === 0) {
+        return {
+          data: [],
+          pagination: { page, limit, total: 0, totalPages: 1 },
+        };
       }
+    } else {
+      return {
+        data: [],
+        pagination: { page, limit, total: 0, totalPages: 1 },
+      };
+    }
 
-      if (input.scope.facilityIds.length > 0) {
-        return input.scope.facilityIds.includes(clinic.id);
-      }
-
-      return false;
+    const clinics = await this.deps.clinicWriter.findClinicsWithoutConsultant({
+      managerZoneIds,
+      global,
     });
 
     const start = (page - 1) * limit;
-    const slice = filtered.slice(start, start + limit);
+    const slice = clinics.slice(start, start + limit);
 
     return {
       data: slice.map((clinic) => ({
         id: clinic.id,
+        displayName: clinic.displayName,
         lat: clinic.lat ?? undefined,
         lng: clinic.lng ?? undefined,
-        territoryId: clinic.territoryId ?? undefined,
-        territoryAssignmentStatus: clinic.territoryAssignmentStatus,
+        managerZoneId: clinic.managerZoneId,
+        managerZoneName: clinic.managerZoneName ?? undefined,
+        territoryId: clinic.managerZoneId,
+        territoryAssignmentStatus: "unassigned" as const,
       })),
       pagination: {
         page,
         limit,
-        total: filtered.length,
-        totalPages: Math.ceil(filtered.length / limit) || 1,
+        total: clinics.length,
+        totalPages: Math.ceil(clinics.length / limit) || 1,
       },
     };
   }

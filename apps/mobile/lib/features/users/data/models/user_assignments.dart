@@ -57,7 +57,7 @@ class TerritoryAssignment extends Equatable {
               ),
         boundary: json['boundary'] == null
             ? null
-            : TerritoryGeometry.fromGeoJson(
+            : TerritoryGeometry.tryFromGeoJson(
                 json['boundary'] as Map<String, dynamic>,
               ),
       );
@@ -114,17 +114,26 @@ class UserAssignments extends Equatable {
   /// REP with at least one territory assigned.
   final bool isOperationallyActive;
 
-  /// First manager found across sectors (summary for list/tests).
-  String? get managerId {
+  /// Distinct managers across verticals (territory-derived; multi-manager OK).
+  List<AssignmentManagerRef> get managers {
+    final byId = <String, AssignmentManagerRef>{};
     for (final assignment in verticalAssignments) {
-      if (assignment.managerId != null) return assignment.managerId;
+      for (final manager in assignment.managers) {
+        byId[manager.id] = manager;
+      }
     }
-    return null;
+    return byId.values.toList(growable: false);
   }
 
+  /// Joined manager names for compact labels.
   String? get managerName {
+    final all = managers;
+    if (all.isNotEmpty) {
+      return all.map((m) => m.name).join(', ');
+    }
     for (final assignment in verticalAssignments) {
-      if (assignment.managerName != null) return assignment.managerName;
+      final name = assignment.managerName;
+      if (name != null && name.isNotEmpty) return name;
     }
     return null;
   }
@@ -159,11 +168,37 @@ class UserAssignments extends Equatable {
     if (sectorRaw != null) {
       final verticalAssignments = sectorRaw.map((raw) {
         final map = raw as Map<String, dynamic>;
+        final managersRaw = map['managers'] as List<dynamic>?;
+        final managers = <AssignmentManagerRef>[
+          if (managersRaw != null)
+            ...managersRaw.map(
+              (item) => AssignmentManagerRef.fromJson(
+                item as Map<String, dynamic>,
+              ),
+            ),
+        ];
+        final managerDisplayName = map['managerName'] as String? ??
+            (managers.isEmpty
+                ? null
+                : managers.map((m) => m.name).join(', '));
+        // Compat: single managerName without managers[].
+        if (managers.isEmpty &&
+            managerDisplayName != null &&
+            managerDisplayName.isNotEmpty) {
+          managers.add(
+            AssignmentManagerRef(
+              id: map['managerId'] as String? ?? 'unknown',
+              name: managerDisplayName,
+            ),
+          );
+        }
         return InviteVerticalAssignment(
           verticalId: map['verticalId'] as String,
-          verticalName: map['verticalName'] as String,
-          managerId: map['managerId'] as String?,
-          managerName: map['managerName'] as String?,
+          verticalName: map['verticalName'] as String? ?? '—',
+          managerZoneId: map['managerZoneId'] as String?,
+          managerZoneName: map['managerZoneName'] as String?,
+          managerDisplayName: managerDisplayName,
+          managers: managers,
           territories: (map['territories'] as List<dynamic>? ?? const [])
               .map((t) => TerritoryOption.fromJson(t as Map<String, dynamic>))
               .toList(),
@@ -191,16 +226,23 @@ class UserAssignments extends Equatable {
             .map(VerticalAssignment.fromJson)
             .toList() ??
         const <VerticalAssignment>[];
-    final managerId = json['managerId'] as String?;
     final managerName = json['managerName'] as String?;
+    final managers = managerName != null && managerName.isNotEmpty
+        ? [
+            AssignmentManagerRef(
+              id: json['managerId'] as String? ?? 'unknown',
+              name: managerName,
+            ),
+          ]
+        : const <AssignmentManagerRef>[];
 
     final bySector = <String, InviteVerticalAssignment>{};
     for (final sector in sectors) {
       bySector[sector.verticalId] = InviteVerticalAssignment(
         verticalId: sector.verticalId,
         verticalName: sector.verticalName,
-        managerId: managerId,
-        managerName: managerName,
+        managerDisplayName: managerName,
+        managers: managers,
       );
     }
     for (final territory in territories) {
@@ -218,8 +260,8 @@ class UserAssignments extends Equatable {
         bySector[verticalId] = InviteVerticalAssignment(
           verticalId: verticalId,
           verticalName: territory.verticalName ?? '—',
-          managerId: managerId,
-          managerName: managerName,
+          managerDisplayName: managerName,
+          managers: managers,
           territories: [option],
         );
       } else {

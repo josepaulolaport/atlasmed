@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_expanded_screen.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -128,16 +129,18 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
                         const _MapPlaceholder()
                       else
                         IgnorePointer(
-                          child: MapWidget(
-                            key: ValueKey(
-                              'mapa-${widget.assignment.territoryId}',
+                          child: SizedMapHost(
+                            builder: (context, width, height) => MapWidget(
+                              key: ValueKey(
+                                'mapa-${widget.assignment.territoryId}',
+                              ),
+                              styleUri: MapboxStyles.STANDARD,
+                              viewport: _initialViewport,
+                              onMapCreated: _onMapCreated,
+                              onStyleLoadedListener: (_) => _configureMap(),
+                              onMapLoadErrorListener: (_) =>
+                                  setState(() => _mapUnavailable = true),
                             ),
-                            styleUri: MapboxStyles.STANDARD,
-                            viewport: _initialViewport,
-                            onMapCreated: _onMapCreated,
-                            onStyleLoadedListener: (_) => _configureMap(),
-                            onMapLoadErrorListener: (_) =>
-                                setState(() => _mapUnavailable = true),
                           ),
                         ),
                       if (widget.onTap == null)
@@ -174,16 +177,7 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
         ),
       ),
     );
-    unawaited(
-      mapboxMap.compass.updateSettings(CompassSettings(enabled: false)),
-    );
-    unawaited(
-      mapboxMap.scaleBar.updateSettings(ScaleBarSettings(enabled: false)),
-    );
-    unawaited(mapboxMap.logo.updateSettings(LogoSettings(enabled: false)));
-    unawaited(
-      mapboxMap.attribution.updateSettings(AttributionSettings(enabled: false)),
-    );
+    unawaited(applyPreviewMapChrome(mapboxMap));
   }
 
   Future<void> _configureMap() async {
@@ -202,6 +196,19 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
         FillLayer(
           id: _fillLayerId,
           sourceId: _sourceId,
+          filter: const [
+            'any',
+            [
+              '==',
+              ['geometry-type'],
+              'Polygon',
+            ],
+            [
+              '==',
+              ['geometry-type'],
+              'MultiPolygon',
+            ],
+          ],
           fillColor: AppColors.blue600.toARGB32(),
           fillOpacity: 0.22,
         ),

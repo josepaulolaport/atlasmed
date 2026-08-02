@@ -28,8 +28,24 @@ final canCreateTerritoryProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canCreateTerritory),
 );
 
+final canCreateManagerZoneProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canCreateManagerZone),
+);
+
+final canCreateRepPatchProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canCreateRepPatch),
+);
+
 final canUpdateTerritoryProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canUpdateTerritory),
+);
+
+final canUpdateManagerZoneProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canUpdateManagerZone),
+);
+
+final canUpdateRepPatchProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canUpdateRepPatch),
 );
 
 final canDeleteTerritoryProvider = Provider<bool>(
@@ -38,6 +54,10 @@ final canDeleteTerritoryProvider = Provider<bool>(
 
 final canMutateFacilityProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canMutateFacility),
+);
+
+final canAssignFacilityConsultantProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canAssignFacilityConsultant),
 );
 
 final canMutateProfessionalProvider = Provider<bool>(

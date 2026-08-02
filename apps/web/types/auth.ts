@@ -117,9 +117,11 @@ export interface InviteUserRequest {
   roleId: string;
   firstName: string;
   lastName: string;
-  managerId?: string;
-  managerTerritoryId?: string;
-  repTerritoryId?: string;
+  birthDate: string;
+  verticalAssignments?: Array<{
+    verticalId: string;
+    territoryIds: string[];
+  }>;
 }
 
 export interface AccessGrant {

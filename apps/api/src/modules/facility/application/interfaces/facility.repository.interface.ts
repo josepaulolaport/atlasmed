@@ -110,7 +110,7 @@ export interface FacilityRecord {
   /** Active consultant assignment start (`facility_consultant_assignments.started_at`). */
   consultantSince: Date | null;
   /**
-   * Display name of the active consultant's manager (`users.manager_id`).
+   * Display name of the manager for the clinic's manager zone (zone UTA).
    * Null when there is no open consultant assignment or the consultant has no manager.
    */
   managerName: string | null;

@@ -17,7 +17,6 @@ export interface UserRecord {
   avatarUrl: string | null;
   avatarBlurhash: string | null;
   tokenVersion: number;
-  managerId: string | null;
   passwordHistory: string[];
   lastLoginAt?: Date | null;
   suspendedAt?: Date | null;
@@ -236,9 +235,4 @@ export interface UserRepository {
     userId: string,
     metadata: Record<string, unknown>,
   ): Promise<void>;
-
-  updateManagerId(
-    userId: string,
-    managerId: string | null,
-  ): Promise<UserRecord>;
 }

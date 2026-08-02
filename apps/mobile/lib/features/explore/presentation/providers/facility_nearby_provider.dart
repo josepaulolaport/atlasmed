@@ -102,6 +102,8 @@ class NearbyFacilitiesQuery {
 }
 
 /// Inline preview: nearby within [establishmentNearbyPreviewRadiusKm].
+///
+/// Prefers shell/loaded lat·lng so this does not wait on a second detail GET.
 final facilityNearbyPreviewProvider =
     FutureProvider.family<List<NearbyEstablishment>, String>((
       ref,
@@ -111,18 +113,33 @@ final facilityNearbyPreviewProvider =
         return const [];
       }
 
-      final repo = ref.watch(clinicDetailRepositoryProvider(facilityId));
-      final dto = await repo.currentValueOrResolve();
-      if (dto == null) return const [];
-      final lat = dto.lat;
-      final lng = dto.lng;
-      if (lat == null || lng == null) return const [];
+      double? lat;
+      double? lng;
+      Iterable<String> clinicVerticalIds = const [];
+
+      final display = ref.watch(clinicDetailDisplayFacilityProvider(facilityId));
+      lat = display?.address?.lat;
+      lng = display?.address?.lng;
+      clinicVerticalIds =
+          display?.verticalProfiles.map((p) => p.verticalId) ?? const [];
+
+      if (lat == null || lng == null) {
+        // Shared with the detail screen — no duplicate ClinicDetailRepository.
+        final dto = await ref
+            .watch(clinicDetailRepositoryProvider(facilityId))
+            .currentValueOrResolve();
+        if (dto == null) return const [];
+        lat = dto.lat;
+        lng = dto.lng;
+        clinicVerticalIds = dto.verticalProfiles.map((p) => p.verticalId);
+        if (lat == null || lng == null) return const [];
+      }
 
       final userVerticalIds = await ref.watch(
         currentUserVerticalIdsProvider.future,
       );
       final shared = sharedNearbyVerticalIds(
-        clinicVerticalIds: dto.verticalProfiles.map((p) => p.verticalId),
+        clinicVerticalIds: clinicVerticalIds,
         userVerticalIds: userVerticalIds,
       );
       // Prefer clinic-local Linha over Explorar "Todas".

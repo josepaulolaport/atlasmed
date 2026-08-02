@@ -29,8 +29,7 @@ final mockInvitations = <UserInvitation>[
       InviteVerticalAssignment(
         verticalId: 'sector-oncologia',
         verticalName: 'Oncologia',
-        managerId: 'user-fernanda-duarte',
-        managerName: 'Fernanda Duarte',
+        managerDisplayName: 'Fernanda Duarte',
         territories: [
           _territory('territory-sul-onco-b'),
           _territory('territory-sul-onco-c'),
@@ -81,8 +80,7 @@ final mockInvitations = <UserInvitation>[
       InviteVerticalAssignment(
         verticalId: 'sector-oncologia',
         verticalName: 'Oncologia',
-        managerId: 'user-marcos-lima',
-        managerName: 'Marcos Lima',
+        managerDisplayName: 'Marcos Lima',
         territories: [_territory('territory-norte-onco-b')],
       ),
     ],
@@ -122,8 +120,7 @@ final mockInvitations = <UserInvitation>[
       InviteVerticalAssignment(
         verticalId: 'sector-cardiologia',
         verticalName: 'Cardiologia',
-        managerId: 'user-eduardo-alves',
-        managerName: 'Eduardo Alves',
+        managerDisplayName: 'Eduardo Alves',
         territories: [_territory('territory-oeste-cardio-a')],
       ),
     ],

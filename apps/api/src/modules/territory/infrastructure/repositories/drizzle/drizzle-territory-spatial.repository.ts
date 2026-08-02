@@ -7,7 +7,10 @@ import type {
   TerritorySpatialRepository,
 } from "../../../application/interfaces/territory-spatial.repository.interface";
 import { OperationNotAllowedError } from "../../../../../shared/errors";
-import { MANAGER_ZONE_TYPE_SLUG } from "../../../application/constants/territory-roles.constants";
+import {
+  MANAGER_ZONE_TYPE_SLUG,
+  REP_PATCH_TYPE_SLUG,
+} from "../../../application/constants/territory-roles.constants";
 
 export class DrizzleTerritorySpatialRepository implements TerritorySpatialRepository {
   async getBoundaryAsGeoJson(territoryId: string): Promise<GeoJsonGeometry | null> {
@@ -141,6 +144,9 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     `) as Promise<Array<{ id: string; code: string }>>;
   }
 
+  /**
+   * Spec 0006: clinic geo membership targets manager zones (not overlapping rep patches).
+   */
   async findContainingClinicAssignmentTerritoryIds(
     lng: number,
     lat: number,
@@ -153,7 +159,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       WHERE t.is_active = true
         AND t.boundary IS NOT NULL
-        AND tt.assigns_clinics = true
+        AND tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
         AND (${excludeTerritoryId}::text IS NULL OR t.id != ${excludeTerritoryId})
         AND ST_Covers(
           t.boundary,
@@ -165,6 +171,131 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     return rows.map((row) => ({
       id: row.id,
       verticalId: row.vertical_id,
+    }));
+  }
+
+  async userHasRepPatchCoveringFacility(
+    userId: string,
+    facilityId: string
+  ): Promise<boolean> {
+    const rows = await db.execute(sql`
+      SELECT 1 AS ok
+      FROM user_territory_assignments uta
+      INNER JOIN territories t ON t.id = uta.territory_id
+      INNER JOIN territory_types tt ON tt.id = t.territory_type_id
+      INNER JOIN facilities f ON f.id = ${facilityId}
+      WHERE uta.user_id = ${userId}
+        AND t.is_active = true
+        AND t.boundary IS NOT NULL
+        AND f.location IS NOT NULL
+        AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+        AND ST_Covers(t.boundary, f.location::geometry)
+      LIMIT 1
+    `) as Array<{ ok: number }>;
+    return rows.length > 0;
+  }
+
+  async findAssignedClinicsImpactedByBoundary(input: {
+    territoryId: string;
+    mode: "manager_zone" | "rep_patch";
+    geoJson: GeoJsonGeometry;
+  }): Promise<
+    Array<{
+      facilityId: string;
+      facilityName: string;
+      consultantUserId: string;
+      consultantName: string;
+    }>
+  > {
+    const geoJsonString = JSON.stringify(input.geoJson);
+
+    if (input.mode === "manager_zone") {
+      const rows = await db.execute(sql`
+        WITH proposed AS (
+          SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
+        )
+        SELECT
+          f.id AS facility_id,
+          f.display_name AS facility_name,
+          fca.user_id AS consultant_user_id,
+          COALESCE(u.name, u.email, fca.user_id) AS consultant_name
+        FROM facilities f
+        INNER JOIN facility_vertical_profiles fvp
+          ON fvp.facility_id = f.id
+          AND fvp.is_active = true
+          AND fvp.manager_zone_id = ${input.territoryId}
+        INNER JOIN facility_consultant_assignments fca
+          ON fca.facility_id = f.id
+          AND fca.ended_at IS NULL
+        INNER JOIN users u ON u.id = fca.user_id
+        CROSS JOIN proposed
+        WHERE f.deactivated_at IS NULL
+          AND f.location IS NOT NULL
+          AND NOT ST_Covers(proposed.geom, f.location::geometry)
+      `) as Array<{
+        facility_id: string;
+        facility_name: string;
+        consultant_user_id: string;
+        consultant_name: string;
+      }>;
+
+      return rows.map((row) => ({
+        facilityId: row.facility_id,
+        facilityName: row.facility_name,
+        consultantUserId: row.consultant_user_id,
+        consultantName: row.consultant_name,
+      }));
+    }
+
+    const rows = await db.execute(sql`
+      WITH proposed AS (
+        SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
+      ),
+      patch_rep AS (
+        SELECT uta.user_id
+        FROM user_territory_assignments uta
+        WHERE uta.territory_id = ${input.territoryId}
+        LIMIT 1
+      )
+      SELECT
+        f.id AS facility_id,
+        f.display_name AS facility_name,
+        fca.user_id AS consultant_user_id,
+        COALESCE(u.name, u.email, fca.user_id) AS consultant_name
+      FROM facilities f
+      INNER JOIN facility_consultant_assignments fca
+        ON fca.facility_id = f.id
+        AND fca.ended_at IS NULL
+      INNER JOIN patch_rep pr ON pr.user_id = fca.user_id
+      INNER JOIN users u ON u.id = fca.user_id
+      CROSS JOIN proposed
+      WHERE f.deactivated_at IS NULL
+        AND f.location IS NOT NULL
+        AND NOT ST_Covers(proposed.geom, f.location::geometry)
+        AND NOT EXISTS (
+          SELECT 1
+          FROM user_territory_assignments uta
+          INNER JOIN territories t ON t.id = uta.territory_id
+          INNER JOIN territory_types tt ON tt.id = t.territory_type_id
+          WHERE uta.user_id = pr.user_id
+            AND t.id != ${input.territoryId}
+            AND t.is_active = true
+            AND t.boundary IS NOT NULL
+            AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+            AND ST_Covers(t.boundary, f.location::geometry)
+        )
+    `) as Array<{
+      facility_id: string;
+      facility_name: string;
+      consultant_user_id: string;
+      consultant_name: string;
+    }>;
+
+    return rows.map((row) => ({
+      facilityId: row.facility_id,
+      facilityName: row.facility_name,
+      consultantUserId: row.consultant_user_id,
+      consultantName: row.consultant_name,
     }));
   }
 

@@ -134,7 +134,6 @@ async function ensureDermRep(params: {
   email: string;
   password: string;
   dermVerticalId: string;
-  managerId: string;
 }): Promise<{ id: string; email: string; created: boolean }> {
   const [role] = await db
     .select({ id: roles.id })
@@ -154,7 +153,6 @@ async function ensureDermRep(params: {
       .update(users)
       .set({
         roleId: role.id,
-        managerId: params.managerId,
         status: "ACTIVE",
         emailVerified: true,
         updatedAt: new Date(),
@@ -175,7 +173,6 @@ async function ensureDermRep(params: {
       firstName: "Rep",
       lastName: "Dermatologia",
       roleId: role.id,
-      managerId: params.managerId,
       status: "ACTIVE",
       emailVerified: true,
     })
@@ -316,7 +313,6 @@ async function main() {
     email: repEmail,
     password: repPassword,
     dermVerticalId: dermId,
-    managerId: manager.id,
   });
   console.log(`   ${rep.created ? "Created" : "Using"} Derm REP ${rep.email}`);
 
@@ -396,7 +392,7 @@ async function main() {
         .update(facilityVerticalProfiles)
         .set({
           isActive: true,
-          territoryId: patchId,
+          managerZoneId: zoneId,
           updatedAt: new Date(),
         })
         .where(eq(facilityVerticalProfiles.id, existingProfile.id));
@@ -404,7 +400,7 @@ async function main() {
       await db.insert(facilityVerticalProfiles).values({
         facilityId,
         verticalId: dermId,
-        territoryId: patchId,
+        managerZoneId: zoneId,
         isActive: true,
         commercialStatus: "UNREGISTERED",
       });
@@ -450,7 +446,7 @@ async function main() {
     }
   }
 
-  const { processed } = await territoryMembershipService.recomputeForTerritoryBoundary(patchId);
+  const { processed } = await territoryMembershipService.recomputeForTerritoryBoundary(zoneId);
 
   console.log("\n✅ Dermatologia demo ready");
   console.log(`   Manager: ${manager.email} (zone UTA + vertical)`);

@@ -11,27 +11,78 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Full-screen multi-select map picker for invite / assignment flows.
+/// Map picker modes for invite / assignment flows.
+enum TerritoryPickerMode {
+  /// REP invite — single parent manager zone (occupied OK).
+  repParentZone,
+
+  /// MANAGER invite — one or more empty zones.
+  managerEmptyZones,
+
+  /// REP invite — free patches under a manager zone.
+  repFreePatches,
+
+  /// Legacy — patches scoped to a manager user id.
+  patchesForManagerUser,
+}
+
+/// Full-screen map picker for invite / assignment flows.
 ///
-/// Entry points:
-/// - [pickForVertical] — `GET /territories?verticalId=` (Manager invite).
-/// - [pickForManager] — `GET /territories?managerId=&verticalId=` (REP),
-///   outlines the manager zone. Scope filtering is server-side.
-///
-/// Tapping toggles selection; confirm returns the full selected list.
+/// Prefer the typed entry points:
+/// - [pickRepParentZone]
+/// - [pickManagerEmptyZones]
+/// - [pickForZone]
+/// - [pickForManager]
 class TerritoryPickerScreen extends ConsumerStatefulWidget {
   const TerritoryPickerScreen._({
+    required this.mode,
     this.verticalId,
     this.managerId,
+    this.managerZoneId,
     this.initiallySelectedIds = const {},
   });
 
+  final TerritoryPickerMode mode;
   final String? verticalId;
   final String? managerId;
+  final String? managerZoneId;
   final Set<String> initiallySelectedIds;
 
-  /// Manager invite — territories in [verticalId].
-  static Future<List<TerritoryOption>?> pickForVertical(
+  bool get allowOccupied => mode == TerritoryPickerMode.repParentZone;
+
+  bool get singleSelect => mode == TerritoryPickerMode.repParentZone;
+
+  String get title => switch (mode) {
+        TerritoryPickerMode.repParentZone => 'Zona do gerente',
+        TerritoryPickerMode.managerEmptyZones => 'Zonas vazias',
+        TerritoryPickerMode.repFreePatches => 'Áreas livres',
+        TerritoryPickerMode.patchesForManagerUser => 'Selecionar territórios',
+      };
+
+  /// REP invite — pick one parent manager zone.
+  static Future<TerritoryOption?> pickRepParentZone(
+    BuildContext context, {
+    required String verticalId,
+    String? initiallySelectedId,
+  }) async {
+    final picked = await Navigator.of(context).push<List<TerritoryOption>>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => TerritoryPickerScreen._(
+          mode: TerritoryPickerMode.repParentZone,
+          verticalId: verticalId,
+          initiallySelectedIds: {
+            ?initiallySelectedId,
+          },
+        ),
+      ),
+    );
+    if (picked == null || picked.isEmpty) return null;
+    return picked.first;
+  }
+
+  /// MANAGER invite — pick empty zones (multi).
+  static Future<List<TerritoryOption>?> pickManagerEmptyZones(
     BuildContext context, {
     required String verticalId,
     Set<String> initiallySelectedIds = const {},
@@ -40,6 +91,7 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => TerritoryPickerScreen._(
+          mode: TerritoryPickerMode.managerEmptyZones,
           verticalId: verticalId,
           initiallySelectedIds: initiallySelectedIds,
         ),
@@ -47,7 +99,53 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
     );
   }
 
-  /// REP picker — patches valid for [managerId] (and optional [verticalId]).
+  /// @Deprecated — use [pickRepParentZone] or [pickManagerEmptyZones].
+  static Future<List<TerritoryOption>?> pickForVertical(
+    BuildContext context, {
+    required String verticalId,
+    Set<String> initiallySelectedIds = const {},
+    bool allowOccupied = false,
+  }) {
+    if (allowOccupied) {
+      return Navigator.of(context).push<List<TerritoryOption>>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => TerritoryPickerScreen._(
+            mode: TerritoryPickerMode.repParentZone,
+            verticalId: verticalId,
+            initiallySelectedIds: initiallySelectedIds,
+          ),
+        ),
+      );
+    }
+    return pickManagerEmptyZones(
+      context,
+      verticalId: verticalId,
+      initiallySelectedIds: initiallySelectedIds,
+    );
+  }
+
+  /// REP invite — patches under [managerZoneId].
+  static Future<List<TerritoryOption>?> pickForZone(
+    BuildContext context, {
+    required String managerZoneId,
+    String? verticalId,
+    Set<String> initiallySelectedIds = const {},
+  }) {
+    return Navigator.of(context).push<List<TerritoryOption>>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => TerritoryPickerScreen._(
+          mode: TerritoryPickerMode.repFreePatches,
+          managerZoneId: managerZoneId,
+          verticalId: verticalId,
+          initiallySelectedIds: initiallySelectedIds,
+        ),
+      ),
+    );
+  }
+
+  /// Legacy REP picker — patches valid for [managerId].
   static Future<List<TerritoryOption>?> pickForManager(
     BuildContext context, {
     required String managerId,
@@ -58,6 +156,7 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => TerritoryPickerScreen._(
+          mode: TerritoryPickerMode.patchesForManagerUser,
           managerId: managerId,
           verticalId: verticalId,
           initiallySelectedIds: initiallySelectedIds,
@@ -99,10 +198,23 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
   Object? _loadError;
   bool _loading = true;
 
-  bool get _isRepScoped => widget.managerId != null;
+  bool get _isRepScoped =>
+      widget.mode == TerritoryPickerMode.repFreePatches ||
+      widget.mode == TerritoryPickerMode.patchesForManagerUser;
+
+  /// Free patches under a manager zone — hide occupied for invite UX.
+  bool get _freeOnlyMode => widget.mode == TerritoryPickerMode.repFreePatches;
+
+  /// Picking manager zones (REP parent or MANAGER empty zones).
+  bool get _pickingManagerZones =>
+      widget.mode == TerritoryPickerMode.repParentZone ||
+      widget.mode == TerritoryPickerMode.managerEmptyZones;
+
+  bool _isSelectable(TerritoryOption territory) =>
+      widget.allowOccupied || !territory.isOccupied;
 
   List<TerritoryOption> get _selectedTerritories => _territories
-      .where((t) => !t.isOccupied && _selectedIds.contains(t.id))
+      .where((t) => _isSelectable(t) && _selectedIds.contains(t.id))
       .toList(growable: false);
 
   @override
@@ -116,9 +228,34 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
     try {
       final repo = ref.read(usersRepositoryProvider);
       final managerId = widget.managerId;
+      final managerZoneId = widget.managerZoneId;
       late final List<TerritoryOption> list;
       ManagerTerritoryScope? scope;
-      if (managerId != null) {
+      if (managerZoneId != null) {
+        list = await repo.getPatchesForZone(
+          managerZoneId: managerZoneId,
+          verticalId: widget.verticalId,
+        );
+        final zones = await repo.getTerritoryOptions(
+          verticalId: widget.verticalId,
+        );
+        TerritoryOption? zone;
+        for (final z in zones) {
+          if (z.id == managerZoneId) {
+            zone = z;
+            break;
+          }
+        }
+        scope = ManagerTerritoryScope(
+          managerId: '',
+          managerName: zone?.name ?? '',
+          managerTerritoryId: managerZoneId,
+          managerTerritoryName: zone?.name,
+          managerZoneCentroid: zone?.centroid,
+          managerZoneBoundary: zone?.boundary,
+          territories: list,
+        );
+      } else if (managerId != null) {
         scope = await repo.getTerritoriesForManager(
           managerId,
           verticalId: widget.verticalId,
@@ -128,14 +265,19 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
         list = await repo.getTerritoryOptions(verticalId: widget.verticalId);
       }
       if (!mounted) return;
-      final occupiedIds = list
-          .where((t) => t.isOccupied)
-          .map((t) => t.id)
-          .toSet();
+      final filtered = _freeOnlyMode
+          ? list.where((t) => !t.isOccupied).toList(growable: false)
+          : list;
+      final blockedIds = widget.allowOccupied
+          ? const <String>{}
+          : list.where((t) => t.isOccupied).map((t) => t.id).toSet();
       setState(() {
         _managerScope = scope;
-        _territories = list;
-        _selectedIds.removeWhere(occupiedIds.contains);
+        _territories = filtered;
+        _selectedIds.removeWhere(blockedIds.contains);
+        _selectedIds.removeWhere(
+          (id) => !filtered.any((t) => t.id == id),
+        );
         _loading = false;
         _loadError = null;
       });
@@ -176,10 +318,10 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                       color: AppColors.gray900,
                     ),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Selecionar territórios',
-                      style: TextStyle(
+                      widget.title,
+                      style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppColors.gray900,
@@ -206,14 +348,32 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                       color: Color(_managerZoneColor),
                       label: 'Área do gerente',
                     ),
-                  const _LegendDot(
-                    color: Color(_freeColor),
-                    label: 'Disponível',
-                  ),
-                  const _LegendDot(
-                    color: Color(_occupiedColor),
-                    label: 'Ocupado',
-                  ),
+                  if (widget.mode == TerritoryPickerMode.repParentZone) ...[
+                    const _LegendDot(
+                      color: Color(_managerZoneColor),
+                      label: 'Zona do gerente',
+                    ),
+                  ] else if (widget.mode ==
+                      TerritoryPickerMode.managerEmptyZones) ...[
+                    const _LegendDot(
+                      color: Color(_managerZoneColor),
+                      label: 'Zona vazia',
+                    ),
+                    const _LegendDot(
+                      color: Color(_occupiedColor),
+                      label: 'Ocupada',
+                    ),
+                  ] else ...[
+                    const _LegendDot(
+                      color: Color(_freeColor),
+                      label: 'Disponível',
+                    ),
+                    if (!_freeOnlyMode)
+                      const _LegendDot(
+                        color: Color(_occupiedColor),
+                        label: 'Ocupado',
+                      ),
+                  ],
                   const _LegendDot(
                     color: Color(_selectedColor),
                     label: 'Selecionado',
@@ -222,6 +382,12 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
               ),
             ),
             Expanded(child: _buildMapBody(token)),
+            if (_freeOnlyMode && !_loading && _loadError == null)
+              _FreePatchList(
+                territories: _territories,
+                selectedIds: _selectedIds,
+                onToggle: _toggle,
+              ),
             SafeArea(
               top: false,
               child: Padding(
@@ -237,9 +403,18 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                         ? null
                         : () => Navigator.of(context).pop(_selectedTerritories),
                     child: Text(
-                      selectedCount == 0
-                          ? 'Confirmar seleção'
-                          : 'Confirmar ($selectedCount)',
+                      widget.mode == TerritoryPickerMode.repParentZone
+                          ? (selectedCount == 0
+                              ? 'Selecionar zona'
+                              : 'Confirmar zona')
+                          : widget.mode ==
+                                  TerritoryPickerMode.managerEmptyZones
+                              ? (selectedCount == 0
+                                  ? 'Selecionar zonas'
+                                  : 'Confirmar ($selectedCount)')
+                              : (selectedCount == 0
+                                  ? 'Confirmar seleção'
+                                  : 'Confirmar ($selectedCount)'),
                     ),
                   ),
                 ),
@@ -283,7 +458,8 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
         ),
       );
     }
-    if (_territories.isEmpty) {
+    if (_territories.isEmpty &&
+        !(_freeOnlyMode && _managerScope?.managerZoneBoundary != null)) {
       return const Center(
         child: Text(
           'Nenhum território disponível nesta seleção.',
@@ -345,11 +521,11 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
 
   void _handlePolygonTap(PolygonAnnotation annotation) {
     final kind = annotation.customData?['kind'] as String?;
-    // Manager zone outline and occupied patches are not selectable.
+    // Parent zone outline (patch mode) and occupied patches not selectable.
     if (kind == 'managerZone' || kind == 'occupied') return;
     final territoryId = annotation.customData?['territoryId'] as String?;
     final territory = _find(territoryId);
-    if (territory == null || territory.isOccupied) return;
+    if (territory == null || !_isSelectable(territory)) return;
     _suppressNextMapTapDeselect = true;
     _toggle(territory);
   }
@@ -374,10 +550,14 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
   }
 
   Future<void> _toggle(TerritoryOption territory) async {
-    if (territory.isOccupied) return;
+    if (!_isSelectable(territory)) return;
     setState(() {
       if (_selectedIds.contains(territory.id)) {
         _selectedIds.remove(territory.id);
+      } else if (widget.singleSelect) {
+        _selectedIds
+          ..clear()
+          ..add(territory.id);
       } else {
         _selectedIds.add(territory.id);
       }
@@ -447,20 +627,27 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       final boundary = territory.boundary;
       if (boundary == null) continue;
 
+      final selectable = _isSelectable(territory);
       final selected =
-          !territory.isOccupied && _selectedIds.contains(territory.id);
-      final baseColor = territory.isOccupied ? _occupiedColor : _freeColor;
+          selectable && _selectedIds.contains(territory.id);
+      final baseColor = _pickingManagerZones
+          ? _managerZoneColor
+          : (selectable ? _freeColor : _occupiedColor);
       final lineColor = selected ? _selectedColor : baseColor;
 
       _appendGeometry(
         boundary: boundary,
         fillColor: baseColor,
-        fillOpacity: selected ? 0.42 : (territory.isOccupied ? 0.28 : 0.22),
+        fillOpacity: selected
+            ? 0.42
+            : (selectable ? 0.22 : 0.28),
         lineColor: lineColor,
         haloWidth: selected ? 5.0 : 3.4,
         lineWidth: selected ? 3.0 : 1.8,
         customData: {
-          'kind': territory.isOccupied ? 'occupied' : 'patch',
+          'kind': selectable
+              ? (_pickingManagerZones ? 'zone' : 'patch')
+              : 'occupied',
           'territoryId': territory.id,
         },
         polygonOptions: polygonOptions,
@@ -651,6 +838,72 @@ class _ManagerScopeBanner extends StatelessWidget {
                       ),
                     ],
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// List of free patches under the map — unambiguous when polygons overlap.
+class _FreePatchList extends StatelessWidget {
+  const _FreePatchList({
+    required this.territories,
+    required this.selectedIds,
+    required this.onToggle,
+  });
+
+  final List<TerritoryOption> territories;
+  final Set<String> selectedIds;
+  final Future<void> Function(TerritoryOption territory) onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    if (territories.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
+        child: Text(
+          'Nenhuma área livre nesta zona. Desenhe uma nova área no convite.',
+          style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 112,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 6),
+            child: Text(
+              'Áreas livres',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gray500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: territories.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final territory = territories[index];
+                final selected = selectedIds.contains(territory.id);
+                return FilterChip(
+                  selected: selected,
+                  showCheckmark: true,
+                  label: Text(territory.name),
+                  selectedColor: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                  checkmarkColor: const Color(0xFFF59E0B),
+                  onSelected: (_) => onToggle(territory),
+                );
+              },
+            ),
           ),
         ],
       ),

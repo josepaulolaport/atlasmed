@@ -68,10 +68,12 @@ class ClinicDetailLinhaHeaderDelegate extends SliverPersistentHeaderDelegate {
   final ValueChanged<String> onChanged;
 
   @override
-  double get minExtent => kClinicDetailLinhaBarHeight;
+  double get minExtent =>
+      options.length < 2 ? 0 : kClinicDetailLinhaBarHeight;
 
   @override
-  double get maxExtent => kClinicDetailLinhaBarHeight;
+  double get maxExtent =>
+      options.length < 2 ? 0 : kClinicDetailLinhaBarHeight;
 
   @override
   Widget build(

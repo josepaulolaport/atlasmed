@@ -19,9 +19,8 @@ class DoctorRow extends StatelessWidget {
   /// Role chips shown beside specialty (e.g. Decisor, Comprador, Prescritor).
   final List<String> badges;
 
-  /// Facility-roster action to edit association role flags without opening
-  /// the full doctor profile.
-  final VoidCallback? onEditRoles;
+  /// Trailing "…" menu (e.g. clinic role vs full profile). Row tap stays [onTap].
+  final VoidCallback? onMoreActions;
 
   const DoctorRow({
     super.key,
@@ -32,8 +31,9 @@ class DoctorRow extends StatelessWidget {
     this.relationshipScore,
     this.showRelationship = false,
     this.badges = const [],
-    this.onEditRoles,
-  });
+    VoidCallback? onMoreActions,
+    @Deprecated('Use onMoreActions') VoidCallback? onEditRoles,
+  }) : onMoreActions = onMoreActions ?? onEditRoles;
 
   @override
   Widget build(BuildContext context) {
@@ -189,16 +189,16 @@ class DoctorRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (onEditRoles != null) ...[
+            if (onMoreActions != null) ...[
               const SizedBox(width: 4),
               IconButton(
-                onPressed: onEditRoles,
-                tooltip: 'Editar papel',
+                onPressed: onMoreActions,
+                tooltip: 'Mais opções',
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(
-                  Icons.edit_outlined,
-                  size: 20,
-                  color: AppColors.navyBright,
+                  Icons.more_horiz_rounded,
+                  size: 22,
+                  color: AppColors.gray600,
                 ),
               ),
             ],

@@ -45,9 +45,17 @@ Registration identity: inviter sets `birthDate` + name on the invite; invitee mu
 | `ADMIN` | Global (`isGlobal`); `assignedVerticalIds` = all active verticals. Optional request `verticalId` filter narrows lists. |
 | `OPS` / `MANAGER` / `REP` | **Not** global. Verticals from `user_vertical_assignments`. Unprofiled facilities are ADMIN-only. Facility visibility is role-specific (below) ∩ active `facility_vertical_profiles` in resolved verticals. |
 | `REP` | Patch UTA kept for org/map; clinic `facilityIds` = active `facility_consultant_assignments` only (filtered by resolved verticals). Geo patch does **not** grant clinic list access. |
-| `MANAGER` | Clinic `facilityIds` = per-vertical profile membership in oversight zones ∪ own consultant assigns ∩ profiles. |
+| `MANAGER` | Clinic access via Spec 0006: `manager_zone_id IN oversightZoneIds` ∪ own consultant assigns (scope caches zone ids; membership is manager zone, not rep patch). |
 | `OPS` | Clinic `facilityIds` = all facilities with active profile in assigned verticals (no zone cover). |
 | `MANAGER` | Own territory oversight ∪ own consultant assignments. Does **not** include peer managers’ zones. Analytics facility set remains report-territory based (no consultant union). |
+
+### Manager ↔ REP (Spec 0006, 2026-08-02)
+
+- **Not** `users.manager_id` for runtime team/scope/clinic gerente.
+- Derive: zone UTA → child patches → patch UTAs (= team). Clinic gerente = UTA on `manager_zone_id`.
+- Multi-manager REPs allowed (patches under different managers’ zones).
+- Edit roles: ADMIN CRUD zones + patches; MANAGER create/edit patches under own zones only.
+- Downstream TODOs: invite overhaul (drop invite/UVA `manager_id`), user-profile multi-manager UI, stop-write + drop `users.manager_id` / `user_vertical_assignments.manager_id`, dual-read compat while clients migrate.
 
 Optional query/body `verticalId` is validated against the caller’s allowed set (`ForbiddenError` if outside). Omit → union of assigned verticals (ADMIN without filter: all facilities including unprofiled).
 

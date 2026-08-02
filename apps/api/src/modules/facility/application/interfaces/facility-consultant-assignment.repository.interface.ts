@@ -27,4 +27,10 @@ export interface FacilityConsultantAssignmentRepository {
     verticalId: string;
     assignedByUserId: string;
   }): Promise<FacilityConsultantAssignmentRecord>;
+
+  /** End active primary assignments for facilities (Spec 0006 boundary impact). */
+  endActiveForFacilities(params: {
+    facilityIds: string[];
+    endReason: string;
+  }): Promise<number>;
 }

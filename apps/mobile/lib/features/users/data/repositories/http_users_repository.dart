@@ -149,7 +149,6 @@ class HttpUsersRepository implements UsersRepository {
             .map(
               (s) => {
                 'verticalId': s.verticalId,
-                if (s.managerId != null) 'managerId': s.managerId,
                 'territoryIds': s.territoryIds,
               },
             )
@@ -236,12 +235,10 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<void> assignManager(String userId, String? managerId) async {
-    final response = await _send(
-      _accessUri('/users/$userId/manager'),
-      method: RepositoryHttpMethod.patch,
-      body: {'managerId': managerId},
+    // Spec 0006: manager is territory-derived — endpoint removed.
+    throw UnsupportedError(
+      'Atribuição de gerente removida. Use zonas/patches territoriais.',
     );
-    _throwIfError(response);
   }
 
   @override
@@ -389,10 +386,14 @@ class HttpUsersRepository implements UsersRepository {
       TerritoryGeometry? boundary;
       if (boundaryResponse.statusCode == 200 &&
           boundaryResponse.body.isNotEmpty) {
-        boundary = TerritoryGeometry.fromGeoJson(
+        boundary = TerritoryGeometry.tryFromGeoJson(
           jsonDecode(boundaryResponse.body) as Map<String, dynamic>,
         );
       }
+      final assignedCount = (row['assignedUserCount'] as num?)?.toInt() ?? 0;
+      final isOccupied = assignedCount > 0;
+      final assigneeName =
+          isOccupied ? await getTerritoryAssigneeName(id) : null;
       options.add(
         TerritoryOption(
           id: id,
@@ -400,6 +401,73 @@ class HttpUsersRepository implements UsersRepository {
           verticalId: row['verticalId'] as String? ?? verticalId,
           centroid: boundary?.labelAnchor,
           boundary: boundary,
+          isOccupied: isOccupied,
+          assignedUserName: assigneeName,
+        ),
+      );
+    }
+    return options;
+  }
+
+  @override
+  Future<String?> getTerritoryAssigneeName(String territoryId) async {
+    final response = await _get(
+      _accessUri('/territories/$territoryId/assignments'),
+    );
+    if (response.statusCode != 200 || response.body.isEmpty) return null;
+    final entries = jsonDecode(response.body) as List<dynamic>;
+    if (entries.isEmpty) return null;
+    final entry = entries.first as Map<String, dynamic>;
+    final firstName = (entry['firstName'] as String?)?.trim() ?? '';
+    final lastName = (entry['lastName'] as String?)?.trim() ?? '';
+    final combined = '$firstName $lastName'.trim();
+    if (combined.isNotEmpty) return combined;
+    final username = (entry['username'] as String?)?.trim();
+    if (username != null && username.isNotEmpty) return username;
+    final email = (entry['email'] as String?)?.trim();
+    return (email != null && email.isNotEmpty) ? email : null;
+  }
+
+  @override
+  Future<List<TerritoryOption>> getPatchesForZone({
+    required String managerZoneId,
+    String? verticalId,
+  }) async {
+    final response = await _get(
+      _territoryUri('/territories', {
+        'type': 'patch',
+        'format': 'flat',
+        'managerTerritoryId': managerZoneId,
+        'verticalId': ?verticalId,
+      }),
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final rows = (decoded['data'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+
+    final options = <TerritoryOption>[];
+    for (final row in rows) {
+      final id = row['id'] as String;
+      final boundaryResponse = await _get(
+        _territoryUri('/territories/$id/boundary'),
+      );
+      TerritoryGeometry? boundary;
+      if (boundaryResponse.statusCode == 200 &&
+          boundaryResponse.body.isNotEmpty) {
+        boundary = TerritoryGeometry.tryFromGeoJson(
+          jsonDecode(boundaryResponse.body) as Map<String, dynamic>,
+        );
+      }
+      final assignedCount = (row['assignedUserCount'] as num?)?.toInt() ?? 0;
+      options.add(
+        TerritoryOption(
+          id: id,
+          name: row['name'] as String,
+          verticalId: row['verticalId'] as String? ?? verticalId,
+          centroid: boundary?.labelAnchor,
+          boundary: boundary,
+          isOccupied: assignedCount > 0,
         ),
       );
     }
@@ -436,7 +504,7 @@ class HttpUsersRepository implements UsersRepository {
 
     TerritoryGeometry? zoneBoundary;
     if (firstZone?['boundary'] != null) {
-      zoneBoundary = TerritoryGeometry.fromGeoJson(
+      zoneBoundary = TerritoryGeometry.tryFromGeoJson(
         firstZone!['boundary'] as Map<String, dynamic>,
       );
     }

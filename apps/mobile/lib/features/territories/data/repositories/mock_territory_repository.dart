@@ -3,10 +3,12 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/mock/mock_territories_data.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_manager.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/boundary_impact.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/unassigned_facility.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/user_repository.dart';
 
@@ -47,10 +49,20 @@ class MockTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<void> updateTerritoryGeometry(
+  Future<BoundaryImpactPreview> previewBoundaryImpact(
     String id,
     TerritoryGeometry geometry,
   ) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    return const BoundaryImpactPreview(mode: 'other', clinics: []);
+  }
+
+  @override
+  Future<void> updateTerritoryGeometry(
+    String id,
+    TerritoryGeometry geometry, {
+    List<String>? acceptedFacilityIds,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     final index = _territories.indexWhere((territory) => territory.id == id);
     if (index == -1) return;
@@ -143,6 +155,16 @@ class MockTerritoryRepository implements TerritoryRepository {
       isActive: isActive,
       managerTerritoryId: managerTerritoryId,
     );
+  }
+
+  @override
+  Future<List<UnassignedFacility>> listUnassignedFacilities({
+    String? managerZoneId,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    return const [];
   }
 
   @override

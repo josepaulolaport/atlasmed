@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
@@ -12,12 +13,14 @@ class TerritoryMetadataForm extends ConsumerStatefulWidget {
   final TerritoryDraft? initial;
   final TerritoryKind initialKind;
   final String? initialVerticalId;
+  final String? initialManagerTerritoryId;
 
   const TerritoryMetadataForm({
     super.key,
     this.initial,
     required this.initialKind,
     this.initialVerticalId,
+    this.initialManagerTerritoryId,
   });
 
   static Future<TerritoryDraft?> show(
@@ -25,6 +28,7 @@ class TerritoryMetadataForm extends ConsumerStatefulWidget {
     TerritoryDraft? initial,
     required TerritoryKind initialKind,
     String? initialVerticalId,
+    String? initialManagerTerritoryId,
   }) {
     return Navigator.of(context).push<TerritoryDraft>(
       MaterialPageRoute(
@@ -33,6 +37,7 @@ class TerritoryMetadataForm extends ConsumerStatefulWidget {
           initial: initial,
           initialKind: initialKind,
           initialVerticalId: initialVerticalId,
+          initialManagerTerritoryId: initialManagerTerritoryId,
         ),
       ),
     );
@@ -54,9 +59,16 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
     super.initState();
     final initial = widget.initial;
     _nameController = TextEditingController(text: initial?.name ?? '');
-    _kind = initial?.kind ?? widget.initialKind;
+    var kind = initial?.kind ?? widget.initialKind;
+    // Spec 0006: managers cannot create manager zones.
+    if (!ref.read(canCreateManagerZoneProvider) &&
+        kind == TerritoryKind.managerZone) {
+      kind = TerritoryKind.repPatch;
+    }
+    _kind = kind;
     _verticalId = initial?.verticalId ?? widget.initialVerticalId;
-    _managerTerritoryId = initial?.managerTerritoryId;
+    _managerTerritoryId =
+        initial?.managerTerritoryId ?? widget.initialManagerTerritoryId;
   }
 
   @override
@@ -139,16 +151,32 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                   const SizedBox(height: 20),
                   const _FieldLabel('Tipo'),
                   const SizedBox(height: 6),
-                  TerritoryKindSwitch(
-                    value: _kind,
-                    onChanged: (kind) {
-                      if (kind == _kind) return;
-                      setState(() {
-                        _kind = kind;
-                        if (kind == TerritoryKind.managerZone) {
-                          _managerTerritoryId = null;
-                        }
-                      });
+                  Builder(
+                    builder: (context) {
+                      final canCreateZone =
+                          ref.watch(canCreateManagerZoneProvider);
+                      if (!canCreateZone) {
+                        return const Text(
+                          'Área de representante',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.gray700,
+                          ),
+                        );
+                      }
+                      return TerritoryKindSwitch(
+                        value: _kind,
+                        onChanged: (kind) {
+                          if (kind == _kind) return;
+                          setState(() {
+                            _kind = kind;
+                            if (kind == TerritoryKind.managerZone) {
+                              _managerTerritoryId = null;
+                            }
+                          });
+                        },
+                      );
                     },
                   ),
                   if (_isPatch) ...[

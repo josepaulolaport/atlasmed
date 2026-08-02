@@ -163,6 +163,19 @@ class _TerritoryMapExpandedScreenState
         FillLayer(
           id: _fillLayerId,
           sourceId: _sourceId,
+          filter: const [
+            'any',
+            [
+              '==',
+              ['geometry-type'],
+              'Polygon',
+            ],
+            [
+              '==',
+              ['geometry-type'],
+              'MultiPolygon',
+            ],
+          ],
           fillColor: AppColors.blue600.toARGB32(),
           fillOpacity: 0.18,
         ),

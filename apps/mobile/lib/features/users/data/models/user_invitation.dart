@@ -116,8 +116,7 @@ class UserInvitation extends Equatable {
               (raw) => InviteVerticalAssignment(
                 verticalId: raw['verticalId'] as String,
                 verticalName: raw['verticalName'] as String,
-                managerId: raw['managerId'] as String?,
-                managerName: raw['managerName'] as String?,
+                managerDisplayName: raw['managerName'] as String?,
                 territories: (raw['territories'] as List<dynamic>? ?? const [])
                     .map(
                       (t) =>

@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_consultant_assignments_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_consultant_assignments_provider.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
@@ -137,10 +141,11 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     _lastVisibilityRefreshAt = now;
 
     final clinicId = widget.clinicId;
-    ref.invalidate(facilityZipRepositoryProvider(clinicId));
-    // Warm so skipLoadingOnReload can swap in fresh data without a skeleton.
+    // Refresh vertical-scoped detail + photos only — keep section notifiers.
     // ignore: unused_result
-    ref.read(facilityZipRepositoryProvider(clinicId)).refresh();
+    ref.read(clinicDetailRepositoryProvider(clinicId)).refresh();
+    // ignore: unused_result
+    ref.read(facilityPhotosRepositoryProvider(clinicId)).refresh();
   }
 
   @override
@@ -148,6 +153,9 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
     _seedEntryVerticalIfNeeded();
     final clinicId = widget.clinicId;
     final repo = ref.watch(facilityZipRepositoryProvider(clinicId));
+    final displayFallback = ref.watch(
+      clinicDetailDisplayFacilityProvider(clinicId),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.navyBright,
@@ -173,15 +181,34 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
       body: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
         repository: repo,
         builder: (context, data, repository) {
-          final detail = data?.facility;
-          // Zip can emit before GET /facilities/:id resolves (empty header race).
+          final zipFacility = data?.facility;
+          if (zipFacility != null &&
+              zipFacility.id.isNotEmpty &&
+              _shouldUpdateLoadedFacility(
+                ref.read(clinicDetailLoadedFacilityProvider(clinicId)),
+                zipFacility,
+              )) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              ref
+                      .read(
+                        clinicDetailLoadedFacilityProvider(clinicId).notifier,
+                      )
+                      .state =
+                  zipFacility;
+            });
+          }
+          // Prefer live zip; fall back to loaded/shell so Linha refetch and
+          // list→detail navigation do not flash a full-page skeleton.
+          final detail = (zipFacility != null && zipFacility.id.isNotEmpty)
+              ? zipFacility
+              : displayFallback;
           if (detail == null || detail.id.isEmpty) {
             return _loadingSkeleton(context);
           }
           return _ClinicDetailBody(
             detail: detail,
             clinicId: clinicId,
-            integrations: data,
             repository: repository,
           );
         },
@@ -342,10 +369,6 @@ Future<void> _openPayerSourcesEditor(
 
   try {
     await ref.read(facilityPayersProvider(clinicId).notifier).replace(updated);
-    // Zip can still hold the pre-edit mix — refresh so integrations stay in sync.
-    ref.invalidate(facilityZipRepositoryProvider(clinicId));
-    // ignore: unused_result
-    ref.read(facilityZipRepositoryProvider(clinicId)).refresh();
     ref.invalidate(healthcareProvidersCatalogProvider);
     // Pull again from API so chart/legend match persisted shares (type, pacote…).
     await ref.read(facilityPayersProvider(clinicId).notifier).retry();
@@ -405,7 +428,7 @@ Future<void> _openPurchaseRecurrenceEditor(
                 if (sheetContext.mounted) Navigator.of(sheetContext).pop();
               },
               refreshDetail: () {
-                ref.invalidate(facilityZipRepositoryProvider(detail.id));
+                ref.invalidate(clinicDetailRepositoryProvider(detail.id));
               },
               refreshExplore: ref
                   .read(exploreProvider.notifier)
@@ -433,13 +456,11 @@ class _ClinicDetailBody extends ConsumerWidget {
     required this.detail,
     required this.clinicId,
     required this.repository,
-    this.integrations,
   });
 
   final Facility detail;
   final String clinicId;
   final FacilityZipRepository repository;
-  final FacilityWithIntegrations? integrations;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -462,20 +483,21 @@ class _ClinicDetailBody extends ConsumerWidget {
           facilityAdministratorsRosterProvider(clinicId).notifier,
         );
         await Future.wait([
-          ref.read(facilityZipRepositoryProvider(clinicId)).refresh(),
+          ref.read(clinicDetailRepositoryProvider(clinicId)).refresh(),
+          ref.read(facilityPhotosRepositoryProvider(clinicId)).refresh(),
           ref.read(establishmentDetailSectionsProvider(clinicId).future),
           ref.read(facilityNearbyPreviewProvider(clinicId).future),
           ref.read(facilityNotesProvider(clinicId).future),
           doctorsNotifier.retry(),
           adminsNotifier.retry(),
-          // photos, orders, payers são cobertos pelo ZipRepository
+          ref.read(facilityPayersProvider(clinicId).notifier).retry(),
+          ref.read(facilityOrdersProvider(clinicId).notifier).retry(),
         ]);
       },
       child: _ClinicDetailContent(
         detail: detail,
         clinicId: clinicId,
         sections: sections,
-        integrations: integrations,
         repository: repository,
       ),
     );
@@ -489,14 +511,12 @@ class _ClinicDetailContent extends ConsumerWidget {
   final Facility detail;
   final String clinicId;
   final EstablishmentDetailSections? sections;
-  final FacilityWithIntegrations? integrations;
   final FacilityZipRepository repository;
   const _ClinicDetailContent({
     required this.detail,
     required this.clinicId,
     required this.repository,
     this.sections,
-    this.integrations,
   });
 
   @override
@@ -540,25 +560,15 @@ class _ClinicDetailContent extends ConsumerWidget {
       activeVerticalId: activeLinhaId,
     );
 
-    // Prefer dedicated payers provider — zip can be stale after an edit until
-    // FacilityZipRepository refreshes.
-    final rawPayers =
-        payersState.loading &&
-            payersState.payers.isEmpty &&
-            (integrations?.payerShares.isNotEmpty ?? false)
-        ? integrations!.payerShares
-        : payersState.payers;
     final effectivePayers = payersApplyToLinha
-        ? rawPayers
+        ? payersState.payers
         : const <PayerShare>[];
     final effectivePayersSummary = buildPayerMixSummary(effectivePayers);
-    final effectiveOrders =
-        (integrations?.orders != null && integrations!.orders.isNotEmpty)
-        ? integrations!.orders
-        : ordersState.orders;
+    final effectiveOrders = ordersState.orders;
     final location = establishmentLocationFromDetail(detail);
     final nearbyAsync = ref.watch(facilityNearbyPreviewProvider(clinicId));
     final canMutate = ref.watch(canMutateFacilityProvider);
+    final canAssignConsultant = ref.watch(canAssignFacilityConsultantProvider);
     final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
 
     void onLinhaChanged(String id) {
@@ -788,7 +798,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                       trailing: doctorsRoster.items.isEmpty
                           ? null
                           : _HeaderLinkButton(
-                              label: 'Ver todos',
+                              label: 'Ver todos / Associar médico',
                               onTap: () => _openDoctorsList(
                                 context,
                                 ref,
@@ -987,6 +997,26 @@ class _ClinicDetailContent extends ConsumerWidget {
                             sections.regionZoneLabel,
                         city: (detail.address?.city.isNotEmpty ?? false)
                             ? detail.address!.city
+                            : null,
+                        canManageConsultant: canAssignConsultant,
+                        onAssignConsultant: canAssignConsultant
+                            ? () => _assignClinicConsultant(
+                                  context,
+                                  ref,
+                                  facilityId: clinicId,
+                                  verticalId: activeLinhaId,
+                                )
+                            : null,
+                        onUnassignConsultant: canAssignConsultant &&
+                                (detail.territory?.consultantName
+                                        ?.trim()
+                                        .isNotEmpty ==
+                                    true)
+                            ? () => _unassignClinicConsultant(
+                                  context,
+                                  ref,
+                                  facilityId: clinicId,
+                                )
                             : null,
                       ),
                     ),
@@ -1251,6 +1281,113 @@ bool _sameIdSet(Set<String> a, Set<String> b) {
   if (identical(a, b)) return true;
   if (a.length != b.length) return false;
   return a.containsAll(b);
+}
+
+bool _shouldUpdateLoadedFacility(Facility? previous, Facility next) {
+  if (previous == null) return true;
+  return previous.updatedAt != next.updatedAt ||
+      previous.name != next.name ||
+      previous.territory?.consultantName != next.territory?.consultantName ||
+      previous.territory?.managerName != next.territory?.managerName ||
+      previous.purchaseRecurrence != next.purchaseRecurrence ||
+      previous.commercial?.purchaseStatus != next.commercial?.purchaseStatus ||
+      previous.commercial?.commercialStatus !=
+          next.commercial?.commercialStatus ||
+      previous.verticalProfiles.length != next.verticalProfiles.length;
+}
+
+Future<void> _assignClinicConsultant(
+  BuildContext context,
+  WidgetRef ref, {
+  required String facilityId,
+  String? verticalId,
+}) async {
+  final userId = await UserPickerSheet.pickAssignee(
+    context,
+    role: UserRole.rep,
+    verticalId: verticalId,
+  );
+  if (userId == null || userId == clearAssignee) return;
+  if (!context.mounted) return;
+
+  try {
+    await ref
+        .read(facilityConsultantAssignmentsRepositoryProvider(facilityId))
+        .assign(userId: userId, verticalId: verticalId);
+    ref.invalidate(clinicDetailRepositoryProvider(facilityId));
+    ref.invalidate(establishmentDetailSectionsProvider(facilityId));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Consultor atribuído.')),
+    );
+  } on FacilityConsultantAssignmentsException catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.message ?? 'Não foi possível atribuir o consultor.'),
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Não foi possível atribuir o consultor.'),
+      ),
+    );
+  }
+}
+
+Future<void> _unassignClinicConsultant(
+  BuildContext context,
+  WidgetRef ref, {
+  required String facilityId,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Remover consultor?'),
+      content: const Text(
+        'A clínica ficará sem consultor responsável até uma nova atribuição.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Remover'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    await ref
+        .read(facilityConsultantAssignmentsRepositoryProvider(facilityId))
+        .unassignCurrent();
+    ref.invalidate(clinicDetailRepositoryProvider(facilityId));
+    ref.invalidate(establishmentDetailSectionsProvider(facilityId));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Consultor removido.')),
+    );
+  } on FacilityConsultantAssignmentsException catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.message ?? 'Não foi possível remover o consultor.'),
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Não foi possível remover o consultor.'),
+      ),
+    );
+  }
 }
 
 // ===============================================================

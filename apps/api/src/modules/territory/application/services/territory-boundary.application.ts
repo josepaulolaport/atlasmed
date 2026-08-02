@@ -70,6 +70,7 @@ export async function applyTerritoryBoundary(
       managerTerritoryId: resolution.managerTerritoryId,
     });
 
+    // Spec 0006: patch edits do not recompute clinic→zone membership.
     await deps.onBoundaryChanged?.(territory.id);
     await deps.onManagerTerritoryChanged?.(resolution.managerTerritoryId);
 
@@ -77,7 +78,7 @@ export async function applyTerritoryBoundary(
       mode: "rep_patch",
       managerTerritoryId: resolution.managerTerritoryId,
       managerZoneCandidates: resolution.candidates,
-      clinicRecomputeEnqueued: true,
+      clinicRecomputeEnqueued: false,
     };
   }
 

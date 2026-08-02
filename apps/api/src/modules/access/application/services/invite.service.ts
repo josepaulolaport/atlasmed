@@ -15,12 +15,10 @@ interface CreateInviteParams {
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
-  managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
   verticalAssignments?: Array<{
     verticalId: string;
-    managerId?: string | undefined;
     territoryIds: string[];
   }>;
 }
@@ -41,7 +39,6 @@ export class InviteService {
       firstName: params.firstName,
       lastName: params.lastName,
       birthDate: params.birthDate,
-      managerId: params.managerId,
       managerTerritoryId: params.managerTerritoryId,
       repTerritoryId: params.repTerritoryId,
       verticalAssignments: params.verticalAssignments,
@@ -52,7 +49,6 @@ export class InviteService {
 
     return {
       invite,
-
       token,
     };
   }

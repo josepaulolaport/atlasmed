@@ -30,7 +30,7 @@ export class UnsuspendUserUseCase {
       scope: params.scope,
       actorId: params.unsuspendedBy,
       actorRole: params.actorRole,
-      target: { id: user.id, managerId: user.managerId },
+      target: { id: user.id },
       action: "unsuspend",
     });
 

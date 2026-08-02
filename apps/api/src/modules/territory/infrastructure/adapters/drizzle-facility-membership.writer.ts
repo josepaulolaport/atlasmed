@@ -1,5 +1,10 @@
 import { db } from "../../../../infrastructure/database/db";
-import { facilities, facilityVerticalProfiles } from "@atlasmed/database";
+import {
+  facilities,
+  facilityConsultantAssignments,
+  facilityVerticalProfiles,
+  territories,
+} from "@atlasmed/database";
 import { eq, isNull, and, inArray, sql } from "drizzle-orm";
 import type {
   ClinicMembershipTarget,
@@ -15,7 +20,7 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
       await tx
         .update(facilityVerticalProfiles)
         .set({
-          territoryId: null,
+          managerZoneId: null,
           updatedAt: new Date(),
         })
         .where(
@@ -29,7 +34,7 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
         await tx
           .update(facilityVerticalProfiles)
           .set({
-            territoryId: membership.territoryId,
+            managerZoneId: membership.territoryId,
             updatedAt: new Date(),
           })
           .where(
@@ -68,7 +73,7 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
     await db
       .update(facilityVerticalProfiles)
       .set({
-        territoryId,
+        managerZoneId: territoryId,
         updatedAt: new Date(),
       })
       .where(
@@ -97,7 +102,7 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
           FROM ${facilityVerticalProfiles}
           WHERE ${facilityVerticalProfiles.facilityId} = ${facilities.id}
             AND ${facilityVerticalProfiles.isActive} = true
-            AND ${inArray(facilityVerticalProfiles.territoryId, params.territoryIds)}
+            AND ${inArray(facilityVerticalProfiles.managerZoneId, params.territoryIds)}
         )`
       );
     }
@@ -115,11 +120,11 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
         lat: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         lng: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         territoryId: sql<string | null>`(
-          SELECT ${facilityVerticalProfiles.territoryId}
+          SELECT ${facilityVerticalProfiles.managerZoneId}
           FROM ${facilityVerticalProfiles}
           WHERE ${facilityVerticalProfiles.facilityId} = ${facilities.id}
             AND ${facilityVerticalProfiles.isActive} = true
-            AND ${facilityVerticalProfiles.territoryId} IS NOT NULL
+            AND ${facilityVerticalProfiles.managerZoneId} IS NOT NULL
           ORDER BY ${facilityVerticalProfiles.updatedAt} DESC
           LIMIT 1
         )`,
@@ -130,5 +135,87 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
       .where(and(...conditions));
 
     return rows;
+  }
+
+  async findClinicsWithoutConsultant(params: {
+    managerZoneIds?: string[];
+    global: boolean;
+  }): Promise<
+    Array<{
+      id: string;
+      displayName: string;
+      lat: number | null;
+      lng: number | null;
+      managerZoneId: string;
+      managerZoneName: string | null;
+    }>
+  > {
+    if (!params.global && !params.managerZoneIds?.length) {
+      return [];
+    }
+
+    const zoneFilter =
+      !params.global && params.managerZoneIds?.length
+        ? inArray(facilityVerticalProfiles.managerZoneId, params.managerZoneIds)
+        : sql`${facilityVerticalProfiles.managerZoneId} IS NOT NULL`;
+
+    const rows = await db
+      .select({
+        id: facilities.id,
+        displayName: facilities.displayName,
+        lat: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
+        lng: sql<number | null>`ST_X(${facilities.location}::geometry)`,
+        managerZoneId: facilityVerticalProfiles.managerZoneId,
+        managerZoneName: territories.name,
+      })
+      .from(facilities)
+      .innerJoin(
+        facilityVerticalProfiles,
+        and(
+          eq(facilityVerticalProfiles.facilityId, facilities.id),
+          eq(facilityVerticalProfiles.isActive, true),
+          zoneFilter,
+        ),
+      )
+      .leftJoin(
+        territories,
+        eq(territories.id, facilityVerticalProfiles.managerZoneId),
+      )
+      .where(
+        and(
+          isNull(facilities.deactivatedAt),
+          sql`NOT EXISTS (
+            SELECT 1
+            FROM ${facilityConsultantAssignments}
+            WHERE ${facilityConsultantAssignments.facilityId} = ${facilities.id}
+              AND ${facilityConsultantAssignments.endedAt} IS NULL
+          )`,
+        ),
+      );
+
+    const seen = new Set<string>();
+    const unique: Array<{
+      id: string;
+      displayName: string;
+      lat: number | null;
+      lng: number | null;
+      managerZoneId: string;
+      managerZoneName: string | null;
+    }> = [];
+
+    for (const row of rows) {
+      if (!row.managerZoneId || seen.has(row.id)) continue;
+      seen.add(row.id);
+      unique.push({
+        id: row.id,
+        displayName: row.displayName,
+        lat: row.lat,
+        lng: row.lng,
+        managerZoneId: row.managerZoneId,
+        managerZoneName: row.managerZoneName,
+      });
+    }
+
+    return unique;
   }
 }

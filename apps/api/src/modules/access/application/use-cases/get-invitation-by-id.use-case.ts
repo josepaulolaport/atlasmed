@@ -9,6 +9,7 @@ import {
   ResourceNotFoundError,
 } from "../../../../shared/errors";
 import { serializeInvitation } from "../utils/serialize-invitation.utils";
+import { MANAGER_ZONE_TYPE_SLUG } from "../../../territory/application/constants/territory-roles.constants";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
@@ -48,28 +49,6 @@ export class GetInvitationByIdUseCase {
         : [];
     const territoryById = new Map(territories.map((t) => [t.id, t]));
 
-    const managerIds = [
-      ...new Set(
-        staged
-          .map((s) => s.managerId)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ];
-    const managers = await Promise.all(
-      managerIds.map((id) => this.deps.userRepository.findById(id)),
-    );
-    const managerNameById = new Map(
-      managers
-        .filter((m): m is NonNullable<typeof m> => Boolean(m))
-        .map((m) => {
-          const name = [m.firstName, m.lastName]
-            .filter(Boolean)
-            .join(" ")
-            .trim();
-          return [m.id, name || m.username] as const;
-        }),
-    );
-
     const verticalAssignments = await Promise.all(
       staged.map(async (row) => {
         const territoriesDto = await Promise.all(
@@ -88,13 +67,14 @@ export class GetInvitationByIdUseCase {
           }),
         );
 
+        const managerName = await this.resolveManagerNameForTerritories(
+          row.territoryIds.map((id) => territoryById.get(id)).filter(Boolean),
+        );
+
         return {
           verticalId: row.verticalId,
           verticalName: verticalNameById.get(row.verticalId) ?? "—",
-          managerId: row.managerId,
-          managerName: row.managerId
-            ? managerNameById.get(row.managerId)
-            : undefined,
+          ...(managerName ? { managerName } : {}),
           territories: territoriesDto,
         };
       }),
@@ -105,5 +85,35 @@ export class GetInvitationByIdUseCase {
       invitedBy: inviter,
       verticalAssignments,
     });
+  }
+
+  private async resolveManagerNameForTerritories(
+    territories: Array<{
+      id: string;
+      managerTerritoryId: string | null;
+      territoryType?: { slug: string } | null;
+    } | undefined>,
+  ): Promise<string | undefined> {
+    const zoneIds = new Set<string>();
+    for (const t of territories) {
+      if (!t) continue;
+      if (t.territoryType?.slug === MANAGER_ZONE_TYPE_SLUG) {
+        zoneIds.add(t.id);
+      } else if (t.managerTerritoryId) {
+        zoneIds.add(t.managerTerritoryId);
+      }
+    }
+    if (zoneIds.size === 0) return undefined;
+
+    for (const zoneId of zoneIds) {
+      const assignees =
+        await this.deps.scopeRepository.findUserIdsByTerritoryId(zoneId);
+      if (assignees.length === 0) continue;
+      const user = await this.deps.userRepository.findById(assignees[0]!.userId);
+      if (!user) continue;
+      const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+      return name || user.username;
+    }
+    return undefined;
   }
 }

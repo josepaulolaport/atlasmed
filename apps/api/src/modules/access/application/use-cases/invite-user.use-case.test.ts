@@ -50,7 +50,6 @@ describe("InviteUserUseCase", () => {
     firstName: "Test",
     lastName: "User",
     birthDate: new Date("1990-05-12T00:00:00.000Z"),
-    managerId: null,
     managerTerritoryId: null,
     repTerritoryId: null,
     acceptedByUserId: null,
@@ -470,8 +469,12 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           ...inviteParams,
-          managerId: "manager-123",
-          repTerritoryId: "territory-rep-1",
+          verticalAssignments: [
+            {
+              verticalId: "vertical-1",
+              territoryIds: ["territory-rep-1"],
+            },
+          ],
         })
       ).resolves.toBeDefined();
     });

@@ -106,10 +106,15 @@ export const territoriesRoute = new Elysia()
     "/territories",
     async ({ body, getUser }) => {
       const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
+      const role = user.role.name as Role;
+      if (isAdminRole(role)) {
+        return territoryUseCases.createTerritory().createTerritory(body);
       }
-      return territoryUseCases.createTerritory().createTerritory(body);
+      // Spec 0006: managers may create rep patches only (not manager zones).
+      if (isManagerRole(role) && body.typeSlug === "patch") {
+        return territoryUseCases.createTerritory().createTerritory(body);
+      }
+      throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
     },
     {
       body: t.Object({
@@ -180,14 +185,17 @@ export const territoriesRoute = new Elysia()
     return boundary;
   })
   .use(requirePermission("update", "TERRITORY"))
-  .put(
-    "/territories/:id/boundary",
+  .post(
+    "/territories/:id/boundary/impact",
     async ({ params, body, getScope }) => {
       const scope = await getScope();
-      return territoryUseCases.saveBoundary().saveBoundary({
+      return territoryUseCases.previewBoundaryImpact().previewBoundaryImpact({
         territoryId: params.id,
         scope,
-        geoJson: body,
+        geoJson: {
+          type: body.type,
+          coordinates: body.coordinates,
+        },
       });
     },
     {
@@ -195,6 +203,36 @@ export const territoriesRoute = new Elysia()
         type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
         coordinates: t.Any(),
       }),
+      detail: {
+        summary: "Preview clinic deassignment impact for a proposed boundary",
+        tags: ["Territory"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  )
+  .put(
+    "/territories/:id/boundary",
+    async ({ params, body, getScope }) => {
+      const scope = await getScope();
+      const { acceptedFacilityIds, ...geoJson } = body;
+      return territoryUseCases.saveBoundary().saveBoundary({
+        territoryId: params.id,
+        scope,
+        geoJson,
+        acceptedFacilityIds,
+      });
+    },
+    {
+      body: t.Object({
+        type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
+        coordinates: t.Any(),
+        acceptedFacilityIds: t.Optional(t.Array(t.String())),
+      }),
+      detail: {
+        summary: "Save territory boundary (requires acceptedFacilityIds when impact non-empty)",
+        tags: ["Territory"],
+        security: [{ bearerAuth: [] }],
+      },
     }
   )
   .delete("/territories/:id/boundary", async ({ params, getScope }) => {
@@ -221,13 +259,20 @@ export const territoriesRoute = new Elysia()
         scope,
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
+        managerZoneId: query.managerZoneId,
       });
     },
     {
       query: t.Object({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
+        managerZoneId: t.Optional(t.String()),
       }),
+      detail: {
+        summary: "List clinics in manager zones without a primary consultant",
+        tags: ["Territory"],
+        security: [{ bearerAuth: [] }],
+      },
     }
   )
   .use(requirePermission("manage", "FACILITY"))

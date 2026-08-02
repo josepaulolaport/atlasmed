@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/boundary_impact.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
@@ -74,7 +75,11 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         neighbors: neighbors,
         fenceZone: fenceZone,
         working: working,
-        validation: _validate(working, neighbors),
+        validation: _validate(
+          working,
+          neighbors,
+          kind: territory.kind,
+        ),
       );
     } catch (_) {
       state = state.copyWith(
@@ -472,7 +477,11 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
   }
 
-  Future<bool> save() async {
+  /// [confirmImpact] must return true only when the user accepts deassign
+  /// for every listed clinic (Spec 0006). Cancel → false → abort save.
+  Future<bool> save({
+    Future<bool> Function(List<BoundaryImpactClinic> clinics)? confirmImpact,
+  }) async {
     final working = state.working;
     if (working == null || !state.canSave) return false;
 
@@ -500,7 +509,26 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         );
       } else {
         final original = state.original!;
-        await repository.updateTerritoryGeometry(original.id, geometry);
+        final impact = await repository.previewBoundaryImpact(
+          original.id,
+          geometry,
+        );
+        List<String>? acceptedFacilityIds;
+        if (impact.clinics.isNotEmpty) {
+          final accepted =
+              await confirmImpact?.call(impact.clinics) ?? false;
+          if (!accepted) {
+            state = state.copyWith(saving: false);
+            return false;
+          }
+          acceptedFacilityIds =
+              impact.clinics.map((c) => c.facilityId).toList();
+        }
+        await repository.updateTerritoryGeometry(
+          original.id,
+          geometry,
+          acceptedFacilityIds: acceptedFacilityIds,
+        );
         _ref.invalidate(territoriesProvider);
         _ref.invalidate(territoryByIdProvider(original.id));
         state = state.copyWith(saving: false, saved: true, undoStack: const []);
@@ -516,6 +544,12 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       return false;
     }
   }
+
+  TerritoryKind? get _editingKind =>
+      state.draft?.kind ?? state.original?.kind;
+
+  bool get _allowsSiblingOverlap =>
+      _editingKind == TerritoryKind.repPatch;
 
   // ---- internals ---------------------------------------------------------
 
@@ -587,6 +621,9 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   /// grow into it.
   GeometryParts _resolveNeighborOverlaps(GeometryParts parts) {
     var next = _applyFence(parts);
+    // Spec 0006: rep patches may overlap sibling patches — only fence to
+    // the manager zone. Manager zones keep exclusive auto-clip.
+    if (_allowsSiblingOverlap) return next;
     for (final neighbor in state.neighbors) {
       for (final neighborPart in neighbor.boundary.coordinates) {
         if (neighborPart.isEmpty || next.isEmpty) continue;
@@ -602,8 +639,11 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
 
   GeometryValidation _validate(
     GeometryParts working,
-    List<Territory> neighbors,
-  ) {
+    List<Territory> neighbors, {
+    TerritoryKind? kind,
+  }) {
+    final allowsSiblingOverlap =
+        (kind ?? _editingKind) == TerritoryKind.repPatch;
     // A brand-new territory starts with nothing drawn — that's not a
     // valid shape to save yet, just the editor's starting point.
     if (working.isEmpty) {
@@ -640,19 +680,21 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
           message: 'O contorno cruza sobre si mesmo.',
         );
       }
-      for (final neighbor in neighbors) {
-        for (final neighborPart in neighbor.boundary.coordinates) {
-          if (neighborPart.isEmpty) continue;
-          // A boolean-op-based check on purpose (not the coarse
-          // `GeometryMath.ringsOverlap`): after a drag ends, the boundary
-          // is auto-clipped to exactly touch a neighbor's border (see
-          // `_resolveNeighborOverlaps`), and a shared border must not
-          // itself keep re-triggering this same flag.
-          if (GeometryOps.intersects(exterior, neighborPart.first)) {
-            return GeometryValidation(
-              overlapsNeighbor: true,
-              message: 'Essa área sobrepõe o território "${neighbor.name}".',
-            );
+      if (!allowsSiblingOverlap) {
+        for (final neighbor in neighbors) {
+          for (final neighborPart in neighbor.boundary.coordinates) {
+            if (neighborPart.isEmpty) continue;
+            // A boolean-op-based check on purpose (not the coarse
+            // `GeometryMath.ringsOverlap`): after a drag ends, the boundary
+            // is auto-clipped to exactly touch a neighbor's border (see
+            // `_resolveNeighborOverlaps`), and a shared border must not
+            // itself keep re-triggering this same flag.
+            if (GeometryOps.intersects(exterior, neighborPart.first)) {
+              return GeometryValidation(
+                overlapsNeighbor: true,
+                message: 'Essa área sobrepõe o território "${neighbor.name}".',
+              );
+            }
           }
         }
       }

@@ -538,8 +538,11 @@ export const facilityVerticalProfiles = pgTable(
     verticalId: text("vertical_id")
       .notNull()
       .references(() => businessVerticals.id, { onDelete: "restrict" }),
-    /** Per-vertical geo membership patch (Q6 C). Null = unassigned/ambiguous for this vertical. */
-    territoryId: text("territory_id").references(() => territories.id, {
+    /**
+     * Spec 0006: per-vertical geo membership = containing manager zone (not rep patch).
+     * Null = unassigned/ambiguous for this vertical.
+     */
+    managerZoneId: text("manager_zone_id").references(() => territories.id, {
       onDelete: "set null",
     }),
     isActive: boolean("is_active").notNull().default(true),
@@ -573,7 +576,7 @@ export const facilityVerticalProfiles = pgTable(
     ),
     index("facility_vertical_profiles_facility_id_idx").on(t.facilityId),
     index("facility_vertical_profiles_vertical_id_idx").on(t.verticalId),
-    index("facility_vertical_profiles_territory_id_idx").on(t.territoryId),
+    index("facility_vertical_profiles_manager_zone_id_idx").on(t.managerZoneId),
     index("facility_vertical_profiles_commercial_status_idx").on(t.commercialStatus),
     index("facility_vertical_profiles_vertical_funnel_stage_idx").on(
       t.verticalId,
@@ -786,7 +789,7 @@ export const facilityVerticalProfilesRelations = relations(
       references: [businessVerticals.id],
     }),
     territory: one(territories, {
-      fields: [facilityVerticalProfiles.territoryId],
+      fields: [facilityVerticalProfiles.managerZoneId],
       references: [territories.id],
     }),
   })

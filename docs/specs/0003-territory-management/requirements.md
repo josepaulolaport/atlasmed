@@ -1,9 +1,24 @@
 # Spec 0003: Territory Management Requirements
 
-**Status:** Implemented (backend core) + vertical ownership addendum in progress  
-**Last Updated:** 2026-07-26  
+**Status:** Implemented (backend core) + Spec 0006 ownership overhaul in progress  
+**Last Updated:** 2026-08-02  
 **Authoritative detail:** [Spec 37 — Territory Management](../../../apps/api/specs/37-territory-management.md)  
-**Vertical ownership addendum (accepted):** [vertical-ownership-design.md](./vertical-ownership-design.md)
+**Vertical ownership addendum (accepted):** [vertical-ownership-design.md](./vertical-ownership-design.md)  
+**Shared coverage / clinic ownership (accepted):** [Spec 0006](../0006-shared-territory-clinic-ownership/requirements.md)
+
+### Spec 0006 overrides (locked)
+
+These replace the conflicting ACs below once Spec 0006 ships:
+
+| AC | Was | Becomes |
+|---|---|---|
+| 7 | Sibling non-overlap for rep patches and manager zones | Non-overlap for **manager zones only**; rep patches **may overlap** |
+| 9 | Multiple REPs may share one patch | **One REP per patch**; many patches per REP |
+| 12 | Membership → containing rep patch | Membership → containing **manager zone** (`manager_zone_id`) |
+| 13 | Scope via patch membership FK | Manager scope via `manager_zone_id` + zone-id predicates (not giant clinic id lists) |
+| 15 | Rep patch boundary change enqueues membership recompute | Zone boundary / clinic move only; patch edit uses impact+deassign flow instead |
+
+Architecture summary membership sentence: store `facility_vertical_profiles.manager_zone_id` (manager zone), not rep patch.
 
 ## User Story
 
@@ -16,7 +31,7 @@ The system uses a **dual-graph territory model**:
 1. **Assignment graph** — flat **manager zones** contain **rep patches** via `managerTerritoryId` (validated with `ST_CoveredBy` on boundary save). Drives user scope. Each territory row belongs to **one** `business_verticals` (`territories.vertical_id`). New verticals get new zone/patch rows.
 2. **Grouping graph** — tree of region/state/municipality types (`participatesInGroupingHierarchy`) for filter navigation and analytics only. Does not drive scope. Groupings are **never** user-assignable.
 
-Clinics get per-vertical geo membership via point-in-polygon on write/recompute, stored on `facility_vertical_profiles.territory_id`. Scope resolves with FK lookups on that membership (plus legacy `facilities.territoryId` bridge) — not live PIP on every list.
+Clinics get per-vertical geo membership via point-in-polygon on write/recompute against **manager zones**, stored on `facility_vertical_profiles.manager_zone_id` (Spec 0006). Manager scope uses zone-id SQL predicates; REP clinic access remains consultant-only.
 
 ## Acceptance Criteria
 
@@ -80,4 +95,4 @@ See Spec 37 for the full endpoint table and design detail.
 - Web analytics map UI — API ready
 - Order/visit territory snapshot fields (Spec 06 / 11)
 - `POST /territories/:id/split`
-- Shared geographic coverage with clinic-level ownership (multiple reps in the same neighborhood) — see [Spec 0006](../0006-shared-territory-clinic-ownership/requirements.md)
+- ~~Shared geographic coverage with clinic-level ownership~~ — moved to [Spec 0006](../0006-shared-territory-clinic-ownership/requirements.md) (accepted)

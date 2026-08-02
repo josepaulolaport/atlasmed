@@ -1,6 +1,6 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { Role } from "@atlasmed/access";
-import { ForbiddenError, ValidationError } from "../../../shared/errors";
+import { ForbiddenError } from "../../../shared/errors";
 import { resolveVerticalIds } from "../../access/application/services/vertical-access.service";
 import type {
   DashboardTerritoryFeature,
@@ -9,7 +9,8 @@ import type {
 } from "../infrastructure/repositories/drizzle-dashboard.repository";
 
 export type DashboardSummary = {
-  verticalId: string;
+  /** Narrowing filter when set; `null` = union of all assigned verticals. */
+  verticalId: string | null;
   purchaseStatus: PurchaseStatusBuckets & {
     /** (active + inactive) / total * 100 */
     coveragePercent: number;
@@ -33,25 +34,15 @@ export class GetDashboardSummaryUseCase {
     scope: ScopeContext;
     verticalId?: string | null;
   }): Promise<DashboardSummary> {
+    const filterVerticalId = input.verticalId?.trim() || null;
     const resolved = resolveVerticalIds({
       role: input.role,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-      queryVerticalId: input.verticalId,
+      queryVerticalId: filterVerticalId,
     });
 
     if (resolved.length === 0) {
       throw new ForbiddenError("Nenhuma vertical acessível");
-    }
-
-    // Dashboard is single-vertical: require an explicit id when multi-assigned.
-    const verticalId = input.verticalId?.trim() || resolved[0]!;
-    if (!resolved.includes(verticalId)) {
-      throw new ForbiddenError();
-    }
-    if (!verticalId) {
-      throw new ValidationError([
-        { field: "verticalId", message: "verticalId is required" },
-      ]);
     }
 
     const isAdmin = input.role === Role.ADMIN;
@@ -60,15 +51,15 @@ export class GetDashboardSummaryUseCase {
       : (input.scope.facilityIds ?? []);
 
     const [purchaseStatus, doctorCount, features] = await Promise.all([
-      this.repo.countPurchaseBuckets({ verticalId, facilityIds }),
-      this.repo.countDoctors({ verticalId, facilityIds }),
+      this.repo.countPurchaseBuckets({ verticalIds: resolved, facilityIds }),
+      this.repo.countDoctors({ verticalIds: resolved, facilityIds }),
       // Admins get Brazil overview stats only — no territory polygons on the
       // Desempenho minimap (same rule as the live Mapa tab).
       isAdmin
         ? Promise.resolve([] as DashboardTerritoryFeature[])
         : this.repo.listAssignedTerritoryFeatures({
             userId: input.userId,
-            verticalId,
+            verticalIds: resolved,
           }),
     ]);
 
@@ -98,7 +89,8 @@ export class GetDashboardSummaryUseCase {
     }
 
     return {
-      verticalId,
+      // Echo explicit filter only; omit means token-scoped union.
+      verticalId: filterVerticalId,
       purchaseStatus: {
         ...purchaseStatus,
         coveragePercent,

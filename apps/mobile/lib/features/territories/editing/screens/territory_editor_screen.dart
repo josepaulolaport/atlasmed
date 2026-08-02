@@ -10,16 +10,20 @@ import 'package:atlasmed_mobile_app/features/territories/editing/geometry/territ
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/territory_invite_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_controller.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_state.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/widgets/boundary_impact_sheet.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_contextual_bar.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_save_bar.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_toolbar.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_validation_banner.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/widgets/invite_patch_name_form.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/territory_metadata_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -234,13 +238,26 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     TerritoryDraft? initial,
   }) async {
     final target = widget.target;
-    final draft = await TerritoryMetadataForm.show(
-      context,
-      initial: initial,
-      initialKind:
-          initial?.kind ?? target.initialKind ?? TerritoryKind.managerZone,
-      initialVerticalId: initial?.verticalId ?? target.initialVerticalId,
-    );
+    final TerritoryDraft? draft;
+    if (target.inviteContextLocked) {
+      draft = await InvitePatchNameForm.show(
+        context,
+        initialName: initial?.name,
+        verticalId: target.initialVerticalId!,
+        verticalName: target.initialVerticalName ?? 'Linha comercial',
+        managerTerritoryId: target.initialManagerTerritoryId!,
+        managerTerritoryName: target.initialManagerTerritoryName ?? 'Zona',
+      );
+    } else {
+      draft = await TerritoryMetadataForm.show(
+        context,
+        initial: initial,
+        initialKind:
+            initial?.kind ?? target.initialKind ?? TerritoryKind.managerZone,
+        initialVerticalId: initial?.verticalId ?? target.initialVerticalId,
+        initialManagerTerritoryId: target.initialManagerTerritoryId,
+      );
+    }
     if (!mounted) return;
     if (draft == null) {
       // Backing out of the very first form leaves nothing to edit — close
@@ -1349,6 +1366,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
             saving: state.saving,
             onCancel: () => _requestExit(context, state),
             onSave: () => _handleSave(context, notifier),
+            saveLabel: widget.target.confirmAsDraftOnly
+                ? 'Confirmar área'
+                : 'Salvar alterações',
           ),
         ],
       ),
@@ -1420,20 +1440,73 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     BuildContext context,
     TerritoryEditorController notifier,
   ) async {
-    final ok = await notifier.save();
+    if (widget.target.confirmAsDraftOnly) {
+      await _confirmInviteDraft(context);
+      return;
+    }
+
+    final ok = await notifier.save(
+      confirmImpact: (clinics) =>
+          BoundaryImpactSheet.confirm(context, clinics: clinics),
+    );
     if (!context.mounted) return;
     if (ok) {
-      Navigator.of(context).pop();
+      final created = ref
+          .read(territoryEditorControllerProvider(widget.target))
+          .original;
+      if (context.canPop()) {
+        context.pop(created);
+      } else {
+        Navigator.of(context).pop(created);
+      }
     } else {
       final message =
           ref
               .read(territoryEditorControllerProvider(widget.target))
               .saveError ??
           'Não foi possível salvar. Tente novamente.';
+      // User cancelled impact sheet — no snackbar noise.
+      final state = ref.read(territoryEditorControllerProvider(widget.target));
+      if (state.saveError == null && !state.saved) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
     }
+  }
+
+  Future<void> _confirmInviteDraft(BuildContext context) async {
+    final state = ref.read(territoryEditorControllerProvider(widget.target));
+    if (!state.canSave || state.working == null || state.draft == null) {
+      final message = state.validation.message ??
+          'Complete o desenho dentro da zona do gerente.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+      return;
+    }
+
+    final draftMeta = state.draft!;
+    final zoneId = draftMeta.managerTerritoryId;
+    if (zoneId == null || zoneId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione a zona do gerente.')),
+      );
+      return;
+    }
+
+    final geometry = TerritoryGeometryEditor.toGeometry(state.working!);
+    final centroid = geometry.labelAnchor ??
+        const MapCoordinate(longitude: 0, latitude: 0);
+    final result = TerritoryInviteDraft(
+      name: draftMeta.name,
+      verticalId: draftMeta.verticalId,
+      managerTerritoryId: zoneId,
+      boundary: geometry,
+      centroid: centroid,
+    );
+
+    // Navigator.pop — invite opens editor via MaterialPageRoute, not go_router.
+    Navigator.of(context).pop(result);
   }
 
   // ---- geometry <-> Mapbox helpers ---------------------------------------

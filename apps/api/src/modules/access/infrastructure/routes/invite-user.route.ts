@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { ZodError } from "zod";
 import { Role } from "@atlasmed/access";
 import { inviteUserSchema } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
@@ -7,6 +8,7 @@ import { inviteRateLimit } from "../middleware/rate-limit.middleware";
 import { sendInviteEmail } from "../email/send-email";
 import { resolveInviteAcceptUrl } from "../email/invite-accept-url";
 import { sendInviteWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
+import { ValidationError } from "../../../../shared/errors";
 
 export const inviteUserRoute = new Elysia({ 
   detail: {
@@ -19,7 +21,20 @@ export const inviteUserRoute = new Elysia({
   .post("/invite", async ({ body, getUser, request, status }: any) => {
     const user = await getUser();
 
-    const parsed = inviteUserSchema.parse(body);
+    let parsed: ReturnType<typeof inviteUserSchema.parse>;
+    try {
+      parsed = inviteUserSchema.parse(body);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ValidationError(
+          error.issues.map((issue) => ({
+            field: issue.path.join(".") || "body",
+            message: issue.message,
+          })),
+        );
+      }
+      throw error;
+    }
 
     try {
       const result = await accessUseCases.inviteUser().execute({
@@ -30,9 +45,6 @@ export const inviteUserRoute = new Elysia({
         firstName: parsed.firstName,
         lastName: parsed.lastName,
         birthDate: parsed.birthDate,
-        managerId: parsed.managerId || undefined,
-        managerTerritoryId: parsed.managerTerritoryId || undefined,
-        repTerritoryId: parsed.repTerritoryId || undefined,
         verticalAssignments: parsed.verticalAssignments,
       });
 
@@ -121,13 +133,18 @@ export const inviteUserRoute = new Elysia({
         pattern: "^\\d{4}-\\d{2}-\\d{2}$",
         description: "Invitee birth date (YYYY-MM-DD) — confirmed at registration",
       }),
-      managerId: t.Optional(t.String({ description: "Manager user ID (required for REP role)" })),
-      managerTerritoryId: t.Optional(t.String({ description: "Manager zone territory ID (required for MANAGER role)" })),
-      repTerritoryId: t.Optional(t.String({ description: "Rep patch territory ID (required for REP role)" })),
       verticalAssignments: t.Optional(t.Array(t.Object({
         verticalId: t.String(),
-        managerId: t.Optional(t.String()),
-        territoryIds: t.Array(t.String()),
+        territoryIds: t.Optional(t.Array(t.String())),
+        newPatch: t.Optional(t.Object({
+          name: t.String({ minLength: 1 }),
+          managerZoneId: t.String(),
+          slug: t.Optional(t.String()),
+          boundary: t.Object({
+            type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
+            coordinates: t.Unknown(),
+          }),
+        })),
       }))),
     }),
     response: {

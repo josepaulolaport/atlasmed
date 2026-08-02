@@ -19,11 +19,15 @@ class UsersApiException implements Exception {
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final error = decoded['error'];
       if (error is Map<String, dynamic>) {
-        final message = error['message'] as String?;
+        final code = error['code'] as String? ?? 'UNKNOWN_ERROR';
+        final fieldMessage = _firstFieldError(error);
+        final message = fieldMessage ??
+            (error['message'] as String?) ??
+            (error['details'] as String?);
         if (message != null && message.isNotEmpty) {
           return UsersApiException(
             statusCode: response.statusCode,
-            code: error['code'] as String? ?? 'UNKNOWN_ERROR',
+            code: code,
             message: message,
           );
         }
@@ -35,12 +39,33 @@ class UsersApiException implements Exception {
           message: error,
         );
       }
+      // Some handlers return { code, message, errors } at the top level.
+      final fieldMessage = _firstFieldError(decoded);
+      final topMessage = fieldMessage ?? decoded['message'] as String?;
+      if (topMessage != null && topMessage.isNotEmpty) {
+        return UsersApiException(
+          statusCode: response.statusCode,
+          code: decoded['code'] as String? ?? 'UNKNOWN_ERROR',
+          message: topMessage,
+        );
+      }
     } catch (_) {}
     return UsersApiException(
       statusCode: response.statusCode,
       code: 'UNKNOWN_ERROR',
       message: 'Ocorreu um erro inesperado (${response.statusCode}).',
     );
+  }
+
+  static String? _firstFieldError(Map<String, dynamic> payload) {
+    final errors = payload['errors'];
+    if (errors is! List || errors.isEmpty) return null;
+    final first = errors.first;
+    if (first is Map<String, dynamic>) {
+      final message = first['message'] as String?;
+      if (message != null && message.isNotEmpty) return message;
+    }
+    return null;
   }
 
   @override

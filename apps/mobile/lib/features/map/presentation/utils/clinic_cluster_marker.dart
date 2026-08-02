@@ -113,6 +113,52 @@ final class ClinicClusterMarker {
         '-n${countKey(neverBought)}';
   }
 
+  static final _imageIdPattern = RegExp(
+    r'^atlasmed-cluster-([sml])-t(\d+|99p)-a(\d+|99p)-i(\d+|99p)-n(\d+|99p)$',
+  );
+
+  /// Parse a style image id back into paint specs (for StyleImageMissing).
+  static ({
+    String sizeTier,
+    num total,
+    num active,
+    num inactive,
+    num neverBought,
+  })?
+  tryParseImageId(String id) {
+    final match = _imageIdPattern.firstMatch(id);
+    if (match == null) return null;
+    num parseCount(String raw) => raw == '99p' ? _maxExact + 1 : num.parse(raw);
+    return (
+      sizeTier: match.group(1)!,
+      total: parseCount(match.group(2)!),
+      active: parseCount(match.group(3)!),
+      inactive: parseCount(match.group(4)!),
+      neverBought: parseCount(match.group(5)!),
+    );
+  }
+
+  /// Register PNGs for the given style image ids (ignores unknown ids).
+  static Future<void> ensureImagesById(
+    StyleManager style, {
+    required double devicePixelRatio,
+    required Iterable<String> imageIds,
+  }) async {
+    final specs = <
+      ({String sizeTier, num total, num active, num inactive, num neverBought})
+    >[];
+    for (final id in imageIds) {
+      final parsed = tryParseImageId(id);
+      if (parsed != null) specs.add(parsed);
+    }
+    if (specs.isEmpty) return;
+    await ensureImages(
+      style,
+      devicePixelRatio: devicePixelRatio,
+      specs: specs,
+    );
+  }
+
   static List<Object> _countKeyExpr(String property) => [
     'case',
     [

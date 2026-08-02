@@ -106,6 +106,8 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   /// while layers still reference them ("Source … missing for layer").
   Future<void>? _clinicLayersEnsureInFlight;
   Timer? _pinResyncDebounce;
+  Timer? _missingImageFlush;
+  final Set<String> _pendingMissingImageIds = {};
   DateTime? _lastRadiusCommitAt;
 
   /// Nearby clinics as plain GeoJSON points (no Supercluster).
@@ -272,6 +274,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   @override
   void dispose() {
     _pinResyncDebounce?.cancel();
+    _missingImageFlush?.cancel();
     _cardScrollController.dispose();
     super.dispose();
   }
@@ -409,11 +412,13 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                         onMapCreated: _onMapCreated,
                         onMapLoadErrorListener: (_) =>
                             setState(() => _mapUnavailable = true),
+                        onStyleImageMissingListener: _onStyleImageMissing,
                         onStyleLoadedListener: (_) async {
                           _clinicLayersEpoch++;
                           _clinicLayersReady = false;
                           _clinicInteractionsRegistered = false;
                           _closeStyleImageReady = false;
+                          _pendingMissingImageIds.clear();
                           await _ensureClinicLayers();
                           await _updateRadiusCircle();
                           await _syncClinicPins();
@@ -495,6 +500,49 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     // don't land on a pin/callout annotation bubble up here and dismiss
     // whatever callout is open.
     map.addInteraction(TapInteraction.onMap(_onMapBackgroundTapped));
+  }
+
+  void _onStyleImageMissing(StyleImageMissingEventData event) {
+    final id = event.id;
+    if (!id.startsWith(NearbyStackMarker.imageIdPrefix) &&
+        !id.startsWith('atlasmed-clinic-pin') &&
+        id != _calloutCloseImageId &&
+        id != _calloutImageId) {
+      return;
+    }
+    _pendingMissingImageIds.add(id);
+    _missingImageFlush?.cancel();
+    _missingImageFlush = Timer(const Duration(milliseconds: 32), () {
+      unawaited(_flushMissingStyleImages());
+    });
+  }
+
+  Future<void> _flushMissingStyleImages() async {
+    final map = _mapboxMap;
+    if (map == null || !mounted || _pendingMissingImageIds.isEmpty) return;
+    final ids = _pendingMissingImageIds.toList(growable: false);
+    _pendingMissingImageIds.clear();
+    try {
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final stackIds = ids
+          .where((id) => id.startsWith(NearbyStackMarker.imageIdPrefix))
+          .toList(growable: false);
+      if (stackIds.isNotEmpty) {
+        await NearbyStackMarker.ensureImagesById(
+          map.style,
+          devicePixelRatio: dpr,
+          imageIds: stackIds,
+        );
+      }
+      if (ids.any((id) => id.startsWith('atlasmed-clinic-pin'))) {
+        await ClinicMapPin.ensureRegistered(
+          map.style,
+          devicePixelRatio: dpr,
+        );
+      }
+    } catch (_) {
+      // Best-effort; next camera/sync pass may retry.
+    }
   }
 
   void _onRadiusChanged(double value) {
@@ -780,6 +828,19 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         FillLayer(
           id: _nearbyRadiusFillLayerId,
           sourceId: _nearbyRadiusSourceId,
+          filter: const [
+            'any',
+            [
+              '==',
+              ['geometry-type'],
+              'Polygon',
+            ],
+            [
+              '==',
+              ['geometry-type'],
+              'MultiPolygon',
+            ],
+          ],
           fillColor: AppColors.navyBright.toARGB32(),
           fillOpacity: 0.10,
         ),

@@ -1,7 +1,6 @@
 import { Elysia, t } from "elysia";
 import { Role } from "@atlasmed/access";
 import {
-  assignUserManagerSchema,
   assignUserTerritorySchema,
   replaceUserAssignmentsSchema,
 } from "@atlasmed/access";
@@ -15,32 +14,6 @@ export const userAssignmentsRoute = new Elysia({
 })
   .use(auth)
   .use(requirePermission("manage", "USER"))
-  .patch(
-    "/users/:id/manager",
-    async ({ params, body, getUserId, getUser }: any) => {
-      const assignedBy = await getUserId();
-      const actor = await getUser();
-      const parsed = assignUserManagerSchema.parse(body);
-
-      await accessUseCases.assignUserManager().execute({
-        targetUserId: params.id,
-        managerId: parsed.managerId,
-        assignedBy,
-        actorRole: actor.role.name,
-      });
-
-      return {
-        message: parsed.managerId
-          ? "User manager assigned successfully"
-          : "User manager removed successfully",
-      };
-    },
-    {
-      body: t.Object({
-        managerId: t.Union([t.String(), t.Null()]),
-      }),
-    },
-  )
   .post(
     "/users/:id/territories",
     async ({ params, body, getUserId, getUser }: any) => {
@@ -92,7 +65,6 @@ export const userAssignmentsRoute = new Elysia({
         userId: params.id,
         verticalId: (body as any).verticalId,
         assignedByUserId,
-        managerId: (body as any).managerId ?? null,
       });
 
       return { message: "Business vertical assigned successfully" };
@@ -153,7 +125,6 @@ export const userAssignmentsRoute = new Elysia({
         actorRole: actor.role.name as Role,
         verticalAssignments: parsed.verticalAssignments.map((v) => ({
           verticalId: v.verticalId,
-          managerId: v.managerId,
           territoryIds: v.territoryIds,
         })),
       });
@@ -168,7 +139,6 @@ export const userAssignmentsRoute = new Elysia({
         verticalAssignments: t.Array(
           t.Object({
             verticalId: t.String(),
-            managerId: t.Optional(t.String()),
             territoryIds: t.Array(t.String()),
           }),
         ),

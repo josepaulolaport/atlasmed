@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_assignment_options_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_users_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
@@ -19,15 +20,23 @@ import 'package:atlasmed_mobile_app/features/users/data/repositories/users_repos
 InviteVerticalAssignment _seededVerticalAssignment({
   required String verticalId,
   required String verticalName,
+  String? managerDisplayName,
   String? managerId,
-  String? managerName,
   required List<String> territoryIds,
 }) {
+  final managers = managerDisplayName == null || managerDisplayName.isEmpty
+      ? const <AssignmentManagerRef>[]
+      : [
+          AssignmentManagerRef(
+            id: managerId ?? 'mgr-$verticalId',
+            name: managerDisplayName,
+          ),
+        ];
   return InviteVerticalAssignment(
     verticalId: verticalId,
     verticalName: verticalName,
-    managerId: managerId,
-    managerName: managerName,
+    managerDisplayName: managerDisplayName,
+    managers: managers,
     territories: territoryIds
         .map((id) => mockTerritoryOptions.firstWhere((o) => o.id == id))
         .toList(),
@@ -56,8 +65,7 @@ class MockUsersRepository implements UsersRepository {
         _seededVerticalAssignment(
           verticalId: 'sector-oncologia',
           verticalName: 'Oncologia',
-          managerId: 'user-fernanda-duarte',
-          managerName: 'Fernanda Duarte',
+          managerDisplayName: 'Fernanda Duarte',
           territoryIds: const ['territory-sul-onco-a'],
         ),
       ],
@@ -68,8 +76,7 @@ class MockUsersRepository implements UsersRepository {
         _seededVerticalAssignment(
           verticalId: 'sector-oncologia',
           verticalName: 'Oncologia',
-          managerId: 'user-marcos-lima',
-          managerName: 'Marcos Lima',
+          managerDisplayName: 'Marcos Lima',
           territoryIds: const ['territory-norte-onco-a'],
         ),
       ],
@@ -80,8 +87,7 @@ class MockUsersRepository implements UsersRepository {
         _seededVerticalAssignment(
           verticalId: 'sector-cardiologia',
           verticalName: 'Cardiologia',
-          managerId: 'user-fernanda-duarte',
-          managerName: 'Fernanda Duarte',
+          managerDisplayName: 'Fernanda Duarte',
           territoryIds: const ['territory-sul-cardio-b'],
         ),
       ],
@@ -92,8 +98,7 @@ class MockUsersRepository implements UsersRepository {
         _seededVerticalAssignment(
           verticalId: 'sector-cardiologia',
           verticalName: 'Cardiologia',
-          managerId: 'user-otavio-barros',
-          managerName: 'Otávio Barros',
+          managerDisplayName: 'Otávio Barros',
           territoryIds: const ['territory-leste-cardio-b'],
         ),
       ],
@@ -104,8 +109,7 @@ class MockUsersRepository implements UsersRepository {
         _seededVerticalAssignment(
           verticalId: 'sector-cardiologia',
           verticalName: 'Cardiologia',
-          managerId: 'user-eduardo-alves',
-          managerName: 'Eduardo Alves',
+          managerDisplayName: 'Eduardo Alves',
           territoryIds: const ['territory-oeste-cardio-c'],
         ),
       ],
@@ -299,42 +303,7 @@ class MockUsersRepository implements UsersRepository {
   @override
   Future<void> assignManager(String userId, String? managerId) async {
     await _delay();
-    final user = await getUserById(userId);
-    if (user != null && user.role.name != UserRoleName.rep) {
-      throw StateError('Apenas representantes podem ter um gerente.');
-    }
-    final current = await getUserAssignments(userId);
-    if (managerId == null) {
-      final cleared = current.verticalAssignments
-          .map((a) => a.copyWith(clearManager: true))
-          .toList();
-      _assignments[userId] = current.copyWith(verticalAssignments: cleared);
-      return;
-    }
-    final manager = mockManagerOptions.firstWhere(
-      (m) => m.id == managerId,
-      orElse: () => ManagerOption(id: managerId, name: '—'),
-    );
-    var sectors = List<InviteVerticalAssignment>.of(
-      current.verticalAssignments,
-    );
-    if (sectors.isEmpty) {
-      sectors = [
-        InviteVerticalAssignment(
-          verticalId: 'sector-oncologia',
-          verticalName: 'Oncologia',
-          managerId: manager.id,
-          managerName: manager.name,
-        ),
-      ];
-    } else {
-      sectors = sectors
-          .map(
-            (a) => a.copyWith(managerId: manager.id, managerName: manager.name),
-          )
-          .toList();
-    }
-    _assignments[userId] = current.copyWith(verticalAssignments: sectors);
+    // Spec 0006: manager link is territory-derived — no-op locally.
   }
 
   @override
@@ -356,8 +325,7 @@ class MockUsersRepository implements UsersRepository {
         InviteVerticalAssignment(
           verticalId: verticalId,
           verticalName: territory.verticalName ?? '—',
-          managerId: current.managerId,
-          managerName: current.managerName,
+          managerDisplayName: current.managerName,
           territories: [territory],
         ),
       );
@@ -408,8 +376,7 @@ class MockUsersRepository implements UsersRepository {
         InviteVerticalAssignment(
           verticalId: sector.id,
           verticalName: sector.name,
-          managerId: current.managerId,
-          managerName: current.managerName,
+          managerDisplayName: current.managerName,
         ),
       ],
     );
@@ -495,9 +462,81 @@ class MockUsersRepository implements UsersRepository {
     String? verticalId,
   }) async {
     await _delay(150);
-    final all = List<TerritoryOption>.of(mockTerritoryOptions);
-    if (verticalId == null) return all;
-    return all.where((t) => t.verticalId == verticalId).toList(growable: false);
+    // Manager zones: occupied (from managers) + a few empty for MANAGER invite.
+    final zones = <TerritoryOption>[];
+    for (final manager in mockManagerOptions) {
+      final zoneId = manager.territoryId;
+      if (zoneId == null) continue;
+      if (verticalId != null && !manager.verticalIds.contains(verticalId)) {
+        continue;
+      }
+      zones.add(
+        TerritoryOption(
+          id: zoneId,
+          name: manager.territoryName ?? manager.name,
+          verticalId: verticalId ??
+              (manager.verticalIds.isNotEmpty
+                  ? manager.verticalIds.first
+                  : null),
+          centroid: manager.territoryCentroid,
+          boundary: manager.territoryBoundary,
+          isOccupied: true,
+          assignedUserName: manager.name,
+        ),
+      );
+    }
+    // Empty zones available for MANAGER invite assignment.
+    final emptyZones = <TerritoryOption>[
+      TerritoryOption(
+        id: 'zone-vazia-abc',
+        name: 'Zona ABC (vazia)',
+        verticalId: 'sector-oncologia',
+        verticalName: 'Oncologia',
+        centroid: const MapCoordinate(latitude: -23.56, longitude: -46.64),
+        isOccupied: false,
+      ),
+      TerritoryOption(
+        id: 'zone-vazia-def',
+        name: 'Zona DEF (vazia)',
+        verticalId: 'sector-cardiologia',
+        verticalName: 'Cardiologia',
+        centroid: const MapCoordinate(latitude: -23.53, longitude: -46.66),
+        isOccupied: false,
+      ),
+    ];
+    for (final zone in emptyZones) {
+      if (verticalId == null || zone.verticalId == verticalId) {
+        zones.add(zone);
+      }
+    }
+    return zones;
+  }
+
+  @override
+  Future<String?> getTerritoryAssigneeName(String territoryId) async {
+    await _delay(80);
+    for (final manager in mockManagerOptions) {
+      if (manager.territoryId == territoryId) return manager.name;
+    }
+    for (final territory in mockTerritoryOptions) {
+      if (territory.id == territoryId) return territory.assignedUserName;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<TerritoryOption>> getPatchesForZone({
+    required String managerZoneId,
+    String? verticalId,
+  }) async {
+    await _delay(150);
+    return mockTerritoryOptions
+        .where((t) {
+          if (t.managerTerritoryId != managerZoneId) return false;
+          if (verticalId != null && t.verticalId != verticalId) return false;
+          return true;
+        })
+        .toList(growable: false);
   }
 
   @override

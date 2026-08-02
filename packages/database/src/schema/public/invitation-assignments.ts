@@ -7,7 +7,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import { invitations, users } from "./users";
+import { invitations } from "./users";
 import { businessVerticals } from "./business-verticals";
 import { territories } from "./territories";
 
@@ -27,9 +27,6 @@ export const invitationVerticalAssignments = pgTable(
     verticalId: text("vertical_id")
       .notNull()
       .references(() => businessVerticals.id, { onDelete: "cascade" }),
-    managerId: text("manager_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -40,7 +37,6 @@ export const invitationVerticalAssignments = pgTable(
     ),
     index("invitation_vertical_assignments_invitation_id_idx").on(t.invitationId),
     index("invitation_vertical_assignments_vertical_id_idx").on(t.verticalId),
-    index("invitation_vertical_assignments_manager_id_idx").on(t.managerId),
   ]
 );
 
@@ -85,10 +81,6 @@ export const invitationVerticalAssignmentsRelations = relations(
     vertical: one(businessVerticals, {
       fields: [invitationVerticalAssignments.verticalId],
       references: [businessVerticals.id],
-    }),
-    manager: one(users, {
-      fields: [invitationVerticalAssignments.managerId],
-      references: [users.id],
     }),
   })
 );

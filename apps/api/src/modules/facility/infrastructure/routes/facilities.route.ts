@@ -843,6 +843,27 @@ const assignConsultantRoute = new Elysia()
     }
   );
 
+const unassignConsultantRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .delete(
+    "/facilities/:id/consultant-assignments/current",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      return facilityUseCases.unassignConsultant().execute({
+        facilityId: params.id,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "End current consultant assignment for facility",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
 const listConformityRequirementsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY"))
@@ -1192,6 +1213,7 @@ export const facilitiesRoute = new Elysia()
   .use(confirmRegistryRepresentativeRoute)
   .use(listConsultantAssignmentsRoute)
   .use(assignConsultantRoute)
+  .use(unassignConsultantRoute)
   .use(listConformityRequirementsRoute)
   .use(listFacilityConformityRecordsRoute)
   .use(createFacilityConformityRecordRoute)

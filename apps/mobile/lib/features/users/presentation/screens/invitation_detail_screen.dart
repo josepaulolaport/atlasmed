@@ -315,7 +315,16 @@ class _VerticalAssignmentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showManager) ...[
-            _InfoRow(label: 'Gerente', value: assignment.managerName ?? '—'),
+            _InfoRow(
+              label: assignment.managers.length > 1 ? 'Gerentes' : 'Gerente',
+              value: assignment.managerName ??
+                  assignment.managerZoneName ??
+                  '—',
+            ),
+            if (assignment.managerZoneName != null) ...[
+              const SizedBox(height: 8),
+              _InfoRow(label: 'Zona', value: assignment.managerZoneName!),
+            ],
             const SizedBox(height: 8),
           ],
           const Text(

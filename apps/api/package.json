@@ -28,6 +28,8 @@
     "db:import:mcp-test:all": "ATLASMED_ALLOW_DATA_LOSS=1 bun src/scripts/import-mcp-test-data.ts --all --admin-email=admin@demo.atlasmed.local",
     "db:geocode:facilities": "bash -lc 'set -a; source .env; set +a; bun src/scripts/geocode-facilities.ts \"$@\"' --",
     "db:geocode:facilities:apply": "bash -lc 'set -a; source .env; set +a; bun src/scripts/geocode-facilities.ts --apply \"$@\"' --",
+    "db:cleanup:multi-uta-patches": "bun src/scripts/cleanup-legacy-multi-uta-patches.ts",
+    "db:cleanup:multi-uta-patches:apply": "APPLY=1 bun src/scripts/cleanup-legacy-multi-uta-patches.ts",
     "db:reset:test": "cd ../../packages/database && ATLASMED_ALLOW_DB_PUSH=1 ATLASMED_ALLOW_DB_PUSH_FORCE=1 ATLASMED_ALLOW_DATA_LOSS=1 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun run db:push --force"
   },
   "dependencies": {

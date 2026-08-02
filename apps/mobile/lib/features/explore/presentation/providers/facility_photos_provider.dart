@@ -88,9 +88,9 @@ class FacilityPhotoUploadController extends StateNotifier<AsyncValue<void>> {
         repo.dispose();
       }
 
-      // Refresh the same ZIP repository consumed by the clinic header so the
-      // uploaded photo is reflected before the success UI is shown.
-      await _ref.read(facilityZipRepositoryProvider(facilityId)).refresh();
+      // Refresh photos only — do not refetch facility detail / other sections.
+      await _ref.read(facilityPhotosRepositoryProvider(facilityId)).refresh();
+      _ref.invalidate(facilityPhotosProvider(facilityId));
       state = const AsyncData(null);
     } on FacilityPhotosException catch (error, stackTrace) {
       state = AsyncError(error.toString(), stackTrace);

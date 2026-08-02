@@ -52,19 +52,21 @@ export class TerritoryAssignmentPolicyService {
       );
     }
 
-    // Multi-REP per patch is allowed (vertical-ownership Q2). Managers stay exclusive per zone.
-    if (params.targetRole === Role.MANAGER) {
+    // Spec 0006: one REP per patch; one MANAGER per zone.
+    if (params.targetRole === Role.MANAGER || params.targetRole === Role.REP) {
       const conflictingAssignments =
         await this.deps.territoryRepository.findConflictingAssignments({
           territoryId: params.territoryId,
           excludeUserId: params.targetUserId,
-          roles: [Role.MANAGER],
+          roles: [params.targetRole],
         });
 
       if (conflictingAssignments.length > 0) {
         throw new OperationNotAllowedError(
           "assign_territory",
-          "Territory is already assigned to another manager",
+          params.targetRole === Role.MANAGER
+            ? "Territory is already assigned to another manager"
+            : "Patch is already assigned to another representative",
         );
       }
     }

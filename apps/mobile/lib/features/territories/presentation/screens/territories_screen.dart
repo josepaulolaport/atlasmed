@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
@@ -14,6 +15,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_detail_sheet.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_kind_switch.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/unassigned_facilities_sheet.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_avatar.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/vertical_selector.dart';
@@ -43,7 +45,27 @@ class TerritoriesScreen extends ConsumerWidget {
     // on top of the fixed action bar the selection shows at the bottom.
     final hasSelection = ref.watch(selectedTerritoryIdProvider) != null;
     final canCreate = ref.watch(canCreateTerritoryProvider);
+    final canAssignConsultant = ref.watch(canAssignFacilityConsultantProvider);
+    final selectedId = ref.watch(selectedTerritoryIdProvider);
+    final kind = ref.watch(selectedTerritoryKindProvider);
     return _TerritoriesPage(
+      actions: canAssignConsultant
+          ? [
+              IconButton(
+                tooltip: 'Clínicas sem consultor',
+                icon: const Icon(Icons.person_off_outlined),
+                onPressed: () {
+                  final zoneId = kind == TerritoryKind.managerZone
+                      ? selectedId
+                      : null;
+                  UnassignedFacilitiesSheet.show(
+                    context,
+                    managerZoneId: zoneId,
+                  );
+                },
+              ),
+            ]
+          : null,
       floatingActionButton: !canCreate || hasSelection
           ? null
           : const _NewTerritoryButton(),
@@ -55,15 +77,20 @@ class TerritoriesScreen extends ConsumerWidget {
 class _TerritoriesPage extends StatelessWidget {
   final Widget child;
   final Widget? floatingActionButton;
+  final List<Widget>? actions;
 
-  const _TerritoriesPage({required this.child, this.floatingActionButton});
+  const _TerritoriesPage({
+    required this.child,
+    this.floatingActionButton,
+    this.actions,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: floatingActionButton,
-      appBar: const AtlasAppBar(page: 'Territórios'),
+      appBar: AtlasAppBar(page: 'Territórios', actions: actions),
       body: SafeArea(
         bottom: false,
         child: Column(children: [Expanded(child: child)]),
@@ -79,18 +106,27 @@ class _NewTerritoryButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canCreateZone = ref.watch(canCreateManagerZoneProvider);
+    final kind = ref.watch(selectedTerritoryKindProvider);
+    // Spec 0006: managers only create patches; force patch when zone selected.
+    final createKind = !canCreateZone && kind == TerritoryKind.managerZone
+        ? TerritoryKind.repPatch
+        : kind;
     return FloatingActionButton.extended(
       backgroundColor: AppColors.navyDeep,
       foregroundColor: Colors.white,
       icon: const Icon(Icons.add_rounded),
-      label: const Text('Novo território'),
+      label: Text(
+        createKind == TerritoryKind.managerZone
+            ? 'Nova zona'
+            : 'Nova área',
+      ),
       onPressed: () {
-        final kind = ref.read(selectedTerritoryKindProvider);
         final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
         context.push(
           '/territories/create',
           extra: TerritoryEditorTarget.creating(
-            initialKind: kind,
+            initialKind: createKind,
             initialVerticalId: verticalId,
           ),
         );
@@ -108,7 +144,10 @@ class _TerritoriesBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final kind = ref.watch(selectedTerritoryKindProvider);
     final selectedVerticalId = ref.watch(selectedTerritoryVerticalIdProvider);
-    final verticalsAsync = ref.watch(businessVerticalsProvider);
+    final isAdmin = ref.watch(isAdminProvider);
+    final verticalsAsync = isAdmin
+        ? ref.watch(businessVerticalsProvider)
+        : ref.watch(currentUserFacilityVerticalOptionsProvider);
     final territoriesAsync = ref.watch(territoriesProvider);
 
     return Column(
@@ -123,32 +162,58 @@ class _TerritoriesBody extends ConsumerWidget {
                 onChanged: (newKind) {
                   if (newKind == kind) return;
                   ref.read(selectedTerritoryIdProvider.notifier).state = null;
+                  ref.read(selectedGeographyRepUserIdProvider.notifier).state =
+                      null;
                   ref.read(selectedTerritoryKindProvider.notifier).state =
                       newKind;
                 },
               ),
-              const SizedBox(height: 10),
               verticalsAsync.when(
-                loading: () => const _VerticalFilterStatus(
-                  'Carregando linhas comerciais...',
+                loading: () => const Padding(
+                  padding: EdgeInsets.only(top: 10),
+                  child: _VerticalFilterStatus(
+                    'Carregando linhas comerciais...',
+                  ),
                 ),
-                error: (_, _) => _VerticalFilterStatus(
-                  'Não foi possível carregar as linhas comerciais.',
-                  actionLabel: 'Tentar novamente',
-                  onAction: () => ref.invalidate(businessVerticalsProvider),
+                error: (_, _) => Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: _VerticalFilterStatus(
+                    'Não foi possível carregar as linhas comerciais.',
+                    actionLabel: 'Tentar novamente',
+                    onAction: () {
+                      if (isAdmin) {
+                        ref.invalidate(businessVerticalsProvider);
+                      } else {
+                        ref.invalidate(
+                          currentUserFacilityVerticalOptionsProvider,
+                        );
+                      }
+                    },
+                  ),
                 ),
-                data: (verticals) => VerticalSelector(
-                  verticals: verticals,
-                  selectedVerticalId: selectedVerticalId,
-                  allowAll: true,
-                  onChanged: (verticalId) {
-                    ref.read(selectedTerritoryIdProvider.notifier).state = null;
-                    ref
-                            .read(selectedTerritoryVerticalIdProvider.notifier)
-                            .state =
-                        verticalId;
-                  },
-                ),
+                data: (verticals) {
+                  // Linha switcher only when the viewer has 2+ associated lines
+                  // (admin: catalog; others: own assignments).
+                  if (verticals.length < 2) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: VerticalSelector(
+                      verticals: verticals,
+                      selectedVerticalId: selectedVerticalId,
+                      allowAll: true,
+                      onChanged: (verticalId) {
+                        ref.read(selectedTerritoryIdProvider.notifier).state =
+                            null;
+                        ref
+                                .read(
+                                  selectedTerritoryVerticalIdProvider.notifier,
+                                )
+                                .state =
+                            verticalId;
+                      },
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -178,6 +243,75 @@ class _TerritoriesBody extends ConsumerWidget {
                       'Não há territórios cadastrados para essa linha e tipo.',
                 );
               }
+
+              final underlayAsync = ref.watch(managerZonesUnderlayProvider);
+              final underlay = underlayAsync.valueOrNull ?? const <Territory>[];
+              final selectedRepId =
+                  ref.watch(selectedGeographyRepUserIdProvider);
+
+              var visible = territories;
+              if (kind == TerritoryKind.repPatch) {
+                final repIds = territories
+                    .map((t) => t.assignedUserId)
+                    .whereType<String>()
+                    .toSet()
+                    .toList()
+                  ..sort();
+                final effectiveRepId = selectedRepId != null &&
+                        repIds.contains(selectedRepId)
+                    ? selectedRepId
+                    : (repIds.isNotEmpty ? repIds.first : null);
+                if (effectiveRepId != null &&
+                    effectiveRepId != selectedRepId) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ref
+                        .read(selectedGeographyRepUserIdProvider.notifier)
+                        .state = effectiveRepId;
+                  });
+                }
+                if (effectiveRepId != null) {
+                  visible = territories
+                      .where((t) => t.assignedUserId == effectiveRepId)
+                      .toList();
+                }
+                return Column(
+                  children: [
+                    if (repIds.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: _RepGeographyFilter(
+                          repUserIds: repIds,
+                          selectedRepUserId: effectiveRepId,
+                          onChanged: (userId) {
+                            ref
+                                .read(
+                                  selectedGeographyRepUserIdProvider.notifier,
+                                )
+                                .state = userId;
+                            ref
+                                .read(selectedTerritoryIdProvider.notifier)
+                                .state = null;
+                          },
+                        ),
+                      ),
+                    Expanded(
+                      child: visible.isEmpty
+                          ? const _StateMessage(
+                              icon: Icons.person_off_outlined,
+                              title: 'Nenhuma área deste representante',
+                              message:
+                                  'Selecione outro representante ou atribua áreas.',
+                            )
+                          : _TerritoriesMap(
+                              accessToken: accessToken,
+                              territories: visible,
+                              underlayTerritories: underlay,
+                            ),
+                    ),
+                  ],
+                );
+              }
+
               return _TerritoriesMap(
                 accessToken: accessToken,
                 territories: territories,
@@ -186,6 +320,53 @@ class _TerritoriesBody extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _RepGeographyFilter extends ConsumerWidget {
+  const _RepGeographyFilter({
+    required this.repUserIds,
+    required this.selectedRepUserId,
+    required this.onChanged,
+  });
+
+  final List<String> repUserIds;
+  final String? selectedRepUserId;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: repUserIds.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final userId = repUserIds[index];
+          final selected = userId == selectedRepUserId;
+          final userAsync = ref.watch(userByIdProvider(userId));
+          final label = userAsync.valueOrNull?.name ?? 'Representante';
+          return ChoiceChip(
+            label: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : AppColors.gray700,
+              ),
+            ),
+            selected: selected,
+            selectedColor: AppColors.navyDeep,
+            backgroundColor: Colors.white,
+            side: BorderSide(
+              color: selected ? AppColors.navyDeep : AppColors.gray200,
+            ),
+            onSelected: (_) => onChanged(userId),
+          );
+        },
+      ),
     );
   }
 }
@@ -230,7 +411,14 @@ class _TerritoriesMap extends ConsumerStatefulWidget {
   final String accessToken;
   final List<Territory> territories;
 
-  const _TerritoriesMap({required this.accessToken, required this.territories});
+  /// Spec 0006: muted manager zones under selected-rep patches.
+  final List<Territory> underlayTerritories;
+
+  const _TerritoriesMap({
+    required this.accessToken,
+    required this.territories,
+    this.underlayTerritories = const [],
+  });
 
   @override
   ConsumerState<_TerritoriesMap> createState() => _TerritoriesMapState();
@@ -298,9 +486,15 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     super.didUpdateWidget(oldWidget);
     final oldIds = oldWidget.territories.map((t) => t.id).toSet();
     final newIds = widget.territories.map((t) => t.id).toSet();
-    if (oldIds.length != newIds.length || !oldIds.containsAll(newIds)) {
+    final oldUnderlay = oldWidget.underlayTerritories.map((t) => t.id).toSet();
+    final newUnderlay = widget.underlayTerritories.map((t) => t.id).toSet();
+    final territoriesChanged =
+        oldIds.length != newIds.length || !oldIds.containsAll(newIds);
+    final underlayChanged = oldUnderlay.length != newUnderlay.length ||
+        !oldUnderlay.containsAll(newUnderlay);
+    if (territoriesChanged || underlayChanged) {
       _renderAnnotations();
-      _fitBounds();
+      if (territoriesChanged) _fitBounds();
     }
   }
 
@@ -612,6 +806,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     if (polygonManager == null || borderManager == null) return;
 
     final territories = widget.territories;
+    final underlay = widget.underlayTerritories;
     final selectedId = ref.read(selectedTerritoryIdProvider);
 
     await polygonManager.deleteAll();
@@ -621,7 +816,39 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     final haloOptions = <PolylineAnnotationOptions>[];
     final borderOptions = <PolylineAnnotationOptions>[];
 
+    // Underlay first (manager zones) — not selectable.
+    for (final territory in underlay) {
+      final safe = territory.boundary.sanitized();
+      if (safe == null) continue;
+      for (final polygonRings in safe.coordinates) {
+        polygonOptions.add(
+          PolygonAnnotationOptions(
+            geometry: Polygon.fromPoints(
+              points: polygonRings.map(_ringToPoints).toList(),
+            ),
+            fillColor: _managerZoneColor,
+            fillOpacity: 0.08,
+            fillOutlineColor: _managerZoneColor,
+          ),
+        );
+        for (final ring in polygonRings) {
+          final points = _ringToPoints(ring);
+          borderOptions.add(
+            PolylineAnnotationOptions(
+              geometry: LineString.fromPoints(points: points),
+              lineColor: _managerZoneColor,
+              lineWidth: 1.0,
+              lineOpacity: 0.35,
+              lineJoin: LineJoin.ROUND,
+            ),
+          );
+        }
+      }
+    }
+
     for (final territory in territories) {
+      final safe = territory.boundary.sanitized();
+      if (safe == null) continue;
       final selected = territory.id == selectedId;
       final baseColor = territory.kind == TerritoryKind.managerZone
           ? _managerZoneColor
@@ -630,7 +857,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
       final haloWidth = selected ? 5.0 : 3.4;
       final lineWidth = selected ? 3.0 : 1.8;
 
-      for (final polygonRings in territory.boundary.coordinates) {
+      for (final polygonRings in safe.coordinates) {
         polygonOptions.add(
           PolygonAnnotationOptions(
             geometry: Polygon.fromPoints(
@@ -766,11 +993,12 @@ class _TerritoryActionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canUpdate = ref.watch(canUpdateTerritoryProvider);
+    final isZone = territory.kind == TerritoryKind.managerZone;
+    final canUpdate = isZone
+        ? ref.watch(canUpdateManagerZoneProvider)
+        : ref.watch(canUpdateRepPatchProvider);
     final canDelete = ref.watch(canDeleteTerritoryProvider);
-    final roleLabel = territory.kind == TerritoryKind.managerZone
-        ? 'Gerente'
-        : 'Representante';
+    final roleLabel = isZone ? 'Gerente' : 'Representante';
     final assignedUserId = territory.assignedUserId;
     final assignedUserAsync = assignedUserId == null
         ? null

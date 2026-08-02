@@ -1,10 +1,21 @@
 import { z } from "zod";
+import { inviteNewPatchSchema } from "./invite-user.schema";
 
-const verticalAssignmentSchema = z.object({
-  verticalId: z.string().min(1),
-  managerId: z.string().min(1).optional(),
-  territoryIds: z.array(z.string().min(1)).default([]),
-});
+const verticalAssignmentSchema = z
+  .object({
+    verticalId: z.string().min(1),
+    territoryIds: z.array(z.string().min(1)).default([]),
+    newPatch: inviteNewPatchSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.newPatch && data.territoryIds.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide either territoryIds or newPatch, not both",
+        path: ["newPatch"],
+      });
+    }
+  });
 
 export const updateInvitationSchema = z.object({
   email: z.string().email().optional(),
@@ -16,9 +27,6 @@ export const updateInvitationSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "birthDate must be YYYY-MM-DD")
     .optional(),
-  managerId: z.string().optional(),
-  managerTerritoryId: z.string().optional(),
-  repTerritoryId: z.string().optional(),
   verticalAssignments: z.array(verticalAssignmentSchema).optional(),
 });
 
