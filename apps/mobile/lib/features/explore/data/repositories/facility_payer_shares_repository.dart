@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_payer_share_api_type.dart';
@@ -55,6 +57,7 @@ class FacilityPayerSharesRepository
                 (p) => {
                   'healthcareProviderId': p.id,
                   'sharePercent': p.sharePercent,
+                  'isPackage': p.isPackage,
                 },
               )
               .toList(growable: false),
@@ -112,5 +115,43 @@ class HealthcareProvidersRepository
       throw const FacilityPayerSharesException();
     }
     return result.items;
+  }
+
+  /// `POST /healthcare-providers` — requires `create:CATALOG`.
+  Future<HealthcareProviderApi> createProvider({
+    required String name,
+    String type = 'PRIVATE',
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/healthcare-providers'),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {
+          'name': name.trim(),
+          'type': type,
+          'isActive': true,
+        },
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityPayerSharesException(
+          response.statusCode == 403
+              ? 'Sem permissão para criar fonte pagadora'
+              : 'Falha ao criar fonte pagadora (${response.statusCode})',
+        );
+      }
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const FacilityPayerSharesException(
+        'Resposta inválida ao criar fonte pagadora',
+      );
+    }
+    return HealthcareProviderApi.fromMap(decoded.cast<String, dynamic>());
   }
 }

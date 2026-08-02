@@ -297,7 +297,6 @@ Future<void> _openPayerSourcesEditor(
   BuildContext context,
   WidgetRef ref, {
   required String clinicId,
-  required String facilityName,
   required List<PayerShare> payers,
 }) async {
   final useMockCatalog =
@@ -336,7 +335,6 @@ Future<void> _openPayerSourcesEditor(
   final updated = await Navigator.of(context).push<List<PayerShare>>(
     MaterialPageRoute(
       builder: (_) => EditPayerSourcesScreen(
-        facilityName: facilityName,
         initialPayers: payers,
         catalog: catalog,
       ),
@@ -346,6 +344,13 @@ Future<void> _openPayerSourcesEditor(
 
   try {
     await ref.read(facilityPayersProvider(clinicId).notifier).replace(updated);
+    // Zip can still hold the pre-edit mix — refresh so integrations stay in sync.
+    ref.invalidate(facilityZipRepositoryProvider(clinicId));
+    // ignore: unused_result
+    ref.read(facilityZipRepositoryProvider(clinicId)).refresh();
+    ref.invalidate(healthcareProvidersCatalogProvider);
+    // Pull again from API so chart/legend match persisted shares (type, pacote…).
+    await ref.read(facilityPayersProvider(clinicId).notifier).retry();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -537,10 +542,11 @@ class _ClinicDetailContent extends ConsumerWidget {
       activeVerticalId: activeLinhaId,
     );
 
-    // Prefer zipped data (from FacilityZipRepository) over individual providers.
-    final rawPayers =
-        (integrations?.payerShares != null &&
-            integrations!.payerShares.isNotEmpty)
+    // Prefer dedicated payers provider — zip can be stale after an edit until
+    // FacilityZipRepository refreshes.
+    final rawPayers = payersState.loading &&
+            payersState.payers.isEmpty &&
+            (integrations?.payerShares.isNotEmpty ?? false)
         ? integrations!.payerShares
         : payersState.payers;
     final effectivePayers = payersApplyToLinha
@@ -867,7 +873,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                     if (payersApplyToLinha) ...[
                       ClinicSectionHeader(
                         title: 'Fontes Pagadoras',
-                        trailing: !canMutate || effectivePayers.isEmpty
+                        trailing: !canMutate
                             ? null
                             : _HeaderLinkButton(
                                 label: 'Editar',
@@ -875,7 +881,6 @@ class _ClinicDetailContent extends ConsumerWidget {
                                   context,
                                   ref,
                                   clinicId: clinicId,
-                                  facilityName: detail.name,
                                   payers: effectivePayers,
                                 ),
                               ),
@@ -894,15 +899,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                         ClinicPayersBarSection(
                           payers: effectivePayers,
                           summary: effectivePayersSummary,
-                          onEdit: canMutate
-                              ? () => _openPayerSourcesEditor(
-                                  context,
-                                  ref,
-                                  clinicId: clinicId,
-                                  facilityName: detail.name,
-                                  payers: effectivePayers,
-                                )
-                              : null,
+                          facilityName: detail.name,
                         ),
                     ],
                     const ClinicSectionHeader(

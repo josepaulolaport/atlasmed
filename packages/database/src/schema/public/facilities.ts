@@ -633,6 +633,8 @@ export const facilityHealthcareProviderShares = pgTable(
     facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
     healthcareProviderId: text("healthcare_provider_id").notNull().references(() => healthcareProviders.id, { onDelete: "restrict" }),
     sharePercent: text("share_percent").notNull(),
+    /** Whether this facility treats the provider share as a package (pacote). */
+    isPackage: boolean("is_package").notNull().default(false),
     source: healthcareProviderShareSourceEnum("source").notNull().default("MANUAL"),
     sourceFirstSeenAt: timestamp("source_first_seen_at"),
     sourceLastSeenAt: timestamp("source_last_seen_at"),

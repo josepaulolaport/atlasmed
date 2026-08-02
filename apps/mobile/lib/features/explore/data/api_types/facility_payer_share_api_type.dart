@@ -12,6 +12,8 @@ class FacilityPayerShareApi {
     required this.healthcareProviderId,
     required this.sharePercent,
     required this.providerName,
+    this.isPackage = false,
+    this.providerType,
   });
 
   factory FacilityPayerShareApi.fromMap(Map<String, dynamic> map) {
@@ -24,6 +26,10 @@ class FacilityPayerShareApi {
       healthcareProviderId: readString(map['healthcareProviderId']),
       sharePercent: readNullableDouble(map['sharePercent']) ?? 0,
       providerName: readString(provider['name']),
+      isPackage: map['isPackage'] == true,
+      providerType: readString(provider['type']).isEmpty
+          ? null
+          : readString(provider['type']),
     );
   }
 
@@ -32,6 +38,8 @@ class FacilityPayerShareApi {
   final String healthcareProviderId;
   final double sharePercent;
   final String providerName;
+  final bool isPackage;
+  final String? providerType;
 
   /// [PayerShare.id] is the healthcare provider id so the editor can match
   /// catalog entries when adding/removing rows.
@@ -40,6 +48,8 @@ class FacilityPayerShareApi {
       id: healthcareProviderId,
       name: providerName.isEmpty ? healthcareProviderId : providerName,
       sharePercent: sharePercent,
+      isPackage: isPackage,
+      type: providerType,
     );
   }
 }
@@ -89,7 +99,8 @@ class HealthcareProviderApi {
   final String type;
   final bool isActive;
 
-  PayerCatalogEntry toCatalogEntry() => PayerCatalogEntry(id: id, name: name);
+  PayerCatalogEntry toCatalogEntry() =>
+      PayerCatalogEntry(id: id, name: name, type: type);
 }
 
 class PaginatedHealthcareProviders {

@@ -29,6 +29,24 @@ void main() {
       ),
     );
 
-    expect(find.text('Nenhuma fonte pagadora cadastrada'), findsOneWidget);
+    expect(find.text('Informação pendente'), findsOneWidget);
+    expect(find.textContaining('Toque em Editar'), findsOneWidget);
+  });
+
+  testWidgets('shows package mix labels', (tester) async {
+    const payers = [
+      PayerShare(id: '1', name: 'Unimed', sharePercent: 60, isPackage: true),
+      PayerShare(id: '2', name: 'Particular', sharePercent: 40),
+    ];
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: ClinicPayersBarSection(payers: payers)),
+      ),
+    );
+
+    expect(find.text('60% pacote'), findsOneWidget);
+    expect(find.text('40% não é pacote'), findsOneWidget);
+    expect(find.text('Pacote'), findsOneWidget);
   });
 }

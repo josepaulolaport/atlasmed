@@ -16,18 +16,24 @@ Color payerShareColorForIndex(int i) =>
     payerShareColors[i % payerShareColors.length];
 
 /// Catalog of healthcare providers available to add as fontes pagadoras.
-/// Phase 1 mock — Phase 3 wires to `GET /healthcare-providers` (or equivalent).
 class PayerCatalogEntry {
-  const PayerCatalogEntry({required this.id, required this.name});
+  const PayerCatalogEntry({
+    required this.id,
+    required this.name,
+    this.type = 'PRIVATE',
+  });
 
   final String id;
   final String name;
+
+  /// `PRIVATE` | `PUBLIC` | `MIXED` | `OTHER`.
+  final String type;
 }
 
 const mockPayerCatalog = <PayerCatalogEntry>[
   PayerCatalogEntry(id: 'hp-cat-1', name: 'Particular'),
-  PayerCatalogEntry(id: 'hp-cat-2', name: 'SUS'),
-  PayerCatalogEntry(id: 'hp-cat-3', name: 'Outras'),
+  PayerCatalogEntry(id: 'hp-cat-2', name: 'SUS', type: 'PUBLIC'),
+  PayerCatalogEntry(id: 'hp-cat-3', name: 'Outras', type: 'OTHER'),
   PayerCatalogEntry(id: 'hp-cat-4', name: 'Unimed'),
   PayerCatalogEntry(id: 'hp-cat-5', name: 'Bradesco Saúde'),
   PayerCatalogEntry(id: 'hp-cat-6', name: 'Sul América'),
