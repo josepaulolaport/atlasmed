@@ -11,14 +11,20 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/nearby_vertical_badges.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
+import 'package:atlasmed_mobile_app/features/map/presentation/utils/nearby_stack_marker.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+
+Color _nearbyStatusDotColor(NearbyEstablishment e) =>
+    PurchaseBucketFilter.mapColor(
+      e.purchaseBucket ?? PurchaseBucketFilter.neverBought,
+    );
 
 /// Full-screen map of establishments near the current facility.
 ///
@@ -100,23 +106,27 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   /// while layers still reference them ("Source … missing for layer").
   Future<void>? _clinicLayersEnsureInFlight;
   Timer? _pinResyncDebounce;
+  DateTime? _lastRadiusCommitAt;
 
   /// Nearby clinics as plain GeoJSON points (no Supercluster).
   ///
   /// The live map clusters city-wide; this screen is radius-bounded (≤10 km)
-  /// and camera-fitted to the circle — clustering at `clusterMaxZoom: 18`
-  /// kept every pin merged at the fit zoom, so the radius looked empty /
-  /// wrong. Co-located addresses still open the stacked sheet on pin tap.
+  /// and camera-fitted to the circle — Supercluster at fit zoom merges the
+  /// whole radius. Co-located addresses (~25 m) become count badges instead;
+  /// the current clinic is a navy ball (or inside a stack when co-located).
   static const _nearbySourceId = 'nearby-clinicas';
+  static const _nearbyStackSourceId = 'nearby-stacks';
   static const _nearbyFocusSourceId = 'nearby-focus';
   static const _nearbyRadiusSourceId = 'nearby-radius';
   static const _nearbyRadiusFillLayerId = 'nearby-radius-fill';
   static const _nearbyRadiusLineLayerId = 'nearby-radius-line';
   static const _nearbyUnclusteredLayerId = 'nearby-clinicas-unclustered';
-  static const _nearbyFocusLayerId = 'nearby-focus-pin';
+  static const _nearbyStackLayerId = 'nearby-clinicas-stacks';
+  static const _nearbyFocusLayerId = 'nearby-focus-ball';
   static const _calloutImageId = 'atlasmed-nearby-callout';
   static const _calloutCloseImageId = 'atlasmed-nearby-callout-close';
   static const _pinInteractionId = 'tap-nearby-pin';
+  static const _stackInteractionId = 'tap-nearby-stack';
 
   static const _coLocatedThresholdKm = 0.025;
 
@@ -143,10 +153,24 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   /// re-centered on whichever establishment's pin/callout is active.
   final ScrollController _cardScrollController = ScrollController();
 
+  /// Empty = all Desempenho buckets. Same chip semantics as live map.
+  final Set<String> _statusFilters = {};
+
+  /// Co-location stack id → members (includes origin when co-located).
+  Map<String, List<NearbyEstablishment>> _stackMembersById = const {};
+
   /// Guards [widget.initialFocusId] handling so it only runs once, even
   /// though the stable `MapWidget` key means `onStyleLoadedListener` could
   /// in theory fire again later (e.g. a style reload).
   bool _initialFocusHandled = false;
+
+  NearbyEstablishment get _originEstablishment => NearbyEstablishment(
+    id: widget.facilityId,
+    name: widget.facilityName,
+    latitude: widget.center.latitude,
+    longitude: widget.center.longitude,
+    distanceKm: 0,
+  );
 
   Set<String> _sharedFor(List<String> userVerticalIds) =>
       sharedNearbyVerticalIds(
@@ -174,6 +198,17 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     queryVerticalId: verticalId,
   );
 
+  List<NearbyEstablishment> _filterByStatus(List<NearbyEstablishment> items) {
+    if (_statusFilters.isEmpty) return items;
+    return items
+        .where((e) {
+          final bucket =
+              e.purchaseBucket ?? PurchaseBucketFilter.neverBought;
+          return _statusFilters.contains(bucket);
+        })
+        .toList(growable: false);
+  }
+
   NearbyFacilitiesQuery _queryFor(String? verticalId) => NearbyFacilitiesQuery(
     facilityId: widget.facilityId,
     latitude: widget.center.latitude,
@@ -187,6 +222,20 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       clinicDetailActiveLinhaIdProvider(widget.facilityId),
     );
     return clinicLinha ?? ref.read(selectedFacilityVerticalIdProvider);
+  }
+
+  void _toggleStatusFilter(String bucket) {
+    setState(() {
+      if (_statusFilters.contains(bucket)) {
+        _statusFilters.remove(bucket);
+      } else {
+        _statusFilters.add(bucket);
+      }
+    });
+    unawaited(_syncClinicPins());
+    if (_selected != null && !_visible.any((e) => e.id == _selected!.id)) {
+      _dismissCallout();
+    }
   }
 
   /// Imperative pin/card helpers — uses [ref.read] (not watch).
@@ -204,9 +253,11 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
           ref.read(effectiveFacilityVerticalIdProvider).valueOrNull ??
           clinicLinha,
     );
-    return filterNearbyByRadius(
-      _scoped(_nearby, shared: shared, verticalId: verticalId),
-      _radiusKm,
+    return _filterByStatus(
+      filterNearbyByRadius(
+        _scoped(_nearby, shared: shared, verticalId: verticalId),
+        _radiusKm,
+      ),
     );
   }
 
@@ -259,19 +310,21 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
             _radiusKm,
           );
           if (_selected != null &&
-              !visibleNow.any((e) => e.id == _selected!.id)) {
+              !_filterByStatus(visibleNow).any((e) => e.id == _selected!.id)) {
             _dismissCallout();
           }
         });
       },
     );
-    final visible = filterNearbyByRadius(
-      _scoped(
-        nearbyAsync.valueOrNull ?? _nearby,
-        shared: shared,
-        verticalId: verticalId,
+    final visible = _filterByStatus(
+      filterNearbyByRadius(
+        _scoped(
+          nearbyAsync.valueOrNull ?? _nearby,
+          shared: shared,
+          verticalId: verticalId,
+        ),
+        _radiusKm,
       ),
-      _radiusKm,
     );
 
     return Scaffold(
@@ -315,7 +368,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
           ),
           FacilityVerticalFilterBar(
             allowedVerticalIds: shared.isEmpty ? null : shared,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             allowAll: false,
             syncExploreSelection: false,
             selectedVerticalId: clinicLinha,
@@ -330,6 +383,10 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                       .state =
                   id;
             },
+          ),
+          _NearbyStatusFilterBar(
+            selected: _statusFilters,
+            onToggle: _toggleStatusFilter,
           ),
           Expanded(
             child: _mapUnavailable || AppConfig.mapboxAccessToken.isEmpty
@@ -456,14 +513,37 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     if (_selected != null && !_visible.any((e) => e.id == _selected!.id)) {
       _dismissCallout();
     }
-    // Debounce only the network refetch when the slider settles.
+    // Progressive refetch while enlarging: trailing debounce + max-wait so
+    // continuous drags keep querying instead of waiting until the thumb stops.
+    _scheduleRadiusCommit(radius);
+  }
+
+  static const _radiusCommitDebounce = Duration(milliseconds: 140);
+  static const _radiusCommitMaxWait = Duration(milliseconds: 320);
+
+  void _scheduleRadiusCommit(double radius) {
     _pinResyncDebounce?.cancel();
-    _pinResyncDebounce = Timer(const Duration(milliseconds: 200), () {
+    final enlarging = radius > _committedRadiusKm;
+    final last = _lastRadiusCommitAt;
+    final forceCommit =
+        enlarging &&
+        (last == null || DateTime.now().difference(last) >= _radiusCommitMaxWait);
+
+    if (forceCommit) {
+      _commitRadiusKm(radius);
+      return;
+    }
+
+    _pinResyncDebounce = Timer(_radiusCommitDebounce, () {
       if (!mounted) return;
-      if (radius != _committedRadiusKm) {
-        setState(() => _committedRadiusKm = radius);
-      }
+      _commitRadiusKm(radius);
     });
+  }
+
+  void _commitRadiusKm(double radius) {
+    if (radius == _committedRadiusKm) return;
+    _lastRadiusCommitAt = DateTime.now();
+    setState(() => _committedRadiusKm = radius);
   }
 
   /// Re-centers the camera on the establishment this screen belongs to and
@@ -625,6 +705,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
 
   Future<bool> _clinicSourcesPresent(StyleManager style) async {
     return await style.styleSourceExists(_nearbySourceId) &&
+        await style.styleSourceExists(_nearbyStackSourceId) &&
         await style.styleSourceExists(_nearbyFocusSourceId);
   }
 
@@ -649,12 +730,23 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       final style = map.style;
 
       await ClinicMapPin.ensureRegistered(style, devicePixelRatio: dpr);
+      await NearbyStackMarker.ensureImages(
+        style,
+        devicePixelRatio: dpr,
+        specs: [
+          for (final bucket in PurchaseBucketFilter.values)
+            for (final count in const [2, 3, 4, 5])
+              (bucket: bucket, count: count),
+        ],
+      );
       if (!mounted || epoch != _clinicLayersEpoch) return;
 
       // Always layers-before-sources. Never leave a layer without its source.
-      // Also drop legacy cluster layers from earlier builds of this screen.
+      // Also drop legacy cluster / focus-pin layers from earlier builds.
       for (final id in [
         _nearbyFocusLayerId,
+        'nearby-focus-pin',
+        _nearbyStackLayerId,
         _nearbyUnclusteredLayerId,
         'nearby-clinicas-cluster-count',
         'nearby-clinicas-clusters',
@@ -665,6 +757,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       }
       for (final id in [
         _nearbySourceId,
+        _nearbyStackSourceId,
         _nearbyFocusSourceId,
         _nearbyRadiusSourceId,
       ]) {
@@ -672,7 +765,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       }
       if (!mounted || epoch != _clinicLayersEpoch) return;
 
-      // Radius under pins: add fill/line first, then pin symbol layers on top.
+      // Radius under pins: add fill/line first, then pin/stack/focus on top.
       // Style layers (not PolygonAnnotation) so taps reach pins.
       await style.addSource(
         GeoJsonSource(
@@ -712,6 +805,15 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       );
       await style.addSource(
         GeoJsonSource(
+          id: _nearbyStackSourceId,
+          data: jsonEncode({
+            'type': 'FeatureCollection',
+            'features': <Object>[],
+          }),
+        ),
+      );
+      await style.addSource(
+        GeoJsonSource(
           id: _nearbyFocusSourceId,
           data: jsonEncode({
             'type': 'FeatureCollection',
@@ -725,7 +827,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         SymbolLayer(
           id: _nearbyUnclusteredLayerId,
           sourceId: _nearbySourceId,
-          iconImage: ClinicMapPin.singleImageId,
+          iconImageExpression: ClinicMapPin.iconImageExpression,
           iconAnchor: IconAnchor.BOTTOM,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
@@ -734,13 +836,26 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       );
       await style.addLayer(
         SymbolLayer(
-          id: _nearbyFocusLayerId,
-          sourceId: _nearbyFocusSourceId,
-          iconImage: ClinicMapPin.focusImageId,
-          iconAnchor: IconAnchor.BOTTOM,
+          id: _nearbyStackLayerId,
+          sourceId: _nearbyStackSourceId,
+          iconImageExpression: NearbyStackMarker.iconImageExpression,
+          iconAnchor: IconAnchor.CENTER,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
           iconSize: 1,
+        ),
+      );
+      // Current clinic “you are here”: white fill + navy ring — not a
+      // status-colored count disc (those are co-location stacks).
+      await style.addLayer(
+        CircleLayer(
+          id: _nearbyFocusLayerId,
+          sourceId: _nearbyFocusSourceId,
+          circleColor: Colors.white.toARGB32(),
+          circleRadius: 7,
+          circleStrokeColor: AppColors.navyBright.toARGB32(),
+          circleStrokeWidth: 4,
+          circleOpacity: 1,
         ),
       );
 
@@ -749,6 +864,8 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       }
 
       _clinicLayersReady = true;
+      // Layers were recreated — re-bind pin/stack taps.
+      _clinicInteractionsRegistered = false;
       _registerClinicInteractions(map);
     } catch (_) {
       _clinicLayersReady = false;
@@ -759,9 +876,9 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   void _registerClinicInteractions(MapboxMap map) {
     if (_clinicInteractionsRegistered) return;
     try {
-      // Drop legacy cluster interaction ids from earlier builds.
       for (final id in [
         _pinInteractionId,
+        _stackInteractionId,
         'tap-nearby-cluster',
         'tap-nearby-cluster-count',
       ]) {
@@ -778,13 +895,22 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         ),
         interactionID: _pinInteractionId,
       );
+      map.addInteraction(
+        TapInteraction(
+          FeaturesetDescriptor(layerId: _nearbyStackLayerId),
+          (feature, _) {
+            unawaited(_onStackFeatureTapped(feature));
+          },
+        ),
+        interactionID: _stackInteractionId,
+      );
       _clinicInteractionsRegistered = true;
     } catch (_) {
       _clinicInteractionsRegistered = false;
     }
   }
 
-  /// Pushes the radius-filtered pin set + focus pin into the GeoJSON sources.
+  /// Pushes singleton pins, co-location stacks, and origin ball into sources.
   Future<void> _syncClinicPins() async {
     final map = _mapboxMap;
     if (map == null || !mounted) return;
@@ -793,50 +919,160 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       await _ensureClinicLayers();
       if (!_clinicLayersReady) return;
 
-      final features = _visible
-          .map(
-            (e) => {
-              'type': 'Feature',
-              'geometry': {
-                'type': 'Point',
-                'coordinates': [e.longitude, e.latitude],
-              },
-              'properties': {'facilityId': e.id, 'name': e.name},
-            },
-          )
-          .toList(growable: false);
+      final groups = _colocateGroups(_visible);
+      final pinFeatures = <Map<String, Object?>>[];
+      final stackFeatures = <Map<String, Object?>>[];
+      final focusFeatures = <Map<String, Object?>>[];
+      final stackMembers = <String, List<NearbyEstablishment>>{};
+      final stackSpecs = <({String bucket, num count})>[];
+
+      for (final group in groups) {
+        if (group.length == 1) {
+          final e = group.first;
+          if (e.id == widget.facilityId) {
+            focusFeatures.add(_focusFeature());
+          } else {
+            pinFeatures.add(_pinFeature(e));
+          }
+          continue;
+        }
+
+        final stackId = group.map((e) => e.id).join('|');
+        stackMembers[stackId] = group;
+        final count = group.length;
+        // Worst bucket among clinics that have status (skip origin if null).
+        final worst = NearbyStackMarker.worstBucket(
+          group
+              .where((e) => e.id != widget.facilityId || e.purchaseBucket != null)
+              .map((e) => e.purchaseBucket),
+        );
+        stackSpecs.add((bucket: worst, count: count));
+        var lat = 0.0;
+        var lng = 0.0;
+        for (final e in group) {
+          lat += e.latitude;
+          lng += e.longitude;
+        }
+        lat /= count;
+        lng /= count;
+        stackFeatures.add({
+          'type': 'Feature',
+          'geometry': {
+            'type': 'Point',
+            'coordinates': [lng, lat],
+          },
+          'properties': {
+            'stackId': stackId,
+            'point_count': count,
+            'purchaseBucket': worst,
+            'includesOrigin': group.any((e) => e.id == widget.facilityId)
+                ? 1
+                : 0,
+          },
+        });
+      }
+
+      _stackMembersById = stackMembers;
+
+      if (!mounted) return;
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      await NearbyStackMarker.ensureImages(
+        map.style,
+        devicePixelRatio: dpr,
+        specs: stackSpecs,
+      );
+      if (!mounted) return;
 
       await map.style.setStyleSourceProperty(
         _nearbySourceId,
         'data',
-        jsonEncode({'type': 'FeatureCollection', 'features': features}),
+        jsonEncode({'type': 'FeatureCollection', 'features': pinFeatures}),
+      );
+      await map.style.setStyleSourceProperty(
+        _nearbyStackSourceId,
+        'data',
+        jsonEncode({'type': 'FeatureCollection', 'features': stackFeatures}),
       );
       await map.style.setStyleSourceProperty(
         _nearbyFocusSourceId,
         'data',
-        jsonEncode({
-          'type': 'FeatureCollection',
-          'features': [
-            {
-              'type': 'Feature',
-              'geometry': {
-                'type': 'Point',
-                'coordinates': [
-                  widget.center.longitude,
-                  widget.center.latitude,
-                ],
-              },
-              'properties': {
-                'facilityId': widget.facilityId,
-                'name': widget.facilityName,
-              },
-            },
-          ],
-        }),
+        jsonEncode({'type': 'FeatureCollection', 'features': focusFeatures}),
       );
     } catch (_) {
       // Keep the basemap; pins can retry on the next sync/style load.
     }
+  }
+
+  Map<String, Object?> _pinFeature(NearbyEstablishment e) => {
+    'type': 'Feature',
+    'geometry': {
+      'type': 'Point',
+      'coordinates': [e.longitude, e.latitude],
+    },
+    'properties': {
+      'facilityId': e.id,
+      'name': e.name,
+      'purchaseBucket': e.purchaseBucket ?? PurchaseBucketFilter.neverBought,
+      'focused': 0,
+    },
+  };
+
+  Map<String, Object?> _focusFeature() => {
+    'type': 'Feature',
+    'geometry': {
+      'type': 'Point',
+      'coordinates': [widget.center.longitude, widget.center.latitude],
+    },
+    'properties': {
+      'facilityId': widget.facilityId,
+      'name': widget.facilityName,
+    },
+  };
+
+  /// Geographic co-location groups (~25 m), including the current clinic.
+  List<List<NearbyEstablishment>> _colocateGroups(
+    List<NearbyEstablishment> nearby,
+  ) {
+    final members = <NearbyEstablishment>[
+      ...nearby.where((e) => e.id != widget.facilityId),
+      _originEstablishment,
+    ];
+    if (members.isEmpty) return const [];
+
+    final parent = List<int>.generate(members.length, (i) => i);
+    int find(int i) {
+      while (parent[i] != i) {
+        parent[i] = parent[parent[i]];
+        i = parent[i];
+      }
+      return i;
+    }
+
+    void union(int a, int b) {
+      final ra = find(a);
+      final rb = find(b);
+      if (ra != rb) parent[rb] = ra;
+    }
+
+    for (var i = 0; i < members.length; i++) {
+      for (var j = i + 1; j < members.length; j++) {
+        if (_haversineKm(
+              members[i].latitude,
+              members[i].longitude,
+              members[j].latitude,
+              members[j].longitude,
+            ) <=
+            _coLocatedThresholdKm) {
+          union(i, j);
+        }
+      }
+    }
+
+    final buckets = <int, List<NearbyEstablishment>>{};
+    for (var i = 0; i < members.length; i++) {
+      buckets.putIfAbsent(find(i), () => []).add(members[i]);
+    }
+    return buckets.values.toList(growable: false);
   }
 
   /// Draws (or redraws) a lightly-shaded circle over the current search
@@ -933,9 +1169,35 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     await _selectPinEstablishment(match);
   }
 
+  Future<void> _onStackFeatureTapped(FeaturesetFeature feature) async {
+    _suppressNextMapTap = true;
+    Future.delayed(
+      const Duration(milliseconds: 300),
+      () => _suppressNextMapTap = false,
+    );
+
+    final stackId = feature.properties['stackId']?.toString();
+    var members = stackId == null ? null : _stackMembersById[stackId];
+    if (members == null || members.isEmpty) {
+      final point = _pointFromGeometry(feature.geometry);
+      if (point == null) return;
+      members = _establishmentsNear(point.latitude, point.longitude);
+    }
+    if (members.isEmpty) return;
+
+    await _centerOn(
+      members.first.latitude,
+      members.first.longitude,
+      zoom: 15,
+    );
+    await _dismissCallout();
+    if (!mounted) return;
+    await _showStackedEstablishmentsSheet(members);
+  }
+
   Future<void> _selectPinEstablishment(NearbyEstablishment match) async {
     final stacked = _establishmentsNear(match.latitude, match.longitude);
-    await _centerOn(match.latitude, match.longitude);
+    await _centerOn(match.latitude, match.longitude, zoom: 15);
 
     if (stacked.length > 1) {
       await _dismissCallout();
@@ -943,6 +1205,8 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       await _showStackedEstablishmentsSheet(stacked);
       return;
     }
+
+    if (match.id == widget.facilityId) return;
 
     if (_selected?.id == match.id) {
       await _dismissCallout();
@@ -964,39 +1228,21 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     return (latitude: lat, longitude: lng);
   }
 
-  /// Tapping a card centers the map on that clinic and opens its callout —
-  /// the reverse of tapping a pin, which also centers the map on the pin.
-  Future<void> _onCardTapped(String id) async {
-    NearbyEstablishment? match;
-    for (final e in _visible) {
-      if (e.id == id) {
-        match = e;
-        break;
-      }
-    }
-    if (match == null) return;
+  /// Tapping a card zooms/centers on that pin and opens callout or stack sheet.
+  Future<void> _onCardTapped(String id) => _focusOnEstablishment(id);
 
-    final stacked = _establishmentsNear(match.latitude, match.longitude);
-    await _centerOn(match.latitude, match.longitude);
-
-    if (stacked.length > 1) {
-      await _dismissCallout();
-      if (!mounted) return;
-      await _showStackedEstablishmentsSheet(stacked);
-      return;
-    }
-
-    await _showCallout(match);
-  }
-
-  Future<void> _centerOn(double latitude, double longitude) async {
+  Future<void> _centerOn(double latitude, double longitude, {double? zoom}) async {
     await _mapboxMap?.easeTo(
-      CameraOptions(center: Point(coordinates: Position(longitude, latitude))),
+      CameraOptions(
+        center: Point(coordinates: Position(longitude, latitude)),
+        zoom: zoom,
+      ),
       MapAnimationOptions(duration: 300),
     );
   }
 
   /// Clinics within ~25 m of a point — treated as the same map spot.
+  /// Includes the current clinic when it shares that spot.
   List<NearbyEstablishment> _establishmentsNear(
     double latitude,
     double longitude,
@@ -1004,16 +1250,33 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     final matches = _visible
         .where(
           (e) =>
+              e.id != widget.facilityId &&
               _haversineKm(latitude, longitude, e.latitude, e.longitude) <=
-              _coLocatedThresholdKm,
+                  _coLocatedThresholdKm,
         )
-        .toList(growable: false);
+        .toList();
+    final originNear =
+        _haversineKm(
+          latitude,
+          longitude,
+          widget.center.latitude,
+          widget.center.longitude,
+        ) <=
+        _coLocatedThresholdKm;
+    if (originNear) {
+      matches.insert(0, _originEstablishment);
+    }
     return matches;
   }
 
   Future<void> _showStackedEstablishmentsSheet(
     List<NearbyEstablishment> establishments,
   ) async {
+    // Current clinic always first when present in the stack.
+    final ordered = [
+      ...establishments.where((e) => e.id == widget.facilityId),
+      ...establishments.where((e) => e.id != widget.facilityId),
+    ];
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1042,7 +1305,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  '${establishments.length} clínicas neste local',
+                  '${ordered.length} clínicas neste local',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -1061,15 +1324,17 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,
-                    itemCount: establishments.length,
+                    itemCount: ordered.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (_, i) {
-                      final e = establishments[i];
+                      final e = ordered[i];
+                      final isCurrent = e.id == widget.facilityId;
                       return _StackedEstablishmentTile(
                         establishment: e,
+                        isCurrentClinic: isCurrent,
                         onTap: () {
                           Navigator.of(sheetContext).pop();
-                          _openEstablishment(e.id);
+                          if (!isCurrent) _openEstablishment(e.id);
                         },
                       );
                     },
@@ -1117,13 +1382,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     if (match == null) return;
 
     final stacked = _establishmentsNear(match.latitude, match.longitude);
-    await _mapboxMap?.easeTo(
-      CameraOptions(
-        center: Point(coordinates: Position(match.longitude, match.latitude)),
-        zoom: 15,
-      ),
-      MapAnimationOptions(duration: 300),
-    );
+    await _centerOn(match.latitude, match.longitude, zoom: 15);
     if (stacked.length > 1) {
       await _dismissCallout();
       if (!mounted) return;
@@ -1358,31 +1617,44 @@ class _StackedEstablishmentTile extends StatelessWidget {
   const _StackedEstablishmentTile({
     required this.establishment,
     required this.onTap,
+    this.isCurrentClinic = false,
   });
 
   final NearbyEstablishment establishment;
   final VoidCallback onTap;
+  final bool isCurrentClinic;
 
   @override
   Widget build(BuildContext context) {
+    final dotColor = isCurrentClinic
+        ? AppColors.navyBright
+        : _nearbyStatusDotColor(establishment);
     return InkWell(
-      onTap: onTap,
+      onTap: isCurrentClinic ? null : onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceTertiary,
+          color: isCurrentClinic
+              ? AppColors.blueLight
+              : AppColors.surfaceTertiary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.gray200),
+          border: Border.all(
+            color: isCurrentClinic ? AppColors.navyBright : AppColors.gray200,
+            width: isCurrentClinic ? 1.4 : 1,
+          ),
         ),
         child: Row(
           children: [
             Container(
-              width: 8,
-              height: 8,
+              width: isCurrentClinic ? 10 : 8,
+              height: isCurrentClinic ? 10 : 8,
               decoration: BoxDecoration(
-                color: establishment.status.color,
+                color: dotColor,
                 shape: BoxShape.circle,
+                border: isCurrentClinic
+                    ? Border.all(color: Colors.white, width: 2)
+                    : null,
               ),
             ),
             const SizedBox(width: 10),
@@ -1400,39 +1672,52 @@ class _StackedEstablishmentTile extends StatelessWidget {
                       color: AppColors.gray900,
                     ),
                   ),
-                  if (establishment.verticals.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    NearbyVerticalBadges(verticals: establishment.verticals),
-                  ],
-                  if (establishment.specialtyLabel != null) ...[
+                  if (isCurrentClinic) ...[
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Clínica atual',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.navyBright,
+                      ),
+                    ),
+                  ] else ...[
+                    if (establishment.verticals.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      NearbyVerticalBadges(verticals: establishment.verticals),
+                    ],
+                    if (establishment.specialtyLabel != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        establishment.specialtyLabel!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 2),
                     Text(
-                      establishment.specialtyLabel!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      '${establishment.distanceKm.toStringAsFixed(1)} km',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
                         color: AppColors.gray500,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 2),
-                  Text(
-                    '${establishment.distanceKm.toStringAsFixed(1)} km',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.gray500,
-                    ),
-                  ),
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: AppColors.navyBright,
-            ),
+            if (!isCurrentClinic)
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppColors.navyBright,
+              ),
           ],
         ),
       ),
@@ -1519,26 +1804,36 @@ class _RadiusPanel extends StatelessWidget {
                 onChanged: (value) => onChanged(snapNearbyRadiusKm(value)),
               ),
             ),
-            if (establishments.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 152,
-                child: ListView.separated(
-                  controller: scrollController,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: establishments.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) {
-                    final e = establishments[i];
-                    return _NearbyEstablishmentCard(
-                      establishment: e,
-                      isSelected: e.id == selectedId,
-                      onTap: () => onEstablishmentTap(e.id),
-                    );
-                  },
-                ),
-              ),
-            ],
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 152,
+              child: establishments.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nenhuma clínica encontrada',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.gray400,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      controller: scrollController,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: establishments.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) {
+                        final e = establishments[i];
+                        return _NearbyEstablishmentCard(
+                          establishment: e,
+                          isSelected: e.id == selectedId,
+                          onTap: () => onEstablishmentTap(e.id),
+                        );
+                      },
+                    ),
+            ),
           ],
         ),
       ),
@@ -1587,7 +1882,7 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: establishment.status.color,
+                    color: _nearbyStatusDotColor(establishment),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -1727,6 +2022,110 @@ class _NearbyMapPlaceholder extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Desempenho status chips — same semantics as live map.
+class _NearbyStatusFilterBar extends StatelessWidget {
+  const _NearbyStatusFilterBar({
+    required this.selected,
+    required this.onToggle,
+  });
+
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Row(
+        children: [
+          for (var i = 0; i < PurchaseBucketFilter.values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Builder(
+              builder: (_) {
+                final bucket = PurchaseBucketFilter.values[i];
+                return _NearbyStatusChip(
+                  label: PurchaseBucketFilter.mapLabel(bucket),
+                  color: PurchaseBucketFilter.mapColor(bucket),
+                  selected: selected.isEmpty || selected.contains(bucket),
+                  emphasized: selected.contains(bucket),
+                  onTap: () => onToggle(bucket),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NearbyStatusChip extends StatelessWidget {
+  const _NearbyStatusChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.emphasized,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final bool emphasized;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = emphasized
+        ? color
+        : selected
+        ? AppColors.gray300
+        : AppColors.gray200;
+    final bg = emphasized
+        ? color.withValues(alpha: 0.12)
+        : selected
+        ? Colors.white
+        : AppColors.gray100;
+    final fg = selected ? AppColors.gray900 : AppColors.gray400;
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: borderColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: emphasized ? FontWeight.w700 : FontWeight.w600,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

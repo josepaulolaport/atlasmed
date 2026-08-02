@@ -216,6 +216,7 @@ class NearbyEstablishment {
     required this.distanceKm,
     this.specialtyLabel,
     this.status = ClinicStatus.active,
+    this.purchaseBucket,
     this.neighborhood,
     this.streetAddress,
     this.streetNumber,
@@ -232,6 +233,9 @@ class NearbyEstablishment {
   /// e.g. "Ortopedia", "Multi", "Derm · Ped".
   final String? specialtyLabel;
   final ClinicStatus status;
+
+  /// Desempenho bucket: `active` | `inactive` | `neverBought`.
+  final String? purchaseBucket;
 
   /// Business verticals this facility is profiled in (for map card badges).
   final List<NearbyVerticalBadge> verticals;

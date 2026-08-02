@@ -7,6 +7,7 @@ import { registryReadService } from "../../../registry-ingestion/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
+import { mapFacilitiesRoute } from "./map-facilities.route";
 
 const listFacilitiesRoute = new Elysia()
   .use(auth)
@@ -1161,6 +1162,7 @@ const createFacilityVisitRoute = new Elysia()
 
 export const facilitiesRoute = new Elysia()
   .use(cadastroSubmissionsRoute)
+  .use(mapFacilitiesRoute)
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `services` is not captured as an id.
   .use(listFacilityServicesRoute)

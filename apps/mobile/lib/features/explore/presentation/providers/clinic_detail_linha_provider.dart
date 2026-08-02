@@ -85,11 +85,16 @@ final clinicDetailActiveLinhaIdProvider = Provider.autoDispose
           .watch(effectiveFacilityVerticalIdProvider)
           .valueOrNull;
 
-      final options = knownIds.isEmpty
-          ? userOptions
-          : userOptions
-                .where((v) => knownIds.contains(v.id))
-                .toList(growable: false);
+      // Bootstrap (profiles unknown): do not send Explorar/Dashboard Linha —
+      // wrong Linha 404s detail (e.g. Orto clinic while filter is Derm) and
+      // blocks learning clinic profiles. Entry hint still allowed.
+      if (knownIds.isEmpty) {
+        return override ?? entryVerticalId;
+      }
+
+      final options = userOptions
+          .where((v) => knownIds.contains(v.id))
+          .toList(growable: false);
 
       return resolveClinicDetailActiveLinhaId(
         options: options,

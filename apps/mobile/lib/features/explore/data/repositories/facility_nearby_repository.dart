@@ -1,6 +1,8 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 
 /// Fetches in-scope facilities near a reference point (establishment-centered).
@@ -39,6 +41,12 @@ Future<List<NearbyEstablishment>> fetchNearbyFacilities({
 }
 
 NearbyEstablishment facilityToNearbyEstablishment(FacilityDTO facility) {
+  final purchaseBucket =
+      PurchaseBucketFilter.fromFunnelApi(
+        facility.purchaseRecurrence?.rawFunnelStage ??
+            facility.purchaseRecurrence?.funnelStage?.apiValue,
+      ) ??
+      PurchaseBucketFilter.neverBought;
   return NearbyEstablishment(
     id: facility.id,
     name: facility.name,
@@ -46,7 +54,8 @@ NearbyEstablishment facilityToNearbyEstablishment(FacilityDTO facility) {
     longitude: facility.lng!,
     distanceKm: facility.distanceKm ?? 0,
     specialtyLabel: _specialtyLabel(facility),
-    status: ClinicStatus.active,
+    purchaseBucket: purchaseBucket,
+    status: _statusForBucket(purchaseBucket),
     neighborhood: facility.neighborhood,
     streetAddress: facility.streetAddress,
     streetNumber: facility.streetNumber,
@@ -61,6 +70,12 @@ NearbyEstablishment facilityToNearbyEstablishment(FacilityDTO facility) {
         .toList(growable: false),
   );
 }
+
+ClinicStatus _statusForBucket(String bucket) => switch (bucket) {
+  PurchaseBucketFilter.active => ClinicStatus.active,
+  PurchaseBucketFilter.inactive => ClinicStatus.inactive,
+  _ => ClinicStatus.rejected,
+};
 
 String? _specialtyLabel(FacilityDTO facility) {
   final neighborhood = facility.neighborhood?.trim();

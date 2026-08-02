@@ -19,6 +19,7 @@ import {
   ListFacilityServicesUseCase,
   UpdateFacilityUseCase,
 } from "./application/use-cases/facility.use-cases";
+import { ListMapFacilityPointsUseCase } from "./application/use-cases/list-map-facility-points.use-case";
 import {
   ConfirmProfessionalAtFacilityUseCase,
   EndFacilityProfessionalUseCase,
@@ -164,6 +165,10 @@ const facilityMembershipDeps = {
 
 export const facilityUseCases = {
   listFacilities: () => new ListFacilitiesUseCase(facilityMembershipDeps),
+  listMapFacilityPoints: () =>
+    new ListMapFacilityPointsUseCase({
+      facilityRepository: facilityRepositories.facility,
+    }),
   listFacilityServices: () =>
     new ListFacilityServicesUseCase(facilityMembershipDeps),
   getFacility: () => new GetFacilityUseCase(facilityMembershipDeps),

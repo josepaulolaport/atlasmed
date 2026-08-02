@@ -37,6 +37,7 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/catalog/infrastructure/routes/competitor-products.route.ts": "auth+permission",
   "modules/catalog/infrastructure/routes/product-comparisons.route.ts": "auth+permission",
   "modules/facility/infrastructure/routes/facilities.route.ts": "auth+permission",
+  "modules/facility/infrastructure/routes/map-facilities.route.ts": "auth+permission",
   "modules/maps/infrastructure/routes/maps.route.ts": "auth+permission",
   "modules/professional/infrastructure/routes/professionals.route.ts": "auth+permission",
   "modules/registry-ingestion/infrastructure/routes/registry-ingestion.route.ts":

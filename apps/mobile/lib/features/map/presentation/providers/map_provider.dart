@@ -3,9 +3,9 @@ import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/map/data/repositories/map_facility_points_repository.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,43 +35,17 @@ final mapTerritoryProvider = FutureProvider<TerritoryGeometry?>((ref) async {
   return ref.watch(mapRepositoryProvider).getAssignedTerritory();
 });
 
-/// User-centered clinic search for the live map tab.
-class LiveMapClinicsQuery {
-  const LiveMapClinicsQuery({
-    required this.latitude,
-    required this.longitude,
-    required this.radiusKm,
-  });
+/// Bump to force a re-fetch of map pins (refresh button).
+final mapFacilityPointsRefreshProvider = StateProvider<int>((ref) => 0);
 
-  final double latitude;
-  final double longitude;
-  final double radiusKm;
-
-  @override
-  bool operator ==(Object other) {
-    return other is LiveMapClinicsQuery &&
-        other.latitude == latitude &&
-        other.longitude == longitude &&
-        other.radiusKm == radiusKm;
-  }
-
-  @override
-  int get hashCode => Object.hash(latitude, longitude, radiusKm);
-}
-
-final liveMapClinicsProvider =
-    FutureProvider.family<List<NearbyEstablishment>, LiveMapClinicsQuery>((
-      ref,
-      query,
-    ) async {
+/// All in-scope thin map pins. Reloads on vertical change / refresh bump /
+/// session change — not on pan/zoom.
+final liveMapFacilityPointsProvider =
+    FutureProvider<List<NearbyEstablishment>>((ref) async {
+      ref.watch(sessionProvider);
+      ref.watch(mapFacilityPointsRefreshProvider);
       final verticalId = await ref.watch(
         effectiveFacilityVerticalIdProvider.future,
       );
-      return fetchNearbyFacilities(
-        latitude: query.latitude,
-        longitude: query.longitude,
-        radiusKm: query.radiusKm,
-        limit: 100,
-        verticalId: verticalId,
-      );
+      return fetchMapFacilityPoints(verticalId: verticalId);
     });

@@ -151,6 +151,16 @@ export interface FacilityListScopeFilter {
   restrictToVerticalProfiles?: boolean;
 }
 
+/** Thin map pin — no list hydration. */
+export interface FacilityMapPoint {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  /** Desempenho bucket: active | inactive | neverBought. */
+  purchaseBucket: "active" | "inactive" | "neverBought";
+}
+
 export interface FacilitySourceUpsertInput {
   sourceProvider: string;
   externalSourceId: string;
@@ -260,6 +270,12 @@ export interface FacilityRepository {
   }>;
 
   findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]>;
+
+  /**
+   * All in-scope geocoded facilities as thin map points (id/name/lat/lng).
+   * Used by the live map — no pagination, no list joins.
+   */
+  listMapPoints(scope: FacilityListScopeFilter): Promise<FacilityMapPoint[]>;
 
   findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]>;
 

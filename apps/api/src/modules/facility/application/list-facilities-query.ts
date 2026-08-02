@@ -40,6 +40,26 @@ export function purchaseBucketToFunnelFilter(bucket: FacilityPurchaseBucket): {
   }
 }
 
+/** Reverse of [purchaseBucketToFunnelFilter] — null/unknown → neverBought. */
+export function funnelStageToPurchaseBucket(
+  stage: FacilityPurchaseFunnelStage | null | undefined,
+): FacilityPurchaseBucket {
+  switch (stage) {
+    case "PURCHASE_WINDOW":
+      return "active";
+    case "OUTSIDE_WINDOW":
+    case "CHURN":
+      return "inactive";
+    case "NEVER_PURCHASED":
+    case "INACTIVE":
+    case null:
+    case undefined:
+      return "neverBought";
+    default:
+      return "neverBought";
+  }
+}
+
 export interface ListFacilitiesQuery {
   latitude?: number;
   longitude?: number;

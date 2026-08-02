@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  funnelStageToPurchaseBucket,
   parseListFacilitiesQuery,
   purchaseBucketToFunnelFilter,
 } from "./list-facilities-query";
@@ -68,5 +69,14 @@ describe("parseListFacilitiesQuery", () => {
       stages: ["NEVER_PURCHASED", "INACTIVE"],
       includeNull: true,
     });
+  });
+
+  it("maps funnel stages back to Desempenho buckets", () => {
+    expect(funnelStageToPurchaseBucket("PURCHASE_WINDOW")).toBe("active");
+    expect(funnelStageToPurchaseBucket("OUTSIDE_WINDOW")).toBe("inactive");
+    expect(funnelStageToPurchaseBucket("CHURN")).toBe("inactive");
+    expect(funnelStageToPurchaseBucket("NEVER_PURCHASED")).toBe("neverBought");
+    expect(funnelStageToPurchaseBucket("INACTIVE")).toBe("neverBought");
+    expect(funnelStageToPurchaseBucket(null)).toBe("neverBought");
   });
 });

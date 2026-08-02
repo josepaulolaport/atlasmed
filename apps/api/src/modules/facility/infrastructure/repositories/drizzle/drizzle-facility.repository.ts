@@ -23,6 +23,7 @@ import type {
   FacilityCommercialStatus,
   FacilityListRecord,
   FacilityListScopeFilter,
+  FacilityMapPoint,
   FacilityRecord,
   FacilityRepository,
   FacilityService,
@@ -1135,6 +1136,85 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       throw new ResourceNotFoundError("Clinic", id);
     }
     return refreshed;
+  }
+
+  async listMapPoints(scope: FacilityListScopeFilter): Promise<FacilityMapPoint[]> {
+    const where = and(
+      buildFacilityListConditions({ scope }),
+      sql`${facilities.location} IS NOT NULL`,
+    );
+
+    const verticalIds = scope.verticalIds;
+    // Priority: any PURCHASE_WINDOW → active; else OUTSIDE/CHURN → inactive; else neverBought.
+    // When verticals resolve, read profile stage(s); otherwise facility rollup.
+    // Correlate with bare `facilities.id` — `${facilities.id}` inside EXISTS is
+    // parameterized by Drizzle and breaks the outer-row join (all → neverBought).
+    const purchaseBucketSql =
+      verticalIds && verticalIds.length > 0
+        ? sql<"active" | "inactive" | "neverBought">`(
+            CASE
+              WHEN EXISTS (
+                SELECT 1
+                FROM ${facilityVerticalProfiles} p
+                WHERE p.facility_id = facilities.id
+                  AND p.is_active = true
+                  AND p.vertical_id IN (${sql.join(
+                    verticalIds.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})
+                  AND p.purchase_funnel_stage = 'PURCHASE_WINDOW'
+              ) THEN 'active'
+              WHEN EXISTS (
+                SELECT 1
+                FROM ${facilityVerticalProfiles} p
+                WHERE p.facility_id = facilities.id
+                  AND p.is_active = true
+                  AND p.vertical_id IN (${sql.join(
+                    verticalIds.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})
+                  AND p.purchase_funnel_stage IN ('OUTSIDE_WINDOW', 'CHURN')
+              ) THEN 'inactive'
+              ELSE 'neverBought'
+            END
+          )`
+        : sql<"active" | "inactive" | "neverBought">`(
+            CASE
+              WHEN ${facilities.purchaseFunnelStage} = 'PURCHASE_WINDOW' THEN 'active'
+              WHEN ${facilities.purchaseFunnelStage} IN ('OUTSIDE_WINDOW', 'CHURN') THEN 'inactive'
+              ELSE 'neverBought'
+            END
+          )`;
+
+    const rows = await db
+      .select({
+        id: facilities.id,
+        name: facilities.displayName,
+        lat: locationLatSql,
+        lng: locationLngSql,
+        purchaseBucket: purchaseBucketSql,
+      })
+      .from(facilities)
+      .where(where)
+      .orderBy(asc(facilities.displayName), asc(facilities.id));
+
+    return rows.flatMap((row) => {
+      if (row.lat == null || row.lng == null) return [];
+      const bucket = row.purchaseBucket;
+      const purchaseBucket =
+        bucket === "active" || bucket === "inactive" || bucket === "neverBought"
+          ? bucket
+          : "neverBought";
+      return [
+        {
+          id: row.id,
+          name: row.name,
+          lat: Number(row.lat),
+          lng: Number(row.lng),
+          purchaseBucket,
+        },
+      ];
+    });
   }
 
   async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {
