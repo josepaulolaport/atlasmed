@@ -172,6 +172,52 @@ describe("findCalendarConflicts", () => {
     );
   });
 
+  it("includes an active override moved into the query range", () => {
+    const existing = oneOff("existing", "2026-02-02", "09:00");
+    existing.overrides = {
+      "2026-02-02T09:00[UTC]": {
+        status: "ACTIVE",
+        startsAt: new Date("2026-01-15T11:00:00.000Z"),
+        endsAt: new Date("2026-01-15T12:00:00.000Z"),
+      },
+    };
+
+    const conflicts = findCalendarConflicts(
+      oneOff("candidate", "2026-01-15", "11:30", 15),
+      [existing],
+      january
+    );
+
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]).toMatchObject({
+      existingOccurrenceKey: "2026-02-02T09:00[UTC]",
+      existingStartsAt: new Date("2026-01-15T11:00:00.000Z"),
+    });
+  });
+
+  it("excludes active overrides moved out of the query range", () => {
+    const candidate = oneOff("candidate", "2026-01-15", "09:30", 15);
+    candidate.overrides = {
+      "2026-01-15T09:30[UTC]": {
+        status: "ACTIVE",
+        startsAt: new Date("2026-02-02T09:30:00.000Z"),
+        endsAt: new Date("2026-02-02T09:45:00.000Z"),
+      },
+    };
+    const existing = oneOff("existing", "2026-01-15", "09:00");
+    existing.overrides = {
+      "2026-01-15T09:00[UTC]": {
+        status: "ACTIVE",
+        startsAt: new Date("2026-02-02T09:00:00.000Z"),
+        endsAt: new Date("2026-02-02T10:00:00.000Z"),
+      },
+    };
+
+    const conflicts = findCalendarConflicts(candidate, [existing], january);
+
+    expect(conflicts).toEqual([]);
+  });
+
   it("keeps overridden existing occurrences ordered for conflict scanning", () => {
     const existing = recurring("existing", {
       anchorLocalDate: "2026-01-01",
@@ -221,6 +267,30 @@ describe("findCalendarConflicts", () => {
     expect(conflicts[99]?.candidateOccurrenceKey).toBe(
       "2026-04-10T09:00[UTC]"
     );
+  });
+
+  it("streams unbounded identical daily rules and returns capped conflicts quickly", () => {
+    const startedAt = performance.now();
+    const conflicts = findCalendarConflicts(
+      recurring("candidate", {
+        anchorLocalDate: "2026-01-01",
+        recurrence: "DAILY",
+      }),
+      [
+        recurring("existing", {
+          anchorLocalDate: "2026-01-01",
+          recurrence: "DAILY",
+        }),
+      ],
+      { from: new Date("2026-01-01T00:00:00.000Z") }
+    );
+    const elapsedMilliseconds = performance.now() - startedAt;
+
+    expect(conflicts).toHaveLength(100);
+    expect(conflicts[99]?.candidateOccurrenceKey).toBe(
+      "2026-04-10T09:00[UTC]"
+    );
+    expect(elapsedMilliseconds).toBeLessThan(1_000);
   });
 
   it("uses a bounded 400-year calendar cycle when the comparison range is unbounded", () => {

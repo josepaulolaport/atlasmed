@@ -1,6 +1,10 @@
 import {
+  calendarOccurrenceFromRecurrenceKey,
+  calendarRuleEnd,
   expandCalendarOccurrences,
+  iterateCalendarOccurrences,
   type CalendarExpansionRange,
+  type CalendarIterationRange,
   type CalendarOccurrence,
   type CalendarRecurrenceRule,
 } from "./recurrence.service";
@@ -36,40 +40,44 @@ export interface CalendarConflict {
 
 /** UI feedback is intentionally bounded even when many concrete pairs overlap. */
 export const MAX_CALENDAR_CONFLICTS = 100;
-const GREGORIAN_CYCLE_YEARS = 400;
 
 /**
  * Finds concrete conflicting occurrence pairs using semi-open overlap.
  *
- * A caller may omit `range.to` for an unbounded recurrence comparison. The
- * approved recurrence set repeats its Gregorian date/weekday and DST rules over
- * a 400-year calendar cycle, so the search is bounded to one such cycle rather
- * than an arbitrary product horizon such as 12 or 24 months.
+ * A caller may omit `range.to` for an unbounded comparison. In that mode,
+ * recurring rules are consumed lazily and stop as soon as the conflict cap is
+ * reached. If two infinite rules never overlap, supported calendar patterns
+ * are checked for one 400-year Gregorian date/weekday cycle and then stop.
+ * This is a termination bound for the supported recurrence shapes, not a claim
+ * that historical or future IANA time-zone rules repeat every 400 years.
  */
 export function findCalendarConflicts(
   candidate: CalendarConflictEntry,
   existing: readonly CalendarConflictEntry[],
   range: CalendarConflictRange
 ): CalendarConflict[] {
-  const expansionRange = resolveExpansionRange(range);
-  const candidateOccurrences = applyOccurrenceState(
-    expandCalendarOccurrences(candidate.rule, expansionRange),
-    candidate
-  );
+  validateConflictRange(range);
   const conflicts: CalendarConflict[] = [];
 
   for (const existingEntry of existing) {
-    const existingOccurrences = applyOccurrenceState(
-      expandCalendarOccurrences(existingEntry.rule, expansionRange),
-      existingEntry
-    );
-    collectOverlaps(
-      candidate,
-      candidateOccurrences,
-      existingEntry,
-      existingOccurrences,
-      conflicts
-    );
+    if (range.to === undefined && isSimpleUnboundedPair(candidate, existingEntry)) {
+      collectUnboundedOverlaps(candidate, existingEntry, range.from, conflicts);
+    } else {
+      const expansionRange = resolveFiniteExpansionRange(
+        candidate,
+        existingEntry,
+        range
+      );
+      const candidateOccurrences = effectiveOccurrences(candidate, expansionRange);
+      const existingOccurrences = effectiveOccurrences(existingEntry, expansionRange);
+      collectOverlaps(
+        candidate,
+        candidateOccurrences,
+        existingEntry,
+        existingOccurrences,
+        conflicts
+      );
+    }
     if (conflicts.length >= MAX_CALENDAR_CONFLICTS) break;
   }
 
@@ -78,31 +86,131 @@ export function findCalendarConflicts(
     .slice(0, MAX_CALENDAR_CONFLICTS);
 }
 
-function resolveExpansionRange(range: CalendarConflictRange): CalendarExpansionRange {
+function validateConflictRange(range: CalendarConflictRange): void {
   if (!Number.isFinite(range.from.getTime())) {
     throw new RangeError("Conflict range requires a valid from date");
   }
-
-  const to = range.to ?? addUtcYears(range.from, GREGORIAN_CYCLE_YEARS);
-  if (!Number.isFinite(to.getTime()) || range.from >= to) {
+  if (
+    range.to !== undefined &&
+    (!Number.isFinite(range.to.getTime()) || range.from >= range.to)
+  ) {
     throw new RangeError("Conflict range requires from < to");
   }
-  return { from: range.from, to };
 }
 
-function addUtcYears(date: Date, years: number): Date {
-  const result = new Date(date);
-  result.setUTCFullYear(result.getUTCFullYear() + years);
-  return result;
+function resolveFiniteExpansionRange(
+  candidate: CalendarConflictEntry,
+  existing: CalendarConflictEntry,
+  range: CalendarConflictRange
+): CalendarExpansionRange {
+  if (range.to !== undefined) return { from: range.from, to: range.to };
+
+  const ends = [finiteRuleEnd(candidate.rule), finiteRuleEnd(existing.rule)].filter(
+    (value): value is Date => value !== undefined
+  );
+  if (ends.length === 0) {
+    throw new RangeError(
+      "Unbounded calendar comparisons with overrides require at least one finite recurrence"
+    );
+  }
+  return { from: range.from, to: new Date(Math.max(...ends.map((end) => end.getTime()))) };
 }
 
-function applyOccurrenceState(
-  occurrences: readonly CalendarOccurrence[],
-  entry: CalendarConflictEntry
+function isSimpleUnboundedPair(
+  candidate: CalendarConflictEntry,
+  existing: CalendarConflictEntry
+): boolean {
+  return !hasOccurrenceState(candidate) && !hasOccurrenceState(existing);
+}
+
+function hasOccurrenceState(entry: CalendarConflictEntry): boolean {
+  return (
+    (entry.cancelledOccurrenceKeys?.length ?? 0) > 0 ||
+    Object.keys(entry.overrides ?? {}).length > 0
+  );
+}
+
+function finiteRuleEnd(rule: CalendarRecurrenceRule): Date | undefined {
+  return calendarRuleEnd(rule);
+}
+
+function collectUnboundedOverlaps(
+  candidate: CalendarConflictEntry,
+  existing: CalendarConflictEntry,
+  from: Date,
+  conflicts: CalendarConflict[]
+): void {
+  const range = unboundedIterationRange(candidate.rule, existing.rule, from);
+  const candidateIterator = iterateCalendarOccurrences(candidate.rule, range);
+  const existingIterator = iterateCalendarOccurrences(existing.rule, range);
+  let candidateOccurrence = candidateIterator.next().value;
+  let existingOccurrence = existingIterator.next().value;
+
+  while (candidateOccurrence && existingOccurrence) {
+    if (overlaps(candidateOccurrence, existingOccurrence)) {
+      conflicts.push(
+        createConflict(candidate, candidateOccurrence, existing, existingOccurrence)
+      );
+      if (conflicts.length >= MAX_CALENDAR_CONFLICTS) return;
+    }
+
+    if (candidateOccurrence.endsAt <= existingOccurrence.endsAt) {
+      candidateOccurrence = candidateIterator.next().value;
+    } else {
+      existingOccurrence = existingIterator.next().value;
+    }
+  }
+}
+
+function unboundedIterationRange(
+  candidate: CalendarRecurrenceRule,
+  existing: CalendarRecurrenceRule,
+  from: Date
+): CalendarIterationRange {
+  if (finiteRuleEnd(candidate) || finiteRuleEnd(existing)) return { from };
+
+  const to = new Date(from);
+  to.setUTCFullYear(to.getUTCFullYear() + 400);
+  return { from, to };
+}
+
+function createConflict(
+  candidate: CalendarConflictEntry,
+  candidateOccurrence: CalendarOccurrence,
+  existing: CalendarConflictEntry,
+  existingOccurrence: CalendarOccurrence
+): CalendarConflict {
+  return {
+    candidateId: candidate.id,
+    existingId: existing.id,
+    candidateOccurrenceKey: candidateOccurrence.recurrenceKey,
+    existingOccurrenceKey: existingOccurrence.recurrenceKey,
+    candidateStartsAt: candidateOccurrence.startsAt,
+    candidateEndsAt: candidateOccurrence.endsAt,
+    existingStartsAt: existingOccurrence.startsAt,
+    existingEndsAt: existingOccurrence.endsAt,
+  };
+}
+
+function effectiveOccurrences(
+  entry: CalendarConflictEntry,
+  range: CalendarExpansionRange
 ): CalendarOccurrence[] {
   const cancelled = new Set(entry.cancelledOccurrenceKeys ?? []);
+  const occurrences = new Map(
+    expandCalendarOccurrences(entry.rule, range).map((occurrence) => [
+      occurrence.recurrenceKey,
+      occurrence,
+    ])
+  );
 
-  return occurrences
+  for (const recurrenceKey of Object.keys(entry.overrides ?? {})) {
+    if (occurrences.has(recurrenceKey)) continue;
+    const occurrence = calendarOccurrenceFromRecurrenceKey(entry.rule, recurrenceKey);
+    if (occurrence) occurrences.set(recurrenceKey, occurrence);
+  }
+
+  return [...occurrences.values()]
     .flatMap((occurrence) => {
       const override = entry.overrides?.[occurrence.recurrenceKey];
       if (
@@ -123,6 +231,7 @@ function applyOccurrenceState(
           `Calendar override ${occurrence.recurrenceKey} requires startsAt < endsAt`
         );
       }
+      if (startsAt >= range.to || endsAt <= range.from) return [];
 
       return [{ ...occurrence, startsAt, endsAt }];
     })
@@ -161,16 +270,9 @@ function collectOverlaps(
       const existingOccurrence = existingOccurrences[index]!;
       if (!overlaps(candidateOccurrence, existingOccurrence)) continue;
 
-      conflicts.push({
-        candidateId: candidate.id,
-        existingId: existing.id,
-        candidateOccurrenceKey: candidateOccurrence.recurrenceKey,
-        existingOccurrenceKey: existingOccurrence.recurrenceKey,
-        candidateStartsAt: candidateOccurrence.startsAt,
-        candidateEndsAt: candidateOccurrence.endsAt,
-        existingStartsAt: existingOccurrence.startsAt,
-        existingEndsAt: existingOccurrence.endsAt,
-      });
+      conflicts.push(
+        createConflict(candidate, candidateOccurrence, existing, existingOccurrence)
+      );
       if (conflicts.length >= MAX_CALENDAR_CONFLICTS) return;
     }
   }

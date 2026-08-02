@@ -22,6 +22,11 @@ export interface CalendarExpansionRange {
   to: Date;
 }
 
+export interface CalendarIterationRange {
+  from: Date;
+  to?: Date;
+}
+
 export interface CalendarOccurrence {
   /** Stable identity derived from the original wall-clock slot, before overrides. */
   recurrenceKey: string;
@@ -43,6 +48,7 @@ interface LocalDateTime extends LocalDate {
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_PATTERN = /^(\d{2}):(\d{2})$/;
+const RECURRENCE_KEY_PATTERN = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})\[(.+)]$/;
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 const formatterCache = new Map<string, Intl.DateTimeFormat>();
@@ -56,11 +62,23 @@ export function expandCalendarOccurrences(
   rule: CalendarRecurrenceRule,
   range: CalendarExpansionRange
 ): CalendarOccurrence[] {
+  return [...iterateCalendarOccurrences(rule, range)];
+}
+
+/**
+ * Lazily yields effective rule occurrences in chronological order. An omitted
+ * `to` is intentionally unbounded: callers must stop after reaching their own
+ * result cap or after the iterator ends for NONE/count/until-limited rules.
+ */
+export function* iterateCalendarOccurrences(
+  rule: CalendarRecurrenceRule,
+  range: CalendarIterationRange
+): Generator<CalendarOccurrence> {
   assertValidRule(rule);
   if (
     !Number.isFinite(range.from.getTime()) ||
-    !Number.isFinite(range.to.getTime()) ||
-    range.from >= range.to
+    (range.to !== undefined &&
+      (!Number.isFinite(range.to.getTime()) || range.from >= range.to))
   ) {
     throw new RangeError("Calendar expansion requires a valid range with from < to");
   }
@@ -68,7 +86,6 @@ export function expandCalendarOccurrences(
   const anchorDate = parseDate(rule.anchorLocalDate);
   const { hour, minute } = parseTime(rule.anchorLocalTime);
   const firstIndex = estimateFirstIndex(rule, anchorDate, range.from);
-  const occurrences: CalendarOccurrence[] = [];
 
   for (let index = firstIndex; ; index += 1) {
     if (rule.recurrenceCount !== undefined && index >= rule.recurrenceCount) break;
@@ -86,21 +103,77 @@ export function expandCalendarOccurrences(
     const startsAt = localDateTimeToUtc(localDateTime, rule.timeZone);
     const endsAt = new Date(startsAt.getTime() + rule.durationMinutes * MINUTE_MS);
 
-    if (startsAt >= range.to) break;
-    if (startsAt < range.to && range.from < endsAt) {
+    if (range.to !== undefined && startsAt >= range.to) break;
+    if (range.from < endsAt) {
       const localOccurrence = `${localDateString}T${rule.anchorLocalTime}`;
-      occurrences.push({
+      yield {
         recurrenceKey: `${localOccurrence}[${rule.timeZone}]`,
         localOccurrence,
         startsAt,
         endsAt,
-      });
+      };
     }
 
     if (rule.recurrence === "NONE") break;
   }
+}
 
-  return occurrences;
+export function calendarRuleEnd(rule: CalendarRecurrenceRule): Date | undefined {
+  assertValidRule(rule);
+  if (
+    rule.recurrence !== "NONE" &&
+    rule.recurrenceCount === undefined &&
+    rule.recurrenceUntil === undefined
+  ) {
+    return undefined;
+  }
+
+  const anchor = parseDate(rule.anchorLocalDate);
+  let lastIndex = rule.recurrence === "NONE" ? 0 : Number.POSITIVE_INFINITY;
+  if (rule.recurrenceCount !== undefined) {
+    lastIndex = Math.min(lastIndex, rule.recurrenceCount - 1);
+  }
+  if (rule.recurrenceUntil !== undefined) {
+    const until = parseDate(rule.recurrenceUntil);
+    lastIndex = Math.min(
+      lastIndex,
+      lastOccurrenceIndexOnOrBefore(anchor, rule.recurrence, until)
+    );
+  }
+  if (!Number.isFinite(lastIndex) || lastIndex < 0) return new Date(0);
+
+  const occurrence = calendarOccurrenceAtIndex(rule, anchor, lastIndex);
+  return occurrence.endsAt;
+}
+
+export function calendarOccurrenceFromRecurrenceKey(
+  rule: CalendarRecurrenceRule,
+  recurrenceKey: string
+): CalendarOccurrence | undefined {
+  assertValidRule(rule);
+  const match = RECURRENCE_KEY_PATTERN.exec(recurrenceKey);
+  if (!match || match[3] !== rule.timeZone) return undefined;
+
+  const localDateString = match[1]!;
+  const localTime = match[2]!;
+  if (localTime !== rule.anchorLocalTime) return undefined;
+
+  const localDate = parseDate(localDateString);
+  const index = occurrenceIndex(parseDate(rule.anchorLocalDate), rule.recurrence, localDate);
+  if (index === undefined) return undefined;
+  if (rule.recurrenceCount !== undefined && index >= rule.recurrenceCount) return undefined;
+  if (rule.recurrenceUntil !== undefined && localDateString > rule.recurrenceUntil) {
+    return undefined;
+  }
+
+  const { hour, minute } = parseTime(localTime);
+  const startsAt = localDateTimeToUtc({ ...localDate, hour, minute }, rule.timeZone);
+  return {
+    recurrenceKey,
+    localOccurrence: `${localDateString}T${localTime}`,
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + rule.durationMinutes * MINUTE_MS),
+  };
 }
 
 function assertValidRule(rule: CalendarRecurrenceRule): void {
@@ -183,6 +256,91 @@ function occurrenceDate(
       };
     }
   }
+}
+
+function calendarOccurrenceAtIndex(
+  rule: CalendarRecurrenceRule,
+  anchor: LocalDate,
+  index: number
+): CalendarOccurrence {
+  const localDate = occurrenceDate(anchor, rule.recurrence, index);
+  const localDateString = formatDate(localDate);
+  const { hour, minute } = parseTime(rule.anchorLocalTime);
+  const startsAt = localDateTimeToUtc({ ...localDate, hour, minute }, rule.timeZone);
+  const localOccurrence = `${localDateString}T${rule.anchorLocalTime}`;
+  return {
+    recurrenceKey: `${localOccurrence}[${rule.timeZone}]`,
+    localOccurrence,
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + rule.durationMinutes * MINUTE_MS),
+  };
+}
+
+function lastOccurrenceIndexOnOrBefore(
+  anchor: LocalDate,
+  recurrence: CalendarRecurrence,
+  until: LocalDate
+): number {
+  if (dateOrdinal(until) < dateOrdinal(anchor)) return -1;
+
+  let estimate: number;
+  switch (recurrence) {
+    case "NONE":
+      return 0;
+    case "DAILY":
+      estimate = Math.floor((dateOrdinal(until) - dateOrdinal(anchor)) / DAY_MS);
+      break;
+    case "WEEKLY":
+      estimate = Math.floor(
+        (dateOrdinal(until) - dateOrdinal(anchor)) / (7 * DAY_MS)
+      );
+      break;
+    case "MONTHLY":
+      estimate =
+        (until.year - anchor.year) * 12 + (until.month - anchor.month);
+      break;
+    case "YEARLY":
+      estimate = until.year - anchor.year;
+      break;
+  }
+
+  while (
+    estimate >= 0 &&
+    dateOrdinal(occurrenceDate(anchor, recurrence, estimate)) > dateOrdinal(until)
+  ) {
+    estimate -= 1;
+  }
+  return estimate;
+}
+
+function occurrenceIndex(
+  anchor: LocalDate,
+  recurrence: CalendarRecurrence,
+  localDate: LocalDate
+): number | undefined {
+  let index: number;
+  switch (recurrence) {
+    case "NONE":
+      index = 0;
+      break;
+    case "DAILY":
+      index = (dateOrdinal(localDate) - dateOrdinal(anchor)) / DAY_MS;
+      break;
+    case "WEEKLY":
+      index = (dateOrdinal(localDate) - dateOrdinal(anchor)) / (7 * DAY_MS);
+      break;
+    case "MONTHLY":
+      index =
+        (localDate.year - anchor.year) * 12 + (localDate.month - anchor.month);
+      break;
+    case "YEARLY":
+      index = localDate.year - anchor.year;
+      break;
+  }
+
+  if (!Number.isInteger(index) || index < 0) return undefined;
+  const expected = occurrenceDate(anchor, recurrence, index);
+  return formatDate(expected) === formatDate(localDate) ? index : undefined;
 }
 
 function estimateFirstIndex(
