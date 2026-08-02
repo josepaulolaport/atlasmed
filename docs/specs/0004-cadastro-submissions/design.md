@@ -26,8 +26,8 @@ Statuses:
 2. `POST …/submissions/:submissionId/documents` — logical document
 3. `POST …/documents/:documentId/files/initiate` — create `file_assets` + signed PUT or multipart session
 4. Client uploads to object storage
-5. `POST …/uploads/complete` — confirm; start `cadastroFileUploadedWorkflow`
-6. Worker validates checksum/MIME, marks `READY`
+5. `POST …/uploads/complete` — confirm storage, mark `PROCESSING`, start `cadastroFileUploadedWorkflow`, and return without downloading the file
+6. Worker uses the internal object-storage endpoint, validates checksum/MIME, and marks `READY`
 7. `POST …/submissions/:submissionId/submit` — freeze package for ops review
 8. `POST …/documents/:documentId/review` — approve / reject / request changes
 

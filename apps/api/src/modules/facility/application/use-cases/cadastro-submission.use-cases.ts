@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import type { CadastroDocumentFileRole } from "@atlasmed/database";
@@ -11,85 +11,13 @@ import { storageService } from "../../../../infrastructure/storage/storage.servi
 import { startCadastroFileUploadedWorkflow } from "../../../../infrastructure/temporal/temporal.client";
 import type { ConformityRepository } from "../interfaces/conformity.repository.interface";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
-import type {
-  CadastroSubmissionRepository,
-  FileAssetRecord,
-} from "../interfaces/cadastro-submission.repository.interface";
+import type { CadastroSubmissionRepository } from "../interfaces/cadastro-submission.repository.interface";
 import { FacilityCadastroCompletionService } from "../services/facility-cadastro-completion.service";
 import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
 import { resolveFacilityTaxIdType } from "../utils/facility-tax-id.utils";
 
 const DEFAULT_PART_SIZE = 10 * 1024 * 1024;
 const UPLOAD_TTL_MS = 6 * 60 * 60 * 1000;
-
-function detectCadastroMime(bytes: Uint8Array): string | null {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return "image/jpeg";
-  }
-  if (
-    bytes.length >= 8 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) {
-    return "image/png";
-  }
-  if (
-    bytes.length >= 12 &&
-    bytes[0] === 0x52 &&
-    bytes[1] === 0x49 &&
-    bytes[2] === 0x46 &&
-    bytes[3] === 0x46 &&
-    bytes[8] === 0x57 &&
-    bytes[9] === 0x45 &&
-    bytes[10] === 0x42 &&
-    bytes[11] === 0x50
-  ) {
-    return "image/webp";
-  }
-  if (
-    bytes.length >= 5 &&
-    bytes[0] === 0x25 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x44 &&
-    bytes[3] === 0x46
-  ) {
-    return "application/pdf";
-  }
-  return null;
-}
-
-function countPdfPages(bytes: Uint8Array): number | null {
-  try {
-    const text = Buffer.from(bytes).toString("latin1");
-    const matches = text.match(/\/Type\s*\/Page\b/g);
-    return matches ? matches.length : null;
-  } catch {
-    return null;
-  }
-}
-
-async function markDocumentReadyIfAllFilesReady(
-  repo: CadastroSubmissionRepository,
-  fileAssetId: string
-) {
-  const link = await repo.findDocumentFileByFileAssetId(fileAssetId);
-  if (!link) return;
-  const files = await repo.listDocumentFiles(link.submissionDocumentId);
-  if (files.length === 0 || !files.every((f) => f.fileAsset?.status === "READY")) {
-    return;
-  }
-  const doc = await repo.findDocumentById(link.submissionDocumentId);
-  if (!doc) return;
-  if (
-    doc.status === "DRAFT" ||
-    doc.status === "PROCESSING" ||
-    doc.status === "CHANGES_REQUESTED"
-  ) {
-    await repo.updateDocumentStatus({ id: doc.id, status: "READY" });
-  }
-}
 
 const INCOMPLETE_UPLOAD_STATUSES = new Set(["PENDING_UPLOAD", "UPLOADING"]);
 
@@ -110,81 +38,13 @@ async function pruneIncompleteDocumentUploads(
   }
 }
 
-/** Validate uploaded bytes and mark the file READY (or FAILED). */
-async function processUploadedCadastroFile(input: {
-  repo: CadastroSubmissionRepository;
-  asset: FileAssetRecord;
-  checksum?: string;
-}): Promise<{ status: "READY" | "FAILED"; errorMessage?: string }> {
-  const { repo, asset } = input;
-  try {
-    const bytes = await storageService.download(asset.objectKey);
-    if (bytes.length === 0) {
-      throw new Error("Object empty or missing");
-    }
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const expected = input.checksum ?? asset.sha256;
-    if (expected && expected !== sha256) {
-      throw new Error("Checksum mismatch");
-    }
-
-    const detected = detectCadastroMime(bytes);
-    if (!detected) {
-      throw new Error("Unsupported or unrecognized file type");
-    }
-    const declared = asset.declaredMimeType.toLowerCase();
-    const declaredNorm = declared === "image/jpg" ? "image/jpeg" : declared;
-    // Allow image/* family mismatch after client re-encode (e.g. HEIC→PNG).
-    const bothImages =
-      declaredNorm.startsWith("image/") && detected.startsWith("image/");
-    if (detected !== declaredNorm && !bothImages) {
-      throw new Error(`MIME mismatch: declared ${declared}, detected ${detected}`);
-    }
-
-    const pageCount =
-      detected === "application/pdf" ? (countPdfPages(bytes) ?? 1) : 1;
-
-    let previewObjectKey: string | null = null;
-    let thumbObjectKey: string | null = null;
-    if (detected.startsWith("image/")) {
-      previewObjectKey = asset.objectKey.replace(/\/original$/, "/preview");
-      thumbObjectKey = asset.objectKey.replace(/\/original$/, "/thumb");
-      await storageService.upload(previewObjectKey, bytes, detected);
-      await storageService.upload(thumbObjectKey, bytes, detected);
-    }
-
-    await repo.updateFileAsset({
-      id: asset.id,
-      status: "READY",
-      sha256,
-      detectedMimeType: detected,
-      pageCount,
-      previewObjectKey,
-      thumbObjectKey,
-      processedAt: new Date(),
-      errorCode: null,
-      errorMessage: null,
-    });
-    await markDocumentReadyIfAllFilesReady(repo, asset.id);
-    return { status: "READY" };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await repo.updateFileAsset({
-      id: asset.id,
-      status: "FAILED",
-      errorCode: "PROCESSING_FAILED",
-      errorMessage: message,
-      processedAt: new Date(),
-    });
-    return { status: "FAILED", errorMessage: message };
-  }
-}
-
 interface Dependencies {
   facilityRepository: FacilityRepository;
   conformityRepository: ConformityRepository;
   cadastroRepository: CadastroSubmissionRepository;
   completionService: FacilityCadastroCompletionService;
+  storage?: Pick<typeof storageService, "headObject" | "completeMultipartUpload">;
+  startCadastroFileUploadedWorkflow?: typeof startCadastroFileUploadedWorkflow;
 }
 
 function serializeFile(file: {
@@ -562,6 +422,10 @@ export class CompleteCadastroFileUploadUseCase {
     parts?: Array<{ partNumber: number; etag: string; sizeBytes?: number }>;
     checksum?: string;
   }) {
+    const storage = this.deps.storage ?? storageService;
+    const startWorkflow =
+      this.deps.startCadastroFileUploadedWorkflow ?? startCadastroFileUploadedWorkflow;
+
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const asset = await this.deps.cadastroRepository.findFileAssetById(
       input.fileId
@@ -590,7 +454,7 @@ export class CompleteCadastroFileUploadUseCase {
           sizeBytes: part.sizeBytes,
         });
       }
-      await storageService.completeMultipartUpload(
+      await storage.completeMultipartUpload(
         asset.objectKey,
         session.storageUploadId,
         input.parts.map((p) => ({ partNumber: p.partNumber, etag: p.etag }))
@@ -601,7 +465,7 @@ export class CompleteCadastroFileUploadUseCase {
         completedAt: new Date(),
       });
     } else {
-      const head = await storageService.headObject(asset.objectKey);
+      const head = await storage.headObject(asset.objectKey);
       if (!head.exists) {
         throw new ValidationError([
           { field: "fileId", message: "Upload não encontrado no storage" },
@@ -609,46 +473,36 @@ export class CompleteCadastroFileUploadUseCase {
       }
     }
 
-    const uploaded = await this.deps.cadastroRepository.updateFileAsset({
+    await this.deps.cadastroRepository.updateFileAsset({
       id: asset.id,
-      status: "UPLOADED",
+      status: "PROCESSING",
       sha256: input.checksum ?? asset.sha256,
       uploadedAt: new Date(),
       errorCode: null,
       errorMessage: null,
     });
 
-    await this.deps.cadastroRepository.updateFileAsset({
-      id: asset.id,
-      status: "PROCESSING",
-    });
-
-    // Process inline so READY does not depend on a running Temporal worker.
-    // Temporal is still started best-effort for audit / eventual worker path.
-    const processed = await processUploadedCadastroFile({
-      repo: this.deps.cadastroRepository,
-      asset: uploaded,
-      checksum: input.checksum,
-    });
-
-    let workflowId: string | null = null;
     try {
-      const started = await startCadastroFileUploadedWorkflow({
+      const started = await startWorkflow({
         fileAssetId: asset.id,
         bucket: asset.bucket,
         objectKey: asset.objectKey,
       });
-      workflowId = started.workflowId;
-    } catch {
-      // Worker optional when inline processing already finished.
-    }
 
-    return {
-      fileId: asset.id,
-      status: processed.status,
-      workflowId,
-      errorMessage: processed.errorMessage,
-    };
+      return {
+        fileId: asset.id,
+        status: "PROCESSING" as const,
+        workflowId: started.workflowId,
+      };
+    } catch (error) {
+      await this.deps.cadastroRepository.updateFileAsset({
+        id: asset.id,
+        status: "UPLOADED",
+        errorCode: "PROCESSING_NOT_SCHEDULED",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 }
 

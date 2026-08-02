@@ -96,6 +96,24 @@ describe("production deployment", () => {
     expect(cnesWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
   });
 
+  it("configures the Cadastro Temporal worker with internal object storage", () => {
+    const { compose } = readDeploymentConfig();
+    const cnesWorker = compose.slice(
+      compose.indexOf("  atlasmed-cnes-worker:"),
+      compose.indexOf("  atlasmed-temporal-db:"),
+    );
+
+    expect(cnesWorker).toContain("      - STORAGE_ENDPOINT=http://atlasmed-minio:9000");
+    expect(cnesWorker).toContain("      - STORAGE_ACCESS_KEY_ID=${MINIO_ROOT_USER}");
+    expect(cnesWorker).toContain("      - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}");
+    expect(cnesWorker).toContain(
+      "      - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}",
+    );
+    expect(cnesWorker).toContain(
+      "      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}",
+    );
+  });
+
   it("recreates application services when deploying their mutable production images", () => {
     const { compose, workflow } = readDeploymentConfig();
 
