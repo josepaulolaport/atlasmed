@@ -2,10 +2,12 @@ import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_manager.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/boundary_impact.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/unassigned_facility.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_ops.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
@@ -87,10 +89,19 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<void> updateTerritoryGeometry(
+  Future<BoundaryImpactPreview> previewBoundaryImpact(
     String id,
     TerritoryGeometry geometry,
   ) async {
+    return const BoundaryImpactPreview(mode: 'none', clinics: []);
+  }
+
+  @override
+  Future<void> updateTerritoryGeometry(
+    String id,
+    TerritoryGeometry geometry, {
+    List<String>? acceptedFacilityIds,
+  }) async {
     lastSavedId = id;
     lastSavedGeometry = geometry;
     final index = territories.indexWhere((t) => t.id == id);
@@ -98,6 +109,14 @@ class _FakeTerritoryRepository implements TerritoryRepository {
       territories[index] = territories[index].copyWith(boundary: geometry);
     }
   }
+
+  @override
+  Future<List<UnassignedFacility>> listUnassignedFacilities({
+    String? managerZoneId,
+    int page = 1,
+    int limit = 50,
+  }) async =>
+      const [];
 
   @override
   Future<Territory> createTerritory(
