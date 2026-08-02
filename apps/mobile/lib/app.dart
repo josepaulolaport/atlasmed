@@ -27,6 +27,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
@@ -267,6 +268,15 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                   path: '/map',
                   pageBuilder: (_, _) =>
                       const NoTransitionPage(child: MapScreen()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/agenda',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: AgendaScreen()),
                 ),
               ],
             ),

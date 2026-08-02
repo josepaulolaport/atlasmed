@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -12,6 +13,31 @@ void main() {
     test('is active only for its configured navigation branch', () {
       expect(explore.isActiveForBranch(0), isTrue);
       expect(explore.isActiveForBranch(1), isFalse);
+    });
+
+    test('Agenda has its own branch and correct role visibility', () {
+      final agenda = appNavigationItems.singleWhere(
+        (item) => item.route == '/agenda',
+      );
+
+      expect(agenda.label, 'Agenda');
+      expect(agenda.branchIndex, 3);
+      expect(agenda.visibleFor!(UserRoleName.rep), isTrue);
+      expect(agenda.visibleFor!(UserRoleName.manager), isTrue);
+      expect(agenda.visibleFor!(UserRoleName.admin), isTrue);
+      expect(agenda.visibleFor!(UserRoleName.ops), isFalse);
+      expect(
+        appNavigationItems
+            .singleWhere((item) => item.route == '/territories')
+            .branchIndex,
+        4,
+      );
+      expect(
+        appNavigationItems
+            .singleWhere((item) => item.route == '/profile')
+            .branchIndex,
+        10,
+      );
     });
   });
 
