@@ -6,13 +6,14 @@ import 'dart:ui' as ui;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/providers/map_provider.dart';
+import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_cluster_marker.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
-import 'package:atlasmed_mobile_app/features/map/presentation/utils/cluster_count_badge.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/foundation.dart';
@@ -23,7 +24,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Live map tab: clinics as pins in the current camera view, Waze-style follow.
+/// Live map tab: in-scope clinic pins with Mapbox Supercluster.
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
 
@@ -37,35 +38,51 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   static const _territoryLineLayerId = 'territorio-atlasmed-contorno';
 
   static const _clinicsSourceId = 'clinicas-ao-vivo';
+  static const _clusterAreaLayerId = 'clinicas-cluster-area';
   static const _clusterLayerId = 'clinicas-clusters';
-  static const _clusterCountLayerId = 'clinicas-cluster-count';
   static const _unclusteredLayerId = 'clinicas-unclustered';
+
+  /// Legacy ids — stripped on rebuild (pin is one atomic SymbolLayer now).
+  static const _legacyClusterLayerIds = [
+    'clinicas-cluster-pills',
+    'clinicas-cluster-count',
+    'clinicas-cluster-active',
+    'clinicas-cluster-inactive',
+    'clinicas-cluster-never',
+  ];
+
+  /// Paint order (bottom → top): halo → atomic pin (disc+pill) → pins.
+  static const _clinicLayerIds = [
+    _clusterLayerId,
+    _clusterAreaLayerId,
+    _unclusteredLayerId,
+  ];
 
   /// Stable follow viewport — recreating it each rebuild retriggers camera
   /// transitions (Mapbox compares viewport by identity / value change).
+  /// Top-down only — pitch locked at 0 (no tilt / side view).
   static const _followViewport = FollowPuckViewportState(
     zoom: 15.5,
-    pitch: 50,
+    pitch: 0,
     bearing: FollowPuckViewportStateBearingHeading(),
   );
 
-  /// API allows up to 500 km; keep a floor so tiny zooms still hit something.
-  static const _minFetchRadiusKm = 0.5;
-  static const _maxFetchRadiusKm = 500.0;
+  /// Bump when GeoJSON source wiring changes (forces rebuild).
+  static const _clusterSourceConfigVersion = 23;
 
-  /// Supercluster radius (1/512ths of a tile; Mapbox default 50). Tear pins
-  /// are ~28–34px wide — merge when their heads would overlap, not while
-  /// still clearly separate.
-  static const _clusterRadius = 30.0;
+  /// Screen-px clustering radius — larger = fewer, less cluttered pins.
+  static const _clusterRadiusPx = 40.0;
 
-  /// Keep pixel-based clustering through street-level zooms; only exact
-  /// duplicates remain clustered past this.
-  static const _clusterMaxZoom = 18.0;
+  /// Keep same-coordinate clinics clustered through street-level zoom.
+  /// (At/above this, Supercluster emits leaves — overlapping pins fight taps.)
+  static const _clusterMaxZoom = 20.0;
 
-  /// Clinics closer than this are treated as the same address (sheet, no zoom).
-  static const _coLocatedThresholdKm = 0.025;
+  /// When focusing a clinic pin, zoom in only if farther out than this.
+  static const _clinicFocusMinZoom = 15.5;
 
-  LiveMapClinicsQuery? _query;
+  /// Clinics within this distance count as one stacked location (drawer).
+  static const _stackDistanceMeters = 40.0;
+
   List<NearbyEstablishment> _clinics = const [];
   NearbyEstablishment? _selected;
   NearbyEstablishment? _pendingCapture;
@@ -77,6 +94,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _clinicLayersReady = false;
   bool _clinicInteractionsRegistered = false;
   bool _calloutTapListenerRegistered = false;
+  bool _pointsRefreshing = false;
+
+  /// Serializes style teardown/rebuild — styleLoaded + sync race otherwise
+  /// removes a source still bound to layers.
+  Future<void>? _ensureClinicLayersInFlight;
+
+  int _mountedClusterSourceConfigVersion = 0;
+  Timer? _clusterImageThrottle;
+
+  /// Empty = show all buckets. Otherwise only selected Desempenho statuses.
+  final Set<String> _statusFilters = {};
 
   /// Remount key so "Tentar novamente" recreates the native Mapbox view.
   int _mapGeneration = 0;
@@ -88,10 +116,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   final GlobalKey _calloutCaptureKey = GlobalKey();
   final GlobalKey _closeButtonCaptureKey = GlobalKey();
   Uint8List? _closeButtonImageBytes;
-  Timer? _viewportDebounce;
-
-  /// Last visible bounds used to client-filter pins to the current view.
-  CoordinateBounds? _visibleBounds;
 
   @override
   void initState() {
@@ -104,16 +128,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   void dispose() {
-    _viewportDebounce?.cancel();
+    _clusterImageThrottle?.cancel();
     super.dispose();
-  }
-
-  List<NearbyEstablishment> get _visibleInView {
-    final bounds = _visibleBounds;
-    if (bounds == null) return _clinics;
-    return _clinics
-        .where((e) => _isInsideBounds(e.latitude, e.longitude, bounds))
-        .toList(growable: false);
   }
 
   @override
@@ -121,32 +137,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final token = AppConfig.mapboxAccessToken;
     final session = ref.watch(locationSessionProvider);
     final location = session.location;
+    ref.watch(liveMapFacilityPointsProvider);
 
-    ref.listen<LocationSessionState>(locationSessionProvider, (_, next) {
-      if (_following && next.location != null) {
-        _scheduleViewportRefresh();
-      }
-    });
-
-    final query = _query;
-    if (query != null) {
-      // Subscribe so rebuilds pick up fetch completion.
-      ref.watch(liveMapClinicsProvider(query));
-      ref.listen<AsyncValue<List<NearbyEstablishment>>>(
-        liveMapClinicsProvider(query),
-        (previous, next) {
-          next.whenData((items) {
+    ref.listen<AsyncValue<List<NearbyEstablishment>>>(
+      liveMapFacilityPointsProvider,
+      (previous, next) {
+        next.when(
+          data: (items) {
             if (!mounted) return;
-            setState(() => _clinics = items);
+            setState(() {
+              _clinics = items;
+              _pointsRefreshing = false;
+            });
             unawaited(_syncAnnotations());
-            if (_selected != null &&
-                !_visibleInView.any((e) => e.id == _selected!.id)) {
+            if (_selected != null && !items.any((e) => e.id == _selected!.id)) {
               unawaited(_dismissCallout());
             }
-          });
-        },
-      );
-    }
+          },
+          loading: () {
+            if (mounted) setState(() => _pointsRefreshing = true);
+          },
+          error: (_, _) {
+            if (mounted) setState(() => _pointsRefreshing = false);
+          },
+        );
+      },
+    );
 
     ref.listen<AsyncValue<TerritoryGeometry?>>(mapTerritoryProvider, (_, next) {
       next.whenData((territory) => unawaited(_drawTerritory(territory)));
@@ -158,7 +174,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       body: Column(
         children: [
           const FacilityVerticalFilterBar(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+          ),
+          _MapStatusFilterBar(
+            selected: _statusFilters,
+            onToggle: _toggleStatusFilter,
           ),
           Expanded(
             child: token.isEmpty
@@ -218,17 +238,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             ref.read(mapTerritoryProvider).valueOrNull,
                           );
                           await _ensureClinicLayers();
-                          await _refreshViewportClinics();
+                          await _syncAnnotations();
                         },
                         onMapLoadErrorListener: _onMapLoadError,
                         onScrollListener: (_) => _stopFollowing(),
-                        onMapIdleListener: (_) => _scheduleViewportRefresh(),
-                        onCameraChangeListener: (_) {
-                          // While following, camera moves continuously —
-                          // refresh on idle is enough; debounce here too
-                          // so pans without a clean idle still update.
-                          if (!_following) _scheduleViewportRefresh();
-                        },
+                        onCameraChangeListener: (_) =>
+                            _scheduleClusterPinImages(),
                       ),
                       if (_pendingCapture != null)
                         Positioned(
@@ -252,9 +267,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       Positioned(
                         right: 16,
                         bottom: 16,
-                        child: _RecenterButton(
-                          following: _following,
-                          onPressed: _resumeFollowing,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _MapIconButton(
+                              tooltip: 'Atualizar clínicas',
+                              onPressed: _pointsRefreshing
+                                  ? null
+                                  : _refreshMapPoints,
+                              child: _pointsRefreshing
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.refresh_rounded),
+                            ),
+                            const SizedBox(height: 10),
+                            _RecenterButton(
+                              following: _following,
+                              onPressed: _resumeFollowing,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -275,6 +311,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _calloutTapListenerRegistered = false;
     map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
     map.compass.updateSettings(CompassSettings(enabled: false));
+    unawaited(
+      map.gestures.updateSettings(GesturesSettings(pitchEnabled: false)),
+    );
     try {
       map.addInteraction(TapInteraction.onMap(_onMapBackgroundTapped));
     } catch (error, stack) {
@@ -305,9 +344,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     StackTrace? stack, {
     String? details,
   }) {
+    final message = details == null ? '$error' : '$error ($details)';
+    // Always surface — Mapbox layer failures are otherwise silent on device.
+    debugPrint('[map.$action] $message');
     if (!kDebugMode) return;
     developer.log(
-      details == null ? '$error' : '$error ($details)',
+      message,
       name: 'map.$action',
       error: error is String ? null : error,
       stackTrace: stack,
@@ -400,66 +442,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  void _scheduleViewportRefresh() {
-    _viewportDebounce?.cancel();
-    _viewportDebounce = Timer(const Duration(milliseconds: 280), () {
-      if (!mounted) return;
-      unawaited(_refreshViewportClinics());
-    });
+  void _refreshMapPoints() {
+    setState(() => _pointsRefreshing = true);
+    ref.read(mapFacilityPointsRefreshProvider.notifier).state++;
   }
 
-  /// Reads the current camera bounds, fetches clinics covering that view,
-  /// and redraws pins for establishments inside it.
-  Future<void> _refreshViewportClinics() async {
-    final map = _mapboxMap;
-    if (map == null || !mounted) return;
-
-    try {
-      final camera = await map.getCameraState();
-      final bounds = await map.coordinateBoundsForCamera(
-        CameraOptions(
-          center: camera.center,
-          padding: camera.padding,
-          zoom: camera.zoom,
-          bearing: camera.bearing,
-          pitch: camera.pitch,
-        ),
-      );
-
-      final sw = bounds.southwest.coordinates;
-      final ne = bounds.northeast.coordinates;
-      final centerLat = (sw.lat.toDouble() + ne.lat.toDouble()) / 2;
-      final centerLng = (sw.lng.toDouble() + ne.lng.toDouble()) / 2;
-      final halfDiagonalKm =
-          _haversineKm(
-            sw.lat.toDouble(),
-            sw.lng.toDouble(),
-            ne.lat.toDouble(),
-            ne.lng.toDouble(),
-          ) /
-          2;
-      final radiusKm = halfDiagonalKm
-          .clamp(_minFetchRadiusKm, _maxFetchRadiusKm)
-          .toDouble();
-
-      // Round so tiny camera jitter doesn't spam the provider family.
-      final nextQuery = LiveMapClinicsQuery(
-        latitude: double.parse(centerLat.toStringAsFixed(4)),
-        longitude: double.parse(centerLng.toStringAsFixed(4)),
-        radiusKm: double.parse(radiusKm.toStringAsFixed(2)),
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _visibleBounds = bounds;
-        _query = nextQuery;
-      });
-      // Annotations update when the provider listen fires; also refresh the
-      // filter against whatever we already have for an immediate paint.
-      await _syncAnnotations();
-    } catch (_) {
-      // Camera may not be ready yet on first frames.
-    }
+  void _toggleStatusFilter(String bucket) {
+    setState(() {
+      if (_statusFilters.contains(bucket)) {
+        _statusFilters.remove(bucket);
+      } else {
+        _statusFilters.add(bucket);
+      }
+    });
+    unawaited(_syncAnnotations());
   }
 
   void _stopFollowing() {
@@ -468,7 +464,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _following = false;
       _viewport = const IdleViewportState();
     });
-    _scheduleViewportRefresh();
   }
 
   void _resumeFollowing() {
@@ -478,7 +473,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _following = true;
       _viewport = _followViewport;
     });
-    _scheduleViewportRefresh();
   }
 
   void _onMapBackgroundTapped(MapContentGestureContext _) {
@@ -490,6 +484,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _ensureClinicLayers() async {
+    if (_clinicLayersReady) return;
+    final existing = _ensureClinicLayersInFlight;
+    if (existing != null) {
+      await existing;
+      return;
+    }
+    final future = _ensureClinicLayersBody();
+    _ensureClinicLayersInFlight = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_ensureClinicLayersInFlight, future)) {
+        _ensureClinicLayersInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _ensureClinicLayersBody() async {
     final map = _mapboxMap;
     if (map == null || _clinicLayersReady) return;
     final dpr = MediaQuery.devicePixelRatioOf(context);
@@ -497,86 +509,169 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     try {
       final style = map.style;
 
-      // Mapbox has no built-in tear pin — rasterize and register style images.
       await ClinicMapPin.ensureRegistered(style, devicePixelRatio: dpr);
-      await ClusterCountBadge.ensureRegistered(style, devicePixelRatio: dpr);
+      await ClinicClusterMarker.ensureRegistered(style, devicePixelRatio: dpr);
 
-      // Recreate so clusterRadius / icons pick up the latest constants
-      // (GeoJSON cluster options are immutable after the source is added).
-      for (final id in [
-        _clusterCountLayerId,
-        _clusterLayerId,
-        _unclusteredLayerId,
-      ]) {
-        if (await style.styleLayerExists(id)) {
-          await style.removeStyleLayer(id);
+      final layerIds = _clinicLayerIds;
+      final sourceExists = await style.styleSourceExists(_clinicsSourceId);
+      final configCurrent =
+          _mountedClusterSourceConfigVersion == _clusterSourceConfigVersion;
+      var allLayersExist = sourceExists && configCurrent;
+      if (sourceExists && configCurrent) {
+        for (final id in layerIds) {
+          if (!await style.styleLayerExists(id)) {
+            allLayersExist = false;
+            break;
+          }
         }
       }
-      if (await style.styleSourceExists(_clinicsSourceId)) {
-        await style.removeStyleSource(_clinicsSourceId);
+
+      if (sourceExists && allLayersExist) {
+        _clinicLayersReady = true;
+        _registerClinicInteractions(map);
+        return;
       }
 
-      await style.addSource(
-        GeoJsonSource(
-          id: _clinicsSourceId,
-          data: jsonEncode({
-            'type': 'FeatureCollection',
-            'features': <Object>[],
-          }),
-          cluster: true,
-          clusterRadius: _clusterRadius,
-          clusterMaxZoom: _clusterMaxZoom,
-          clusterMinPoints: 2,
-        ),
-      );
+      for (final id in [...layerIds, ..._legacyClusterLayerIds]) {
+        try {
+          if (await style.styleLayerExists(id)) {
+            await style.removeStyleLayer(id);
+          }
+        } catch (error, stack) {
+          _logMapIssue('clinic-layer-remove', error, stack, details: id);
+        }
+      }
 
-      // No `slot`: on Mapbox Standard, slotted layers sit under buildings /
-      // place labels. Omitting the slot puts clinic pins above the basemap.
-      await style.addLayer(
+      if (await style.styleSourceExists(_clinicsSourceId)) {
+        try {
+          await style.removeStyleSource(_clinicsSourceId);
+        } catch (error, stack) {
+          _logMapIssue('clinic-source-remove', error, stack);
+        }
+      }
+
+      if (!await style.styleSourceExists(_clinicsSourceId)) {
+        await style.addSource(
+          GeoJsonSource(
+            id: _clinicsSourceId,
+            data: jsonEncode({
+              'type': 'FeatureCollection',
+              'features': <Object>[],
+            }),
+            cluster: true,
+            clusterRadius: _clusterRadiusPx,
+            clusterMaxZoom: _clusterMaxZoom,
+            clusterMinPoints: 2,
+            // Aggregate Desempenho buckets for legend pills.
+            clusterProperties: {
+              'active': [
+                '+',
+                [
+                  'case',
+                  [
+                    '==',
+                    ['get', 'purchaseBucket'],
+                    PurchaseBucketFilter.active,
+                  ],
+                  1,
+                  0,
+                ],
+              ],
+              'inactive': [
+                '+',
+                [
+                  'case',
+                  [
+                    '==',
+                    ['get', 'purchaseBucket'],
+                    PurchaseBucketFilter.inactive,
+                  ],
+                  1,
+                  0,
+                ],
+              ],
+              'neverBought': [
+                '+',
+                [
+                  'case',
+                  [
+                    '==',
+                    ['get', 'purchaseBucket'],
+                    PurchaseBucketFilter.neverBought,
+                  ],
+                  1,
+                  0,
+                ],
+              ],
+            },
+          ),
+        );
+        _mountedClusterSourceConfigVersion = _clusterSourceConfigVersion;
+      }
+
+      const clusterFilter = ['has', 'point_count'];
+      const unclusteredFilter = [
+        '!',
+        ['has', 'point_count'],
+      ];
+
+      Future<void> addSymbolIfMissing(String id, SymbolLayer layer) async {
+        if (await style.styleLayerExists(id)) return;
+        await style.addLayer(layer);
+      }
+
+      // Soft halo — visual only (not tappable; large radius stole pin taps).
+      if (!await style.styleLayerExists(_clusterAreaLayerId)) {
+        await style.addLayer(
+          CircleLayer(
+            id: _clusterAreaLayerId,
+            sourceId: _clinicsSourceId,
+            filter: clusterFilter,
+            circleColor: AppColors.blue600.toARGB32(),
+            circleOpacity: 0.08,
+            circleStrokeColor: AppColors.blue600.toARGB32(),
+            circleStrokeWidth: 1.0,
+            circleStrokeOpacity: 0.16,
+            circleRadiusExpression: [
+              'step',
+              ['get', 'point_count'],
+              18,
+              10,
+              22,
+              25,
+              26,
+              50,
+              30,
+              100,
+              34,
+            ],
+          ),
+        );
+      }
+
+      // One atomic pin bitmap (disc+pill+all numbers). No Mapbox text —
+      // text glyphs still paint over neighbor icons in the same layer.
+      await addSymbolIfMissing(
+        _clusterLayerId,
         SymbolLayer(
           id: _clusterLayerId,
           sourceId: _clinicsSourceId,
-          filter: const ['has', 'point_count'],
-          iconImage: ClinicMapPin.clusterImageId,
-          iconAnchor: IconAnchor.BOTTOM,
-          iconAllowOverlap: true,
-          iconIgnorePlacement: true,
-          // Slightly grow the blue cluster pin as density increases.
-          iconSizeExpression: [
-            'step',
-            ['get', 'point_count'],
-            1.0,
-            10,
-            1.12,
-            25,
-            1.24,
-          ],
-        ),
-      );
-
-      // Pre-baked red chip with the number inside (avoids ems/px drift).
-      await style.addLayer(
-        SymbolLayer(
-          id: _clusterCountLayerId,
-          sourceId: _clinicsSourceId,
-          filter: const ['has', 'point_count'],
-          iconImageExpression: ClusterCountBadge.iconImageExpression,
+          filter: clusterFilter,
+          iconImageExpression: ClinicClusterMarker.iconImageExpression,
           iconAnchor: IconAnchor.CENTER,
-          iconOffset: ClusterCountBadge.symbolIconOffset,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
+          iconOpacity: 0.68,
         ),
       );
 
-      await style.addLayer(
+      await addSymbolIfMissing(
+        _unclusteredLayerId,
         SymbolLayer(
           id: _unclusteredLayerId,
           sourceId: _clinicsSourceId,
-          filter: const [
-            '!',
-            ['has', 'point_count'],
-          ],
-          iconImage: ClinicMapPin.singleImageId,
+          filter: unclusteredFilter,
+          iconImageExpression: ClinicMapPin.iconImageExpression,
           iconAnchor: IconAnchor.BOTTOM,
           iconAllowOverlap: true,
           iconIgnorePlacement: true,
@@ -587,43 +682,51 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _clinicLayersReady = true;
       _registerClinicInteractions(map);
     } catch (error, stack) {
-      // Keep the basemap visible even if pins fail to mount.
       _logMapIssue('clinic-layers', error, stack);
     }
   }
 
   void _registerClinicInteractions(MapboxMap map) {
     if (_clinicInteractionsRegistered) return;
-    _clinicInteractionsRegistered = true;
 
     try {
+      // Drop legacy halo tap — it used a huge circle and ate nearby pin taps.
+      for (final id in [
+        'tap-$_clusterAreaLayerId',
+        'tap-$_clusterLayerId',
+        'tap-clinicas-pin',
+      ]) {
+        try {
+          map.removeInteraction(id);
+        } catch (_) {}
+      }
+
+      // Unclustered first + stopPropagation: pins win over clusters when both
+      // fall inside the hit radius (TapInteraction first-match wins).
       map.addInteraction(
-        TapInteraction(FeaturesetDescriptor(layerId: _clusterLayerId), (
-          feature,
-          _,
-        ) {
-          unawaited(_onClusterFeatureTapped(feature));
-        }),
-        interactionID: 'tap-clinicas-cluster',
-      );
-      map.addInteraction(
-        TapInteraction(FeaturesetDescriptor(layerId: _clusterCountLayerId), (
-          feature,
-          _,
-        ) {
-          unawaited(_onClusterFeatureTapped(feature));
-        }),
-        interactionID: 'tap-clinicas-cluster-count',
-      );
-      map.addInteraction(
-        TapInteraction(FeaturesetDescriptor(layerId: _unclusteredLayerId), (
-          feature,
-          _,
-        ) {
-          unawaited(_onUnclusteredFeatureTapped(feature));
-        }),
+        TapInteraction(
+          FeaturesetDescriptor(layerId: _unclusteredLayerId),
+          (feature, context) {
+            unawaited(_onUnclusteredFeatureTapped(feature, context));
+          },
+          // Cover pin body above BOTTOM tip; keep small so neighbors lose.
+          radius: 16,
+          stopPropagation: true,
+        ),
         interactionID: 'tap-clinicas-pin',
       );
+      map.addInteraction(
+        TapInteraction(
+          FeaturesetDescriptor(layerId: _clusterLayerId),
+          (feature, context) {
+            unawaited(_onClusterFeatureTapped(feature, context));
+          },
+          radius: 18,
+          stopPropagation: true,
+        ),
+        interactionID: 'tap-$_clusterLayerId',
+      );
+      _clinicInteractionsRegistered = true;
     } catch (error, stack) {
       _clinicInteractionsRegistered = false;
       _logMapIssue('clinic-interactions', error, stack);
@@ -636,32 +739,139 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     try {
       await _ensureClinicLayers();
-      if (!_clinicLayersReady) return;
+      if (!_clinicLayersReady || !mounted) return;
 
-      final features = _visibleInView
-          .map(
-            (e) => {
-              'type': 'Feature',
-              'geometry': {
-                'type': 'Point',
-                'coordinates': [e.longitude, e.latitude],
-              },
-              'properties': {'facilityId': e.id, 'name': e.name},
-            },
-          )
-          .toList(growable: false);
+      final selectedId = _selected?.id;
+      final filtered = _statusFilters.isEmpty
+          ? _clinics
+          : _clinics
+                .where((e) {
+                  final bucket =
+                      e.purchaseBucket ?? PurchaseBucketFilter.neverBought;
+                  return _statusFilters.contains(bucket);
+                })
+                .toList(growable: false);
+
+      final features = [
+        for (final e in filtered) _pinFeature(e, selectedId: selectedId),
+      ];
 
       await map.style.setStyleSourceProperty(
         _clinicsSourceId,
         'data',
         jsonEncode({'type': 'FeatureCollection', 'features': features}),
       );
+      // Cluster aggregates exist after source update — bake pin bitmaps.
+      _scheduleClusterPinImages();
     } catch (error, stack) {
       _logMapIssue('sync-pins', error, stack);
     }
   }
 
-  Future<void> _onClusterFeatureTapped(FeaturesetFeature feature) async {
+  void _scheduleClusterPinImages() {
+    _clusterImageThrottle?.cancel();
+    _clusterImageThrottle = Timer(const Duration(milliseconds: 120), () {
+      unawaited(_ensureClusterPinImages());
+    });
+  }
+
+  /// Lazily paint+register atomic pin PNGs for current cluster aggregates.
+  Future<void> _ensureClusterPinImages() async {
+    final map = _mapboxMap;
+    if (map == null || !_clinicLayersReady || !mounted) return;
+    try {
+      // Clustering tiles lag the data write — retry once if empty.
+      var specs = await _queryClusterPinSpecs(map);
+      if (specs.isEmpty) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        if (!mounted || _mapboxMap == null) return;
+        specs = await _queryClusterPinSpecs(_mapboxMap!);
+      }
+      if (specs.isEmpty || !mounted) return;
+
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      await ClinicClusterMarker.ensureImages(
+        map.style,
+        devicePixelRatio: dpr,
+        specs: specs,
+      );
+    } catch (error, stack) {
+      _logMapIssue('cluster-pin-images', error, stack);
+    }
+  }
+
+  Future<
+    Set<
+      ({String sizeTier, num total, num active, num inactive, num neverBought})
+    >
+  >
+  _queryClusterPinSpecs(MapboxMap map) async {
+    final queried = await map.querySourceFeatures(
+      _clinicsSourceId,
+      SourceQueryOptions(filter: jsonEncode(['has', 'point_count'])),
+    );
+    final specs =
+        <
+          ({
+            String sizeTier,
+            num total,
+            num active,
+            num inactive,
+            num neverBought,
+          })
+        >{};
+    for (final row in queried) {
+      final feature = row?.queriedFeature.feature;
+      if (feature == null) continue;
+      final props = feature['properties'];
+      final Map<Object?, Object?> rawProps;
+      if (props is Map) {
+        rawProps = props;
+      } else {
+        rawProps = feature;
+      }
+      final total = _asNum(rawProps['point_count']);
+      if (total < 2) continue;
+      specs.add((
+        sizeTier: ClinicClusterMarker.sizeTierForCount(total.round()),
+        total: total,
+        active: _asNum(rawProps['active']),
+        inactive: _asNum(rawProps['inactive']),
+        neverBought: _asNum(rawProps['neverBought']),
+      ));
+    }
+    return specs;
+  }
+
+  static num _asNum(Object? value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static Map<String, Object?> _pinFeature(
+    NearbyEstablishment e, {
+    required String? selectedId,
+  }) {
+    return {
+      'type': 'Feature',
+      'geometry': {
+        'type': 'Point',
+        'coordinates': [e.longitude, e.latitude],
+      },
+      'properties': {
+        'facilityId': e.id,
+        'name': e.name,
+        'purchaseBucket': e.purchaseBucket ?? PurchaseBucketFilter.neverBought,
+        'focused': selectedId == e.id ? 1 : 0,
+      },
+    };
+  }
+
+  Future<void> _onClusterFeatureTapped(
+    FeaturesetFeature feature,
+    MapContentGestureContext context,
+  ) async {
     _suppressNextMapTap = true;
     Future.delayed(
       const Duration(milliseconds: 300),
@@ -673,92 +883,221 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     _stopFollowing();
     await _dismissCallout();
-    final clusterFeature = _clusterFeaturePayload(feature);
-    final center = _pointFromGeometry(feature.geometry);
-    if (center == null) return;
+
+    // Gesture point is reliable; Featureset geometry shape varies by platform.
+    final fromGeom = _pointFromGeometry(feature.geometry);
+    final lat = fromGeom?.latitude ?? context.point.coordinates.lat.toDouble();
+    final lng = fromGeom?.longitude ?? context.point.coordinates.lng.toDouble();
+
+    // Native API expects a GeoJSON Feature, not bare properties.
+    final clusterFeature = <String?, Object?>{
+      'type': 'Feature',
+      'geometry': feature.geometry,
+      'properties': Map<String?, Object?>.from(feature.properties),
+      if (feature.properties['cluster_id'] != null)
+        'id': feature.properties['cluster_id'],
+    };
 
     try {
+      final pointCount =
+          (feature.properties['point_count'] as num?)?.toInt() ?? 80;
+      final leafLimit = pointCount.clamp(2, 200);
       final leaves = await map.getGeoJsonClusterLeaves(
         _clinicsSourceId,
         clusterFeature,
-        100,
+        leafLimit,
         0,
       );
-      final items = _establishmentsFromLeafFeatures(leaves.featureCollection);
+      final leafFc = leaves.featureCollection;
+      final items = _establishmentsFromClusterLeaves(leafFc);
 
-      // Same address / nearly identical coords → list panel, no zoom chase.
-      if (items.length > 1 && _areCoLocated(items)) {
-        await _centerOn(center.latitude, center.longitude);
+      final camera = await map.getCameraState();
+
+      // Same / near-same coords → zoom never splits pins. Drawer immediately.
+      // Must run before expansion zoom — Supercluster still returns higher zooms
+      // for identical points all the way to clusterMaxZoom.
+      final coLocated =
+          _areLeafGeometriesStacked(leafFc) ||
+          (items.length > 1 && _areStackedCoordinates(items));
+      if (coLocated && items.length > 1) {
+        await _centerOn(lat, lng);
         if (!mounted) return;
         await _showStackedSheet(items);
         return;
       }
 
-      final expansion = await map.getGeoJsonClusterExpansionZoom(
-        _clinicsSourceId,
-        clusterFeature,
-      );
-      final camera = await map.getCameraState();
-      final currentZoom = camera.zoom;
-      final targetZoom = double.tryParse(expansion.value ?? '');
-
-      // Already at/past expansion zoom but still clustered → co-located.
-      if (targetZoom == null || targetZoom <= currentZoom + 0.05) {
-        if (items.length > 1) {
-          await _centerOn(center.latitude, center.longitude);
-          if (!mounted) return;
-          await _showStackedSheet(items);
-          return;
-        }
+      // Already at/above cluster max — leaves won't uncluster further.
+      if (items.length > 1 && camera.zoom >= _clusterMaxZoom - 0.05) {
+        await _centerOn(lat, lng);
+        if (!mounted) return;
+        await _showStackedSheet(items);
+        return;
       }
 
-      await map.easeTo(
-        CameraOptions(
-          center: Point(
-            coordinates: Position(center.longitude, center.latitude),
+      double? targetZoom;
+      try {
+        final expansion = await map.getGeoJsonClusterExpansionZoom(
+          _clinicsSourceId,
+          clusterFeature,
+        );
+        targetZoom = double.tryParse(expansion.value ?? '');
+      } catch (error, stack) {
+        _logMapIssue('cluster-expansion-zoom', error, stack);
+      }
+
+      // Only zoom when Mapbox reports a real expansion past current zoom.
+      // Never fake +1.8 — that caused endless zoom on same-spot clusters.
+      final canExpand = targetZoom != null && targetZoom > camera.zoom + 0.05;
+
+      if (canExpand) {
+        await map.easeTo(
+          CameraOptions(
+            center: Point(coordinates: Position(lng, lat)),
+            zoom: targetZoom.clamp(0.0, _clusterMaxZoom),
+            pitch: 0,
+            bearing: camera.bearing,
           ),
-          zoom: (targetZoom ?? (currentZoom + 1.5)).clamp(
-            currentZoom + 0.5,
-            18,
-          ),
-          pitch: 0,
-          bearing: 0,
-        ),
-        MapAnimationOptions(duration: 400),
-      );
-    } catch (_) {
-      await _centerOn(center.latitude, center.longitude);
+          MapAnimationOptions(duration: 450),
+        );
+        return;
+      }
+
+      // Nothing left to uncluster.
+      if (items.length > 1) {
+        await _centerOn(lat, lng);
+        if (!mounted) return;
+        await _showStackedSheet(items);
+        return;
+      }
+
+      await _centerOn(lat, lng);
+    } catch (error, stack) {
+      _logMapIssue('cluster-tap', error, stack);
+      // Don't zoom on error — prefer drawer if we already know the leaves.
+      try {
+        final pointCount =
+            (feature.properties['point_count'] as num?)?.toInt() ?? 0;
+        if (pointCount > 1) {
+          final leaves = await map.getGeoJsonClusterLeaves(
+            _clinicsSourceId,
+            clusterFeature,
+            pointCount.clamp(2, 200),
+            0,
+          );
+          final items = _establishmentsFromClusterLeaves(
+            leaves.featureCollection,
+          );
+          if (items.length > 1) {
+            await _centerOn(lat, lng);
+            if (!mounted) return;
+            await _showStackedSheet(items);
+            return;
+          }
+        }
+      } catch (_) {}
+      await _centerOn(lat, lng);
     }
   }
 
-  Future<void> _onUnclusteredFeatureTapped(FeaturesetFeature feature) async {
+  List<NearbyEstablishment> _establishmentsFromClusterLeaves(
+    List<Map<String?, Object?>?>? featureCollection,
+  ) {
+    if (featureCollection == null || featureCollection.isEmpty) {
+      return const [];
+    }
+    final byId = {for (final e in _clinics) e.id: e};
+    final out = <NearbyEstablishment>[];
+    for (final raw in featureCollection) {
+      if (raw == null) continue;
+      final props = raw['properties'];
+      if (props is! Map) continue;
+      final id = props['facilityId']?.toString();
+      if (id == null) continue;
+      final e = byId[id];
+      if (e != null) out.add(e);
+    }
+    return out;
+  }
+
+  /// True when every clinic lies within [_stackDistanceMeters] of the first.
+  static bool _areStackedCoordinates(List<NearbyEstablishment> items) {
+    if (items.length < 2) return false;
+    final lat0 = items.first.latitude;
+    final lng0 = items.first.longitude;
+    for (var i = 1; i < items.length; i++) {
+      if (_distanceMeters(lat0, lng0, items[i].latitude, items[i].longitude) >
+          _stackDistanceMeters) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Raw leaf geometries — catches near-duplicate coords in the source.
+  static bool _areLeafGeometriesStacked(
+    List<Map<String?, Object?>?>? featureCollection,
+  ) {
+    if (featureCollection == null || featureCollection.length < 2) {
+      return false;
+    }
+    final points = <({double lat, double lng})>[];
+    for (final raw in featureCollection) {
+      if (raw == null) continue;
+      final geom = raw['geometry'];
+      if (geom is! Map) continue;
+      final coords = geom['coordinates'];
+      if (coords is! List || coords.length < 2) continue;
+      final lng = (coords[0] as num?)?.toDouble();
+      final lat = (coords[1] as num?)?.toDouble();
+      if (lat == null || lng == null) continue;
+      points.add((lat: lat, lng: lng));
+    }
+    if (points.length < 2) return false;
+    final lat0 = points.first.lat;
+    final lng0 = points.first.lng;
+    for (var i = 1; i < points.length; i++) {
+      if (_distanceMeters(lat0, lng0, points[i].lat, points[i].lng) >
+          _stackDistanceMeters) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static double _distanceMeters(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const metersPerDegLat = 111320.0;
+    final dLat = (lat1 - lat2) * metersPerDegLat;
+    final dLng =
+        (lng1 - lng2) * metersPerDegLat * math.cos(lat1 * math.pi / 180.0);
+    return math.sqrt(dLat * dLat + dLng * dLng);
+  }
+
+  Future<void> _onUnclusteredFeatureTapped(
+    FeaturesetFeature feature,
+    MapContentGestureContext context,
+  ) async {
     _suppressNextMapTap = true;
     Future.delayed(
       const Duration(milliseconds: 300),
       () => _suppressNextMapTap = false,
     );
 
-    final facilityId = feature.properties['facilityId']?.toString();
-    NearbyEstablishment? match;
-    if (facilityId != null) {
-      for (final e in _visibleInView) {
-        if (e.id == facilityId) {
-          match = e;
-          break;
-        }
-      }
-    }
-    match ??= () {
-      final point = _pointFromGeometry(feature.geometry);
-      if (point == null) return null;
-      final near = _establishmentsNear(point.latitude, point.longitude);
-      return near.isEmpty ? null : near.first;
-    }();
+    // Prefer pin closest to finger on screen — radius can catch a neighbor.
+    final match = await _resolveUnclusteredTap(feature, context);
     if (match == null) return;
 
     final stacked = _establishmentsNear(match.latitude, match.longitude);
     _stopFollowing();
-    await _centerOn(match.latitude, match.longitude);
+    await _centerOn(
+      match.latitude,
+      match.longitude,
+      minZoom: _clinicFocusMinZoom,
+    );
 
     if (stacked.length > 1) {
       await _dismissCallout();
@@ -775,6 +1114,67 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     await _showCallout(match);
   }
 
+  Future<NearbyEstablishment?> _resolveUnclusteredTap(
+    FeaturesetFeature feature,
+    MapContentGestureContext context,
+  ) async {
+    final map = _mapboxMap;
+    final byId = {for (final e in _clinics) e.id: e};
+
+    NearbyEstablishment? fromFeature() {
+      final id = feature.properties['facilityId']?.toString();
+      if (id != null && byId.containsKey(id)) return byId[id];
+      final point = _pointFromGeometry(feature.geometry);
+      if (point == null) return null;
+      final near = _establishmentsNear(point.latitude, point.longitude);
+      return near.isEmpty ? null : near.first;
+    }
+
+    if (map == null) return fromFeature();
+
+    try {
+      final touch = context.touchPosition;
+      const pad = 18.0;
+      final hits = await map.queryRenderedFeatures(
+        RenderedQueryGeometry.fromScreenBox(
+          ScreenBox(
+            min: ScreenCoordinate(x: touch.x - pad, y: touch.y - pad),
+            max: ScreenCoordinate(x: touch.x + pad, y: touch.y + pad),
+          ),
+        ),
+        RenderedQueryOptions(layerIds: [_unclusteredLayerId]),
+      );
+
+      NearbyEstablishment? best;
+      var bestDist = double.infinity;
+      for (final hit in hits) {
+        final raw = hit?.queriedFeature.feature;
+        if (raw == null) continue;
+        final props = raw['properties'];
+        final id = props is Map
+            ? props['facilityId']?.toString()
+            : raw['facilityId']?.toString();
+        final e = id == null ? null : byId[id];
+        if (e == null) continue;
+        final screen = await map.pixelForCoordinate(
+          Point(coordinates: Position(e.longitude, e.latitude)),
+        );
+        // Pin tip is at coordinate; visual body sits above — bias target up.
+        final dx = screen.x - touch.x;
+        final dy = (screen.y - 16) - touch.y;
+        final dist = dx * dx + dy * dy;
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = e;
+        }
+      }
+      if (best != null) return best;
+    } catch (error, stack) {
+      _logMapIssue('unclustered-tap-resolve', error, stack);
+    }
+    return fromFeature();
+  }
+
   /// Same bubble as the nearby-clinics minimap: rasterize off-screen, then
   /// attach as a Mapbox point annotation so it stays glued to the pin.
   Future<void> _showCallout(NearbyEstablishment establishment) async {
@@ -785,6 +1185,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _selected = establishment;
       _pendingCapture = establishment;
     });
+    unawaited(_syncAnnotations());
 
     await WidgetsBinding.instance.endOfFrame;
     await WidgetsBinding.instance.endOfFrame;
@@ -889,6 +1290,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         _selected = null;
         _pendingCapture = null;
       });
+      unawaited(_syncAnnotations());
     } else {
       _selected = null;
       _pendingCapture = null;
@@ -918,53 +1320,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (id != null) _openEstablishment(id);
   }
 
-  Map<String?, Object?> _clusterFeaturePayload(FeaturesetFeature feature) {
-    return {
-      'type': 'Feature',
-      'geometry': feature.geometry,
-      'properties': feature.properties.map(
-        (key, value) => MapEntry(key, value),
-      ),
-    };
-  }
-
-  List<NearbyEstablishment> _establishmentsFromLeafFeatures(
-    List<Map<String?, Object?>?>? featureCollection,
-  ) {
-    if (featureCollection == null || featureCollection.isEmpty) {
-      return const [];
-    }
-    final byId = {for (final e in _clinics) e.id: e};
-    final items = <NearbyEstablishment>[];
-    for (final feature in featureCollection) {
-      if (feature == null) continue;
-      final props = feature['properties'];
-      String? id;
-      if (props is Map) {
-        id = props['facilityId']?.toString();
-      }
-      if (id == null) continue;
-      final match = byId[id];
-      if (match != null) items.add(match);
-    }
-    return items;
-  }
-
-  bool _areCoLocated(List<NearbyEstablishment> items) {
-    if (items.length < 2) return true;
-    final origin = items.first;
-    return items.every(
-      (e) =>
-          _haversineKm(
-            origin.latitude,
-            origin.longitude,
-            e.latitude,
-            e.longitude,
-          ) <=
-          _coLocatedThresholdKm,
-    );
-  }
-
   ({double latitude, double longitude})? _pointFromGeometry(
     Map<String?, Object?> geometry,
   ) {
@@ -976,12 +1331,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return (latitude: lat, longitude: lng);
   }
 
-  Future<void> _centerOn(double latitude, double longitude) async {
-    await _mapboxMap?.easeTo(
+  /// Center on [latitude]/[longitude]. Keeps current facing (bearing).
+  /// Zooms in only when [minZoom] is set and camera is farther out.
+  Future<void> _centerOn(
+    double latitude,
+    double longitude, {
+    double? minZoom,
+  }) async {
+    final map = _mapboxMap;
+    if (map == null) return;
+    final camera = await map.getCameraState();
+    final needsZoom = minZoom != null && camera.zoom < minZoom - 0.05;
+    await map.easeTo(
       CameraOptions(
         center: Point(coordinates: Position(longitude, latitude)),
+        zoom: needsZoom ? minZoom : camera.zoom,
         pitch: 0,
-        bearing: 0,
+        bearing: camera.bearing,
       ),
       MapAnimationOptions(duration: 300),
     );
@@ -991,11 +1357,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     double latitude,
     double longitude,
   ) {
-    return _visibleInView
+    return _clinics
         .where(
           (e) =>
-              _haversineKm(latitude, longitude, e.latitude, e.longitude) <=
-              _coLocatedThresholdKm,
+              _distanceMeters(latitude, longitude, e.latitude, e.longitude) <=
+              _stackDistanceMeters,
         )
         .toList(growable: false);
   }
@@ -1071,42 +1437,150 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _openEstablishment(String id) {
+    // Pass map Linha as entry hint; detail bootstraps without forcing it when
+    // clinic profiles don't include that Linha (avoids wrong-Linha 404).
+    final verticalId = ref
+        .read(effectiveFacilityVerticalIdProvider)
+        .valueOrNull;
+    if (verticalId != null && verticalId.isNotEmpty) {
+      context.push(
+        Uri(
+          path: '/explore/clinic/$id',
+          queryParameters: {'verticalId': verticalId},
+        ).toString(),
+      );
+      return;
+    }
     context.push('/explore/clinic/$id');
   }
+}
 
-  static bool _isInsideBounds(
-    double latitude,
-    double longitude,
-    CoordinateBounds bounds,
-  ) {
-    final sw = bounds.southwest.coordinates;
-    final ne = bounds.northeast.coordinates;
-    final minLat = math.min(sw.lat.toDouble(), ne.lat.toDouble());
-    final maxLat = math.max(sw.lat.toDouble(), ne.lat.toDouble());
-    final minLng = math.min(sw.lng.toDouble(), ne.lng.toDouble());
-    final maxLng = math.max(sw.lng.toDouble(), ne.lng.toDouble());
-    return latitude >= minLat &&
-        latitude <= maxLat &&
-        longitude >= minLng &&
-        longitude <= maxLng;
+class _MapStatusFilterBar extends StatelessWidget {
+  const _MapStatusFilterBar({required this.selected, required this.onToggle});
+
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Row(
+        children: [
+          for (var i = 0; i < PurchaseBucketFilter.values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Builder(
+              builder: (_) {
+                final bucket = PurchaseBucketFilter.values[i];
+                return _MapStatusChip(
+                  label: PurchaseBucketFilter.mapLabel(bucket),
+                  color: PurchaseBucketFilter.mapColor(bucket),
+                  selected: selected.isEmpty || selected.contains(bucket),
+                  emphasized: selected.contains(bucket),
+                  onTap: () => onToggle(bucket),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
   }
+}
 
-  static double _haversineKm(
-    double lat1,
-    double lng1,
-    double lat2,
-    double lng2,
-  ) {
-    const earthRadiusKm = 6371.0088;
-    final dLat = (lat2 - lat1) * math.pi / 180;
-    final dLng = (lng2 - lng1) * math.pi / 180;
-    final a =
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1 * math.pi / 180) *
-            math.cos(lat2 * math.pi / 180) *
-            math.sin(dLng / 2) *
-            math.sin(dLng / 2);
-    return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+class _MapStatusChip extends StatelessWidget {
+  const _MapStatusChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.emphasized,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final bool emphasized;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = emphasized
+        ? color
+        : selected
+        ? AppColors.gray300
+        : AppColors.gray200;
+    final bg = emphasized
+        ? color.withValues(alpha: 0.12)
+        : selected
+        ? Colors.white
+        : AppColors.gray100;
+    final fg = selected ? AppColors.gray900 : AppColors.gray400;
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: borderColor),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: emphasized ? FontWeight.w700 : FontWeight.w600,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapIconButton extends StatelessWidget {
+  const _MapIconButton({
+    required this.child,
+    required this.onPressed,
+    this.tooltip,
+  });
+
+  final Widget child;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Material(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: const Color(0x33111827),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox(width: 48, height: 48, child: Center(child: child)),
+      ),
+    );
+    if (tooltip == null) return button;
+    return Tooltip(message: tooltip!, child: button);
   }
 }
 
@@ -1118,23 +1592,13 @@ class _RecenterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 3,
-      shadowColor: const Color(0x33111827),
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: following ? null : onPressed,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(
-            following ? Icons.my_location_rounded : Icons.navigation_rounded,
-            color: following ? AppColors.navyBright : AppColors.gray900,
-            size: 22,
-          ),
-        ),
+    return _MapIconButton(
+      tooltip: following ? 'Seguindo sua localização' : 'Centralizar em mim',
+      onPressed: following ? null : onPressed,
+      child: Icon(
+        following ? Icons.my_location_rounded : Icons.navigation_rounded,
+        color: following ? AppColors.navyBright : AppColors.gray900,
+        size: 22,
       ),
     );
   }
@@ -1164,7 +1628,10 @@ class _StackedClinicTile extends StatelessWidget {
               width: 8,
               height: 8,
               decoration: BoxDecoration(
-                color: establishment.status.color,
+                color: PurchaseBucketFilter.mapColor(
+                  establishment.purchaseBucket ??
+                      PurchaseBucketFilter.neverBought,
+                ),
                 shape: BoxShape.circle,
               ),
             ),
@@ -1175,13 +1642,11 @@ class _StackedClinicTile extends StatelessWidget {
                 children: [
                   Text(
                     establishment.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: AppColors.gray900,
+                      height: 1.25,
                     ),
                   ),
                   const SizedBox(height: 2),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_nearby_map_screen.dart';
@@ -183,13 +183,34 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
   }
 
   Future<void> _openFullMap(Widget screen) async {
-    setState(() => _fullMapOpen = true);
-    // Let the mini MapWidget dispose before the full-screen one mounts.
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => screen));
+    // Real screen push (Material slide). Keep the live mini map until the
+    // route animation finishes covering it — disposing earlier flashed the
+    // gray [_MapPlaceholder] under the transition.
+    final route = MaterialPageRoute<void>(builder: (_) => screen);
+    final navFuture = Navigator.of(context).push<void>(route);
+
+    void disposeMiniWhenCovered() {
+      if (!mounted || _fullMapOpen) return;
+      setState(() => _fullMapOpen = true);
+    }
+
+    void onStatus(AnimationStatus status) {
+      if (status != AnimationStatus.completed) return;
+      route.animation?.removeStatusListener(onStatus);
+      disposeMiniWhenCovered();
+    }
+
+    // Animation is attached after the route is installed — wait a frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final animation = route.animation;
+      if (animation == null || animation.isCompleted) {
+        disposeMiniWhenCovered();
+        return;
+      }
+      animation.addStatusListener(onStatus);
+    });
+
+    await navFuture;
     if (!mounted) return;
     setState(() {
       _fullMapOpen = false;
@@ -235,7 +256,10 @@ class _NearbyClinicCard extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: establishment.status.color,
+                    color: PurchaseBucketFilter.mapColor(
+                      establishment.purchaseBucket ??
+                          PurchaseBucketFilter.neverBought,
+                    ),
                     shape: BoxShape.circle,
                   ),
                 ),

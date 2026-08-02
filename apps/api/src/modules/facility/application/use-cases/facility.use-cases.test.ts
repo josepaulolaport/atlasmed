@@ -91,6 +91,7 @@ function fakeRepository(
       updated: false,
     }),
     findIdsByTerritoryIds: async () => [],
+    listMapPoints: async () => [],
     applyApprovedFieldUpdates: async () => facilityRecord("approved"),
     findActiveFacilityIdsByVerticalIds: async () => [],
     findVerticalProfilesByFacilityIds: async () => new Map(),

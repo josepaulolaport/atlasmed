@@ -259,18 +259,23 @@ export class GetFacilityUseCase {
 
     assertResourceInScope(input.scope, "facility", clinic.id);
 
-    if (listScope.restrictToVerticalProfiles && listScope.verticalIds?.length) {
-      const allowed = await this.deps.facilityRepository.findActiveFacilityIdsByVerticalIds(
-        listScope.verticalIds,
+    // Detail access uses territory scope + any assigned Linha profile.
+    // Do NOT hard-deny on the narrow verticalId filter — that Linha only
+    // scopes commercial/funnel fields. Otherwise opening an Orto clinic while
+    // Explorar is on Derm 404s before profiles can load for the switcher.
+    const assignedVerticalIds = input.scope.assignedVerticalIds ?? [];
+    if (!input.scope.isGlobal && assignedVerticalIds.length > 0) {
+      const hasAssignedProfile = (clinic.verticalProfiles ?? []).some(
+        (profile) =>
+          profile.isActive && assignedVerticalIds.includes(profile.verticalId),
       );
-      if (!allowed.includes(clinic.id)) {
+      if (!hasAssignedProfile) {
         return null;
       }
     }
 
     // Detail: scope commercial/funnel to active Linha, but expose every
     // user-assigned profile so the mobile Linha switcher can flip Orto↔Derm.
-    const assignedVerticalIds = input.scope.assignedVerticalIds ?? [];
     const exposeProfileVerticalIds =
       assignedVerticalIds.length > 0
         ? assignedVerticalIds

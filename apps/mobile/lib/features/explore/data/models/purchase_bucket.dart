@@ -25,12 +25,27 @@ abstract final class PurchaseBucketFilter {
     _ => value,
   };
 
+  /// Live-map filter chips (singular).
+  static String mapLabel(String value) => switch (value) {
+    active => 'Ativo',
+    inactive => 'Inativo',
+    neverBought => 'Sem compras',
+    _ => value,
+  };
+
   static Color color(String value) => switch (value) {
     active => activeColor,
     inactive => inactiveColor,
     neverBought => neverColor,
     _ => const Color(0xFF6b7280),
   };
+
+  /// Live-map pin / cluster legend / filter chips — same palette as Desempenho.
+  static const mapActiveColor = activeColor;
+  static const mapInactiveColor = inactiveColor;
+  static const mapNeverBoughtColor = neverColor;
+
+  static Color mapColor(String value) => color(value);
 
   static Color backgroundColor(String value) =>
       color(value).withValues(alpha: 0.1);
