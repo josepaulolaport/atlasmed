@@ -1,10 +1,13 @@
 import { describe, expect, it, mock } from "bun:test";
-import { createEmptyScopeContext, createGlobalScopeContext } from "@atlasmed/access";
+import {
+  createEmptyScopeContext,
+  createGlobalScopeContext,
+} from "@atlasmed/access";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { ListMapFacilityPointsUseCase } from "./list-map-facility-points.use-case";
 
 function fakeRepo(
-  listMapPoints: FacilityRepository["listMapPoints"]
+  listMapPoints: FacilityRepository["listMapPoints"],
 ): FacilityRepository {
   return {
     listMapPoints,
@@ -36,9 +39,21 @@ describe("ListMapFacilityPointsUseCase", () => {
     const result = await useCase.execute({
       scope: createGlobalScopeContext(),
       role: "ADMIN",
+      latitude: -23.55,
+      longitude: -46.63,
+      radiusKm: 8,
     });
 
-    expect(listMapPoints).toHaveBeenCalledTimes(1);
+    expect(listMapPoints).toHaveBeenCalledWith({
+      scope: {
+        isGlobal: true,
+        verticalIds: [],
+        restrictToVerticalProfiles: false,
+      },
+      latitude: -23.55,
+      longitude: -46.63,
+      radiusKm: 8,
+    });
     expect(result.type).toBe("FeatureCollection");
     expect(result.features).toHaveLength(2);
     expect(result.features[0]).toEqual({
@@ -66,13 +81,21 @@ describe("ListMapFacilityPointsUseCase", () => {
       },
       role: "REP",
       verticalId: "v1",
+      latitude: -23.55,
+      longitude: -46.63,
+      radiusKm: 5,
     });
 
     expect(listMapPoints).toHaveBeenCalledWith({
-      isGlobal: false,
-      facilityIds: ["a", "b"],
-      verticalIds: ["v1"],
-      restrictToVerticalProfiles: true,
+      scope: {
+        isGlobal: false,
+        facilityIds: ["a", "b"],
+        verticalIds: ["v1"],
+        restrictToVerticalProfiles: true,
+      },
+      latitude: -23.55,
+      longitude: -46.63,
+      radiusKm: 5,
     });
   });
 });

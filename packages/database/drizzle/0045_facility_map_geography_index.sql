@@ -1,0 +1,1 @@
+CREATE INDEX "facilities_active_location_geography_gist_idx" ON "facilities" USING gist ("location"::geography) WHERE "facilities"."deactivated_at" is null and "facilities"."location" is not null;

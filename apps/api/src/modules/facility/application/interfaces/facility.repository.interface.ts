@@ -271,11 +271,13 @@ export interface FacilityRepository {
 
   findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]>;
 
-  /**
-   * All in-scope geocoded facilities as thin map points (id/name/lat/lng).
-   * Used by the live map — no pagination, no list joins.
-   */
-  listMapPoints(scope: FacilityListScopeFilter): Promise<FacilityMapPoint[]>;
+  /** Thin in-scope geocoded facilities inside the current visible map radius. */
+  listMapPoints(params: {
+    scope: FacilityListScopeFilter;
+    latitude: number;
+    longitude: number;
+    radiusKm: number;
+  }): Promise<FacilityMapPoint[]>;
 
   findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]>;
 

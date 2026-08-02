@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/viewport_query.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_facility_points_repository.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
@@ -35,18 +36,25 @@ final mapTerritoryProvider = FutureProvider<TerritoryGeometry?>((ref) async {
   return ref.watch(mapRepositoryProvider).getAssignedTerritory();
 });
 
+/// Current visible map center and radius. Null until Mapbox reports a viewport.
+final mapViewportQueryProvider = StateProvider<MapViewportQuery?>(
+  (ref) => null,
+);
+
 /// Bump to force a re-fetch of map pins (refresh button).
 final mapFacilityPointsRefreshProvider = StateProvider<int>((ref) => 0);
 
-/// All in-scope thin map pins. Reloads on vertical change / refresh bump /
-/// session change — not on pan/zoom.
+/// Thin in-scope map pins inside the current visible radius. Reloads when the
+/// viewport, vertical, session, or manual refresh changes.
 final liveMapFacilityPointsProvider = FutureProvider<List<NearbyEstablishment>>(
   (ref) async {
     ref.watch(sessionProvider);
     ref.watch(mapFacilityPointsRefreshProvider);
+    final viewport = ref.watch(mapViewportQueryProvider);
+    if (viewport == null) return const [];
     final verticalId = await ref.watch(
       effectiveFacilityVerticalIdProvider.future,
     );
-    return fetchMapFacilityPoints(verticalId: verticalId);
+    return fetchMapFacilityPoints(verticalId: verticalId, viewport: viewport);
   },
 );

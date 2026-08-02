@@ -12,6 +12,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/viewport_query.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/providers/map_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_cluster_marker.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
@@ -121,6 +122,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   int _mountedClusterSourceConfigVersion = 0;
   Timer? _clusterImageThrottle;
+  Timer? _viewportRefreshDebounce;
+  int _viewportPublishGeneration = 0;
 
   /// Empty = show all buckets. Otherwise only selected Desempenho statuses.
   final Set<String> _statusFilters = {};
@@ -148,6 +151,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void dispose() {
     _clusterImageThrottle?.cancel();
+    _viewportRefreshDebounce?.cancel();
     _missingImageFlush?.cancel();
     super.dispose();
   }
@@ -175,7 +179,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             }
           },
           loading: () {
-            if (mounted) setState(() => _pointsRefreshing = true);
+            if (!mounted) return;
+            setState(() {
+              _clinics = const [];
+              _pointsRefreshing = true;
+            });
+            unawaited(_syncAnnotations());
+            unawaited(_dismissCallout());
           },
           error: (_, _) {
             if (mounted) setState(() => _pointsRefreshing = false);
@@ -265,8 +275,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           onStyleImageMissingListener: _onStyleImageMissing,
                           onMapLoadErrorListener: _onMapLoadError,
                           onScrollListener: (_) => _stopFollowing(),
-                          onCameraChangeListener: (_) =>
-                              _scheduleClusterPinImages(),
+                          onCameraChangeListener: (_) {
+                            _scheduleClusterPinImages();
+                            _scheduleViewportRefresh(width, height);
+                          },
+                          onMapIdleListener: (_) => _scheduleViewportRefresh(
+                            width,
+                            height,
+                            immediate: true,
+                          ),
                         ),
                       ),
                       if (_pendingCapture != null)
@@ -342,6 +359,86 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       map.addInteraction(TapInteraction.onMap(_onMapBackgroundTapped));
     } catch (error, stack) {
       _logMapIssue('tap-mapa-fundo', error, stack);
+    }
+  }
+
+  void _scheduleViewportRefresh(
+    double width,
+    double height, {
+    bool immediate = false,
+  }) {
+    _viewportRefreshDebounce?.cancel();
+    if (immediate) {
+      unawaited(_publishVisibleViewport(width, height));
+      return;
+    }
+    _viewportRefreshDebounce = Timer(
+      const Duration(milliseconds: 450),
+      () => unawaited(_publishVisibleViewport(width, height)),
+    );
+  }
+
+  Future<void> _publishVisibleViewport(double width, double height) async {
+    final map = _mapboxMap;
+    if (map == null || width <= 0 || height <= 0) return;
+    final generation = ++_viewportPublishGeneration;
+
+    try {
+      final camera = await map.getCameraState();
+      final bounds = await map.coordinateBoundsForCameraUnwrapped(
+        CameraOptions(
+          center: camera.center,
+          zoom: camera.zoom,
+          bearing: camera.bearing,
+          pitch: camera.pitch,
+          padding: camera.padding,
+        ),
+      );
+      if (generation != _viewportPublishGeneration || !mounted) return;
+
+      final centerLat = camera.center.coordinates.lat.toDouble();
+      final centerLng = camera.center.coordinates.lng.toDouble();
+      final southLat = bounds.southwest.coordinates.lat.toDouble();
+      final westLng = bounds.southwest.coordinates.lng.toDouble();
+      final northLat = bounds.northeast.coordinates.lat.toDouble();
+      final eastLng = bounds.northeast.coordinates.lng.toDouble();
+      final cornerRadiiKm = [
+        MapViewportQuery.haversineDistanceKm(
+          centerLat,
+          centerLng,
+          southLat,
+          westLng,
+        ),
+        MapViewportQuery.haversineDistanceKm(
+          centerLat,
+          centerLng,
+          southLat,
+          eastLng,
+        ),
+        MapViewportQuery.haversineDistanceKm(
+          centerLat,
+          centerLng,
+          northLat,
+          westLng,
+        ),
+        MapViewportQuery.haversineDistanceKm(
+          centerLat,
+          centerLng,
+          northLat,
+          eastLng,
+        ),
+      ];
+      final next = MapViewportQuery(
+        latitude: centerLat,
+        longitude: centerLng,
+        radiusKm: cornerRadiiKm.reduce(math.max).clamp(0.1, 20050.0).toDouble(),
+      );
+      setState(() => _clinics = const []);
+      await _syncAnnotations();
+      if (generation != _viewportPublishGeneration || !mounted) return;
+      ref.read(mapViewportQueryProvider.notifier).state = next;
+    } catch (error, stack) {
+      _logMapIssue('viewport-facilities', error, stack);
     }
   }
 

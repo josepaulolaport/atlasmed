@@ -140,6 +140,9 @@ export const facilities = pgTable(
   (t) => [
     uniqueIndex("facilities_source_provider_external_source_id_uidx").on(t.sourceProvider, t.externalSourceId),
     uniqueIndex("facilities_source_provider_cnes_code_uidx").on(t.sourceProvider, t.cnesCode),
+    index("facilities_active_location_geography_gist_idx")
+      .using("gist", sql`${t.location}::geography`)
+      .where(sql`${t.deactivatedAt} is null and ${t.location} is not null`),
     index("facilities_deactivated_at_idx").on(t.deactivatedAt),
     index("facilities_name_idx").on(t.displayName),
     index("facilities_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),

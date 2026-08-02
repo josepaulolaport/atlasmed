@@ -15,6 +15,9 @@ export const mapFacilitiesRoute = new Elysia()
         scope,
         role: actor.role.name,
         verticalId: query.verticalId,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radiusKm: query.radiusKm,
       });
     },
     {
@@ -26,6 +29,9 @@ export const mapFacilitiesRoute = new Elysia()
       },
       query: t.Object({
         verticalId: t.Optional(t.String()),
+        latitude: t.Number({ minimum: -90, maximum: 90 }),
+        longitude: t.Number({ minimum: -180, maximum: 180 }),
+        radiusKm: t.Number({ exclusiveMinimum: 0, maximum: 20050 }),
       }),
-    }
+    },
   );

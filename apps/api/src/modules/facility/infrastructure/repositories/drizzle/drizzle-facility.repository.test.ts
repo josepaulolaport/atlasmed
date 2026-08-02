@@ -4,6 +4,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import {
   buildFacilityListConditions,
   buildFacilityListOrderBy,
+  buildMapViewportCondition,
 } from "./drizzle-facility.repository";
 
 const dialect = new PgDialect();
@@ -133,6 +134,23 @@ describe("facility list SQL", () => {
     expect(lastAsc.slice(2)).toEqual(lastDesc.slice(2));
     expect(lastAsc[2]).toContain('"facilities"."name" asc');
     expect(lastAsc[3]).toContain('"facilities"."id" asc');
+  });
+});
+
+describe("facility map points SQL", () => {
+  it("limits map points to the visible radius with ST_DWithin", () => {
+    const { sql, params } = sqlShape(buildMapViewportCondition({
+      latitude: -23.55,
+      longitude: -46.63,
+      radiusKm: 8,
+    }));
+
+    const normalizedSql = sql.toLowerCase();
+    expect(normalizedSql).toContain("st_dwithin");
+    expect(normalizedSql).toContain("st_setsrid");
+    expect(normalizedSql).toContain("st_makepoint");
+    expect(sql).toContain("::geography");
+    expect(params).toEqual(expect.arrayContaining([-46.63, -23.55, 8000]));
   });
 });
 
