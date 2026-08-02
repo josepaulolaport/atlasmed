@@ -172,6 +172,30 @@ describe("findCalendarConflicts", () => {
     );
   });
 
+  it("keeps overridden existing occurrences ordered for conflict scanning", () => {
+    const existing = recurring("existing", {
+      anchorLocalDate: "2026-01-01",
+      recurrence: "DAILY",
+      recurrenceCount: 2,
+    });
+    existing.overrides = {
+      "2026-01-01T09:00[UTC]": {
+        startsAt: new Date("2026-01-03T11:00:00.000Z"),
+        endsAt: new Date("2026-01-03T12:00:00.000Z"),
+      },
+    };
+
+    const conflicts = findCalendarConflicts(
+      oneOff("candidate", "2026-01-02", "09:30", 15),
+      [existing],
+      january
+    );
+
+    expect(conflicts.map((conflict) => conflict.existingOccurrenceKey)).toEqual([
+      "2026-01-02T09:00[UTC]",
+    ]);
+  });
+
   it("caps UI feedback at 100 deterministic conflict pairs", () => {
     const conflicts = findCalendarConflicts(
       recurring("candidate", {

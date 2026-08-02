@@ -102,26 +102,36 @@ function applyOccurrenceState(
 ): CalendarOccurrence[] {
   const cancelled = new Set(entry.cancelledOccurrenceKeys ?? []);
 
-  return occurrences.flatMap((occurrence) => {
-    const override = entry.overrides?.[occurrence.recurrenceKey];
-    if (cancelled.has(occurrence.recurrenceKey) || override?.status === "CANCELLED") {
-      return [];
-    }
+  return occurrences
+    .flatMap((occurrence) => {
+      const override = entry.overrides?.[occurrence.recurrenceKey];
+      if (
+        cancelled.has(occurrence.recurrenceKey) ||
+        override?.status === "CANCELLED"
+      ) {
+        return [];
+      }
 
-    const startsAt = override?.startsAt ?? occurrence.startsAt;
-    const endsAt = override?.endsAt ?? occurrence.endsAt;
-    if (
-      !Number.isFinite(startsAt.getTime()) ||
-      !Number.isFinite(endsAt.getTime()) ||
-      startsAt >= endsAt
-    ) {
-      throw new RangeError(
-        `Calendar override ${occurrence.recurrenceKey} requires startsAt < endsAt`
-      );
-    }
+      const startsAt = override?.startsAt ?? occurrence.startsAt;
+      const endsAt = override?.endsAt ?? occurrence.endsAt;
+      if (
+        !Number.isFinite(startsAt.getTime()) ||
+        !Number.isFinite(endsAt.getTime()) ||
+        startsAt >= endsAt
+      ) {
+        throw new RangeError(
+          `Calendar override ${occurrence.recurrenceKey} requires startsAt < endsAt`
+        );
+      }
 
-    return [{ ...occurrence, startsAt, endsAt }];
-  });
+      return [{ ...occurrence, startsAt, endsAt }];
+    })
+    .sort(
+      (left, right) =>
+        left.startsAt.getTime() - right.startsAt.getTime() ||
+        left.endsAt.getTime() - right.endsAt.getTime() ||
+        left.recurrenceKey.localeCompare(right.recurrenceKey)
+    );
 }
 
 function collectOverlaps(
