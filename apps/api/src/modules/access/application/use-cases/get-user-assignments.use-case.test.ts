@@ -205,7 +205,7 @@ describe("GetUserAssignmentsUseCase", () => {
           email: "u@example.com",
           role: { name: Role.REP },
         }),
-      ),
+      ) as any,
     });
     const scopeRepository = createMockScopeRepository({
       findVerticalAssignmentsByUserId: mock(() => Promise.resolve([])),
