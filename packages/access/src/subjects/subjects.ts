@@ -19,6 +19,10 @@ export const Subjects = {
 
   VISIT: "VISIT",
 
+  CALENDAR: "CALENDAR",
+
+  INTERACTION: "INTERACTION",
+
   /** User-submitted Não Conformidades (not CNES registry suggestions). */
   FIELD_SUGGESTION: "FIELD_SUGGESTION",
 
