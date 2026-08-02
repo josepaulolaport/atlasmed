@@ -335,12 +335,6 @@ const appNavigationItems = <AppNavigationItem>[
     visibleFor: canManageUsers,
   ),
   AppNavigationItem(
-    branchIndex: 5,
-    label: 'Pedidos',
-    route: '/orders',
-    icon: Icons.inventory_2_outlined,
-  ),
-  AppNavigationItem(
     branchIndex: 6,
     label: 'Cadastros',
     route: '/registrations',

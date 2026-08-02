@@ -14,4 +14,17 @@ void main() {
       expect(explore.isActiveForBranch(1), isFalse);
     });
   });
+
+  group('appNavigationItems', () {
+    test('does not expose orders while the feature is deferred', () {
+      expect(
+        appNavigationItems,
+        isNot(
+          contains(
+            predicate<AppNavigationItem>((item) => item.route == '/orders'),
+          ),
+        ),
+      );
+    });
+  });
 }
