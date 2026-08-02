@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_consultant_assignments_repository.dart';
@@ -35,6 +36,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_orders_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_payers_bar_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_potential_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
@@ -283,6 +285,7 @@ class _ClinicDetailContent extends ConsumerWidget {
     final administrators = data?.administrators;
     final doctors = data?.doctors;
     final payers = data?.payerShares;
+    final orders = data?.orders;
     final canMutate = ref.watch(canMutateFacilityProvider);
     final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
     final canCreateVisit = ref.watch(canCreateVisitProvider);
@@ -407,6 +410,10 @@ class _ClinicDetailContent extends ConsumerWidget {
                         detail: detail,
                         nearby: data?.nearby,
                         clinicVerticalIds: clinicProfileIds,
+                      ),
+                      ClinicOrdersHistorySection(
+                        clinicId: clinicId,
+                        orders: orders,
                       ),
                       ClinicTeamSection(
                         clinicId: clinicId,
@@ -816,6 +823,39 @@ class ClinicMapSection extends StatelessWidget {
             nearbyEstablishments: nearby!,
             clinicVerticalIds: clinicVerticalIds,
           ),
+      ],
+    );
+  }
+}
+
+class ClinicOrdersHistorySection extends StatelessWidget {
+  const ClinicOrdersHistorySection({
+    super.key,
+    required this.clinicId,
+    required this.orders,
+  });
+
+  final String clinicId;
+  final List<FacilityOrderSummary>? orders;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ClinicSectionHeader(
+          title: 'Histórico de pedidos',
+          badge: _countBadge(orders?.length),
+          trailing: orders == null || orders!.isEmpty
+              ? null
+              : _HeaderLinkButton(
+                  label: 'Ver todos',
+                  onTap: () => context.go('/orders'),
+                ),
+        ),
+        if (orders == null)
+          const _SectionLoadingCard()
+        else
+          ClinicOrdersSection(orders: orders!, facilityId: clinicId),
       ],
     );
   }

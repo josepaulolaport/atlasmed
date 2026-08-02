@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
@@ -84,25 +83,7 @@ class OrderDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionButton(
-                          label: 'Repetir pedido',
-                          filled: false,
-                          onTap: () => context.go('/orders/new'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ActionButton(
-                          label: 'Suporte',
-                          filled: true,
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
+                  _ActionButton(label: 'Suporte', filled: true, onTap: () {}),
                 ],
               ),
             ),

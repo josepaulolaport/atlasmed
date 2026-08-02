@@ -16,13 +16,11 @@ void main() {
   });
 
   group('appNavigationItems', () {
-    test('does not expose orders while the feature is deferred', () {
+    test('keeps order history available in the main navigation', () {
       expect(
         appNavigationItems,
-        isNot(
-          contains(
-            predicate<AppNavigationItem>((item) => item.route == '/orders'),
-          ),
+        contains(
+          predicate<AppNavigationItem>((item) => item.route == '/orders'),
         ),
       );
     });

@@ -37,9 +37,7 @@ class _ClinicOrdersSectionState extends State<ClinicOrdersSection> {
       return ClinicaEmptySection(
         icon: Icons.receipt_long_outlined,
         title: 'Nenhum pedido registrado',
-        description: 'Crie o primeiro pedido para este estabelecimento.',
-        onAction: () => context.push('/orders/new'),
-        actionLabel: const Text('Criar pedido'),
+        description: 'Os pedidos registrados aparecerão aqui.',
       );
     }
 

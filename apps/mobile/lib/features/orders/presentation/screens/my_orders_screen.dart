@@ -136,39 +136,6 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                 ),
               ],
             ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 320),
-                  child: SizedBox(
-                    height: 54,
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => context.go('/orders/new'),
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: const Text(
-                        'Novo pedido',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.navyDeep,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -430,7 +397,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Toque em “Novo pedido” para começar.',
+            'Os pedidos registrados aparecerão aqui.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: AppColors.gray500),
           ),
