@@ -120,7 +120,8 @@ export interface InviteUserRequest {
   birthDate: string;
   verticalAssignments?: Array<{
     verticalId: string;
-    territoryIds: string[];
+    /** Omitted / empty until territories are picked; API coerces to []. */
+    territoryIds?: string[];
   }>;
 }
 
