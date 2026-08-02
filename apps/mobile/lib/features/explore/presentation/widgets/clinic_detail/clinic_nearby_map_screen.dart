@@ -535,10 +535,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         );
       }
       if (ids.any((id) => id.startsWith('atlasmed-clinic-pin'))) {
-        await ClinicMapPin.ensureRegistered(
-          map.style,
-          devicePixelRatio: dpr,
-        );
+        await ClinicMapPin.ensureRegistered(map.style, devicePixelRatio: dpr);
       }
     } catch (_) {
       // Best-effort; next camera/sync pass may retry.

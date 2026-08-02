@@ -20,10 +20,7 @@ class SizedMapHost extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
         final height = constraints.maxHeight;
-        if (!width.isFinite ||
-            !height.isFinite ||
-            width < 2 ||
-            height < 2) {
+        if (!width.isFinite || !height.isFinite || width < 2 || height < 2) {
           return const SizedBox.expand();
         }
         return builder(context, width, height);

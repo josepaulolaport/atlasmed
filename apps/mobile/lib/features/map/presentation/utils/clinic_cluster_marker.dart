@@ -144,19 +144,22 @@ final class ClinicClusterMarker {
     required double devicePixelRatio,
     required Iterable<String> imageIds,
   }) async {
-    final specs = <
-      ({String sizeTier, num total, num active, num inactive, num neverBought})
-    >[];
+    final specs =
+        <
+          ({
+            String sizeTier,
+            num total,
+            num active,
+            num inactive,
+            num neverBought,
+          })
+        >[];
     for (final id in imageIds) {
       final parsed = tryParseImageId(id);
       if (parsed != null) specs.add(parsed);
     }
     if (specs.isEmpty) return;
-    await ensureImages(
-      style,
-      devicePixelRatio: devicePixelRatio,
-      specs: specs,
-    );
+    await ensureImages(style, devicePixelRatio: devicePixelRatio, specs: specs);
   }
 
   static List<Object> _countKeyExpr(String property) => [

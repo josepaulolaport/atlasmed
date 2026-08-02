@@ -1477,11 +1477,12 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   Future<void> _confirmInviteDraft(BuildContext context) async {
     final state = ref.read(territoryEditorControllerProvider(widget.target));
     if (!state.canSave || state.working == null || state.draft == null) {
-      final message = state.validation.message ??
+      final message =
+          state.validation.message ??
           'Complete o desenho dentro da zona do gerente.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
       return;
     }
 
@@ -1495,8 +1496,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
 
     final geometry = TerritoryGeometryEditor.toGeometry(state.working!);
-    final centroid = geometry.labelAnchor ??
-        const MapCoordinate(longitude: 0, latitude: 0);
+    final centroid =
+        geometry.labelAnchor ?? const MapCoordinate(longitude: 0, latitude: 0);
     final result = TerritoryInviteDraft(
       name: draftMeta.name,
       verticalId: draftMeta.verticalId,

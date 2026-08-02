@@ -63,8 +63,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
   bool get _needsVerticals =>
       _selectedRole != null && _selectedRole!.name != UserRoleName.admin;
 
-  List<InviteWizardStep> get _steps =>
-      buildInviteWizardSteps(_selectedRole);
+  List<InviteWizardStep> get _steps => buildInviteWizardSteps(_selectedRole);
 
   InviteWizardStep get _currentStep =>
       _steps[_stepIndex.clamp(0, _steps.length - 1)];
@@ -85,8 +84,9 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
     final id = widget.invitationId;
     if (id == null) return;
     try {
-      final invitation =
-          await ref.read(invitationsRepositoryProvider).getInvitation(id);
+      final invitation = await ref
+          .read(invitationsRepositoryProvider)
+          .getInvitation(id);
       if (!mounted) return;
       if (!invitation.status.isEditable) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -165,9 +165,9 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
   String get _title => _isExisting ? 'Editar convite' : 'Novo convite';
 
   void _snack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Identity gate for Continuar on step 0. Uses [FormState] only while the
@@ -194,14 +194,10 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
   bool _validateZones() {
     for (final assignment in _orderedAssignments) {
       if (_needsZone && assignment.managerZoneId == null) {
-        _snack(
-          'Selecione a zona do gerente para ${assignment.verticalName}.',
-        );
+        _snack('Selecione a zona do gerente para ${assignment.verticalName}.');
         return false;
       }
-      if (!_needsZone &&
-          _needsTerritory &&
-          assignment.territories.isEmpty) {
+      if (!_needsZone && _needsTerritory && assignment.territories.isEmpty) {
         _snack(
           'Selecione ao menos uma zona vazia para ${assignment.verticalName}.',
         );
@@ -286,9 +282,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
   Future<String?> _resolveManagerName(TerritoryOption zone) async {
     final fromOption = zone.assignedUserName?.trim();
     if (fromOption != null && fromOption.isNotEmpty) return fromOption;
-    return ref
-        .read(usersRepositoryProvider)
-        .getTerritoryAssigneeName(zone.id);
+    return ref.read(usersRepositoryProvider).getTerritoryAssigneeName(zone.id);
   }
 
   Future<void> _applyRepZone(
@@ -450,11 +444,10 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           if (!stillValid) {
             if (mounted) {
               setState(() {
-                _verticalAssignments[assignment.verticalId] =
-                    assignment.copyWith(territories: const []);
+                _verticalAssignments[assignment.verticalId] = assignment
+                    .copyWith(territories: const []);
                 _submitting = false;
-                final patchesIndex =
-                    _indexOfKind(InviteWizardStepKind.patches);
+                final patchesIndex = _indexOfKind(InviteWizardStepKind.patches);
                 if (patchesIndex >= 0) _stepIndex = patchesIndex;
               });
               _snack(
@@ -472,8 +465,9 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       final firstName = _firstNameController.text.trim();
       final lastName = _lastNameController.text.trim();
       final phoneNumber = _phoneController.text.trim();
-      final verticalAssignments =
-          _needsVerticals ? _orderedAssignments : const <InviteVerticalAssignment>[];
+      final verticalAssignments = _needsVerticals
+          ? _orderedAssignments
+          : const <InviteVerticalAssignment>[];
 
       if (_isExisting) {
         await repo.updateInvitation(
@@ -571,25 +565,21 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
               child: _loadingInvitation
                   ? const Center(child: CircularProgressIndicator())
                   : _loadError != null
-                      ? const Center(
-                          child: Text(
-                            'Não foi possível carregar o convite.',
-                            style: TextStyle(color: AppColors.gray500),
-                          ),
-                        )
-                      : AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 220),
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeIn,
-                          child: KeyedSubtree(
-                            key: ValueKey(step.kind),
-                            child: _buildStepBody(
-                              step,
-                              rolesAsync,
-                              sectorsAsync,
-                            ),
-                          ),
-                        ),
+                  ? const Center(
+                      child: Text(
+                        'Não foi possível carregar o convite.',
+                        style: TextStyle(color: AppColors.gray500),
+                      ),
+                    )
+                  : AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: KeyedSubtree(
+                        key: ValueKey(step.kind),
+                        child: _buildStepBody(step, rolesAsync, sectorsAsync),
+                      ),
+                    ),
             ),
             if (!_loadingInvitation && _loadError == null)
               _InviteBottomBar(
@@ -699,15 +689,16 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           onPickZone: _pickZone,
           onClearZone: (assignment) {
             setState(() {
-              _verticalAssignments[assignment.verticalId] =
-                  assignment.copyWith(clearZone: true, territories: const []);
+              _verticalAssignments[assignment.verticalId] = assignment.copyWith(
+                clearZone: true,
+                territories: const [],
+              );
             });
           },
           onPickEmptyZones: _pickEmptyZones,
           onRemoveTerritory: (assignment, territoryId) {
             setState(() {
-              _verticalAssignments[assignment.verticalId] =
-                  assignment.copyWith(
+              _verticalAssignments[assignment.verticalId] = assignment.copyWith(
                 territories: assignment.territories
                     .where((t) => t.id != territoryId)
                     .toList(),
@@ -727,14 +718,14 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           onDrawNewPatch: _drawNewPatch,
           onClearNewPatch: (assignment) {
             setState(() {
-              _verticalAssignments[assignment.verticalId] =
-                  assignment.copyWith(clearNewPatch: true);
+              _verticalAssignments[assignment.verticalId] = assignment.copyWith(
+                clearNewPatch: true,
+              );
             });
           },
           onRemoveTerritory: (assignment, territoryId) {
             setState(() {
-              _verticalAssignments[assignment.verticalId] =
-                  assignment.copyWith(
+              _verticalAssignments[assignment.verticalId] = assignment.copyWith(
                 territories: assignment.territories
                     .where((t) => t.id != territoryId)
                     .toList(),

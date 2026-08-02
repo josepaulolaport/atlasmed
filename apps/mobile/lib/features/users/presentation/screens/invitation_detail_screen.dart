@@ -317,9 +317,8 @@ class _VerticalAssignmentCard extends StatelessWidget {
           if (showManager) ...[
             _InfoRow(
               label: assignment.managers.length > 1 ? 'Gerentes' : 'Gerente',
-              value: assignment.managerName ??
-                  assignment.managerZoneName ??
-                  '—',
+              value:
+                  assignment.managerName ?? assignment.managerZoneName ?? '—',
             ),
             if (assignment.managerZoneName != null) ...[
               const SizedBox(height: 8),

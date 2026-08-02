@@ -174,13 +174,16 @@ void main() {
       },
     );
 
-    test('assignManager is a no-op (manager link is territory-derived)', () async {
-      const userId = 'user-igor-santana';
-      await repository.assignManager(userId, 'user-marcos-lima');
-      final assignments = await repository.getUserAssignments(userId);
-      expect(assignments.managers, isEmpty);
-      expect(assignments.managerName, isNull);
-    });
+    test(
+      'assignManager is a no-op (manager link is territory-derived)',
+      () async {
+        const userId = 'user-igor-santana';
+        await repository.assignManager(userId, 'user-marcos-lima');
+        final assignments = await repository.getUserAssignments(userId);
+        expect(assignments.managers, isEmpty);
+        expect(assignments.managerName, isNull);
+      },
+    );
 
     test(
       'getUserAssignments seeds carry sector and map geometry for the map cards',

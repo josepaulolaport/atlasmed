@@ -45,7 +45,9 @@ class ClinicContextSection extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: onAssignConsultant,
-                  child: Text(_hasConsultant ? 'Trocar consultor' : 'Atribuir consultor'),
+                  child: Text(
+                    _hasConsultant ? 'Trocar consultor' : 'Atribuir consultor',
+                  ),
                 ),
                 if (_hasConsultant && onUnassignConsultant != null)
                   TextButton(

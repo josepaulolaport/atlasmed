@@ -33,7 +33,9 @@ final selectedTerritoryVerticalIdProvider = StateProvider<String?>((ref) {
 });
 
 /// Spec 0006: when viewing patches, show only one rep's shapes (not all overlaps).
-final selectedGeographyRepUserIdProvider = StateProvider<String?>((ref) => null);
+final selectedGeographyRepUserIdProvider = StateProvider<String?>(
+  (ref) => null,
+);
 
 final territoriesProvider = FutureProvider<List<Territory>>((ref) async {
   final repository = ref.watch(territoryRepositoryProvider);
@@ -46,7 +48,9 @@ final territoriesProvider = FutureProvider<List<Territory>>((ref) async {
 });
 
 /// Manager zones drawn under patches on the geography map.
-final managerZonesUnderlayProvider = FutureProvider<List<Territory>>((ref) async {
+final managerZonesUnderlayProvider = FutureProvider<List<Territory>>((
+  ref,
+) async {
   final kind = ref.watch(selectedTerritoryKindProvider);
   if (kind != TerritoryKind.repPatch) return const [];
   final repository = ref.watch(territoryRepositoryProvider);

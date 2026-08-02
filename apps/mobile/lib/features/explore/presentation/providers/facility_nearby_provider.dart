@@ -117,7 +117,9 @@ final facilityNearbyPreviewProvider =
       double? lng;
       Iterable<String> clinicVerticalIds = const [];
 
-      final display = ref.watch(clinicDetailDisplayFacilityProvider(facilityId));
+      final display = ref.watch(
+        clinicDetailDisplayFacilityProvider(facilityId),
+      );
       lat = display?.address?.lat;
       lng = display?.address?.lng;
       clinicVerticalIds =

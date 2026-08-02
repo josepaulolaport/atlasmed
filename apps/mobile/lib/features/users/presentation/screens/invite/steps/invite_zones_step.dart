@@ -32,7 +32,7 @@ class InviteZonesStep extends StatelessWidget {
   final void Function(InviteVerticalAssignment assignment) onClearZone;
   final void Function(InviteVerticalAssignment assignment) onPickEmptyZones;
   final void Function(InviteVerticalAssignment assignment, String territoryId)
-      onRemoveTerritory;
+  onRemoveTerritory;
 
   bool get _isRep => role.name == UserRoleName.rep;
 
@@ -115,8 +115,10 @@ class _RepZoneCard extends StatelessWidget {
                 onTap: onPickZone,
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -281,10 +283,7 @@ class _ManagerZonesCard extends StatelessWidget {
                     ),
                     child: const Text(
                       'Nenhuma zona selecionada',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.gray400,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AppColors.gray400),
                     ),
                   )
                 : ListView.separated(

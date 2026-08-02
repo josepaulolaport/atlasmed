@@ -43,7 +43,9 @@ class AssignmentManager extends Equatable {
       id: json['id'] as String,
       name: (json['name'] as String?)?.trim().isNotEmpty == true
           ? json['name'] as String
-          : (composed.isNotEmpty ? composed : (username ?? json['id'] as String)),
+          : (composed.isNotEmpty
+                ? composed
+                : (username ?? json['id'] as String)),
       username: username,
       email: json['email'] as String?,
       firstName: firstName,
@@ -82,12 +84,12 @@ class UserTerritoryAssignment extends Equatable {
 
   @override
   List<Object?> get props => [
-        territoryId,
-        territoryName,
-        managerZoneId,
-        managerZoneName,
-        boundary,
-      ];
+    territoryId,
+    territoryName,
+    managerZoneId,
+    managerZoneName,
+    boundary,
+  ];
 }
 
 class UserVerticalAssignment extends Equatable {
@@ -117,8 +119,11 @@ class UserVerticalAssignment extends Equatable {
     final managersRaw = json['managers'] as List<dynamic>?;
     final managers = managersRaw != null
         ? managersRaw
-            .map((item) => AssignmentManager.fromJson(item as Map<String, dynamic>))
-            .toList()
+              .map(
+                (item) =>
+                    AssignmentManager.fromJson(item as Map<String, dynamic>),
+              )
+              .toList()
         : <AssignmentManager>[];
 
     // Compat: single managerName / managerId from older payloads.
@@ -139,7 +144,8 @@ class UserVerticalAssignment extends Equatable {
       verticalName: (json['verticalName'] as String?) ?? '—',
       managers: managers,
       managerId: json['managerId'] as String?,
-      managerName: json['managerName'] as String? ??
+      managerName:
+          json['managerName'] as String? ??
           (managers.isEmpty
               ? null
               : managers.map((m) => m.displayName).join(', ')),
@@ -157,14 +163,14 @@ class UserVerticalAssignment extends Equatable {
 
   @override
   List<Object?> get props => [
-        verticalId,
-        verticalName,
-        managers,
-        managerId,
-        managerName,
-        territories,
-        assignedAt,
-      ];
+    verticalId,
+    verticalName,
+    managers,
+    managerId,
+    managerName,
+    territories,
+    assignedAt,
+  ];
 }
 
 /// Self-service assignments from `GET /user/assignments`.

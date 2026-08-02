@@ -474,7 +474,8 @@ class MockUsersRepository implements UsersRepository {
         TerritoryOption(
           id: zoneId,
           name: manager.territoryName ?? manager.name,
-          verticalId: verticalId ??
+          verticalId:
+              verticalId ??
               (manager.verticalIds.isNotEmpty
                   ? manager.verticalIds.first
                   : null),

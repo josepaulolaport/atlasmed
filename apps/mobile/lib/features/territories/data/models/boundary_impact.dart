@@ -26,10 +26,7 @@ class BoundaryImpactPreview {
   final String mode;
   final List<BoundaryImpactClinic> clinics;
 
-  const BoundaryImpactPreview({
-    required this.mode,
-    required this.clinics,
-  });
+  const BoundaryImpactPreview({required this.mode, required this.clinics});
 
   factory BoundaryImpactPreview.fromJson(Map<String, dynamic> json) {
     final clinics = (json['clinics'] as List<dynamic>? ?? const [])

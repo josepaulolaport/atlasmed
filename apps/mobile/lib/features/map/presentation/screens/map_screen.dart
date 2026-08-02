@@ -430,10 +430,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
       }
       if (ids.any((id) => id.startsWith('atlasmed-clinic-pin'))) {
-        await ClinicMapPin.ensureRegistered(
-          map.style,
-          devicePixelRatio: dpr,
-        );
+        await ClinicMapPin.ensureRegistered(map.style, devicePixelRatio: dpr);
       }
     } catch (error, stack) {
       _logMapIssue('style-image-missing', error, stack);
@@ -452,18 +449,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final style = map.style;
       final payload = jsonEncode(safe.toFeatureCollection());
       if (await style.styleSourceExists(_territorySourceId)) {
-        await style.setStyleSourceProperty(
-          _territorySourceId,
-          'data',
-          payload,
-        );
+        await style.setStyleSourceProperty(_territorySourceId, 'data', payload);
         return;
       }
       await style.addSource(
-        GeoJsonSource(
-          id: _territorySourceId,
-          data: payload,
-        ),
+        GeoJsonSource(id: _territorySourceId, data: payload),
       );
       await style.addLayer(
         FillLayer(

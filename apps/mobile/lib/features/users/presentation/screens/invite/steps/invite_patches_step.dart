@@ -25,7 +25,7 @@ class InvitePatchesStep extends StatelessWidget {
   final void Function(InviteVerticalAssignment assignment) onDrawNewPatch;
   final void Function(InviteVerticalAssignment assignment) onClearNewPatch;
   final void Function(InviteVerticalAssignment assignment, String territoryId)
-      onRemoveTerritory;
+  onRemoveTerritory;
 
   @override
   Widget build(BuildContext context) {
@@ -70,8 +70,7 @@ class _PatchBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final draft = assignment.newPatch;
-    final hasSelection =
-        draft != null || assignment.territories.isNotEmpty;
+    final hasSelection = draft != null || assignment.territories.isNotEmpty;
 
     return InviteStepCard(
       child: Column(
@@ -143,106 +142,101 @@ class _PatchBlock extends StatelessWidget {
                     ),
                     child: const Text(
                       'Área escolhida aparece aqui',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.gray400,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AppColors.gray400),
                     ),
                   )
                 : draft != null
-                    ? Align(
-                        alignment: Alignment.centerLeft,
-                        child: Stack(
-                          children: [
-                            TerritoryMapCard(
-                              assignment: TerritoryAssignment(
-                                territoryId:
-                                    'draft-${assignment.verticalId}',
-                                territoryName:
-                                    'Nova área (rascunho): ${draft.name}',
-                                assignedAt: DateTime.now(),
-                                verticalId: assignment.verticalId,
-                                verticalName: assignment.verticalName,
-                                centroid: draft.centroid,
-                                boundary: draft.geometry,
-                              ),
-                              width: 220,
-                              mapHeight: 120,
-                              onTap: onDrawNewPatch,
-                            ),
-                            Positioned(
-                              top: 28,
-                              right: 4,
-                              child: Material(
-                                color: Colors.white,
-                                shape: const CircleBorder(),
-                                elevation: 1,
-                                child: InkWell(
-                                  customBorder: const CircleBorder(),
-                                  onTap: onClearNewPatch,
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(
-                                      Icons.close_rounded,
-                                      size: 16,
-                                      color: AppColors.gray500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: Stack(
+                      children: [
+                        TerritoryMapCard(
+                          assignment: TerritoryAssignment(
+                            territoryId: 'draft-${assignment.verticalId}',
+                            territoryName:
+                                'Nova área (rascunho): ${draft.name}',
+                            assignedAt: DateTime.now(),
+                            verticalId: assignment.verticalId,
+                            verticalName: assignment.verticalName,
+                            centroid: draft.centroid,
+                            boundary: draft.geometry,
+                          ),
+                          width: 220,
+                          mapHeight: 120,
+                          onTap: onDrawNewPatch,
                         ),
-                      )
-                    : ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: assignment.territories.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final territory = assignment.territories[index];
-                          return Stack(
-                            children: [
-                              TerritoryMapCard(
-                                assignment: TerritoryAssignment(
-                                  territoryId: territory.id,
-                                  territoryName: territory.name,
-                                  assignedAt: DateTime.now(),
-                                  verticalId: territory.verticalId,
-                                  verticalName: territory.verticalName,
-                                  centroid: territory.centroid,
-                                  boundary: territory.boundary,
+                        Positioned(
+                          top: 28,
+                          right: 4,
+                          child: Material(
+                            color: Colors.white,
+                            shape: const CircleBorder(),
+                            elevation: 1,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: onClearNewPatch,
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: AppColors.gray500,
                                 ),
-                                width: 220,
-                                mapHeight: 120,
-                                onTap: onPickTerritories,
                               ),
-                              Positioned(
-                                top: 28,
-                                right: 4,
-                                child: Material(
-                                  color: Colors.white,
-                                  shape: const CircleBorder(),
-                                  elevation: 1,
-                                  child: InkWell(
-                                    customBorder: const CircleBorder(),
-                                    onTap: () =>
-                                        onRemoveTerritory(territory.id),
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(4),
-                                      child: Icon(
-                                        Icons.close_rounded,
-                                        size: 16,
-                                        color: AppColors.gray500,
-                                      ),
-                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: assignment.territories.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      final territory = assignment.territories[index];
+                      return Stack(
+                        children: [
+                          TerritoryMapCard(
+                            assignment: TerritoryAssignment(
+                              territoryId: territory.id,
+                              territoryName: territory.name,
+                              assignedAt: DateTime.now(),
+                              verticalId: territory.verticalId,
+                              verticalName: territory.verticalName,
+                              centroid: territory.centroid,
+                              boundary: territory.boundary,
+                            ),
+                            width: 220,
+                            mapHeight: 120,
+                            onTap: onPickTerritories,
+                          ),
+                          Positioned(
+                            top: 28,
+                            right: 4,
+                            child: Material(
+                              color: Colors.white,
+                              shape: const CircleBorder(),
+                              elevation: 1,
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () => onRemoveTerritory(territory.id),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 16,
+                                    color: AppColors.gray500,
                                   ),
                                 ),
                               ),
-                            ],
-                          );
-                        },
-                      ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
           ),
         ],
       ),

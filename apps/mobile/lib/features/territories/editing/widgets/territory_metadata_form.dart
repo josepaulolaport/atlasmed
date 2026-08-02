@@ -153,8 +153,9 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                   const SizedBox(height: 6),
                   Builder(
                     builder: (context) {
-                      final canCreateZone =
-                          ref.watch(canCreateManagerZoneProvider);
+                      final canCreateZone = ref.watch(
+                        canCreateManagerZoneProvider,
+                      );
                       if (!canCreateZone) {
                         return const Text(
                           'Área de representante',

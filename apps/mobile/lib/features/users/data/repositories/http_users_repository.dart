@@ -392,8 +392,9 @@ class HttpUsersRepository implements UsersRepository {
       }
       final assignedCount = (row['assignedUserCount'] as num?)?.toInt() ?? 0;
       final isOccupied = assignedCount > 0;
-      final assigneeName =
-          isOccupied ? await getTerritoryAssigneeName(id) : null;
+      final assigneeName = isOccupied
+          ? await getTerritoryAssigneeName(id)
+          : null;
       options.add(
         TerritoryOption(
           id: id,

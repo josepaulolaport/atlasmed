@@ -13,14 +13,13 @@ class DashboardRepository extends Repository<DashboardSummary>
   DashboardRepository({String? verticalId})
     : _verticalId = verticalId,
       super(
-        endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/dashboard/summary',
-        ).replace(
-          queryParameters: {
-            if (verticalId != null && verticalId.isNotEmpty)
-              'verticalId': verticalId,
-          },
-        ),
+        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/dashboard/summary')
+            .replace(
+              queryParameters: {
+                if (verticalId != null && verticalId.isNotEmpty)
+                  'verticalId': verticalId,
+              },
+            ),
         resolveOnCreate: false,
       );
 

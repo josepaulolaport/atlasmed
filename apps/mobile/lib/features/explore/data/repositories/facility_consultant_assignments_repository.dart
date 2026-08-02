@@ -29,19 +29,13 @@ class FacilityConsultantAssignmentsRepository {
     '$_baseUrl/api/v1/facilities/$facilityId/consultant-assignments',
   );
 
-  Future<void> assign({
-    required String userId,
-    String? verticalId,
-  }) async {
+  Future<void> assign({required String userId, String? verticalId}) async {
     final response = await _client.call(
       request: RepositoryHttpRequest(
         url: _endpoint,
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
-        body: {
-          'userId': userId,
-          'verticalId': ?verticalId,
-        },
+        body: {'userId': userId, 'verticalId': ?verticalId},
       ),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {

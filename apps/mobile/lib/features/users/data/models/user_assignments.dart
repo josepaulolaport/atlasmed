@@ -172,15 +172,13 @@ class UserAssignments extends Equatable {
         final managers = <AssignmentManagerRef>[
           if (managersRaw != null)
             ...managersRaw.map(
-              (item) => AssignmentManagerRef.fromJson(
-                item as Map<String, dynamic>,
-              ),
+              (item) =>
+                  AssignmentManagerRef.fromJson(item as Map<String, dynamic>),
             ),
         ];
-        final managerDisplayName = map['managerName'] as String? ??
-            (managers.isEmpty
-                ? null
-                : managers.map((m) => m.name).join(', '));
+        final managerDisplayName =
+            map['managerName'] as String? ??
+            (managers.isEmpty ? null : managers.map((m) => m.name).join(', '));
         // Compat: single managerName without managers[].
         if (managers.isEmpty &&
             managerDisplayName != null &&

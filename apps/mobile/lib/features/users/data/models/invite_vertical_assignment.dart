@@ -40,13 +40,19 @@ class InviteNewPatchDraft extends Equatable {
   final TerritoryGeometry? geometry;
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'managerZoneId': managerZoneId,
-        'boundary': boundary,
-      };
+    'name': name,
+    'managerZoneId': managerZoneId,
+    'boundary': boundary,
+  };
 
   @override
-  List<Object?> get props => [name, managerZoneId, boundary, centroid, geometry];
+  List<Object?> get props => [
+    name,
+    managerZoneId,
+    boundary,
+    centroid,
+    geometry,
+  ];
 }
 
 /// Per-vertical slice of an invite payload — zone/patch territories only.
@@ -86,8 +92,7 @@ class InviteVerticalAssignment extends Equatable {
   List<String> get territoryIds =>
       territories.map((t) => t.id).toList(growable: false);
 
-  bool get hasTerritorySelection =>
-      territories.isNotEmpty || newPatch != null;
+  bool get hasTerritorySelection => territories.isNotEmpty || newPatch != null;
 
   /// Compat / UI label — joined manager names.
   String? get managerName {
@@ -111,30 +116,29 @@ class InviteVerticalAssignment extends Equatable {
       verticalId: verticalId,
       verticalName: verticalName,
       managerZoneId: clearZone ? null : (managerZoneId ?? this.managerZoneId),
-      managerZoneName:
-          clearZone ? null : (managerZoneName ?? this.managerZoneName),
+      managerZoneName: clearZone
+          ? null
+          : (managerZoneName ?? this.managerZoneName),
       managerDisplayName: clearZone
           ? null
           : (managers != null && managers.isEmpty
-              ? null
-              : (managerDisplayName ?? this.managerDisplayName)),
+                ? null
+                : (managerDisplayName ?? this.managerDisplayName)),
       managers: clearZone ? const [] : (managers ?? this.managers),
       territories: territories ?? this.territories,
-      newPatch: clearNewPatch || clearZone
-          ? null
-          : (newPatch ?? this.newPatch),
+      newPatch: clearNewPatch || clearZone ? null : (newPatch ?? this.newPatch),
     );
   }
 
   @override
   List<Object?> get props => [
-        verticalId,
-        verticalName,
-        managerZoneId,
-        managerZoneName,
-        managerDisplayName,
-        managers,
-        territories,
-        newPatch,
-      ];
+    verticalId,
+    verticalName,
+    managerZoneId,
+    managerZoneName,
+    managerDisplayName,
+    managers,
+    territories,
+    newPatch,
+  ];
 }

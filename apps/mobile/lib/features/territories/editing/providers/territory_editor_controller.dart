@@ -75,11 +75,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         neighbors: neighbors,
         fenceZone: fenceZone,
         working: working,
-        validation: _validate(
-          working,
-          neighbors,
-          kind: territory.kind,
-        ),
+        validation: _validate(working, neighbors, kind: territory.kind),
       );
     } catch (_) {
       state = state.copyWith(
@@ -515,14 +511,14 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         );
         List<String>? acceptedFacilityIds;
         if (impact.clinics.isNotEmpty) {
-          final accepted =
-              await confirmImpact?.call(impact.clinics) ?? false;
+          final accepted = await confirmImpact?.call(impact.clinics) ?? false;
           if (!accepted) {
             state = state.copyWith(saving: false);
             return false;
           }
-          acceptedFacilityIds =
-              impact.clinics.map((c) => c.facilityId).toList();
+          acceptedFacilityIds = impact.clinics
+              .map((c) => c.facilityId)
+              .toList();
         }
         await repository.updateTerritoryGeometry(
           original.id,
@@ -545,11 +541,9 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     }
   }
 
-  TerritoryKind? get _editingKind =>
-      state.draft?.kind ?? state.original?.kind;
+  TerritoryKind? get _editingKind => state.draft?.kind ?? state.original?.kind;
 
-  bool get _allowsSiblingOverlap =>
-      _editingKind == TerritoryKind.repPatch;
+  bool get _allowsSiblingOverlap => _editingKind == TerritoryKind.repPatch;
 
   // ---- internals ---------------------------------------------------------
 

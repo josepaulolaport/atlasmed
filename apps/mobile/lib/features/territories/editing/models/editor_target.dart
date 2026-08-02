@@ -22,12 +22,12 @@ class TerritoryEditorTarget {
       initialManagerTerritoryId != null;
 
   const TerritoryEditorTarget.existing(this.territoryId)
-      : initialKind = null,
-        initialVerticalId = null,
-        initialVerticalName = null,
-        initialManagerTerritoryId = null,
-        initialManagerTerritoryName = null,
-        confirmAsDraftOnly = false;
+    : initialKind = null,
+      initialVerticalId = null,
+      initialVerticalName = null,
+      initialManagerTerritoryId = null,
+      initialManagerTerritoryName = null,
+      confirmAsDraftOnly = false;
 
   const TerritoryEditorTarget.creating({
     required this.initialKind,
@@ -53,12 +53,12 @@ class TerritoryEditorTarget {
 
   @override
   int get hashCode => Object.hash(
-        territoryId,
-        initialKind,
-        initialVerticalId,
-        initialVerticalName,
-        initialManagerTerritoryId,
-        initialManagerTerritoryName,
-        confirmAsDraftOnly,
-      );
+    territoryId,
+    initialKind,
+    initialVerticalId,
+    initialVerticalName,
+    initialManagerTerritoryId,
+    initialManagerTerritoryName,
+    confirmAsDraftOnly,
+  );
 }

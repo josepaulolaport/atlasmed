@@ -30,50 +30,55 @@ void seedClinicDetailShellFromDto(WidgetRef ref, FacilityDTO dto) {
 }
 
 void seedClinicDetailShellFromEntry(WidgetRef ref, FacilityEntry entry) {
-  ref.read(clinicDetailShellFacilityProvider(entry.id).notifier).state =
-      Facility(
-        id: entry.id,
-        name: entry.name,
-        address: FacilityAddress(
-          neighborhood: entry.neighborhood ?? '',
-          city: entry.city,
-        ),
-        commercial: FacilityCommercial(
-          commercialStatus: entry.commercialStatus,
-          doctorCount: entry.doctorCount,
-        ),
-        distanceKm: entry.distanceKm,
-        purchaseRecurrence: entry.purchaseRecurrence,
-        professionalCount: entry.doctorCount,
-        services: entry.services,
-        verticalProfiles: entry.verticalProfiles,
-      );
+  ref
+      .read(clinicDetailShellFacilityProvider(entry.id).notifier)
+      .state = Facility(
+    id: entry.id,
+    name: entry.name,
+    address: FacilityAddress(
+      neighborhood: entry.neighborhood ?? '',
+      city: entry.city,
+    ),
+    commercial: FacilityCommercial(
+      commercialStatus: entry.commercialStatus,
+      doctorCount: entry.doctorCount,
+    ),
+    distanceKm: entry.distanceKm,
+    purchaseRecurrence: entry.purchaseRecurrence,
+    professionalCount: entry.doctorCount,
+    services: entry.services,
+    verticalProfiles: entry.verticalProfiles,
+  );
 }
 
-void seedClinicDetailShellFromNearby(WidgetRef ref, NearbyEstablishment nearby) {
-  ref.read(clinicDetailShellFacilityProvider(nearby.id).notifier).state =
-      Facility(
-        id: nearby.id,
-        name: nearby.name,
-        address: FacilityAddress(
-          streetAddress: nearby.streetAddress,
-          streetNumber: nearby.streetNumber,
-          addressComplement: nearby.addressComplement,
-          neighborhood: nearby.neighborhood ?? '',
-          city: '',
-          lat: nearby.latitude,
-          lng: nearby.longitude,
-        ),
-        distanceKm: nearby.distanceKm,
-        verticalProfiles: nearby.verticals
-            .map(
-              (v) => FacilityVerticalProfileDTO(
-                verticalId: v.id,
-                verticalName: v.name,
-              ),
-            )
-            .toList(growable: false),
-      );
+void seedClinicDetailShellFromNearby(
+  WidgetRef ref,
+  NearbyEstablishment nearby,
+) {
+  ref
+      .read(clinicDetailShellFacilityProvider(nearby.id).notifier)
+      .state = Facility(
+    id: nearby.id,
+    name: nearby.name,
+    address: FacilityAddress(
+      streetAddress: nearby.streetAddress,
+      streetNumber: nearby.streetNumber,
+      addressComplement: nearby.addressComplement,
+      neighborhood: nearby.neighborhood ?? '',
+      city: '',
+      lat: nearby.latitude,
+      lng: nearby.longitude,
+    ),
+    distanceKm: nearby.distanceKm,
+    verticalProfiles: nearby.verticals
+        .map(
+          (v) => FacilityVerticalProfileDTO(
+            verticalId: v.id,
+            verticalName: v.name,
+          ),
+        )
+        .toList(growable: false),
+  );
 }
 
 /// Vertical-scoped facility detail. Recreates only when active Linha changes.

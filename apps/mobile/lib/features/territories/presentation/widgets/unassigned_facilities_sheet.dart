@@ -11,10 +11,7 @@ class UnassignedFacilitiesSheet extends ConsumerStatefulWidget {
 
   final String? managerZoneId;
 
-  static Future<void> show(
-    BuildContext context, {
-    String? managerZoneId,
-  }) {
+  static Future<void> show(BuildContext context, {String? managerZoneId}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -39,9 +36,9 @@ class _UnassignedFacilitiesSheetState
   }
 
   Future<List<UnassignedFacility>> _load() {
-    return ref.read(territoryRepositoryProvider).listUnassignedFacilities(
-          managerZoneId: widget.managerZoneId,
-        );
+    return ref
+        .read(territoryRepositoryProvider)
+        .listUnassignedFacilities(managerZoneId: widget.managerZoneId);
   }
 
   @override

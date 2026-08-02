@@ -1001,22 +1001,23 @@ class _ClinicDetailContent extends ConsumerWidget {
                         canManageConsultant: canAssignConsultant,
                         onAssignConsultant: canAssignConsultant
                             ? () => _assignClinicConsultant(
-                                  context,
-                                  ref,
-                                  facilityId: clinicId,
-                                  verticalId: activeLinhaId,
-                                )
+                                context,
+                                ref,
+                                facilityId: clinicId,
+                                verticalId: activeLinhaId,
+                              )
                             : null,
-                        onUnassignConsultant: canAssignConsultant &&
+                        onUnassignConsultant:
+                            canAssignConsultant &&
                                 (detail.territory?.consultantName
                                         ?.trim()
                                         .isNotEmpty ==
                                     true)
                             ? () => _unassignClinicConsultant(
-                                  context,
-                                  ref,
-                                  facilityId: clinicId,
-                                )
+                                context,
+                                ref,
+                                facilityId: clinicId,
+                              )
                             : null,
                       ),
                     ),
@@ -1317,22 +1318,22 @@ Future<void> _assignClinicConsultant(
     ref.invalidate(clinicDetailRepositoryProvider(facilityId));
     ref.invalidate(establishmentDetailSectionsProvider(facilityId));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Consultor atribuído.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Consultor atribuído.')));
   } on FacilityConsultantAssignmentsException catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(error.message ?? 'Não foi possível atribuir o consultor.'),
+        content: Text(
+          error.message ?? 'Não foi possível atribuir o consultor.',
+        ),
       ),
     );
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Não foi possível atribuir o consultor.'),
-      ),
+      const SnackBar(content: Text('Não foi possível atribuir o consultor.')),
     );
   }
 }
@@ -1370,9 +1371,9 @@ Future<void> _unassignClinicConsultant(
     ref.invalidate(clinicDetailRepositoryProvider(facilityId));
     ref.invalidate(establishmentDetailSectionsProvider(facilityId));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Consultor removido.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Consultor removido.')));
   } on FacilityConsultantAssignmentsException catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1383,9 +1384,7 @@ Future<void> _unassignClinicConsultant(
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Não foi possível remover o consultor.'),
-      ),
+      const SnackBar(content: Text('Não foi possível remover o consultor.')),
     );
   }
 }

@@ -21,7 +21,8 @@ class UsersApiException implements Exception {
       if (error is Map<String, dynamic>) {
         final code = error['code'] as String? ?? 'UNKNOWN_ERROR';
         final fieldMessage = _firstFieldError(error);
-        final message = fieldMessage ??
+        final message =
+            fieldMessage ??
             (error['message'] as String?) ??
             (error['details'] as String?);
         if (message != null && message.isNotEmpty) {

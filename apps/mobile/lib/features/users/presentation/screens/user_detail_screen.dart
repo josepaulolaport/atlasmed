@@ -596,8 +596,8 @@ class _VerticalAssignmentCardState
     final managerName = zone.assignedUserName?.trim().isNotEmpty == true
         ? zone.assignedUserName
         : await ref
-            .read(usersRepositoryProvider)
-            .getTerritoryAssigneeName(zone.id);
+              .read(usersRepositoryProvider)
+              .getTerritoryAssigneeName(zone.id);
     if (!mounted) return;
     await _persist(
       assignment.copyWith(
@@ -614,9 +614,7 @@ class _VerticalAssignmentCardState
 
   Future<void> _clearZone() async {
     if (!widget.canManage || _busy) return;
-    await _persist(
-      assignment.copyWith(clearZone: true, territories: const []),
-    );
+    await _persist(assignment.copyWith(clearZone: true, territories: const []));
   }
 
   Future<void> _pickTerritories() async {
@@ -626,7 +624,9 @@ class _VerticalAssignmentCardState
       final zoneId = assignment.managerZoneId;
       if (zoneId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Selecione a zona do gerente primeiro.')),
+          const SnackBar(
+            content: Text('Selecione a zona do gerente primeiro.'),
+          ),
         );
         return;
       }
@@ -765,7 +765,8 @@ class _VerticalAssignmentCardState
               ] else
                 _DetailRow(
                   label: 'Zona / gerente',
-                  value: assignment.managerName ??
+                  value:
+                      assignment.managerName ??
                       assignment.managerZoneName ??
                       assignment.managerDisplayName ??
                       'Sem zona',

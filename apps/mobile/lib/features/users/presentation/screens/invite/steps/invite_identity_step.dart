@@ -251,14 +251,16 @@ class InviteIdentityStep extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: sectors.map((sector) {
-                        final selected =
-                            verticalAssignments.containsKey(sector.id);
+                        final selected = verticalAssignments.containsKey(
+                          sector.id,
+                        );
                         return FilterChip(
                           label: Text(sector.name),
                           selected: selected,
                           onSelected: (value) => onToggleSector(sector, value),
-                          selectedColor:
-                              const Color(0xFF0a2f7f).withValues(alpha: 0.12),
+                          selectedColor: const Color(
+                            0xFF0a2f7f,
+                          ).withValues(alpha: 0.12),
                           checkmarkColor: AppColors.navyDeep,
                           labelStyle: TextStyle(
                             fontSize: 13,

@@ -20,8 +20,8 @@ class TerritoryInviteDraft {
   final MapCoordinate centroid;
 
   Map<String, dynamic> toNewPatchJson() => {
-        'name': name,
-        'managerZoneId': managerTerritoryId,
-        'boundary': boundary.toGeoJson(),
-      };
+    'name': name,
+    'managerZoneId': managerTerritoryId,
+    'boundary': boundary.toGeoJson(),
+  };
 }

@@ -54,11 +54,7 @@ final class NearbyStackMarker {
       if (parsed != null) specs.add(parsed);
     }
     if (specs.isEmpty) return;
-    await ensureImages(
-      style,
-      devicePixelRatio: devicePixelRatio,
-      specs: specs,
-    );
+    await ensureImages(style, devicePixelRatio: devicePixelRatio, specs: specs);
   }
 
   static String countLabel(num count) {

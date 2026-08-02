@@ -53,11 +53,11 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
   bool get singleSelect => mode == TerritoryPickerMode.repParentZone;
 
   String get title => switch (mode) {
-        TerritoryPickerMode.repParentZone => 'Zona do gerente',
-        TerritoryPickerMode.managerEmptyZones => 'Zonas vazias',
-        TerritoryPickerMode.repFreePatches => 'Áreas livres',
-        TerritoryPickerMode.patchesForManagerUser => 'Selecionar territórios',
-      };
+    TerritoryPickerMode.repParentZone => 'Zona do gerente',
+    TerritoryPickerMode.managerEmptyZones => 'Zonas vazias',
+    TerritoryPickerMode.repFreePatches => 'Áreas livres',
+    TerritoryPickerMode.patchesForManagerUser => 'Selecionar territórios',
+  };
 
   /// REP invite — pick one parent manager zone.
   static Future<TerritoryOption?> pickRepParentZone(
@@ -71,9 +71,7 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
         builder: (_) => TerritoryPickerScreen._(
           mode: TerritoryPickerMode.repParentZone,
           verticalId: verticalId,
-          initiallySelectedIds: {
-            ?initiallySelectedId,
-          },
+          initiallySelectedIds: {?initiallySelectedId},
         ),
       ),
     );
@@ -275,9 +273,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
         _managerScope = scope;
         _territories = filtered;
         _selectedIds.removeWhere(blockedIds.contains);
-        _selectedIds.removeWhere(
-          (id) => !filtered.any((t) => t.id == id),
-        );
+        _selectedIds.removeWhere((id) => !filtered.any((t) => t.id == id));
         _loading = false;
         _loadError = null;
       });
@@ -405,16 +401,15 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
                     child: Text(
                       widget.mode == TerritoryPickerMode.repParentZone
                           ? (selectedCount == 0
-                              ? 'Selecionar zona'
-                              : 'Confirmar zona')
-                          : widget.mode ==
-                                  TerritoryPickerMode.managerEmptyZones
-                              ? (selectedCount == 0
-                                  ? 'Selecionar zonas'
-                                  : 'Confirmar ($selectedCount)')
-                              : (selectedCount == 0
-                                  ? 'Confirmar seleção'
-                                  : 'Confirmar ($selectedCount)'),
+                                ? 'Selecionar zona'
+                                : 'Confirmar zona')
+                          : widget.mode == TerritoryPickerMode.managerEmptyZones
+                          ? (selectedCount == 0
+                                ? 'Selecionar zonas'
+                                : 'Confirmar ($selectedCount)')
+                          : (selectedCount == 0
+                                ? 'Confirmar seleção'
+                                : 'Confirmar ($selectedCount)'),
                     ),
                   ),
                 ),
@@ -628,8 +623,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       if (boundary == null) continue;
 
       final selectable = _isSelectable(territory);
-      final selected =
-          selectable && _selectedIds.contains(territory.id);
+      final selected = selectable && _selectedIds.contains(territory.id);
       final baseColor = _pickingManagerZones
           ? _managerZoneColor
           : (selectable ? _freeColor : _occupiedColor);
@@ -638,9 +632,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
       _appendGeometry(
         boundary: boundary,
         fillColor: baseColor,
-        fillOpacity: selected
-            ? 0.42
-            : (selectable ? 0.22 : 0.28),
+        fillOpacity: selected ? 0.42 : (selectable ? 0.22 : 0.28),
         lineColor: lineColor,
         haloWidth: selected ? 5.0 : 3.4,
         lineWidth: selected ? 3.0 : 1.8,

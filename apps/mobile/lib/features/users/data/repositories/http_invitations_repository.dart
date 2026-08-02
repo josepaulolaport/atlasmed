@@ -106,10 +106,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
         'newPatch': draft.toJson(),
       };
     }
-    return {
-      'verticalId': s.verticalId,
-      'territoryIds': s.territoryIds,
-    };
+    return {'verticalId': s.verticalId, 'territoryIds': s.territoryIds};
   }).toList();
 
   @override

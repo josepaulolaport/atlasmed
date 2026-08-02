@@ -117,9 +117,7 @@ class _NewTerritoryButton extends ConsumerWidget {
       foregroundColor: Colors.white,
       icon: const Icon(Icons.add_rounded),
       label: Text(
-        createKind == TerritoryKind.managerZone
-            ? 'Nova zona'
-            : 'Nova área',
+        createKind == TerritoryKind.managerZone ? 'Nova zona' : 'Nova área',
       ),
       onPressed: () {
         final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
@@ -246,27 +244,29 @@ class _TerritoriesBody extends ConsumerWidget {
 
               final underlayAsync = ref.watch(managerZonesUnderlayProvider);
               final underlay = underlayAsync.valueOrNull ?? const <Territory>[];
-              final selectedRepId =
-                  ref.watch(selectedGeographyRepUserIdProvider);
+              final selectedRepId = ref.watch(
+                selectedGeographyRepUserIdProvider,
+              );
 
               var visible = territories;
               if (kind == TerritoryKind.repPatch) {
-                final repIds = territories
-                    .map((t) => t.assignedUserId)
-                    .whereType<String>()
-                    .toSet()
-                    .toList()
-                  ..sort();
-                final effectiveRepId = selectedRepId != null &&
-                        repIds.contains(selectedRepId)
+                final repIds =
+                    territories
+                        .map((t) => t.assignedUserId)
+                        .whereType<String>()
+                        .toSet()
+                        .toList()
+                      ..sort();
+                final effectiveRepId =
+                    selectedRepId != null && repIds.contains(selectedRepId)
                     ? selectedRepId
                     : (repIds.isNotEmpty ? repIds.first : null);
-                if (effectiveRepId != null &&
-                    effectiveRepId != selectedRepId) {
+                if (effectiveRepId != null && effectiveRepId != selectedRepId) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     ref
-                        .read(selectedGeographyRepUserIdProvider.notifier)
-                        .state = effectiveRepId;
+                            .read(selectedGeographyRepUserIdProvider.notifier)
+                            .state =
+                        effectiveRepId;
                   });
                 }
                 if (effectiveRepId != null) {
@@ -284,13 +284,16 @@ class _TerritoriesBody extends ConsumerWidget {
                           selectedRepUserId: effectiveRepId,
                           onChanged: (userId) {
                             ref
-                                .read(
-                                  selectedGeographyRepUserIdProvider.notifier,
-                                )
-                                .state = userId;
+                                    .read(
+                                      selectedGeographyRepUserIdProvider
+                                          .notifier,
+                                    )
+                                    .state =
+                                userId;
                             ref
-                                .read(selectedTerritoryIdProvider.notifier)
-                                .state = null;
+                                    .read(selectedTerritoryIdProvider.notifier)
+                                    .state =
+                                null;
                           },
                         ),
                       ),
@@ -490,7 +493,8 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     final newUnderlay = widget.underlayTerritories.map((t) => t.id).toSet();
     final territoriesChanged =
         oldIds.length != newIds.length || !oldIds.containsAll(newIds);
-    final underlayChanged = oldUnderlay.length != newUnderlay.length ||
+    final underlayChanged =
+        oldUnderlay.length != newUnderlay.length ||
         !oldUnderlay.containsAll(newUnderlay);
     if (territoriesChanged || underlayChanged) {
       _renderAnnotations();

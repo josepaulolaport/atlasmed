@@ -17,10 +17,8 @@ typedef FacilityWithIntegrations = ({
 /// Children are owned by Riverpod providers — this zip must not create or
 /// dispose them. Linha-scoped detail swaps keep the photos repo alive.
 class FacilityZipRepository extends ZipRepository<FacilityWithIntegrations> {
-  FacilityZipRepository({
-    required this.detail,
-    required this.photos,
-  }) : super(repositories: [detail, photos]);
+  FacilityZipRepository({required this.detail, required this.photos})
+    : super(repositories: [detail, photos]);
 
   final ClinicDetailRepository detail;
   final FacilityPhotosRepository photos;

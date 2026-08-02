@@ -18,7 +18,8 @@ class UnassignedFacility {
   factory UnassignedFacility.fromJson(Map<String, dynamic> json) {
     return UnassignedFacility(
       id: json['id'] as String,
-      displayName: (json['displayName'] as String?) ??
+      displayName:
+          (json['displayName'] as String?) ??
           (json['name'] as String?) ??
           json['id'] as String,
       lat: (json['lat'] as num?)?.toDouble(),

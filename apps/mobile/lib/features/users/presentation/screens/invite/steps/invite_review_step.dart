@@ -56,10 +56,7 @@ class InviteReviewStep extends StatelessWidget {
             children: [
               const InviteFieldLabel('Função'),
               const SizedBox(height: 12),
-              InviteContextChip(
-                label: role.name.label,
-                color: role.name.color,
-              ),
+              InviteContextChip(label: role.name.label, color: role.name.color),
             ],
           ),
         ),
@@ -160,10 +157,7 @@ class _ReviewRow extends StatelessWidget {
             width: 96,
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.gray500,
-              ),
+              style: const TextStyle(fontSize: 13, color: AppColors.gray500),
             ),
           ),
           Expanded(

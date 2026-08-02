@@ -288,10 +288,7 @@ class _DoctorCard extends StatelessWidget {
 }
 
 class _AlterRoleButton extends StatelessWidget {
-  const _AlterRoleButton({
-    required this.onTap,
-    required this.label,
-  });
+  const _AlterRoleButton({required this.onTap, required this.label});
 
   final VoidCallback onTap;
   final String label;
