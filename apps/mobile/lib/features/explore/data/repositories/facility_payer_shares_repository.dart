@@ -127,11 +127,7 @@ class HealthcareProvidersRepository
         url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/healthcare-providers'),
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
-        body: {
-          'name': name.trim(),
-          'type': type,
-          'isActive': true,
-        },
+        body: {'name': name.trim(), 'type': type, 'isActive': true},
       ),
     );
 

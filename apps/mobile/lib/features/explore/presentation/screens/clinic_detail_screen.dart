@@ -334,10 +334,8 @@ Future<void> _openPayerSourcesEditor(
 
   final updated = await Navigator.of(context).push<List<PayerShare>>(
     MaterialPageRoute(
-      builder: (_) => EditPayerSourcesScreen(
-        initialPayers: payers,
-        catalog: catalog,
-      ),
+      builder: (_) =>
+          EditPayerSourcesScreen(initialPayers: payers, catalog: catalog),
     ),
   );
   if (updated == null || !context.mounted) return;
@@ -544,7 +542,8 @@ class _ClinicDetailContent extends ConsumerWidget {
 
     // Prefer dedicated payers provider — zip can be stale after an edit until
     // FacilityZipRepository refreshes.
-    final rawPayers = payersState.loading &&
+    final rawPayers =
+        payersState.loading &&
             payersState.payers.isEmpty &&
             (integrations?.payerShares.isNotEmpty ?? false)
         ? integrations!.payerShares

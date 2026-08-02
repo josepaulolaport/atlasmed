@@ -81,8 +81,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
     return (sum * 100).round() / 100;
   }
 
-  bool get _isBalanced =>
-      _payers.isEmpty || _percentsEqual(_totalPercent, 100);
+  bool get _isBalanced => _payers.isEmpty || _percentsEqual(_totalPercent, 100);
 
   bool get _hasZeroShare =>
       _payers.any((p) => _parsePercent(p.percentCtrl.text) <= 0);
@@ -504,9 +503,8 @@ class _PercentStepper extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _PercentPickerSheet(
-        initialValue: _parsePercent(controller.text),
-      ),
+      builder: (_) =>
+          _PercentPickerSheet(initialValue: _parsePercent(controller.text)),
     );
     if (picked == null) return;
     controller.text = _formatPercent(picked);
@@ -519,10 +517,7 @@ class _PercentStepper extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _HoldStepButton(
-          icon: Icons.remove_rounded,
-          onStep: () => _nudge(-1),
-        ),
+        _HoldStepButton(icon: Icons.remove_rounded, onStep: () => _nudge(-1)),
         const SizedBox(width: 4),
         Material(
           color: AppColors.gray100,
@@ -546,10 +541,7 @@ class _PercentStepper extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        _HoldStepButton(
-          icon: Icons.add_rounded,
-          onStep: () => _nudge(1),
-        ),
+        _HoldStepButton(icon: Icons.add_rounded, onStep: () => _nudge(1)),
       ],
     );
   }
@@ -982,11 +974,11 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                       child: Text(
                         _pool.isEmpty
                             ? 'Todas as fontes do catálogo já foram adicionadas. '
-                                'Crie uma nova abaixo.'
+                                  'Crie uma nova abaixo.'
                             : query.isEmpty
                             ? 'Nenhuma fonte disponível.'
                             : 'Nada encontrado para "$query". '
-                                'Tente outro termo ou crie uma fonte.',
+                                  'Tente outro termo ou crie uma fonte.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 13.5,

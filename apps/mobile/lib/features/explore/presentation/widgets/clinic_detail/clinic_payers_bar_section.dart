@@ -207,7 +207,9 @@ class _PackageMixBar extends StatelessWidget {
   final double nonPackagePercent;
 
   static const _packageColor = AppColors.navyBright;
-  static const _nonPackageColor = Color(0xFF9CA3AF); // gray-400 — visible on white
+  static const _nonPackageColor = Color(
+    0xFF9CA3AF,
+  ); // gray-400 — visible on white
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +284,12 @@ class _PackageMixBarPainter extends CustomPainter {
 
     final packageWidth = size.width * packageFraction;
     final packageRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, packageWidth.clamp(size.height, size.width), size.height),
+      Rect.fromLTWH(
+        0,
+        0,
+        packageWidth.clamp(size.height, size.width),
+        size.height,
+      ),
       radius,
     );
     canvas.drawRRect(packageRect, Paint()..color = packageColor);
@@ -337,11 +344,7 @@ class _DonutPainter extends CustomPainter {
 }
 
 class _PayerLegendRow extends StatelessWidget {
-  const _PayerLegendRow({
-    required this.slice,
-    required this.color,
-    this.onTap,
-  });
+  const _PayerLegendRow({required this.slice, required this.color, this.onTap});
 
   final PayerDisplaySlice slice;
   final Color color;
@@ -363,7 +366,10 @@ class _PayerLegendRow extends StatelessWidget {
               Flexible(
                 child: Text(
                   slice.name,
-                  style: const TextStyle(fontSize: 13, color: AppColors.gray900),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.gray900,
+                  ),
                 ),
               ),
               if (!slice.isBucket && slice.isPackage) ...[
