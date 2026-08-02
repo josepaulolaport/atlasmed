@@ -30,10 +30,10 @@ export const calendarRecurrenceEnum = pgEnum("calendar_recurrence", [
   "YEARLY",
 ]);
 
-export const calendarOccurrenceOverrideStatusEnum = pgEnum(
-  "calendar_occurrence_override_status",
-  ["ACTIVE", "CANCELLED"],
-);
+export const calendarOccurrenceStatusEnum = pgEnum("calendar_occurrence_status", [
+  "ACTIVE",
+  "CANCELLED",
+]);
 
 export const interactionModalityEnum = pgEnum("interaction_modality", [
   "IN_PERSON",
@@ -61,8 +61,8 @@ export const calendar = pgTable(
     anchorLocalTime: time("anchor_local_time").notNull(),
     timeZone: text("time_zone").notNull(),
     durationMinutes: integer("duration_minutes").notNull(),
-    firstStartsAt: timestamp("first_starts_at", { withTimezone: true }).notNull().defaultNow(),
-    firstEndsAt: timestamp("first_ends_at", { withTimezone: true }).notNull().defaultNow(),
+    firstStartsAt: timestamp("first_starts_at", { withTimezone: true }),
+    firstEndsAt: timestamp("first_ends_at", { withTimezone: true }),
     recurrence: calendarRecurrenceEnum("recurrence").notNull().default("NONE"),
     recurrenceUntil: date("recurrence_until"),
     recurrenceCount: integer("recurrence_count"),
@@ -72,7 +72,22 @@ export const calendar = pgTable(
   },
   (t) => [
     check("calendar_duration_minutes_positive_check", sql`${t.durationMinutes} > 0`),
-    check("calendar_first_ends_after_starts_check", sql`${t.firstEndsAt} > ${t.firstStartsAt}`),
+    check(
+      "calendar_first_occurrence_instants_check",
+      sql`(${t.firstStartsAt} is null and ${t.firstEndsAt} is null) or (${t.firstStartsAt} is not null and ${t.firstEndsAt} is not null and ${t.firstEndsAt} > ${t.firstStartsAt} and ${t.firstEndsAt} - ${t.firstStartsAt} = ${t.durationMinutes} * interval '1 minute')`,
+    ),
+    check(
+      "calendar_recurrence_until_anchor_check",
+      sql`${t.recurrenceUntil} is null or ${t.recurrenceUntil} >= ${t.anchorLocalDate}`,
+    ),
+    check(
+      "calendar_recurrence_none_bounds_check",
+      sql`${t.recurrence} <> 'NONE' or (${t.recurrenceUntil} is null and ${t.recurrenceCount} is null)`,
+    ),
+    check(
+      "calendar_recurrence_bounds_mutually_exclusive_check",
+      sql`${t.recurrenceUntil} is null or ${t.recurrenceCount} is null`,
+    ),
     check(
       "calendar_recurrence_count_positive_check",
       sql`${t.recurrenceCount} is null or ${t.recurrenceCount} > 0`,
@@ -96,7 +111,7 @@ export const calendarOccurrenceOverrides = pgTable(
     recurrenceKey: text("recurrence_key").notNull(),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
-    status: calendarOccurrenceOverrideStatusEnum("status").notNull().default("ACTIVE"),
+    status: calendarOccurrenceStatusEnum("status").notNull().default("ACTIVE"),
     reason: text("reason"),
     version: integer("version").notNull().default(1),
   },
@@ -145,7 +160,7 @@ export const interactions = pgTable(
       onDelete: "restrict",
     }),
     correctionReason: text("correction_reason"),
-    visitId: text("visit_id").references(() => visits.id, { onDelete: "set null" }),
+    visitId: text("visit_id").references(() => visits.id, { onDelete: "restrict" }),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -157,7 +172,14 @@ export const interactions = pgTable(
       "interactions_actual_ends_after_starts_check",
       sql`${t.actualEndedAt} is null or (${t.actualStartedAt} is not null and ${t.actualEndedAt} > ${t.actualStartedAt})`,
     ),
-    index("interactions_calendar_id_recurrence_key_idx").on(t.calendarId, t.recurrenceKey),
+    check(
+      "interactions_cancellation_metadata_check",
+      sql`(${t.cancelledAt} is null and ${t.cancelledByUserId} is null and ${t.cancellationReason} is null) or (${t.cancelledAt} is not null and ${t.cancelledByUserId} is not null and ${t.cancellationReason} is not null and btrim(${t.cancellationReason}) <> '' and ${t.status} = 'CANCELLED')`,
+    ),
+    check(
+      "interactions_correction_metadata_check",
+      sql`(${t.correctedAt} is null and ${t.correctedByUserId} is null and ${t.correctionReason} is null) or (${t.correctedAt} is not null and ${t.correctedByUserId} is not null and ${t.correctionReason} is not null and btrim(${t.correctionReason}) <> '' and ${t.status} = 'COMPLETED')`,
+    ),
     index("interactions_facility_id_status_idx").on(t.facilityId, t.status),
     index("interactions_agent_user_id_status_idx").on(t.agentUserId, t.status),
     index("interactions_status_idx").on(t.status),

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { getTableConfig, type AnyPgTable } from "drizzle-orm/pg-core";
+import { getTableConfig, PgDialect, type AnyPgTable } from "drizzle-orm/pg-core";
 import {
   calendar,
   calendarEventKindEnum,
   calendarOccurrenceOverrides,
-  calendarOccurrenceOverrideStatusEnum,
+  calendarOccurrenceStatusEnum,
   calendarRecurrenceEnum,
   interactionEvents,
   interactionModalityEnum,
@@ -51,6 +51,13 @@ const indexColumnNames = (table: AnyPgTable, name: string) =>
     "name" in column ? column.name : undefined,
   );
 
+const pgDialect = new PgDialect();
+
+const checkSqlByName = (table: AnyPgTable, name: string) => {
+  const candidate = getTableConfig(table).checks.find((check) => check.name === name);
+  return candidate ? pgDialect.sqlToQuery(candidate.value).sql : undefined;
+};
+
 describe("calendar and interaction schema", () => {
   test("exports the approved enum values", () => {
     expect(calendarEventKindEnum.enumValues).toEqual(["INTERACTION", "PERSONAL_BLOCK"]);
@@ -61,7 +68,8 @@ describe("calendar and interaction schema", () => {
       "MONTHLY",
       "YEARLY",
     ]);
-    expect(calendarOccurrenceOverrideStatusEnum.enumValues).toEqual(["ACTIVE", "CANCELLED"]);
+    expect(calendarOccurrenceStatusEnum.enumName).toBe("calendar_occurrence_status");
+    expect(calendarOccurrenceStatusEnum.enumValues).toEqual(["ACTIVE", "CANCELLED"]);
     expect(interactionModalityEnum.enumValues).toEqual(["IN_PERSON", "REMOTE"]);
     expect(interactionStatusEnum.enumValues).toEqual([
       "SCHEDULED",
@@ -125,8 +133,8 @@ describe("calendar and interaction schema", () => {
       ["anchor_local_time", "time", true],
       ["time_zone", "text", true],
       ["duration_minutes", "integer", true],
-      ["first_starts_at", "timestamp with time zone", true],
-      ["first_ends_at", "timestamp with time zone", true],
+      ["first_starts_at", "timestamp with time zone", false],
+      ["first_ends_at", "timestamp with time zone", false],
       ["recurrence", "calendar_recurrence", true],
       ["recurrence_until", "date", false],
       ["recurrence_count", "integer", false],
@@ -140,20 +148,31 @@ describe("calendar and interaction schema", () => {
     }
   });
 
-  test("defaults first occurrence instants for the approved insert contract", () => {
+  test("keeps first occurrence instants insert-optional without independent defaults", () => {
     for (const name of ["first_starts_at", "first_ends_at"]) {
-      expect(columnByName(calendar, name)).toMatchObject({ hasDefault: true });
+      expect(columnByName(calendar, name)).toMatchObject({ hasDefault: false, notNull: false });
     }
   });
 
-  test("defines recurrence checks and owner/time indexes", () => {
-    expect(getTableConfig(calendar).checks.map((candidate) => candidate.name)).toEqual(
-      expect.arrayContaining([
-        "calendar_duration_minutes_positive_check",
-        "calendar_first_ends_after_starts_check",
-        "calendar_recurrence_count_positive_check",
-      ]),
+  test("defines coherent first-occurrence and recurrence checks", () => {
+    expect(checkSqlByName(calendar, "calendar_first_occurrence_instants_check")).toBe(
+      '("calendar"."first_starts_at" is null and "calendar"."first_ends_at" is null) or ("calendar"."first_starts_at" is not null and "calendar"."first_ends_at" is not null and "calendar"."first_ends_at" > "calendar"."first_starts_at" and "calendar"."first_ends_at" - "calendar"."first_starts_at" = "calendar"."duration_minutes" * interval \'1 minute\')',
     );
+    expect(checkSqlByName(calendar, "calendar_recurrence_until_anchor_check")).toBe(
+      '"calendar"."recurrence_until" is null or "calendar"."recurrence_until" >= "calendar"."anchor_local_date"',
+    );
+    expect(checkSqlByName(calendar, "calendar_recurrence_none_bounds_check")).toBe(
+      '"calendar"."recurrence" <> \'NONE\' or ("calendar"."recurrence_until" is null and "calendar"."recurrence_count" is null)',
+    );
+    expect(checkSqlByName(calendar, "calendar_recurrence_bounds_mutually_exclusive_check")).toBe(
+      '"calendar"."recurrence_until" is null or "calendar"."recurrence_count" is null',
+    );
+    expect(checkSqlByName(calendar, "calendar_recurrence_count_positive_check")).toBe(
+      '"calendar"."recurrence_count" is null or "calendar"."recurrence_count" > 0',
+    );
+  });
+
+  test("defines owner/time indexes", () => {
     expect(indexColumnNames(calendar, "calendar_owner_user_id_first_starts_at_idx")).toEqual([
       "owner_user_id",
       "first_starts_at",
@@ -173,7 +192,7 @@ describe("calendar and interaction schema", () => {
       ["recurrence_key", "text", true],
       ["starts_at", "timestamp with time zone", true],
       ["ends_at", "timestamp with time zone", true],
-      ["status", "calendar_occurrence_override_status", true],
+      ["status", "calendar_occurrence_status", true],
       ["reason", "text", false],
       ["version", "integer", true],
     ]);
@@ -243,9 +262,14 @@ describe("calendar and interaction schema", () => {
         "interactions_visit_id_key",
       ]),
     );
-    expect(config.checks.map((candidate) => candidate.name)).toContain(
-      "interactions_actual_ends_after_starts_check",
+    expect(checkSqlByName(interactions, "interactions_actual_ends_after_starts_check")).toBeDefined();
+    expect(checkSqlByName(interactions, "interactions_cancellation_metadata_check")).toBe(
+      '("interactions"."cancelled_at" is null and "interactions"."cancelled_by_user_id" is null and "interactions"."cancellation_reason" is null) or ("interactions"."cancelled_at" is not null and "interactions"."cancelled_by_user_id" is not null and "interactions"."cancellation_reason" is not null and btrim("interactions"."cancellation_reason") <> \'\' and "interactions"."status" = \'CANCELLED\')',
     );
+    expect(checkSqlByName(interactions, "interactions_correction_metadata_check")).toBe(
+      '("interactions"."corrected_at" is null and "interactions"."corrected_by_user_id" is null and "interactions"."correction_reason" is null) or ("interactions"."corrected_at" is not null and "interactions"."corrected_by_user_id" is not null and "interactions"."correction_reason" is not null and btrim("interactions"."correction_reason") <> \'\' and "interactions"."status" = \'COMPLETED\')',
+    );
+    expect(indexByName(interactions, "interactions_calendar_id_recurrence_key_idx")).toBeUndefined();
     expect(indexColumnNames(interactions, "interactions_facility_id_status_idx")).toEqual([
       "facility_id",
       "status",
@@ -290,9 +314,27 @@ describe("calendar and interaction schema", () => {
       foreignKeyByColumnName(calendar, "owner_user_id")?.onDelete,
       foreignKeyByColumnName(calendarOccurrenceOverrides, "calendar_id")?.onDelete,
       foreignKeyByColumnName(interactions, "calendar_id")?.onDelete,
+      foreignKeyByColumnName(interactions, "facility_id")?.onDelete,
+      foreignKeyByColumnName(interactions, "agent_user_id")?.onDelete,
+      foreignKeyByColumnName(interactions, "cancelled_by_user_id")?.onDelete,
+      foreignKeyByColumnName(interactions, "corrected_by_user_id")?.onDelete,
+      foreignKeyByColumnName(interactions, "visit_id")?.onDelete,
       foreignKeyByColumnName(interactionEvents, "interaction_id")?.onDelete,
+      foreignKeyByColumnName(interactionEvents, "actor_user_id")?.onDelete,
       foreignKeyByColumnName(orders, "interaction_id")?.onDelete,
-    ]).toEqual(["restrict", "restrict", "restrict", "restrict", "restrict"]);
+    ]).toEqual([
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+      "restrict",
+    ]);
   });
 
   test("adds an optional indexed interaction link to orders", () => {
