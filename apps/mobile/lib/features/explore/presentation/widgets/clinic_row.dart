@@ -98,74 +98,59 @@ class ClinicRow extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 3),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      if (clinic.distanceKm != null) ...[
-                        const Icon(
-                          Icons.near_me_rounded,
-                          size: 11,
-                          color: AppColors.gray500,
+                      if (clinic.distanceKm != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.near_me_rounded,
+                              size: 11,
+                              color: AppColors.gray500,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${clinic.distanceKm!.toStringAsFixed(1)} km',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.gray500,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${clinic.distanceKm!.toStringAsFixed(1)} km',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.person_outline_rounded,
+                            size: 11,
                             color: AppColors.gray500,
                           ),
-                        ),
-                      ],
-                      if (clinic.distanceKm != null)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6),
-                          child: Text(
-                            '•',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.gray400,
+                          const SizedBox(width: 4),
+                          Text(
+                            '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray500,
                             ),
                           ),
-                        ),
-                      const Icon(
-                        Icons.person_outline_rounded,
-                        size: 11,
-                        color: AppColors.gray500,
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.gray500,
+                      if (serviceChip.label != null) ...[
+                        _ServiceChip(label: serviceChip.label!),
+                        if (serviceChip.overflow > 0)
+                          _ServiceChip(label: '+${serviceChip.overflow}'),
+                      ] else
+                        const _ServiceChip(
+                          label: 'Sem especialidade',
+                          muted: true,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              if (serviceChip.label != null) ...[
-                                _ServiceChip(label: serviceChip.label!),
-                                if (serviceChip.overflow > 0)
-                                  _ServiceChip(
-                                    label: '+${serviceChip.overflow}',
-                                  ),
-                              ] else
-                                const _ServiceChip(
-                                  label: 'Sem especialidade',
-                                  muted: true,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   if (statusChips.isNotEmpty ||
