@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 /// "Notas de campo" — private, facility-scoped notes only the current user sees.
 class ClinicFieldNotesSection extends StatelessWidget {
@@ -24,26 +26,34 @@ class ClinicFieldNotesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final loadedNotes = notes;
-    if (loadedNotes == null) {
-      return const ClinicDetailCard(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: Center(
-            child: SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
+    return Column(
+      children: [
+        const ClinicSectionHeader(title: 'Notas de campo'),
+        if (loadedNotes == null)
+          ClinicDetailCard(
+            child: AtlasShimmer(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 14,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(height: 12),
+                  Container(width: 220, height: 14, color: Colors.white),
+                ],
+              ),
             ),
+          )
+        else
+          _NotesBody(
+            facilityId: facilityId,
+            notes: loadedNotes,
+            canAdd: canAdd,
+            onCreate: onCreate,
           ),
-        ),
-      );
-    }
-
-    return _NotesBody(
-      facilityId: facilityId,
-      notes: loadedNotes,
-      canAdd: canAdd,
-      onCreate: onCreate,
+      ],
     );
   }
 }

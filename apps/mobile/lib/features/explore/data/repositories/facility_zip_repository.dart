@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
@@ -163,6 +164,7 @@ class FacilityZipRepository extends ZipRepository<FacilityDetailData> {
     required FacilityNearbyRepository nearby,
     required FacilityPotentialRepository? potentials,
   }) : _detail = detail,
+       _photos = photos,
        _payers = payers,
        _administrators = administrators,
        _doctors = doctors,
@@ -184,6 +186,7 @@ class FacilityZipRepository extends ZipRepository<FacilityDetailData> {
 
   final String facilityId;
   final ClinicDetailRepository _detail;
+  final FacilityPhotosRepository _photos;
   final FacilityPayerSharesRepository _payers;
   final FacilityRepresentativesRepository _administrators;
   final FacilityProfessionalsRepository _doctors;
@@ -295,10 +298,32 @@ class FacilityZipRepository extends ZipRepository<FacilityDetailData> {
     await _doctors.refresh();
   }
 
+  Future<FacilityPhotosResponse?> refreshPhotos() => _photos.refresh();
+
   Future<List<PayerShare>> replacePayerShares(List<PayerShare> payers) async {
     final saved = await _payers.replaceShares(payers);
     await _payers.refresh();
     return saved;
+  }
+
+  Future<List<PayerCatalogEntry>> loadPayerCatalog() async {
+    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
+      return mockPayerCatalog;
+    }
+
+    final repository = HealthcareProvidersRepository(
+      limit: 100,
+      isActive: true,
+    );
+    try {
+      final providers = await repository.loadProviders();
+      return providers
+          .where((provider) => provider.isActive)
+          .map((provider) => provider.toCatalogEntry())
+          .toList(growable: false);
+    } finally {
+      repository.dispose();
+    }
   }
 
   Future<FacilityFieldNote> createNote(String text) => _notes.createNote(text);

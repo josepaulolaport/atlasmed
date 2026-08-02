@@ -116,8 +116,8 @@ final facilityNearbyPreviewProvider =
             .watch(clinicDetailRepositoryProvider(facilityId))
             .currentValueOrResolve();
         if (dto == null) return const [];
-        lat = dto.lat;
-        lng = dto.lng;
+        lat = dto.address?.lat;
+        lng = dto.address?.lng;
         clinicVerticalIds = dto.verticalProfiles.map((p) => p.verticalId);
         if (lat == null || lng == null) return const [];
       }
