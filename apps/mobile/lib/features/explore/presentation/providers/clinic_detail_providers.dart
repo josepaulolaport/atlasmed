@@ -4,9 +4,9 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_photos_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 
 /// Shell hint from list/map navigation — paints header before detail returns.
 final clinicDetailShellFacilityProvider = StateProvider.autoDispose
@@ -90,20 +90,74 @@ final clinicDetailRepositoryProvider = Provider.autoDispose
       return repository;
     });
 
-/// Photos are not Linha-scoped — stable across detail vertical swaps.
-final facilityPhotosRepositoryProvider = Provider.autoDispose
-    .family<FacilityPhotosRepository, String>((ref, id) {
-      final repository = FacilityPhotosRepository(id);
+/// Provides a [FacilityZipRepository] for a given facility [id].
+/// Owns and combines the facility detail with every related read model.
+/// Automatically disposes the repository when the provider is no longer listened to.
+final facilityZipRepositoryProvider = Provider.autoDispose
+    .family<FacilityZipRepository, String>((ref, id) {
+      final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(id));
+      final repository = FacilityZipRepository(id, verticalId: verticalId);
       ref.onDispose(repository.dispose);
       return repository;
     });
 
-/// Detail + photos zip. Photos child survives Linha-driven detail recreate.
-final facilityZipRepositoryProvider = Provider.autoDispose
-    .family<FacilityZipRepository, String>((ref, id) {
-      final detail = ref.watch(clinicDetailRepositoryProvider(id));
-      final photos = ref.watch(facilityPhotosRepositoryProvider(id));
-      final repository = FacilityZipRepository(detail: detail, photos: photos);
-      ref.onDispose(repository.dispose);
-      return repository;
+typedef ClinicDetailScopeArgs = ({
+  String facilityId,
+  String? initialVerticalId,
+});
+
+/// Synchronizes route context and loaded facility profiles outside the widget.
+final clinicDetailScopeProvider = Provider.autoDispose
+    .family<void, ClinicDetailScopeArgs>((ref, args) {
+      final facilityId = args.facilityId;
+      final initialVerticalId = args.initialVerticalId;
+      final entryVerticalId = ref.watch(
+        clinicDetailEntryVerticalIdProvider(facilityId),
+      );
+      if (initialVerticalId != null &&
+          initialVerticalId.isNotEmpty &&
+          entryVerticalId != initialVerticalId) {
+        Future.microtask(() {
+          ref
+                  .read(
+                    clinicDetailEntryVerticalIdProvider(facilityId).notifier,
+                  )
+                  .state =
+              initialVerticalId;
+        });
+      }
+
+      final repository = ref.watch(facilityZipRepositoryProvider(facilityId));
+      final subscription = repository.stream.listen((state) {
+        if (state case RepositoryStateReady(data: final data)) {
+          final facility = data.facility;
+          if (facility != null && facility.id.isNotEmpty) {
+            ref
+                    .read(
+                      clinicDetailLoadedFacilityProvider(facilityId).notifier,
+                    )
+                    .state =
+                facility;
+          }
+          final profileIds = facility?.verticalProfiles
+              .map((profile) => profile.verticalId)
+              .where((id) => id.isNotEmpty)
+              .toSet();
+          if (profileIds == null || profileIds.isEmpty) return;
+          final current = ref.read(
+            clinicDetailKnownProfileIdsProvider(facilityId),
+          );
+          if (_sameIds(current, profileIds)) return;
+          ref
+                  .read(
+                    clinicDetailKnownProfileIdsProvider(facilityId).notifier,
+                  )
+                  .state =
+              profileIds;
+        }
+      });
+      ref.onDispose(subscription.cancel);
     });
+
+bool _sameIds(Set<String> left, Set<String> right) =>
+    left.length == right.length && left.containsAll(right);

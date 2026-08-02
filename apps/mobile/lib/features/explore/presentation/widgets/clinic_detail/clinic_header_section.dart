@@ -16,6 +16,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_status_chips.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
 /// and full address. Rendered above the scrollable section list, not inside
@@ -24,19 +25,17 @@ class ClinicHeaderSection extends ConsumerWidget {
   const ClinicHeaderSection({
     super.key,
     required this.detail,
-    required this.sections,
     required this.photos,
   });
 
-  final Facility detail;
+  final Facility? detail;
   final PhotoGallerySummary? photos;
-
-  /// Nullable while the mocked sections provider is still loading — the
-  /// header degrades gracefully to identity + address only in that case.
-  final EstablishmentDetailSections? sections;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final detail = this.detail;
+    if (detail == null) return const ClinicHeaderSkeleton();
+
     final top = MediaQuery.of(context).padding.top;
     final uploading = ref
         .watch(facilityPhotoUploadProvider(detail.id))
@@ -63,14 +62,12 @@ class ClinicHeaderSection extends ConsumerWidget {
         );
       }
     });
+
     final clinicServices = FacilityServiceLabels.resolveDisplayServices(
       services: detail.services,
       verticalProfiles: detail.verticalProfiles,
     );
     final orderedServices = FacilityServiceLabels.prioritize(clinicServices);
-    final specialties = orderedServices.isEmpty
-        ? sections?.specialtiesLabel
-        : null;
     // Identity / contact / address / PF-PJ prefer the live facility DTO.
     final fullAddress = detail.address?.formattedAddress;
     final taxIdType = parseFacilityTaxIdType(detail.registration?.taxIdType);
@@ -122,18 +119,6 @@ class ClinicHeaderSection extends ConsumerWidget {
                               letterSpacing: -0.3,
                             ),
                           ),
-                          if (specialties != null) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              specialties,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: Color(0xCCFFFFFF),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
                           if (taxIdType != null) ...[
                             const SizedBox(height: 3),
                             Text(
@@ -257,6 +242,8 @@ class ClinicHeaderSection extends ConsumerWidget {
     WidgetRef ref,
     PhotoGallerySummary? photos,
   ) async {
+    final detail = this.detail;
+    if (detail == null) return;
     final hasPhotos = photos != null && photos.count > 0;
     final isMock =
         detail.id.startsWith('near-') || detail.id.endsWith(':empty');
@@ -313,6 +300,8 @@ class ClinicHeaderSection extends ConsumerWidget {
   }
 
   void _openViewer(BuildContext context, PhotoGallerySummary photos) {
+    final detail = this.detail;
+    if (detail == null) return;
     openClinicPhotoViewer(context, facilityName: detail.name, photos: photos);
   }
 
@@ -320,6 +309,72 @@ class ClinicHeaderSection extends ConsumerWidget {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
+}
+
+class ClinicHeaderSkeleton extends StatelessWidget {
+  const ClinicHeaderSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(28, top + 8, 28, 22),
+      color: AppColors.navyBright,
+      child: const AtlasShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _HeaderSkeletonBlock(width: 72, height: 72, round: true),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _HeaderSkeletonBlock(width: 210, height: 20),
+                      SizedBox(height: 9),
+                      _HeaderSkeletonBlock(width: 120, height: 12),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            _HeaderSkeletonBlock(width: 260, height: 24),
+            SizedBox(height: 10),
+            _HeaderSkeletonBlock(width: 220, height: 22),
+            SizedBox(height: 14),
+            _HeaderSkeletonBlock(width: 280, height: 13),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderSkeletonBlock extends StatelessWidget {
+  const _HeaderSkeletonBlock({
+    required this.width,
+    required this.height,
+    this.round = false,
+  });
+
+  final double width;
+  final double height;
+  final bool round;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    height: height,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      shape: round ? BoxShape.circle : BoxShape.rectangle,
+      borderRadius: round ? null : BorderRadius.circular(8),
+    ),
+  );
 }
 
 class _Avatar extends StatelessWidget {

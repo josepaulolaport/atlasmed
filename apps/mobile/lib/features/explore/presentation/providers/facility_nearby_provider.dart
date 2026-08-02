@@ -1,25 +1,10 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Builds map center from live facility detail coordinates.
-EstablishmentLocation? establishmentLocationFromDetail(Facility facility) {
-  final lat = facility.address?.lat;
-  final lng = facility.address?.lng;
-  if (lat == null || lng == null) return null;
-
-  return EstablishmentLocation(
-    latitude: lat,
-    longitude: lng,
-    formattedAddress: facility.address?.formattedAddress,
-  );
-}
-
-/// Clinic verticals the signed-in user can also see (intersection).
 Set<String> sharedNearbyVerticalIds({
   required Iterable<String> clinicVerticalIds,
   required Iterable<String> userVerticalIds,
@@ -29,11 +14,7 @@ Set<String> sharedNearbyVerticalIds({
   return clinicVerticalIds.where(user.contains).toSet();
 }
 
-/// Vertical id for nearby `GET /facilities` given clinic∩user scope.
-///
-/// - empty shared → [fallbackEffectiveId] (user-only filter)
-/// - one shared → that id
-/// - many shared → [selectedVerticalId] when in shared, else `null` (Todas)
+/// Resolves the vertical used by the nearby facilities query.
 String? resolveNearbyVerticalId({
   required Set<String> sharedVerticalIds,
   required String? selectedVerticalId,
@@ -48,14 +29,18 @@ String? resolveNearbyVerticalId({
   return null;
 }
 
-/// When "Todas" among several shared verticals, drop clinics outside that set.
+/// Filters the "Todas" result to verticals shared by user and clinic.
 List<NearbyEstablishment> filterNearbyBySharedVerticals(
   List<NearbyEstablishment> items,
   Set<String> sharedVerticalIds,
 ) {
   if (sharedVerticalIds.isEmpty) return items;
   return items
-      .where((e) => e.verticals.any((v) => sharedVerticalIds.contains(v.id)))
+      .where(
+        (item) => item.verticals.any(
+          (vertical) => sharedVerticalIds.contains(vertical.id),
+        ),
+      )
       .toList(growable: false);
 }
 
@@ -131,8 +116,8 @@ final facilityNearbyPreviewProvider =
             .watch(clinicDetailRepositoryProvider(facilityId))
             .currentValueOrResolve();
         if (dto == null) return const [];
-        lat = dto.lat;
-        lng = dto.lng;
+        lat = dto.address?.lat;
+        lng = dto.address?.lng;
         clinicVerticalIds = dto.verticalProfiles.map((p) => p.verticalId);
         if (lat == null || lng == null) return const [];
       }
@@ -173,7 +158,7 @@ final facilityNearbyPreviewProvider =
       );
     });
 
-/// Full-screen map: refetch when radius / origin / vertical changes.
+/// Full-screen map: refetch when radius, origin or vertical changes.
 final facilityNearbyProvider =
     FutureProvider.family<List<NearbyEstablishment>, NearbyFacilitiesQuery>((
       ref,

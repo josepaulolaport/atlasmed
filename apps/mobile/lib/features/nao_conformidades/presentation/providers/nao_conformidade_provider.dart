@@ -115,9 +115,10 @@ class NaoConformidadeActions {
       // Facility was mutated on approve — refresh open/cached clinic detail.
       final facilityId = updated.targetId;
       _ref.invalidate(clinicDetailRepositoryProvider(facilityId));
+      _ref.invalidate(facilityZipRepositoryProvider(facilityId));
       // Warm the provider so popping back to the clinic already has fresh data.
       // ignore: unused_result
-      _ref.read(clinicDetailRepositoryProvider(facilityId)).refresh();
+      _ref.read(facilityZipRepositoryProvider(facilityId)).refresh();
     }
     return updated;
   }

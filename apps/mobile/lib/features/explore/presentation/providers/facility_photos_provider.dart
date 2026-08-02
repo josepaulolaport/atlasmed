@@ -89,7 +89,9 @@ class FacilityPhotoUploadController extends StateNotifier<AsyncValue<void>> {
       }
 
       // Refresh photos only — do not refetch facility detail / other sections.
-      await _ref.read(facilityPhotosRepositoryProvider(facilityId)).refresh();
+      await _ref
+          .read(facilityZipRepositoryProvider(facilityId))
+          .refreshPhotos();
       _ref.invalidate(facilityPhotosProvider(facilityId));
       state = const AsyncData(null);
     } on FacilityPhotosException catch (error, stackTrace) {
