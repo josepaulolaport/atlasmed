@@ -115,8 +115,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
     String? managerZoneId,
     int page = 1,
     int limit = 50,
-  }) async =>
-      const [];
+  }) async => const [];
 
   @override
   Future<Territory> createTerritory(
