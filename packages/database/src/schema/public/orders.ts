@@ -14,6 +14,7 @@ import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
 import { facilities, professionals } from "./facilities";
 import { products } from "./catalog";
+import { interactions } from "./calendar";
 import { users } from "./users";
 
 export const orders = pgTable(
@@ -28,6 +29,9 @@ export const orders = pgTable(
       .references(() => businessVerticals.id, { onDelete: "restrict" }),
     sellerId: text("seller_id").references(() => users.id),
     professionalId: text("professional_id").references(() => professionals.id),
+    interactionId: text("interaction_id").references(() => interactions.id, {
+      onDelete: "set null",
+    }),
     status: orderStatusEnum("status").notNull().default("DRAFT"),
     type: orderTypeEnum("type").notNull().default("SALE"),
     surgeryType: text("surgery_type"),
@@ -58,6 +62,7 @@ export const orders = pgTable(
     index("orders_legacy_id_idx").on(t.legacyId),
     index("orders_ordered_at_idx").on(t.orderedAt),
     index("orders_professional_id_idx").on(t.professionalId),
+    index("orders_interaction_id_idx").on(t.interactionId),
     index("orders_seller_id_idx").on(t.sellerId),
     index("orders_valid_purchase_facility_ordered_at_idx")
       .on(t.facilityId, t.orderedAt.desc())
@@ -97,6 +102,10 @@ export const orderItems = pgTable(
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   facility: one(facilities, { fields: [orders.facilityId], references: [facilities.id] }),
+  interaction: one(interactions, {
+    fields: [orders.interactionId],
+    references: [interactions.id],
+  }),
   items: many(orderItems),
 }));
 
