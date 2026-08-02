@@ -54,15 +54,15 @@ export const calendar = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     ownerUserId: text("owner_user_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "restrict" }),
     kind: calendarEventKindEnum("kind").notNull(),
     title: text("title").notNull(),
     anchorLocalDate: date("anchor_local_date").notNull(),
     anchorLocalTime: time("anchor_local_time").notNull(),
-    timezone: text("timezone").notNull(),
+    timeZone: text("time_zone").notNull(),
     durationMinutes: integer("duration_minutes").notNull(),
-    firstStartsAt: timestamp("first_starts_at", { withTimezone: true }).notNull(),
-    firstEndsAt: timestamp("first_ends_at", { withTimezone: true }).notNull(),
+    firstStartsAt: timestamp("first_starts_at", { withTimezone: true }).notNull().defaultNow(),
+    firstEndsAt: timestamp("first_ends_at", { withTimezone: true }).notNull().defaultNow(),
     recurrence: calendarRecurrenceEnum("recurrence").notNull().default("NONE"),
     recurrenceUntil: date("recurrence_until"),
     recurrenceCount: integer("recurrence_count"),
@@ -92,7 +92,7 @@ export const calendarOccurrenceOverrides = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     calendarId: text("calendar_id")
       .notNull()
-      .references(() => calendar.id, { onDelete: "cascade" }),
+      .references(() => calendar.id, { onDelete: "restrict" }),
     recurrenceKey: text("recurrence_key").notNull(),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
@@ -123,7 +123,7 @@ export const interactions = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     calendarId: text("calendar_id")
       .notNull()
-      .references(() => calendar.id, { onDelete: "cascade" }),
+      .references(() => calendar.id, { onDelete: "restrict" }),
     recurrenceKey: text("recurrence_key").notNull(),
     facilityId: text("facility_id")
       .notNull()
@@ -170,7 +170,7 @@ export const interactionEvents = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     interactionId: text("interaction_id")
       .notNull()
-      .references(() => interactions.id, { onDelete: "cascade" }),
+      .references(() => interactions.id, { onDelete: "restrict" }),
     actorUserId: text("actor_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

@@ -30,7 +30,7 @@ export const orders = pgTable(
     sellerId: text("seller_id").references(() => users.id),
     professionalId: text("professional_id").references(() => professionals.id),
     interactionId: text("interaction_id").references(() => interactions.id, {
-      onDelete: "set null",
+      onDelete: "restrict",
     }),
     status: orderStatusEnum("status").notNull().default("DRAFT"),
     type: orderTypeEnum("type").notNull().default("SALE"),

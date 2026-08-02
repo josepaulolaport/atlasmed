@@ -13,8 +13,35 @@ import {
 } from "./calendar";
 import { orders } from "./orders";
 
+const recurringMonthly = {
+  ownerUserId: "user-1",
+  kind: "INTERACTION" as const,
+  title: "Atendimento",
+  anchorLocalDate: "2026-01-31",
+  anchorLocalTime: "09:00",
+  timeZone: "America/Sao_Paulo",
+  durationMinutes: 60,
+  recurrence: "MONTHLY" as const,
+} satisfies typeof calendar.$inferInsert;
+
+const orderWithoutInteraction = {
+  facilityId: "facility-1",
+  verticalId: "vertical-1",
+  orderedAt: new Date("2026-01-31T12:00:00.000Z"),
+} satisfies typeof orders.$inferInsert;
+
+const orderWithInteraction = {
+  ...orderWithoutInteraction,
+  interactionId: "interaction-1",
+} satisfies typeof orders.$inferInsert;
+
 const columnByName = (table: AnyPgTable, name: string) =>
   getTableConfig(table).columns.find((column) => column.name === name);
+
+const foreignKeyByColumnName = (table: AnyPgTable, name: string) =>
+  getTableConfig(table).foreignKeys.find((foreignKey) =>
+    foreignKey.reference().columns.some((column) => column.name === name),
+  );
 
 const indexByName = (table: AnyPgTable, name: string) =>
   getTableConfig(table).indexes.find((candidate) => candidate.config.name === name);
@@ -45,6 +72,15 @@ describe("calendar and interaction schema", () => {
     ]);
   });
 
+  test("accepts the approved insert contracts", () => {
+    expect(recurringMonthly).toMatchObject({
+      recurrence: "MONTHLY",
+      timeZone: "America/Sao_Paulo",
+    });
+    expect(orderWithoutInteraction).not.toHaveProperty("interactionId");
+    expect(orderWithInteraction.interactionId).toBe("interaction-1");
+  });
+
   test("uses the required physical table names", () => {
     expect([
       getTableConfig(calendar).name,
@@ -67,7 +103,7 @@ describe("calendar and interaction schema", () => {
         "title",
         "anchor_local_date",
         "anchor_local_time",
-        "timezone",
+        "time_zone",
         "duration_minutes",
         "first_starts_at",
         "first_ends_at",
@@ -87,7 +123,7 @@ describe("calendar and interaction schema", () => {
       ["title", "text", true],
       ["anchor_local_date", "date", true],
       ["anchor_local_time", "time", true],
-      ["timezone", "text", true],
+      ["time_zone", "text", true],
       ["duration_minutes", "integer", true],
       ["first_starts_at", "timestamp with time zone", true],
       ["first_ends_at", "timestamp with time zone", true],
@@ -101,6 +137,12 @@ describe("calendar and interaction schema", () => {
 
     for (const name of ["first_starts_at", "first_ends_at", "created_at", "updated_at"]) {
       expect(columnByName(calendar, name)).toMatchObject({ withTimezone: true });
+    }
+  });
+
+  test("defaults first occurrence instants for the approved insert contract", () => {
+    for (const name of ["first_starts_at", "first_ends_at"]) {
+      expect(columnByName(calendar, name)).toMatchObject({ hasDefault: true });
     }
   });
 
@@ -241,6 +283,16 @@ describe("calendar and interaction schema", () => {
       "interaction_id",
       "created_at",
     ]);
+  });
+
+  test("restricts deletion across business-history foreign keys", () => {
+    expect([
+      foreignKeyByColumnName(calendar, "owner_user_id")?.onDelete,
+      foreignKeyByColumnName(calendarOccurrenceOverrides, "calendar_id")?.onDelete,
+      foreignKeyByColumnName(interactions, "calendar_id")?.onDelete,
+      foreignKeyByColumnName(interactionEvents, "interaction_id")?.onDelete,
+      foreignKeyByColumnName(orders, "interaction_id")?.onDelete,
+    ]).toEqual(["restrict", "restrict", "restrict", "restrict", "restrict"]);
   });
 
   test("adds an optional indexed interaction link to orders", () => {
