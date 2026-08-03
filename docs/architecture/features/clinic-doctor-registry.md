@@ -153,9 +153,17 @@ Current suggestion types include:
 - Facility reactivation.
 - Doctor-clinic association removal.
 
+## Relationship to Calendar and Interactions
+
+Facilities and professionals provide CRM context for commercial contacts, but contact does not imply physical presence. New scheduling and activity flows use the [Calendar and Commercial Interactions](calendar-interactions.md) domain.
+
+An interaction is linked to a facility and may be `IN_PERSON` or `REMOTE`. Facility notes remain scoped to the facility–user relationship, and orders may optionally link to an interaction.
+
+`visits` remains only as a compatibility ledger written when an interaction is completed. Registry and CRM documentation should not use visit as the generic term for every contact or follow-up.
+
 ## Target Direction
 
-This domain should evolve into the healthcare CRM foundation. It should support profile quality, relationship history, territory-aware access, visits, notes, follow-ups, data provenance, and governed workflows for accepting or rejecting external data changes.
+This domain should evolve into the healthcare CRM foundation. It should support profile quality, relationship and interaction history, territory-aware access, notes, follow-ups, data provenance, and governed workflows for accepting or rejecting external data changes.
 
 ## Open Questions
 
