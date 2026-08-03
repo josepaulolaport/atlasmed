@@ -20,12 +20,12 @@ function mapOverride(row: typeof calendarOccurrenceOverrides.$inferSelect): Cale
     endsAt: row.endsAt, status: row.status, reason: row.reason, version: row.version };
 }
 function mapInteraction(row: typeof interactions.$inferSelect, linkedOrderCount = 0,
-  lifecycle: { eventCount?: number; initialOnly?: boolean } = {}): CalendarInteractionRecord {
+  lifecycle: { eventCount?: number } = {}): CalendarInteractionRecord {
   return { id: row.id, recurrenceKey: row.recurrenceKey, facilityId: row.facilityId, modality: row.modality,
     status: row.status, cancelledAt: row.cancelledAt, cancelledByUserId: row.cancelledByUserId,
     cancellationReason: row.cancellationReason, visitId: row.visitId, linkedOrderCount, version: row.version,
     actualStartedAt: row.actualStartedAt, actualEndedAt: row.actualEndedAt,
-    lifecycleEventCount: lifecycle.eventCount ?? 0, hasOnlyInitialLifecycleEvents: lifecycle.initialOnly ?? true };
+    lifecycleEventCount: lifecycle.eventCount ?? 0 };
 }
 export function mapCalendarEvent(row: typeof calendar.$inferSelect, overrides: CalendarOverrideRecord[] = [], interactionRows: CalendarInteractionRecord[] = [],
   owner: { id: string; name: string } = { id: row.ownerUserId, name: row.ownerUserId }, facility: { id: string; name: string } | null = null): CalendarEventRecord {
@@ -64,8 +64,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       interactionRows.length ? this.database.select({ interactionId: orders.interactionId, count: sql<number>`cast(count(*) as int)` }).from(orders)
         .where(inArray(orders.interactionId, interactionRows.map((item) => item.id))).groupBy(orders.interactionId) : Promise.resolve([]),
       interactionRows.length ? this.database.select({ interactionId: interactionEvents.interactionId,
-        count: sql<number>`cast(count(*) as int)`,
-        nonInitialCount: sql<number>`cast(count(*) filter (where not (${interactionEvents.previousStatus} is null and ${interactionEvents.newStatus} = 'SCHEDULED')) as int)` })
+        count: sql<number>`cast(count(*) as int)` })
         .from(interactionEvents).where(inArray(interactionEvents.interactionId, interactionRows.map((item) => item.id)))
         .groupBy(interactionEvents.interactionId) : Promise.resolve([]),
     ]);
@@ -74,7 +73,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     const facilityById = new Map(facilityRows.map((facility) => [facility.id, facility]));
     const orderCountByInteractionId = new Map(orderCounts.map((item) => [item.interactionId, item.count]));
     const lifecycleByInteractionId = new Map(lifecycleRows.map((item) => [item.interactionId,
-      { eventCount: item.count, initialOnly: item.nonInitialCount === 0 }]));
+      { eventCount: item.count }]));
     return rows.map((row) => {
       const rowInteractions = interactionRows.filter((item) => item.calendarId === row.id);
       const facility = rowInteractions[0] ? facilityById.get(rowInteractions[0].facilityId) ?? null : null;
@@ -204,8 +203,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     ]);
     if (rows.some((item) => item.status !== "SCHEDULED" || item.visitId || item.actualStartedAt || item.actualEndedAt)
       || orderCounts.some((item) => item.count > 0)
-      || lifecycleRows.some((event) => event.previousStatus !== null || event.newStatus !== "SCHEDULED")) return false;
-    if (lifecycleRows.length) await this.database.delete(interactionEvents).where(inArray(interactionEvents.interactionId, ids));
+      || lifecycleRows.length > 0) return false;
     for (let index = 0; index < rows.length; index += 1) {
       await this.database.update(interactions).set({ recurrenceKey: `__calendar_rekey__${index}__${rows[index]!.id}` })
         .where(eq(interactions.id, rows[index]!.id));

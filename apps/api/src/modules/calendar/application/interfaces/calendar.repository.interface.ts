@@ -38,7 +38,6 @@ export interface CalendarInteractionRecord {
   actualStartedAt?: Date | null;
   actualEndedAt?: Date | null;
   lifecycleEventCount?: number;
-  hasOnlyInitialLifecycleEvents?: boolean;
 }
 
 export interface CalendarEventRecord {

@@ -416,6 +416,25 @@ describe("Calendar application use cases", () => {
     ]);
   });
 
+  it("rejects series shape edits when a materialized interaction has append-only lifecycle history but allows title-only edits", async () => {
+    const repository = new FakeCalendarRepository();
+    const useCase = new UpdateCalendarEventUseCase({ repository });
+    repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 1,
+      facility: { id: "facility-1", name: "Clínica Central" }, interactions: [{
+        id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED",
+        visitId: null, linkedOrderCount: 0, lifecycleEventCount: 1, version: 1,
+      }] })];
+
+    await expect(useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "history-shape", expectedVersion: 1, changes: { startsAt: "2026-08-03T10:00:00Z" } }))
+      .rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(repository.replacedInteractions).toBeUndefined();
+
+    await useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "history-title", expectedVersion: 1, changes: { title: "Novo título" } });
+    expect(repository.updated?.changes).toMatchObject({ title: "Novo título" });
+  });
+
   it("rejects materialized series shape edits after progress or linked orders but allows title-only edits", async () => {
     const repository = new FakeCalendarRepository();
     const useCase = new UpdateCalendarEventUseCase({ repository });

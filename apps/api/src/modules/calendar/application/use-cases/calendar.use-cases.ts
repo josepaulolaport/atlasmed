@@ -311,7 +311,7 @@ export class UpdateCalendarEventUseCase {
       if (current.kind === "INTERACTION" && current.interactions.length > 0 && changesRecurrenceShape) {
         const blocked = current.interactions.some((item) => item.status !== "SCHEDULED" || item.visitId
           || (item.linkedOrderCount ?? 0) > 0 || item.actualStartedAt || item.actualEndedAt
-          || item.hasOnlyInitialLifecycleEvents === false);
+          || (item.lifecycleEventCount ?? 0) > 0);
         if (blocked) throw new ValidationError([{ field: "recurrence", message: "Recurrence shape can change only while every materialized interaction is untouched and scheduled" }]);
         if (current.overrides.some((item) => item.status === "ACTIVE")) {
           throw new ValidationError([{ field: "recurrence", message: "Recurrence shape cannot change while active occurrence overrides exist" }]);
