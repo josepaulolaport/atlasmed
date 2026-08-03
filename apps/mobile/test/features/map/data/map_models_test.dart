@@ -1,9 +1,34 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/viewport_query.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('MapViewportQuery', () {
+    test('serializes the visible center and radius for the map endpoint', () {
+      const query = MapViewportQuery(
+        latitude: -23.55,
+        longitude: -46.63,
+        radiusKm: 8.25,
+      );
+
+      expect(query.toQueryParameters(), {
+        'latitude': '-23.55',
+        'longitude': '-46.63',
+        'radiusKm': '8.25',
+      });
+    });
+  });
+
+  group('MapViewportQuery distance', () {
+    test('supports world-scale visible radii without truncating to 100 km', () {
+      final distance = MapViewportQuery.haversineDistanceKm(0, 0, 0, 90);
+
+      expect(distance, closeTo(10007.5, 1));
+    });
+  });
+
   group('TerritoryGeometry', () {
     test('builds a valid Polygon GeoJSON feature collection', () {
       final geometry = TerritoryGeometry.polygon([

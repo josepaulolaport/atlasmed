@@ -27,6 +27,9 @@ export class ListMapFacilityPointsUseCase {
     scope: ScopeContext;
     role: string;
     verticalId?: string;
+    latitude: number;
+    longitude: number;
+    radiusKm: number;
   }): Promise<MapFacilityPointsGeoJson> {
     const listScope = buildFacilityListScope({
       scope: input.scope,
@@ -34,7 +37,12 @@ export class ListMapFacilityPointsUseCase {
       verticalId: input.verticalId,
     });
 
-    const points = await this.deps.facilityRepository.listMapPoints(listScope);
+    const points = await this.deps.facilityRepository.listMapPoints({
+      scope: listScope,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      radiusKm: input.radiusKm,
+    });
 
     return {
       type: "FeatureCollection",

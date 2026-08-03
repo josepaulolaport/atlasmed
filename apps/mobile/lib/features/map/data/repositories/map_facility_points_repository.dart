@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/viewport_query.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 /// Thin live-map pins from `GET /api/v1/map/facilities/points`.
@@ -16,15 +17,27 @@ class MapFacilityPointsPage {
 
 class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     with SessionEnvironmentMixin<MapFacilityPointsPage> {
-  MapFacilityPointsRepository({String? baseUrl, this.verticalId})
-    : super(
-        endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
-        name: 'MapFacilityPointsRepository',
-      );
+  MapFacilityPointsRepository({
+    String? baseUrl,
+    this.verticalId,
+    required this.viewport,
+  }) : super(
+         endpoint: _buildEndpoint(
+           baseUrl ?? AppConfig.apiBaseUrl,
+           verticalId,
+           viewport,
+         ),
+         name: 'MapFacilityPointsRepository',
+       );
 
   final String? verticalId;
+  final MapViewportQuery viewport;
 
-  static Uri _buildEndpoint(String baseUrl, String? verticalId) {
+  static Uri _buildEndpoint(
+    String baseUrl,
+    String? verticalId,
+    MapViewportQuery viewport,
+  ) {
     final base = Uri.parse(baseUrl);
     final basePath = base.path.endsWith('/')
         ? base.path.substring(0, base.path.length - 1)
@@ -32,6 +45,7 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     return base.replace(
       path: '$basePath/api/v1/map/facilities/points',
       queryParameters: {
+        ...viewport.toQueryParameters(),
         if (verticalId != null && verticalId.trim().isNotEmpty)
           'verticalId': verticalId.trim(),
       },
@@ -89,8 +103,12 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
 
 Future<List<NearbyEstablishment>> fetchMapFacilityPoints({
   String? verticalId,
+  required MapViewportQuery viewport,
 }) async {
-  final repo = MapFacilityPointsRepository(verticalId: verticalId);
+  final repo = MapFacilityPointsRepository(
+    verticalId: verticalId,
+    viewport: viewport,
+  );
   try {
     final page = await repo.currentValueOrResolve();
     return page?.points ?? const [];

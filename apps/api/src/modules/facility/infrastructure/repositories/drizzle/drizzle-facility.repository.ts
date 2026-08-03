@@ -612,6 +612,18 @@ export function buildFacilityListOrderBy(params: {
   }
 }
 
+export function buildMapViewportCondition(params: {
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+}) {
+  return sql`ST_DWithin(
+    ${facilities.location}::geography,
+    ST_SetSRID(ST_MakePoint(${params.longitude}, ${params.latitude}), 4326)::geography,
+    ${params.radiusKm * 1000}
+  )`;
+}
+
 export class DrizzleFacilityRepository implements FacilityRepository {
   async findAll(params: {
     page: number;
@@ -1143,13 +1155,19 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return refreshed;
   }
 
-  async listMapPoints(scope: FacilityListScopeFilter): Promise<FacilityMapPoint[]> {
+  async listMapPoints(params: {
+    scope: FacilityListScopeFilter;
+    latitude: number;
+    longitude: number;
+    radiusKm: number;
+  }): Promise<FacilityMapPoint[]> {
     const where = and(
-      buildFacilityListConditions({ scope }),
+      buildFacilityListConditions({ scope: params.scope }),
       sql`${facilities.location} IS NOT NULL`,
+      buildMapViewportCondition(params),
     );
 
-    const verticalIds = scope.verticalIds;
+    const verticalIds = params.scope.verticalIds;
     // Priority: any PURCHASE_WINDOW → active; else OUTSIDE/CHURN → inactive; else neverBought.
     // When verticals resolve, read profile stage(s); otherwise facility rollup.
     // Correlate with bare `facilities.id` — `${facilities.id}` inside EXISTS is
