@@ -60,7 +60,7 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
           actions: [
             if (widget.target.mode != CalendarEditorMode.create)
               IconButton(
-                tooltip: 'Cancelar compromisso',
+                tooltip: _cancelTooltip(widget.target.mode),
                 onPressed: state.isSubmitting ? null : _cancel,
                 icon: const Icon(Icons.delete_outline_rounded),
               ),
@@ -522,8 +522,14 @@ const _durationOptions = [30, 60, 90, 120, 150, 180, 240];
 
 String _screenTitle(CalendarEditorMode mode) => switch (mode) {
   CalendarEditorMode.create => 'Novo compromisso',
-  CalendarEditorMode.series => 'Editar série',
+  CalendarEditorMode.series => 'Editar toda a série',
   CalendarEditorMode.occurrence => 'Editar ocorrência',
+};
+
+String _cancelTooltip(CalendarEditorMode mode) => switch (mode) {
+  CalendarEditorMode.create => 'Cancelar compromisso',
+  CalendarEditorMode.series => 'Cancelar toda a série',
+  CalendarEditorMode.occurrence => 'Cancelar esta ocorrência',
 };
 
 String _formatDate(DateTime value) =>

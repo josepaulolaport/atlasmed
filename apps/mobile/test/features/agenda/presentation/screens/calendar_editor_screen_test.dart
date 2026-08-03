@@ -50,18 +50,35 @@ class _EditorRepository implements CalendarMutationRepositoryContract {
   }) async {}
 }
 
-Widget _app(_EditorRepository repository, {CalendarEditorPrefill? prefill}) =>
-    ProviderScope(
-      overrides: [
-        calendarMutationRepositoryProvider.overrideWithValue(repository),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.light,
-        home: CalendarEditorScreen(
-          target: CalendarEditorTarget.creating(prefill: prefill),
-        ),
-      ),
-    );
+Widget _app(
+  _EditorRepository repository, {
+  CalendarEditorPrefill? prefill,
+  CalendarEditorTarget? target,
+}) => ProviderScope(
+  overrides: [calendarMutationRepositoryProvider.overrideWithValue(repository)],
+  child: MaterialApp(
+    theme: AppTheme.light,
+    home: CalendarEditorScreen(
+      target: target ?? CalendarEditorTarget.creating(prefill: prefill),
+    ),
+  ),
+);
+
+CalendarOccurrence _recurringOccurrence() => CalendarOccurrence.fromJson({
+  'id': 'calendar-1:key-1',
+  'calendarId': 'calendar-1',
+  'recurrenceKey': 'key-1',
+  'ownerUserId': 'rep-1',
+  'kind': 'PERSONAL_BLOCK',
+  'title': 'Bloqueio semanal',
+  'startsAt': '2026-08-03T12:00:00.000Z',
+  'endsAt': '2026-08-03T13:00:00.000Z',
+  'timeZone': 'America/Sao_Paulo',
+  'durationMinutes': 60,
+  'recurrence': 'WEEKLY',
+  'version': 4,
+  'canMutate': true,
+});
 
 void main() {
   testWidgets(
@@ -85,6 +102,31 @@ void main() {
       expect(find.textContaining('último dia válido'), findsOneWidget);
     },
   );
+
+  testWidgets('keeps occurrence and series editor wording distinct', (
+    tester,
+  ) async {
+    final repository = _EditorRepository();
+    final occurrence = _recurringOccurrence();
+
+    await tester.pumpWidget(
+      _app(
+        repository,
+        target: CalendarEditorTarget.editingOccurrence(occurrence),
+      ),
+    );
+    expect(find.text('Editar ocorrência'), findsOneWidget);
+    expect(find.text('Repetição'), findsNothing);
+    expect(find.byTooltip('Cancelar esta ocorrência'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      _app(repository, target: CalendarEditorTarget.editingSeries(occurrence)),
+    );
+    expect(find.text('Editar toda a série'), findsOneWidget);
+    expect(find.text('Repetição'), findsWidgets);
+    expect(find.byTooltip('Cancelar toda a série'), findsOneWidget);
+  });
 
   testWidgets(
     'validates clinic and keeps entered draft after network failure',

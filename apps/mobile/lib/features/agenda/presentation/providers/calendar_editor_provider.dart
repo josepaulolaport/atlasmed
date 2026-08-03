@@ -117,7 +117,7 @@ class CalendarEditorDraft extends Equatable {
 
   CalendarOccurrenceUpdateCommand toOccurrenceUpdateCommand() =>
       CalendarOccurrenceUpdateCommand(
-        expectedVersion: overrideVersion ?? expectedVersion,
+        expectedVersion: overrideVersion ?? 0,
         startsAt: _offsetIso(startsAt),
         durationMinutes: durationMinutes,
       );
@@ -369,7 +369,7 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState> {
     try {
       final command = CalendarCancellationCommand(
         expectedVersion: target.mode == CalendarEditorMode.occurrence
-            ? occurrence.overrideVersion ?? occurrence.version
+            ? occurrence.overrideVersion ?? 0
             : occurrence.version,
         reason: reason.trim(),
       );

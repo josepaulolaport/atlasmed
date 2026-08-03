@@ -163,7 +163,7 @@ Future<void> _cancelOccurrence(
   if (reason == null || !context.mounted) return;
 
   final repository = ref.read(calendarMutationRepositoryProvider);
-  final expectedVersion = detail.overrideVersion ?? detail.calendarVersion;
+  final expectedVersion = detail.overrideVersion ?? 0;
   final idempotencyKey =
       'cancel-${detail.calendarId}-${detail.recurrenceKey}-v$expectedVersion';
   try {
@@ -530,6 +530,7 @@ class _ActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final busy = command != null;
+    final isRecurring = detail.recurrence != CalendarRecurrence.none;
     final canOrder =
         detail.status == InteractionStatus.scheduled ||
         detail.status == InteractionStatus.inProgress;
@@ -574,13 +575,19 @@ class _ActionsCard extends StatelessWidget {
               TextButton.icon(
                 onPressed: onReschedule,
                 icon: const Icon(Icons.edit_calendar_outlined),
-                label: const Text('Reagendar'),
+                label: Text(
+                  isRecurring ? 'Reagendar esta ocorrência' : 'Reagendar',
+                ),
               ),
             if (onCancel != null)
               TextButton.icon(
                 onPressed: onCancel,
                 icon: const Icon(Icons.event_busy_outlined),
-                label: const Text('Cancelar agendamento'),
+                label: Text(
+                  isRecurring
+                      ? 'Cancelar esta ocorrência'
+                      : 'Cancelar agendamento',
+                ),
               ),
           ],
         ],

@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
   CalendarCreateCommand? created;
   String? createKey;
+  CalendarOccurrenceUpdateCommand? occurrenceUpdate;
+  CalendarCancellationCommand? occurrenceCancellation;
   Object? submitError;
 
   @override
@@ -31,7 +33,9 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
     required String recurrenceKey,
     required CalendarOccurrenceUpdateCommand command,
     required String idempotencyKey,
-  }) async {}
+  }) async {
+    occurrenceUpdate = command;
+  }
 
   @override
   Future<void> cancelCalendar({
@@ -46,8 +50,28 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
     required String recurrenceKey,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
-  }) async {}
+  }) async {
+    occurrenceCancellation = command;
+  }
 }
+
+CalendarOccurrence _occurrence({int version = 8, int? overrideVersion}) =>
+    CalendarOccurrence.fromJson({
+      'id': 'calendar-1:key-1',
+      'calendarId': 'calendar-1',
+      'recurrenceKey': 'key-1',
+      'ownerUserId': 'rep-1',
+      'kind': 'PERSONAL_BLOCK',
+      'title': 'Bloqueio',
+      'startsAt': '2026-08-03T12:00:00.000Z',
+      'endsAt': '2026-08-03T13:00:00.000Z',
+      'timeZone': 'America/Sao_Paulo',
+      'durationMinutes': 60,
+      'recurrence': 'WEEKLY',
+      'version': version,
+      'overrideVersion': ?overrideVersion,
+      'canMutate': true,
+    });
 
 void main() {
   test(
@@ -185,6 +209,68 @@ void main() {
       );
     },
   );
+
+  test(
+    'first occurrence reschedule sends override expectedVersion 0',
+    () async {
+      final repository = _FakeCalendarRepository();
+      final notifier = CalendarEditorNotifier(
+        repository: repository,
+        target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+        idempotencyKeyFactory: () => 'occurrence-key',
+      );
+
+      expect(await notifier.submit(), isTrue);
+
+      expect(repository.occurrenceUpdate?.expectedVersion, 0);
+    },
+  );
+
+  test('subsequent occurrence reschedule sends override version', () async {
+    final repository = _FakeCalendarRepository();
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: CalendarEditorTarget.editingOccurrence(
+        _occurrence(version: 8, overrideVersion: 3),
+      ),
+      idempotencyKeyFactory: () => 'occurrence-key',
+    );
+
+    expect(await notifier.submit(), isTrue);
+
+    expect(repository.occurrenceUpdate?.expectedVersion, 3);
+  });
+
+  test(
+    'first occurrence cancellation sends override expectedVersion 0',
+    () async {
+      final repository = _FakeCalendarRepository();
+      final notifier = CalendarEditorNotifier(
+        repository: repository,
+        target: CalendarEditorTarget.editingOccurrence(_occurrence(version: 8)),
+        idempotencyKeyFactory: () => 'occurrence-key',
+      );
+
+      expect(await notifier.cancel('Conflito de horário'), isTrue);
+
+      expect(repository.occurrenceCancellation?.expectedVersion, 0);
+    },
+  );
+
+  test('subsequent occurrence cancellation sends override version', () async {
+    final repository = _FakeCalendarRepository();
+    final notifier = CalendarEditorNotifier(
+      repository: repository,
+      target: CalendarEditorTarget.editingOccurrence(
+        _occurrence(version: 8, overrideVersion: 3),
+      ),
+      idempotencyKeyFactory: () => 'occurrence-key',
+    );
+
+    expect(await notifier.cancel('Conflito de horário'), isTrue);
+
+    expect(repository.occurrenceCancellation?.expectedVersion, 3);
+  });
 
   test(
     'keeps draft and idempotency key after network failure, then clears only on success',

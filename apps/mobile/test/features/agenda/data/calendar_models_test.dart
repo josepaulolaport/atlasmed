@@ -142,6 +142,67 @@ void main() {
     });
   });
 
+  test(
+    'maps recurring interaction detail calendar DTO to an occurrence editor snapshot',
+    () {
+      final detail = InteractionDetail.fromJson({
+        'id': 'interaction-1',
+        'calendarId': 'calendar-1',
+        'recurrenceKey': '2026-08-03T09:00[America/Sao_Paulo]',
+        'modality': 'REMOTE',
+        'status': 'SCHEDULED',
+        'version': 5,
+        'canMutate': true,
+        'calendar': {
+          'id': 'calendar-1',
+          'title': 'Acompanhamento semanal',
+          'version': 8,
+          'recurrence': 'WEEKLY',
+          'recurrenceUntil': '2026-10-05',
+          'recurrenceCount': null,
+        },
+        'occurrence': {
+          'recurrenceKey': '2026-08-03T09:00[America/Sao_Paulo]',
+          'startsAt': '2026-08-03T12:00:00.000Z',
+          'endsAt': '2026-08-03T13:00:00.000Z',
+          'timeZone': 'America/Sao_Paulo',
+          'overrideVersion': 2,
+        },
+        'facility': {
+          'id': 'facility-1',
+          'displayName': 'Clínica Central',
+          'city': 'São Paulo',
+          'state': 'SP',
+        },
+        'agent': {'id': 'rep-1', 'displayName': 'Ana Souza'},
+        'linkedOrders': <Map<String, dynamic>>[],
+      });
+
+      final occurrence = CalendarOccurrence.fromInteraction(detail);
+
+      expect(
+        {
+          'recurrence': occurrence.recurrence,
+          'recurrenceUntil': occurrence.recurrenceUntil,
+          'recurrenceCount': occurrence.recurrenceCount,
+          'calendarVersion': occurrence.version,
+          'overrideVersion': occurrence.overrideVersion,
+          'timeZone': occurrence.timeZone,
+          'durationMinutes': occurrence.durationMinutes,
+        },
+        {
+          'recurrence': CalendarRecurrence.weekly,
+          'recurrenceUntil': '2026-10-05',
+          'recurrenceCount': null,
+          'calendarVersion': 8,
+          'overrideVersion': 2,
+          'timeZone': 'America/Sao_Paulo',
+          'durationMinutes': 60,
+        },
+      );
+    },
+  );
+
   test('groups and sorts occurrences by local day and local start time', () {
     CalendarOccurrence occurrence(String id, String localDate, String time) =>
         CalendarOccurrence.fromJson({

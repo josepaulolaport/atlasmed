@@ -163,6 +163,8 @@ InteractionDetail _detail({
   bool canMutate = true,
   int version = 1,
   int? calendarVersion,
+  int? overrideVersion,
+  CalendarRecurrence recurrence = CalendarRecurrence.none,
 }) => InteractionDetail(
   id: 'interaction-1',
   calendarId: 'calendar-1',
@@ -191,6 +193,8 @@ InteractionDetail _detail({
   version: version,
   canMutate: canMutate,
   calendarVersion: calendarVersion ?? version,
+  overrideVersion: overrideVersion,
+  recurrence: recurrence,
 );
 
 Widget _app(
@@ -291,8 +295,66 @@ void main() {
     expect(cancelled, isTrue);
   });
 
+  testWidgets('recurring attendance labels occurrence reschedule explicitly', (
+    tester,
+  ) async {
+    final repository = _InteractionRepository(
+      _detail(recurrence: CalendarRecurrence.weekly),
+    );
+    await tester.pumpWidget(
+      _app(
+        repository,
+        _NotesRepository(),
+        onReschedule: () {},
+        onCancel: () {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Reagendar esta ocorrência'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Reagendar esta ocorrência'), findsOneWidget);
+    expect(find.text('Cancelar esta ocorrência'), findsOneWidget);
+  });
+
+  testWidgets('missed attendance exposes only correction action', (
+    tester,
+  ) async {
+    final repository = _InteractionRepository(
+      _detail(status: InteractionStatus.notCompleted),
+    );
+    await tester.pumpWidget(
+      _app(
+        repository,
+        _NotesRepository(),
+        onReschedule: () {},
+        onCancel: () {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Corrigir como concluído'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Corrigir como concluído'), findsOneWidget);
+    expect(find.text('Iniciar interação'), findsNothing);
+    expect(find.text('Concluir interação'), findsNothing);
+    expect(find.text('Novo pedido'), findsNothing);
+    expect(find.text('Reagendar'), findsNothing);
+    expect(find.text('Reagendar esta ocorrência'), findsNothing);
+    expect(find.text('Cancelar agendamento'), findsNothing);
+    expect(find.text('Cancelar esta ocorrência'), findsNothing);
+  });
+
   testWidgets(
-    'production cancel sends occurrence version, reason and stable key',
+    'first production cancel sends override version 0, reason and stable key',
     (tester) async {
       final repository = _InteractionRepository(
         _detail(version: 7, calendarVersion: 7),
@@ -322,11 +384,47 @@ void main() {
       expect(mutations.cancellations, 1);
       expect(mutations.calendarId, 'calendar-1');
       expect(mutations.recurrenceKey, '2026-08-03T09:00');
-      expect(mutations.command?.expectedVersion, 7);
+      expect(mutations.command?.expectedVersion, 0);
       expect(mutations.command?.reason, 'Clínica solicitou reagendamento.');
-      expect(mutations.idempotencyKey, 'cancel-calendar-1-2026-08-03T09:00-v7');
+      expect(mutations.idempotencyKey, 'cancel-calendar-1-2026-08-03T09:00-v0');
     },
   );
+
+  testWidgets('subsequent production cancel sends current override version', (
+    tester,
+  ) async {
+    final repository = _InteractionRepository(
+      _detail(version: 7, calendarVersion: 7, overrideVersion: 2),
+    );
+    final mutations = _MutationRepository();
+    await tester.pumpWidget(
+      _app(repository, _NotesRepository(), mutations: mutations),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Reagendar'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final cancelButton = find.widgetWithText(
+      TextButton,
+      'Cancelar agendamento',
+    );
+    await tester.ensureVisible(cancelButton);
+    await tester.pump();
+    await tester.tap(cancelButton);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('interaction-cancel-reason')),
+      'Clínica solicitou reagendamento.',
+    );
+    await tester.tap(find.text('Confirmar cancelamento'));
+    await tester.pumpAndSettle();
+
+    expect(mutations.command?.expectedVersion, 2);
+    expect(mutations.idempotencyKey, 'cancel-calendar-1-2026-08-03T09:00-v2');
+  });
 
   testWidgets('pull to refresh reloads interaction and facility notes', (
     tester,
