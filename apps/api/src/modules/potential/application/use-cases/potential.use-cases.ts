@@ -15,7 +15,7 @@ const MONTHS_IN_WINDOW = 3;
 function assertVerticalAccess(scope: ScopeContext, verticalId: string) {
   const assigned = scope.assignedVerticalIds ?? [];
   if (scope.isGlobal && assigned.length === 0) return;
-  if (assigned.length > 0 && !assigned.includes(verticalId)) {
+  if (!assigned.includes(verticalId)) {
     throw new ForbiddenError();
   }
 }
@@ -298,7 +298,10 @@ export class UnlinkProductPotentialUseCase {
     const definition = await this.deps.potentialRepository.findDefinitionById(
       link.definitionId,
     );
-    if (definition) assertVerticalAccess(input.scope, definition.verticalId);
+    if (!definition) {
+      throw new ResourceNotFoundError("PotentialDefinition", link.definitionId);
+    }
+    assertVerticalAccess(input.scope, definition.verticalId);
     await this.deps.potentialRepository.unlinkProduct(input.productId);
     return { ok: true };
   }
