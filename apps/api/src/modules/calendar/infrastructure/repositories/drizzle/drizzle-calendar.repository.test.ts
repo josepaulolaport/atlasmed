@@ -110,7 +110,7 @@ describe("DrizzleCalendarRepository.replaceUntouchedInteractions", () => {
 
     const replaced = await repository.replaceUntouchedInteractions({
       calendarId: "calendar-1",
-      recurrenceKeys: ["2026-08-03T10:00[UTC]"],
+      recurrenceKeyMap: [{ oldRecurrenceKey: "2026-08-03T09:00[UTC]", newRecurrenceKey: "2026-08-03T10:00[UTC]" }],
     });
 
     expect(replaced).toBe(true);
@@ -118,6 +118,21 @@ describe("DrizzleCalendarRepository.replaceUntouchedInteractions", () => {
     expect(updatedRecurrenceKeys).toEqual([
       "__calendar_rekey__0__interaction-1",
       "2026-08-03T10:00[UTC]",
+    ]);
+  });
+
+  it("maps interaction identity by old recurrence key rather than selected row order", async () => {
+    const { database, updatedRecurrenceKeys } = repositoryDatabase({});
+    const repository = new DrizzleCalendarRepository(database);
+
+    await repository.replaceUntouchedInteractions({
+      calendarId: "calendar-1",
+      recurrenceKeyMap: [{ oldRecurrenceKey: "2026-08-03T09:00[UTC]", newRecurrenceKey: "2026-08-05T10:00[UTC]" }],
+    });
+
+    expect(updatedRecurrenceKeys).toEqual([
+      "__calendar_rekey__0__interaction-1",
+      "2026-08-05T10:00[UTC]",
     ]);
   });
 
@@ -129,7 +144,7 @@ describe("DrizzleCalendarRepository.replaceUntouchedInteractions", () => {
 
     const replaced = await repository.replaceUntouchedInteractions({
       calendarId: "calendar-1",
-      recurrenceKeys: ["2026-08-03T10:00[UTC]"],
+      recurrenceKeyMap: [{ oldRecurrenceKey: "2026-08-03T09:00[UTC]", newRecurrenceKey: "2026-08-03T10:00[UTC]" }],
     });
 
     expect(replaced).toBe(false);

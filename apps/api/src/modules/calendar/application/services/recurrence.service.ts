@@ -264,30 +264,40 @@ export function calendarOccurrenceFromRecurrenceKey(
   rule: CalendarRecurrenceRule,
   recurrenceKey: string
 ): CalendarOccurrence | undefined {
+  const index = calendarOccurrenceIndexFromRecurrenceKey(rule, recurrenceKey);
+  return index === undefined ? undefined : calendarOccurrenceAtIndex(rule, parseDate(rule.anchorLocalDate), index);
+}
+
+/**
+ * Maps a materialized occurrence to the same ordinal occurrence in a changed
+ * recurrence rule. Ordinal identity is derived from the old rule, never from
+ * database row order or the number of materialized interactions.
+ */
+export function mapCalendarRecurrenceKey(
+  oldRule: CalendarRecurrenceRule,
+  nextRule: CalendarRecurrenceRule,
+  recurrenceKey: string
+): string | undefined {
+  const index = calendarOccurrenceIndexFromRecurrenceKey(oldRule, recurrenceKey);
+  if (index === undefined) return undefined;
+  return calendarOccurrenceAtIndexIfPresent(nextRule, index)?.recurrenceKey;
+}
+
+export function calendarOccurrenceIndexFromRecurrenceKey(
+  rule: CalendarRecurrenceRule,
+  recurrenceKey: string
+): number | undefined {
   assertValidRule(rule);
   const match = RECURRENCE_KEY_PATTERN.exec(recurrenceKey);
-  if (!match || match[3] !== rule.timeZone) return undefined;
+  if (!match || match[3] !== rule.timeZone || match[2] !== rule.anchorLocalTime) return undefined;
 
   const localDateString = match[1]!;
-  const localTime = match[2]!;
-  if (localTime !== rule.anchorLocalTime) return undefined;
-
   const localDate = parseDate(localDateString);
   const index = occurrenceIndex(parseDate(rule.anchorLocalDate), rule.recurrence, localDate);
   if (index === undefined) return undefined;
   if (rule.recurrenceCount !== undefined && index >= rule.recurrenceCount) return undefined;
-  if (rule.recurrenceUntil !== undefined && localDateString > rule.recurrenceUntil) {
-    return undefined;
-  }
-
-  const { hour, minute } = parseTime(localTime);
-  const startsAt = localDateTimeToUtc({ ...localDate, hour, minute }, rule.timeZone);
-  return {
-    recurrenceKey,
-    localOccurrence: `${localDateString}T${localTime}`,
-    startsAt,
-    endsAt: new Date(startsAt.getTime() + rule.durationMinutes * MINUTE_MS),
-  };
+  if (rule.recurrenceUntil !== undefined && localDateString > rule.recurrenceUntil) return undefined;
+  return index;
 }
 
 function assertValidRule(rule: CalendarRecurrenceRule): void {
@@ -370,6 +380,18 @@ function occurrenceDate(
       };
     }
   }
+}
+
+function calendarOccurrenceAtIndexIfPresent(
+  rule: CalendarRecurrenceRule,
+  index: number
+): CalendarOccurrence | undefined {
+  if (rule.recurrence === "NONE" && index !== 0) return undefined;
+  if (rule.recurrenceCount !== undefined && index >= rule.recurrenceCount) return undefined;
+  const localDate = occurrenceDate(parseDate(rule.anchorLocalDate), rule.recurrence, index);
+  const localDateString = formatDate(localDate);
+  if (rule.recurrenceUntil !== undefined && localDateString > rule.recurrenceUntil) return undefined;
+  return calendarOccurrenceAtIndex(rule, parseDate(rule.anchorLocalDate), index);
 }
 
 function calendarOccurrenceAtIndex(

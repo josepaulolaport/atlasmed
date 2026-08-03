@@ -2,7 +2,7 @@ import type { Role, ScopeContext } from "@atlasmed/access";
 import { AppError, ForbiddenError, ResourceNotFoundError, ValidationError, CalendarConflictError, CalendarVersionConflictError } from "../../../../shared/errors";
 import type { CalendarEventRecord, CalendarInteractionRecord, CalendarOverrideRecord, CalendarRepository, InteractionModality } from "../interfaces/calendar.repository.interface";
 import { findCalendarConflicts, type CalendarConflictEntry } from "../services/conflict.service";
-import { calendarOccurrenceFromRecurrenceKey, expandCalendarOccurrences, iterateCalendarOccurrences, type CalendarRecurrence, type CalendarRecurrenceRule } from "../services/recurrence.service";
+import { calendarOccurrenceFromRecurrenceKey, expandCalendarOccurrences, mapCalendarRecurrenceKey, type CalendarRecurrence, type CalendarRecurrenceRule } from "../services/recurrence.service";
 
 export class CalendarIdempotencyConflictError extends AppError {
   constructor() {
@@ -157,15 +157,6 @@ async function loadOwned(repository: CalendarRepository, id: string, actor: Acto
   if (!event) throw new ResourceNotFoundError("Calendar", id);
   assertMutationOwner(actor, event);
   return event;
-}
-
-function firstOccurrences(rule: CalendarRecurrenceRule, count: number) {
-  const occurrences = [];
-  for (const occurrence of iterateCalendarOccurrences(rule, { from: new Date(0) })) {
-    occurrences.push(occurrence);
-    if (occurrences.length === count) break;
-  }
-  return occurrences;
 }
 
 function firstStartsAt(event: CalendarEventRecord): Date {
@@ -324,6 +315,15 @@ export class UpdateCalendarEventUseCase {
         recurrenceCount: input.changes.recurrenceCount === null ? undefined : input.changes.recurrenceCount ?? current.recurrenceCount ?? undefined };
       const values = eventValues(current.ownerUserId, nextData);
       const nextRule = conflictFrom(values, current.id, current.overrides).rule;
+      const recurrenceKeyMap = current.kind === "INTERACTION" && current.interactions.length > 0 && changesRecurrenceShape
+        ? current.interactions.map((interaction) => {
+          const newRecurrenceKey = mapCalendarRecurrenceKey(ruleOf(current), nextRule, interaction.recurrenceKey);
+          if (!newRecurrenceKey) {
+            throw new ValidationError([{ field: "recurrence", message: `Cannot deterministically map materialized occurrence ${interaction.recurrenceKey}` }]);
+          }
+          return { oldRecurrenceKey: interaction.recurrenceKey, newRecurrenceKey };
+        })
+        : undefined;
       const invalid: string[] = [];
       for (const override of current.overrides) {
         if (calendarOccurrenceFromRecurrenceKey(nextRule, override.recurrenceKey)) continue;
@@ -335,16 +335,10 @@ export class UpdateCalendarEventUseCase {
       const keptOverrides = current.overrides.filter((item) => !invalid.includes(item.recurrenceKey));
       const conflicts = findCalendarConflicts(conflictFrom(values, current.id, keptOverrides), await repository.listConflictEntries(current.ownerUserId, current.id, { from: values.firstStartsAt }), { from: values.firstStartsAt });
       if (conflicts.length) throw new CalendarConflictError(conflicts.slice(0, 10));
-      if (invalid.length) await repository.deleteInvalidOverrides(current.id, invalid);
-      if (current.kind === "INTERACTION" && current.interactions.length > 0 && changesRecurrenceShape) {
-        const nextOccurrences = firstOccurrences(nextRule, current.interactions.length);
-        if (nextOccurrences.length !== current.interactions.length) {
-          throw new ValidationError([{ field: "recurrence", message: "Edited recurrence must include every materialized interaction occurrence" }]);
-        }
-        if (!(await repository.replaceUntouchedInteractions({ calendarId: current.id, recurrenceKeys: nextOccurrences.map((item) => item.recurrenceKey) }))) {
-          throw new ValidationError([{ field: "recurrence", message: "One or more materialized interactions are no longer untouched" }]);
-        }
+      if (recurrenceKeyMap && !(await repository.replaceUntouchedInteractions({ calendarId: current.id, recurrenceKeyMap }))) {
+        throw new ValidationError([{ field: "recurrence", message: "One or more materialized interactions are no longer untouched" }]);
       }
+      if (invalid.length) await repository.deleteInvalidOverrides(current.id, invalid);
       const updated = await repository.update({ id: current.id, expectedVersion: input.expectedVersion, commandKey: input.idempotencyKey, changes: values });
       if (!updated) throw new CalendarVersionConflictError(current.id, input.expectedVersion);
       return (await repository.saveCommandReceipt(owner, input.idempotencyKey, commandKind, updated.id, fingerprint, updated)).result;

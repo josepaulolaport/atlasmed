@@ -192,9 +192,13 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     }
     return mapCalendarEvent(row, [], interactionRows);
   }
-  async replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeys: string[] }): Promise<boolean> {
+  async replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean> {
     const rows = await this.database.select().from(interactions).where(eq(interactions.calendarId, input.calendarId)).for("update");
-    if (rows.length !== input.recurrenceKeys.length) return false;
+    if (rows.length !== input.recurrenceKeyMap.length) return false;
+    const newKeys = input.recurrenceKeyMap.map((item) => item.newRecurrenceKey);
+    if (new Set(newKeys).size !== newKeys.length) return false;
+    const rowByRecurrenceKey = new Map(rows.map((row) => [row.recurrenceKey, row]));
+    if (input.recurrenceKeyMap.some((item) => !rowByRecurrenceKey.has(item.oldRecurrenceKey))) return false;
     const ids = rows.map((item) => item.id);
     const [orderCounts, lifecycleRows] = await Promise.all([
       ids.length ? this.database.select({ interactionId: orders.interactionId, count: sql<number>`cast(count(*) as int)` })
@@ -208,9 +212,10 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       await this.database.update(interactions).set({ recurrenceKey: `__calendar_rekey__${index}__${rows[index]!.id}` })
         .where(eq(interactions.id, rows[index]!.id));
     }
-    for (let index = 0; index < rows.length; index += 1) {
-      await this.database.update(interactions).set({ recurrenceKey: input.recurrenceKeys[index]!, updatedAt: new Date() })
-        .where(eq(interactions.id, rows[index]!.id));
+    for (const mapping of input.recurrenceKeyMap) {
+      const row = rowByRecurrenceKey.get(mapping.oldRecurrenceKey)!;
+      await this.database.update(interactions).set({ recurrenceKey: mapping.newRecurrenceKey, updatedAt: new Date() })
+        .where(eq(interactions.id, row.id));
     }
     return true;
   }

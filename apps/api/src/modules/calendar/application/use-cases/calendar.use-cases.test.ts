@@ -149,11 +149,14 @@ class FakeCalendarRepository implements CalendarRepository {
       startsAt: input.startsAt, endsAt: input.endsAt, status: input.status, reason: input.reason ?? null,
       version: (input.expectedVersion ?? 0) + 1 };
   }
-  async replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeys: string[] }) {
+  async replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }) {
     const event = await this.findById(input.calendarId);
     if (!event) return false;
-    this.replacedInteractions = event.interactions.map((item, index) => ({ id: item.id, recurrenceKey: input.recurrenceKeys[index] ?? "" }));
-    event.interactions = event.interactions.map((item, index) => ({ ...item, recurrenceKey: input.recurrenceKeys[index] ?? item.recurrenceKey }));
+    const mapped = new Map(input.recurrenceKeyMap.map((item) => [item.oldRecurrenceKey, item.newRecurrenceKey]));
+    if (new Set(input.recurrenceKeyMap.map((item) => item.newRecurrenceKey)).size !== input.recurrenceKeyMap.length
+      || event.interactions.some((item) => !mapped.has(item.recurrenceKey))) return false;
+    this.replacedInteractions = event.interactions.map((item) => ({ id: item.id, recurrenceKey: mapped.get(item.recurrenceKey)! }));
+    event.interactions = event.interactions.map((item) => ({ ...item, recurrenceKey: mapped.get(item.recurrenceKey)! }));
     return true;
   }
   async cancel(input: { id: string; expectedVersion: number; actorUserId: string; reason: string; commandKey: string }) {
@@ -413,6 +416,22 @@ describe("Calendar application use cases", () => {
     expect(repository.replacedInteractions).toEqual([
       { id: "interaction-1", recurrenceKey: "2026-08-03T10:00[UTC]" },
       { id: "interaction-2", recurrenceKey: "2026-08-04T10:00[UTC]" },
+    ]);
+  });
+
+  it("maps a later-only materialized interaction to the corresponding later occurrence", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 3,
+      facility: { id: "facility-1", name: "Clínica Central" }, interactions: [
+        { id: "interaction-3", recurrenceKey: "2026-08-05T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", visitId: null, linkedOrderCount: 0, version: 1 },
+      ] })];
+
+    await new UpdateCalendarEventUseCase({ repository }).execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "later-only-shape", expectedVersion: 1,
+      changes: { startsAt: "2026-08-03T10:00:00Z", timeZone: "UTC", durationMinutes: 30 } });
+
+    expect(repository.replacedInteractions).toEqual([
+      { id: "interaction-3", recurrenceKey: "2026-08-05T10:00[UTC]" },
     ]);
   });
 

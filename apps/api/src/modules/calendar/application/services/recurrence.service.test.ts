@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   expandCalendarOccurrences,
+  mapCalendarRecurrenceKey,
   type CalendarRecurrenceRule,
 } from "./recurrence.service";
 
@@ -20,6 +21,23 @@ function rule(
 function isoDates(occurrences: ReturnType<typeof expandCalendarOccurrences>) {
   return occurrences.map((occurrence) => occurrence.startsAt.toISOString());
 }
+
+describe("mapCalendarRecurrenceKey", () => {
+  it("maps by old occurrence ordinal instead of by materialized row count", () => {
+    const oldRule = rule({ recurrence: "DAILY", recurrenceCount: 3 });
+    const nextRule = rule({ anchorLocalTime: "10:00", recurrence: "DAILY", recurrenceCount: 3 });
+
+    expect(mapCalendarRecurrenceKey(oldRule, nextRule, "2026-01-17T09:30[UTC]")).toBe("2026-01-17T10:00[UTC]");
+  });
+
+  it("returns undefined when the old materialized occurrence has no corresponding new ordinal", () => {
+    expect(mapCalendarRecurrenceKey(
+      rule({ recurrence: "DAILY", recurrenceCount: 3 }),
+      rule({ recurrence: "NONE" }),
+      "2026-01-17T09:30[UTC]",
+    )).toBeUndefined();
+  });
+});
 
 describe("expandCalendarOccurrences", () => {
   it("expands a one-off occurrence with deterministic local identity", () => {

@@ -119,7 +119,7 @@ export interface CalendarRepository {
   saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null, requestFingerprint: string, result: T): Promise<CalendarCommandReceipt<T>>;
   create(input: CreateCalendarEventInput): Promise<CalendarEventRecord>;
   update(input: UpdateCalendarEventInput): Promise<CalendarEventRecord | null>;
-  replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeys: string[] }): Promise<boolean>;
+  replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean>;
   upsertOverride(input: UpsertCalendarOverrideInput): Promise<CalendarOverrideRecord | null>;
   deleteInvalidOverrides(calendarId: string, recurrenceKeys: string[]): Promise<boolean>;
   cancel(input: CancelCalendarEventInput): Promise<CalendarEventRecord | null>;
