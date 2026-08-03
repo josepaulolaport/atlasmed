@@ -21,12 +21,24 @@ describe("interaction overdue candidate pagination", () => {
     const result = await collectOverdueCandidates<Candidate>({
       limit: 100,
       pageSize: 100,
-      isOverdue: (candidate) => !candidate.cancelled && candidate.effectiveEndsAt < now,
+      isOverdue: (candidate) => !candidate.cancelled && candidate.effectiveEndsAt <= now,
       fetchPage: async (cursor) => rows.filter((row) => !cursor
         || row.interaction.updatedAt > cursor.updatedAt
         || (row.interaction.updatedAt.getTime() === cursor.updatedAt.getTime() && row.interaction.id > cursor.id)).slice(0, 100),
     });
 
     expect(result.map((row) => row.interaction.id)).toEqual(["overdue"]);
+  });
+
+  it("includes an interaction ending exactly at now", async () => {
+    const now = new Date("2026-08-03T12:00:00.000Z");
+    const row: Candidate = { interaction: { id: "boundary", updatedAt: new Date(0), recurrenceKey: "boundary" }, effectiveEndsAt: now, cancelled: false };
+    const result = await collectOverdueCandidates<Candidate>({
+      limit: 1,
+      pageSize: 100,
+      fetchPage: async () => [row],
+      isOverdue: (candidate) => !candidate.cancelled && candidate.effectiveEndsAt <= now,
+    });
+    expect(result).toEqual([row]);
   });
 });

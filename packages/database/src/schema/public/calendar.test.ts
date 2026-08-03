@@ -336,7 +336,7 @@ describe("calendar and interaction schema", () => {
 
   test("stores durable owner-scoped command receipts", () => {
     expect(
-      ["owner_user_id", "command_key", "command_kind", "resource_id", "result", "created_at"].map(
+      ["owner_user_id", "command_key", "command_kind", "resource_id", "request_fingerprint", "result", "created_at"].map(
         (name) => {
           const column = columnByName(calendarCommandReceipts, name);
           return [column?.name, column?.getSQLType(), column?.notNull];
@@ -347,6 +347,7 @@ describe("calendar and interaction schema", () => {
       ["command_key", "text", true],
       ["command_kind", "text", true],
       ["resource_id", "text", false],
+      ["request_fingerprint", "text", true],
       ["result", "jsonb", true],
       ["created_at", "timestamp with time zone", true],
     ]);

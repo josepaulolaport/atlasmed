@@ -83,6 +83,7 @@ export interface InteractionRepository {
     completedAt: Date;
     scheduledStartsAt?: Date;
     correctionReason?: string;
+    persistEffectiveMissed?: boolean;
   }): Promise<InteractionMutationResult | null>;
   markOverdue(input: { now: Date; limit: number; actorUserId: string | null }): Promise<number>;
 }

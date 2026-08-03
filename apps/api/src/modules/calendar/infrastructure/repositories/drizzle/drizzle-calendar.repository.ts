@@ -3,6 +3,7 @@ import { calendar, calendarCommandReceipts, calendarOccurrenceOverrides, facilit
 import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
 import type {
+  CalendarCommandReceipt,
   CalendarEventRecord,
   CalendarInteractionRecord,
   CalendarOverrideRecord,
@@ -18,10 +19,13 @@ function mapOverride(row: typeof calendarOccurrenceOverrides.$inferSelect): Cale
   return { id: row.id, calendarId: row.calendarId, recurrenceKey: row.recurrenceKey, startsAt: row.startsAt,
     endsAt: row.endsAt, status: row.status, reason: row.reason, version: row.version };
 }
-function mapInteraction(row: typeof interactions.$inferSelect, linkedOrderCount = 0): CalendarInteractionRecord {
+function mapInteraction(row: typeof interactions.$inferSelect, linkedOrderCount = 0,
+  lifecycle: { eventCount?: number; initialOnly?: boolean } = {}): CalendarInteractionRecord {
   return { id: row.id, recurrenceKey: row.recurrenceKey, facilityId: row.facilityId, modality: row.modality,
     status: row.status, cancelledAt: row.cancelledAt, cancelledByUserId: row.cancelledByUserId,
-    cancellationReason: row.cancellationReason, visitId: row.visitId, linkedOrderCount, version: row.version };
+    cancellationReason: row.cancellationReason, visitId: row.visitId, linkedOrderCount, version: row.version,
+    actualStartedAt: row.actualStartedAt, actualEndedAt: row.actualEndedAt,
+    lifecycleEventCount: lifecycle.eventCount ?? 0, hasOnlyInitialLifecycleEvents: lifecycle.initialOnly ?? true };
 }
 export function mapCalendarEvent(row: typeof calendar.$inferSelect, overrides: CalendarOverrideRecord[] = [], interactionRows: CalendarInteractionRecord[] = [],
   owner: { id: string; name: string } = { id: row.ownerUserId, name: row.ownerUserId }, facility: { id: string; name: string } | null = null): CalendarEventRecord {
@@ -53,22 +57,29 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     const overrideRows = await this.database.query.calendarOccurrenceOverrides.findMany({ where: (table, { inArray }) => inArray(table.calendarId, ids) });
     const interactionRows = await this.database.query.interactions.findMany({ where: (table, { inArray }) => inArray(table.calendarId, ids) });
     const ownerIds = [...new Set(rows.map((row) => row.ownerUserId))];
-    const [ownerRows, facilityRows, orderCounts] = await Promise.all([
+    const [ownerRows, facilityRows, orderCounts, lifecycleRows] = await Promise.all([
       this.database.select({ id: users.id, firstName: users.firstName, lastName: users.lastName }).from(users).where(inArray(users.id, ownerIds)),
       interactionRows.length ? this.database.select({ id: facilities.id, name: facilities.displayName }).from(facilities)
         .where(inArray(facilities.id, [...new Set(interactionRows.map((item) => item.facilityId))])) : Promise.resolve([]),
       interactionRows.length ? this.database.select({ interactionId: orders.interactionId, count: sql<number>`cast(count(*) as int)` }).from(orders)
         .where(inArray(orders.interactionId, interactionRows.map((item) => item.id))).groupBy(orders.interactionId) : Promise.resolve([]),
+      interactionRows.length ? this.database.select({ interactionId: interactionEvents.interactionId,
+        count: sql<number>`cast(count(*) as int)`,
+        nonInitialCount: sql<number>`cast(count(*) filter (where not (${interactionEvents.previousStatus} is null and ${interactionEvents.newStatus} = 'SCHEDULED')) as int)` })
+        .from(interactionEvents).where(inArray(interactionEvents.interactionId, interactionRows.map((item) => item.id)))
+        .groupBy(interactionEvents.interactionId) : Promise.resolve([]),
     ]);
     const ownerById = new Map(ownerRows.map((owner) => [owner.id,
       { id: owner.id, name: [owner.firstName, owner.lastName].filter(Boolean).join(" ") || owner.id }]));
     const facilityById = new Map(facilityRows.map((facility) => [facility.id, facility]));
     const orderCountByInteractionId = new Map(orderCounts.map((item) => [item.interactionId, item.count]));
+    const lifecycleByInteractionId = new Map(lifecycleRows.map((item) => [item.interactionId,
+      { eventCount: item.count, initialOnly: item.nonInitialCount === 0 }]));
     return rows.map((row) => {
       const rowInteractions = interactionRows.filter((item) => item.calendarId === row.id);
       const facility = rowInteractions[0] ? facilityById.get(rowInteractions[0].facilityId) ?? null : null;
       return mapCalendarEvent(row, overrideRows.filter((item) => item.calendarId === row.id).map(mapOverride),
-        rowInteractions.map((item) => mapInteraction(item, orderCountByInteractionId.get(item.id) ?? 0)),
+        rowInteractions.map((item) => mapInteraction(item, orderCountByInteractionId.get(item.id) ?? 0, lifecycleByInteractionId.get(item.id))),
         ownerById.get(row.ownerUserId), facility);
     });
   }
@@ -134,7 +145,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     }
     return (await this.database.select().from(interactions).where(and(
       eq(interactions.calendarId, calendarId), inArray(interactions.recurrenceKey, keys.filter((key) => !cancelledKeys.has(key))),
-    ))).map(mapInteraction);
+    ))).map((row) => mapInteraction(row));
   }
   async cancelInteractionOccurrences(input: { calendarId: string; recurrenceKeys?: string[]; actorUserId: string; reason: string }): Promise<number> {
     const now = new Date();
@@ -153,17 +164,22 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     return updated.length;
   }
 
-  async getCommandReceipt<T>(ownerUserId: string, commandKey: string): Promise<T | undefined> {
-    const [row] = await this.database.select({ result: calendarCommandReceipts.result }).from(calendarCommandReceipts)
+  async getCommandReceipt<T>(ownerUserId: string, commandKey: string): Promise<CalendarCommandReceipt<T> | undefined> {
+    const [row] = await this.database.select({ commandKind: calendarCommandReceipts.commandKind,
+      resourceId: calendarCommandReceipts.resourceId, requestFingerprint: calendarCommandReceipts.requestFingerprint,
+      result: calendarCommandReceipts.result }).from(calendarCommandReceipts)
       .where(and(eq(calendarCommandReceipts.ownerUserId, ownerUserId), eq(calendarCommandReceipts.commandKey, commandKey))).limit(1);
-    return row?.result as T | undefined;
+    return row ? { ...row, result: row.result as T } : undefined;
   }
-  async saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null, result: T): Promise<T> {
-    const [row] = await this.database.insert(calendarCommandReceipts).values({ ownerUserId, commandKey, commandKind, resourceId, result })
-      .onConflictDoNothing({ target: [calendarCommandReceipts.ownerUserId, calendarCommandReceipts.commandKey] }).returning({ result: calendarCommandReceipts.result });
-    if (row) return row.result as T;
+  async saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null,
+    requestFingerprint: string, result: T): Promise<CalendarCommandReceipt<T>> {
+    const [row] = await this.database.insert(calendarCommandReceipts).values({ ownerUserId, commandKey, commandKind, resourceId, requestFingerprint, result })
+      .onConflictDoNothing({ target: [calendarCommandReceipts.ownerUserId, calendarCommandReceipts.commandKey] })
+      .returning({ commandKind: calendarCommandReceipts.commandKind, resourceId: calendarCommandReceipts.resourceId,
+        requestFingerprint: calendarCommandReceipts.requestFingerprint, result: calendarCommandReceipts.result });
+    if (row) return { ...row, result: row.result as T };
     const replay = await this.getCommandReceipt<T>(ownerUserId, commandKey);
-    if (replay === undefined) throw new DatabaseError("save calendar command receipt");
+    if (!replay) throw new DatabaseError("save calendar command receipt");
     return replay;
   }
   async create(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
@@ -177,6 +193,30 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     }
     return mapCalendarEvent(row, [], interactionRows);
   }
+  async replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeys: string[] }): Promise<boolean> {
+    const rows = await this.database.select().from(interactions).where(eq(interactions.calendarId, input.calendarId)).for("update");
+    if (rows.length !== input.recurrenceKeys.length) return false;
+    const ids = rows.map((item) => item.id);
+    const [orderCounts, lifecycleRows] = await Promise.all([
+      ids.length ? this.database.select({ interactionId: orders.interactionId, count: sql<number>`cast(count(*) as int)` })
+        .from(orders).where(inArray(orders.interactionId, ids)).groupBy(orders.interactionId) : Promise.resolve([]),
+      ids.length ? this.database.select().from(interactionEvents).where(inArray(interactionEvents.interactionId, ids)) : Promise.resolve([]),
+    ]);
+    if (rows.some((item) => item.status !== "SCHEDULED" || item.visitId || item.actualStartedAt || item.actualEndedAt)
+      || orderCounts.some((item) => item.count > 0)
+      || lifecycleRows.some((event) => event.previousStatus !== null || event.newStatus !== "SCHEDULED")) return false;
+    if (lifecycleRows.length) await this.database.delete(interactionEvents).where(inArray(interactionEvents.interactionId, ids));
+    for (let index = 0; index < rows.length; index += 1) {
+      await this.database.update(interactions).set({ recurrenceKey: `__calendar_rekey__${index}__${rows[index]!.id}` })
+        .where(eq(interactions.id, rows[index]!.id));
+    }
+    for (let index = 0; index < rows.length; index += 1) {
+      await this.database.update(interactions).set({ recurrenceKey: input.recurrenceKeys[index]!, updatedAt: new Date() })
+        .where(eq(interactions.id, rows[index]!.id));
+    }
+    return true;
+  }
+
   async update(input: UpdateCalendarEventInput): Promise<CalendarEventRecord | null> {
     const [row] = await this.database.update(calendar).set({ ...input.changes, updatedAt: new Date(), version: sql`${calendar.version} + 1` })
       .where(and(eq(calendar.id, input.id), eq(calendar.version, input.expectedVersion), eq(calendar.status, "ACTIVE"))).returning();

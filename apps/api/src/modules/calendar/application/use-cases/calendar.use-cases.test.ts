@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { createGlobalScopeContext, createEmptyScopeContext, type ScopeContext } from "@atlasmed/access";
 import { CalendarConflictError, CalendarVersionConflictError, ForbiddenError, ValidationError } from "../../../../shared/errors";
+import { CalendarIdempotencyConflictError } from "./calendar.use-cases";
 import type {
+  CalendarCommandReceipt,
   CalendarEventRecord,
   CalendarRepository,
   CreateCalendarEventInput,
@@ -55,7 +57,8 @@ class FakeCalendarRepository implements CalendarRepository {
   createCalls = 0;
   cancelCalls = 0;
   cancelledInteractions: Array<{ recurrenceKey: string; actorUserId: string; reason: string }> = [];
-  receipts = new Map<string, unknown>();
+  receipts = new Map<string, CalendarCommandReceipt<unknown>>();
+  replacedInteractions?: Array<{ id: string; recurrenceKey: string }>;
   private locked = false;
 
   async runWithOwnerLock<T>(_ownerUserId: string, work: (repository: CalendarRepository) => Promise<T>): Promise<T> {
@@ -89,10 +92,13 @@ class FakeCalendarRepository implements CalendarRepository {
     }
     return targets.length;
   }
-  async getCommandReceipt<T>(ownerUserId: string, commandKey: string) { return this.receipts.get(`${ownerUserId}:${commandKey}`) as T | undefined; }
-  async saveCommandReceipt<T>(ownerUserId: string, commandKey: string, _kind: string, resourceId: string | null, result: T) {
-    this.receipts.set(`${ownerUserId}:${commandKey}`, result);
-    return result;
+  async getCommandReceipt<T>(ownerUserId: string, commandKey: string) {
+    return this.receipts.get(`${ownerUserId}:${commandKey}`) as CalendarCommandReceipt<T> | undefined;
+  }
+  async saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null, requestFingerprint: string, result: T) {
+    const receipt = { commandKind, resourceId, requestFingerprint, result };
+    this.receipts.set(`${ownerUserId}:${commandKey}`, receipt);
+    return receipt;
   }
   async listConflictEntries(ownerUserId: string, excludeCalendarId?: string) {
     return this.events.filter((event) => event.ownerUserId === ownerUserId && event.id !== excludeCalendarId).map((event) => ({
@@ -142,6 +148,13 @@ class FakeCalendarRepository implements CalendarRepository {
     return { id: "override-1", calendarId: input.calendarId, recurrenceKey: input.recurrenceKey,
       startsAt: input.startsAt, endsAt: input.endsAt, status: input.status, reason: input.reason ?? null,
       version: (input.expectedVersion ?? 0) + 1 };
+  }
+  async replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeys: string[] }) {
+    const event = await this.findById(input.calendarId);
+    if (!event) return false;
+    this.replacedInteractions = event.interactions.map((item, index) => ({ id: item.id, recurrenceKey: input.recurrenceKeys[index] ?? "" }));
+    event.interactions = event.interactions.map((item, index) => ({ ...item, recurrenceKey: input.recurrenceKeys[index] ?? item.recurrenceKey }));
+    return true;
   }
   async cancel(input: { id: string; expectedVersion: number; actorUserId: string; reason: string; commandKey: string }) {
     if (!this.locked) throw new Error("owner lock required");
@@ -279,6 +292,18 @@ describe("Calendar application use cases", () => {
     expect(repository.events[0]?.interactions[0]?.status).toBe("SCHEDULED");
   });
 
+  it("derives NOT_COMPLETED when an interaction ends exactly at now", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({ kind: "INTERACTION", interactions: [{
+      id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 1,
+    }] })];
+    const [result] = await new ListCalendarUseCase({ repository, now: () => new Date("2026-08-03T10:00:00.000Z") }).execute({
+      actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      from: new Date("2026-08-03T00:00:00Z"), to: new Date("2026-08-04T00:00:00Z"),
+    });
+    expect(result?.interaction?.status).toBe("NOT_COMPLETED");
+  });
+
   it("returns occupied active intervals without work-hour restrictions", async () => {
     const repository = new FakeCalendarRepository();
     repository.events = [baseEvent({ anchorLocalTime: "02:00", firstStartsAt: new Date("2026-08-03T02:00Z"), firstEndsAt: new Date("2026-08-03T03:00Z") })];
@@ -373,15 +398,41 @@ describe("Calendar application use cases", () => {
     expect(repository.override?.recurrenceKey).toBe("2026-08-04T09:00[UTC]");
   });
 
-  it("rejects recurrence-shape edits after any interaction materialization but allows title-only edits", async () => {
+  it("rekeys untouched scheduled interactions when the materialized series shape changes", async () => {
     const repository = new FakeCalendarRepository();
-    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: "facility-1", name: "Clínica Central" }, interactions: [{
-      id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 1,
-    }] })];
-    const useCase = new UpdateCalendarEventUseCase({ repository });
+    repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 2,
+      facility: { id: "facility-1", name: "Clínica Central" }, interactions: [
+        { id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", visitId: null, linkedOrderCount: 0, version: 1 },
+        { id: "interaction-2", recurrenceKey: "2026-08-04T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", visitId: null, linkedOrderCount: 0, version: 1 },
+      ] })];
 
+    await new UpdateCalendarEventUseCase({ repository }).execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "shape", expectedVersion: 1,
+      changes: { startsAt: "2026-08-03T10:00:00Z", timeZone: "UTC", durationMinutes: 30 } });
+
+    expect(repository.replacedInteractions).toEqual([
+      { id: "interaction-1", recurrenceKey: "2026-08-03T10:00[UTC]" },
+      { id: "interaction-2", recurrenceKey: "2026-08-04T10:00[UTC]" },
+    ]);
+  });
+
+  it("rejects materialized series shape edits after progress or linked orders but allows title-only edits", async () => {
+    const repository = new FakeCalendarRepository();
+    const useCase = new UpdateCalendarEventUseCase({ repository });
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: "facility-1", name: "Clínica Central" }, interactions: [{
+      id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "IN_PROGRESS",
+      visitId: null, linkedOrderCount: 0, version: 2,
+    }] })];
     await expect(useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
-      id: "calendar-1", idempotencyKey: "shape", expectedVersion: 1, changes: { recurrence: "DAILY", recurrenceCount: 2 } }))
+      id: "calendar-1", idempotencyKey: "progressed", expectedVersion: 1, changes: { recurrence: "DAILY", recurrenceCount: 2 } }))
+      .rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+
+    repository.events[0] = baseEvent({ kind: "INTERACTION", facility: { id: "facility-1", name: "Clínica Central" }, interactions: [{
+      id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED",
+      visitId: null, linkedOrderCount: 1, version: 1,
+    }] });
+    await expect(useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "order-linked", expectedVersion: 1, changes: { durationMinutes: 30 } }))
       .rejects.toMatchObject({ code: "VALIDATION_ERROR" });
 
     await useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
@@ -400,6 +451,35 @@ describe("Calendar application use cases", () => {
 
     expect(second).toEqual(first);
     expect(repository.createCalls).toBe(1);
+  });
+
+  it("rejects same-owner idempotency key reuse with a different create payload", async () => {
+    const repository = new FakeCalendarRepository();
+    const useCase = new CreateCalendarEventUseCase({ repository });
+    await useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      idempotencyKey: "same-key", data: createInteraction });
+
+    await expect(useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      idempotencyKey: "same-key", data: { ...createInteraction, title: "Outra visita" } }))
+      .rejects.toBeInstanceOf(CalendarIdempotencyConflictError);
+    expect(repository.createCalls).toBe(1);
+  });
+
+  it("rejects cross-resource and cross-command idempotency key reuse", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent(), baseEvent({ id: "calendar-2", title: "Outro", anchorLocalDate: "2026-08-05",
+      firstStartsAt: new Date("2026-08-05T09:00:00Z"), firstEndsAt: new Date("2026-08-05T10:00:00Z") })];
+    const update = new UpdateCalendarEventUseCase({ repository });
+    await update.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "shared-key", expectedVersion: 1, changes: { title: "Primeiro" } });
+
+    await expect(update.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-2", idempotencyKey: "shared-key", expectedVersion: 1, changes: { title: "Segundo" } }))
+      .rejects.toMatchObject({ code: "CALENDAR_IDEMPOTENCY_CONFLICT", statusCode: 409 });
+
+    await expect(new CancelCalendarEventUseCase({ repository }).execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "shared-key", expectedVersion: 2, reason: "Cancelado" }))
+      .rejects.toMatchObject({ code: "CALENDAR_IDEMPOTENCY_CONFLICT", statusCode: 409 });
   });
 
   it("soft-cancels and preserves the trimmed reason while replaying retries", async () => {

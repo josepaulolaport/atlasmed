@@ -108,14 +108,16 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     });
   }
 
-  async complete(input: { id: string; actorUserId: string; expectedVersion: number; idempotencyKey: string; completedAt: Date; scheduledStartsAt?: Date; correctionReason?: string }): Promise<InteractionMutationResult | null> {
+  async complete(input: { id: string; actorUserId: string; expectedVersion: number; idempotencyKey: string; completedAt: Date; scheduledStartsAt?: Date; correctionReason?: string; persistEffectiveMissed?: boolean }): Promise<InteractionMutationResult | null> {
     return this.inTransaction(async (repository, tx) => {
       const replay = await repository.findCommandResult({ id: input.id, command: "complete", idempotencyKey: input.idempotencyKey });
       if (replay) return { interaction: replay, replayed: true };
       const [current] = await tx.select().from(interactions).where(eq(interactions.id, input.id)).for("update").limit(1);
-      if (!current || current.version !== input.expectedVersion || !["IN_PROGRESS", "NOT_COMPLETED"].includes(current.status)) return null;
+      if (!current || current.version !== input.expectedVersion
+        || (!["IN_PROGRESS", "NOT_COMPLETED"].includes(current.status) && !(input.persistEffectiveMissed && current.status === "SCHEDULED"))) return null;
 
-      const corrected = current.status === "NOT_COMPLETED";
+      const persistedMissed = input.persistEffectiveMissed === true && current.status === "SCHEDULED";
+      const corrected = current.status === "NOT_COMPLETED" || persistedMissed;
       const actualStartedAt = corrected
         ? input.scheduledStartsAt ?? new Date(input.completedAt.getTime() - 1)
         : current.actualStartedAt;
@@ -126,6 +128,10 @@ export class DrizzleInteractionRepository implements InteractionRepository {
           visitedAt: actualStartedAt }).returning({ id: visits.id });
         if (!visit) throw new DatabaseError("create compatibility visit");
         visitId = visit.id;
+      }
+      if (persistedMissed) {
+        await tx.insert(interactionEvents).values({ interactionId: input.id, actorUserId: null, source: "SYSTEM",
+          previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED", metadata: { source: "completion-correction" } });
       }
       const [updated] = await tx.update(interactions).set({
         status: "COMPLETED",
@@ -140,7 +146,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       }).where(and(eq(interactions.id, input.id), eq(interactions.version, input.expectedVersion))).returning();
       if (!updated) return null;
       await tx.insert(interactionEvents).values({ interactionId: input.id, actorUserId: input.actorUserId, source: "USER",
-        previousStatus: current.status, newStatus: "COMPLETED", reason: corrected ? input.correctionReason : null,
+        previousStatus: persistedMissed ? "NOT_COMPLETED" : current.status, newStatus: "COMPLETED", reason: corrected ? input.correctionReason : null,
         metadata: commandMetadata("complete", input.idempotencyKey, updated.version) });
       const detail = await repository.findById(input.id);
       if (!detail) throw new DatabaseError("load completed interaction");
@@ -172,12 +178,12 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         },
         isOverdue: ({ interaction, calendar: event, override }) => {
           if (override?.status === "CANCELLED") return false;
-          if (override) return override.endsAt < input.now;
+          if (override) return override.endsAt <= input.now;
           const occurrence = calendarOccurrenceFromRecurrenceKey({ anchorLocalDate: event.anchorLocalDate,
             anchorLocalTime: event.anchorLocalTime.slice(0, 5), timeZone: event.timeZone, durationMinutes: event.durationMinutes,
             recurrence: event.recurrence, ...(event.recurrenceUntil ? { recurrenceUntil: event.recurrenceUntil } : {}),
             ...(event.recurrenceCount ? { recurrenceCount: event.recurrenceCount } : {}) }, interaction.recurrenceKey);
-          return !!occurrence && occurrence.endsAt < input.now;
+          return !!occurrence && occurrence.endsAt <= input.now;
         },
       });
       if (!overdue.length) return 0;

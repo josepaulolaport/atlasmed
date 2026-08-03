@@ -1,8 +1,14 @@
 import type { Role, ScopeContext } from "@atlasmed/access";
-import { ForbiddenError, ResourceNotFoundError, ValidationError, CalendarConflictError, CalendarVersionConflictError } from "../../../../shared/errors";
+import { AppError, ForbiddenError, ResourceNotFoundError, ValidationError, CalendarConflictError, CalendarVersionConflictError } from "../../../../shared/errors";
 import type { CalendarEventRecord, CalendarInteractionRecord, CalendarOverrideRecord, CalendarRepository, InteractionModality } from "../interfaces/calendar.repository.interface";
 import { findCalendarConflicts, type CalendarConflictEntry } from "../services/conflict.service";
-import { calendarOccurrenceFromRecurrenceKey, expandCalendarOccurrences, type CalendarRecurrence, type CalendarRecurrenceRule } from "../services/recurrence.service";
+import { calendarOccurrenceFromRecurrenceKey, expandCalendarOccurrences, iterateCalendarOccurrences, type CalendarRecurrence, type CalendarRecurrenceRule } from "../services/recurrence.service";
+
+export class CalendarIdempotencyConflictError extends AppError {
+  constructor() {
+    super("CALENDAR_IDEMPOTENCY_CONFLICT", 409, "Idempotency key was already used for a different calendar command");
+  }
+}
 
 interface Actor { userId: string; roleName: Role }
 interface Dependencies { repository: CalendarRepository; now?: () => Date }
@@ -153,6 +159,15 @@ async function loadOwned(repository: CalendarRepository, id: string, actor: Acto
   return event;
 }
 
+function firstOccurrences(rule: CalendarRecurrenceRule, count: number) {
+  const occurrences = [];
+  for (const occurrence of iterateCalendarOccurrences(rule, { from: new Date(0) })) {
+    occurrences.push(occurrence);
+    if (occurrences.length === count) break;
+  }
+  return occurrences;
+}
+
 function firstStartsAt(event: CalendarEventRecord): Date {
   if (event.firstStartsAt) return event.firstStartsAt;
   const first = expandCalendarOccurrences(ruleOf(event), { from: new Date(0), to: new Date("9999-12-31T23:59:59.999Z") })[0];
@@ -168,6 +183,29 @@ function conflictFrom(event: ReturnType<typeof eventValues>, id: string, overrid
     cancelledOccurrenceKeys: overrides.filter((item) => item.status === "CANCELLED").map((item) => item.recurrenceKey),
     overrides: Object.fromEntries(overrides.map((item) => [item.recurrenceKey, { status: item.status, startsAt: item.startsAt, endsAt: item.endsAt }])),
   };
+}
+
+function canonicalize(value: unknown): unknown {
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, canonicalize(item)]));
+  }
+  return value;
+}
+function commandFingerprint(commandKind: string, resourceId: string | null, expectedVersion: number | null, payload: unknown): string {
+  return new Bun.CryptoHasher("sha256").update(JSON.stringify(canonicalize({ commandKind, resourceId, expectedVersion, payload }))).digest("hex");
+}
+function replayResult<T>(receipt: { commandKind: string; resourceId: string | null; requestFingerprint: string; result: T } | undefined,
+  commandKind: string, resourceId: string | null, requestFingerprint: string): T | undefined {
+  if (!receipt) return undefined;
+  if (receipt.commandKind !== commandKind || receipt.resourceId !== resourceId || receipt.requestFingerprint !== requestFingerprint) {
+    throw new CalendarIdempotencyConflictError();
+  }
+  return receipt.result;
 }
 
 function receiptEvent(value: CalendarEventRecord): CalendarEventRecord {
@@ -188,8 +226,10 @@ export class CreateCalendarEventUseCase {
     if (input.actor.roleName === "MANAGER") throw new ForbiddenError();
     if (input.data.kind === "INTERACTION" && (!input.scope.isGlobal && !input.scope.facilityIds.includes(input.data.facilityId!))) throw new ForbiddenError();
     const event = eventValues(input.actor.userId, input.data);
+    const commandKind = "CREATE";
+    const fingerprint = commandFingerprint(commandKind, null, null, input.data);
     return this.deps.repository.runWithOwnerLock(input.actor.userId, async (repository) => {
-      const replay = await repository.getCommandReceipt<CalendarEventRecord>(input.actor.userId, input.idempotencyKey);
+      const replay = replayResult(await repository.getCommandReceipt<CalendarEventRecord>(input.actor.userId, input.idempotencyKey), commandKind, null, fingerprint);
       if (replay) return receiptEvent(replay);
       const existing = await repository.listConflictEntries(input.actor.userId, undefined, { from: event.firstStartsAt });
       const candidate = conflictFrom(event, `candidate:${input.idempotencyKey}`);
@@ -199,7 +239,7 @@ export class CreateCalendarEventUseCase {
       const created = await repository.create({ commandKey: input.idempotencyKey, event,
         ...(input.data.kind === "INTERACTION" ? { interaction: { recurrenceKey: firstOccurrence.recurrenceKey,
           facilityId: input.data.facilityId!, agentUserId: input.actor.userId, modality: input.data.modality! } } : {}) });
-      return repository.saveCommandReceipt(input.actor.userId, input.idempotencyKey, "CREATE", created.id, created);
+      return (await repository.saveCommandReceipt(input.actor.userId, input.idempotencyKey, commandKind, null, fingerprint, created)).result;
     });
   }
 }
@@ -223,7 +263,7 @@ export class ListCalendarUseCase {
         const interaction = interactions.find((item) => item.recurrenceKey === occurrence.recurrenceKey);
         if (event.kind === "INTERACTION" && (!interaction || (managerView && !input.scope.isGlobal && !input.scope.facilityIds.includes(interaction.facilityId)))) continue;
         if (interaction?.status === "CANCELLED") continue;
-        const effectiveInteractionStatus = interaction?.status === "SCHEDULED" && occurrence.endsAt < now
+        const effectiveInteractionStatus = interaction?.status === "SCHEDULED" && occurrence.endsAt <= now
           ? "NOT_COMPLETED"
           : interaction?.status;
         rows.push({ id: `${event.id}:${occurrence.recurrenceKey}`, calendarId: event.id, recurrenceKey: occurrence.recurrenceKey,
@@ -256,8 +296,10 @@ export class UpdateCalendarEventUseCase {
   async execute(input: { actor: Actor; scope: ScopeContext; id: string; idempotencyKey: string; expectedVersion: number;
     changes: Partial<{ title: string; startsAt: string; timeZone: string; durationMinutes: number; recurrence: CalendarRecurrence; recurrenceUntil: string | null; recurrenceCount: number | null }> }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
+    const commandKind = "UPDATE_SERIES";
+    const fingerprint = commandFingerprint(commandKind, input.id, input.expectedVersion, input.changes);
     return this.deps.repository.runWithOwnerLock(owner, async (repository) => {
-      const replay = await repository.getCommandReceipt<CalendarEventRecord>(owner, input.idempotencyKey);
+      const replay = replayResult(await repository.getCommandReceipt<CalendarEventRecord>(owner, input.idempotencyKey), commandKind, input.id, fingerprint);
       if (replay) return receiptEvent(replay);
       const current = await loadOwned(repository, input.id, input.actor);
       const changesRecurrenceShape = input.changes.startsAt !== undefined
@@ -267,7 +309,13 @@ export class UpdateCalendarEventUseCase {
         || input.changes.recurrenceUntil !== undefined
         || input.changes.recurrenceCount !== undefined;
       if (current.kind === "INTERACTION" && current.interactions.length > 0 && changesRecurrenceShape) {
-        throw new ValidationError([{ field: "recurrence", message: "Recurrence, anchor, duration, and time zone cannot change after interactions have materialized" }]);
+        const blocked = current.interactions.some((item) => item.status !== "SCHEDULED" || item.visitId
+          || (item.linkedOrderCount ?? 0) > 0 || item.actualStartedAt || item.actualEndedAt
+          || item.hasOnlyInitialLifecycleEvents === false);
+        if (blocked) throw new ValidationError([{ field: "recurrence", message: "Recurrence shape can change only while every materialized interaction is untouched and scheduled" }]);
+        if (current.overrides.some((item) => item.status === "ACTIVE")) {
+          throw new ValidationError([{ field: "recurrence", message: "Recurrence shape cannot change while active occurrence overrides exist" }]);
+        }
       }
       const nextData: EventData = { kind: current.kind, title: input.changes.title ?? current.title,
         startsAt: input.changes.startsAt ?? firstStartsAt(current).toISOString(), timeZone: input.changes.timeZone ?? current.timeZone,
@@ -288,9 +336,18 @@ export class UpdateCalendarEventUseCase {
       const conflicts = findCalendarConflicts(conflictFrom(values, current.id, keptOverrides), await repository.listConflictEntries(current.ownerUserId, current.id, { from: values.firstStartsAt }), { from: values.firstStartsAt });
       if (conflicts.length) throw new CalendarConflictError(conflicts.slice(0, 10));
       if (invalid.length) await repository.deleteInvalidOverrides(current.id, invalid);
+      if (current.kind === "INTERACTION" && current.interactions.length > 0 && changesRecurrenceShape) {
+        const nextOccurrences = firstOccurrences(nextRule, current.interactions.length);
+        if (nextOccurrences.length !== current.interactions.length) {
+          throw new ValidationError([{ field: "recurrence", message: "Edited recurrence must include every materialized interaction occurrence" }]);
+        }
+        if (!(await repository.replaceUntouchedInteractions({ calendarId: current.id, recurrenceKeys: nextOccurrences.map((item) => item.recurrenceKey) }))) {
+          throw new ValidationError([{ field: "recurrence", message: "One or more materialized interactions are no longer untouched" }]);
+        }
+      }
       const updated = await repository.update({ id: current.id, expectedVersion: input.expectedVersion, commandKey: input.idempotencyKey, changes: values });
       if (!updated) throw new CalendarVersionConflictError(current.id, input.expectedVersion);
-      return repository.saveCommandReceipt(owner, input.idempotencyKey, "UPDATE_SERIES", updated.id, updated);
+      return (await repository.saveCommandReceipt(owner, input.idempotencyKey, commandKind, updated.id, fingerprint, updated)).result;
     });
   }
 }
@@ -311,8 +368,11 @@ export class UpdateCalendarOccurrenceUseCase {
   constructor(private readonly deps: Dependencies) {}
   async execute(input: { actor: Actor; scope: ScopeContext; id: string; recurrenceKey: string; idempotencyKey: string; expectedVersion: number; startsAt: string; durationMinutes: number }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
+    const commandKind = "UPDATE_OCCURRENCE";
+    const resourceId = `${input.id}:${input.recurrenceKey}`;
+    const fingerprint = commandFingerprint(commandKind, resourceId, input.expectedVersion, { startsAt: input.startsAt, durationMinutes: input.durationMinutes });
     return this.deps.repository.runWithOwnerLock(owner, async (repository) => {
-      const replay = await repository.getCommandReceipt<CalendarOverrideRecord>(owner, input.idempotencyKey);
+      const replay = replayResult(await repository.getCommandReceipt<CalendarOverrideRecord>(owner, input.idempotencyKey), commandKind, resourceId, fingerprint);
       if (replay) return receiptOverride(replay);
       const event = await loadOwned(repository, input.id, input.actor);
       const original = calendarOccurrenceFromRecurrenceKey(ruleOf(event), input.recurrenceKey);
@@ -333,7 +393,7 @@ export class UpdateCalendarOccurrenceUseCase {
         status: "ACTIVE", actorUserId: input.actor.userId, previousStartsAt, previousEndsAt,
         expectedVersion: input.expectedVersion, commandKey: input.idempotencyKey });
       if (!result) throw new CalendarVersionConflictError(event.id, input.expectedVersion);
-      return repository.saveCommandReceipt(owner, input.idempotencyKey, "UPDATE_OCCURRENCE", event.id, result);
+      return (await repository.saveCommandReceipt(owner, input.idempotencyKey, commandKind, resourceId, fingerprint, result)).result;
     });
   }
 }
@@ -344,8 +404,11 @@ export class CancelCalendarOccurrenceUseCase {
   constructor(private readonly deps: Dependencies) {}
   async execute(input: { actor: Actor; scope: ScopeContext; id: string; recurrenceKey: string; idempotencyKey: string; expectedVersion: number; reason: string }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
+    const commandKind = "CANCEL_OCCURRENCE";
+    const resourceId = `${input.id}:${input.recurrenceKey}`;
+    const fingerprint = commandFingerprint(commandKind, resourceId, input.expectedVersion, { reason: input.reason.trim() });
     return this.deps.repository.runWithOwnerLock(owner, async (repository) => {
-      const replay = await repository.getCommandReceipt<CalendarOverrideRecord>(owner, input.idempotencyKey);
+      const replay = replayResult(await repository.getCommandReceipt<CalendarOverrideRecord>(owner, input.idempotencyKey), commandKind, resourceId, fingerprint);
       if (replay) return receiptOverride(replay);
       const event = await loadOwned(repository, input.id, input.actor);
       const original = calendarOccurrenceFromRecurrenceKey(ruleOf(event), input.recurrenceKey);
@@ -362,7 +425,7 @@ export class CancelCalendarOccurrenceUseCase {
           recurrenceKeys: [input.recurrenceKey], actorUserId: input.actor.userId, reason: cancellationReason });
         if (cancelledCount !== 1) throw new ValidationError([{ field: "recurrenceKey", message: "Interaction occurrence is no longer scheduled" }]);
       }
-      return repository.saveCommandReceipt(owner, input.idempotencyKey, "CANCEL_OCCURRENCE", event.id, result);
+      return (await repository.saveCommandReceipt(owner, input.idempotencyKey, commandKind, resourceId, fingerprint, result)).result;
     });
   }
 }
@@ -371,8 +434,10 @@ export class CancelCalendarEventUseCase {
   constructor(private readonly deps: Dependencies) {}
   async execute(input: { actor: Actor; scope: ScopeContext; id: string; idempotencyKey: string; expectedVersion: number; reason: string }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
+    const commandKind = "CANCEL_SERIES";
+    const fingerprint = commandFingerprint(commandKind, input.id, input.expectedVersion, { reason: input.reason.trim() });
     return this.deps.repository.runWithOwnerLock(owner, async (repository) => {
-      const replay = await repository.getCommandReceipt<{ id: string; cancelled: true }>(owner, input.idempotencyKey);
+      const replay = replayResult(await repository.getCommandReceipt<{ id: string; cancelled: true }>(owner, input.idempotencyKey), commandKind, input.id, fingerprint);
       if (replay) return replay;
       const event = await loadOwned(repository, input.id, input.actor);
       if (event.kind === "INTERACTION" && event.interactions.some((item) => item.status !== "SCHEDULED")) throw new ValidationError([{ field: "id", message: "Only scheduled interaction series may be cancelled" }]);
@@ -386,7 +451,7 @@ export class CancelCalendarEventUseCase {
         actorUserId: input.actor.userId, reason: cancellationReason, commandKey: input.idempotencyKey });
       if (!cancelled) throw new CalendarVersionConflictError(event.id, input.expectedVersion);
       const result = { id: event.id, cancelled: true as const };
-      return repository.saveCommandReceipt(owner, input.idempotencyKey, "CANCEL_SERIES", event.id, result);
+      return (await repository.saveCommandReceipt(owner, input.idempotencyKey, commandKind, event.id, fingerprint, result)).result;
     });
   }
 }

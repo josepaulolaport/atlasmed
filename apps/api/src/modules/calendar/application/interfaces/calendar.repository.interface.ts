@@ -16,6 +16,13 @@ export interface CalendarOverrideRecord {
   version: number;
 }
 
+export interface CalendarCommandReceipt<T> {
+  commandKind: string;
+  resourceId: string | null;
+  requestFingerprint: string;
+  result: T;
+}
+
 export interface CalendarInteractionRecord {
   id: string;
   recurrenceKey: string;
@@ -28,6 +35,10 @@ export interface CalendarInteractionRecord {
   visitId?: string | null;
   linkedOrderCount?: number;
   version: number;
+  actualStartedAt?: Date | null;
+  actualEndedAt?: Date | null;
+  lifecycleEventCount?: number;
+  hasOnlyInitialLifecycleEvents?: boolean;
 }
 
 export interface CalendarEventRecord {
@@ -105,10 +116,11 @@ export interface CalendarRepository {
   listConflictEntries(ownerUserId: string, excludeCalendarId?: string, range?: { from: Date; to?: Date }): Promise<CalendarConflictEntry[]>;
   ensureInteractionsForOccurrences(calendarId: string, recurrenceKeys: string[]): Promise<CalendarInteractionRecord[]>;
   cancelInteractionOccurrences(input: { calendarId: string; recurrenceKeys?: string[]; actorUserId: string; reason: string }): Promise<number>;
-  getCommandReceipt<T>(ownerUserId: string, commandKey: string): Promise<T | undefined>;
-  saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null, result: T): Promise<T>;
+  getCommandReceipt<T>(ownerUserId: string, commandKey: string): Promise<CalendarCommandReceipt<T> | undefined>;
+  saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null, requestFingerprint: string, result: T): Promise<CalendarCommandReceipt<T>>;
   create(input: CreateCalendarEventInput): Promise<CalendarEventRecord>;
   update(input: UpdateCalendarEventInput): Promise<CalendarEventRecord | null>;
+  replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeys: string[] }): Promise<boolean>;
   upsertOverride(input: UpsertCalendarOverrideInput): Promise<CalendarOverrideRecord | null>;
   deleteInvalidOverrides(calendarId: string, recurrenceKeys: string[]): Promise<boolean>;
   cancel(input: CancelCalendarEventInput): Promise<CalendarEventRecord | null>;

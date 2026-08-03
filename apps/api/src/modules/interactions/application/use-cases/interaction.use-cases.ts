@@ -66,7 +66,7 @@ function effectiveOccurrence(record: InteractionDetailRecord) {
 function effectiveStatus(record: InteractionDetailRecord, occurrence: ReturnType<typeof effectiveOccurrence>, now: Date): InteractionStatus {
   if (record.status !== "SCHEDULED") return record.status;
   if (record.calendar.status === "CANCELLED" || record.occurrenceOverride?.status === "CANCELLED") return "CANCELLED";
-  return occurrence.endsAt < now ? "NOT_COMPLETED" : "SCHEDULED";
+  return occurrence.endsAt <= now ? "NOT_COMPLETED" : "SCHEDULED";
 }
 
 function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Date) {
@@ -88,7 +88,9 @@ function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Da
     version: record.version,
     calendarVersion: record.calendar.version,
     overrideVersion: record.occurrenceOverride?.version ?? null,
-    calendar: { id: record.calendarId, title: record.calendar.title, version: record.calendar.version },
+    calendar: { id: record.calendarId, title: record.calendar.title, version: record.calendar.version,
+      recurrence: record.calendar.recurrence, recurrenceUntil: record.calendar.recurrenceUntil,
+      recurrenceCount: record.calendar.recurrenceCount },
     occurrence: {
       recurrenceKey: record.recurrenceKey,
       startsAt: occurrence.startsAt.toISOString(),
@@ -150,17 +152,20 @@ export class CompleteInteractionUseCase {
     const record = await this.deps.repository.findById(input.id);
     if (!record) throw new ResourceNotFoundError("Interaction", input.id);
     assertOwner(record, input.actor, input.scope);
-    if (record.status !== "IN_PROGRESS" && record.status !== "NOT_COMPLETED") throw new InteractionTransitionError(record.status, "COMPLETED");
+    const occurrence = effectiveOccurrence(record);
+    const status = effectiveStatus(record, occurrence, now);
+    if (status !== "IN_PROGRESS" && status !== "NOT_COMPLETED") throw new InteractionTransitionError(status, "COMPLETED");
     const correctionReason = input.correctionReason?.trim();
-    if (record.status === "NOT_COMPLETED" && !correctionReason) {
+    if (status === "NOT_COMPLETED" && !correctionReason) {
       throw new ValidationError([{ field: "correctionReason", message: "correctionReason is required when correcting a missed interaction" }]);
     }
     if (record.version !== input.expectedVersion) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
-    const occurrence = effectiveOccurrence(record);
     const scheduledStartsAt = occurrence.startsAt < now ? occurrence.startsAt : new Date(now.getTime() - 1);
     const result = await this.deps.repository.complete({ id: input.id, actorUserId: input.actor.userId, expectedVersion: input.expectedVersion,
       idempotencyKey: input.idempotencyKey, completedAt: now,
-      ...(record.status === "NOT_COMPLETED" ? { scheduledStartsAt } : {}), ...(correctionReason ? { correctionReason } : {}) });
+      ...(status === "NOT_COMPLETED" ? { scheduledStartsAt } : {}),
+      ...(record.status === "SCHEDULED" && status === "NOT_COMPLETED" ? { persistEffectiveMissed: true } : {}),
+      ...(correctionReason ? { correctionReason } : {}) });
     if (!result) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
     return toDto(result.interaction, input.actor, now);
   }

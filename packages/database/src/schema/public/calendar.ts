@@ -234,6 +234,7 @@ export const calendarCommandReceipts = pgTable(
     commandKey: text("command_key").notNull(),
     commandKind: text("command_kind").notNull(),
     resourceId: text("resource_id"),
+    requestFingerprint: text("request_fingerprint").notNull(),
     result: jsonb("result").$type<unknown>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

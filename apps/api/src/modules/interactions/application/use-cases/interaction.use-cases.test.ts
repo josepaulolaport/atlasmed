@@ -74,7 +74,7 @@ function interaction(overrides: Partial<InteractionDetailRecord> = {}): Interact
 class FakeInteractionRepository implements InteractionRepository {
   record: InteractionDetailRecord | null = interaction();
   visits = 0;
-  events: Array<{ previousStatus: string; newStatus: string; reason?: string }> = [];
+  events: Array<{ previousStatus: string; newStatus: string; reason?: string; source?: string; actorUserId?: string | null }> = [];
   receipts = new Map<string, InteractionDetailRecord>();
   overdueCount = 0;
 
@@ -95,11 +95,14 @@ class FakeInteractionRepository implements InteractionRepository {
     return { interaction: this.record, replayed: false };
   }
 
-  async complete(input: { expectedVersion: number; idempotencyKey: string; completedAt: Date; actorUserId: string; correctionReason?: string; scheduledStartsAt?: Date }) {
+  async complete(input: { expectedVersion: number; idempotencyKey: string; completedAt: Date; actorUserId: string; correctionReason?: string; scheduledStartsAt?: Date; persistEffectiveMissed?: boolean }) {
     const replay = this.receipts.get(`complete:${input.idempotencyKey}`);
     if (replay) return { interaction: replay, replayed: true };
-    if (!this.record || this.record.version !== input.expectedVersion || !["IN_PROGRESS", "NOT_COMPLETED"].includes(this.record.status)) return null;
-    const previousStatus = this.record.status;
+    if (!this.record || this.record.version !== input.expectedVersion || (!["IN_PROGRESS", "NOT_COMPLETED"].includes(this.record.status) && !(input.persistEffectiveMissed && this.record.status === "SCHEDULED"))) return null;
+    const previousStatus = input.persistEffectiveMissed && this.record.status === "SCHEDULED" ? "NOT_COMPLETED" : this.record.status;
+    if (input.persistEffectiveMissed && this.record.status === "SCHEDULED") {
+      this.events.push({ previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED", source: "SYSTEM", actorUserId: null });
+    }
     const corrected = previousStatus === "NOT_COMPLETED";
     const visitId = this.record.visitId ?? `visit-${this.visits + 1}`;
     if (!this.record.visitId) this.visits += 1;
@@ -126,7 +129,7 @@ class FakeInteractionRepository implements InteractionRepository {
   async markOverdue(input: { now: Date; limit: number }) {
     if (!this.record || this.record.status !== "SCHEDULED" || this.overdueCount >= input.limit) return 0;
     const endsAt = this.record.occurrenceOverride?.endsAt ?? new Date("2026-08-03T13:00:00.000Z");
-    if (endsAt >= input.now) return 0;
+    if (endsAt > input.now) return 0;
     const previousStatus = this.record.status;
     this.record = { ...this.record, status: "NOT_COMPLETED", version: this.record.version + 1, updatedAt: input.now };
     this.events.push({ previousStatus, newStatus: "NOT_COMPLETED" });
@@ -163,6 +166,28 @@ describe("GetInteractionUseCase", () => {
       facility: { id: "facility-1", displayName: "Clínica Central", city: "São Paulo", state: "SP" },
       linkedOrders: [],
     }));
+  });
+
+  test("returns recurrence fields in the calendar DTO for the mobile editor", async () => {
+    const repository = new FakeInteractionRepository();
+    repository.record = interaction({ calendar: { ...interaction().calendar, recurrence: "WEEKLY", recurrenceUntil: "2026-09-30", recurrenceCount: null } });
+    const result = await executeGet(repository, "REP", scope());
+    expect(result.calendar).toEqual({
+      id: "calendar-1",
+      title: "Visita",
+      version: 3,
+      recurrence: "WEEKLY",
+      recurrenceUntil: "2026-09-30",
+      recurrenceCount: null,
+    });
+  });
+
+  test("derives missed when the effective occurrence ends exactly at now", async () => {
+    const repository = new FakeInteractionRepository();
+    const result = await new GetInteractionUseCase({ repository, now: () => new Date("2026-08-03T13:00:00.000Z") }).execute({
+      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+    });
+    expect(result.status).toBe("NOT_COMPLETED");
   });
 
   test("derives missed and cancelled effective states without persisting on read", async () => {
@@ -279,8 +304,23 @@ describe("CompleteInteractionUseCase", () => {
     expect(result.actualEndedAt).toBe("2026-08-03T14:00:00.000Z");
   });
 
-  test("does not complete a scheduled interaction directly", async () => {
-    await expect(new CompleteInteractionUseCase({ repository: new FakeInteractionRepository() }).execute(ownerInput())).rejects.toBeInstanceOf(InteractionTransitionError);
+  test("atomically persists an effective missed transition before correcting a read-derived scheduled row", async () => {
+    const repository = new FakeInteractionRepository();
+    const result = await new CompleteInteractionUseCase({ repository, now: () => new Date("2026-08-03T13:00:00.000Z") }).execute({
+      ...ownerInput(), correctionReason: "  Visita confirmada  ",
+    });
+
+    expect(result).toEqual(expect.objectContaining({ status: "COMPLETED", visitId: "visit-1", correctionReason: "Visita confirmada" }));
+    expect(repository.events).toEqual([
+      { previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED", source: "SYSTEM", actorUserId: null },
+      { previousStatus: "NOT_COMPLETED", newStatus: "COMPLETED", reason: "Visita confirmada" },
+    ]);
+    expect(repository.visits).toBe(1);
+  });
+
+  test("does not complete a still-active scheduled interaction directly", async () => {
+    await expect(new CompleteInteractionUseCase({ repository: new FakeInteractionRepository(), now: () => new Date("2026-08-03T12:59:59.999Z") }).execute(ownerInput()))
+      .rejects.toBeInstanceOf(InteractionTransitionError);
   });
 });
 
@@ -291,6 +331,10 @@ describe("MarkOverdueInteractionsUseCase", () => {
     expect(await useCase.execute({ limit: 25 })).toBe(1);
     expect(scheduled.record?.status).toBe("NOT_COMPLETED");
     expect(scheduled.events).toEqual([{ previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED" }]);
+
+    const exactBoundary = new FakeInteractionRepository();
+    expect(await new MarkOverdueInteractionsUseCase({ repository: exactBoundary }).execute({ now: new Date("2026-08-03T13:00:00.000Z") })).toBe(1);
+    expect(exactBoundary.record?.status).toBe("NOT_COMPLETED");
 
     const inProgress = new FakeInteractionRepository();
     inProgress.record = interaction({ status: "IN_PROGRESS" });
