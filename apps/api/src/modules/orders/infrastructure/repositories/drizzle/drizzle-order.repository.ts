@@ -61,6 +61,8 @@ function deserializeOrderReceipt(value: unknown): OrderDetailRecord {
 }
 
 export class DrizzleOrderRepository implements OrderRepository {
+  constructor(private readonly database: typeof db = db) {}
+
   async findAll(input: {
     page: number;
     limit: number;
@@ -340,7 +342,13 @@ export class DrizzleOrderRepository implements OrderRepository {
     requestFingerprint: string,
     input: CreateOrderInput,
   ): Promise<CreateOrderIdempotentResult> {
-    return db.transaction(async (tx) => {
+    return this.database.transaction(async (tx) => {
+      await tx.execute(sql`
+        select pg_advisory_xact_lock(
+          hashtextextended(${actorUserId} || ':' || ${commandKey}, 0)
+        )
+      `);
+
       const [existing] = await tx
         .select({
           requestFingerprint: orderCommandReceipts.requestFingerprint,
@@ -353,7 +361,6 @@ export class DrizzleOrderRepository implements OrderRepository {
             eq(orderCommandReceipts.commandKey, commandKey),
           ),
         )
-        .for("update")
         .limit(1);
       if (existing) {
         if (existing.requestFingerprint !== requestFingerprint) return { kind: "mismatch" };
@@ -386,36 +393,14 @@ export class DrizzleOrderRepository implements OrderRepository {
       })));
       const order = await this.findByIdWithDatabase(tx, created.id);
       if (!order) throw new DatabaseError("load created order");
-      const [receipt] = await tx
-        .insert(orderCommandReceipts)
-        .values({
-          actorUserId,
-          commandKey,
-          requestFingerprint,
-          orderId: order.id,
-          result: order,
-        })
-        .onConflictDoNothing({
-          target: [orderCommandReceipts.actorUserId, orderCommandReceipts.commandKey],
-        })
-        .returning({ id: orderCommandReceipts.id });
-      if (receipt) return { kind: "created", order };
-
-      const [winner] = await tx
-        .select({
-          requestFingerprint: orderCommandReceipts.requestFingerprint,
-          result: orderCommandReceipts.result,
-        })
-        .from(orderCommandReceipts)
-        .where(
-          and(
-            eq(orderCommandReceipts.actorUserId, actorUserId),
-            eq(orderCommandReceipts.commandKey, commandKey),
-          ),
-        )
-        .limit(1);
-      if (!winner || winner.requestFingerprint !== requestFingerprint) return { kind: "mismatch" };
-      return { kind: "replay", order: deserializeOrderReceipt(winner.result) };
+      await tx.insert(orderCommandReceipts).values({
+        actorUserId,
+        commandKey,
+        requestFingerprint,
+        orderId: order.id,
+        result: order,
+      });
+      return { kind: "created", order };
     });
   }
 

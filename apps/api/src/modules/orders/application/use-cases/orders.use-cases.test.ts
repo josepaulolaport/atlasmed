@@ -491,6 +491,98 @@ describe("orders use cases", () => {
     expect(createCalls).toBe(1);
   });
 
+  it("coalesces concurrent first-time retries through the repository", async () => {
+    let createCalls = 0;
+    let receipt: { requestFingerprint: string; order: OrderDetailRecord } | null = null;
+    let releaseCreation!: () => void;
+    const creationStarted = new Promise<void>((resolve) => {
+      releaseCreation = resolve;
+    });
+    const order = {
+      id: "order-concurrent",
+      legacyId: null,
+      interactionId: null,
+      verticalId: "vertical-1",
+      facility: { id: "facility-1", name: "Clínica Um" },
+      professional: null,
+      seller: { id: "rep-1", name: "Rep" },
+      status: "PENDING" as const,
+      type: "SALE",
+      orderedAt: new Date("2026-01-02T10:00:00Z"),
+      createdAt: new Date("2026-01-02T10:00:00Z"),
+      updatedAt: new Date("2026-01-02T10:00:00Z"),
+      surgeryType: null,
+      surgerySubtype: null,
+      notes: null,
+      freight: 0,
+      grossWeight: 0,
+      netWeight: 0,
+      currency: "BRL",
+      usdExchangeRate: null,
+      finalizedById: null,
+      finalizedAt: null,
+      rejectedById: null,
+      rejectionReason: null,
+      noBillingById: null,
+      noBillingAt: null,
+      noBillingNotes: null,
+      expenseAuthorizedById: null,
+      expenseAuthorizedAt: null,
+      items: [],
+    } satisfies OrderDetailRecord;
+    let serialized = Promise.resolve();
+    const repository = createRepository({
+      findCommandReceipt: async () => receipt,
+      createIdempotently: async (_actor, _key, requestFingerprint) => {
+        const previous = serialized;
+        let release!: () => void;
+        serialized = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        await previous;
+        try {
+          if (receipt) {
+            return receipt.requestFingerprint === requestFingerprint
+              ? { kind: "replay" as const, order: receipt.order }
+              : { kind: "mismatch" as const };
+          }
+          createCalls += 1;
+          releaseCreation();
+          await Promise.resolve();
+          receipt = { requestFingerprint, order };
+          return { kind: "created" as const, order };
+        } finally {
+          release();
+        }
+      },
+    });
+    const useCase = new CreateOrderUseCase({ orderRepository: repository });
+    const input = {
+      facilityId: "facility-1",
+      idempotencyKey: "concurrent-order",
+      items: [{ productId: "product-1", quantity: 1 }],
+      scope: scopedToFacilityOne,
+      actor: { userId: "rep-1", roleName: "REP" },
+    };
+
+    const first = useCase.execute(input);
+    await creationStarted;
+    const second = useCase.execute(input);
+    const conflicting = useCase.execute({
+      ...input,
+      items: [{ productId: "product-1", quantity: 2 }],
+    });
+    const conflictAssertion = expect(conflicting).rejects.toMatchObject({
+      statusCode: 409,
+      code: "ORDER_IDEMPOTENCY_CONFLICT",
+    });
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+    await conflictAssertion;
+
+    expect(secondResult).toEqual(firstResult);
+    expect(createCalls).toBe(1);
+  });
+
   it("rejects reuse of an idempotency key with a different payload", async () => {
     let receipt: { requestFingerprint: string; order: OrderDetailRecord } | null = null;
     const order = {
