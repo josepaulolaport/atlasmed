@@ -1,3 +1,5 @@
+import type { AnyDatabase } from "@atlasmed/database";
+
 export type InteractionContextStatus =
   | "SCHEDULED"
   | "IN_PROGRESS"
@@ -7,6 +9,7 @@ export type InteractionContextStatus =
 
 export interface InteractionContext {
   id: string;
+  ownerUserId: string;
   agentUserId: string;
   facilityId: string;
   status: InteractionContextStatus;
@@ -18,4 +21,6 @@ export interface InteractionContext {
 
 export interface InteractionContextPort {
   findById(interactionId: string): Promise<InteractionContext | null>;
+  /** Re-read interaction/calendar/override state while holding the shared owner lock. */
+  lockAndGetOrderable(interactionId: string, database?: AnyDatabase): Promise<InteractionContext | null>;
 }

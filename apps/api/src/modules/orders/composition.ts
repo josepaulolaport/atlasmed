@@ -6,16 +6,19 @@ import {
   ListOrdersUseCase,
 } from "./application/use-cases/orders.use-cases";
 
-export const ordersRepositories = {
-  order: new DrizzleOrderRepository(),
-};
-
 export const ordersPorts = {
   interactionContext: new DrizzleInteractionContextPort(),
 };
 
+export const ordersRepositories = {
+  order: new DrizzleOrderRepository(undefined, ordersPorts.interactionContext),
+};
+
 export const ordersUseCases = {
-  listOrders: () => new ListOrdersUseCase({ orderRepository: ordersRepositories.order }),
+  listOrders: () => new ListOrdersUseCase({
+    orderRepository: ordersRepositories.order,
+    interactionContextPort: ordersPorts.interactionContext,
+  }),
   getOrder: () => new GetOrderUseCase({ orderRepository: ordersRepositories.order }),
   createOrder: () =>
     new CreateOrderUseCase({

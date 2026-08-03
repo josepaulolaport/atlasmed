@@ -14,9 +14,12 @@ function actorPlugin() {
   }));
 }
 
-function useCases(createExecute = mock(async () => ({ id: "order-1" }))): OrdersHttpUseCases {
+function useCases(
+  createExecute = mock(async () => ({ id: "order-1" })),
+  listExecute = async () => ({ data: [], pagination: {} }),
+): OrdersHttpUseCases {
   return {
-    listOrders: () => ({ execute: async () => ({ data: [], pagination: {} }) }),
+    listOrders: () => ({ execute: listExecute }),
     getOrder: () => ({ execute: async () => ({ id: "order-1" }) }),
     createOrder: () => ({ execute: createExecute }),
   };
@@ -43,6 +46,17 @@ const body = {
 };
 
 describe("Order HTTP routes", () => {
+  it("passes interactionId and actor context to GET /orders", async () => {
+    const execute = mock(async () => ({ data: [], pagination: {} }));
+    const response = await app(useCases(undefined, execute)).handle(new Request("http://localhost/orders?interactionId=interaction-1"));
+
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({
+      interactionId: "interaction-1",
+      actor: { userId: "rep-1", roleName: "REP" },
+    }));
+  });
+
   it("requires Idempotency-Key for POST /orders", async () => {
     const response = await app(useCases()).handle(new Request("http://localhost/orders", {
       method: "POST",

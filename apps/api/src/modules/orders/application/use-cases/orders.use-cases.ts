@@ -128,7 +128,7 @@ function serializeOrder(order: OrderDetailRecord) {
 }
 
 export class ListOrdersUseCase {
-  constructor(private readonly deps: { orderRepository: OrderRepository }) {}
+  constructor(private readonly deps: { orderRepository: OrderRepository; interactionContextPort?: InteractionContextPort }) {}
 
   async execute(input: {
     page?: number;
@@ -147,6 +147,19 @@ export class ListOrdersUseCase {
 
     if (input.facilityId) {
       assertResourceInScope(input.scope, "facility", input.facilityId);
+    }
+
+    if (input.interactionId && this.deps.interactionContextPort) {
+      const interaction = await this.deps.interactionContextPort.findById(input.interactionId);
+      if (!interaction || !interaction.canRead) throw new ForbiddenError("Interaction outside actor scope");
+      assertResourceInScope(input.scope, "facility", interaction.facilityId);
+      if (!input.actor) throw new ForbiddenError("Interaction actor is required");
+      const isOwner = interaction.agentUserId === input.actor.userId;
+      const isManager = input.actor.roleName === Role.MANAGER && input.scope.managedUserIds.includes(interaction.agentUserId);
+      if (!isOwner && !isManager) throw new ForbiddenError("Interaction outside actor owner/team scope");
+      if (input.facilityId && input.facilityId !== interaction.facilityId) {
+        throw new ForbiddenError("Interaction facility outside requested facility");
+      }
     }
 
     const verticalIds = resolveVerticalIds({
@@ -420,6 +433,11 @@ export class CreateOrderUseCase {
       createInput,
     );
     if (result.kind === "mismatch") throw new OrderIdempotencyConflictError();
+    if (result.kind === "interaction_not_orderable") {
+      throw new ValidationError([
+        { field: "interactionId", message: "Interaction status does not allow order creation" },
+      ]);
+    }
 
     return serializeOrder(result.order);
   }

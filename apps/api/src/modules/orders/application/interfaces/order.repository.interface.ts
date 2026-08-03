@@ -109,7 +109,8 @@ export interface CreateOrderInput {
 
 export type CreateOrderIdempotentResult =
   | { kind: "created" | "replay"; order: OrderDetailRecord }
-  | { kind: "mismatch" };
+  | { kind: "mismatch" }
+  | { kind: "interaction_not_orderable" };
 
 export interface OrderRepository {
   findAll(input: {

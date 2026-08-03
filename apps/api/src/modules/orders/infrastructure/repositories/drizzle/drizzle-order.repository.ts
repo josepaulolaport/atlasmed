@@ -21,6 +21,7 @@ import type {
   OrderScopeFilter,
   OrderStatus,
 } from "../../../application/interfaces/order.repository.interface";
+import type { InteractionContextPort } from "../../../application/interfaces/interaction-context.port";
 
 function scopeCondition(scope: OrderScopeFilter) {
   if (scope.isGlobal) return undefined;
@@ -61,7 +62,10 @@ function deserializeOrderReceipt(value: unknown): OrderDetailRecord {
 }
 
 export class DrizzleOrderRepository implements OrderRepository {
-  constructor(private readonly database: typeof db = db) {}
+  constructor(
+    private readonly database: AnyDatabase = db,
+    private readonly interactionContextPort?: InteractionContextPort,
+  ) {}
 
   async findAll(input: {
     page: number;
@@ -365,6 +369,15 @@ export class DrizzleOrderRepository implements OrderRepository {
       if (existing) {
         if (existing.requestFingerprint !== requestFingerprint) return { kind: "mismatch" };
         return { kind: "replay", order: deserializeOrderReceipt(existing.result) };
+      }
+
+      if (input.interactionId && this.interactionContextPort) {
+        const interaction = await this.interactionContextPort.lockAndGetOrderable(input.interactionId, tx);
+        if (!interaction || !interaction.canCreateOrder || interaction.calendarStatus !== "ACTIVE"
+          || interaction.occurrenceStatus === "CANCELLED"
+          || !["SCHEDULED", "IN_PROGRESS"].includes(interaction.status)) {
+          return { kind: "interaction_not_orderable" };
+        }
       }
 
       const [created] = await tx

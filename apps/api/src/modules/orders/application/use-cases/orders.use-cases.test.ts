@@ -11,6 +11,7 @@ import type { OrderDetailRecord, OrderRepository } from "../interfaces/order.rep
 function createInteractionContextPort(
   context: {
     id: string;
+    ownerUserId?: string;
     agentUserId: string;
     facilityId: string;
     status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "NOT_COMPLETED" | "CANCELLED";
@@ -21,7 +22,8 @@ function createInteractionContextPort(
   } | null,
 ) {
   return {
-    findById: async () => context,
+    findById: async () => context ? { ownerUserId: context.ownerUserId ?? context.agentUserId, ...context } : null,
+    lockAndGetOrderable: async () => context ? { ownerUserId: context.ownerUserId ?? context.agentUserId, ...context } : null,
   };
 }
 
@@ -158,6 +160,47 @@ describe("orders use cases", () => {
       total: 210,
       itemCount: 2,
     });
+  });
+
+  it("denies listing arbitrary interaction orders to an unmanaged REP", async () => {
+    const repository = createRepository();
+    const interactionContextPort = createInteractionContextPort({
+      id: "interaction-1",
+      agentUserId: "other-rep",
+      facilityId: "facility-1",
+      status: "SCHEDULED",
+      calendarStatus: "ACTIVE",
+      occurrenceStatus: "ACTIVE",
+      canRead: true,
+      canCreateOrder: true,
+    });
+
+    await expect(new ListOrdersUseCase({ orderRepository: repository, interactionContextPort }).execute({
+      interactionId: "interaction-1",
+      actor: { userId: "rep-1", roleName: "REP" },
+      scope: scopedToFacilityOne,
+    })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("allows a manager to list a managed agent interaction in facility scope", async () => {
+    const repository = createRepository();
+    const interactionContextPort = createInteractionContextPort({
+      id: "interaction-1",
+      agentUserId: "agent-1",
+      facilityId: "facility-1",
+      status: "SCHEDULED",
+      calendarStatus: "ACTIVE",
+      occurrenceStatus: "ACTIVE",
+      canRead: true,
+      canCreateOrder: true,
+    });
+    const scope = { ...scopedToFacilityOne, managedUserIds: ["agent-1"] };
+
+    await expect(new ListOrdersUseCase({ orderRepository: repository, interactionContextPort }).execute({
+      interactionId: "interaction-1",
+      actor: { userId: "manager-1", roleName: "MANAGER" },
+      scope,
+    })).resolves.toMatchObject({ pagination: { total: 1 } });
   });
 
   it("denies detail access when its facility is outside the scope", async () => {
@@ -637,6 +680,58 @@ describe("orders use cases", () => {
       statusCode: 409,
       code: "ORDER_IDEMPOTENCY_CONFLICT",
     });
+  });
+
+  it("rejects cancellation that happens after preflight before the transactional insert", async () => {
+    let cancelled = false;
+    const interactionPort = {
+      findById: async () => ({
+        id: "interaction-1",
+        ownerUserId: "rep-1",
+        agentUserId: "rep-1",
+        facilityId: "facility-1",
+        status: "SCHEDULED" as const,
+        calendarStatus: "ACTIVE" as const,
+        occurrenceStatus: "ACTIVE" as const,
+        canRead: true,
+        canCreateOrder: true,
+      }),
+      lockAndGetOrderable: async (_interactionId: string) => cancelled ? {
+        id: "interaction-1",
+        ownerUserId: "rep-1",
+        agentUserId: "rep-1",
+        facilityId: "facility-1",
+        status: "SCHEDULED" as const,
+        calendarStatus: "CANCELLED" as const,
+        occurrenceStatus: "ACTIVE" as const,
+        canRead: true,
+        canCreateOrder: false,
+      } : null,
+    };
+    const repository = createRepository({
+      createIdempotently: async () => {
+        cancelled = true;
+        const current = await interactionPort.lockAndGetOrderable("interaction-1");
+        return current?.canCreateOrder
+          ? { kind: "created" as const, order: await repository.create({
+              facilityId: "facility-1", interactionId: "interaction-1", verticalId: "vertical-1",
+              sellerId: "rep-1", items: [{ productId: "product-1", quantity: 1, unitPrice: 100 }],
+            }) }
+          : { kind: "interaction_not_orderable" as const };
+      },
+    });
+
+    await expect(new CreateOrderUseCase({
+      orderRepository: repository,
+      interactionContextPort: interactionPort,
+    }).execute({
+      interactionId: "interaction-1",
+      facilityId: "facility-1",
+      idempotencyKey: "cancel-race-order",
+      items: [{ productId: "product-1", quantity: 1 }],
+      scope: scopedToFacilityOne,
+      actor: { userId: "rep-1", roleName: "REP" },
+    })).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("rejects a linked order when its calendar series is cancelled despite stale interaction status", async () => {
