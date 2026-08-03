@@ -1,7 +1,43 @@
 import { Elysia, t } from "elysia";
+import { AppError } from "../../../../shared/errors";
 import { acceptInviteSchema } from "@atlasmed/access";
 import { accessUseCases } from "../../composition";
 import { registerRateLimit } from "../middleware/rate-limit.middleware";
+
+export function mapAcceptInviteRouteError(
+  error: unknown,
+): { status: number; body: Record<string, unknown> } | null {
+  if (error instanceof AppError) {
+    return {
+      status: error.statusCode,
+      body: { error: error.toClientJSON() },
+    };
+  }
+
+  if (error instanceof Error && error.message.includes("already taken")) {
+    return {
+      status: 409,
+      body: {
+        error: error.message,
+        code: "CONFLICT",
+        suggestion: "Please choose a different value",
+      },
+    };
+  }
+
+  if (error instanceof Error && error.message.includes("does not match")) {
+    return {
+      status: 400,
+      body: {
+        error: error.message,
+        code: "IDENTIFIER_MISMATCH",
+        hint: "The email or phone number must match where the invitation was sent",
+      },
+    };
+  }
+
+  return null;
+}
 
 export const acceptInviteRoute = new Elysia({ 
   detail: {
@@ -132,23 +168,9 @@ export const acceptInviteRoute = new Elysia({
     },
   })
   .onError(({ error, set }) => {
-    if (error instanceof Error && error.message.includes("already taken")) {
-      set.status = 409;
-      return {
-        error: error.message,
-        code: "CONFLICT",
-        suggestion: "Please choose a different value",
-      };
-    }
+    const mapped = mapAcceptInviteRouteError(error);
+    if (!mapped) throw error;
 
-    if (error instanceof Error && error.message.includes("does not match")) {
-      set.status = 400;
-      return {
-        error: error.message,
-        code: "IDENTIFIER_MISMATCH",
-        hint: "The email or phone number must match where the invitation was sent",
-      };
-    }
-
-    throw error;
+    set.status = mapped.status;
+    return mapped.body;
   });
