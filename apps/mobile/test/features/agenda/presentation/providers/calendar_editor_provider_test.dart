@@ -128,6 +128,36 @@ void main() {
   );
 
   test(
+    'series update does not overwrite recurrence when list DTO omitted it',
+    () {
+      final occurrence = CalendarOccurrence.fromJson({
+        'id': 'calendar-1:key-1',
+        'calendarId': 'calendar-1',
+        'recurrenceKey': 'key-1',
+        'ownerUserId': 'rep-1',
+        'kind': 'PERSONAL_BLOCK',
+        'title': 'Bloqueio',
+        'startsAt': '2026-08-03T12:00:00.000Z',
+        'endsAt': '2026-08-03T13:00:00.000Z',
+        'timeZone': 'America/Sao_Paulo',
+        'durationMinutes': 60,
+        'version': 4,
+        'canMutate': true,
+      });
+      final notifier = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingSeries(occurrence),
+      );
+
+      final payload = notifier.state.draft.toUpdateCommand().toJson();
+
+      expect(payload, isNot(contains('recurrence')));
+      expect(payload, isNot(contains('recurrenceUntil')));
+      expect(payload, isNot(contains('recurrenceCount')));
+    },
+  );
+
+  test(
     'keeps draft and idempotency key after network failure, then clears only on success',
     () async {
       final repository = _FakeCalendarRepository()

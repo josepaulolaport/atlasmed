@@ -141,6 +141,7 @@ class CalendarUpdateCommand extends Equatable {
     this.recurrence,
     this.recurrenceUntil,
     this.recurrenceCount,
+    this.includeRecurrence = true,
   });
 
   final int expectedVersion;
@@ -151,6 +152,7 @@ class CalendarUpdateCommand extends Equatable {
   final CalendarRecurrence? recurrence;
   final String? recurrenceUntil;
   final int? recurrenceCount;
+  final bool includeRecurrence;
 
   Map<String, dynamic> toJson() => {
     'expectedVersion': expectedVersion,
@@ -158,9 +160,10 @@ class CalendarUpdateCommand extends Equatable {
     if (startsAt != null) 'startsAt': startsAt,
     if (timeZone != null) 'timeZone': timeZone,
     if (durationMinutes != null) 'durationMinutes': durationMinutes,
-    if (recurrence != null) 'recurrence': calendarRecurrenceToApi(recurrence!),
-    'recurrenceUntil': recurrenceUntil,
-    'recurrenceCount': recurrenceCount,
+    if (includeRecurrence && recurrence != null)
+      'recurrence': calendarRecurrenceToApi(recurrence!),
+    if (includeRecurrence) 'recurrenceUntil': recurrenceUntil,
+    if (includeRecurrence) 'recurrenceCount': recurrenceCount,
   };
 
   @override
@@ -173,6 +176,7 @@ class CalendarUpdateCommand extends Equatable {
     recurrence,
     recurrenceUntil,
     recurrenceCount,
+    includeRecurrence,
   ];
 }
 

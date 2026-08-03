@@ -22,6 +22,7 @@ class CalendarEditorDraft extends Equatable {
     required this.recurrenceCount,
     required this.expectedVersion,
     required this.overrideVersion,
+    required this.recurrenceProvided,
   });
 
   final CalendarEventKind kind;
@@ -38,6 +39,7 @@ class CalendarEditorDraft extends Equatable {
   final int? recurrenceCount;
   final int expectedVersion;
   final int? overrideVersion;
+  final bool recurrenceProvided;
 
   CalendarEditorDraft copyWith({
     CalendarEventKind? kind,
@@ -74,6 +76,7 @@ class CalendarEditorDraft extends Equatable {
         : (recurrenceCount ?? this.recurrenceCount),
     expectedVersion: expectedVersion,
     overrideVersion: overrideVersion,
+    recurrenceProvided: recurrenceProvided,
   );
 
   CalendarCreateCommand toCreateCommand() => CalendarCreateCommand(
@@ -101,6 +104,7 @@ class CalendarEditorDraft extends Equatable {
     timeZone: timeZone,
     durationMinutes: durationMinutes,
     recurrence: recurrence,
+    includeRecurrence: recurrenceProvided,
     recurrenceUntil:
         recurrenceEnd == CalendarRecurrenceEnd.date && recurrenceUntil != null
         ? _dateOnly(recurrenceUntil!)
@@ -133,6 +137,7 @@ class CalendarEditorDraft extends Equatable {
     recurrenceCount,
     expectedVersion,
     overrideVersion,
+    recurrenceProvided,
   ];
 }
 
@@ -443,6 +448,7 @@ CalendarEditorDraft _initialDraft(
       recurrenceCount: occurrence.recurrenceCount,
       expectedVersion: occurrence.version,
       overrideVersion: occurrence.overrideVersion,
+      recurrenceProvided: occurrence.recurrenceProvided,
     );
   }
   final rounded = DateTime(
@@ -468,6 +474,7 @@ CalendarEditorDraft _initialDraft(
     recurrenceCount: null,
     expectedVersion: 0,
     overrideVersion: null,
+    recurrenceProvided: true,
   );
 }
 
