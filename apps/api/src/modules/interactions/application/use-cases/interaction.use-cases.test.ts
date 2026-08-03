@@ -138,8 +138,8 @@ class FakeInteractionRepository implements InteractionRepository {
   }
 }
 
-function executeGet(repository: InteractionRepository, roleName: Role, actorScope: ScopeContext) {
-  return new GetInteractionUseCase({ repository }).execute({
+function executeGet(repository: InteractionRepository, roleName: Role, actorScope: ScopeContext, clock = () => now) {
+  return new GetInteractionUseCase({ repository, now: clock }).execute({
     id: "interaction-1",
     actor: { userId: roleName === "MANAGER" ? "manager-1" : "rep-1", roleName },
     scope: actorScope,
@@ -148,7 +148,7 @@ function executeGet(repository: InteractionRepository, roleName: Role, actorScop
 
 describe("GetInteractionUseCase", () => {
   test("returns occurrence, facility, agent, order context, and owner mutation capability", async () => {
-    const result = await executeGet(new FakeInteractionRepository(), "REP", scope());
+    const result = await executeGet(new FakeInteractionRepository(), "REP", scope(), () => new Date("2026-08-03T12:00:00.000Z"));
 
     expect(result).toEqual(expect.objectContaining({
       id: "interaction-1",
@@ -256,11 +256,12 @@ describe("StartInteractionUseCase", () => {
 
   test("rejects manager mutation, invalid transitions, and stale versions with typed errors", async () => {
     const repository = new FakeInteractionRepository();
-    await expect(new StartInteractionUseCase({ repository }).execute({ ...ownerInput(), actor: { userId: "manager-1", roleName: "MANAGER" }, scope: scope({ managedUserIds: ["rep-1"] }) })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const useCase = new StartInteractionUseCase({ repository, now: () => now });
+    await expect(useCase.execute({ ...ownerInput(), actor: { userId: "manager-1", roleName: "MANAGER" }, scope: scope({ managedUserIds: ["rep-1"] }) })).rejects.toMatchObject({ code: "FORBIDDEN" });
     repository.record = interaction({ status: "IN_PROGRESS" });
-    await expect(new StartInteractionUseCase({ repository }).execute(ownerInput())).rejects.toBeInstanceOf(InteractionTransitionError);
+    await expect(useCase.execute(ownerInput())).rejects.toBeInstanceOf(InteractionTransitionError);
     repository.record = interaction({ version: 2 });
-    await expect(new StartInteractionUseCase({ repository }).execute(ownerInput())).rejects.toBeInstanceOf(InteractionVersionConflictError);
+    await expect(useCase.execute(ownerInput())).rejects.toBeInstanceOf(InteractionVersionConflictError);
   });
 });
 
