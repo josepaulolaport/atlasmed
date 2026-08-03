@@ -271,6 +271,183 @@ class CalendarInteractionContext extends Equatable {
   List<Object?> get props => [id, facilityId, agentUserId, modality, status];
 }
 
+class InteractionFacility extends Equatable {
+  const InteractionFacility({
+    required this.id,
+    required this.displayName,
+    this.city,
+    this.state,
+  });
+
+  final String id;
+  final String displayName;
+  final String? city;
+  final String? state;
+
+  factory InteractionFacility.fromJson(Map<String, dynamic> json) =>
+      InteractionFacility(
+        id: json['id'] as String,
+        displayName:
+            (json['displayName'] as String?) ??
+            (json['name'] as String?) ??
+            'Clínica',
+        city: json['city'] as String?,
+        state: json['state'] as String?,
+      );
+
+  String get locationLabel => [
+    city,
+    state,
+  ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' - ');
+
+  @override
+  List<Object?> get props => [id, displayName, city, state];
+}
+
+class InteractionAgent extends Equatable {
+  const InteractionAgent({required this.id, required this.displayName});
+
+  final String id;
+  final String displayName;
+
+  factory InteractionAgent.fromJson(Map<String, dynamic> json) =>
+      InteractionAgent(
+        id: json['id'] as String,
+        displayName:
+            (json['displayName'] as String?) ??
+            [json['firstName'], json['lastName']]
+                .whereType<String>()
+                .where((value) => value.trim().isNotEmpty)
+                .join(' '),
+      );
+
+  @override
+  List<Object?> get props => [id, displayName];
+}
+
+class InteractionLinkedOrder extends Equatable {
+  const InteractionLinkedOrder({
+    required this.id,
+    required this.status,
+    required this.type,
+    required this.orderedAt,
+  });
+
+  final String id;
+  final String status;
+  final String type;
+  final DateTime orderedAt;
+
+  factory InteractionLinkedOrder.fromJson(Map<String, dynamic> json) =>
+      InteractionLinkedOrder(
+        id: json['id'] as String,
+        status: json['status'] as String,
+        type: json['type'] as String,
+        orderedAt: DateTime.parse(json['orderedAt'] as String),
+      );
+
+  @override
+  List<Object?> get props => [id, status, type, orderedAt];
+}
+
+class InteractionDetail extends Equatable {
+  const InteractionDetail({
+    required this.id,
+    required this.calendarId,
+    required this.recurrenceKey,
+    required this.title,
+    required this.modality,
+    required this.status,
+    required this.occurrenceStartsAt,
+    required this.occurrenceEndsAt,
+    required this.timeZone,
+    required this.facility,
+    required this.agent,
+    required this.linkedOrders,
+    required this.version,
+    required this.canMutate,
+    this.actualStartedAt,
+    this.actualEndedAt,
+    this.correctionReason,
+  });
+
+  final String id;
+  final String calendarId;
+  final String recurrenceKey;
+  final String title;
+  final CalendarModality modality;
+  final InteractionStatus status;
+  final DateTime occurrenceStartsAt;
+  final DateTime occurrenceEndsAt;
+  final String timeZone;
+  final InteractionFacility facility;
+  final InteractionAgent agent;
+  final List<InteractionLinkedOrder> linkedOrders;
+  final int version;
+  final bool canMutate;
+  final DateTime? actualStartedAt;
+  final DateTime? actualEndedAt;
+  final String? correctionReason;
+
+  factory InteractionDetail.fromJson(Map<String, dynamic> json) {
+    final occurrence = json['occurrence'] as Map<String, dynamic>;
+    final calendar = json['calendar'] as Map<String, dynamic>;
+    return InteractionDetail(
+      id: json['id'] as String,
+      calendarId: json['calendarId'] as String,
+      recurrenceKey: json['recurrenceKey'] as String,
+      title: calendar['title'] as String? ?? 'Atendimento',
+      modality: _enumFromApi(CalendarModality.values, json['modality']),
+      status: _enumFromApi(InteractionStatus.values, json['status']),
+      occurrenceStartsAt: DateTime.parse(
+        occurrence['startsAt'] as String,
+      ).toUtc(),
+      occurrenceEndsAt: DateTime.parse(occurrence['endsAt'] as String).toUtc(),
+      timeZone: occurrence['timeZone'] as String? ?? 'America/Sao_Paulo',
+      facility: InteractionFacility.fromJson(
+        json['facility'] as Map<String, dynamic>,
+      ),
+      agent: InteractionAgent.fromJson(json['agent'] as Map<String, dynamic>),
+      linkedOrders: (json['linkedOrders'] as List<dynamic>? ?? const [])
+          .map(
+            (order) =>
+                InteractionLinkedOrder.fromJson(order as Map<String, dynamic>),
+          )
+          .toList(growable: false),
+      version: json['version'] as int,
+      canMutate: json['canMutate'] as bool? ?? false,
+      actualStartedAt: json['actualStartedAt'] == null
+          ? null
+          : DateTime.parse(json['actualStartedAt'] as String).toUtc(),
+      actualEndedAt: json['actualEndedAt'] == null
+          ? null
+          : DateTime.parse(json['actualEndedAt'] as String).toUtc(),
+      correctionReason: json['correctionReason'] as String?,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    id,
+    calendarId,
+    recurrenceKey,
+    title,
+    modality,
+    status,
+    occurrenceStartsAt,
+    occurrenceEndsAt,
+    timeZone,
+    facility,
+    agent,
+    linkedOrders,
+    version,
+    canMutate,
+    actualStartedAt,
+    actualEndedAt,
+    correctionReason,
+  ];
+}
+
 class CalendarOccurrence extends Equatable {
   const CalendarOccurrence({
     required this.calendarId,

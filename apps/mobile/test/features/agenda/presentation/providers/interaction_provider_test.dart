@@ -1,0 +1,115 @@
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/interaction_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+class _Repository implements CalendarRepositoryContract {
+  _Repository({required this.detail, this.startError});
+
+  InteractionDetail detail;
+  Object? startError;
+  int getCalls = 0;
+  int startCalls = 0;
+  final List<String> keys = [];
+
+  @override
+  Future<InteractionDetail> getInteraction(String id) async {
+    getCalls++;
+    return detail;
+  }
+
+  @override
+  Future<InteractionDetail> startInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+  }) async {
+    startCalls++;
+    keys.add(idempotencyKey);
+    if (startError != null) throw startError!;
+    detail = _detail(status: InteractionStatus.inProgress, version: 2);
+    return detail;
+  }
+
+  @override
+  Future<InteractionDetail> completeInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+    String? correctionReason,
+  }) async => detail;
+
+  @override
+  Future<List<CalendarAvailabilityInterval>> getAvailability({
+    required DateTime from,
+    required DateTime to,
+    String? ownerUserId,
+  }) async => const [];
+
+  @override
+  Future<List<CalendarOccurrence>> listCalendar({
+    required DateTime from,
+    required DateTime to,
+    String? ownerUserId,
+  }) async => const [];
+}
+
+InteractionDetail _detail({
+  InteractionStatus status = InteractionStatus.scheduled,
+  int version = 1,
+}) => InteractionDetail(
+  id: 'interaction-1',
+  calendarId: 'calendar-1',
+  recurrenceKey: '2026-08-03T09:00',
+  title: 'Visita comercial',
+  modality: CalendarModality.inPerson,
+  status: status,
+  occurrenceStartsAt: DateTime.utc(2026, 8, 3, 12),
+  occurrenceEndsAt: DateTime.utc(2026, 8, 3, 13),
+  timeZone: 'America/Sao_Paulo',
+  facility: const InteractionFacility(
+    id: 'facility-1',
+    displayName: 'Clínica Central',
+  ),
+  agent: const InteractionAgent(id: 'agent-1', displayName: 'Ana'),
+  linkedOrders: const [],
+  version: version,
+  canMutate: true,
+);
+
+void main() {
+  test('opening only loads detail and never starts automatically', () async {
+    final repository = _Repository(detail: _detail());
+    final notifier = InteractionNotifier(repository, 'interaction-1');
+
+    await Future<void>.delayed(Duration.zero);
+
+    expect(repository.getCalls, 1);
+    expect(repository.startCalls, 0);
+    expect(
+      notifier.state.detail.asData?.value.status,
+      InteractionStatus.scheduled,
+    );
+  });
+
+  test('retry preserves idempotency key after a network error', () async {
+    final repository = _Repository(
+      detail: _detail(),
+      startError: const CalendarNetworkException('offline'),
+    );
+    final notifier = InteractionNotifier(repository, 'interaction-1');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(await notifier.start(), isFalse);
+    repository.startError = null;
+    expect(await notifier.start(), isTrue);
+
+    expect(repository.keys, hasLength(2));
+    expect(repository.keys.first, repository.keys.last);
+    expect(
+      notifier.state.detail.asData?.value.status,
+      InteractionStatus.inProgress,
+    );
+  });
+}

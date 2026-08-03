@@ -92,8 +92,16 @@ class CartState {
   final List<CartItem> items;
   final SelectableClinic? clinic;
   final SelectableDoctor? doctor;
+  final String? interactionId;
+  final bool isClinicLocked;
 
-  const CartState({this.items = const [], this.clinic, this.doctor});
+  const CartState({
+    this.items = const [],
+    this.clinic,
+    this.doctor,
+    this.interactionId,
+    this.isClinicLocked = false,
+  });
 
   int get totalQty => items.fold(0, (s, i) => s + i.qty);
 
@@ -119,13 +127,22 @@ class CartState {
     List<CartItem>? items,
     SelectableClinic? clinic,
     SelectableDoctor? doctor,
+    String? interactionId,
+    bool? isClinicLocked,
     bool clearClinic = false,
     bool clearDoctor = false,
+    bool clearInteraction = false,
   }) {
     return CartState(
       items: items ?? this.items,
       clinic: clearClinic ? null : (clinic ?? this.clinic),
       doctor: clearDoctor ? null : (doctor ?? this.doctor),
+      interactionId: clearInteraction
+          ? null
+          : (interactionId ?? this.interactionId),
+      isClinicLocked: clearInteraction
+          ? false
+          : (isClinicLocked ?? this.isClinicLocked),
     );
   }
 }
@@ -189,7 +206,20 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 
   void setClinic(SelectableClinic? clinic) {
+    if (state.isClinicLocked) return;
     state = state.copyWith(clinic: clinic, clearDoctor: true);
+  }
+
+  void setInteractionContext({
+    required String interactionId,
+    required SelectableClinic clinic,
+  }) {
+    state = state.copyWith(
+      interactionId: interactionId,
+      clinic: clinic,
+      isClinicLocked: true,
+      clearDoctor: true,
+    );
   }
 
   void setDoctor(SelectableDoctor? doctor) {

@@ -30,6 +30,7 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/interaction_screen.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
@@ -499,8 +500,17 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           ),
         ),
         GoRoute(
+          path: '/agenda/interactions/:id',
+          builder: (_, state) =>
+              InteractionScreen(interactionId: state.pathParameters['id']!),
+        ),
+        GoRoute(
           path: '/orders/new',
-          builder: (_, _) => const NewOrderProductsScreen(),
+          builder: (_, state) => NewOrderProductsScreen(
+            interactionId: state.uri.queryParameters['interactionId'],
+            facilityId: state.uri.queryParameters['facilityId'],
+            facilityName: state.uri.queryParameters['facilityName'],
+          ),
         ),
         GoRoute(
           path: '/orders/new/cart',
@@ -512,7 +522,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         GoRoute(
           path: '/orders/new/success',
-          builder: (_, _) => const OrderSuccessScreen(),
+          builder: (_, state) => OrderSuccessScreen(
+            orderId: state.uri.queryParameters['orderId'],
+            interactionId: state.uri.queryParameters['interactionId'],
+          ),
         ),
         GoRoute(
           path: '/orders/:id',

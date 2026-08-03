@@ -21,6 +21,21 @@ abstract interface class CalendarRepositoryContract {
     required DateTime to,
     String? ownerUserId,
   });
+
+  Future<InteractionDetail> getInteraction(String id);
+
+  Future<InteractionDetail> startInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+  });
+
+  Future<InteractionDetail> completeInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+    String? correctionReason,
+  });
 }
 
 abstract interface class CalendarMutationRepositoryContract {
@@ -222,6 +237,64 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     }
   }
 
+  @override
+  Future<InteractionDetail> getInteraction(String id) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/$id'),
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  @override
+  Future<InteractionDetail> startInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/$id/start'),
+        method: RepositoryHttpMethod.post,
+        headers: {'Idempotency-Key': idempotencyKey},
+        body: {'expectedVersion': expectedVersion},
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  @override
+  Future<InteractionDetail> completeInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+    String? correctionReason,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: '/api/v1/interactions/$id/complete'),
+        method: RepositoryHttpMethod.post,
+        headers: {'Idempotency-Key': idempotencyKey},
+        body: {
+          'expectedVersion': expectedVersion,
+          if (correctionReason != null && correctionReason.trim().isNotEmpty)
+            'correctionReason': correctionReason.trim(),
+        },
+      ),
+    );
+    return _interactionFromResponse(response);
+  }
+
+  InteractionDetail _interactionFromResponse(RepositoryHttpResponse response) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _throwIfError(response);
+    }
+    return InteractionDetail.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
+
   Uri _calendarUri(
     String suffix, {
     required DateTime from,
@@ -277,6 +350,14 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         throw CalendarValidationException(message, details: payload.details);
       case 403:
         throw CalendarForbiddenException(message);
+      case 409 when payload.code == 'INTERACTION_INVALID_TRANSITION':
+        throw InteractionTransitionException(message);
+      case 409 when payload.code == 'INTERACTION_VERSION_CONFLICT':
+        throw InteractionVersionConflictException(
+          message,
+          expectedVersion: payload.expectedVersion,
+          actualVersion: payload.actualVersion,
+        );
       case 409 when payload.code == 'CALENDAR_VERSION_CONFLICT':
         throw CalendarVersionConflictException(
           message,
@@ -321,6 +402,21 @@ class CalendarVersionConflictException extends CalendarApiException {
   final int? expectedVersion;
 }
 
+class InteractionTransitionException extends CalendarApiException {
+  const InteractionTransitionException(super.message);
+}
+
+class InteractionVersionConflictException extends CalendarApiException {
+  const InteractionVersionConflictException(
+    super.message, {
+    this.expectedVersion,
+    this.actualVersion,
+  });
+
+  final int? expectedVersion;
+  final int? actualVersion;
+}
+
 class CalendarValidationException extends CalendarApiException {
   const CalendarValidationException(super.message, {this.details = const []});
 
@@ -339,6 +435,7 @@ class _CalendarErrorPayload {
     required this.conflicts,
     this.calendarId,
     this.expectedVersion,
+    this.actualVersion,
   });
 
   final String? code;
@@ -347,6 +444,7 @@ class _CalendarErrorPayload {
   final List<CalendarConflict> conflicts;
   final String? calendarId;
   final int? expectedVersion;
+  final int? actualVersion;
 }
 
 _CalendarErrorPayload _errorPayload(String body) {
@@ -369,6 +467,7 @@ _CalendarErrorPayload _errorPayload(String body) {
           .toList(growable: false),
       calendarId: error['calendarId'] as String?,
       expectedVersion: error['expectedVersion'] as int?,
+      actualVersion: error['actualVersion'] as int?,
     );
   } catch (_) {
     return const _CalendarErrorPayload(

@@ -25,6 +25,25 @@ class _FakeCalendarRepository implements CalendarRepositoryContract {
     required DateTime to,
     String? ownerUserId,
   }) => Future.value(const []);
+
+  @override
+  Future<InteractionDetail> getInteraction(String id) =>
+      throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> startInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> completeInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+    String? correctionReason,
+  }) => throw UnimplementedError();
 }
 
 void main() {

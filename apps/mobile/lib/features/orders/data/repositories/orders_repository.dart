@@ -19,6 +19,7 @@ class ApiOrderListItem {
     required this.id,
     required this.legacyId,
     required this.verticalId,
+    required this.interactionId,
     required this.status,
     required this.type,
     required this.orderedAt,
@@ -35,6 +36,7 @@ class ApiOrderListItem {
   final String id;
   final int? legacyId;
   final String? verticalId;
+  final String? interactionId;
   final String status;
   final String type;
   final DateTime? orderedAt;
@@ -54,6 +56,7 @@ class ApiOrderListItem {
         id: json['id'] as String,
         legacyId: json['legacyId'] as int?,
         verticalId: json['verticalId'] as String?,
+        interactionId: json['interactionId'] as String?,
         status: json['status'] as String,
         type: json['type'] as String,
         orderedAt: _dateOrNull(json['orderedAt']),
@@ -139,6 +142,7 @@ class ApiOrderDetail extends ApiOrderListItem {
     required super.id,
     required super.legacyId,
     required super.verticalId,
+    required super.interactionId,
     required super.status,
     required super.type,
     required super.orderedAt,
@@ -165,6 +169,7 @@ class ApiOrderDetail extends ApiOrderListItem {
     id: json['id'] as String,
     legacyId: json['legacyId'] as int?,
     verticalId: json['verticalId'] as String?,
+    interactionId: json['interactionId'] as String?,
     status: json['status'] as String,
     type: json['type'] as String,
     orderedAt: _dateOrNull(json['orderedAt']),
@@ -242,8 +247,14 @@ class OrdersRepository extends Repository<OrdersPage>
     int page = 1,
     int limit = 20,
     List<String>? statuses,
+    String? interactionId,
   }) async {
-    final query = <String, String>{'page': '$page', 'limit': '$limit'};
+    final query = <String, String>{
+      'page': '$page',
+      'limit': '$limit',
+      if (interactionId != null && interactionId.isNotEmpty)
+        'interactionId': interactionId,
+    };
     if (statuses != null && statuses.isNotEmpty) {
       query['status'] = statuses.join(',');
     }
@@ -277,6 +288,7 @@ class OrdersRepository extends Repository<OrdersPage>
   Future<ApiOrderDetail> createOrder({
     required String facilityId,
     required List<CreateOrderItemInput> items,
+    String? interactionId,
     String? verticalId,
     String? professionalId,
     String? notes,
@@ -288,6 +300,7 @@ class OrdersRepository extends Repository<OrdersPage>
         method: RepositoryHttpMethod.post,
         body: {
           'facilityId': facilityId,
+          'interactionId': ?interactionId,
           'verticalId': ?verticalId,
           'professionalId': ?professionalId,
           'notes': ?notes,

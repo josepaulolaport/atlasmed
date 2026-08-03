@@ -286,7 +286,172 @@ void main() {
       expect(client.requests[2].body?['reason'], 'Mudança de agenda');
     },
   );
+
+  test('gets interaction detail without issuing a lifecycle command', () async {
+    final client = _RecordingClient([_response(200, _interactionJson())]);
+    final repository = CalendarRepository(
+      baseUrl: 'https://api.atlasmed.test',
+      client: client,
+    );
+
+    final interaction = await repository.getInteraction('interaction-1');
+
+    expect(client.requests, hasLength(1));
+    expect(client.requests.single.method, RepositoryHttpMethod.get);
+    expect(
+      client.requests.single.url.path,
+      '/api/v1/interactions/interaction-1',
+    );
+    expect(interaction.status, InteractionStatus.scheduled);
+    expect(interaction.facility.displayName, 'Clínica Central');
+    expect(interaction.linkedOrders.single.id, 'order-1');
+  });
+
+  test(
+    'starts early with stable idempotency key and expected version',
+    () async {
+      final client = _RecordingClient([
+        _response(200, _interactionJson(status: 'IN_PROGRESS', version: 4)),
+      ]);
+      final repository = CalendarRepository(
+        baseUrl: 'https://api.atlasmed.test',
+        client: client,
+      );
+
+      final interaction = await repository.startInteraction(
+        'interaction-1',
+        expectedVersion: 3,
+        idempotencyKey: 'start-interaction-1-3',
+      );
+
+      final request = client.requests.single;
+      expect(request.method, RepositoryHttpMethod.post);
+      expect(request.url.path, '/api/v1/interactions/interaction-1/start');
+      expect(request.headers['Idempotency-Key'], 'start-interaction-1-3');
+      expect(request.body, {'expectedVersion': 3});
+      expect(interaction.status, InteractionStatus.inProgress);
+      expect(interaction.version, 4);
+    },
+  );
+
+  test(
+    'completes a missed interaction with correction justification',
+    () async {
+      final client = _RecordingClient([
+        _response(200, _interactionJson(status: 'COMPLETED', version: 5)),
+      ]);
+      final repository = CalendarRepository(
+        baseUrl: 'https://api.atlasmed.test',
+        client: client,
+      );
+
+      await repository.completeInteraction(
+        'interaction-1',
+        expectedVersion: 4,
+        idempotencyKey: 'complete-interaction-1-4',
+        correctionReason: 'Atendimento confirmado posteriormente.',
+      );
+
+      expect(client.requests.single.body, {
+        'expectedVersion': 4,
+        'correctionReason': 'Atendimento confirmado posteriormente.',
+      });
+    },
+  );
+
+  test(
+    'maps interaction transition and version conflicts for retry UI',
+    () async {
+      final transitionRepository = CalendarRepository(
+        baseUrl: 'https://api.atlasmed.test',
+        client: _RecordingClient([
+          _response(409, {
+            'error': {
+              'code': 'INTERACTION_INVALID_TRANSITION',
+              'message': 'Transição inválida.',
+            },
+          }),
+        ]),
+      );
+      expect(
+        () => transitionRepository.startInteraction(
+          'interaction-1',
+          expectedVersion: 1,
+          idempotencyKey: 'stable-key',
+        ),
+        throwsA(isA<InteractionTransitionException>()),
+      );
+
+      final versionRepository = CalendarRepository(
+        baseUrl: 'https://api.atlasmed.test',
+        client: _RecordingClient([
+          _response(409, {
+            'error': {
+              'code': 'INTERACTION_VERSION_CONFLICT',
+              'message': 'Versão desatualizada.',
+              'expectedVersion': 2,
+              'actualVersion': 3,
+            },
+          }),
+        ]),
+      );
+      expect(
+        () => versionRepository.completeInteraction(
+          'interaction-1',
+          expectedVersion: 2,
+          idempotencyKey: 'stable-key',
+        ),
+        throwsA(isA<InteractionVersionConflictException>()),
+      );
+    },
+  );
 }
+
+Map<String, dynamic> _interactionJson({
+  String status = 'SCHEDULED',
+  int version = 3,
+}) => {
+  'id': 'interaction-1',
+  'calendarId': 'calendar-1',
+  'recurrenceKey': '2026-08-03T09:00',
+  'modality': 'IN_PERSON',
+  'status': status,
+  'actualStartedAt': null,
+  'actualEndedAt': null,
+  'correctedAt': null,
+  'correctedByUserId': null,
+  'correctionReason': null,
+  'visitId': null,
+  'version': version,
+  'calendar': {'id': 'calendar-1', 'title': 'Visita comercial'},
+  'occurrence': {
+    'recurrenceKey': '2026-08-03T09:00',
+    'startsAt': '2026-08-03T12:00:00.000Z',
+    'endsAt': '2026-08-03T13:00:00.000Z',
+    'timeZone': 'America/Sao_Paulo',
+  },
+  'facility': {
+    'id': 'facility-1',
+    'displayName': 'Clínica Central',
+    'city': 'São Paulo',
+    'state': 'SP',
+  },
+  'agent': {
+    'id': 'agent-1',
+    'firstName': 'Ana',
+    'lastName': 'Souza',
+    'displayName': 'Ana Souza',
+  },
+  'linkedOrders': [
+    {
+      'id': 'order-1',
+      'status': 'PENDING',
+      'type': 'SALE',
+      'orderedAt': '2026-08-03T12:30:00.000Z',
+    },
+  ],
+  'canMutate': true,
+};
 
 Future<Object> _capturedError(RepositoryHttpResponse response) async {
   final repository = CalendarRepository(

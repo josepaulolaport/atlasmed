@@ -22,7 +22,7 @@ class AgendaItem extends StatelessWidget {
       button: onTap != null,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(

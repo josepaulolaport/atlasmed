@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/selectable.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/catalog_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
@@ -12,7 +13,16 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/product
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class NewOrderProductsScreen extends ConsumerStatefulWidget {
-  const NewOrderProductsScreen({super.key});
+  const NewOrderProductsScreen({
+    super.key,
+    this.interactionId,
+    this.facilityId,
+    this.facilityName,
+  });
+
+  final String? interactionId;
+  final String? facilityId;
+  final String? facilityName;
 
   @override
   ConsumerState<NewOrderProductsScreen> createState() =>
@@ -34,6 +44,25 @@ class _NewOrderProductsScreenState
     'Diagnóstico',
     'Suplementação',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final interactionId = widget.interactionId;
+    final facilityId = widget.facilityId;
+    final facilityName = widget.facilityName;
+    if (interactionId != null && facilityId != null && facilityName != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref
+            .read(cartProvider.notifier)
+            .setInteractionContext(
+              interactionId: interactionId,
+              clinic: SelectableClinic(id: facilityId, name: facilityName),
+            );
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -203,17 +232,18 @@ class _NewOrderProductsScreenState
                 ),
               ),
             ),
-            GestureDetector(
-              onTap: () {},
-              child: const Text(
-                'Trocar',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.navyBright,
+            if (!cart.isClinicLocked)
+              GestureDetector(
+                onTap: () {},
+                child: const Text(
+                  'Trocar',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navyBright,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

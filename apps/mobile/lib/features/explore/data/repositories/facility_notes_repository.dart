@@ -18,16 +18,31 @@ class FacilityNotesException implements Exception {
 /// Private facility field notes (`GET/POST /facilities/:id/notes`).
 class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
     with SessionEnvironmentMixin<List<FacilityFieldNote>> {
-  FacilityNotesRepository(this.facilityId, {RepositoryHttpClient? client})
-    : _client = client,
-      super(
-        endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/notes',
-        ),
-        name: 'FacilityNotesRepository',
-      );
+  FacilityNotesRepository(
+    this.facilityId, {
+    this.ownerUserId,
+    RepositoryHttpClient? client,
+    String? baseUrl,
+  }) : _client = client,
+       _actorEndpoint = Uri.parse(
+         '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/notes',
+       ),
+       super(
+         endpoint:
+             Uri.parse(
+               '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/notes',
+             ).replace(
+               queryParameters: ownerUserId == null || ownerUserId.isEmpty
+                   ? null
+                   : {'ownerUserId': ownerUserId},
+             ),
+         resolveOnCreate: false,
+         name: 'FacilityNotesRepository',
+       );
 
   final String facilityId;
+  final String? ownerUserId;
+  final Uri _actorEndpoint;
   final RepositoryHttpClient? _client;
 
   @override
@@ -42,17 +57,24 @@ class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
   }
 
   Future<List<FacilityFieldNote>> loadNotes() async {
-    final result = await currentValueOrResolve();
-    if (result == null) {
-      throw const FacilityNotesException();
+    final response = await client.call(
+      request: RepositoryHttpRequest(url: endpoint),
+    );
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityNotesException(
+          'Falha ao carregar notas (${response.statusCode})',
+        );
+      }
     }
-    return result;
+    return fromJson(response.body);
   }
 
   Future<FacilityFieldNote> createNote(String note) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: endpoint,
+        url: _actorEndpoint,
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
         body: {'note': note},
@@ -68,9 +90,7 @@ class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
       }
     }
 
-    final created = _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
-    await refresh();
-    return created;
+    return _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   FacilityFieldNote _fromApi(Map<String, dynamic> map) {

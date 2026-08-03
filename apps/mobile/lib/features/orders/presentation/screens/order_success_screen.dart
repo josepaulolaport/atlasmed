@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/interaction_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
@@ -8,7 +9,10 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_w
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
-  const OrderSuccessScreen({super.key});
+  const OrderSuccessScreen({super.key, this.orderId, this.interactionId});
+
+  final String? orderId;
+  final String? interactionId;
 
   @override
   ConsumerState<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
@@ -20,6 +24,11 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(cartProvider.notifier).clearCart();
+      ref.invalidate(ordersPageProvider(null));
+      final interactionId = widget.interactionId;
+      if (interactionId != null) {
+        ref.invalidate(interactionProvider(interactionId));
+      }
     });
   }
 
@@ -40,7 +49,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
                 children: [
-                  _HeroSection(orderId: 'PED-2042'),
+                  _HeroSection(orderId: widget.orderId ?? 'Pedido confirmado'),
                   const SizedBox(height: 16),
                   _InfoCard(
                     child: Row(
@@ -186,7 +195,11 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/orders'),
+                  onPressed: () => widget.interactionId == null
+                      ? context.go('/orders')
+                      : context.go(
+                          '/agenda/interactions/${widget.interactionId}',
+                        ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.navyDeep,
                     foregroundColor: Colors.white,
@@ -195,9 +208,14 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Ver meus pedidos',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  child: Text(
+                    widget.interactionId == null
+                        ? 'Ver meus pedidos'
+                        : 'Voltar ao atendimento',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),

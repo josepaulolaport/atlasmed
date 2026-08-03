@@ -66,6 +66,25 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
     required DateTime to,
     String? ownerUserId,
   }) async => const [];
+
+  @override
+  Future<InteractionDetail> getInteraction(String id) =>
+      throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> startInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<InteractionDetail> completeInteraction(
+    String id, {
+    required int expectedVersion,
+    required String idempotencyKey,
+    String? correctionReason,
+  }) => throw UnimplementedError();
 }
 
 User _user(String id, String name, UserRoleName role) => User(
