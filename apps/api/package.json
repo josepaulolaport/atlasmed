@@ -30,6 +30,8 @@
     "db:geocode:facilities:apply": "bash -lc 'set -a; source .env; set +a; bun src/scripts/geocode-facilities.ts --apply \"$@\"' --",
     "db:cleanup:multi-uta-patches": "bun src/scripts/cleanup-legacy-multi-uta-patches.ts",
     "db:cleanup:multi-uta-patches:apply": "APPLY=1 bun src/scripts/cleanup-legacy-multi-uta-patches.ts",
+    "db:import:legacy-cnes-care-facilities": "bun src/scripts/import-legacy-cnes-care-facilities.ts",
+    "db:import:legacy-cnes-care-facilities:apply": "APPLY=1 bun src/scripts/import-legacy-cnes-care-facilities.ts",
     "db:reset:test": "cd ../../packages/database && ATLASMED_ALLOW_DB_PUSH=1 ATLASMED_ALLOW_DB_PUSH_FORCE=1 ATLASMED_ALLOW_DATA_LOSS=1 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun run db:push --force"
   },
   "dependencies": {
@@ -61,6 +63,7 @@
     "ioredis": "^5.10.1",
     "jose": "^6.2.3",
     "meilisearch": "^0.59.0",
+    "mysql2": "^3.23.2",
     "otplib": "^13.4.0",
     "pg": "^8.21.0",
     "prom-client": "^15.1.3",
