@@ -10,6 +10,8 @@ export interface InteractionContext {
   agentUserId: string;
   facilityId: string;
   status: InteractionContextStatus;
+  calendarStatus: "ACTIVE" | "CANCELLED";
+  occurrenceStatus: "ACTIVE" | "CANCELLED" | null;
   canRead: boolean;
   canCreateOrder: boolean;
 }

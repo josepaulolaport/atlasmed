@@ -1,16 +1,20 @@
 import {
   facilities,
   facilityVerticalProfiles,
+  orderCommandReceipts,
   orderItems,
   orders,
   productVerticals,
   products,
   professionals,
   users,
+  type AnyDatabase,
 } from "@atlasmed/database";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
+import { DatabaseError } from "../../../../../shared/errors";
 import type {
+  CreateOrderIdempotentResult,
   CreateOrderInput,
   OrderDetailRecord,
   OrderRepository,
@@ -25,6 +29,35 @@ function scopeCondition(scope: OrderScopeFilter) {
 
 function personName(firstName: string | null, lastName: string | null, fallback: string | null) {
   return [firstName, lastName].filter(Boolean).join(" ") || fallback || null;
+}
+
+function deserializeOrderReceipt(value: unknown): OrderDetailRecord {
+  const order = value as OrderDetailRecord & {
+    orderedAt: string | Date | null;
+    createdAt: string | Date;
+    updatedAt: string | Date;
+    finalizedAt: string | Date | null;
+    noBillingAt: string | Date | null;
+    expenseAuthorizedAt: string | Date | null;
+    items: Array<OrderDetailRecord["items"][number] & {
+      createdAt: string | Date;
+      updatedAt: string | Date;
+    }>;
+  };
+  return {
+    ...order,
+    orderedAt: order.orderedAt ? new Date(order.orderedAt) : null,
+    createdAt: new Date(order.createdAt),
+    updatedAt: new Date(order.updatedAt),
+    finalizedAt: order.finalizedAt ? new Date(order.finalizedAt) : null,
+    noBillingAt: order.noBillingAt ? new Date(order.noBillingAt) : null,
+    expenseAuthorizedAt: order.expenseAuthorizedAt ? new Date(order.expenseAuthorizedAt) : null,
+    items: order.items.map((item) => ({
+      ...item,
+      createdAt: new Date(item.createdAt),
+      updatedAt: new Date(item.updatedAt),
+    })),
+  };
 }
 
 export class DrizzleOrderRepository implements OrderRepository {
@@ -169,7 +202,11 @@ export class DrizzleOrderRepository implements OrderRepository {
   }
 
   async findById(id: string): Promise<OrderDetailRecord | null> {
-    const [order] = await db
+    return this.findByIdWithDatabase(db, id);
+  }
+
+  private async findByIdWithDatabase(database: AnyDatabase, id: string): Promise<OrderDetailRecord | null> {
+    const [order] = await database
       .select({
         order: orders,
         facilityId: facilities.id,
@@ -191,7 +228,7 @@ export class DrizzleOrderRepository implements OrderRepository {
 
     if (!order) return null;
 
-    const items = await db
+    const items = await database
       .select({ item: orderItems, productId: products.id, productName: products.name, productCode: products.code })
       .from(orderItems)
       .leftJoin(products, eq(products.id, orderItems.productId))
@@ -278,6 +315,110 @@ export class DrizzleOrderRepository implements OrderRepository {
     return new Map(rows.map((row) => [row.id, Number(row.price)]));
   }
 
+  async findCommandReceipt(actorUserId: string, commandKey: string) {
+    const [receipt] = await db
+      .select({
+        requestFingerprint: orderCommandReceipts.requestFingerprint,
+        order: orderCommandReceipts.result,
+      })
+      .from(orderCommandReceipts)
+      .where(
+        and(
+          eq(orderCommandReceipts.actorUserId, actorUserId),
+          eq(orderCommandReceipts.commandKey, commandKey),
+        ),
+      )
+      .limit(1);
+    return receipt
+      ? { requestFingerprint: receipt.requestFingerprint, order: deserializeOrderReceipt(receipt.order) }
+      : null;
+  }
+
+  async createIdempotently(
+    actorUserId: string,
+    commandKey: string,
+    requestFingerprint: string,
+    input: CreateOrderInput,
+  ): Promise<CreateOrderIdempotentResult> {
+    return db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({
+          requestFingerprint: orderCommandReceipts.requestFingerprint,
+          result: orderCommandReceipts.result,
+        })
+        .from(orderCommandReceipts)
+        .where(
+          and(
+            eq(orderCommandReceipts.actorUserId, actorUserId),
+            eq(orderCommandReceipts.commandKey, commandKey),
+          ),
+        )
+        .for("update")
+        .limit(1);
+      if (existing) {
+        if (existing.requestFingerprint !== requestFingerprint) return { kind: "mismatch" };
+        return { kind: "replay", order: deserializeOrderReceipt(existing.result) };
+      }
+
+      const [created] = await tx
+        .insert(orders)
+        .values({
+          facilityId: input.facilityId,
+          interactionId: input.interactionId ?? null,
+          verticalId: input.verticalId,
+          sellerId: input.sellerId,
+          professionalId: input.professionalId ?? null,
+          status: (input.status ?? "PENDING") as OrderStatus,
+          type: (input.type ?? "SALE") as "SALE" | "CONSIGNMENT" | "DONATION" | "OTHER",
+          notes: input.notes ?? null,
+          freight: String(input.freight ?? 0),
+          orderedAt: input.orderedAt ?? new Date(),
+        })
+        .returning({ id: orders.id });
+      if (!created) throw new DatabaseError("create order");
+
+      await tx.insert(orderItems).values(input.items.map((item, index) => ({
+        orderId: created.id,
+        productId: item.productId,
+        lineNumber: index + 1,
+        quantity: String(item.quantity),
+        unitPrice: String(item.unitPrice ?? 0),
+      })));
+      const order = await this.findByIdWithDatabase(tx, created.id);
+      if (!order) throw new DatabaseError("load created order");
+      const [receipt] = await tx
+        .insert(orderCommandReceipts)
+        .values({
+          actorUserId,
+          commandKey,
+          requestFingerprint,
+          orderId: order.id,
+          result: order,
+        })
+        .onConflictDoNothing({
+          target: [orderCommandReceipts.actorUserId, orderCommandReceipts.commandKey],
+        })
+        .returning({ id: orderCommandReceipts.id });
+      if (receipt) return { kind: "created", order };
+
+      const [winner] = await tx
+        .select({
+          requestFingerprint: orderCommandReceipts.requestFingerprint,
+          result: orderCommandReceipts.result,
+        })
+        .from(orderCommandReceipts)
+        .where(
+          and(
+            eq(orderCommandReceipts.actorUserId, actorUserId),
+            eq(orderCommandReceipts.commandKey, commandKey),
+          ),
+        )
+        .limit(1);
+      if (!winner || winner.requestFingerprint !== requestFingerprint) return { kind: "mismatch" };
+      return { kind: "replay", order: deserializeOrderReceipt(winner.result) };
+    });
+  }
+
   async create(input: CreateOrderInput): Promise<OrderDetailRecord> {
     const orderId = await db.transaction(async (tx) => {
       const [created] = await tx
@@ -296,7 +437,7 @@ export class DrizzleOrderRepository implements OrderRepository {
         })
         .returning({ id: orders.id });
 
-      if (!created) throw new Error("Failed to insert order");
+      if (!created) throw new DatabaseError("create order");
 
       await tx.insert(orderItems).values(
         input.items.map((item, index) => ({
@@ -312,7 +453,7 @@ export class DrizzleOrderRepository implements OrderRepository {
     });
 
     const detail = await this.findById(orderId);
-    if (!detail) throw new Error("Order created but not found");
+    if (!detail) throw new DatabaseError("load created order");
     return detail;
   }
 }

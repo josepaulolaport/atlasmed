@@ -6,7 +6,7 @@ import {
   GetOrderUseCase,
   ListOrdersUseCase,
 } from "./orders.use-cases";
-import type { OrderRepository } from "../interfaces/order.repository.interface";
+import type { OrderDetailRecord, OrderRepository } from "../interfaces/order.repository.interface";
 
 function createInteractionContextPort(
   context: {
@@ -14,6 +14,8 @@ function createInteractionContextPort(
     agentUserId: string;
     facilityId: string;
     status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "NOT_COMPLETED" | "CANCELLED";
+    calendarStatus: "ACTIVE" | "CANCELLED";
+    occurrenceStatus: "ACTIVE" | "CANCELLED" | null;
     canRead: boolean;
     canCreateOrder: boolean;
   } | null,
@@ -103,6 +105,11 @@ function createRepository(overrides: Partial<OrderRepository> = {}): OrderReposi
     findProductIdsInVertical: async (productIds) => productIds,
     findProductUnitPrices: async (productIds) =>
       new Map(productIds.map((id) => [id, 100])),
+    findCommandReceipt: async () => null,
+    createIdempotently: async (_actorUserId, _key, _fingerprint, input) => ({
+      kind: "created" as const,
+      order: await createRepository(overrides).create(input),
+    }),
     ...overrides,
   };
 }
@@ -263,6 +270,7 @@ describe("orders use cases", () => {
 
     const result = await new CreateOrderUseCase({ orderRepository: repository }).execute({
       facilityId: "facility-1",
+      idempotencyKey: "create-order-1",
       items: [{ productId: "product-1", quantity: 2 }],
       scope: scopedToFacilityOne,
       actor: { userId: "rep-1", roleName: "REP" },
@@ -329,12 +337,15 @@ describe("orders use cases", () => {
         agentUserId: "rep-1",
         facilityId: "facility-1",
         status: "SCHEDULED",
+        calendarStatus: "ACTIVE",
+        occurrenceStatus: "ACTIVE",
         canRead: true,
         canCreateOrder: true,
       }),
     }).execute({
       interactionId: "interaction-1",
       facilityId: "facility-1",
+      idempotencyKey: "create-linked-order-1",
       items: [{ productId: "product-1", quantity: 1 }],
       scope: scopedToFacilityOne,
       actor: { userId: "rep-1", roleName: "REP" },
@@ -353,12 +364,15 @@ describe("orders use cases", () => {
           agentUserId: "other-rep",
           facilityId: "facility-1",
           status: "SCHEDULED",
+          calendarStatus: "ACTIVE",
+          occurrenceStatus: "ACTIVE",
           canRead: true,
           canCreateOrder: true,
         }),
       }).execute({
         interactionId: "interaction-1",
         facilityId: "facility-1",
+        idempotencyKey: "wrong-owner-order",
         items: [{ productId: "product-1", quantity: 1 }],
         scope: scopedToFacilityOne,
         actor: { userId: "rep-1", roleName: "REP" },
@@ -375,12 +389,15 @@ describe("orders use cases", () => {
           agentUserId: "rep-1",
           facilityId: "facility-2",
           status: "IN_PROGRESS",
+          calendarStatus: "ACTIVE",
+          occurrenceStatus: "ACTIVE",
           canRead: true,
           canCreateOrder: true,
         }),
       }).execute({
         interactionId: "interaction-1",
         facilityId: "facility-1",
+        idempotencyKey: "wrong-facility-order",
         items: [{ productId: "product-1", quantity: 1 }],
         scope: scopedToFacilityOne,
         actor: { userId: "rep-1", roleName: "REP" },
@@ -397,12 +414,182 @@ describe("orders use cases", () => {
           agentUserId: "rep-1",
           facilityId: "facility-1",
           status: "COMPLETED",
+          calendarStatus: "ACTIVE",
+          occurrenceStatus: "ACTIVE",
           canRead: true,
           canCreateOrder: false,
         }),
       }).execute({
         interactionId: "interaction-1",
         facilityId: "facility-1",
+        idempotencyKey: "closed-interaction-order",
+        items: [{ productId: "product-1", quantity: 1 }],
+        scope: scopedToFacilityOne,
+        actor: { userId: "rep-1", roleName: "REP" },
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("replays an idempotent retry without creating a second order", async () => {
+    let createCalls = 0;
+    const order = {
+      id: "order-replayed",
+      legacyId: null,
+      interactionId: null,
+      verticalId: "vertical-1",
+      facility: { id: "facility-1", name: "Clínica Um" },
+      professional: null,
+      seller: { id: "rep-1", name: "Rep" },
+      status: "PENDING" as const,
+      type: "SALE",
+      orderedAt: new Date("2026-01-02T10:00:00Z"),
+      createdAt: new Date("2026-01-02T10:00:00Z"),
+      updatedAt: new Date("2026-01-02T10:00:00Z"),
+      surgeryType: null,
+      surgerySubtype: null,
+      notes: null,
+      freight: 0,
+      grossWeight: 0,
+      netWeight: 0,
+      currency: "BRL",
+      usdExchangeRate: null,
+      finalizedById: null,
+      finalizedAt: null,
+      rejectedById: null,
+      rejectionReason: null,
+      noBillingById: null,
+      noBillingAt: null,
+      noBillingNotes: null,
+      expenseAuthorizedById: null,
+      expenseAuthorizedAt: null,
+      items: [],
+    };
+    let receipt: { fingerprint: string; order: typeof order } | undefined;
+    const repository = createRepository({
+      findCommandReceipt: async () => receipt
+        ? { requestFingerprint: receipt.fingerprint, order: receipt.order }
+        : null,
+      createIdempotently: async (_actor, _key, fingerprint) => {
+        createCalls += 1;
+        receipt = { fingerprint, order };
+        return { kind: "created" as const, order };
+      },
+    });
+    const useCase = new CreateOrderUseCase({ orderRepository: repository });
+    const input = {
+      facilityId: "facility-1",
+      idempotencyKey: "retry-order",
+      items: [{ productId: "product-1", quantity: 1 }],
+      scope: scopedToFacilityOne,
+      actor: { userId: "rep-1", roleName: "REP" },
+    };
+
+    const first = await useCase.execute(input);
+    const replay = await useCase.execute(input);
+
+    expect(replay).toEqual(first);
+    expect(createCalls).toBe(1);
+  });
+
+  it("rejects reuse of an idempotency key with a different payload", async () => {
+    let receipt: { requestFingerprint: string; order: OrderDetailRecord } | null = null;
+    const order = {
+      id: "order-existing",
+      legacyId: null,
+      interactionId: null,
+      verticalId: "vertical-1",
+      facility: { id: "facility-1", name: "Clínica Um" },
+      professional: null,
+      seller: { id: "rep-1", name: "Rep" },
+      status: "PENDING" as const,
+      type: "SALE",
+      orderedAt: new Date("2026-01-02T10:00:00Z"),
+      createdAt: new Date("2026-01-02T10:00:00Z"),
+      updatedAt: new Date("2026-01-02T10:00:00Z"),
+      surgeryType: null,
+      surgerySubtype: null,
+      notes: null,
+      freight: 0,
+      grossWeight: 0,
+      netWeight: 0,
+      currency: "BRL",
+      usdExchangeRate: null,
+      finalizedById: null,
+      finalizedAt: null,
+      rejectedById: null,
+      rejectionReason: null,
+      noBillingById: null,
+      noBillingAt: null,
+      noBillingNotes: null,
+      expenseAuthorizedById: null,
+      expenseAuthorizedAt: null,
+      items: [],
+    };
+    const repository = createRepository({
+      findCommandReceipt: async () => receipt,
+      createIdempotently: async (_actor, _key, requestFingerprint) => {
+        receipt = { requestFingerprint, order };
+        return { kind: "created" as const, order };
+      },
+    });
+    const useCase = new CreateOrderUseCase({ orderRepository: repository });
+    const base = {
+      facilityId: "facility-1",
+      idempotencyKey: "reused-order-key",
+      scope: scopedToFacilityOne,
+      actor: { userId: "rep-1", roleName: "REP" },
+    };
+
+    await expect(useCase.execute({ ...base, items: [{ productId: "product-1", quantity: 1 }] })).resolves.toBeDefined();
+    await expect(useCase.execute({ ...base, items: [{ productId: "product-1", quantity: 2 }] })).rejects.toMatchObject({
+      statusCode: 409,
+      code: "ORDER_IDEMPOTENCY_CONFLICT",
+    });
+  });
+
+  it("rejects a linked order when its calendar series is cancelled despite stale interaction status", async () => {
+    await expect(
+      new CreateOrderUseCase({
+        orderRepository: createRepository(),
+        interactionContextPort: createInteractionContextPort({
+          id: "interaction-1",
+          agentUserId: "rep-1",
+          facilityId: "facility-1",
+          status: "SCHEDULED",
+          calendarStatus: "CANCELLED",
+          occurrenceStatus: "ACTIVE",
+          canRead: true,
+          canCreateOrder: true,
+        }),
+      }).execute({
+        interactionId: "interaction-1",
+        facilityId: "facility-1",
+        idempotencyKey: "cancelled-series-order",
+        items: [{ productId: "product-1", quantity: 1 }],
+        scope: scopedToFacilityOne,
+        actor: { userId: "rep-1", roleName: "REP" },
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects a linked order when its occurrence override is cancelled", async () => {
+    await expect(
+      new CreateOrderUseCase({
+        orderRepository: createRepository(),
+        interactionContextPort: createInteractionContextPort({
+          id: "interaction-1",
+          agentUserId: "rep-1",
+          facilityId: "facility-1",
+          status: "IN_PROGRESS",
+          calendarStatus: "ACTIVE",
+          occurrenceStatus: "CANCELLED",
+          canRead: true,
+          canCreateOrder: true,
+        }),
+      }).execute({
+        interactionId: "interaction-1",
+        facilityId: "facility-1",
+        idempotencyKey: "cancelled-occurrence-order",
         items: [{ productId: "product-1", quantity: 1 }],
         scope: scopedToFacilityOne,
         actor: { userId: "rep-1", roleName: "REP" },
@@ -418,6 +605,7 @@ describe("orders use cases", () => {
     await expect(
       new CreateOrderUseCase({ orderRepository: repository }).execute({
         facilityId: "facility-1",
+        idempotencyKey: "missing-profile-order",
         items: [{ productId: "product-1", quantity: 1 }],
         scope: scopedToFacilityOne,
         actor: { userId: "rep-1", roleName: "REP" },

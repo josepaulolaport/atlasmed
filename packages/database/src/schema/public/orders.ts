@@ -5,6 +5,7 @@ import {
   numeric,
   boolean,
   timestamp,
+  jsonb,
   index,
   unique,
 } from "drizzle-orm/pg-core";
@@ -73,6 +74,30 @@ export const orders = pgTable(
     index("orders_updated_at_facility_id_idx").on(t.updatedAt, t.facilityId),
     unique("orders_legacy_id_key").on(t.legacyId),
   ]
+);
+
+export const orderCommandReceipts = pgTable(
+  "order_command_receipts",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    commandKey: text("command_key").notNull(),
+    requestFingerprint: text("request_fingerprint").notNull(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "restrict" }),
+    result: jsonb("result").$type<unknown>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("order_command_receipts_actor_user_id_command_key_key").on(
+      t.actorUserId,
+      t.commandKey,
+    ),
+    index("order_command_receipts_order_id_idx").on(t.orderId),
+  ],
 );
 
 export const orderItems = pgTable(

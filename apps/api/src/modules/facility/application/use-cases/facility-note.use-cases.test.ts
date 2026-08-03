@@ -72,6 +72,7 @@ describe("Facility note use cases", () => {
     }).execute({
       facilityId: "facility-1",
       userId: "manager-1",
+      roleName: "MANAGER",
       ownerUserId: "rep-1",
       scope: {
         ...globalScope,
@@ -85,24 +86,53 @@ describe("Facility note use cases", () => {
     expect(findByFacilityAndUser).toHaveBeenCalledWith("facility-1", "rep-1");
   });
 
-  it("lets a global actor read another user's notes", async () => {
+  it("denies an ADMIN reading another user's private notes despite global scope", async () => {
     const findByFacilityAndUser = mock(async () => []);
 
-    await new ListFacilityNotesUseCase({
-      facilityNoteRepository: {
-        findByFacilityAndUser,
-        create: async () => {
-          throw new Error("unused");
+    await expect(
+      new ListFacilityNotesUseCase({
+        facilityNoteRepository: {
+          findByFacilityAndUser,
+          create: async () => {
+            throw new Error("unused");
+          },
         },
-      },
-    }).execute({
-      facilityId: "facility-1",
-      userId: "admin-1",
-      ownerUserId: "rep-1",
-      scope: globalScope,
-    });
+      }).execute({
+        facilityId: "facility-1",
+        userId: "admin-1",
+        roleName: "ADMIN",
+        ownerUserId: "rep-1",
+        scope: globalScope,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
 
-    expect(findByFacilityAndUser).toHaveBeenCalledWith("facility-1", "rep-1");
+    expect(findByFacilityAndUser).not.toHaveBeenCalled();
+  });
+
+  it("denies a non-manager reading a managed user's private notes", async () => {
+    const findByFacilityAndUser = mock(async () => []);
+
+    await expect(
+      new ListFacilityNotesUseCase({
+        facilityNoteRepository: {
+          findByFacilityAndUser,
+          create: async () => {
+            throw new Error("unused");
+          },
+        },
+      }).execute({
+        facilityId: "facility-1",
+        userId: "rep-2",
+        roleName: "REP",
+        ownerUserId: "rep-1",
+        scope: {
+          ...globalScope,
+          managedUserIds: ["rep-1"],
+        },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    expect(findByFacilityAndUser).not.toHaveBeenCalled();
   });
 
   it("denies notes owned by an unmanaged user", async () => {
@@ -119,6 +149,7 @@ describe("Facility note use cases", () => {
       }).execute({
         facilityId: "facility-1",
         userId: "manager-1",
+        roleName: "MANAGER",
         ownerUserId: "rep-2",
         scope: {
           ...globalScope,

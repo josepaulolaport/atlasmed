@@ -22,6 +22,7 @@ export class ListFacilityNotesUseCase {
   async execute(input: {
     facilityId: string;
     userId: string;
+    roleName?: string;
     ownerUserId?: string;
     scope: ScopeContext;
   }) {
@@ -30,8 +31,7 @@ export class ListFacilityNotesUseCase {
     const ownerUserId = input.ownerUserId ?? input.userId;
     if (
       ownerUserId !== input.userId &&
-      !input.scope.isGlobal &&
-      !input.scope.managedUserIds.includes(ownerUserId)
+      (input.roleName !== "MANAGER" || !input.scope.managedUserIds.includes(ownerUserId))
     ) {
       throw new ForbiddenError("Facility note owner outside actor scope");
     }

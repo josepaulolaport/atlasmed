@@ -5,8 +5,9 @@ import {
   type ScopeContext,
 } from "@atlasmed/access";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
-import { ValidationError } from "../../../../shared/errors";
+import { AppError, ValidationError } from "../../../../shared/errors";
 import type {
+  CreateOrderInput,
   CreateOrderItemInput,
   OrderDetailRecord,
   OrderRepository,
@@ -219,6 +220,47 @@ export class GetOrderUseCase {
   }
 }
 
+export class OrderIdempotencyConflictError extends AppError {
+  constructor() {
+    super(
+      "ORDER_IDEMPOTENCY_CONFLICT",
+      409,
+      "Idempotency-Key was already used with a different order payload",
+    );
+  }
+}
+
+function orderRequestFingerprint(input: {
+  facilityId: string;
+  interactionId?: string;
+  verticalId?: string;
+  professionalId?: string | null;
+  status?: string;
+  type?: string;
+  notes?: string | null;
+  freight?: number;
+  orderedAt?: string;
+  items: CreateOrderItemInput[];
+}): string {
+  const canonical = {
+    facilityId: input.facilityId,
+    interactionId: input.interactionId ?? null,
+    verticalId: input.verticalId ?? null,
+    professionalId: input.professionalId ?? null,
+    status: input.status ?? "PENDING",
+    type: input.type ?? "SALE",
+    notes: input.notes ?? null,
+    freight: input.freight ?? 0,
+    orderedAt: input.orderedAt ?? null,
+    items: input.items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice ?? null,
+    })),
+  };
+  return new Bun.CryptoHasher("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
 export class CreateOrderUseCase {
   constructor(
     private readonly deps: {
@@ -229,6 +271,7 @@ export class CreateOrderUseCase {
 
   async execute(input: {
     facilityId: string;
+    idempotencyKey: string;
     interactionId?: string;
     verticalId?: string;
     professionalId?: string | null;
@@ -241,6 +284,18 @@ export class CreateOrderUseCase {
     scope: ScopeContext;
     actor: { userId: string; roleName: string };
   }) {
+    const requestFingerprint = orderRequestFingerprint(input);
+    const existingReceipt = await this.deps.orderRepository.findCommandReceipt(
+      input.actor.userId,
+      input.idempotencyKey,
+    );
+    if (existingReceipt) {
+      if (existingReceipt.requestFingerprint !== requestFingerprint) {
+        throw new OrderIdempotencyConflictError();
+      }
+      return serializeOrder(existingReceipt.order);
+    }
+
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     if (input.interactionId) {
@@ -258,6 +313,8 @@ export class CreateOrderUseCase {
       }
       if (
         !interaction.canCreateOrder ||
+        interaction.calendarStatus !== "ACTIVE" ||
+        interaction.occurrenceStatus === "CANCELLED" ||
         !["SCHEDULED", "IN_PROGRESS"].includes(interaction.status)
       ) {
         throw new ValidationError([
@@ -343,7 +400,7 @@ export class CreateOrderUseCase {
       };
     });
 
-    const order = await this.deps.orderRepository.create({
+    const createInput: CreateOrderInput = {
       facilityId: input.facilityId,
       interactionId: input.interactionId ?? null,
       verticalId,
@@ -355,8 +412,15 @@ export class CreateOrderUseCase {
       freight: input.freight ?? 0,
       orderedAt: input.orderedAt ? new Date(input.orderedAt) : new Date(),
       items,
-    });
+    };
+    const result = await this.deps.orderRepository.createIdempotently(
+      input.actor.userId,
+      input.idempotencyKey,
+      requestFingerprint,
+      createInput,
+    );
+    if (result.kind === "mismatch") throw new OrderIdempotencyConflictError();
 
-    return serializeOrder(order);
+    return serializeOrder(result.order);
   }
 }

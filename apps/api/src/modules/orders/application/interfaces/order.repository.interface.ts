@@ -107,6 +107,10 @@ export interface CreateOrderInput {
   items: CreateOrderItemInput[];
 }
 
+export type CreateOrderIdempotentResult =
+  | { kind: "created" | "replay"; order: OrderDetailRecord }
+  | { kind: "mismatch" };
+
 export interface OrderRepository {
   findAll(input: {
     page: number;
@@ -124,6 +128,16 @@ export interface OrderRepository {
   }): Promise<{ orders: OrderListRecord[]; total: number }>;
   findById(id: string): Promise<OrderDetailRecord | null>;
   create(input: CreateOrderInput): Promise<OrderDetailRecord>;
+  findCommandReceipt(
+    actorUserId: string,
+    commandKey: string,
+  ): Promise<{ requestFingerprint: string; order: OrderDetailRecord } | null>;
+  createIdempotently(
+    actorUserId: string,
+    commandKey: string,
+    requestFingerprint: string,
+    input: CreateOrderInput,
+  ): Promise<CreateOrderIdempotentResult>;
   hasActiveFacilityVerticalProfile(
     facilityId: string,
     verticalId: string

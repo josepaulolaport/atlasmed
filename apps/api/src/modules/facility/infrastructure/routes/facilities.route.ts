@@ -397,11 +397,16 @@ const listFacilityNotesRoute = new Elysia()
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
     "/facilities/:id/notes",
-    async ({ params, query, getScope, getUserId }) => {
-      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+    async ({ params, query, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
       return facilityUseCases.listFacilityNotes().execute({
         facilityId: params.id,
         userId,
+        roleName: authContext.roleName,
         ownerUserId: query.ownerUserId,
         scope,
       });
