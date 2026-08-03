@@ -158,6 +158,35 @@ void main() {
   );
 
   test(
+    'explicit recurrence change is included after list DTO omitted recurrence',
+    () {
+      final occurrence = CalendarOccurrence.fromJson({
+        'id': 'calendar-1:key-1',
+        'calendarId': 'calendar-1',
+        'recurrenceKey': 'key-1',
+        'ownerUserId': 'rep-1',
+        'kind': 'PERSONAL_BLOCK',
+        'title': 'Bloqueio',
+        'startsAt': '2026-08-03T12:00:00.000Z',
+        'endsAt': '2026-08-03T13:00:00.000Z',
+        'timeZone': 'America/Sao_Paulo',
+        'durationMinutes': 60,
+        'version': 4,
+        'canMutate': true,
+      });
+      final notifier = CalendarEditorNotifier(
+        repository: _FakeCalendarRepository(),
+        target: CalendarEditorTarget.editingSeries(occurrence),
+      )..setRecurrence(CalendarRecurrence.weekly);
+
+      expect(
+        notifier.state.draft.toUpdateCommand().toJson()['recurrence'],
+        'WEEKLY',
+      );
+    },
+  );
+
+  test(
     'keeps draft and idempotency key after network failure, then clears only on success',
     () async {
       final repository = _FakeCalendarRepository()

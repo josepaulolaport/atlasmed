@@ -52,6 +52,7 @@ class CalendarEditorDraft extends Equatable {
     String? timeZone,
     int? durationMinutes,
     CalendarRecurrence? recurrence,
+    bool? recurrenceProvided,
     CalendarRecurrenceEnd? recurrenceEnd,
     DateTime? recurrenceUntil,
     bool clearRecurrenceUntil = false,
@@ -76,7 +77,7 @@ class CalendarEditorDraft extends Equatable {
         : (recurrenceCount ?? this.recurrenceCount),
     expectedVersion: expectedVersion,
     overrideVersion: overrideVersion,
-    recurrenceProvided: recurrenceProvided,
+    recurrenceProvided: recurrenceProvided ?? this.recurrenceProvided,
   );
 
   CalendarCreateCommand toCreateCommand() => CalendarCreateCommand(
@@ -257,6 +258,7 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState> {
   void setRecurrence(CalendarRecurrence value) => _setDraft(
     state.draft.copyWith(
       recurrence: value,
+      recurrenceProvided: true,
       recurrenceEnd: value == CalendarRecurrence.none
           ? CalendarRecurrenceEnd.none
           : state.draft.recurrenceEnd,
