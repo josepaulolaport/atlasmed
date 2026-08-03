@@ -15,19 +15,22 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  token: z.string().min(1, "Invitation token is required"),
-  email: z.string().email("Invalid email address"),
+  token: z.string().min(1, "Token de convite é obrigatório"),
+  email: z.string().email("Email inválido"),
   phoneNumber: z.string().optional(),
-  username: z.string().min(3, "Username must be at least 3 characters"),
+  username: z.string().min(3, "Nome de usuário deve ter pelo menos 3 caracteres"),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
+    .min(8, "Senha deve ter pelo menos 8 caracteres")
+    .regex(/[A-Z]/, "Senha deve conter uma letra maiúscula")
+    .regex(/[a-z]/, "Senha deve conter uma letra minúscula")
+    .regex(/[0-9]/, "Senha deve conter um número")
+    .regex(/[^A-Za-z0-9]/, "Senha deve conter um caractere especial"),
+  firstName: z.string().min(1, "Nome é obrigatório"),
+  lastName: z.string().min(1, "Sobrenome é obrigatório"),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de nascimento inválida"),
 });
 
 export const passwordResetRequestSchema = z.object({

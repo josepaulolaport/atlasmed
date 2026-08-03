@@ -87,8 +87,9 @@ export interface RegisterRequest {
   phoneNumber?: string;
   username: string;
   password: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
 }
 
 export interface RefreshTokenRequest {

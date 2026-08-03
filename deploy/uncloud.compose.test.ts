@@ -96,6 +96,18 @@ describe("production deployment", () => {
     expect(cnesWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
   });
 
+  it("always allows the canonical production web origin even when CORS_ORIGINS is overridden", () => {
+    const { compose } = readDeploymentConfig();
+    const api = compose.slice(
+      compose.indexOf("  atlasmed-api:"),
+      compose.indexOf("  atlasmed-api-worker:"),
+    );
+
+    expect(api).toContain(
+      "CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev},https://app.tdomains.uk",
+    );
+  });
+
   it("recreates application services when deploying their mutable production images", () => {
     const { compose, workflow } = readDeploymentConfig();
 

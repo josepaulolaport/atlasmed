@@ -74,6 +74,8 @@ export const authApi = {
     phoneNumber?: string;
     role: { id: string; name: string };
     expiresAt: string;
+    firstName?: string;
+    lastName?: string;
   }> => {
     const response = await apiClient.get(`/access/invite/${encodeURIComponent(token)}`);
     return response.data;

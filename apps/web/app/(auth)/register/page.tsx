@@ -19,6 +19,8 @@ type InviteTokenForm = z.infer<typeof inviteTokenSchema>;
 interface ValidatedInvite {
   email?: string;
   phoneNumber?: string;
+  firstName?: string;
+  lastName?: string;
   role: { id: string; name: string };
   expiresAt: string;
 }
@@ -99,6 +101,11 @@ function RegisterForm() {
         token,
         email: validated.email || "",
         phoneNumber: validated.phoneNumber || "",
+        firstName: validated.firstName || "",
+        lastName: validated.lastName || "",
+        birthDate: "",
+        username: "",
+        password: "",
       });
     } catch {
       setError("Token de cadastro inválido, expirado ou já utilizado");
@@ -322,10 +329,14 @@ function RegisterForm() {
               <Input
                 id="firstName"
                 type="text"
-                placeholder="Opcional"
                 {...registerForm.register("firstName")}
                 disabled={isLoading}
               />
+              {registerForm.formState.errors.firstName && (
+                <p className="text-xs text-red-600">
+                  {registerForm.formState.errors.firstName.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -333,11 +344,30 @@ function RegisterForm() {
               <Input
                 id="lastName"
                 type="text"
-                placeholder="Opcional"
                 {...registerForm.register("lastName")}
                 disabled={isLoading}
               />
+              {registerForm.formState.errors.lastName && (
+                <p className="text-xs text-red-600">
+                  {registerForm.formState.errors.lastName.message}
+                </p>
+              )}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="birthDate">Data de nascimento</Label>
+            <Input
+              id="birthDate"
+              type="date"
+              {...registerForm.register("birthDate")}
+              disabled={isLoading}
+            />
+            {registerForm.formState.errors.birthDate && (
+              <p className="text-xs text-red-600">
+                {registerForm.formState.errors.birthDate.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -371,12 +401,12 @@ function RegisterForm() {
           </Button>
 
           <p className="text-center text-sm text-zinc-500">
-            Already have an account?{" "}
+            Já tem uma conta?{" "}
             <Link
               href="/login"
               className="text-blue-600 hover:underline font-medium"
             >
-              Sign in
+              Entrar
             </Link>
           </p>
         </form>

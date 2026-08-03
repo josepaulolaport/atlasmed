@@ -41,7 +41,7 @@ services:
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_EXPIRATION=${JWT_EXPIRATION:-15m}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev,https://app.tdomains.uk}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev},https://app.tdomains.uk
       - FRONTEND_URL=${FRONTEND_URL:-https://app.tdomains.uk}
       - TRUST_PROXY=true
       - SESSION_SECURITY_MODE=audit_only

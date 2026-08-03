@@ -36,7 +36,7 @@ Self-service profile remains `PATCH /user` (name/avatar only).
 
 Invite delivery uses Resend (`RESEND_FROM_EMAIL`). Codes are short 8-char strings (hashed at rest). The email accept link is omitted when `FRONTEND_URL` is localhost/http (spam signal on Gmail). DNS: keep Resend `send` SPF/MX + DKIM; apex Cloudflare Email Routing MX is fine; add `_dmarc` for better inbox placement.
 
-Registration identity: inviter sets `birthDate` + name on the invite; invitee must confirm birth date exactly and name via soft fuzzy match (≥50% of name tokens, case/accent-insensitive). Password confirmation is client-side only.
+Registration identity: inviter sets `birthDate` + name on the invite; invitee must confirm birth date exactly and name via soft fuzzy match (≥50% of name tokens, case/accent-insensitive). Web and mobile registration forms must submit `firstName`, `lastName`, and `birthDate`; these fields are required by both the Elysia and Zod API contracts. Password confirmation is client-side only.
 
 ## Clinic visibility (ScopeContext)
 

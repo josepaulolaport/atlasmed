@@ -148,8 +148,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       router.push("/login");
     } catch (err) {
-      const error = err as { response?: { data?: { error?: string } } };
-      const message = error.response?.data?.error || "Falha no cadastro";
+      const error = err as {
+        response?: { data?: { error?: string | { message?: string } } };
+      };
+      const apiError = error.response?.data?.error;
+      const message =
+        typeof apiError === "string"
+          ? apiError
+          : apiError?.message || "Falha no cadastro";
       toast({
         title: "Erro",
         description: message,
