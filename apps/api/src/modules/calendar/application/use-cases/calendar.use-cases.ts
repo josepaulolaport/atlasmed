@@ -5,7 +5,7 @@ import { findCalendarConflicts, type CalendarConflictEntry } from "../services/c
 import { calendarOccurrenceFromRecurrenceKey, expandCalendarOccurrences, type CalendarRecurrence, type CalendarRecurrenceRule } from "../services/recurrence.service";
 
 interface Actor { userId: string; roleName: Role }
-interface Dependencies { repository: CalendarRepository }
+interface Dependencies { repository: CalendarRepository; now?: () => Date }
 interface EventData {
   kind: "INTERACTION" | "PERSONAL_BLOCK";
   title: string;
@@ -30,8 +30,15 @@ export interface CalendarOccurrenceDto {
   endsAt: string;
   timeZone: string;
   durationMinutes: number;
+  recurrence: CalendarRecurrence;
+  recurrenceUntil: string | null;
+  recurrenceCount: number | null;
   version: number;
+  calendarVersion: number;
   overrideVersion?: number;
+  owner: { id: string; name: string };
+  facility: { id: string; name: string } | null;
+  canMutate: boolean;
   interaction?: { id: string; facilityId: string; modality: InteractionModality; status: string; version: number };
 }
 
@@ -204,6 +211,7 @@ export class ListCalendarUseCase {
     const owner = assertOwnerRead(input.actor, input.scope, input.ownerUserId);
     const managerView = input.actor.roleName === "MANAGER" && owner !== input.actor.userId;
     const events = await this.deps.repository.listByOwner(owner, { from: input.from, to: input.to });
+    const now = this.deps.now?.() ?? new Date();
     const rows: CalendarOccurrenceDto[] = [];
     for (const event of events) {
       const occurrences = effectiveOccurrences(event, input.from, input.to);
@@ -215,13 +223,19 @@ export class ListCalendarUseCase {
         const interaction = interactions.find((item) => item.recurrenceKey === occurrence.recurrenceKey);
         if (event.kind === "INTERACTION" && (!interaction || (managerView && !input.scope.isGlobal && !input.scope.facilityIds.includes(interaction.facilityId)))) continue;
         if (interaction?.status === "CANCELLED") continue;
+        const effectiveInteractionStatus = interaction?.status === "SCHEDULED" && occurrence.endsAt < now
+          ? "NOT_COMPLETED"
+          : interaction?.status;
         rows.push({ id: `${event.id}:${occurrence.recurrenceKey}`, calendarId: event.id, recurrenceKey: occurrence.recurrenceKey,
           ownerUserId: event.ownerUserId, kind: event.kind, title: managerView && event.kind === "PERSONAL_BLOCK" ? "Indisponível" : event.title,
           startsAt: occurrence.startsAt.toISOString(), endsAt: occurrence.endsAt.toISOString(), timeZone: event.timeZone,
-          durationMinutes: Math.round((occurrence.endsAt.getTime() - occurrence.startsAt.getTime()) / 60_000), version: event.version,
+          durationMinutes: Math.round((occurrence.endsAt.getTime() - occurrence.startsAt.getTime()) / 60_000),
+          recurrence: event.recurrence, recurrenceUntil: event.recurrenceUntil, recurrenceCount: event.recurrenceCount,
+          version: event.version, calendarVersion: event.version, owner: event.owner, facility: event.facility,
+          canMutate: !managerView && event.ownerUserId === input.actor.userId,
           ...(occurrence.override ? { overrideVersion: occurrence.override.version } : {}),
           ...(interaction ? { interaction: { id: interaction.id, facilityId: interaction.facilityId, modality: interaction.modality,
-            status: interaction.status, version: interaction.version } } : {}) });
+            status: effectiveInteractionStatus!, version: interaction.version } } : {}) });
         if (rows.length > MAX_RESULTS) throw new ValidationError([{ field: "range", message: `Calendar result exceeds ${MAX_RESULTS} occurrences` }]);
       }
     }
@@ -246,6 +260,15 @@ export class UpdateCalendarEventUseCase {
       const replay = await repository.getCommandReceipt<CalendarEventRecord>(owner, input.idempotencyKey);
       if (replay) return receiptEvent(replay);
       const current = await loadOwned(repository, input.id, input.actor);
+      const changesRecurrenceShape = input.changes.startsAt !== undefined
+        || input.changes.timeZone !== undefined
+        || input.changes.durationMinutes !== undefined
+        || input.changes.recurrence !== undefined
+        || input.changes.recurrenceUntil !== undefined
+        || input.changes.recurrenceCount !== undefined;
+      if (current.kind === "INTERACTION" && current.interactions.length > 0 && changesRecurrenceShape) {
+        throw new ValidationError([{ field: "recurrence", message: "Recurrence, anchor, duration, and time zone cannot change after interactions have materialized" }]);
+      }
       const nextData: EventData = { kind: current.kind, title: input.changes.title ?? current.title,
         startsAt: input.changes.startsAt ?? firstStartsAt(current).toISOString(), timeZone: input.changes.timeZone ?? current.timeZone,
         durationMinutes: input.changes.durationMinutes ?? current.durationMinutes, recurrence: input.changes.recurrence ?? current.recurrence,
@@ -296,6 +319,9 @@ export class UpdateCalendarOccurrenceUseCase {
       if (!original) throw new ResourceNotFoundError("CalendarOccurrence", input.recurrenceKey);
       const interaction = await interactionFor(repository, event, input.recurrenceKey);
       if (event.kind === "INTERACTION" && interaction?.status !== "SCHEDULED") throw new ValidationError([{ field: "recurrenceKey", message: "Only scheduled interaction occurrences may be rescheduled" }]);
+      const currentOverride = event.overrides.find((item) => item.recurrenceKey === input.recurrenceKey && item.status === "ACTIVE");
+      const previousStartsAt = currentOverride?.startsAt ?? original.startsAt;
+      const previousEndsAt = currentOverride?.endsAt ?? original.endsAt;
       const startsAt = new Date(input.startsAt); const endsAt = new Date(startsAt.getTime() + input.durationMinutes * 60_000);
       validateEventData({ kind: event.kind, title: event.title, startsAt: input.startsAt, timeZone: event.timeZone,
         durationMinutes: input.durationMinutes, recurrence: "NONE" });
@@ -304,7 +330,8 @@ export class UpdateCalendarOccurrenceUseCase {
       const conflicts = findCalendarConflicts(occurrenceCandidate(event, startsAt, endsAt, input.recurrenceKey), [siblings, ...others], { from: startsAt, to: endsAt });
       if (conflicts.length) throw new CalendarConflictError(conflicts.slice(0, 10));
       const result = await repository.upsertOverride({ calendarId: event.id, recurrenceKey: input.recurrenceKey, startsAt, endsAt,
-        status: "ACTIVE", expectedVersion: input.expectedVersion, commandKey: input.idempotencyKey });
+        status: "ACTIVE", actorUserId: input.actor.userId, previousStartsAt, previousEndsAt,
+        expectedVersion: input.expectedVersion, commandKey: input.idempotencyKey });
       if (!result) throw new CalendarVersionConflictError(event.id, input.expectedVersion);
       return repository.saveCommandReceipt(owner, input.idempotencyKey, "UPDATE_OCCURRENCE", event.id, result);
     });
@@ -325,9 +352,16 @@ export class CancelCalendarOccurrenceUseCase {
       if (!original) throw new ResourceNotFoundError("CalendarOccurrence", input.recurrenceKey);
       const interaction = await interactionFor(repository, event, input.recurrenceKey);
       if (event.kind === "INTERACTION" && interaction?.status !== "SCHEDULED") throw new ValidationError([{ field: "recurrenceKey", message: "Only scheduled interaction occurrences may be cancelled" }]);
+      const cancellationReason = reason(input.reason);
       const result = await repository.upsertOverride({ calendarId: event.id, recurrenceKey: input.recurrenceKey, startsAt: original.startsAt, endsAt: original.endsAt,
-        status: "CANCELLED", reason: reason(input.reason), expectedVersion: input.expectedVersion, commandKey: input.idempotencyKey });
+        status: "CANCELLED", reason: cancellationReason, actorUserId: input.actor.userId,
+        expectedVersion: input.expectedVersion, commandKey: input.idempotencyKey });
       if (!result) throw new CalendarVersionConflictError(event.id, input.expectedVersion);
+      if (event.kind === "INTERACTION") {
+        const cancelledCount = await repository.cancelInteractionOccurrences({ calendarId: event.id,
+          recurrenceKeys: [input.recurrenceKey], actorUserId: input.actor.userId, reason: cancellationReason });
+        if (cancelledCount !== 1) throw new ValidationError([{ field: "recurrenceKey", message: "Interaction occurrence is no longer scheduled" }]);
+      }
       return repository.saveCommandReceipt(owner, input.idempotencyKey, "CANCEL_OCCURRENCE", event.id, result);
     });
   }
@@ -342,8 +376,14 @@ export class CancelCalendarEventUseCase {
       if (replay) return replay;
       const event = await loadOwned(repository, input.id, input.actor);
       if (event.kind === "INTERACTION" && event.interactions.some((item) => item.status !== "SCHEDULED")) throw new ValidationError([{ field: "id", message: "Only scheduled interaction series may be cancelled" }]);
+      const cancellationReason = reason(input.reason);
+      if (event.kind === "INTERACTION") {
+        const cancelledCount = await repository.cancelInteractionOccurrences({ calendarId: event.id,
+          actorUserId: input.actor.userId, reason: cancellationReason });
+        if (cancelledCount !== event.interactions.length) throw new ValidationError([{ field: "id", message: "One or more interactions are no longer scheduled" }]);
+      }
       const cancelled = await repository.cancel({ id: event.id, expectedVersion: input.expectedVersion,
-        actorUserId: input.actor.userId, reason: reason(input.reason), commandKey: input.idempotencyKey });
+        actorUserId: input.actor.userId, reason: cancellationReason, commandKey: input.idempotencyKey });
       if (!cancelled) throw new CalendarVersionConflictError(event.id, input.expectedVersion);
       const result = { id: event.id, cancelled: true as const };
       return repository.saveCommandReceipt(owner, input.idempotencyKey, "CANCEL_SERIES", event.id, result);

@@ -60,6 +60,8 @@ function interaction(overrides: Partial<InteractionDetailRecord> = {}): Interact
       recurrence: "NONE",
       recurrenceUntil: null,
       recurrenceCount: null,
+      status: "ACTIVE",
+      version: 3,
     },
     occurrenceOverride: null,
     facility: { id: "facility-1", displayName: "Clínica Central", city: "São Paulo", state: "SP" },
@@ -93,7 +95,7 @@ class FakeInteractionRepository implements InteractionRepository {
     return { interaction: this.record, replayed: false };
   }
 
-  async complete(input: { expectedVersion: number; idempotencyKey: string; completedAt: Date; actorUserId: string; correctionReason?: string }) {
+  async complete(input: { expectedVersion: number; idempotencyKey: string; completedAt: Date; actorUserId: string; correctionReason?: string; scheduledStartsAt?: Date }) {
     const replay = this.receipts.get(`complete:${input.idempotencyKey}`);
     if (replay) return { interaction: replay, replayed: true };
     if (!this.record || this.record.version !== input.expectedVersion || !["IN_PROGRESS", "NOT_COMPLETED"].includes(this.record.status)) return null;
@@ -101,9 +103,13 @@ class FakeInteractionRepository implements InteractionRepository {
     const corrected = previousStatus === "NOT_COMPLETED";
     const visitId = this.record.visitId ?? `visit-${this.visits + 1}`;
     if (!this.record.visitId) this.visits += 1;
+    const actualStartedAt = corrected
+      ? input.scheduledStartsAt ?? new Date(input.completedAt.getTime() - 1)
+      : this.record.actualStartedAt;
     this.record = {
       ...this.record,
       status: "COMPLETED",
+      actualStartedAt,
       actualEndedAt: input.completedAt,
       correctedAt: corrected ? input.completedAt : null,
       correctedByUserId: corrected ? input.actorUserId : null,
@@ -143,6 +149,9 @@ describe("GetInteractionUseCase", () => {
 
     expect(result).toEqual(expect.objectContaining({
       id: "interaction-1",
+      calendarId: "calendar-1",
+      calendarVersion: 3,
+      recurrenceKey: "2026-08-03T09:00[America/Sao_Paulo]",
       status: "SCHEDULED",
       canMutate: true,
       occurrence: {
@@ -154,6 +163,29 @@ describe("GetInteractionUseCase", () => {
       facility: { id: "facility-1", displayName: "Clínica Central", city: "São Paulo", state: "SP" },
       linkedOrders: [],
     }));
+  });
+
+  test("derives missed and cancelled effective states without persisting on read", async () => {
+    const overdue = new FakeInteractionRepository();
+    const overdueResult = await new GetInteractionUseCase({ repository: overdue, now: () => new Date("2026-08-03T13:00:00.001Z") }).execute({
+      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+    });
+    expect(overdueResult).toEqual(expect.objectContaining({ status: "NOT_COMPLETED", canMutate: true }));
+    expect(overdue.record?.status).toBe("SCHEDULED");
+
+    const cancelledSeries = new FakeInteractionRepository();
+    cancelledSeries.record = interaction({ calendar: { ...interaction().calendar, status: "CANCELLED", version: 4 } });
+    expect(await new GetInteractionUseCase({ repository: cancelledSeries, now: () => now }).execute({
+      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+    })).toEqual(expect.objectContaining({ status: "CANCELLED", canMutate: false, calendarVersion: 4 }));
+
+    const cancelledOverride = new FakeInteractionRepository();
+    cancelledOverride.record = interaction({ occurrenceOverride: {
+      startsAt: new Date("2026-08-03T12:00:00.000Z"), endsAt: new Date("2026-08-03T13:00:00.000Z"), status: "CANCELLED", version: 2,
+    } });
+    expect(await new GetInteractionUseCase({ repository: cancelledOverride, now: () => now }).execute({
+      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+    })).toEqual(expect.objectContaining({ status: "CANCELLED", canMutate: false, overrideVersion: 2 }));
   });
 
   test("allows a manager to read only a managed agent in facility scope", async () => {
@@ -177,6 +209,24 @@ describe("StartInteractionUseCase", () => {
     const result = await new StartInteractionUseCase({ repository, now: () => new Date("2026-08-03T11:00:00.000Z") }).execute(ownerInput());
     expect(result).toEqual(expect.objectContaining({ status: "IN_PROGRESS", actualStartedAt: "2026-08-03T11:00:00.000Z", version: 2 }));
     expect(repository.events).toEqual([{ previousStatus: "SCHEDULED", newStatus: "IN_PROGRESS" }]);
+  });
+
+  test("rejects start after the effective end or when calendar/override cancellation makes a stale row cancelled", async () => {
+    const ended = new FakeInteractionRepository();
+    await expect(new StartInteractionUseCase({ repository: ended, now: () => new Date("2026-08-03T13:00:00.001Z") }).execute(ownerInput()))
+      .rejects.toBeInstanceOf(InteractionTransitionError);
+
+    const cancelledSeries = new FakeInteractionRepository();
+    cancelledSeries.record = interaction({ calendar: { ...interaction().calendar, status: "CANCELLED", version: 4 } });
+    await expect(new StartInteractionUseCase({ repository: cancelledSeries, now: () => now }).execute(ownerInput()))
+      .rejects.toBeInstanceOf(InteractionTransitionError);
+
+    const cancelledOverride = new FakeInteractionRepository();
+    cancelledOverride.record = interaction({ occurrenceOverride: {
+      startsAt: new Date("2026-08-03T12:00:00.000Z"), endsAt: new Date("2026-08-03T13:00:00.000Z"), status: "CANCELLED", version: 2,
+    } });
+    await expect(new StartInteractionUseCase({ repository: cancelledOverride, now: () => now }).execute(ownerInput()))
+      .rejects.toBeInstanceOf(InteractionTransitionError);
   });
 
   test("rejects manager mutation, invalid transitions, and stale versions with typed errors", async () => {
@@ -212,8 +262,21 @@ describe("CompleteInteractionUseCase", () => {
       status: "COMPLETED",
       correctionReason: "Cliente confirmou visita",
       correctedByUserId: "rep-1",
+      actualStartedAt: "2026-08-03T12:00:00.000Z",
       actualEndedAt: "2026-08-03T14:00:00.000Z",
     }));
+  });
+
+  test("uses completion minus 1ms when a corrected missed interaction completes before its scheduled start", async () => {
+    const repository = new FakeInteractionRepository();
+    repository.record = interaction({ status: "NOT_COMPLETED", occurrenceOverride: {
+      startsAt: new Date("2026-08-03T15:00:00.000Z"), endsAt: new Date("2026-08-03T16:00:00.000Z"), status: "ACTIVE", version: 1,
+    } });
+    const result = await new CompleteInteractionUseCase({ repository, now: () => new Date("2026-08-03T14:00:00.000Z") }).execute({
+      ...ownerInput(), correctionReason: "Correção administrativa",
+    });
+    expect(result.actualStartedAt).toBe("2026-08-03T13:59:59.999Z");
+    expect(result.actualEndedAt).toBe("2026-08-03T14:00:00.000Z");
   });
 
   test("does not complete a scheduled interaction directly", async () => {

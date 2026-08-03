@@ -32,11 +32,14 @@ export interface InteractionDetailRecord {
     recurrence: "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
     recurrenceUntil: string | null;
     recurrenceCount: number | null;
+    status: "ACTIVE" | "CANCELLED";
+    version: number;
   };
   occurrenceOverride: {
     startsAt: Date;
     endsAt: Date;
     status: "ACTIVE" | "CANCELLED";
+    version: number;
   } | null;
   facility: {
     id: string;
@@ -78,6 +81,7 @@ export interface InteractionRepository {
     expectedVersion: number;
     idempotencyKey: string;
     completedAt: Date;
+    scheduledStartsAt?: Date;
     correctionReason?: string;
   }): Promise<InteractionMutationResult | null>;
   markOverdue(input: { now: Date; limit: number; actorUserId: string | null }): Promise<number>;

@@ -42,6 +42,8 @@ export const interactionModalityEnum = pgEnum("interaction_modality", [
   "REMOTE",
 ]);
 
+export const interactionEventSourceEnum = pgEnum("interaction_event_source", ["USER", "SYSTEM"]);
+
 export const interactionStatusEnum = pgEnum("interaction_status", [
   "SCHEDULED",
   "IN_PROGRESS",
@@ -205,9 +207,8 @@ export const interactionEvents = pgTable(
     interactionId: text("interaction_id")
       .notNull()
       .references(() => interactions.id, { onDelete: "restrict" }),
-    actorUserId: text("actor_user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+    actorUserId: text("actor_user_id").references(() => users.id, { onDelete: "restrict" }),
+    source: interactionEventSourceEnum("source").notNull().default("USER"),
     previousStatus: interactionStatusEnum("previous_status"),
     newStatus: interactionStatusEnum("new_status").notNull(),
     reason: text("reason"),

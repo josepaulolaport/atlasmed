@@ -21,7 +21,7 @@ export function createInteractionOverdueJobs(deps: {
     do {
       processed = await deps.useCase.execute({ limit: job.data.limit });
       total += processed;
-    } while (processed === job.data.limit);
+    } while (processed > 0);
     logger.info("Processed overdue interactions", { count: total });
   };
 

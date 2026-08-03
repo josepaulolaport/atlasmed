@@ -8,6 +8,7 @@ import {
   calendarOccurrenceStatusEnum,
   calendarRecurrenceEnum,
   calendarStatusEnum,
+  interactionEventSourceEnum,
   interactionEvents,
   interactionModalityEnum,
   interactions,
@@ -74,6 +75,7 @@ describe("calendar and interaction schema", () => {
     expect(calendarOccurrenceStatusEnum.enumName).toBe("calendar_occurrence_status");
     expect(calendarOccurrenceStatusEnum.enumValues).toEqual(["ACTIVE", "CANCELLED"]);
     expect(interactionModalityEnum.enumValues).toEqual(["IN_PERSON", "REMOTE"]);
+    expect(interactionEventSourceEnum.enumValues).toEqual(["USER", "SYSTEM"]);
     expect(interactionStatusEnum.enumValues).toEqual([
       "SCHEDULED",
       "IN_PROGRESS",
@@ -305,6 +307,7 @@ describe("calendar and interaction schema", () => {
       [
         "interaction_id",
         "actor_user_id",
+        "source",
         "previous_status",
         "new_status",
         "reason",
@@ -316,7 +319,8 @@ describe("calendar and interaction schema", () => {
       }),
     ).toEqual([
       ["interaction_id", "text", true],
-      ["actor_user_id", "text", true],
+      ["actor_user_id", "text", false],
+      ["source", "interaction_event_source", true],
       ["previous_status", "interaction_status", false],
       ["new_status", "interaction_status", true],
       ["reason", "text", false],
@@ -327,6 +331,7 @@ describe("calendar and interaction schema", () => {
       "interaction_id",
       "created_at",
     ]);
+    expect(foreignKeyByColumnName(interactionEvents, "actor_user_id")?.onDelete).toBe("restrict");
   });
 
   test("stores durable owner-scoped command receipts", () => {
@@ -363,10 +368,8 @@ describe("calendar and interaction schema", () => {
       foreignKeyByColumnName(interactions, "corrected_by_user_id")?.onDelete,
       foreignKeyByColumnName(interactions, "visit_id")?.onDelete,
       foreignKeyByColumnName(interactionEvents, "interaction_id")?.onDelete,
-      foreignKeyByColumnName(interactionEvents, "actor_user_id")?.onDelete,
       foreignKeyByColumnName(orders, "interaction_id")?.onDelete,
     ]).toEqual([
-      "restrict",
       "restrict",
       "restrict",
       "restrict",

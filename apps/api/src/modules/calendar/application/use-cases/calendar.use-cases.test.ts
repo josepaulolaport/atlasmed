@@ -37,6 +37,8 @@ const baseEvent = (overrides: Partial<CalendarEventRecord> = {}): CalendarEventR
   cancelledByUserId: null,
   cancellationReason: null,
   version: 1,
+  owner: { id: "rep-1", name: "Ana Silva" },
+  facility: null,
   overrides: [],
   interactions: [],
   ...overrides,
@@ -52,6 +54,7 @@ class FakeCalendarRepository implements CalendarRepository {
   ensuredKeys: string[] = [];
   createCalls = 0;
   cancelCalls = 0;
+  cancelledInteractions: Array<{ recurrenceKey: string; actorUserId: string; reason: string }> = [];
   receipts = new Map<string, unknown>();
   private locked = false;
 
@@ -73,6 +76,18 @@ class FakeCalendarRepository implements CalendarRepository {
       }
     }
     return event.interactions.filter((item) => recurrenceKeys.includes(item.recurrenceKey));
+  }
+  async cancelInteractionOccurrences(input: { calendarId: string; recurrenceKeys?: string[]; actorUserId: string; reason: string }) {
+    const event = await this.findById(input.calendarId);
+    if (!event) return 0;
+    const targets = event.interactions.filter((item) => !input.recurrenceKeys || input.recurrenceKeys.includes(item.recurrenceKey));
+    for (const item of targets) {
+      if (item.status !== "SCHEDULED") throw new ValidationError([{ field: "recurrenceKey", message: "Only scheduled interaction occurrences may be cancelled" }]);
+      item.status = "CANCELLED";
+      item.version += 1;
+      this.cancelledInteractions.push({ recurrenceKey: item.recurrenceKey, actorUserId: input.actorUserId, reason: input.reason });
+    }
+    return targets.length;
   }
   async getCommandReceipt<T>(ownerUserId: string, commandKey: string) { return this.receipts.get(`${ownerUserId}:${commandKey}`) as T | undefined; }
   async saveCommandReceipt<T>(ownerUserId: string, commandKey: string, _kind: string, resourceId: string | null, result: T) {
@@ -100,6 +115,8 @@ class FakeCalendarRepository implements CalendarRepository {
       ...input.event,
       id: "created-calendar",
       version: 1,
+      owner: { id: input.event.ownerUserId, name: "Ana Silva" },
+      facility: input.interaction ? { id: input.interaction.facilityId, name: "Clínica Central" } : null,
       overrides: [],
       interactions: input.interaction ? [{
         id: "interaction-1",
@@ -229,13 +246,37 @@ describe("Calendar application use cases", () => {
 
   it("filters manager interaction rows outside facility scope and rejects unmanaged owners", async () => {
     const repository = new FakeCalendarRepository();
-    repository.events = [baseEvent({ kind: "INTERACTION", interactions: [{ id: "i", recurrenceKey: "2026-08-03T09:00[UTC]",
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: "facility-out", name: "Fora do escopo" }, interactions: [{ id: "i", recurrenceKey: "2026-08-03T09:00[UTC]",
       facilityId: "facility-out", modality: "REMOTE", status: "SCHEDULED", version: 1 }] })];
     const useCase = new ListCalendarUseCase({ repository });
     expect(await useCase.execute({ actor: { userId: "manager-1", roleName: "MANAGER" }, scope: managerScope,
       ownerUserId: "rep-1", from: new Date("2026-08-03"), to: new Date("2026-08-04") })).toEqual([]);
     await expect(useCase.execute({ actor: { userId: "manager-1", roleName: "MANAGER" }, scope: managerScope,
       ownerUserId: "rep-2", from: new Date("2026-08-03"), to: new Date("2026-08-04") })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("returns the mobile calendar contract with recurrence, identities, versions, and effective missed state", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({
+      kind: "INTERACTION", recurrence: "WEEKLY", recurrenceCount: 2,
+      owner: { id: "rep-1", name: "Ana Silva" }, facility: { id: "facility-1", name: "Clínica Central" },
+      interactions: [{ id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 7 }],
+      overrides: [{ id: "override-1", calendarId: "calendar-1", recurrenceKey: "2026-08-03T09:00[UTC]",
+        startsAt: new Date("2026-08-03T11:00:00Z"), endsAt: new Date("2026-08-03T12:00:00Z"), status: "ACTIVE", reason: null, version: 2 }],
+    })];
+
+    const [result] = await new ListCalendarUseCase({ repository, now: () => new Date("2026-08-03T12:00:00.001Z") }).execute({
+      actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      from: new Date("2026-08-03T00:00:00Z"), to: new Date("2026-08-04T00:00:00Z"),
+    });
+
+    expect(result).toEqual(expect.objectContaining({
+      calendarId: "calendar-1", recurrenceKey: "2026-08-03T09:00[UTC]", recurrence: "WEEKLY", recurrenceCount: 2,
+      recurrenceUntil: null, calendarVersion: 1, version: 1, overrideVersion: 2, canMutate: true,
+      owner: { id: "rep-1", name: "Ana Silva" }, facility: { id: "facility-1", name: "Clínica Central" },
+      interaction: expect.objectContaining({ id: "interaction-1", status: "NOT_COMPLETED", version: 7 }),
+    }));
+    expect(repository.events[0]?.interactions[0]?.status).toBe("SCHEDULED");
   });
 
   it("returns occupied active intervals without work-hour restrictions", async () => {
@@ -268,6 +309,19 @@ describe("Calendar application use cases", () => {
     await expect(new CancelCalendarOccurrenceUseCase({ repository }).execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
       id: "calendar-1", recurrenceKey: "2026-08-03T09:00[UTC]", idempotencyKey: "cmd-cancel", expectedVersion: 0, reason: " Cliente pediu " }))
       .rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("cancels a scheduled interaction occurrence and its lifecycle row with user metadata", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: "facility-1", name: "Clínica Central" }, interactions: [{
+      id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 1,
+    }] })];
+
+    await new CancelCalendarOccurrenceUseCase({ repository }).execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", recurrenceKey: "2026-08-03T09:00[UTC]", idempotencyKey: "cancel-occ", expectedVersion: 0, reason: " Cliente pediu " });
+
+    expect(repository.cancelledInteractions).toEqual([{ recurrenceKey: "2026-08-03T09:00[UTC]", actorUserId: "rep-1", reason: "Cliente pediu" }]);
+    expect(repository.events[0]?.interactions[0]).toMatchObject({ status: "CANCELLED", version: 2 });
   });
 
   it("rejects occurrence rescheduling that overlaps an effective sibling in the same series", async () => {
@@ -319,6 +373,22 @@ describe("Calendar application use cases", () => {
     expect(repository.override?.recurrenceKey).toBe("2026-08-04T09:00[UTC]");
   });
 
+  it("rejects recurrence-shape edits after any interaction materialization but allows title-only edits", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: "facility-1", name: "Clínica Central" }, interactions: [{
+      id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 1,
+    }] })];
+    const useCase = new UpdateCalendarEventUseCase({ repository });
+
+    await expect(useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "shape", expectedVersion: 1, changes: { recurrence: "DAILY", recurrenceCount: 2 } }))
+      .rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+
+    await useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "title", expectedVersion: 1, changes: { title: "Novo título" } });
+    expect(repository.updated?.changes).toMatchObject({ title: "Novo título" });
+  });
+
   it("replays a create command without executing the business write twice", async () => {
     const repository = new FakeCalendarRepository();
     const useCase = new CreateCalendarEventUseCase({ repository });
@@ -344,6 +414,25 @@ describe("Calendar application use cases", () => {
     expect(second).toEqual(first);
     expect(repository.cancelCalls).toBe(1);
     expect(repository.events[0]).toMatchObject({ status: "CANCELLED", cancellationReason: "compromisso cancelado" });
+  });
+
+  it("cancels every materialized scheduled interaction in a series transactionally", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({ kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 2,
+      facility: { id: "facility-1", name: "Clínica Central" }, interactions: [
+        { id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 1 },
+        { id: "interaction-2", recurrenceKey: "2026-08-04T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 1 },
+      ] })];
+
+    await new CancelCalendarEventUseCase({ repository }).execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      id: "calendar-1", idempotencyKey: "cancel-series", expectedVersion: 1, reason: " Plano alterado " });
+
+    expect(repository.events[0]?.status).toBe("CANCELLED");
+    expect(repository.events[0]?.interactions.map((item) => item.status)).toEqual(["CANCELLED", "CANCELLED"]);
+    expect(repository.cancelledInteractions).toEqual([
+      { recurrenceKey: "2026-08-03T09:00[UTC]", actorUserId: "rep-1", reason: "Plano alterado" },
+      { recurrenceKey: "2026-08-04T09:00[UTC]", actorUserId: "rep-1", reason: "Plano alterado" },
+    ]);
   });
 
   it("requires a trimmed cancellation reason and soft-cancels an owned active series with expectedVersion", async () => {

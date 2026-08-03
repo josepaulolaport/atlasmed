@@ -22,6 +22,11 @@ export interface CalendarInteractionRecord {
   facilityId: string;
   modality: InteractionModality;
   status: InteractionStatus;
+  cancelledAt?: Date | null;
+  cancelledByUserId?: string | null;
+  cancellationReason?: string | null;
+  visitId?: string | null;
+  linkedOrderCount?: number;
   version: number;
 }
 
@@ -44,13 +49,15 @@ export interface CalendarEventRecord {
   cancelledByUserId: string | null;
   cancellationReason: string | null;
   version: number;
+  owner: { id: string; name: string };
+  facility: { id: string; name: string } | null;
   overrides: CalendarOverrideRecord[];
   interactions: CalendarInteractionRecord[];
 }
 
 export interface CreateCalendarEventInput {
   commandKey: string;
-  event: Omit<CalendarEventRecord, "id" | "version" | "overrides" | "interactions" | "status" | "cancelledAt" | "cancelledByUserId" | "cancellationReason"> & {
+  event: Omit<CalendarEventRecord, "id" | "version" | "owner" | "facility" | "overrides" | "interactions" | "status" | "cancelledAt" | "cancelledByUserId" | "cancellationReason"> & {
     firstStartsAt: Date;
     firstEndsAt: Date;
   };
@@ -76,6 +83,9 @@ export interface UpsertCalendarOverrideInput {
   endsAt: Date;
   status: "ACTIVE" | "CANCELLED";
   reason?: string | null;
+  actorUserId: string;
+  previousStartsAt?: Date;
+  previousEndsAt?: Date;
   expectedVersion: number;
   commandKey: string;
 }
@@ -94,6 +104,7 @@ export interface CalendarRepository {
   findById(id: string): Promise<CalendarEventRecord | null>;
   listConflictEntries(ownerUserId: string, excludeCalendarId?: string, range?: { from: Date; to?: Date }): Promise<CalendarConflictEntry[]>;
   ensureInteractionsForOccurrences(calendarId: string, recurrenceKeys: string[]): Promise<CalendarInteractionRecord[]>;
+  cancelInteractionOccurrences(input: { calendarId: string; recurrenceKeys?: string[]; actorUserId: string; reason: string }): Promise<number>;
   getCommandReceipt<T>(ownerUserId: string, commandKey: string): Promise<T | undefined>;
   saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null, result: T): Promise<T>;
   create(input: CreateCalendarEventInput): Promise<CalendarEventRecord>;

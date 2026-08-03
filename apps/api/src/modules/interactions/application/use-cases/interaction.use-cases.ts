@@ -63,14 +63,22 @@ function effectiveOccurrence(record: InteractionDetailRecord) {
     : occurrence;
 }
 
-function toDto(record: InteractionDetailRecord, actor: InteractionActor) {
+function effectiveStatus(record: InteractionDetailRecord, occurrence: ReturnType<typeof effectiveOccurrence>, now: Date): InteractionStatus {
+  if (record.status !== "SCHEDULED") return record.status;
+  if (record.calendar.status === "CANCELLED" || record.occurrenceOverride?.status === "CANCELLED") return "CANCELLED";
+  return occurrence.endsAt < now ? "NOT_COMPLETED" : "SCHEDULED";
+}
+
+function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Date) {
   const occurrence = effectiveOccurrence(record);
+  const status = effectiveStatus(record, occurrence, now);
+  const canMutate = record.agentUserId === actor.userId && record.calendar.ownerUserId === actor.userId && status !== "CANCELLED";
   return {
     id: record.id,
     calendarId: record.calendarId,
     recurrenceKey: record.recurrenceKey,
     modality: record.modality,
-    status: record.status,
+    status,
     actualStartedAt: record.actualStartedAt?.toISOString() ?? null,
     actualEndedAt: record.actualEndedAt?.toISOString() ?? null,
     correctedAt: record.correctedAt?.toISOString() ?? null,
@@ -78,7 +86,9 @@ function toDto(record: InteractionDetailRecord, actor: InteractionActor) {
     correctionReason: record.correctionReason,
     visitId: record.visitId,
     version: record.version,
-    calendar: { id: record.calendarId, title: record.calendar.title },
+    calendarVersion: record.calendar.version,
+    overrideVersion: record.occurrenceOverride?.version ?? null,
+    calendar: { id: record.calendarId, title: record.calendar.title, version: record.calendar.version },
     occurrence: {
       recurrenceKey: record.recurrenceKey,
       startsAt: occurrence.startsAt.toISOString(),
@@ -91,7 +101,7 @@ function toDto(record: InteractionDetailRecord, actor: InteractionActor) {
       displayName: [record.agent.firstName, record.agent.lastName].filter(Boolean).join(" ") || record.agent.id,
     },
     linkedOrders: record.linkedOrders.map((order) => ({ ...order, orderedAt: order.orderedAt.toISOString() })),
-    canMutate: record.agentUserId === actor.userId && record.calendar.ownerUserId === actor.userId,
+    canMutate,
   };
 }
 
@@ -101,37 +111,41 @@ export class GetInteractionUseCase {
     const record = await this.deps.repository.findById(input.id);
     if (!record) throw new ResourceNotFoundError("Interaction", input.id);
     assertReadable(record, input.actor, input.scope);
-    return toDto(record, input.actor);
+    return toDto(record, input.actor, this.deps.now?.() ?? new Date());
   }
 }
 
 export class StartInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
   async execute(input: { id: string; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string }) {
+    const now = this.deps.now?.() ?? new Date();
     const replay = await this.deps.repository.findCommandResult({ id: input.id, command: "start", idempotencyKey: input.idempotencyKey });
     if (replay) {
       assertOwner(replay, input.actor, input.scope);
-      return toDto(replay, input.actor);
+      return toDto(replay, input.actor, now);
     }
     const record = await this.deps.repository.findById(input.id);
     if (!record) throw new ResourceNotFoundError("Interaction", input.id);
     assertOwner(record, input.actor, input.scope);
-    if (record.status !== "SCHEDULED") throw new InteractionTransitionError(record.status, "IN_PROGRESS");
+    const occurrence = effectiveOccurrence(record);
+    const status = effectiveStatus(record, occurrence, now);
+    if (status !== "SCHEDULED") throw new InteractionTransitionError(status, "IN_PROGRESS");
     if (record.version !== input.expectedVersion) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
     const result = await this.deps.repository.start({ id: input.id, actorUserId: input.actor.userId, expectedVersion: input.expectedVersion,
-      idempotencyKey: input.idempotencyKey, startedAt: this.deps.now?.() ?? new Date() });
+      idempotencyKey: input.idempotencyKey, startedAt: now });
     if (!result) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
-    return toDto(result.interaction, input.actor);
+    return toDto(result.interaction, input.actor, now);
   }
 }
 
 export class CompleteInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
   async execute(input: { id: string; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string; correctionReason?: string }) {
+    const now = this.deps.now?.() ?? new Date();
     const replay = await this.deps.repository.findCommandResult({ id: input.id, command: "complete", idempotencyKey: input.idempotencyKey });
     if (replay) {
       assertOwner(replay, input.actor, input.scope);
-      return toDto(replay, input.actor);
+      return toDto(replay, input.actor, now);
     }
     const record = await this.deps.repository.findById(input.id);
     if (!record) throw new ResourceNotFoundError("Interaction", input.id);
@@ -142,10 +156,13 @@ export class CompleteInteractionUseCase {
       throw new ValidationError([{ field: "correctionReason", message: "correctionReason is required when correcting a missed interaction" }]);
     }
     if (record.version !== input.expectedVersion) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
+    const occurrence = effectiveOccurrence(record);
+    const scheduledStartsAt = occurrence.startsAt < now ? occurrence.startsAt : new Date(now.getTime() - 1);
     const result = await this.deps.repository.complete({ id: input.id, actorUserId: input.actor.userId, expectedVersion: input.expectedVersion,
-      idempotencyKey: input.idempotencyKey, completedAt: this.deps.now?.() ?? new Date(), ...(correctionReason ? { correctionReason } : {}) });
+      idempotencyKey: input.idempotencyKey, completedAt: now,
+      ...(record.status === "NOT_COMPLETED" ? { scheduledStartsAt } : {}), ...(correctionReason ? { correctionReason } : {}) });
     if (!result) throw new InteractionVersionConflictError(input.expectedVersion, record.version);
-    return toDto(result.interaction, input.actor);
+    return toDto(result.interaction, input.actor, now);
   }
 }
 
