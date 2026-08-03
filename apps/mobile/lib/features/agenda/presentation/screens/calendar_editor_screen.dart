@@ -114,7 +114,7 @@ class _CalendarEditorScreenState extends ConsumerState<CalendarEditorScreen> {
                                     hintText:
                                         draft.kind ==
                                             CalendarEventKind.interaction
-                                        ? 'Ex.: Visita de acompanhamento'
+                                        ? 'Ex.: Interação de acompanhamento'
                                         : 'Ex.: Horário pessoal',
                                     errorText: errors['title'],
                                   ),

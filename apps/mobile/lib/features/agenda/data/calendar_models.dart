@@ -366,6 +366,11 @@ class InteractionDetail extends Equatable {
     required this.linkedOrders,
     required this.version,
     required this.canMutate,
+    this.calendarVersion = 0,
+    this.overrideVersion,
+    this.recurrence = CalendarRecurrence.none,
+    this.recurrenceUntil,
+    this.recurrenceCount,
     this.actualStartedAt,
     this.actualEndedAt,
     this.correctionReason,
@@ -385,6 +390,11 @@ class InteractionDetail extends Equatable {
   final List<InteractionLinkedOrder> linkedOrders;
   final int version;
   final bool canMutate;
+  final int calendarVersion;
+  final int? overrideVersion;
+  final CalendarRecurrence recurrence;
+  final String? recurrenceUntil;
+  final int? recurrenceCount;
   final DateTime? actualStartedAt;
   final DateTime? actualEndedAt;
   final String? correctionReason;
@@ -416,6 +426,24 @@ class InteractionDetail extends Equatable {
           .toList(growable: false),
       version: json['version'] as int,
       canMutate: json['canMutate'] as bool? ?? false,
+      calendarVersion:
+          calendar['version'] as int? ??
+          json['calendarVersion'] as int? ??
+          json['version'] as int? ??
+          0,
+      overrideVersion:
+          occurrence['overrideVersion'] as int? ??
+          json['overrideVersion'] as int?,
+      recurrence: _enumFromApi(
+        CalendarRecurrence.values,
+        calendar['recurrence'] ?? json['recurrence'] ?? 'NONE',
+      ),
+      recurrenceUntil:
+          calendar['recurrenceUntil'] as String? ??
+          json['recurrenceUntil'] as String?,
+      recurrenceCount:
+          calendar['recurrenceCount'] as int? ??
+          json['recurrenceCount'] as int?,
       actualStartedAt: json['actualStartedAt'] == null
           ? null
           : DateTime.parse(json['actualStartedAt'] as String).toUtc(),
@@ -442,6 +470,11 @@ class InteractionDetail extends Equatable {
     linkedOrders,
     version,
     canMutate,
+    calendarVersion,
+    overrideVersion,
+    recurrence,
+    recurrenceUntil,
+    recurrenceCount,
     actualStartedAt,
     actualEndedAt,
     correctionReason,
@@ -498,6 +531,49 @@ class CalendarOccurrence extends Equatable {
   final String? recurrenceUntil;
   final int? recurrenceCount;
   final bool recurrenceProvided;
+
+  factory CalendarOccurrence.fromInteraction(InteractionDetail detail) {
+    final localStart = detail.occurrenceStartsAt.toLocal();
+    final localEnd = detail.occurrenceEndsAt.toLocal();
+    return CalendarOccurrence(
+      calendarId: detail.calendarId,
+      occurrenceId: '${detail.calendarId}:${detail.recurrenceKey}',
+      recurrenceKey: detail.recurrenceKey,
+      kind: CalendarEventKind.interaction,
+      title: detail.title,
+      owner: CalendarIdentity(
+        id: detail.agent.id,
+        name: detail.agent.displayName,
+      ),
+      facility: CalendarIdentity(
+        id: detail.facility.id,
+        name: detail.facility.displayName,
+      ),
+      modality: detail.modality,
+      startsAt: detail.occurrenceStartsAt,
+      endsAt: detail.occurrenceEndsAt,
+      localDate: _dateOnly(localStart),
+      localStartsAt: _formatTime(localStart),
+      localEndsAt: _formatTime(localEnd),
+      recurrence: detail.recurrence,
+      interaction: CalendarInteractionContext(
+        id: detail.id,
+        facilityId: detail.facility.id,
+        agentUserId: detail.agent.id,
+        modality: detail.modality,
+        status: detail.status,
+      ),
+      canMutate: detail.canMutate,
+      timeZone: detail.timeZone,
+      durationMinutes: detail.occurrenceEndsAt
+          .difference(detail.occurrenceStartsAt)
+          .inMinutes,
+      version: detail.calendarVersion,
+      overrideVersion: detail.overrideVersion,
+      recurrenceUntil: detail.recurrenceUntil,
+      recurrenceCount: detail.recurrenceCount,
+    );
+  }
 
   factory CalendarOccurrence.fromJson(Map<String, dynamic> json) {
     final startsAt = DateTime.parse(json['startsAt'] as String).toUtc();

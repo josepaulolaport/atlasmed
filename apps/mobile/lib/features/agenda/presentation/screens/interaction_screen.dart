@@ -1,4 +1,6 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/interaction_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
@@ -53,14 +55,14 @@ class InteractionScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Atendimento'),
+        title: const Text('Interação'),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.gray900,
       ),
       body: state.detail.when(
         loading: () => const Center(
           child: CircularProgressIndicator(
-            semanticsLabel: 'Carregando atendimento',
+            semanticsLabel: 'Carregando interação',
           ),
         ),
         error: (error, _) => _InteractionError(
@@ -89,15 +91,111 @@ class InteractionScreen extends ConsumerWidget {
                   },
                 ).toString(),
               ),
-          onReschedule: onReschedule,
-          onCancel: onCancel,
+          onRefresh: () =>
+              ref.read(interactionProvider(interactionId).notifier).load(),
+          onReschedule:
+              onReschedule ??
+              () async {
+                final occurrence = CalendarOccurrence.fromInteraction(detail);
+                await context.push(
+                  '/agenda/${detail.calendarId}/occurrences/${Uri.encodeComponent(detail.recurrenceKey)}/edit',
+                  extra: occurrence,
+                );
+                await ref
+                    .read(interactionProvider(interactionId).notifier)
+                    .load();
+              },
+          onCancel: onCancel ?? () => _cancelOccurrence(context, ref, detail),
         ),
       ),
     );
   }
 }
 
-class _InteractionContent extends StatelessWidget {
+Future<void> _cancelOccurrence(
+  BuildContext context,
+  WidgetRef ref,
+  InteractionDetail detail,
+) async {
+  final controller = TextEditingController();
+  String? errorText;
+  final reason = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Cancelar interação'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Informe o motivo do cancelamento desta ocorrência.'),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('interaction-cancel-reason'),
+              controller: controller,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: 'Motivo',
+                errorText: errorText,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Voltar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isEmpty) {
+                setState(() => errorText = 'Informe o motivo do cancelamento.');
+                return;
+              }
+              Navigator.pop(dialogContext, value);
+            },
+            child: const Text('Confirmar cancelamento'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (reason == null || !context.mounted) return;
+
+  final repository = ref.read(calendarMutationRepositoryProvider);
+  final expectedVersion = detail.overrideVersion ?? detail.calendarVersion;
+  final idempotencyKey =
+      'cancel-${detail.calendarId}-${detail.recurrenceKey}-v$expectedVersion';
+  try {
+    await repository.cancelCalendarOccurrence(
+      calendarId: detail.calendarId,
+      recurrenceKey: detail.recurrenceKey,
+      command: CalendarCancellationCommand(
+        expectedVersion: expectedVersion,
+        reason: reason,
+      ),
+      idempotencyKey: idempotencyKey,
+    );
+    ref.invalidate(agendaProvider);
+    await ref.read(interactionProvider(detail.id).notifier).load();
+  } on CalendarApiException catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error.message)));
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Não foi possível cancelar a interação. Tente novamente.',
+        ),
+      ),
+    );
+  }
+}
+
+class _InteractionContent extends ConsumerWidget {
   const _InteractionContent({
     required this.detail,
     required this.command,
@@ -105,6 +203,7 @@ class _InteractionContent extends StatelessWidget {
     required this.onStart,
     required this.onComplete,
     required this.onNewOrder,
+    required this.onRefresh,
     this.onReschedule,
     this.onCancel,
   });
@@ -115,17 +214,24 @@ class _InteractionContent extends StatelessWidget {
   final Future<bool> Function() onStart;
   final Future<bool> Function({String? correctionReason}) onComplete;
   final VoidCallback onNewOrder;
+  final Future<void> Function() onRefresh;
   final VoidCallback? onReschedule;
   final VoidCallback? onCancel;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final notesQuery = InteractionNotesQuery(
       facilityId: detail.facility.id,
       ownerUserId: detail.canMutate ? null : detail.agent.id,
     );
     return RefreshIndicator(
-      onRefresh: () async {},
+      onRefresh: () async {
+        ref.invalidate(interactionNotesProvider(notesQuery));
+        await Future.wait([
+          onRefresh(),
+          ref.read(interactionNotesProvider(notesQuery).future),
+        ]);
+      },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -436,7 +542,7 @@ class _ActionsCard extends StatelessWidget {
               onPressed: busy ? null : () => onStart(),
               icon: const Icon(Icons.play_arrow_rounded),
               label: Text(
-                command == 'start' ? 'Iniciando…' : 'Iniciar atendimento',
+                command == 'start' ? 'Iniciando…' : 'Iniciar interação',
               ),
             ),
           if (detail.status == InteractionStatus.inProgress)
@@ -444,7 +550,7 @@ class _ActionsCard extends StatelessWidget {
               onPressed: busy ? null : () => onComplete(),
               icon: const Icon(Icons.check_rounded),
               label: Text(
-                command == 'complete' ? 'Concluindo…' : 'Concluir atendimento',
+                command == 'complete' ? 'Concluindo…' : 'Concluir interação',
               ),
             ),
           if (detail.status == InteractionStatus.notCompleted)
@@ -489,12 +595,12 @@ class _ActionsCard extends StatelessWidget {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Corrigir atendimento'),
+          title: const Text('Corrigir interação'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Informe por que este atendimento deve ser marcado como concluído.',
+                'Informe por que esta interação deve ser marcada como concluída.',
               ),
               const SizedBox(height: 12),
               TextField(
@@ -643,7 +749,7 @@ class _StatusChip extends StatelessWidget {
 
 String _statusLabel(InteractionStatus status) => switch (status) {
   InteractionStatus.scheduled => 'Agendado',
-  InteractionStatus.inProgress => 'Em atendimento',
+  InteractionStatus.inProgress => 'Em andamento',
   InteractionStatus.completed => 'Concluído',
   InteractionStatus.notCompleted => 'Não realizado',
   InteractionStatus.cancelled => 'Cancelado',

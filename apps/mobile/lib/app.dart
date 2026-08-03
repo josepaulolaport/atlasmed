@@ -43,6 +43,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_t
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/new_order_products_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/cart_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/checkout_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_success_screen.dart';
 import 'package:atlasmed_mobile_app/features/presentations/presentation/screens/presentations_screen.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profile_screen.dart';
@@ -522,10 +523,22 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         GoRoute(
           path: '/orders/new/success',
-          builder: (_, state) => OrderSuccessScreen(
-            orderId: state.uri.queryParameters['orderId'],
-            interactionId: state.uri.queryParameters['interactionId'],
-          ),
+          builder: (_, state) {
+            final order = state.extra;
+            if (order is! ApiOrderDetail) {
+              return const Scaffold(
+                body: Center(
+                  child: Text(
+                    'Não foi possível abrir a confirmação do pedido.',
+                  ),
+                ),
+              );
+            }
+            return OrderSuccessScreen(
+              order: order,
+              interactionId: state.uri.queryParameters['interactionId'],
+            );
+          },
         ),
         GoRoute(
           path: '/orders/:id',

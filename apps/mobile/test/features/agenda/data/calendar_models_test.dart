@@ -54,6 +54,49 @@ void main() {
       },
     );
 
+    test(
+      'parses enriched recurrence bounds, versions and mutation metadata',
+      () {
+        final occurrence = CalendarOccurrence.fromJson({
+          'id': 'calendar-1:key-1',
+          'calendarId': 'calendar-1',
+          'occurrenceId': 'calendar-1:key-1',
+          'recurrenceKey': 'key-1',
+          'kind': 'INTERACTION',
+          'title': 'Interação de acompanhamento',
+          'startsAt': '2026-08-03T12:00:00.000Z',
+          'endsAt': '2026-08-03T13:00:00.000Z',
+          'timeZone': 'America/Sao_Paulo',
+          'durationMinutes': 60,
+          'recurrence': 'WEEKLY',
+          'recurrenceUntil': '2026-10-01',
+          'recurrenceCount': null,
+          'version': 4,
+          'overrideVersion': 2,
+          'canMutate': true,
+          'owner': {'id': 'rep-1', 'displayName': 'Ana Souza'},
+          'facility': {'id': 'facility-1', 'name': 'Clínica Central'},
+          'interaction': {
+            'id': 'interaction-1',
+            'facilityId': 'facility-1',
+            'agentUserId': 'rep-1',
+            'modality': 'REMOTE',
+            'status': 'SCHEDULED',
+          },
+        });
+
+        expect(occurrence.recurrence, CalendarRecurrence.weekly);
+        expect(occurrence.recurrenceUntil, '2026-10-01');
+        expect(occurrence.recurrenceCount, isNull);
+        expect(occurrence.version, 4);
+        expect(occurrence.overrideVersion, 2);
+        expect(occurrence.canMutate, isTrue);
+        expect(occurrence.owner.name, 'Ana Souza');
+        expect(occurrence.facility?.name, 'Clínica Central');
+        expect(occurrence.modality, CalendarModality.remote);
+      },
+    );
+
     test('falls back to canonical ids when display enrichment is absent', () {
       final occurrence = CalendarOccurrence.fromJson({
         'id': 'occurrence-2',

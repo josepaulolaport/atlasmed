@@ -32,10 +32,14 @@ class _InteractionRepository implements CalendarRepositoryContract {
   InteractionDetail detail;
   int starts = 0;
   int completes = 0;
+  int gets = 0;
   String? correctionReason;
 
   @override
-  Future<InteractionDetail> getInteraction(String id) async => detail;
+  Future<InteractionDetail> getInteraction(String id) async {
+    gets++;
+    return detail;
+  }
 
   @override
   Future<InteractionDetail> startInteraction(
@@ -76,18 +80,72 @@ class _InteractionRepository implements CalendarRepositoryContract {
   }) async => const [];
 }
 
+class _MutationRepository implements CalendarMutationRepositoryContract {
+  int cancellations = 0;
+  String? calendarId;
+  String? recurrenceKey;
+  CalendarCancellationCommand? command;
+  String? idempotencyKey;
+
+  @override
+  Future<void> cancelCalendarOccurrence({
+    required String calendarId,
+    required String recurrenceKey,
+    required CalendarCancellationCommand command,
+    required String idempotencyKey,
+  }) async {
+    cancellations++;
+    this.calendarId = calendarId;
+    this.recurrenceKey = recurrenceKey;
+    this.command = command;
+    this.idempotencyKey = idempotencyKey;
+  }
+
+  @override
+  Future<void> cancelCalendar({
+    required String calendarId,
+    required CalendarCancellationCommand command,
+    required String idempotencyKey,
+  }) async {}
+
+  @override
+  Future<void> createCalendar({
+    required CalendarCreateCommand command,
+    required String idempotencyKey,
+  }) async {}
+
+  @override
+  Future<void> updateCalendar({
+    required String calendarId,
+    required CalendarUpdateCommand command,
+    required String idempotencyKey,
+  }) async {}
+
+  @override
+  Future<void> updateCalendarOccurrence({
+    required String calendarId,
+    required String recurrenceKey,
+    required CalendarOccurrenceUpdateCommand command,
+    required String idempotencyKey,
+  }) async {}
+}
+
 class _NotesRepository extends FacilityNotesRepository {
   _NotesRepository() : super('facility-1');
   int creates = 0;
+  int loads = 0;
 
   @override
-  Future<List<FacilityFieldNote>> loadNotes() async => [
-    FacilityFieldNote(
-      id: 'note-1',
-      text: 'Usar estacionamento lateral.',
-      createdAt: DateTime.utc(2026, 8, 2),
-    ),
-  ];
+  Future<List<FacilityFieldNote>> loadNotes() async {
+    loads++;
+    return [
+      FacilityFieldNote(
+        id: 'note-1',
+        text: 'Usar estacionamento lateral.',
+        createdAt: DateTime.utc(2026, 8, 2),
+      ),
+    ];
+  }
 
   @override
   Future<FacilityFieldNote> createNote(String note) async {
@@ -104,6 +162,7 @@ InteractionDetail _detail({
   InteractionStatus status = InteractionStatus.scheduled,
   bool canMutate = true,
   int version = 1,
+  int? calendarVersion,
 }) => InteractionDetail(
   id: 'interaction-1',
   calendarId: 'calendar-1',
@@ -131,15 +190,21 @@ InteractionDetail _detail({
   ],
   version: version,
   canMutate: canMutate,
+  calendarVersion: calendarVersion ?? version,
 );
 
 Widget _app(
   _InteractionRepository repository,
   _NotesRepository notes, {
+  _MutationRepository? mutations,
   VoidCallback? onNewOrder,
+  VoidCallback? onReschedule,
+  VoidCallback? onCancel,
 }) => ProviderScope(
   overrides: [
     calendarRepositoryProvider.overrideWithValue(repository),
+    if (mutations != null)
+      calendarMutationRepositoryProvider.overrideWithValue(mutations),
     interactionNotesRepositoryProvider.overrideWith((ref, query) {
       ref.onDispose(notes.dispose);
       return notes;
@@ -150,6 +215,8 @@ Widget _app(
     home: InteractionScreen(
       interactionId: 'interaction-1',
       onNewOrder: onNewOrder,
+      onReschedule: onReschedule,
+      onCancel: onCancel,
     ),
   ),
 );
@@ -170,11 +237,11 @@ void main() {
     expect(find.text('Pedidos vinculados (1)'), findsOneWidget);
     expect(find.textContaining('Usar estacionamento lateral.'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Iniciar atendimento'),
+      find.text('Iniciar interação'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Iniciar atendimento'), findsOneWidget);
+    expect(find.text('Iniciar interação'), findsOneWidget);
   });
 
   testWidgets('explicit early start refreshes the workspace', (tester) async {
@@ -183,16 +250,121 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('Iniciar atendimento'),
+      find.text('Iniciar interação'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Iniciar atendimento'));
+    await tester.tap(find.text('Iniciar interação'));
     await tester.pumpAndSettle();
 
     expect(repository.starts, 1);
-    expect(find.text('Concluir atendimento'), findsOneWidget);
+    expect(find.text('Concluir interação'), findsOneWidget);
   });
+
+  testWidgets('scheduled attendance exposes reschedule and cancel callbacks', (
+    tester,
+  ) async {
+    var rescheduled = false;
+    var cancelled = false;
+    final repository = _InteractionRepository(_detail());
+    await tester.pumpWidget(
+      _app(
+        repository,
+        _NotesRepository(),
+        onReschedule: () => rescheduled = true,
+        onCancel: () => cancelled = true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Reagendar'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Reagendar'));
+    await tester.ensureVisible(find.text('Cancelar agendamento'));
+    await tester.pump();
+    await tester.tap(find.text('Cancelar agendamento'));
+
+    expect(rescheduled, isTrue);
+    expect(cancelled, isTrue);
+  });
+
+  testWidgets(
+    'production cancel sends occurrence version, reason and stable key',
+    (tester) async {
+      final repository = _InteractionRepository(
+        _detail(version: 7, calendarVersion: 7),
+      );
+      final mutations = _MutationRepository();
+      await tester.pumpWidget(
+        _app(repository, _NotesRepository(), mutations: mutations),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Reagendar'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('Cancelar agendamento'));
+      await tester.pump();
+      await tester.tap(find.text('Cancelar agendamento'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('interaction-cancel-reason')),
+        'Clínica solicitou reagendamento.',
+      );
+      await tester.tap(find.text('Confirmar cancelamento'));
+      await tester.pumpAndSettle();
+
+      expect(mutations.cancellations, 1);
+      expect(mutations.calendarId, 'calendar-1');
+      expect(mutations.recurrenceKey, '2026-08-03T09:00');
+      expect(mutations.command?.expectedVersion, 7);
+      expect(mutations.command?.reason, 'Clínica solicitou reagendamento.');
+      expect(mutations.idempotencyKey, 'cancel-calendar-1-2026-08-03T09:00-v7');
+    },
+  );
+
+  testWidgets('pull to refresh reloads interaction and facility notes', (
+    tester,
+  ) async {
+    final repository = _InteractionRepository(_detail());
+    final notes = _NotesRepository();
+    await tester.pumpWidget(_app(repository, notes));
+    await tester.pumpAndSettle();
+
+    expect(repository.gets, 1);
+    expect(notes.loads, 1);
+
+    await tester.drag(find.byType(ListView), const Offset(0, 400));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(repository.gets, 2);
+    expect(notes.loads, 2);
+  });
+
+  testWidgets(
+    'cancelled attendance displays status without prohibited actions',
+    (tester) async {
+      final repository = _InteractionRepository(
+        _detail(status: InteractionStatus.cancelled),
+      );
+      await tester.pumpWidget(_app(repository, _NotesRepository()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cancelado'), findsOneWidget);
+      expect(find.text('Iniciar interação'), findsNothing);
+      expect(find.text('Concluir interação'), findsNothing);
+      expect(find.text('Corrigir como concluído'), findsNothing);
+      expect(find.text('Novo pedido'), findsNothing);
+      expect(find.text('Reagendar'), findsNothing);
+      expect(find.text('Cancelar agendamento'), findsNothing);
+    },
+  );
 
   testWidgets('manager view is read-only and hides note composer', (
     tester,
@@ -202,7 +374,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Visualização somente leitura'), findsOneWidget);
-    expect(find.text('Iniciar atendimento'), findsNothing);
+    expect(find.text('Iniciar interação'), findsNothing);
     expect(find.text('Novo pedido'), findsNothing);
     expect(find.text('Adicionar nota'), findsNothing);
   });

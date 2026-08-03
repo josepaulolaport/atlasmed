@@ -57,6 +57,8 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
   late DateTime _periodStart;
   String _search = '';
   String? _selectedOwnerUserId;
+  InteractionStatus? _selectedStatus;
+  CalendarModality? _selectedModality;
 
   @override
   void initState() {
@@ -97,7 +99,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         (currentUser.role.name == UserRoleName.admin ||
             currentUser.role.name == UserRoleName.rep);
     final ownerPicker =
-        widget.ownerPicker ?? (isManager ? _buildManagerOwnerPicker() : null);
+        widget.ownerPicker ?? (isManager ? _buildManagerFilters() : null);
     final createAction =
         widget.onCreate ??
         (canCreate ? () => context.push('/agenda/new') : null);
@@ -142,6 +144,78 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
       ),
     );
   }
+
+  Widget _buildManagerFilters() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _buildManagerOwnerPicker(),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<InteractionStatus?>(
+              key: const Key('agenda-status-filter'),
+              initialValue: _selectedStatus,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Status',
+              ),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Todos')),
+                DropdownMenuItem(
+                  value: InteractionStatus.scheduled,
+                  child: Text('Agendada'),
+                ),
+                DropdownMenuItem(
+                  value: InteractionStatus.inProgress,
+                  child: Text('Em andamento'),
+                ),
+                DropdownMenuItem(
+                  value: InteractionStatus.completed,
+                  child: Text('Concluída'),
+                ),
+                DropdownMenuItem(
+                  value: InteractionStatus.cancelled,
+                  child: Text('Cancelada'),
+                ),
+                DropdownMenuItem(
+                  value: InteractionStatus.notCompleted,
+                  child: Text('Não realizada'),
+                ),
+              ],
+              onChanged: (status) => setState(() => _selectedStatus = status),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonFormField<CalendarModality?>(
+              key: const Key('agenda-modality-filter'),
+              initialValue: _selectedModality,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                isDense: true,
+                labelText: 'Modalidade',
+              ),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Todas')),
+                DropdownMenuItem(
+                  value: CalendarModality.inPerson,
+                  child: Text('Presencial'),
+                ),
+                DropdownMenuItem(
+                  value: CalendarModality.remote,
+                  child: Text('Remota'),
+                ),
+              ],
+              onChanged: (modality) =>
+                  setState(() => _selectedModality = modality),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
 
   Widget _buildManagerOwnerPicker() {
     final owners = ref.watch(agendaOwnerOptionsProvider);
@@ -193,12 +267,20 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
 
   List<CalendarOccurrence> _filtered(List<CalendarOccurrence> occurrences) {
     final query = _search.toLowerCase();
-    if (query.isEmpty) return occurrences;
     return occurrences
         .where((occurrence) {
-          return occurrence.title.toLowerCase().contains(query) ||
+          final matchesSearch =
+              query.isEmpty ||
+              occurrence.title.toLowerCase().contains(query) ||
               (occurrence.facility?.name.toLowerCase().contains(query) ??
                   false);
+          final matchesStatus =
+              _selectedStatus == null ||
+              occurrence.interaction?.status == _selectedStatus;
+          final matchesModality =
+              _selectedModality == null ||
+              occurrence.modality == _selectedModality;
+          return matchesSearch && matchesStatus && matchesModality;
         })
         .toList(growable: false);
   }
@@ -528,7 +610,7 @@ class _AgendaEmpty extends StatelessWidget {
             ),
             SizedBox(height: 8),
             Text(
-              'Use a agenda para acompanhar visitas, contatos e bloqueios pessoais.',
+              'Use a agenda para acompanhar interações e bloqueios pessoais.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: AppColors.gray600),
             ),

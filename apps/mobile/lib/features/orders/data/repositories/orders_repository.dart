@@ -288,6 +288,7 @@ class OrdersRepository extends Repository<OrdersPage>
   Future<ApiOrderDetail> createOrder({
     required String facilityId,
     required List<CreateOrderItemInput> items,
+    required String idempotencyKey,
     String? interactionId,
     String? verticalId,
     String? professionalId,
@@ -298,6 +299,7 @@ class OrdersRepository extends Repository<OrdersPage>
       request: RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/orders'),
         method: RepositoryHttpMethod.post,
+        headers: {'Idempotency-Key': idempotencyKey},
         body: {
           'facilityId': facilityId,
           'interactionId': ?interactionId,

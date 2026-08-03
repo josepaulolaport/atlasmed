@@ -97,9 +97,11 @@ void main() {
     await repository.createOrder(
       facilityId: 'facility-1',
       interactionId: 'interaction-1',
+      idempotencyKey: 'order-attempt-1',
       items: const [CreateOrderItemInput(productId: 'product-1', quantity: 1)],
     );
 
     expect(client.request!.body?['interactionId'], 'interaction-1');
+    expect(client.request!.headers['Idempotency-Key'], 'order-attempt-1');
   });
 }

@@ -10,6 +10,33 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/providers/order
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
+class CheckoutSubmissionController {
+  CheckoutSubmissionController({String Function()? idempotencyKeyFactory})
+    : _idempotencyKeyFactory =
+          idempotencyKeyFactory ??
+          (() => 'order-${DateTime.now().microsecondsSinceEpoch}');
+
+  final String Function() _idempotencyKeyFactory;
+  String? _pendingIdempotencyKey;
+  ApiOrderDetail? _confirmationOrder;
+
+  String get idempotencyKey =>
+      _pendingIdempotencyKey ??= _idempotencyKeyFactory();
+
+  ApiOrderDetail? get confirmationOrder => _confirmationOrder;
+
+  void recordFailure() {}
+
+  void recordCreatedOrder(ApiOrderDetail order) {
+    _confirmationOrder = order;
+    recordSuccess();
+  }
+
+  void recordSuccess() {
+    _pendingIdempotencyKey = null;
+  }
+}
+
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -20,6 +47,8 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _submitting = false;
   String? _submitError;
+  final CheckoutSubmissionController _submission =
+      CheckoutSubmissionController();
 
   void _showClinicSheet(BuildContext context, WidgetRef ref) {
     final cart = ref.read(cartProvider);
@@ -437,10 +466,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _submitError = null;
     });
     try {
+      final idempotencyKey = _submission.idempotencyKey;
       final order = await ref
           .read(ordersRepositoryProvider)
           .createOrder(
             facilityId: clinic.id,
+            idempotencyKey: idempotencyKey,
             interactionId: cart.interactionId,
             professionalId: cart.doctor?.id,
             items: cart.items
@@ -453,6 +484,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 )
                 .toList(growable: false),
           );
+      _submission.recordCreatedOrder(order);
       if (!mounted) return;
       context.push(
         Uri(
@@ -463,6 +495,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               'interactionId': cart.interactionId!,
           },
         ).toString(),
+        extra: order,
       );
     } catch (_) {
       if (mounted) {

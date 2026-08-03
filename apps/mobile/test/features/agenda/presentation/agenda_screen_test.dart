@@ -184,6 +184,62 @@ void main() {
     expect(repository.queries.last.ownerUserId, 'rep-2');
   });
 
+  testWidgets('manager filters interactions by status and modality', (
+    tester,
+  ) async {
+    final repository = _QueryRecordingRepository();
+    final manager = _user('manager-1', 'Marina', UserRoleName.manager);
+    final rep = _user('rep-2', 'Bruno', UserRoleName.rep);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          calendarRepositoryProvider.overrideWithValue(repository),
+          currentUserProvider.overrideWith((ref) async => manager),
+          agendaOwnerOptionsProvider.overrideWith((ref) async => [rep]),
+          agendaProvider.overrideWith(
+            (ref, query) async => [
+              _occurrence(
+                id: 'scheduled-remote',
+                date: '2026-08-03',
+                time: '09:00',
+                title: 'Interação remota',
+                facility: 'Clínica Norte',
+                modality: CalendarModality.remote,
+                status: InteractionStatus.scheduled,
+              ),
+              _occurrence(
+                id: 'completed-in-person',
+                date: '2026-08-03',
+                time: '11:00',
+                title: 'Interação concluída',
+                facility: 'Clínica Sul',
+                modality: CalendarModality.inPerson,
+                status: InteractionStatus.completed,
+              ),
+            ],
+          ),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const AgendaScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('agenda-status-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Concluída').last);
+    await tester.pump();
+    expect(find.text('Interação concluída'), findsOneWidget);
+    expect(find.text('Interação remota'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('agenda-modality-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remota').last);
+    await tester.pump();
+    expect(find.text('Interação concluída'), findsNothing);
+    expect(find.text('Interação remota'), findsNothing);
+  });
+
   testWidgets('keeps read-only agenda without any create placeholder', (
     tester,
   ) async {
@@ -326,7 +382,7 @@ void main() {
     expect(find.text('Nenhum compromisso neste período'), findsOneWidget);
     expect(
       find.text(
-        'Use a agenda para acompanhar visitas, contatos e bloqueios pessoais.',
+        'Use a agenda para acompanhar interações e bloqueios pessoais.',
       ),
       findsOneWidget,
     );
