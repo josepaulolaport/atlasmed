@@ -34,30 +34,50 @@ class CalendarIdentity extends Equatable {
   final String id;
   final String name;
 
-  factory CalendarIdentity.fromJson(Map<String, dynamic> json) =>
-      CalendarIdentity(
-        id: json['id'] as String,
-        name: (json['name'] ?? json['displayName']) as String,
-      );
+  factory CalendarIdentity.fromJson(
+    Map<String, dynamic> json, {
+    required String fallbackId,
+    required String fallbackName,
+  }) => CalendarIdentity(
+    id: (json['id'] as String?) ?? fallbackId,
+    name:
+        (json['name'] as String?) ??
+        (json['displayName'] as String?) ??
+        fallbackName,
+  );
 
   @override
   List<Object?> get props => [id, name];
 }
 
 class CalendarInteractionContext extends Equatable {
-  const CalendarInteractionContext({required this.id, required this.status});
+  const CalendarInteractionContext({
+    required this.id,
+    required this.status,
+    this.facilityId,
+    this.agentUserId,
+    this.modality,
+  });
 
   final String id;
+  final String? facilityId;
+  final String? agentUserId;
+  final CalendarModality? modality;
   final InteractionStatus status;
 
   factory CalendarInteractionContext.fromJson(Map<String, dynamic> json) =>
       CalendarInteractionContext(
         id: json['id'] as String,
+        facilityId: json['facilityId'] as String?,
+        agentUserId: json['agentUserId'] as String?,
+        modality: json['modality'] == null
+            ? null
+            : _enumFromApi(CalendarModality.values, json['modality']),
         status: _enumFromApi(InteractionStatus.values, json['status']),
       );
 
   @override
-  List<Object?> get props => [id, status];
+  List<Object?> get props => [id, facilityId, agentUserId, modality, status];
 }
 
 class CalendarOccurrence extends Equatable {
@@ -100,44 +120,59 @@ class CalendarOccurrence extends Equatable {
   factory CalendarOccurrence.fromJson(Map<String, dynamic> json) {
     final startsAt = DateTime.parse(json['startsAt'] as String).toUtc();
     final endsAt = DateTime.parse(json['endsAt'] as String).toUtc();
-    final localDateRaw = json['localDate'] as String?;
-    final localStartsAt =
-        json['localStartsAt'] as String? ?? _formatTime(startsAt.toLocal());
-    final localEndsAt =
-        json['localEndsAt'] as String? ?? _formatTime(endsAt.toLocal());
+    final localStart = startsAt.toLocal();
+    final localEnd = endsAt.toLocal();
+    final occurrenceId =
+        (json['occurrenceId'] as String?) ?? json['id'] as String;
+    final calendarId = (json['calendarId'] as String?) ?? json['id'] as String;
+    final ownerUserId =
+        (json['ownerUserId'] as String?) ??
+        ((json['owner'] as Map<String, dynamic>?)?['id'] as String?) ??
+        '';
+    final interactionJson = json['interaction'] as Map<String, dynamic>?;
+    final interaction = interactionJson == null
+        ? null
+        : CalendarInteractionContext.fromJson(interactionJson);
+    final facilityId =
+        (json['facilityId'] as String?) ?? interaction?.facilityId ?? '';
+    final ownerJson =
+        json['owner'] as Map<String, dynamic>? ??
+        <String, dynamic>{'name': json['ownerName']};
+    final facilityJson = json['facility'] as Map<String, dynamic>?;
     return CalendarOccurrence(
-      calendarId: (json['calendarId'] ?? json['id']) as String,
-      occurrenceId: json['occurrenceId'] as String,
-      recurrenceKey: json['recurrenceKey'] as String,
+      calendarId: calendarId,
+      occurrenceId: occurrenceId,
+      recurrenceKey: (json['recurrenceKey'] as String?) ?? occurrenceId,
       kind: _enumFromApi(CalendarEventKind.values, json['kind']),
       title: json['title'] as String,
       owner: CalendarIdentity.fromJson(
-        (json['owner'] ??
-                {'id': json['ownerUserId'], 'name': json['ownerName']})
-            as Map<String, dynamic>,
+        ownerJson,
+        fallbackId: ownerUserId,
+        fallbackName: 'Usuário',
       ),
-      facility: json['facility'] == null
+      facility: facilityJson == null
           ? null
-          : CalendarIdentity.fromJson(json['facility'] as Map<String, dynamic>),
+          : CalendarIdentity.fromJson(
+              facilityJson,
+              fallbackId: facilityId,
+              fallbackName: 'Clínica',
+            ),
       modality: json['modality'] == null
-          ? null
+          ? interaction?.modality
           : _enumFromApi(CalendarModality.values, json['modality']),
       startsAt: startsAt,
       endsAt: endsAt,
-      localDate: localDateRaw == null
-          ? _dateOnly(startsAt.toLocal())
-          : DateTime.parse(localDateRaw),
-      localStartsAt: localStartsAt,
-      localEndsAt: localEndsAt,
+      localDate: json['localDate'] == null
+          ? _dateOnly(localStart)
+          : DateTime.parse(json['localDate'] as String),
+      localStartsAt:
+          json['localStartsAt'] as String? ?? _formatTime(localStart),
+      localEndsAt: json['localEndsAt'] as String? ?? _formatTime(localEnd),
       recurrence: _enumFromApi(
         CalendarRecurrence.values,
         json['recurrence'] ?? 'NONE',
       ),
-      interaction: json['interaction'] == null
-          ? null
-          : CalendarInteractionContext.fromJson(
-              json['interaction'] as Map<String, dynamic>,
-            ),
+      interaction: interaction,
       canMutate: json['canMutate'] as bool? ?? false,
     );
   }
@@ -185,6 +220,53 @@ class CalendarAvailabilityInterval extends Equatable {
 
   @override
   List<Object?> get props => [startsAt, endsAt, occurrenceId];
+}
+
+class CalendarConflictInterval extends Equatable {
+  const CalendarConflictInterval({
+    required this.startsAt,
+    required this.endsAt,
+    this.id,
+  });
+
+  final DateTime startsAt;
+  final DateTime endsAt;
+  final String? id;
+
+  @override
+  List<Object?> get props => [startsAt, endsAt, id];
+}
+
+class CalendarConflict extends Equatable {
+  const CalendarConflict({required this.candidate, required this.existing});
+
+  final CalendarConflictInterval candidate;
+  final CalendarConflictInterval existing;
+
+  factory CalendarConflict.fromJson(Map<String, dynamic> json) =>
+      CalendarConflict(
+        candidate: CalendarConflictInterval(
+          id: json['candidateId'] as String?,
+          startsAt: DateTime.parse(
+            (json['candidateStartsAt'] ?? json['startsAt']) as String,
+          ).toUtc(),
+          endsAt: DateTime.parse(
+            (json['candidateEndsAt'] ?? json['endsAt']) as String,
+          ).toUtc(),
+        ),
+        existing: CalendarConflictInterval(
+          id: (json['existingId'] ?? json['occurrenceId']) as String?,
+          startsAt: DateTime.parse(
+            (json['existingStartsAt'] ?? json['startsAt']) as String,
+          ).toUtc(),
+          endsAt: DateTime.parse(
+            (json['existingEndsAt'] ?? json['endsAt']) as String,
+          ).toUtc(),
+        ),
+      );
+
+  @override
+  List<Object?> get props => [candidate, existing];
 }
 
 class AgendaDayGroup extends Equatable {

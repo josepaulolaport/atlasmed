@@ -1,5 +1,8 @@
+import 'package:atlasmed_mobile_app/core/user/models/user.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_repository_providers.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,6 +42,21 @@ final agendaAvailabilityProvider = FutureProvider.autoDispose
             ownerUserId: query.ownerUserId,
           );
     });
+
+final agendaOwnerOptionsProvider = FutureProvider.autoDispose<List<User>>((
+  ref,
+) async {
+  final repository = ref.watch(usersRepositoryProvider);
+  final page = await repository.getUsers(
+    page: 1,
+    limit: 100,
+    role: UserRoleName.rep,
+  );
+  // The current API does not expose manager-to-agent ids on this list DTO.
+  // Show users visible in the authenticated scope and let Calendar scope
+  // authorization remain the source of truth.
+  return page.items;
+});
 
 void refreshAgenda(Ref ref, AgendaQuery query) {
   ref.invalidate(agendaProvider(query));

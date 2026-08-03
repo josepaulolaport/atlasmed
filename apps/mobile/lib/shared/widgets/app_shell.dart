@@ -419,7 +419,7 @@ class AtlasDrawer extends ConsumerWidget {
                       avatarToken: session.token,
                     ),
                     Expanded(
-                      child: _NavItems(
+                      child: AtlasDrawerNavigation(
                         activeBranchIndex: activeBranchIndex,
                         onSelectBranch: onSelectBranch,
                         role: user?.role.name,
@@ -565,12 +565,13 @@ class _DrawerHeader extends StatelessWidget {
   }
 }
 
-class _NavItems extends StatelessWidget {
+class AtlasDrawerNavigation extends StatelessWidget {
   final int activeBranchIndex;
   final ValueChanged<int> onSelectBranch;
   final UserRoleName? role;
 
-  const _NavItems({
+  const AtlasDrawerNavigation({
+    super.key,
     required this.activeBranchIndex,
     required this.onSelectBranch,
     this.role,
@@ -586,14 +587,13 @@ class _NavItems extends StatelessWidget {
       return role != null && visibleFor(role!);
     });
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 0),
-      child: Column(
-        children: items.map((item) {
-          final isActive = item.isActiveForBranch(activeBranchIndex);
-          return _buildNavRow(item, isActive, context);
-        }).toList(),
-      ),
+    return ListView(
+      key: const Key('atlas-drawer-navigation'),
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 8),
+      children: items.map((item) {
+        final isActive = item.isActiveForBranch(activeBranchIndex);
+        return _buildNavRow(item, isActive, context);
+      }).toList(),
     );
   }
 

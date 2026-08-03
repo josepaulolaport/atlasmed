@@ -3,38 +3,72 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('CalendarOccurrence', () {
-    test('parses interaction calendar DTO and local display values', () {
+    test(
+      'parses the canonical Calendar API list DTO without invented local fields',
+      () {
+        final occurrence = CalendarOccurrence.fromJson({
+          'id': 'calendar-1:2026-08-03T09:00[America/Sao_Paulo]',
+          'calendarId': 'calendar-1',
+          'ownerUserId': 'user-1',
+          'kind': 'INTERACTION',
+          'title': 'Visita de acompanhamento',
+          'startsAt': '2026-08-03T12:00:00.000Z',
+          'endsAt': '2026-08-03T13:00:00.000Z',
+          'interaction': {
+            'id': 'interaction-1',
+            'facilityId': 'facility-1',
+            'agentUserId': 'user-1',
+            'modality': 'IN_PERSON',
+            'status': 'SCHEDULED',
+          },
+          'owner': {'id': 'user-1', 'displayName': 'Ana Souza'},
+          'facility': {'id': 'facility-1', 'displayName': 'Clínica Central'},
+        });
+        final localStart = DateTime.parse('2026-08-03T12:00:00.000Z').toLocal();
+        final localEnd = DateTime.parse('2026-08-03T13:00:00.000Z').toLocal();
+
+        expect(occurrence.kind, CalendarEventKind.interaction);
+        expect(occurrence.occurrenceId, contains('calendar-1:'));
+        expect(occurrence.owner.id, 'user-1');
+        expect(occurrence.owner.name, 'Ana Souza');
+        expect(occurrence.facility?.name, 'Clínica Central');
+        expect(occurrence.modality, CalendarModality.inPerson);
+        expect(occurrence.startsAt.isUtc, isTrue);
+        expect(
+          occurrence.localDate,
+          DateTime(localStart.year, localStart.month, localStart.day),
+        );
+        expect(
+          occurrence.localStartsAt,
+          '${localStart.hour.toString().padLeft(2, '0')}:${localStart.minute.toString().padLeft(2, '0')}',
+        );
+        expect(
+          occurrence.localEndsAt,
+          '${localEnd.hour.toString().padLeft(2, '0')}:${localEnd.minute.toString().padLeft(2, '0')}',
+        );
+        expect(occurrence.recurrence, CalendarRecurrence.none);
+        expect(occurrence.interaction?.facilityId, 'facility-1');
+        expect(occurrence.interaction?.agentUserId, 'user-1');
+        expect(occurrence.interaction?.status, InteractionStatus.scheduled);
+        expect(occurrence.canMutate, isFalse);
+      },
+    );
+
+    test('falls back to canonical ids when display enrichment is absent', () {
       final occurrence = CalendarOccurrence.fromJson({
-        'id': 'calendar-1',
-        'occurrenceId': 'calendar-1:2026-08-03T09:00[America/Sao_Paulo]',
-        'recurrenceKey': '2026-08-03T09:00[America/Sao_Paulo]',
-        'kind': 'INTERACTION',
-        'title': 'Visita de acompanhamento',
-        'owner': {'id': 'user-1', 'name': 'Ana Souza'},
-        'facility': {'id': 'facility-1', 'name': 'Clínica Central'},
-        'modality': 'IN_PERSON',
-        'startsAt': '2026-08-03T12:00:00.000Z',
-        'endsAt': '2026-08-03T13:00:00.000Z',
-        'localDate': '2026-08-03',
-        'localStartsAt': '09:00',
-        'localEndsAt': '10:00',
-        'recurrence': 'WEEKLY',
-        'interaction': {'id': 'interaction-1', 'status': 'SCHEDULED'},
-        'canMutate': true,
+        'id': 'occurrence-2',
+        'calendarId': 'calendar-2',
+        'ownerUserId': 'user-2',
+        'kind': 'PERSONAL_BLOCK',
+        'title': 'Indisponível',
+        'startsAt': '2026-08-04T17:00:00.000Z',
+        'endsAt': '2026-08-04T17:30:00.000Z',
       });
 
-      expect(occurrence.kind, CalendarEventKind.interaction);
-      expect(occurrence.occurrenceId, contains('calendar-1:'));
-      expect(occurrence.owner.name, 'Ana Souza');
-      expect(occurrence.facility?.name, 'Clínica Central');
-      expect(occurrence.modality, CalendarModality.inPerson);
-      expect(occurrence.startsAt.isUtc, isTrue);
-      expect(occurrence.localDate, DateTime(2026, 8, 3));
-      expect(occurrence.localStartsAt, '09:00');
-      expect(occurrence.recurrence, CalendarRecurrence.weekly);
-      expect(occurrence.interaction?.status, InteractionStatus.scheduled);
-      expect(occurrence.canMutate, isTrue);
-      expect(occurrence.dayLabel, 'segunda-feira, 3 de agosto');
+      expect(occurrence.owner.id, 'user-2');
+      expect(occurrence.owner.name, 'Usuário');
+      expect(occurrence.facility, isNull);
+      expect(occurrence.recurrenceKey, 'occurrence-2');
     });
 
     test('parses redacted manager personal block without private context', () {
@@ -76,8 +110,8 @@ void main() {
           'owner': {'id': 'user-1', 'name': 'Ana'},
           'facility': null,
           'modality': null,
-          'startsAt': '${localDate}T${time}:00.000Z',
-          'endsAt': '${localDate}T${time}:30.000Z',
+          'startsAt': '${localDate}T$time:00.000Z',
+          'endsAt': '${localDate}T$time:30.000Z',
           'localDate': localDate,
           'localStartsAt': time,
           'localEndsAt': time,

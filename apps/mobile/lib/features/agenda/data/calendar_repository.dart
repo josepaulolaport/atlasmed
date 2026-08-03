@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 import 'calendar_models.dart';
 
@@ -21,17 +23,32 @@ abstract interface class CalendarRepositoryContract {
   });
 }
 
-class CalendarRepository implements CalendarRepositoryContract {
+class CalendarRepository extends Repository<List<CalendarOccurrence>>
+    with SessionEnvironmentMixin<List<CalendarOccurrence>>
+    implements CalendarRepositoryContract {
   CalendarRepository({String? baseUrl, RepositoryHttpClient? client})
     : _baseUri = Uri.parse(baseUrl ?? AppConfig.apiBaseUrl),
-      _client =
-          client ??
-          createPlatformHttpClient(
-            tokenBuilder: SessionEnvironment.instance.tokenBuilder,
-          );
+      _client = client,
+      super(
+        endpoint: Uri.parse(
+          '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/calendar',
+        ),
+        resolveOnCreate: false,
+        name: 'CalendarRepository',
+      );
 
   final Uri _baseUri;
-  final RepositoryHttpClient _client;
+  final RepositoryHttpClient? _client;
+
+  @override
+  RepositoryHttpClient get client =>
+      _client ??
+      createPlatformHttpClient(
+        tokenBuilder: SessionEnvironment.instance.tokenBuilder,
+      );
+
+  @override
+  List<CalendarOccurrence> fromJson(String json) => const [];
 
   @override
   Future<List<CalendarOccurrence>> listCalendar({
@@ -74,12 +91,13 @@ class CalendarRepository implements CalendarRepositoryContract {
       _throwIfError(response);
     }
     final decoded = jsonDecode(response.body);
-    final map = decoded is Map<String, dynamic>
+    final data = decoded is List<dynamic>
         ? decoded
-        : const <String, dynamic>{};
-    final data =
-        (map['data'] ?? map['busy'] ?? map['intervals']) as List<dynamic>? ??
-        const [];
+        : ((decoded as Map<String, dynamic>)['data'] ??
+                      decoded['busy'] ??
+                      decoded['intervals'])
+                  as List<dynamic>? ??
+              const [];
     return data
         .cast<Map<String, dynamic>>()
         .map(CalendarAvailabilityInterval.fromJson)
@@ -103,14 +121,31 @@ class CalendarRepository implements CalendarRepositoryContract {
 
   Future<RepositoryHttpResponse> _call(Uri uri) async {
     try {
-      return await _client.call(
-        request: RepositoryHttpRequest(
-          url: uri,
-          method: RepositoryHttpMethod.get,
-        ),
+      final request = RepositoryHttpRequest(
+        url: uri,
+        method: RepositoryHttpMethod.get,
       );
+      var response = await client.call(request: request);
+      if (response.statusCode == 401) {
+        await onErrorStatusCode(401);
+        response = await client.call(request: request);
+      }
+      return response;
     } on CalendarApiException {
       rethrow;
+    } on SessionExpiredException {
+      try {
+        return await client.call(
+          request: RepositoryHttpRequest(
+            url: uri,
+            method: RepositoryHttpMethod.get,
+          ),
+        );
+      } catch (_) {
+        throw const CalendarNetworkException(
+          'Sua sessão expirou. Entre novamente para acessar a agenda.',
+        );
+      }
     } catch (_) {
       throw const CalendarNetworkException(
         'Não foi possível acessar a agenda. Verifique sua conexão.',
@@ -122,12 +157,19 @@ class CalendarRepository implements CalendarRepositoryContract {
     final payload = _errorPayload(response.body);
     final message = payload.message;
     switch (response.statusCode) {
+      case 400:
+      case 422:
+        throw CalendarValidationException(message, details: payload.details);
       case 403:
         throw CalendarForbiddenException(message);
+      case 409 when payload.code == 'CALENDAR_VERSION_CONFLICT':
+        throw CalendarVersionConflictException(
+          message,
+          calendarId: payload.calendarId,
+          expectedVersion: payload.expectedVersion,
+        );
       case 409:
         throw CalendarConflictException(message, conflicts: payload.conflicts);
-      case 422:
-        throw CalendarValidationException(message);
       default:
         throw CalendarNetworkException(message);
     }
@@ -150,11 +192,24 @@ class CalendarForbiddenException extends CalendarApiException {
 class CalendarConflictException extends CalendarApiException {
   const CalendarConflictException(super.message, {this.conflicts = const []});
 
-  final List<CalendarAvailabilityInterval> conflicts;
+  final List<CalendarConflict> conflicts;
+}
+
+class CalendarVersionConflictException extends CalendarApiException {
+  const CalendarVersionConflictException(
+    super.message, {
+    this.calendarId,
+    this.expectedVersion,
+  });
+
+  final String? calendarId;
+  final int? expectedVersion;
 }
 
 class CalendarValidationException extends CalendarApiException {
-  const CalendarValidationException(super.message);
+  const CalendarValidationException(super.message, {this.details = const []});
+
+  final List<Object?> details;
 }
 
 class CalendarNetworkException extends CalendarApiException {
@@ -162,10 +217,21 @@ class CalendarNetworkException extends CalendarApiException {
 }
 
 class _CalendarErrorPayload {
-  const _CalendarErrorPayload({required this.message, required this.conflicts});
+  const _CalendarErrorPayload({
+    required this.code,
+    required this.message,
+    required this.details,
+    required this.conflicts,
+    this.calendarId,
+    this.expectedVersion,
+  });
 
+  final String? code;
   final String message;
-  final List<CalendarAvailabilityInterval> conflicts;
+  final List<Object?> details;
+  final List<CalendarConflict> conflicts;
+  final String? calendarId;
+  final int? expectedVersion;
 }
 
 _CalendarErrorPayload _errorPayload(String body) {
@@ -173,20 +239,27 @@ _CalendarErrorPayload _errorPayload(String body) {
     final decoded = jsonDecode(body) as Map<String, dynamic>;
     final nested = decoded['error'];
     final error = nested is Map<String, dynamic> ? nested : decoded;
+    final detailsRaw = error['details'] ?? error['errors'];
     final conflictsRaw = error['conflicts'] as List<dynamic>? ?? const [];
     return _CalendarErrorPayload(
+      code: error['code'] as String?,
       message:
           error['message'] as String? ??
-          error['details'] as String? ??
+          (detailsRaw is String ? detailsRaw : null) ??
           'Não foi possível concluir a solicitação.',
+      details: detailsRaw is List<dynamic> ? detailsRaw : const [],
       conflicts: conflictsRaw
           .cast<Map<String, dynamic>>()
-          .map(CalendarAvailabilityInterval.fromJson)
+          .map(CalendarConflict.fromJson)
           .toList(growable: false),
+      calendarId: error['calendarId'] as String?,
+      expectedVersion: error['expectedVersion'] as int?,
     );
   } catch (_) {
     return const _CalendarErrorPayload(
+      code: null,
       message: 'Não foi possível concluir a solicitação.',
+      details: [],
       conflicts: [],
     );
   }

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capabilities.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/splash_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_email_screen.dart';
@@ -63,6 +65,33 @@ class AtlasMedApp extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<AtlasMedApp> createState() => _AtlasMedAppState();
+}
+
+class _AgendaRouteGuard extends ConsumerWidget {
+  const _AgendaRouteGuard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    return currentUser.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const Scaffold(
+        body: Center(
+          child: Text('Não foi possível validar o acesso à agenda.'),
+        ),
+      ),
+      data: (user) {
+        if (user == null || !canReadAgenda(user.role.name)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) context.go('/dashboard');
+          });
+          return const SizedBox.shrink();
+        }
+        return const AgendaScreen();
+      },
+    );
+  }
 }
 
 class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
@@ -149,6 +178,12 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         final isLocationGate = location == '/location-gate';
 
         if (isAuthenticated) {
+          final user = ref.read(currentUserProvider).valueOrNull;
+          if (location == '/agenda' &&
+              user != null &&
+              !canReadAgenda(user.role.name)) {
+            return '/dashboard';
+          }
           final locationSession = ref.read(locationSessionProvider);
           if (!locationSession.isUsable) {
             return isLocationGate ? null : '/location-gate';
@@ -276,7 +311,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                 GoRoute(
                   path: '/agenda',
                   pageBuilder: (_, _) =>
-                      const NoTransitionPage(child: AgendaScreen()),
+                      const NoTransitionPage(child: _AgendaRouteGuard()),
                 ),
               ],
             ),

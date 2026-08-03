@@ -1,7 +1,14 @@
+import 'package:atlasmed_mobile_app/core/user/models/user.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 CalendarOccurrence _occurrence({
@@ -26,7 +33,7 @@ CalendarOccurrence _occurrence({
       ? null
       : CalendarIdentity(id: 'facility-1', name: facility),
   modality: modality,
-  startsAt: DateTime.parse('${date}T${time}:00.000Z'),
+  startsAt: DateTime.parse('${date}T$time:00.000Z'),
   endsAt: DateTime.parse('${date}T10:00:00.000Z'),
   localDate: DateTime.parse(date),
   localStartsAt: time,
@@ -39,6 +46,41 @@ CalendarOccurrence _occurrence({
 );
 
 Widget _app(Widget child) => MaterialApp(theme: AppTheme.light, home: child);
+
+class _QueryRecordingRepository implements CalendarRepositoryContract {
+  final List<AgendaQuery> queries = [];
+
+  @override
+  Future<List<CalendarOccurrence>> listCalendar({
+    required DateTime from,
+    required DateTime to,
+    String? ownerUserId,
+  }) async {
+    queries.add(AgendaQuery(from: from, to: to, ownerUserId: ownerUserId));
+    return const [];
+  }
+
+  @override
+  Future<List<CalendarAvailabilityInterval>> getAvailability({
+    required DateTime from,
+    required DateTime to,
+    String? ownerUserId,
+  }) async => const [];
+}
+
+User _user(String id, String name, UserRoleName role) => User(
+  id: id,
+  email: '$id@atlasmed.test',
+  username: id,
+  firstName: name,
+  status: UserStatus.active,
+  emailVerified: true,
+  phoneVerified: true,
+  twoFactorEnabled: false,
+  role: UserRole(id: 'role-${role.name}', name: role),
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
 
 void main() {
   testWidgets('shows chronological flat day groups with status icon and text', (
@@ -96,39 +138,134 @@ void main() {
     expect(firstTitle, lessThan(secondTitle));
   });
 
-  testWidgets(
-    'shows manager picker hook and keeps read-only agenda without create',
-    (tester) async {
-      await tester.pumpWidget(
-        _app(
-          AgendaScreen.content(
-            occurrences: [
-              _occurrence(
-                id: 'managed',
-                date: '2026-08-03',
-                time: '09:00',
-                title: 'Indisponível',
-                canMutate: false,
-              ),
-            ],
-            ownerPicker: const Text('Selecionar representante'),
+  testWidgets('manager selection reloads AgendaQuery with ownerUserId', (
+    tester,
+  ) async {
+    final repository = _QueryRecordingRepository();
+    final manager = _user('manager-1', 'Marina', UserRoleName.manager);
+    final rep = _user('rep-2', 'Bruno', UserRoleName.rep);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          calendarRepositoryProvider.overrideWithValue(repository),
+          currentUserProvider.overrideWith((ref) async => manager),
+          agendaOwnerOptionsProvider.overrideWith((ref) async => [rep]),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const AgendaScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('agenda-owner-selector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bruno').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.queries.last.ownerUserId, 'rep-2');
+  });
+
+  testWidgets('keeps read-only agenda without any create placeholder', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        AgendaScreen.content(
+          occurrences: [
+            _occurrence(
+              id: 'managed',
+              date: '2026-08-03',
+              time: '09:00',
+              title: 'Indisponível',
+              canMutate: false,
+            ),
+          ],
+          ownerPicker: const Text('Selecionar representante'),
+          onPreviousPeriod: () {},
+          onNextPeriod: () {},
+          onToday: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('Selecionar representante'), findsOneWidget);
+    expect(find.text('Indisponível'), findsOneWidget);
+    expect(find.byIcon(Icons.add_rounded), findsNothing);
+  });
+
+  testWidgets('filters loaded events locally by title and clinic', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        AgendaScreen.content(
+          occurrences: [
+            _occurrence(
+              id: 'south',
+              date: '2026-08-03',
+              time: '09:00',
+              title: 'Visita de acompanhamento',
+              facility: 'Clínica Sul',
+              status: InteractionStatus.scheduled,
+            ),
+            _occurrence(
+              id: 'north',
+              date: '2026-08-03',
+              time: '11:00',
+              title: 'Retorno comercial',
+              facility: 'Clínica Norte',
+              status: InteractionStatus.scheduled,
+            ),
+          ],
+          onPreviousPeriod: () {},
+          onNextPeriod: () {},
+          onToday: () {},
+          onRefresh: () {},
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byKey(const Key('agenda-search')), 'norte');
+    await tester.pump();
+
+    expect(find.text('Retorno comercial'), findsOneWidget);
+    expect(find.text('Visita de acompanhamento'), findsNothing);
+  });
+
+  testWidgets('toolbar stays overflow-free on narrow high text scale', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(320, 640),
+          textScaler: TextScaler.linear(2),
+        ),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: AgendaScreen.content(
+            occurrences: const [],
+            ownerPicker: const Text(
+              'Representante com nome longo para validar responsividade',
+            ),
             onPreviousPeriod: () {},
             onNextPeriod: () {},
             onToday: () {},
             onRefresh: () {},
           ),
         ),
-      );
+      ),
+    );
 
-      expect(find.text('Selecionar representante'), findsOneWidget);
-      expect(find.text('Indisponível'), findsOneWidget);
-      expect(find.byTooltip('Criar compromisso'), findsNothing);
-      expect(
-        find.byTooltip('Criação de compromissos disponível em breve'),
-        findsOneWidget,
-      );
-    },
-  );
+    await tester.pump();
+    expect(find.byKey(const Key('agenda-search')), findsOneWidget);
+  });
 
   testWidgets('shows loading, empty teaching, and error retry states', (
     tester,

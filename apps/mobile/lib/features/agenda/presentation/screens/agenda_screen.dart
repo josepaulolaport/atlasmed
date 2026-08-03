@@ -1,5 +1,7 @@
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_day_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
@@ -52,6 +54,8 @@ class AgendaScreen extends ConsumerStatefulWidget {
 
 class _AgendaScreenState extends ConsumerState<AgendaScreen> {
   late DateTime _periodStart;
+  String _search = '';
+  String? _selectedOwnerUserId;
 
   @override
   void initState() {
@@ -62,6 +66,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
   AgendaQuery get _query => AgendaQuery(
     from: _periodStart,
     to: _periodStart.add(const Duration(days: 7)),
+    ownerUserId: _selectedOwnerUserId,
   );
 
   @override
@@ -69,7 +74,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
     final preview = widget._preview;
     if (preview != null) {
       return _AgendaScaffold(
-        occurrences: preview.occurrences,
+        occurrences: _filtered(preview.occurrences),
         loading: preview.loading,
         errorMessage: preview.errorMessage,
         onRetry: preview.onRetry,
@@ -80,43 +85,111 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         onNextPeriod: preview.onNextPeriod,
         onToday: preview.onToday,
         onRefresh: preview.onRefresh,
+        onSearchChanged: _setSearch,
       );
     }
 
+    final currentUser = ref.watch(currentUserProvider).valueOrNull;
+    final isManager = currentUser?.role.name == UserRoleName.manager;
+    final ownerPicker =
+        widget.ownerPicker ?? (isManager ? _buildManagerOwnerPicker() : null);
     final agenda = ref.watch(agendaProvider(_query));
     return agenda.when(
       loading: () => _AgendaScaffold(
         loading: true,
         periodStart: _periodStart,
-        ownerPicker: widget.ownerPicker,
+        ownerPicker: ownerPicker,
         onCreate: widget.onCreate,
         onPreviousPeriod: _previousPeriod,
         onNextPeriod: _nextPeriod,
         onToday: _today,
         onRefresh: _refresh,
+        onSearchChanged: _setSearch,
       ),
       error: (error, _) => _AgendaScaffold(
         errorMessage: error.toString(),
         onRetry: _refresh,
         periodStart: _periodStart,
-        ownerPicker: widget.ownerPicker,
+        ownerPicker: ownerPicker,
         onCreate: widget.onCreate,
         onPreviousPeriod: _previousPeriod,
         onNextPeriod: _nextPeriod,
         onToday: _today,
         onRefresh: _refresh,
+        onSearchChanged: _setSearch,
       ),
       data: (occurrences) => _AgendaScaffold(
-        occurrences: occurrences,
+        occurrences: _filtered(occurrences),
         periodStart: _periodStart,
-        ownerPicker: widget.ownerPicker,
+        ownerPicker: ownerPicker,
         onCreate: widget.onCreate,
         onPreviousPeriod: _previousPeriod,
         onNextPeriod: _nextPeriod,
         onToday: _today,
         onRefresh: _refresh,
+        onSearchChanged: _setSearch,
       ),
     );
+  }
+
+  Widget _buildManagerOwnerPicker() {
+    final owners = ref.watch(agendaOwnerOptionsProvider);
+    return owners.when(
+      loading: () => const LinearProgressIndicator(
+        minHeight: 2,
+        semanticsLabel: 'Carregando representantes',
+      ),
+      error: (_, _) => const Text(
+        'Não foi possível carregar os representantes.',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      data: (users) {
+        if (users.isEmpty) {
+          return const Text('Nenhum representante disponível.');
+        }
+        return DropdownButtonFormField<String>(
+          key: const Key('agenda-owner-selector'),
+          initialValue: _selectedOwnerUserId,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            isDense: true,
+            labelText: 'Representante',
+          ),
+          hint: const Text('Selecione um representante'),
+          items: users
+              .map(
+                (user) => DropdownMenuItem(
+                  value: user.id,
+                  child: Text(
+                    user.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(growable: false),
+          onChanged: (ownerUserId) {
+            if (ownerUserId == null) return;
+            setState(() => _selectedOwnerUserId = ownerUserId);
+          },
+        );
+      },
+    );
+  }
+
+  void _setSearch(String value) => setState(() => _search = value.trim());
+
+  List<CalendarOccurrence> _filtered(List<CalendarOccurrence> occurrences) {
+    final query = _search.toLowerCase();
+    if (query.isEmpty) return occurrences;
+    return occurrences
+        .where((occurrence) {
+          return occurrence.title.toLowerCase().contains(query) ||
+              (occurrence.facility?.name.toLowerCase().contains(query) ??
+                  false);
+        })
+        .toList(growable: false);
   }
 
   void _previousPeriod() => setState(
@@ -144,6 +217,7 @@ class _AgendaScaffold extends StatelessWidget {
     this.onNextPeriod,
     this.onToday,
     this.onRefresh,
+    this.onSearchChanged,
   });
 
   final List<CalendarOccurrence> occurrences;
@@ -157,6 +231,7 @@ class _AgendaScaffold extends StatelessWidget {
   final VoidCallback? onNextPeriod;
   final VoidCallback? onToday;
   final VoidCallback? onRefresh;
+  final ValueChanged<String>? onSearchChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +248,7 @@ class _AgendaScaffold extends StatelessWidget {
             onNextPeriod: onNextPeriod,
             onToday: onToday,
             onRefresh: onRefresh,
+            onSearchChanged: onSearchChanged,
           ),
           Expanded(child: _body()),
         ],
@@ -208,6 +284,7 @@ class _AgendaToolbar extends StatelessWidget {
     this.onNextPeriod,
     this.onToday,
     this.onRefresh,
+    this.onSearchChanged,
   });
 
   final DateTime periodStart;
@@ -217,6 +294,7 @@ class _AgendaToolbar extends StatelessWidget {
   final VoidCallback? onNextPeriod;
   final VoidCallback? onToday;
   final VoidCallback? onRefresh;
+  final ValueChanged<String>? onSearchChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -227,14 +305,15 @@ class _AgendaToolbar extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (ownerPicker != null) ...[
-              ownerPicker!,
-              const SizedBox(height: 10),
-            ],
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact =
+                constraints.maxWidth < 420 ||
+                MediaQuery.textScalerOf(context).scale(14) > 21;
+            final navigation = Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 2,
+              runSpacing: 4,
               children: [
                 IconButton(
                   tooltip: 'Período anterior',
@@ -246,33 +325,81 @@ class _AgendaToolbar extends StatelessWidget {
                   onPressed: onNextPeriod,
                   icon: const Icon(Icons.chevron_right_rounded),
                 ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    _periodLabel(periodStart),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.gray800,
-                    ),
-                  ),
-                ),
                 TextButton(onPressed: onToday, child: const Text('Hoje')),
                 IconButton(
                   tooltip: 'Atualizar agenda',
                   onPressed: onRefresh,
                   icon: const Icon(Icons.refresh_rounded),
                 ),
-                IconButton(
-                  tooltip: onCreate == null
-                      ? 'Criação de compromissos disponível em breve'
-                      : 'Criar compromisso',
-                  onPressed: onCreate,
-                  icon: const Icon(Icons.add_rounded),
-                ),
+                if (onCreate != null)
+                  IconButton(
+                    tooltip: 'Criar compromisso',
+                    onPressed: onCreate,
+                    icon: const Icon(Icons.add_rounded),
+                  ),
               ],
-            ),
-          ],
+            );
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: compact ? 280 : double.infinity,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (ownerPicker != null) ...[
+                      DefaultTextStyle.merge(
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: compact ? 2 : 1,
+                        child: ownerPicker!,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (compact) ...[
+                      Text(
+                        _periodLabel(periodStart),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gray800,
+                        ),
+                      ),
+                      navigation,
+                    ] else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _periodLabel(periodStart),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.gray800,
+                              ),
+                            ),
+                          ),
+                          navigation,
+                        ],
+                      ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      key: const Key('agenda-search'),
+                      onChanged: onSearchChanged,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        prefixIcon: Icon(Icons.search_rounded),
+                        hintText: 'Buscar por compromisso ou clínica',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -309,9 +436,9 @@ class _AgendaEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
+    return const SingleChildScrollView(
+      padding: EdgeInsets.all(32),
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -51,4 +52,37 @@ void main() {
       );
     });
   });
+
+  testWidgets('drawer remains scrollable on compact height and large text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 360);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(
+            size: Size(320, 360),
+            textScaler: TextScaler.linear(2),
+          ),
+          child: Scaffold(
+            body: AtlasDrawerNavigation(
+              activeBranchIndex: 0,
+              onSelectBranch: _ignoreBranch,
+              role: UserRoleName.admin,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('atlas-drawer-navigation')), findsOneWidget);
+    expect(find.byType(Scrollable), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 }
+
+void _ignoreBranch(int _) {}
