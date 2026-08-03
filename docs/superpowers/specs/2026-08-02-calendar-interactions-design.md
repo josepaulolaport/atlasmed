@@ -59,7 +59,7 @@ Ocorrências de eventos recorrentes são expandidas por faixa durante a leitura.
 
 ### Histórico
 
-`interaction_events` é append-only e registra transições com ator, estado anterior/novo, motivo, data e metadata segura. Eventos críticos também são espelhados em `audit.audit_logs`; o audit log genérico não é a fonte autoritativa do ciclo de vida.
+`interaction_events` é append-only e registra transições com origem `USER` ou `SYSTEM`, ator de usuário quando aplicável, estado anterior/novo, motivo, data e metadata segura. Eventos automáticos, como o processamento de vencidas, usam origem `SYSTEM` e podem não ter ator de usuário. Esse histórico é a fonte autoritativa do ciclo de vida.
 
 ### Pedidos e notas
 
@@ -67,6 +67,7 @@ Ocorrências de eventos recorrentes são expandidas por faixa durante a leitura.
 - Uma interação pode ter zero ou vários pedidos.
 - Todo pedido continua vinculado ao agente comercial por `sellerId`.
 - Abrir “Novo pedido” pelo atendimento preenche clínica, agente e interação.
+- A criação do pedido exige chave de idempotência e rejeita a reutilização da mesma chave pelo mesmo ator com payload diferente.
 - Pedido e interação possuem ciclos de vida independentes.
 - Notas continuam pertencendo à relação clínica–usuário e são opcionais.
 - O agente pode criar e ler suas notas. Gestores autorizados podem ler notas dos agentes no escopo, mas não criá-las ou alterá-las em nome deles.
@@ -98,7 +99,7 @@ O cálculo ocorre no timezone IANA armazenado na série e cada ocorrência é co
 - A API compara o novo evento ou série com os eventos existentes do proprietário.
 - As frequências permitidas são limitadas às quatro regras simples acima; o serviço de recorrência centraliza expansão e interseção.
 - O mobile pode fazer uma pré-validação, mas o backend é a autoridade.
-- Requisições de criação e transição usam chave de idempotência e versão otimista para tolerar retry do mobile.
+- Comandos de calendário, início/conclusão de interação e criação de pedido usam chave de idempotência; alterações de calendário, cancelamentos e transições de interação também usam versão otimista para tolerar retry do mobile.
 
 Como migrations não serão produzidas nesta branch, uma constraint de exclusão PostgreSQL para impedir corridas de sobreposição será documentada como migration obrigatória antes do merge. Até ela existir no banco, o repositório usa transação e lock por proprietário.
 
@@ -106,11 +107,11 @@ Como migrations não serão produzidas nesta branch, uma constraint de exclusão
 
 ```text
 SCHEDULED -> IN_PROGRESS -> COMPLETED
-    |              
-    +-> CANCELLED
     |
     +-> NOT_COMPLETED -> COMPLETED
 ```
+
+O schema também define `CANCELLED`. No fluxo entregue, o cancelamento ocorre pelos endpoints de calendário e cancela a interação materializada correspondente, sem uma rota própria de transição em `interactions`.
 
 Regras:
 
@@ -143,8 +144,8 @@ Um job periódico persiste `NOT_COMPLETED`. A leitura também deriva essa condi�
 - `GET /interactions/:id`: contexto completo do atendimento.
 - `POST /interactions/:id/start`: inicia atendimento.
 - `POST /interactions/:id/complete`: conclui atendimento; justificativa obrigatória quando corrige `NOT_COMPLETED`.
-- `GET /interactions/:id/orders`: lista pedidos vinculados.
-- `POST /interactions/:id/orders`: cria pedido com clínica/agente/interação fixados pelo backend.
+- `GET /orders?interactionId=`: lista pedidos vinculados.
+- `POST /orders` com `interactionId`: cria pedido com clínica/agente/interação validados pelo backend e exige `Idempotency-Key`.
 
 Os handlers seguem Elysia + TypeBox + Zod, `auth`, `requirePermission`, `getScope()`, use-case e DTO explícito. Não expõem tipos Drizzle.
 

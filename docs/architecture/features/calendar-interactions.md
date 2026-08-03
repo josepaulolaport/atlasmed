@@ -30,7 +30,7 @@ The schema is defined in `packages/database/src/schema/public/calendar.ts` and r
 | `calendar` | Event or recurring series, owner, type, title, local anchor, IANA timezone, duration, first UTC interval, recurrence bounds, cancellation data, and optimistic version. |
 | `calendar_occurrence_overrides` | Per-occurrence reschedule or cancellation keyed by `(calendar_id, recurrence_key)`, with its own optimistic version. |
 | `interactions` | Commercial state for one occurrence, keyed uniquely by `(calendar_id, recurrence_key)`, with facility, agent, modality, timestamps, correction data, optional compatibility `visit_id`, and version. |
-| `interaction_events` | Append-only transition history with actor, previous/new status, reason, safe metadata, and timestamp. |
+| `interaction_events` | Append-only transition history with source (`USER` or `SYSTEM`), optional user actor, previous/new status, reason, safe metadata, and timestamp. |
 | `calendar_command_receipts` | Idempotency receipts unique by `(owner_user_id, command_key)`, storing the command result for replay. |
 
 `orders.interaction_id` is nullable and indexed. A single interaction may have zero or many linked orders, while each order keeps its own lifecycle and seller/facility/vertical rules.
@@ -192,7 +192,7 @@ The API initializes a BullMQ queue and worker named `interaction-overdue`. A rep
 
 Each run processes batches of up to 100 until no full batch remains. It changes only `SCHEDULED` interactions whose effective occurrence end is before the job time.
 
-Cancelled overrides are skipped. Each successful transition becomes `NOT_COMPLETED`, increments the interaction version, and appends an `interaction_events` row with `source: overdue-job`.
+Cancelled overrides are skipped. Each successful transition becomes `NOT_COMPLETED`, increments the interaction version, and appends an `interaction_events` row with event source `SYSTEM`, no user actor by default, and metadata `source: overdue-job`.
 
 ## Visits Compatibility
 
