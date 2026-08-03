@@ -397,20 +397,24 @@ const listFacilityNotesRoute = new Elysia()
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
     "/facilities/:id/notes",
-    async ({ params, getScope, getUserId }) => {
+    async ({ params, query, getScope, getUserId }) => {
       const [scope, userId] = await Promise.all([getScope(), getUserId()]);
       return facilityUseCases.listFacilityNotes().execute({
         facilityId: params.id,
         userId,
+        ownerUserId: query.ownerUserId,
         scope,
       });
     },
     {
       detail: {
-        summary: "List my private field notes for a facility",
+        summary: "List private field notes for a facility",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
+      query: t.Object({
+        ownerUserId: t.Optional(t.String()),
+      }),
     }
   );
 

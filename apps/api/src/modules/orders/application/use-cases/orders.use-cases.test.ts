@@ -8,6 +8,21 @@ import {
 } from "./orders.use-cases";
 import type { OrderRepository } from "../interfaces/order.repository.interface";
 
+function createInteractionContextPort(
+  context: {
+    id: string;
+    agentUserId: string;
+    facilityId: string;
+    status: "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "NOT_COMPLETED" | "CANCELLED";
+    canRead: boolean;
+    canCreateOrder: boolean;
+  } | null,
+) {
+  return {
+    findById: async () => context,
+  };
+}
+
 const scopedToFacilityOne: ScopeContext = {
   isGlobal: false,
   assignedTerritoryIds: ["territory-1"],
@@ -30,6 +45,7 @@ function createRepository(overrides: Partial<OrderRepository> = {}): OrderReposi
         {
           id: "order-1",
           legacyId: 42,
+          interactionId: null,
           verticalId: "vertical-1",
           facility: { id: "facility-1", name: "Clínica Um" },
           professional: { id: "professional-1", name: "Dra. Ana" },
@@ -50,6 +66,7 @@ function createRepository(overrides: Partial<OrderRepository> = {}): OrderReposi
         ? {
             id,
             legacyId: null,
+            interactionId: null,
             verticalId: "vertical-1",
             facility: { id: "facility-2", name: "Clínica Dois" },
             professional: null,
@@ -105,6 +122,7 @@ describe("orders use cases", () => {
       limit: 10,
       statuses: ["PENDING", "APPROVED"],
       facilityId: "facility-1",
+      interactionId: "interaction-1",
       includeItemPreviews: true,
       actor: { userId: "rep-1", roleName: "REP" },
       scope: scopedToFacilityOne,
@@ -116,6 +134,7 @@ describe("orders use cases", () => {
       limit: 10,
       statuses: ["PENDING", "APPROVED"],
       facilityId: "facility-1",
+      interactionId: "interaction-1",
       verticalIds: ["vertical-1"],
       sellerId: "rep-1",
       includeItemPreviews: true,
@@ -125,6 +144,7 @@ describe("orders use cases", () => {
     expect(result.data[0]).toMatchObject({
       id: "order-1",
       legacyId: 42,
+      interactionId: null,
       verticalId: "vertical-1",
       status: "PENDING",
       facility: { name: "Clínica Um" },
@@ -149,6 +169,7 @@ describe("orders use cases", () => {
     repository.findById = async () => ({
       id: "order-1",
       legacyId: null,
+      interactionId: null,
       verticalId: "vertical-1",
       facility: { id: "facility-1", name: "Clínica Um" },
       professional: null,
@@ -195,6 +216,7 @@ describe("orders use cases", () => {
         return {
           id: "order-new",
           legacyId: null,
+          interactionId: input.interactionId ?? null,
           verticalId: input.verticalId,
           facility: { id: input.facilityId, name: "Clínica Um" },
           professional: null,
@@ -258,6 +280,134 @@ describe("orders use cases", () => {
       itemCount: 1,
       total: 200,
     });
+  });
+
+  it("creates an order linked to an owned scheduled interaction", async () => {
+    let created: Parameters<OrderRepository["create"]>[0] | null = null;
+    const repository = createRepository({
+      create: async (input) => {
+        created = input;
+        return {
+          id: "order-linked",
+          legacyId: null,
+          interactionId: input.interactionId ?? null,
+          verticalId: input.verticalId,
+          facility: { id: input.facilityId, name: "Clínica Um" },
+          professional: null,
+          seller: { id: input.sellerId!, name: "Rep" },
+          status: input.status ?? "PENDING",
+          type: input.type ?? "SALE",
+          orderedAt: input.orderedAt ?? new Date(),
+          createdAt: new Date("2026-01-01T10:00:00Z"),
+          updatedAt: new Date("2026-01-01T10:00:00Z"),
+          surgeryType: null,
+          surgerySubtype: null,
+          notes: null,
+          freight: 0,
+          grossWeight: 0,
+          netWeight: 0,
+          currency: "BRL",
+          usdExchangeRate: null,
+          finalizedById: null,
+          finalizedAt: null,
+          rejectedById: null,
+          rejectionReason: null,
+          noBillingById: null,
+          noBillingAt: null,
+          noBillingNotes: null,
+          expenseAuthorizedById: null,
+          expenseAuthorizedAt: null,
+          items: [],
+        };
+      },
+    });
+
+    const result = await new CreateOrderUseCase({
+      orderRepository: repository,
+      interactionContextPort: createInteractionContextPort({
+        id: "interaction-1",
+        agentUserId: "rep-1",
+        facilityId: "facility-1",
+        status: "SCHEDULED",
+        canRead: true,
+        canCreateOrder: true,
+      }),
+    }).execute({
+      interactionId: "interaction-1",
+      facilityId: "facility-1",
+      items: [{ productId: "product-1", quantity: 1 }],
+      scope: scopedToFacilityOne,
+      actor: { userId: "rep-1", roleName: "REP" },
+    });
+
+    expect(created).toMatchObject({ interactionId: "interaction-1", sellerId: "rep-1" });
+    expect(result.interactionId).toBe("interaction-1");
+  });
+
+  it("rejects a linked order when interaction ownership does not match", async () => {
+    await expect(
+      new CreateOrderUseCase({
+        orderRepository: createRepository(),
+        interactionContextPort: createInteractionContextPort({
+          id: "interaction-1",
+          agentUserId: "other-rep",
+          facilityId: "facility-1",
+          status: "SCHEDULED",
+          canRead: true,
+          canCreateOrder: true,
+        }),
+      }).execute({
+        interactionId: "interaction-1",
+        facilityId: "facility-1",
+        items: [{ productId: "product-1", quantity: 1 }],
+        scope: scopedToFacilityOne,
+        actor: { userId: "rep-1", roleName: "REP" },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("rejects a linked order when facility differs from the interaction", async () => {
+    await expect(
+      new CreateOrderUseCase({
+        orderRepository: createRepository(),
+        interactionContextPort: createInteractionContextPort({
+          id: "interaction-1",
+          agentUserId: "rep-1",
+          facilityId: "facility-2",
+          status: "IN_PROGRESS",
+          canRead: true,
+          canCreateOrder: true,
+        }),
+      }).execute({
+        interactionId: "interaction-1",
+        facilityId: "facility-1",
+        items: [{ productId: "product-1", quantity: 1 }],
+        scope: scopedToFacilityOne,
+        actor: { userId: "rep-1", roleName: "REP" },
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects a linked order when interaction status does not allow creation", async () => {
+    await expect(
+      new CreateOrderUseCase({
+        orderRepository: createRepository(),
+        interactionContextPort: createInteractionContextPort({
+          id: "interaction-1",
+          agentUserId: "rep-1",
+          facilityId: "facility-1",
+          status: "COMPLETED",
+          canRead: true,
+          canCreateOrder: false,
+        }),
+      }).execute({
+        interactionId: "interaction-1",
+        facilityId: "facility-1",
+        items: [{ productId: "product-1", quantity: 1 }],
+        scope: scopedToFacilityOne,
+        actor: { userId: "rep-1", roleName: "REP" },
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("rejects create when facility has no profile for the vertical", async () => {

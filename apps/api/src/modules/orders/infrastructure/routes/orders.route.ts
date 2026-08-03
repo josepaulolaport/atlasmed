@@ -40,6 +40,7 @@ const listOrdersRoute = new Elysia()
         limit: query.limit ? Number(query.limit) : undefined,
         statuses: parseStatuses(query.status),
         facilityId: query.facilityId,
+        interactionId: query.interactionId,
         verticalId: query.verticalId,
         includeItemPreviews: query.includeItemPreviews === "true",
         actor: { userId, roleName: authContext.roleName },
@@ -56,6 +57,7 @@ const listOrdersRoute = new Elysia()
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         facilityId: t.Optional(t.String()),
+        interactionId: t.Optional(t.String()),
         verticalId: t.Optional(t.String()),
         includeItemPreviews: t.Optional(t.String({
           description: "When true, each order includes up to 2 item preview lines",
@@ -112,6 +114,7 @@ const createOrderRoute = new Elysia()
       ]);
       return ordersUseCases.createOrder().execute({
         facilityId: body.facilityId,
+        interactionId: body.interactionId,
         verticalId: body.verticalId,
         professionalId: body.professionalId,
         status: body.status,
@@ -132,6 +135,7 @@ const createOrderRoute = new Elysia()
       },
       body: t.Object({
         facilityId: t.String(),
+        interactionId: t.Optional(t.String()),
         verticalId: t.Optional(t.String()),
         professionalId: t.Optional(t.Nullable(t.String())),
         status: t.Optional(t.Union([t.Literal("DRAFT"), t.Literal("PENDING")])),

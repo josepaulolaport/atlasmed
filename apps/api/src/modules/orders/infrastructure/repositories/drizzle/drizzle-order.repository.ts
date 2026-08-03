@@ -33,6 +33,7 @@ export class DrizzleOrderRepository implements OrderRepository {
     limit: number;
     statuses?: OrderStatus[];
     facilityId?: string;
+    interactionId?: string;
     verticalIds: string[];
     sellerId?: string;
     includeItemPreviews?: boolean;
@@ -48,6 +49,7 @@ export class DrizzleOrderRepository implements OrderRepository {
     ];
     if (input.statuses?.length) conditions.push(inArray(orders.status, input.statuses));
     if (input.facilityId) conditions.push(eq(orders.facilityId, input.facilityId));
+    if (input.interactionId) conditions.push(eq(orders.interactionId, input.interactionId));
     if (input.sellerId) conditions.push(eq(orders.sellerId, input.sellerId));
     const where = and(...conditions);
     const skip = (input.page - 1) * input.limit;
@@ -57,6 +59,7 @@ export class DrizzleOrderRepository implements OrderRepository {
         .select({
           id: orders.id,
           legacyId: orders.legacyId,
+          interactionId: orders.interactionId,
           verticalId: orders.verticalId,
           status: orders.status,
           type: orders.type,
@@ -101,6 +104,7 @@ export class DrizzleOrderRepository implements OrderRepository {
       orders: rows.map((row) => ({
         id: row.id,
         legacyId: row.legacyId,
+        interactionId: row.interactionId,
         verticalId: row.verticalId,
         status: row.status,
         type: row.type,
@@ -280,6 +284,7 @@ export class DrizzleOrderRepository implements OrderRepository {
         .insert(orders)
         .values({
           facilityId: input.facilityId,
+          interactionId: input.interactionId ?? null,
           verticalId: input.verticalId,
           sellerId: input.sellerId,
           professionalId: input.professionalId ?? null,
