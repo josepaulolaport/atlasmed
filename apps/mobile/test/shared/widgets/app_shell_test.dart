@@ -14,4 +14,15 @@ void main() {
       expect(explore.isActiveForBranch(1), isFalse);
     });
   });
+
+  group('appNavigationItems', () {
+    test('keeps order history available in the main navigation', () {
+      expect(
+        appNavigationItems,
+        contains(
+          predicate<AppNavigationItem>((item) => item.route == '/orders'),
+        ),
+      );
+    });
+  });
 }

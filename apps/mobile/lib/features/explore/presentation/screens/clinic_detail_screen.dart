@@ -505,11 +505,6 @@ class ClinicDetailQuickActions extends ConsumerWidget {
             label: const Text('Visita'),
             onTap: () => _createVisit(context, ref, detail.id),
           ),
-        QuickActionItem(
-          icon: icon(Icons.note_add_rounded),
-          label: const Text('Pedido'),
-          onTap: () => context.push('/orders/new'),
-        ),
       ],
     );
   }
