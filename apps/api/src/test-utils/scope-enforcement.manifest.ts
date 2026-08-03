@@ -39,6 +39,11 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertCanMutateUser"],
   },
 
+  "modules/calendar/application/use-cases/calendar.use-cases.ts": {
+    kind: "domain-policy",
+    patterns: ["assertOwnerRead", "assertMutationOwner", "facilityIds"],
+  },
+
   "modules/catalog/application/use-cases/catalog.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facility"],

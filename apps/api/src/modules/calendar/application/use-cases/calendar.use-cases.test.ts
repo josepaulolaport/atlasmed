@@ -32,6 +32,10 @@ const baseEvent = (overrides: Partial<CalendarEventRecord> = {}): CalendarEventR
   recurrence: "NONE",
   recurrenceUntil: null,
   recurrenceCount: null,
+  status: "ACTIVE",
+  cancelledAt: null,
+  cancelledByUserId: null,
+  cancellationReason: null,
   version: 1,
   overrides: [],
   interactions: [],
@@ -43,14 +47,38 @@ class FakeCalendarRepository implements CalendarRepository {
   created?: CreateCalendarEventInput;
   updated?: UpdateCalendarEventInput;
   override?: UpsertCalendarOverrideInput;
-  deleted?: { id: string; expectedVersion: number; reason?: string; commandKey?: string };
+  deleted?: { id: string; expectedVersion: number; actorUserId?: string; reason?: string; commandKey?: string };
   versionFailure = false;
+  ensuredKeys: string[] = [];
+  createCalls = 0;
+  cancelCalls = 0;
+  receipts = new Map<string, unknown>();
+  private locked = false;
 
   async runWithOwnerLock<T>(_ownerUserId: string, work: (repository: CalendarRepository) => Promise<T>): Promise<T> {
-    return work(this);
+    this.locked = true;
+    try { return await work(this); } finally { this.locked = false; }
   }
-  async listByOwner(ownerUserId: string) { return this.events.filter((event) => event.ownerUserId === ownerUserId); }
+  async listByOwner(ownerUserId: string, _range?: { from: Date; to: Date }) { return this.events.filter((event) => event.ownerUserId === ownerUserId && event.status !== "CANCELLED"); }
   async findById(id: string) { return this.events.find((event) => event.id === id) ?? null; }
+  async ensureInteractionsForOccurrences(calendarId: string, recurrenceKeys: string[]) {
+    this.ensuredKeys.push(...recurrenceKeys);
+    const event = await this.findById(calendarId);
+    if (!event || event.kind !== "INTERACTION") return event?.interactions ?? [];
+    const seed = event.interactions[0];
+    if (!seed) return [];
+    for (const recurrenceKey of recurrenceKeys) {
+      if (!event.interactions.some((item) => item.recurrenceKey === recurrenceKey)) {
+        event.interactions.push({ ...seed, id: `interaction-${event.interactions.length + 1}`, recurrenceKey, status: "SCHEDULED", version: 1 });
+      }
+    }
+    return event.interactions.filter((item) => recurrenceKeys.includes(item.recurrenceKey));
+  }
+  async getCommandReceipt<T>(ownerUserId: string, commandKey: string) { return this.receipts.get(`${ownerUserId}:${commandKey}`) as T | undefined; }
+  async saveCommandReceipt<T>(ownerUserId: string, commandKey: string, _kind: string, resourceId: string | null, result: T) {
+    this.receipts.set(`${ownerUserId}:${commandKey}`, result);
+    return result;
+  }
   async listConflictEntries(ownerUserId: string, excludeCalendarId?: string) {
     return this.events.filter((event) => event.ownerUserId === ownerUserId && event.id !== excludeCalendarId).map((event) => ({
       id: event.id,
@@ -66,6 +94,7 @@ class FakeCalendarRepository implements CalendarRepository {
     }));
   }
   async create(input: CreateCalendarEventInput) {
+    this.createCalls += 1;
     this.created = input;
     const event = baseEvent({
       ...input.event,
@@ -97,10 +126,21 @@ class FakeCalendarRepository implements CalendarRepository {
       startsAt: input.startsAt, endsAt: input.endsAt, status: input.status, reason: input.reason ?? null,
       version: (input.expectedVersion ?? 0) + 1 };
   }
-  async delete(input: { id: string; expectedVersion: number }) {
+  async cancel(input: { id: string; expectedVersion: number; actorUserId: string; reason: string; commandKey: string }) {
+    if (!this.locked) throw new Error("owner lock required");
+    this.cancelCalls += 1;
     this.deleted = input;
-    return !this.versionFailure;
+    if (this.versionFailure) return null;
+    const event = await this.findById(input.id);
+    if (!event) return null;
+    event.status = "CANCELLED";
+    event.cancelledAt = new Date("2026-08-03T12:00:00Z");
+    event.cancelledByUserId = input.actorUserId;
+    event.cancellationReason = input.reason;
+    event.version += 1;
+    return event;
   }
+  async deleteInvalidOverrides() { return true; }
 }
 
 const repScope = createGlobalScopeContext() as ScopeContext;
@@ -144,6 +184,16 @@ describe("Calendar application use cases", () => {
       scope: { ...managerScope, managedUserIds: [] } as ScopeContext,
       idempotencyKey: "cmd", data: { ...createInteraction, facilityId: "facility-out" },
     })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("creates explicit first occurrence instants even when historical rows may map null", async () => {
+    const repository = new FakeCalendarRepository();
+    await new CreateCalendarEventUseCase({ repository }).execute({
+      actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      idempotencyKey: "first-instants", data: createInteraction,
+    });
+    expect(repository.created?.event.firstStartsAt).toEqual(new Date("2026-08-03T12:00:00.000Z"));
+    expect(repository.created?.event.firstEndsAt).toEqual(new Date("2026-08-03T13:00:00.000Z"));
   });
 
   it("returns typed conflict details and does not create overlapping events", async () => {
@@ -216,17 +266,93 @@ describe("Calendar application use cases", () => {
     repository.events[0] = baseEvent({ kind: "INTERACTION", interactions: [{ id: "i", recurrenceKey: "2026-08-03T09:00[UTC]",
       facilityId: "facility-1", modality: "REMOTE", status: "COMPLETED", version: 2 }] });
     await expect(new CancelCalendarOccurrenceUseCase({ repository }).execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
-      id: "calendar-1", recurrenceKey: "2026-08-03T09:00[UTC]", idempotencyKey: "cmd", expectedVersion: 0, reason: " Cliente pediu " }))
+      id: "calendar-1", recurrenceKey: "2026-08-03T09:00[UTC]", idempotencyKey: "cmd-cancel", expectedVersion: 0, reason: " Cliente pediu " }))
       .rejects.toBeInstanceOf(ValidationError);
   });
 
-  it("requires a trimmed cancellation reason and deletes an owned active series with expectedVersion", async () => {
+  it("rejects occurrence rescheduling that overlaps an effective sibling in the same series", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({ recurrence: "DAILY", recurrenceCount: 2 })];
+
+    await expect(new UpdateCalendarOccurrenceUseCase({ repository }).execute({
+      actor: { userId: "rep-1", roleName: "REP" }, scope: repScope, id: "calendar-1",
+      recurrenceKey: "2026-08-04T09:00[UTC]", idempotencyKey: "overlap-sibling", expectedVersion: 0,
+      startsAt: "2026-08-03T09:30:00Z", durationMinutes: 30,
+    })).rejects.toBeInstanceOf(CalendarConflictError);
+  });
+
+  it("materializes one independent interaction for every listed recurring occurrence", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({
+      kind: "INTERACTION",
+      recurrence: "DAILY",
+      recurrenceCount: 2,
+      interactions: [{ id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "SCHEDULED", version: 1 }],
+    })];
+
+    const result = await new ListCalendarUseCase({ repository }).execute({
+      actor: { userId: "rep-1", roleName: "REP" }, scope: repScope,
+      from: new Date("2026-08-03T00:00:00Z"), to: new Date("2026-08-05T00:00:00Z"),
+    });
+
+    expect(repository.ensuredKeys).toEqual([
+      "2026-08-03T09:00[UTC]",
+      "2026-08-04T09:00[UTC]",
+    ]);
+    expect(result.map((item) => item.interaction?.id)).toEqual(["interaction-1", "interaction-2"]);
+  });
+
+  it("does not reuse another occurrence interaction state during cancellation", async () => {
+    const repository = new FakeCalendarRepository();
+    repository.events = [baseEvent({
+      kind: "INTERACTION", recurrence: "DAILY", recurrenceCount: 2,
+      interactions: [{ id: "interaction-1", recurrenceKey: "2026-08-03T09:00[UTC]", facilityId: "facility-1", modality: "REMOTE", status: "COMPLETED", version: 2 }],
+    })];
+
+    await new CancelCalendarOccurrenceUseCase({ repository }).execute({
+      actor: { userId: "rep-1", roleName: "REP" }, scope: repScope, id: "calendar-1",
+      recurrenceKey: "2026-08-04T09:00[UTC]", idempotencyKey: "cancel-second", expectedVersion: 0,
+      reason: "Cliente pediu",
+    });
+
+    expect(repository.ensuredKeys).toContain("2026-08-04T09:00[UTC]");
+    expect(repository.override?.recurrenceKey).toBe("2026-08-04T09:00[UTC]");
+  });
+
+  it("replays a create command without executing the business write twice", async () => {
+    const repository = new FakeCalendarRepository();
+    const useCase = new CreateCalendarEventUseCase({ repository });
+    const input = { actor: { userId: "rep-1", roleName: "REP" as const }, scope: repScope,
+      idempotencyKey: "same-create", data: createInteraction };
+
+    const first = await useCase.execute(input);
+    const second = await useCase.execute(input);
+
+    expect(second).toEqual(first);
+    expect(repository.createCalls).toBe(1);
+  });
+
+  it("soft-cancels and preserves the trimmed reason while replaying retries", async () => {
+    const repository = new FakeCalendarRepository(); repository.events = [baseEvent()];
+    const useCase = new CancelCalendarEventUseCase({ repository });
+    const input = { actor: { userId: "rep-1", roleName: "REP" as const }, scope: repScope, id: "calendar-1",
+      idempotencyKey: "same-cancel", expectedVersion: 1, reason: "  compromisso cancelado " };
+
+    const first = await useCase.execute(input);
+    const second = await useCase.execute(input);
+
+    expect(second).toEqual(first);
+    expect(repository.cancelCalls).toBe(1);
+    expect(repository.events[0]).toMatchObject({ status: "CANCELLED", cancellationReason: "compromisso cancelado" });
+  });
+
+  it("requires a trimmed cancellation reason and soft-cancels an owned active series with expectedVersion", async () => {
     const repository = new FakeCalendarRepository(); repository.events = [baseEvent()];
     const useCase = new CancelCalendarEventUseCase({ repository });
     await expect(useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope, id: "calendar-1",
       idempotencyKey: "cmd", expectedVersion: 1, reason: "   " })).rejects.toBeInstanceOf(ValidationError);
     await useCase.execute({ actor: { userId: "rep-1", roleName: "REP" }, scope: repScope, id: "calendar-1",
       idempotencyKey: "cmd", expectedVersion: 1, reason: "  compromisso cancelado " });
-    expect(repository.deleted).toEqual({ id: "calendar-1", expectedVersion: 1, reason: "compromisso cancelado", commandKey: "cmd" });
+    expect(repository.deleted).toEqual({ id: "calendar-1", expectedVersion: 1, actorUserId: "rep-1", reason: "compromisso cancelado", commandKey: "cmd" });
   });
 });

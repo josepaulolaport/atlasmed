@@ -30,6 +30,8 @@ export const calendarRecurrenceEnum = pgEnum("calendar_recurrence", [
   "YEARLY",
 ]);
 
+export const calendarStatusEnum = pgEnum("calendar_status", ["ACTIVE", "CANCELLED"]);
+
 export const calendarOccurrenceStatusEnum = pgEnum("calendar_occurrence_status", [
   "ACTIVE",
   "CANCELLED",
@@ -66,6 +68,12 @@ export const calendar = pgTable(
     recurrence: calendarRecurrenceEnum("recurrence").notNull().default("NONE"),
     recurrenceUntil: date("recurrence_until"),
     recurrenceCount: integer("recurrence_count"),
+    status: calendarStatusEnum("status").notNull().default("ACTIVE"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledByUserId: text("cancelled_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    cancellationReason: text("cancellation_reason"),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -91,6 +99,10 @@ export const calendar = pgTable(
     check(
       "calendar_recurrence_count_positive_check",
       sql`${t.recurrenceCount} is null or ${t.recurrenceCount} > 0`,
+    ),
+    check(
+      "calendar_cancellation_metadata_check",
+      sql`(${t.status} = 'ACTIVE' and ${t.cancelledAt} is null and ${t.cancelledByUserId} is null and ${t.cancellationReason} is null) or (${t.status} = 'CANCELLED' and ${t.cancelledAt} is not null and ${t.cancelledByUserId} is not null and ${t.cancellationReason} is not null and btrim(${t.cancellationReason}) <> '')`,
     ),
     index("calendar_owner_user_id_first_starts_at_idx").on(t.ownerUserId, t.firstStartsAt),
     index("calendar_owner_user_id_kind_first_starts_at_idx").on(
@@ -208,6 +220,28 @@ export const interactionEvents = pgTable(
       t.createdAt,
     ),
     index("interaction_events_actor_user_id_created_at_idx").on(t.actorUserId, t.createdAt),
+  ],
+);
+
+export const calendarCommandReceipts = pgTable(
+  "calendar_command_receipts",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    commandKey: text("command_key").notNull(),
+    commandKind: text("command_kind").notNull(),
+    resourceId: text("resource_id"),
+    result: jsonb("result").$type<unknown>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("calendar_command_receipts_owner_user_id_command_key_key").on(
+      t.ownerUserId,
+      t.commandKey,
+    ),
+    index("calendar_command_receipts_resource_id_idx").on(t.resourceId),
   ],
 );
 

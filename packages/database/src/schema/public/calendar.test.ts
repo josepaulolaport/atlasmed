@@ -2,10 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { getTableConfig, PgDialect, type AnyPgTable } from "drizzle-orm/pg-core";
 import {
   calendar,
+  calendarCommandReceipts,
   calendarEventKindEnum,
   calendarOccurrenceOverrides,
   calendarOccurrenceStatusEnum,
   calendarRecurrenceEnum,
+  calendarStatusEnum,
   interactionEvents,
   interactionModalityEnum,
   interactions,
@@ -68,6 +70,7 @@ describe("calendar and interaction schema", () => {
       "MONTHLY",
       "YEARLY",
     ]);
+    expect(calendarStatusEnum.enumValues).toEqual(["ACTIVE", "CANCELLED"]);
     expect(calendarOccurrenceStatusEnum.enumName).toBe("calendar_occurrence_status");
     expect(calendarOccurrenceStatusEnum.enumValues).toEqual(["ACTIVE", "CANCELLED"]);
     expect(interactionModalityEnum.enumValues).toEqual(["IN_PERSON", "REMOTE"]);
@@ -95,11 +98,13 @@ describe("calendar and interaction schema", () => {
       getTableConfig(calendarOccurrenceOverrides).name,
       getTableConfig(interactions).name,
       getTableConfig(interactionEvents).name,
+      getTableConfig(calendarCommandReceipts).name,
     ]).toEqual([
       "calendar",
       "calendar_occurrence_overrides",
       "interactions",
       "interaction_events",
+      "calendar_command_receipts",
     ]);
   });
 
@@ -118,6 +123,10 @@ describe("calendar and interaction schema", () => {
         "recurrence",
         "recurrence_until",
         "recurrence_count",
+        "status",
+        "cancelled_at",
+        "cancelled_by_user_id",
+        "cancellation_reason",
         "version",
         "created_at",
         "updated_at",
@@ -138,6 +147,10 @@ describe("calendar and interaction schema", () => {
       ["recurrence", "calendar_recurrence", true],
       ["recurrence_until", "date", false],
       ["recurrence_count", "integer", false],
+      ["status", "calendar_status", true],
+      ["cancelled_at", "timestamp with time zone", false],
+      ["cancelled_by_user_id", "text", false],
+      ["cancellation_reason", "text", false],
       ["version", "integer", true],
       ["created_at", "timestamp with time zone", true],
       ["updated_at", "timestamp with time zone", true],
@@ -170,6 +183,13 @@ describe("calendar and interaction schema", () => {
     expect(checkSqlByName(calendar, "calendar_recurrence_count_positive_check")).toBe(
       '"calendar"."recurrence_count" is null or "calendar"."recurrence_count" > 0',
     );
+  });
+
+  test("preserves calendar series cancellation metadata coherently", () => {
+    expect(checkSqlByName(calendar, "calendar_cancellation_metadata_check")).toBe(
+      '("calendar"."status" = \'ACTIVE\' and "calendar"."cancelled_at" is null and "calendar"."cancelled_by_user_id" is null and "calendar"."cancellation_reason" is null) or ("calendar"."status" = \'CANCELLED\' and "calendar"."cancelled_at" is not null and "calendar"."cancelled_by_user_id" is not null and "calendar"."cancellation_reason" is not null and btrim("calendar"."cancellation_reason") <> \'\')',
+    );
+    expect(foreignKeyByColumnName(calendar, "cancelled_by_user_id")?.onDelete).toBe("restrict");
   });
 
   test("defines owner/time indexes", () => {
@@ -307,6 +327,29 @@ describe("calendar and interaction schema", () => {
       "interaction_id",
       "created_at",
     ]);
+  });
+
+  test("stores durable owner-scoped command receipts", () => {
+    expect(
+      ["owner_user_id", "command_key", "command_kind", "resource_id", "result", "created_at"].map(
+        (name) => {
+          const column = columnByName(calendarCommandReceipts, name);
+          return [column?.name, column?.getSQLType(), column?.notNull];
+        },
+      ),
+    ).toEqual([
+      ["owner_user_id", "text", true],
+      ["command_key", "text", true],
+      ["command_kind", "text", true],
+      ["resource_id", "text", false],
+      ["result", "jsonb", true],
+      ["created_at", "timestamp with time zone", true],
+    ]);
+    const config = getTableConfig(calendarCommandReceipts);
+    expect(config.uniqueConstraints.map((candidate) => candidate.name)).toContain(
+      "calendar_command_receipts_owner_user_id_command_key_key",
+    );
+    expect(foreignKeyByColumnName(calendarCommandReceipts, "owner_user_id")?.onDelete).toBe("restrict");
   });
 
   test("restricts deletion across business-history foreign keys", () => {

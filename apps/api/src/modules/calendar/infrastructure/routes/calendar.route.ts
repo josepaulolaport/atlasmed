@@ -12,8 +12,11 @@ export interface CalendarHttpUseCases {
   updateOccurrence(): Executable; cancel(): Executable; cancelOccurrence(): Executable;
 }
 
+const MAX_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
+const validTimeZone = (value: string) => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } };
 const dateRangeSchema = z.object({ from: z.string().datetime({ offset: true }), to: z.string().datetime({ offset: true }), ownerUserId: z.string().min(1).optional() })
-  .refine((value) => new Date(value.from) < new Date(value.to), { path: ["to"], message: "to must be after from" });
+  .refine((value) => new Date(value.from) < new Date(value.to), { path: ["to"], message: "to must be after from" })
+  .refine((value) => new Date(value.to).getTime() - new Date(value.from).getTime() <= MAX_RANGE_MS, { path: ["to"], message: "Calendar range may not exceed 366 days" });
 const baseEvent = z.object({
   title: z.string().trim().min(1), startsAt: z.string().datetime({ offset: true }), timeZone: z.string().refine((value) => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } }, "Invalid IANA time zone"),
   durationMinutes: z.number().int().positive().refine((value) => value % 30 === 0, "durationMinutes must be a multiple of 30"),
@@ -25,8 +28,12 @@ const createSchema = z.discriminatedUnion("kind", [
 ]);
 const expectedVersionSchema = z.number().int().nonnegative();
 const updateSchema = z.object({ expectedVersion: expectedVersionSchema, title: z.string().trim().min(1).optional(), startsAt: z.string().datetime({ offset: true }).optional(),
-  timeZone: z.string().optional(), durationMinutes: z.number().int().positive().refine((value) => value % 30 === 0).optional(), recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).optional(),
-  recurrenceUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), recurrenceCount: z.number().int().positive().nullable().optional() });
+  timeZone: z.string().refine(validTimeZone, "Invalid IANA time zone").optional(), durationMinutes: z.number().int().positive().refine((value) => value % 30 === 0, "durationMinutes must be a multiple of 30").optional(), recurrence: z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"]).optional(),
+  recurrenceUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), recurrenceCount: z.number().int().positive().nullable().optional() })
+  .superRefine((value, ctx) => {
+    if (value.recurrenceUntil && value.recurrenceCount) ctx.addIssue({ code: "custom", path: ["recurrenceUntil"], message: "recurrenceUntil and recurrenceCount are mutually exclusive" });
+    if (value.recurrence === "NONE" && (value.recurrenceUntil || value.recurrenceCount)) ctx.addIssue({ code: "custom", path: ["recurrence"], message: "NONE recurrence cannot have bounds" });
+  });
 const occurrenceUpdateSchema = z.object({ expectedVersion: expectedVersionSchema, startsAt: z.string().datetime({ offset: true }), durationMinutes: z.number().int().positive().refine((value) => value % 30 === 0) });
 const cancellationSchema = z.object({ expectedVersion: expectedVersionSchema, reason: z.string().trim().min(1) });
 

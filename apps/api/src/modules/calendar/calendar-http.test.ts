@@ -81,6 +81,28 @@ describe("Calendar HTTP routes", () => {
     expect(invalidDuration.status).toBe(400);
   });
 
+  it("rejects ranges longer than 366 days", async () => {
+    const response = await app(useCases()).handle(new Request(
+      "http://localhost/calendar?from=2026-01-01T00:00:00Z&to=2027-01-03T00:00:00Z",
+    ));
+    expect(response.status).toBe(400);
+  });
+
+  it("fully validates merged recurrence rules on update", async () => {
+    const application = app(useCases());
+    const invalidZone = await application.handle(new Request("http://localhost/calendar/calendar-1", {
+      method: "PATCH", headers: { "content-type": "application/json", "idempotency-key": "cmd-zone" },
+      body: JSON.stringify({ expectedVersion: 1, timeZone: "Mars/Olympus" }),
+    }));
+    expect(invalidZone.status).toBe(400);
+
+    const invalidBounds = await application.handle(new Request("http://localhost/calendar/calendar-1", {
+      method: "PATCH", headers: { "content-type": "application/json", "idempotency-key": "cmd-bounds" },
+      body: JSON.stringify({ expectedVersion: 1, recurrence: "NONE", recurrenceCount: 2 }),
+    }));
+    expect(invalidBounds.status).toBe(400);
+  });
+
   it("uses the authenticated actor as owner and accepts a valid interaction", async () => {
     const execute = mock(async () => ({ id: "created" }));
     const response = await app(useCases({ create: () => ({ execute }) as any })).handle(new Request("http://localhost/calendar", {
