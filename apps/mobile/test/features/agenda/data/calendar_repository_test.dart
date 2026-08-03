@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
@@ -188,6 +189,101 @@ void main() {
         ),
         throwsA(isA<CalendarNetworkException>()),
       );
+    },
+  );
+  test(
+    'creates calendar with idempotency header and exact API contract',
+    () async {
+      final client = _RecordingClient([
+        _response(200, {'id': 'calendar-1'}),
+      ]);
+      final repository = CalendarRepository(
+        baseUrl: 'https://api.atlasmed.test',
+        client: client,
+      );
+
+      await repository.createCalendar(
+        idempotencyKey: 'create-123',
+        command: const CalendarCreateCommand(
+          kind: CalendarEventKind.interaction,
+          title: 'Visita',
+          facilityId: 'facility-1',
+          modality: CalendarModality.inPerson,
+          startsAt: '2026-08-03T09:00:00-03:00',
+          timeZone: 'America/Sao_Paulo',
+          durationMinutes: 60,
+          recurrence: CalendarRecurrence.weekly,
+          recurrenceCount: 4,
+        ),
+      );
+
+      final request = client.requests.single;
+      expect(request.method, RepositoryHttpMethod.post);
+      expect(request.url.path, '/api/v1/calendar');
+      expect(request.headers['Idempotency-Key'], 'create-123');
+      expect(request.body, {
+        'kind': 'INTERACTION',
+        'title': 'Visita',
+        'facilityId': 'facility-1',
+        'modality': 'IN_PERSON',
+        'startsAt': '2026-08-03T09:00:00-03:00',
+        'timeZone': 'America/Sao_Paulo',
+        'durationMinutes': 60,
+        'recurrence': 'WEEKLY',
+        'recurrenceCount': 4,
+      });
+    },
+  );
+
+  test(
+    'updates series, occurrence and cancellation with expected versions',
+    () async {
+      final client = _RecordingClient([
+        _response(200, {'id': 'calendar-1'}),
+        _response(200, {'id': 'override-1'}),
+        _response(200, {'id': 'calendar-1', 'cancelled': true}),
+      ]);
+      final repository = CalendarRepository(
+        baseUrl: 'https://api.atlasmed.test',
+        client: client,
+      );
+
+      await repository.updateCalendar(
+        calendarId: 'calendar-1',
+        idempotencyKey: 'update-series',
+        command: const CalendarUpdateCommand(
+          expectedVersion: 3,
+          title: 'Novo título',
+        ),
+      );
+      await repository.updateCalendarOccurrence(
+        calendarId: 'calendar-1',
+        recurrenceKey: '2026-08-03T09:00',
+        idempotencyKey: 'update-occurrence',
+        command: const CalendarOccurrenceUpdateCommand(
+          expectedVersion: 0,
+          startsAt: '2026-08-03T10:00:00-03:00',
+          durationMinutes: 60,
+        ),
+      );
+      await repository.cancelCalendar(
+        calendarId: 'calendar-1',
+        idempotencyKey: 'cancel-series',
+        command: const CalendarCancellationCommand(
+          expectedVersion: 3,
+          reason: 'Mudança de agenda',
+        ),
+      );
+
+      expect(client.requests[0].method, RepositoryHttpMethod.patch);
+      expect(client.requests[0].body?['expectedVersion'], 3);
+      expect(
+        client.requests[1].url.path,
+        '/api/v1/calendar/calendar-1/occurrences/2026-08-03T09%3A00',
+      );
+      expect(client.requests[1].body?['expectedVersion'], 0);
+      expect(client.requests[2].method, RepositoryHttpMethod.delete);
+      expect(client.requests[2].body?['reason'], 'Mudança de agenda');
     },
   );
 }

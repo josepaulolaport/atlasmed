@@ -29,7 +29,9 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
@@ -89,6 +91,55 @@ class _AgendaRouteGuard extends ConsumerWidget {
           return const SizedBox.shrink();
         }
         return const AgendaScreen();
+      },
+    );
+  }
+}
+
+class AgendaEditorRouteGuard extends ConsumerWidget {
+  const AgendaEditorRouteGuard({super.key, required this.target});
+
+  final CalendarEditorTarget target;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    return currentUser.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const Scaffold(
+        body: Center(
+          child: Text('Não foi possível validar o acesso à agenda.'),
+        ),
+      ),
+      data: (user) {
+        if (user == null || !canMutateAgenda(user.role.name)) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Agenda')),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_outline_rounded, size: 40),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Você não tem permissão para alterar a agenda.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => context.go('/agenda'),
+                      child: const Text('Voltar para a agenda'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return CalendarEditorScreen(target: target);
       },
     );
   }
@@ -384,6 +435,48 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         // Details and flows use the root navigator so the drawer cannot capture
         // the edge-swipe back gesture.
+        GoRoute(
+          path: '/agenda/new',
+          builder: (_, state) => AgendaEditorRouteGuard(
+            target: CalendarEditorTarget.creating(
+              prefill: state.extra is CalendarEditorPrefill
+                  ? state.extra as CalendarEditorPrefill
+                  : null,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/agenda/:id/edit',
+          builder: (_, state) {
+            final occurrence = state.extra;
+            if (occurrence is! CalendarOccurrence) {
+              return const Scaffold(
+                body: Center(
+                  child: Text('Não foi possível abrir este compromisso.'),
+                ),
+              );
+            }
+            return AgendaEditorRouteGuard(
+              target: CalendarEditorTarget.editingSeries(occurrence),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/agenda/:id/occurrences/:recurrenceKey/edit',
+          builder: (_, state) {
+            final occurrence = state.extra;
+            if (occurrence is! CalendarOccurrence) {
+              return const Scaffold(
+                body: Center(
+                  child: Text('Não foi possível abrir esta ocorrência.'),
+                ),
+              );
+            }
+            return AgendaEditorRouteGuard(
+              target: CalendarEditorTarget.editingOccurrence(occurrence),
+            );
+          },
+        ),
         GoRoute(
           path: '/dashboard/facilities/:bucket',
           builder: (_, state) => PurchaseBucketFacilitiesScreen(

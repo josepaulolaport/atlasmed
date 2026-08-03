@@ -23,9 +23,42 @@ abstract interface class CalendarRepositoryContract {
   });
 }
 
+abstract interface class CalendarMutationRepositoryContract {
+  Future<void> createCalendar({
+    required CalendarCreateCommand command,
+    required String idempotencyKey,
+  });
+
+  Future<void> updateCalendar({
+    required String calendarId,
+    required CalendarUpdateCommand command,
+    required String idempotencyKey,
+  });
+
+  Future<void> updateCalendarOccurrence({
+    required String calendarId,
+    required String recurrenceKey,
+    required CalendarOccurrenceUpdateCommand command,
+    required String idempotencyKey,
+  });
+
+  Future<void> cancelCalendar({
+    required String calendarId,
+    required CalendarCancellationCommand command,
+    required String idempotencyKey,
+  });
+
+  Future<void> cancelCalendarOccurrence({
+    required String calendarId,
+    required String recurrenceKey,
+    required CalendarCancellationCommand command,
+    required String idempotencyKey,
+  });
+}
+
 class CalendarRepository extends Repository<List<CalendarOccurrence>>
     with SessionEnvironmentMixin<List<CalendarOccurrence>>
-    implements CalendarRepositoryContract {
+    implements CalendarRepositoryContract, CalendarMutationRepositoryContract {
   CalendarRepository({String? baseUrl, RepositoryHttpClient? client})
     : _baseUri = Uri.parse(baseUrl ?? AppConfig.apiBaseUrl),
       _client = client,
@@ -104,6 +137,91 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
         .toList(growable: false);
   }
 
+  @override
+  Future<void> createCalendar({
+    required CalendarCreateCommand command,
+    required String idempotencyKey,
+  }) => _mutate(
+    path: '/api/v1/calendar',
+    method: RepositoryHttpMethod.post,
+    body: command.toJson(),
+    idempotencyKey: idempotencyKey,
+  );
+
+  @override
+  Future<void> updateCalendar({
+    required String calendarId,
+    required CalendarUpdateCommand command,
+    required String idempotencyKey,
+  }) => _mutate(
+    path: '/api/v1/calendar/$calendarId',
+    method: RepositoryHttpMethod.patch,
+    body: command.toJson(),
+    idempotencyKey: idempotencyKey,
+  );
+
+  @override
+  Future<void> updateCalendarOccurrence({
+    required String calendarId,
+    required String recurrenceKey,
+    required CalendarOccurrenceUpdateCommand command,
+    required String idempotencyKey,
+  }) => _mutate(
+    path:
+        '/api/v1/calendar/$calendarId/occurrences/${Uri.encodeComponent(recurrenceKey)}',
+    method: RepositoryHttpMethod.patch,
+    body: command.toJson(),
+    idempotencyKey: idempotencyKey,
+  );
+
+  @override
+  Future<void> cancelCalendar({
+    required String calendarId,
+    required CalendarCancellationCommand command,
+    required String idempotencyKey,
+  }) => _mutate(
+    path: '/api/v1/calendar/$calendarId',
+    method: RepositoryHttpMethod.delete,
+    body: command.toJson(),
+    idempotencyKey: idempotencyKey,
+  );
+
+  @override
+  Future<void> cancelCalendarOccurrence({
+    required String calendarId,
+    required String recurrenceKey,
+    required CalendarCancellationCommand command,
+    required String idempotencyKey,
+  }) => _mutate(
+    path:
+        '/api/v1/calendar/$calendarId/occurrences/${Uri.encodeComponent(recurrenceKey)}',
+    method: RepositoryHttpMethod.delete,
+    body: command.toJson(),
+    idempotencyKey: idempotencyKey,
+  );
+
+  Future<void> _mutate({
+    required String path,
+    required RepositoryHttpMethod method,
+    required Map<String, dynamic> body,
+    required String idempotencyKey,
+  }) async {
+    final response = await _callRequest(
+      RepositoryHttpRequest(
+        url: _baseUri.replace(path: path, query: null),
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: body,
+      ),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _throwIfError(response);
+    }
+  }
+
   Uri _calendarUri(
     String suffix, {
     required DateTime from,
@@ -119,12 +237,14 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     },
   );
 
-  Future<RepositoryHttpResponse> _call(Uri uri) async {
+  Future<RepositoryHttpResponse> _call(Uri uri) => _callRequest(
+    RepositoryHttpRequest(url: uri, method: RepositoryHttpMethod.get),
+  );
+
+  Future<RepositoryHttpResponse> _callRequest(
+    RepositoryHttpRequest request,
+  ) async {
     try {
-      final request = RepositoryHttpRequest(
-        url: uri,
-        method: RepositoryHttpMethod.get,
-      );
       var response = await client.call(request: request);
       if (response.statusCode == 401) {
         await onErrorStatusCode(401);
@@ -135,12 +255,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
       rethrow;
     } on SessionExpiredException {
       try {
-        return await client.call(
-          request: RepositoryHttpRequest(
-            url: uri,
-            method: RepositoryHttpMethod.get,
-          ),
-        );
+        return await client.call(request: request);
       } catch (_) {
         throw const CalendarNetworkException(
           'Sua sessão expirou. Entre novamente para acessar a agenda.',

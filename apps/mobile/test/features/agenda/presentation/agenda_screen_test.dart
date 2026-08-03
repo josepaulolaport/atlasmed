@@ -194,6 +194,26 @@ void main() {
     expect(find.byIcon(Icons.add_rounded), findsNothing);
   });
 
+  testWidgets('representative sees the production create action', (
+    tester,
+  ) async {
+    final repository = _QueryRecordingRepository();
+    final rep = _user('rep-1', 'Ana', UserRoleName.rep);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          calendarRepositoryProvider.overrideWithValue(repository),
+          currentUserProvider.overrideWith((ref) async => rep),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const AgendaScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Criar compromisso'), findsOneWidget);
+  });
+
   testWidgets('filters loaded events locally by title and clinic', (
     tester,
   ) async {

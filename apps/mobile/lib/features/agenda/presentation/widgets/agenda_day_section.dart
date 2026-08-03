@@ -4,9 +4,14 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class AgendaDaySection extends StatelessWidget {
-  const AgendaDaySection({super.key, required this.group});
+  const AgendaDaySection({
+    super.key,
+    required this.group,
+    this.onOccurrenceTap,
+  });
 
   final AgendaDayGroup group;
+  final ValueChanged<CalendarOccurrence>? onOccurrenceTap;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +32,12 @@ class AgendaDaySection extends StatelessWidget {
             ),
           ),
           for (var index = 0; index < group.items.length; index++) ...[
-            AgendaItem(occurrence: group.items[index]),
+            AgendaItem(
+              occurrence: group.items[index],
+              onTap: group.items[index].canMutate && onOccurrenceTap != null
+                  ? () => onOccurrenceTap!(group.items[index])
+                  : null,
+            ),
             if (index < group.items.length - 1)
               const Padding(
                 padding: EdgeInsets.only(left: 68),

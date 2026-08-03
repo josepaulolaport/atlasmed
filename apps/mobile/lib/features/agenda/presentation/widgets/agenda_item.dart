@@ -3,9 +3,10 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class AgendaItem extends StatelessWidget {
-  const AgendaItem({super.key, required this.occurrence});
+  const AgendaItem({super.key, required this.occurrence, this.onTap});
 
   final CalendarOccurrence occurrence;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -18,66 +19,71 @@ class AgendaItem extends StatelessWidget {
         ?contextLabel,
         status.label,
       ].join(', '),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 52,
-              child: Text(
-                occurrence.localStartsAt,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray700,
+      button: onTap != null,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 52,
+                child: Text(
+                  occurrence.localStartsAt,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray700,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    occurrence.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.gray900,
-                    ),
-                  ),
-                  if (contextLabel != null) ...[
-                    const SizedBox(height: 4),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      contextLabel,
+                      occurrence.title,
                       style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.gray600,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.gray900,
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 7),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(status.icon, size: 15, color: status.color),
-                      const SizedBox(width: 5),
+                    if (contextLabel != null) ...[
+                      const SizedBox(height: 4),
                       Text(
-                        status.label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: status.color,
+                        contextLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.gray600,
                         ),
                       ),
                     ],
-                  ),
-                ],
+                    const SizedBox(height: 7),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(status.icon, size: 15, color: status.color),
+                        const SizedBox(width: 5),
+                        Text(
+                          status.label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: status.color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

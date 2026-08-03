@@ -21,6 +21,11 @@ final calendarRepositoryProvider = Provider<CalendarRepositoryContract>((ref) {
   return CalendarRepository();
 });
 
+final calendarMutationRepositoryProvider =
+    Provider<CalendarMutationRepositoryContract>((ref) {
+      return CalendarRepository();
+    });
+
 final agendaProvider = FutureProvider.autoDispose
     .family<List<CalendarOccurrence>, AgendaQuery>((ref, query) {
       return ref

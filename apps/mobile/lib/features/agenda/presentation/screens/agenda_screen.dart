@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class AgendaScreen extends ConsumerStatefulWidget {
   const AgendaScreen({super.key, this.ownerPicker, this.onCreate})
@@ -91,43 +92,53 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
 
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
     final isManager = currentUser?.role.name == UserRoleName.manager;
+    final canCreate =
+        currentUser != null &&
+        (currentUser.role.name == UserRoleName.admin ||
+            currentUser.role.name == UserRoleName.rep);
     final ownerPicker =
         widget.ownerPicker ?? (isManager ? _buildManagerOwnerPicker() : null);
+    final createAction =
+        widget.onCreate ??
+        (canCreate ? () => context.push('/agenda/new') : null);
     final agenda = ref.watch(agendaProvider(_query));
     return agenda.when(
       loading: () => _AgendaScaffold(
         loading: true,
         periodStart: _periodStart,
         ownerPicker: ownerPicker,
-        onCreate: widget.onCreate,
+        onCreate: createAction,
         onPreviousPeriod: _previousPeriod,
         onNextPeriod: _nextPeriod,
         onToday: _today,
         onRefresh: _refresh,
         onSearchChanged: _setSearch,
+        onOccurrenceTap: _editOccurrence,
       ),
       error: (error, _) => _AgendaScaffold(
         errorMessage: error.toString(),
         onRetry: _refresh,
         periodStart: _periodStart,
         ownerPicker: ownerPicker,
-        onCreate: widget.onCreate,
+        onCreate: createAction,
         onPreviousPeriod: _previousPeriod,
         onNextPeriod: _nextPeriod,
         onToday: _today,
         onRefresh: _refresh,
         onSearchChanged: _setSearch,
+        onOccurrenceTap: _editOccurrence,
       ),
       data: (occurrences) => _AgendaScaffold(
         occurrences: _filtered(occurrences),
         periodStart: _periodStart,
         ownerPicker: ownerPicker,
-        onCreate: widget.onCreate,
+        onCreate: createAction,
         onPreviousPeriod: _previousPeriod,
         onNextPeriod: _nextPeriod,
         onToday: _today,
         onRefresh: _refresh,
         onSearchChanged: _setSearch,
+        onOccurrenceTap: _editOccurrence,
       ),
     );
   }
@@ -201,6 +212,59 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
 
   void _today() => setState(() => _periodStart = _startOfWeek(DateTime.now()));
 
+  Future<void> _editOccurrence(CalendarOccurrence occurrence) async {
+    if (!occurrence.recurrenceProvided) {
+      await context.push(
+        '/agenda/${occurrence.calendarId}/occurrences/${Uri.encodeComponent(occurrence.recurrenceKey)}/edit',
+        extra: occurrence,
+      );
+      if (mounted) _refresh();
+      return;
+    }
+    if (occurrence.recurrence == CalendarRecurrence.none) {
+      await context.push(
+        '/agenda/${occurrence.calendarId}/edit',
+        extra: occurrence,
+      );
+    } else {
+      final choice = await showModalBottomSheet<CalendarEditorMode>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.event_rounded),
+                title: const Text('Editar somente esta ocorrência'),
+                onTap: () =>
+                    Navigator.pop(context, CalendarEditorMode.occurrence),
+              ),
+              ListTile(
+                leading: const Icon(Icons.event_repeat_rounded),
+                title: const Text('Editar toda a série'),
+                onTap: () => Navigator.pop(context, CalendarEditorMode.series),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (!mounted || choice == null) return;
+      if (choice == CalendarEditorMode.occurrence) {
+        await context.push(
+          '/agenda/${occurrence.calendarId}/occurrences/${Uri.encodeComponent(occurrence.recurrenceKey)}/edit',
+          extra: occurrence,
+        );
+      } else {
+        await context.push(
+          '/agenda/${occurrence.calendarId}/edit',
+          extra: occurrence,
+        );
+      }
+    }
+    if (mounted) _refresh();
+  }
+
   void _refresh() => ref.invalidate(agendaProvider(_query));
 }
 
@@ -218,6 +282,7 @@ class _AgendaScaffold extends StatelessWidget {
     this.onToday,
     this.onRefresh,
     this.onSearchChanged,
+    this.onOccurrenceTap,
   });
 
   final List<CalendarOccurrence> occurrences;
@@ -232,6 +297,7 @@ class _AgendaScaffold extends StatelessWidget {
   final VoidCallback? onToday;
   final VoidCallback? onRefresh;
   final ValueChanged<String>? onSearchChanged;
+  final ValueChanged<CalendarOccurrence>? onOccurrenceTap;
 
   @override
   Widget build(BuildContext context) {
@@ -269,7 +335,10 @@ class _AgendaScaffold extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: groups.length,
-        itemBuilder: (_, index) => AgendaDaySection(group: groups[index]),
+        itemBuilder: (_, index) => AgendaDaySection(
+          group: groups[index],
+          onOccurrenceTap: onOccurrenceTap,
+        ),
       ),
     );
   }

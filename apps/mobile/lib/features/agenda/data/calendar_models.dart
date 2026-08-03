@@ -28,6 +28,193 @@ T _enumFromApi<T extends Enum>(List<T> values, Object? raw) {
   );
 }
 
+enum CalendarRecurrenceEnd { none, date, count }
+
+enum CalendarEditorMode { create, series, occurrence }
+
+String calendarEventKindToApi(CalendarEventKind value) => switch (value) {
+  CalendarEventKind.interaction => 'INTERACTION',
+  CalendarEventKind.personalBlock => 'PERSONAL_BLOCK',
+};
+
+String calendarModalityToApi(CalendarModality value) => switch (value) {
+  CalendarModality.inPerson => 'IN_PERSON',
+  CalendarModality.remote => 'REMOTE',
+};
+
+String calendarRecurrenceToApi(CalendarRecurrence value) =>
+    value.name.toUpperCase();
+
+class CalendarEditorPrefill extends Equatable {
+  const CalendarEditorPrefill({this.facilityId, this.facilityName, this.kind});
+
+  final String? facilityId;
+  final String? facilityName;
+  final CalendarEventKind? kind;
+
+  @override
+  List<Object?> get props => [facilityId, facilityName, kind];
+}
+
+class CalendarEditorTarget extends Equatable {
+  const CalendarEditorTarget.creating({this.prefill})
+    : mode = CalendarEditorMode.create,
+      occurrence = null;
+
+  const CalendarEditorTarget.editingSeries(CalendarOccurrence this.occurrence)
+    : mode = CalendarEditorMode.series,
+      prefill = null;
+
+  const CalendarEditorTarget.editingOccurrence(
+    CalendarOccurrence this.occurrence,
+  ) : mode = CalendarEditorMode.occurrence,
+      prefill = null;
+
+  final CalendarEditorMode mode;
+  final CalendarEditorPrefill? prefill;
+  final CalendarOccurrence? occurrence;
+
+  @override
+  List<Object?> get props => [mode, prefill, occurrence];
+}
+
+class CalendarCreateCommand extends Equatable {
+  const CalendarCreateCommand({
+    required this.kind,
+    required this.title,
+    required this.startsAt,
+    required this.timeZone,
+    required this.durationMinutes,
+    required this.recurrence,
+    this.facilityId,
+    this.modality,
+    this.recurrenceUntil,
+    this.recurrenceCount,
+  });
+
+  final CalendarEventKind kind;
+  final String title;
+  final String? facilityId;
+  final CalendarModality? modality;
+  final String startsAt;
+  final String timeZone;
+  final int durationMinutes;
+  final CalendarRecurrence recurrence;
+  final String? recurrenceUntil;
+  final int? recurrenceCount;
+
+  Map<String, dynamic> toJson() => {
+    'kind': calendarEventKindToApi(kind),
+    'title': title,
+    if (facilityId != null) 'facilityId': facilityId,
+    if (modality != null) 'modality': calendarModalityToApi(modality!),
+    'startsAt': startsAt,
+    'timeZone': timeZone,
+    'durationMinutes': durationMinutes,
+    'recurrence': calendarRecurrenceToApi(recurrence),
+    if (recurrenceUntil != null) 'recurrenceUntil': recurrenceUntil,
+    if (recurrenceCount != null) 'recurrenceCount': recurrenceCount,
+  };
+
+  @override
+  List<Object?> get props => [
+    kind,
+    title,
+    facilityId,
+    modality,
+    startsAt,
+    timeZone,
+    durationMinutes,
+    recurrence,
+    recurrenceUntil,
+    recurrenceCount,
+  ];
+}
+
+class CalendarUpdateCommand extends Equatable {
+  const CalendarUpdateCommand({
+    required this.expectedVersion,
+    this.title,
+    this.startsAt,
+    this.timeZone,
+    this.durationMinutes,
+    this.recurrence,
+    this.recurrenceUntil,
+    this.recurrenceCount,
+  });
+
+  final int expectedVersion;
+  final String? title;
+  final String? startsAt;
+  final String? timeZone;
+  final int? durationMinutes;
+  final CalendarRecurrence? recurrence;
+  final String? recurrenceUntil;
+  final int? recurrenceCount;
+
+  Map<String, dynamic> toJson() => {
+    'expectedVersion': expectedVersion,
+    if (title != null) 'title': title,
+    if (startsAt != null) 'startsAt': startsAt,
+    if (timeZone != null) 'timeZone': timeZone,
+    if (durationMinutes != null) 'durationMinutes': durationMinutes,
+    if (recurrence != null) 'recurrence': calendarRecurrenceToApi(recurrence!),
+    'recurrenceUntil': recurrenceUntil,
+    'recurrenceCount': recurrenceCount,
+  };
+
+  @override
+  List<Object?> get props => [
+    expectedVersion,
+    title,
+    startsAt,
+    timeZone,
+    durationMinutes,
+    recurrence,
+    recurrenceUntil,
+    recurrenceCount,
+  ];
+}
+
+class CalendarOccurrenceUpdateCommand extends Equatable {
+  const CalendarOccurrenceUpdateCommand({
+    required this.expectedVersion,
+    required this.startsAt,
+    required this.durationMinutes,
+  });
+
+  final int expectedVersion;
+  final String startsAt;
+  final int durationMinutes;
+
+  Map<String, dynamic> toJson() => {
+    'expectedVersion': expectedVersion,
+    'startsAt': startsAt,
+    'durationMinutes': durationMinutes,
+  };
+
+  @override
+  List<Object?> get props => [expectedVersion, startsAt, durationMinutes];
+}
+
+class CalendarCancellationCommand extends Equatable {
+  const CalendarCancellationCommand({
+    required this.expectedVersion,
+    required this.reason,
+  });
+
+  final int expectedVersion;
+  final String reason;
+
+  Map<String, dynamic> toJson() => {
+    'expectedVersion': expectedVersion,
+    'reason': reason,
+  };
+
+  @override
+  List<Object?> get props => [expectedVersion, reason];
+}
+
 class CalendarIdentity extends Equatable {
   const CalendarIdentity({required this.id, required this.name});
 
@@ -98,6 +285,13 @@ class CalendarOccurrence extends Equatable {
     required this.recurrence,
     required this.interaction,
     required this.canMutate,
+    this.timeZone = 'UTC',
+    this.durationMinutes = 60,
+    this.version = 0,
+    this.overrideVersion,
+    this.recurrenceUntil,
+    this.recurrenceCount,
+    this.recurrenceProvided = true,
   });
 
   final String calendarId;
@@ -116,6 +310,13 @@ class CalendarOccurrence extends Equatable {
   final CalendarRecurrence recurrence;
   final CalendarInteractionContext? interaction;
   final bool canMutate;
+  final String timeZone;
+  final int durationMinutes;
+  final int version;
+  final int? overrideVersion;
+  final String? recurrenceUntil;
+  final int? recurrenceCount;
+  final bool recurrenceProvided;
 
   factory CalendarOccurrence.fromJson(Map<String, dynamic> json) {
     final startsAt = DateTime.parse(json['startsAt'] as String).toUtc();
@@ -174,6 +375,15 @@ class CalendarOccurrence extends Equatable {
       ),
       interaction: interaction,
       canMutate: json['canMutate'] as bool? ?? false,
+      timeZone: json['timeZone'] as String? ?? 'UTC',
+      durationMinutes:
+          json['durationMinutes'] as int? ??
+          endsAt.difference(startsAt).inMinutes,
+      version: json['version'] as int? ?? 0,
+      overrideVersion: json['overrideVersion'] as int?,
+      recurrenceUntil: json['recurrenceUntil'] as String?,
+      recurrenceCount: json['recurrenceCount'] as int?,
+      recurrenceProvided: json.containsKey('recurrence'),
     );
   }
 
@@ -197,6 +407,13 @@ class CalendarOccurrence extends Equatable {
     recurrence,
     interaction,
     canMutate,
+    timeZone,
+    durationMinutes,
+    version,
+    overrideVersion,
+    recurrenceUntil,
+    recurrenceCount,
+    recurrenceProvided,
   ];
 }
 

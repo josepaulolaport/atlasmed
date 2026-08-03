@@ -88,6 +88,9 @@ bool canReadAgenda(UserRoleName role) =>
     role == UserRoleName.manager ||
     role == UserRoleName.rep;
 
+bool canMutateAgenda(UserRoleName role) =>
+    role == UserRoleName.admin || role == UserRoleName.rep;
+
 bool canManageCatalog(UserRoleName role) => role == UserRoleName.admin;
 
 bool isAdmin(UserRoleName role) => role == UserRoleName.admin;
