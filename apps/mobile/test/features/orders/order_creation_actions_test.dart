@@ -46,6 +46,7 @@ void main() {
       id: 'order-1',
       legacyId: 1,
       verticalId: null,
+      interactionId: null,
       status: 'DELIVERED',
       type: 'STANDARD',
       orderedAt: DateTime.utc(2026, 1, 2),
