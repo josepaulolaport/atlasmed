@@ -272,6 +272,28 @@ export class InviteAlreadyUsedError extends AppError {
   }
 }
 
+export class CalendarConflictError extends AppError {
+  constructor(conflicts: Array<object>) {
+    super(
+      "CALENDAR_CONFLICT",
+      409,
+      "Calendar event conflicts with an existing occurrence",
+      { conflicts },
+    );
+  }
+}
+
+export class CalendarVersionConflictError extends AppError {
+  constructor(calendarId: string, expectedVersion: number) {
+    super(
+      "CALENDAR_VERSION_CONFLICT",
+      409,
+      "Calendar event was changed by another request",
+      { calendarId, expectedVersion },
+    );
+  }
+}
+
 // ============================================================================
 // Gone Errors (410)
 // ============================================================================

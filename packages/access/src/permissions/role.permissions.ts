@@ -24,6 +24,8 @@ export function applyRoleAbilities(
       can("manage", "SEARCH_SYNC");
       can("manage", "CATALOG");
       can("manage", "VISIT");
+      can("manage", "CALENDAR");
+      can("manage", "INTERACTION");
       can("manage", "FIELD_SUGGESTION");
       can("manage", "CADASTRO_SUBMISSION");
       break;
@@ -31,6 +33,8 @@ export function applyRoleAbilities(
     case "MANAGER":
       can("create", "VISIT");
       can("read", "VISIT");
+      can("read", "CALENDAR");
+      can("read", "INTERACTION");
       can("read", "USER");
       can("update", "USER");
       can("create", "USER");
@@ -58,6 +62,14 @@ export function applyRoleAbilities(
     case "REP":
       can("create", "VISIT");
       can("read", "VISIT");
+      can("create", "CALENDAR");
+      can("read", "CALENDAR");
+      can("update", "CALENDAR");
+      can("delete", "CALENDAR");
+      can("create", "INTERACTION");
+      can("read", "INTERACTION");
+      can("update", "INTERACTION");
+      can("delete", "INTERACTION");
       can("read", "FACILITY");
       can("update", "FACILITY");
       can("read", "PROFESSIONAL");

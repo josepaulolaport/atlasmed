@@ -13,6 +13,8 @@ const CLIENT_SAFE_CONTEXT_KEYS: Record<string, readonly string[]> = {
   VALIDATION_ERROR: ["errors"],
   INVALID_PASSWORD: ["requirements"],
   INVITE_EXPIRED: ["expiredAt"],
+  CALENDAR_CONFLICT: ["conflicts"],
+  CALENDAR_VERSION_CONFLICT: ["calendarId", "expectedVersion"],
 };
 
 export abstract class AppError extends Error {

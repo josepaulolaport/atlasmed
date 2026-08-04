@@ -322,47 +322,54 @@ const appNavigationItems = <AppNavigationItem>[
   ),
   AppNavigationItem(
     branchIndex: 3,
+    label: 'Agenda',
+    route: '/agenda',
+    icon: Icons.calendar_month_outlined,
+    visibleFor: canReadAgenda,
+  ),
+  AppNavigationItem(
+    branchIndex: 4,
     label: 'Territórios',
     route: '/territories',
     icon: Icons.layers_outlined,
     visibleFor: canReadTerritories,
   ),
   AppNavigationItem(
-    branchIndex: 4,
+    branchIndex: 5,
     label: 'Usuários',
     route: '/users',
     icon: Icons.people_outline_rounded,
     visibleFor: canManageUsers,
   ),
   AppNavigationItem(
-    branchIndex: 5,
+    branchIndex: 6,
     label: 'Pedidos',
     route: '/orders',
     icon: Icons.inventory_2_outlined,
   ),
   AppNavigationItem(
-    branchIndex: 6,
+    branchIndex: 7,
     label: 'Cadastros',
     route: '/registrations',
     icon: Icons.fact_check_outlined,
     visibleFor: canReviewCadastro,
   ),
   AppNavigationItem(
-    branchIndex: 7,
+    branchIndex: 8,
     label: 'Não Conformidades',
     route: '/non-conformities',
     icon: Icons.rate_review_outlined,
     visibleFor: canReadFieldSuggestions,
   ),
   AppNavigationItem(
-    branchIndex: 8,
+    branchIndex: 9,
     label: 'Produtos',
     route: '/products',
     icon: Icons.inventory_outlined,
     visibleFor: canReadCatalog,
   ),
   AppNavigationItem(
-    branchIndex: 9,
+    branchIndex: 10,
     label: 'Perfil',
     route: '/profile',
     icon: Icons.person_outline_rounded,
@@ -412,7 +419,7 @@ class AtlasDrawer extends ConsumerWidget {
                       avatarToken: session.token,
                     ),
                     Expanded(
-                      child: _NavItems(
+                      child: AtlasDrawerNavigation(
                         activeBranchIndex: activeBranchIndex,
                         onSelectBranch: onSelectBranch,
                         role: user?.role.name,
@@ -558,12 +565,13 @@ class _DrawerHeader extends StatelessWidget {
   }
 }
 
-class _NavItems extends StatelessWidget {
+class AtlasDrawerNavigation extends StatelessWidget {
   final int activeBranchIndex;
   final ValueChanged<int> onSelectBranch;
   final UserRoleName? role;
 
-  const _NavItems({
+  const AtlasDrawerNavigation({
+    super.key,
     required this.activeBranchIndex,
     required this.onSelectBranch,
     this.role,
@@ -579,14 +587,13 @@ class _NavItems extends StatelessWidget {
       return role != null && visibleFor(role!);
     });
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 0),
-      child: Column(
-        children: items.map((item) {
-          final isActive = item.isActiveForBranch(activeBranchIndex);
-          return _buildNavRow(item, isActive, context);
-        }).toList(),
-      ),
+    return ListView(
+      key: const Key('atlas-drawer-navigation'),
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 8),
+      children: items.map((item) {
+        final isActive = item.isActiveForBranch(activeBranchIndex);
+        return _buildNavRow(item, isActive, context);
+      }).toList(),
     );
   }
 

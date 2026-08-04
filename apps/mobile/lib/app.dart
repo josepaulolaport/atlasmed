@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capabilities.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/splash_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_email_screen.dart';
@@ -27,6 +29,10 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/interaction_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
@@ -37,6 +43,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_t
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/new_order_products_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/cart_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/checkout_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_success_screen.dart';
 import 'package:atlasmed_mobile_app/features/presentations/presentation/screens/presentations_screen.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profile_screen.dart';
@@ -62,6 +69,82 @@ class AtlasMedApp extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<AtlasMedApp> createState() => _AtlasMedAppState();
+}
+
+class _AgendaRouteGuard extends ConsumerWidget {
+  const _AgendaRouteGuard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    return currentUser.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const Scaffold(
+        body: Center(
+          child: Text('Não foi possível validar o acesso à agenda.'),
+        ),
+      ),
+      data: (user) {
+        if (user == null || !canReadAgenda(user.role.name)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) context.go('/dashboard');
+          });
+          return const SizedBox.shrink();
+        }
+        return const AgendaScreen();
+      },
+    );
+  }
+}
+
+class AgendaEditorRouteGuard extends ConsumerWidget {
+  const AgendaEditorRouteGuard({super.key, required this.target});
+
+  final CalendarEditorTarget target;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+    return currentUser.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const Scaffold(
+        body: Center(
+          child: Text('Não foi possível validar o acesso à agenda.'),
+        ),
+      ),
+      data: (user) {
+        if (user == null || !canMutateAgenda(user.role.name)) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Agenda')),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_outline_rounded, size: 40),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Você não tem permissão para alterar a agenda.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => context.go('/agenda'),
+                      child: const Text('Voltar para a agenda'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return CalendarEditorScreen(target: target);
+      },
+    );
+  }
 }
 
 class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
@@ -148,6 +231,12 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         final isLocationGate = location == '/location-gate';
 
         if (isAuthenticated) {
+          final user = ref.read(currentUserProvider).valueOrNull;
+          if (location == '/agenda' &&
+              user != null &&
+              !canReadAgenda(user.role.name)) {
+            return '/dashboard';
+          }
           final locationSession = ref.read(locationSessionProvider);
           if (!locationSession.isUsable) {
             return isLocationGate ? null : '/location-gate';
@@ -273,6 +362,15 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
             StatefulShellBranch(
               routes: [
                 GoRoute(
+                  path: '/agenda',
+                  pageBuilder: (_, _) =>
+                      const NoTransitionPage(child: _AgendaRouteGuard()),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: '/territories',
                   pageBuilder: (_, _) =>
                       const NoTransitionPage(child: TerritoriesScreen()),
@@ -340,6 +438,48 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         // Details and flows use the root navigator so the drawer cannot capture
         // the edge-swipe back gesture.
         GoRoute(
+          path: '/agenda/new',
+          builder: (_, state) => AgendaEditorRouteGuard(
+            target: CalendarEditorTarget.creating(
+              prefill: state.extra is CalendarEditorPrefill
+                  ? state.extra as CalendarEditorPrefill
+                  : null,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/agenda/:id/edit',
+          builder: (_, state) {
+            final occurrence = state.extra;
+            if (occurrence is! CalendarOccurrence) {
+              return const Scaffold(
+                body: Center(
+                  child: Text('Não foi possível abrir este compromisso.'),
+                ),
+              );
+            }
+            return AgendaEditorRouteGuard(
+              target: CalendarEditorTarget.editingSeries(occurrence),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/agenda/:id/occurrences/:recurrenceKey/edit',
+          builder: (_, state) {
+            final occurrence = state.extra;
+            if (occurrence is! CalendarOccurrence) {
+              return const Scaffold(
+                body: Center(
+                  child: Text('Não foi possível abrir esta ocorrência.'),
+                ),
+              );
+            }
+            return AgendaEditorRouteGuard(
+              target: CalendarEditorTarget.editingOccurrence(occurrence),
+            );
+          },
+        ),
+        GoRoute(
           path: '/dashboard/facilities/:bucket',
           builder: (_, state) => PurchaseBucketFacilitiesScreen(
             bucket: state.pathParameters['bucket']!,
@@ -361,8 +501,17 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           ),
         ),
         GoRoute(
+          path: '/agenda/interactions/:id',
+          builder: (_, state) =>
+              InteractionScreen(interactionId: state.pathParameters['id']!),
+        ),
+        GoRoute(
           path: '/orders/new',
-          builder: (_, _) => const NewOrderProductsScreen(),
+          builder: (_, state) => NewOrderProductsScreen(
+            interactionId: state.uri.queryParameters['interactionId'],
+            facilityId: state.uri.queryParameters['facilityId'],
+            facilityName: state.uri.queryParameters['facilityName'],
+          ),
         ),
         GoRoute(
           path: '/orders/new/cart',
@@ -374,7 +523,22 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         GoRoute(
           path: '/orders/new/success',
-          builder: (_, _) => const OrderSuccessScreen(),
+          builder: (_, state) {
+            final order = state.extra;
+            if (order is! ApiOrderDetail) {
+              return const Scaffold(
+                body: Center(
+                  child: Text(
+                    'Não foi possível abrir a confirmação do pedido.',
+                  ),
+                ),
+              );
+            }
+            return OrderSuccessScreen(
+              order: order,
+              interactionId: state.uri.queryParameters['interactionId'],
+            );
+          },
         ),
         GoRoute(
           path: '/orders/:id',

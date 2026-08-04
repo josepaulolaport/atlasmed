@@ -1,5 +1,5 @@
 import type { ScopeContext } from "@atlasmed/access";
-import { assertResourceInScope } from "@atlasmed/access";
+import { assertResourceInScope, ForbiddenError } from "@atlasmed/access";
 import type { FacilityNoteRepository } from "../interfaces/facility-note.repository.interface";
 import type { FacilityNoteRecord } from "../interfaces/facility-note.repository.interface";
 
@@ -22,13 +22,23 @@ export class ListFacilityNotesUseCase {
   async execute(input: {
     facilityId: string;
     userId: string;
+    roleName?: string;
+    ownerUserId?: string;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
+    const ownerUserId = input.ownerUserId ?? input.userId;
+    if (
+      ownerUserId !== input.userId &&
+      (input.roleName !== "MANAGER" || !input.scope.managedUserIds.includes(ownerUserId))
+    ) {
+      throw new ForbiddenError("Facility note owner outside actor scope");
+    }
+
     const notes = await this.deps.facilityNoteRepository.findByFacilityAndUser(
       input.facilityId,
-      input.userId
+      ownerUserId
     );
 
     return notes.map(serializeFacilityNote);

@@ -2,6 +2,7 @@ import { cleanupJobs, startCleanupWorker } from "./cleanup.jobs";
 import { startNotificationWorker } from "./notification.queue";
 import { logger } from "../logging/logger";
 import { registerTerritoryMembershipWorker } from "../../modules/territory/composition";
+import { interactionOverdueJobs, startInteractionOverdueWorker } from "../../modules/interactions/infrastructure/jobs/interaction-overdue.jobs";
 
 export async function initializeBackgroundJobs(): Promise<void> {
   try {
@@ -10,7 +11,8 @@ export async function initializeBackgroundJobs(): Promise<void> {
     startNotificationWorker();
     startCleanupWorker();
     registerTerritoryMembershipWorker();
-    await cleanupJobs.initializeAllJobs();
+    startInteractionOverdueWorker();
+    await Promise.all([cleanupJobs.initializeAllJobs(), interactionOverdueJobs.schedule()]);
 
     logger.info("Background jobs initialized");
   } catch (error) {

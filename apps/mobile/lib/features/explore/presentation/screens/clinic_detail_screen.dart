@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_consultant_assignments_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_consultant_assignments_provider.dart';
@@ -18,7 +19,6 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recur
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purchase_recurrence_providers.dart';
@@ -502,37 +502,18 @@ class ClinicDetailQuickActions extends ConsumerWidget {
         if (canCreateVisit)
           QuickActionItem(
             icon: icon(Icons.calendar_month_rounded),
-            label: const Text('Visita'),
-            onTap: () => _createVisit(context, ref, detail.id),
+            label: const Text('Agendar interação'),
+            onTap: () => context.push(
+              '/agenda/new',
+              extra: CalendarEditorPrefill(
+                facilityId: detail.id,
+                facilityName: detail.name,
+                kind: CalendarEventKind.interaction,
+              ),
+            ),
           ),
       ],
     );
-  }
-
-  Future<void> _createVisit(
-    BuildContext context,
-    WidgetRef ref,
-    String clinicId,
-  ) async {
-    try {
-      await ref.read(clinicVisitsRepositoryProvider(clinicId)).createVisit();
-      ref.invalidate(clinicVisitsRepositoryProvider(clinicId));
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Visita registrada com sucesso'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Erro ao registrar visita'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 }
 

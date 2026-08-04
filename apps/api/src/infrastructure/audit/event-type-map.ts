@@ -78,6 +78,15 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "POST /api/v1/territories/:id/approval/accept": { eventType: "TERRITORY.APPROVED" },
   "POST /api/v1/territories/:id/approval/reject": { eventType: "TERRITORY.REJECTED" },
 
+  // --- Calendar / Interactions ---
+  "POST /api/v1/calendar": { eventType: "CALENDAR.CREATED" },
+  "PATCH /api/v1/calendar/:id": { eventType: "CALENDAR.RESCHEDULED" },
+  "PATCH /api/v1/calendar/:id/occurrences/:recurrenceKey": { eventType: "CALENDAR.OCCURRENCE_RESCHEDULED" },
+  "DELETE /api/v1/calendar/:id": { eventType: "CALENDAR.CANCELLED", severity: "WARNING" },
+  "DELETE /api/v1/calendar/:id/occurrences/:recurrenceKey": { eventType: "CALENDAR.OCCURRENCE_CANCELLED", severity: "WARNING" },
+  "POST /api/v1/interactions/:id/start": { eventType: "INTERACTION.STARTED" },
+  "POST /api/v1/interactions/:id/complete": { eventType: "INTERACTION.COMPLETED" },
+
   // --- Registry / Ingestion ---
   "POST /api/v1/registry/ingestion": { eventType: "REGISTRY.INGESTION_STARTED" },
   "POST /api/v1/registry/suggestions/:id/approve": { eventType: "REGISTRY.SUGGESTION_APPROVED" },
@@ -95,14 +104,21 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "DELETE /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_DEACTIVATED", severity: "WARNING" },
 };
 
-const PATH_PARAM_PATTERN = /\/[0-9a-z]{20,}(?=\/|$)/gi;
+const INTERACTION_COMMAND_PATH_PATTERN = /(?<=\/interactions\/)[^/]+(?=\/(?:start|complete)$)/gi;
+const CALENDAR_OCCURRENCE_PATH_PATTERN = /(?<=\/calendar\/)[^/]+(?=\/occurrences\/)/gi;
+const RECURRENCE_KEY_PATH_PATTERN = /(?<=\/occurrences\/)[^/]+$/gi;
+const CUID_PATH_PARAM_PATTERN = /\/[0-9a-z]{20,}(?=\/|$)/gi;
 
 /**
  * Normalizes a concrete request path to its route template by replacing
  * cuid-shaped path segments with :id placeholders.
  */
 function normalizePath(path: string): string {
-  return path.replace(PATH_PARAM_PATTERN, "/:id");
+  return path
+    .replace(INTERACTION_COMMAND_PATH_PATTERN, ":id")
+    .replace(CALENDAR_OCCURRENCE_PATH_PATTERN, ":id")
+    .replace(RECURRENCE_KEY_PATH_PATTERN, ":recurrenceKey")
+    .replace(CUID_PATH_PARAM_PATTERN, "/:id");
 }
 
 export function resolveAuditEvent(

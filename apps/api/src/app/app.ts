@@ -17,6 +17,8 @@ import { orders } from "../modules/orders";
 import { potential } from "../modules/potential";
 import { visits } from "../modules/visits";
 import { dashboard } from "../modules/dashboard";
+import { calendar } from "../modules/calendar";
+import { interactions } from "../modules/interactions";
 import { user as avatarUser } from "../modules/user";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
@@ -103,6 +105,7 @@ const app = new Elysia()
         "Content-Type",
         "Authorization",
         "X-AtlasMed-Vertical-Id",
+        "Idempotency-Key",
       ],
       exposeHeaders: ["Content-Type", "Authorization"],
       maxAge: 86400, // 24 hours
@@ -140,7 +143,9 @@ const app = new Elysia()
       .use(orders)
       .use(potential)
       .use(visits)
-      .use(dashboard),
+      .use(dashboard)
+      .use(calendar)
+      .use(interactions),
   );
 
 export default app;

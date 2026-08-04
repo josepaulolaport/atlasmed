@@ -5,9 +5,37 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/selectable.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+
+class CheckoutSubmissionController {
+  CheckoutSubmissionController({String Function()? idempotencyKeyFactory})
+    : _idempotencyKeyFactory =
+          idempotencyKeyFactory ??
+          (() => 'order-${DateTime.now().microsecondsSinceEpoch}');
+
+  final String Function() _idempotencyKeyFactory;
+  String? _pendingIdempotencyKey;
+  ApiOrderDetail? _confirmationOrder;
+
+  String get idempotencyKey =>
+      _pendingIdempotencyKey ??= _idempotencyKeyFactory();
+
+  ApiOrderDetail? get confirmationOrder => _confirmationOrder;
+
+  void recordFailure() {}
+
+  void recordCreatedOrder(ApiOrderDetail order) {
+    _confirmationOrder = order;
+    recordSuccess();
+  }
+
+  void recordSuccess() {
+    _pendingIdempotencyKey = null;
+  }
+}
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -17,6 +45,11 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
+  bool _submitting = false;
+  String? _submitError;
+  final CheckoutSubmissionController _submission =
+      CheckoutSubmissionController();
+
   void _showClinicSheet(BuildContext context, WidgetRef ref) {
     final cart = ref.read(cartProvider);
     showModalBottomSheet(
@@ -129,7 +162,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
-    final canConfirm = cart.clinic != null && cart.doctor != null;
+    final canConfirm =
+        cart.clinic != null &&
+        cart.items.isNotEmpty &&
+        (cart.interactionId != null || cart.doctor != null);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -184,7 +220,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 label: 'Clínica',
                 value: cart.clinic?.name,
                 placeholder: 'Selecione a clínica',
-                onTap: () => _showClinicSheet(context, ref),
+                onTap: cart.isClinicLocked
+                    ? null
+                    : () => _showClinicSheet(context, ref),
+                disabled: cart.isClinicLocked,
               ),
               const SizedBox(height: 10),
               SelectorField(
@@ -369,16 +408,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
               ),
               const SizedBox(height: 18),
+              if (_submitError != null) ...[
+                Text(
+                  _submitError!,
+                  style: const TextStyle(color: AppColors.redDark),
+                ),
+                const SizedBox(height: 10),
+              ],
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: canConfirm
-                      ? () {
-                          // TODO: submit order via OrdersRepository.createOrder()
-                          // when POST /api/v1/orders endpoint exists
-                          context.push('/orders/new/success');
-                        }
+                  onPressed: canConfirm && !_submitting
+                      ? () => _submit(cart)
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.navyDeep,
@@ -388,9 +430,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Confirmar pedido',
-                    style: TextStyle(
+                  child: Text(
+                    _submitting ? 'Enviando pedido…' : 'Confirmar pedido',
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -400,9 +442,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               if (!canConfirm) ...[
                 const SizedBox(height: 10),
-                const Center(
+                Center(
                   child: Text(
-                    'Selecione clínica e médico para continuar',
+                    cart.interactionId != null
+                        ? 'Adicione ao menos um produto para continuar'
+                        : 'Selecione clínica e médico para continuar',
                     style: TextStyle(fontSize: 12.5, color: AppColors.gray400),
                   ),
                 ),
@@ -412,6 +456,57 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _submit(CartState cart) async {
+    final clinic = cart.clinic;
+    if (clinic == null || cart.items.isEmpty) return;
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+    });
+    try {
+      final idempotencyKey = _submission.idempotencyKey;
+      final order = await ref
+          .read(ordersRepositoryProvider)
+          .createOrder(
+            facilityId: clinic.id,
+            idempotencyKey: idempotencyKey,
+            interactionId: cart.interactionId,
+            professionalId: cart.doctor?.id,
+            items: cart.items
+                .map(
+                  (item) => CreateOrderItemInput(
+                    productId: item.productId,
+                    quantity: item.qty.toDouble(),
+                    unitPrice: item.unitPrice,
+                  ),
+                )
+                .toList(growable: false),
+          );
+      _submission.recordCreatedOrder(order);
+      if (!mounted) return;
+      context.push(
+        Uri(
+          path: '/orders/new/success',
+          queryParameters: {
+            'orderId': order.id,
+            if (cart.interactionId != null)
+              'interactionId': cart.interactionId!,
+          },
+        ).toString(),
+        extra: order,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _submitError =
+              'Não foi possível criar o pedido. Revise sua conexão e tente novamente.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 }
 

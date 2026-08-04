@@ -33,6 +33,8 @@ export {
   
   // Conflict Errors
   ResourceConflictError,
+  CalendarConflictError,
+  CalendarVersionConflictError,
   EmailAlreadyExistsError,
   UsernameAlreadyExistsError,
   InviteAlreadyUsedError,

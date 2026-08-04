@@ -25,6 +25,7 @@ export interface OrderListItemPreview {
 export interface OrderListRecord {
   id: string;
   legacyId: number | null;
+  interactionId: string | null;
   verticalId: string;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
@@ -43,6 +44,7 @@ export interface OrderListRecord {
 export interface OrderDetailRecord {
   id: string;
   legacyId: number | null;
+  interactionId: string | null;
   verticalId: string;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
@@ -93,6 +95,7 @@ export interface CreateOrderItemInput {
 
 export interface CreateOrderInput {
   facilityId: string;
+  interactionId?: string | null;
   verticalId: string;
   sellerId: string | null;
   professionalId?: string | null;
@@ -104,12 +107,18 @@ export interface CreateOrderInput {
   items: CreateOrderItemInput[];
 }
 
+export type CreateOrderIdempotentResult =
+  | { kind: "created" | "replay"; order: OrderDetailRecord }
+  | { kind: "mismatch" }
+  | { kind: "interaction_not_orderable" };
+
 export interface OrderRepository {
   findAll(input: {
     page: number;
     limit: number;
     statuses?: OrderStatus[];
     facilityId?: string;
+    interactionId?: string;
     /** Restrict to orders in these verticals (empty ⇒ no rows). */
     verticalIds: string[];
     /** When set (REP), only orders sold by this user. */
@@ -120,6 +129,16 @@ export interface OrderRepository {
   }): Promise<{ orders: OrderListRecord[]; total: number }>;
   findById(id: string): Promise<OrderDetailRecord | null>;
   create(input: CreateOrderInput): Promise<OrderDetailRecord>;
+  findCommandReceipt(
+    actorUserId: string,
+    commandKey: string,
+  ): Promise<{ requestFingerprint: string; order: OrderDetailRecord } | null>;
+  createIdempotently(
+    actorUserId: string,
+    commandKey: string,
+    requestFingerprint: string,
+    input: CreateOrderInput,
+  ): Promise<CreateOrderIdempotentResult>;
   hasActiveFacilityVerticalProfile(
     facilityId: string,
     verticalId: string
