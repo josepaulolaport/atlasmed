@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -76,22 +77,17 @@ class _AgendaRouteGuard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
-    return currentUser.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (_, _) => const Scaffold(
-        body: Center(
-          child: Text('Não foi possível validar o acesso à agenda.'),
-        ),
-      ),
-      data: (user) {
-        if (user == null || !canReadAgenda(user.role.name)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) context.go('/dashboard');
-          });
-          return const SizedBox.shrink();
+    final repository = ref.watch(userProvider);
+
+    return RepositoryBuilder(
+      repository: repository,
+      builder: (context, data, actions) {
+        if (data == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
+
         return const AgendaScreen();
       },
     );
@@ -105,42 +101,17 @@ class AgendaEditorRouteGuard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
-    return currentUser.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (_, _) => const Scaffold(
-        body: Center(
-          child: Text('Não foi possível validar o acesso à agenda.'),
-        ),
-      ),
-      data: (user) {
-        if (user == null || !canMutateAgenda(user.role.name)) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Agenda')),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.lock_outline_rounded, size: 40),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Você não tem permissão para alterar a agenda.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => context.go('/agenda'),
-                      child: const Text('Voltar para a agenda'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+    final repository = ref.watch(userProvider);
+
+    return RepositoryBuilder(
+      repository: repository,
+      builder: (context, data, actions) {
+        if (data == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
         }
+
         return CalendarEditorScreen(target: target);
       },
     );
