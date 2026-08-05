@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
-import 'package:atlasmed_mobile_app/core/user/models/app_capability.dart';
 import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/splash_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/login_screen.dart';
@@ -157,7 +156,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           final capabilities = ref.read(userCapabilitiesProvider);
           if (location == '/agenda' &&
               capabilities.valueOrNull != null &&
-              !capabilities.valueOrNull!.can(AppCapability.agendaRead)) {
+              !capabilities.valueOrNull!.can(.agenda, .read)) {
             return '/dashboard';
           }
           final locationSession = ref.read(locationSessionProvider);

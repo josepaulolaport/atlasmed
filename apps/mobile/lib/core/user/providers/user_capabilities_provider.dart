@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
-import 'package:atlasmed_mobile_app/core/user/models/app_capability.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_capabilities.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_capabilities_repository.dart';
@@ -31,177 +30,171 @@ final currentUserRoleProvider = Provider<UserRoleName?>((ref) {
 
 final canAgendaReadProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.agendaRead) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.agenda, .read) ??
       false,
 );
+
 final canAgendaCreateProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.agendaCreate) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.agenda, .create) ??
       false,
 );
+
 final canManageUserAdminProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.userManage) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
       false,
 );
+
 final canLifecycleUserProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.userLifecycle) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .lifecycle) ??
       false,
 );
+
 final canCreateTerritoryProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.territoryCreate) ??
+          ?.can(.territory, .create) ??
       false,
 );
+
 final canCreateManagerZoneProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.territoryCreate) ??
+          ?.can(.territory, .create) ??
       false,
 );
+
 final canCreateRepPatchProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.territoryCreate) ??
+          ?.can(.territory, .create) ??
       false,
 );
+
 final canUpdateTerritoryProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.territoryUpdate) ??
+          ?.can(.territory, .update) ??
       false,
 );
+
 final canUpdateManagerZoneProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.territoryUpdate) ??
+          ?.can(.territory, .update) ??
       false,
 );
+
 final canUpdateRepPatchProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.territoryUpdate) ??
+          ?.can(.territory, .update) ??
       false,
 );
+
 final canDeleteTerritoryProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.territoryDelete) ??
+          ?.can(.territory, .delete) ??
       false,
 );
+
 final canCreateFieldSuggestionProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.fieldSuggestionRead) ??
+          ?.can(.fieldSuggestion, .read) ??
       false,
 );
+
 final canReviewFieldSuggestionsProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.fieldSuggestionReview) ??
+          ?.can(.fieldSuggestion, .review) ??
       false,
 );
+
 final canAssignFacilityConsultantProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.facilityUpdate) ??
+          ?.can(.facility, .update) ??
       false,
 );
+
 final canMutateProfessionalProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.professionalUpdate) ??
+          ?.can(.professional, .update) ??
       false,
 );
+
 final canCreateVisitProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.agendaCreate) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.agenda, .create) ??
       false,
 );
+
 final canManageUsersProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.userManage) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
       false,
 );
+
 final canReviewCadastroProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.cadastroReview) ??
+          ?.can(.cadastro, .review) ??
       false,
 );
+
 final canReadTerritoriesProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.territoryRead) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.territory, .read) ??
       false,
 );
+
 final canMutateFacilityProvider = Provider<bool>(
   (ref) =>
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(AppCapability.facilityUpdate) ??
+          ?.can(.facility, .update) ??
       false,
 );
+
 final canReadCatalogProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.catalogRead) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.catalog, .read) ??
       false,
 );
+
 final isAdminProvider = Provider<bool>(
   (ref) =>
-      ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.userManage) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
       false,
 );

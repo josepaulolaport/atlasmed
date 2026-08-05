@@ -1,4 +1,3 @@
-import 'package:atlasmed_mobile_app/core/user/models/app_capability.dart';
 import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
@@ -12,10 +11,7 @@ final territoryRepositoryProvider = Provider<TerritoryRepository>((ref) {
 });
 
 final isAdminProvider = Provider<bool>((ref) {
-  return ref
-          .watch(userCapabilitiesProvider)
-          .valueOrNull
-          ?.can(AppCapability.userManage) ??
+  return ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
       false;
 });
 

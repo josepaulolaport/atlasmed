@@ -10,7 +10,6 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
-import 'package:atlasmed_mobile_app/core/user/models/app_capability.dart';
 import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
@@ -363,7 +362,7 @@ final appNavigationItems = <AppNavigationItem>[
         ref
             .watch(userCapabilitiesProvider)
             .valueOrNull
-            ?.can(AppCapability.fieldSuggestionRead) ??
+            ?.can(.fieldSuggestion, .read) ??
         false,
   ),
   AppNavigationItem(

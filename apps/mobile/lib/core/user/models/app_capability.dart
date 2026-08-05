@@ -1,59 +1,59 @@
-enum AppCapability {
-  agendaRead,
-  agendaCreate,
-  agendaUpdate,
-  agendaDelete,
-  catalogRead,
-  catalogManage,
-  cadastroRead,
-  cadastroReview,
-  fieldSuggestionRead,
-  fieldSuggestionReview,
-  facilityRead,
-  facilityCreate,
-  facilityUpdate,
-  facilityDelete,
-  professionalRead,
-  professionalUpdate,
-  territoryRead,
-  territoryCreate,
-  territoryUpdate,
-  territoryDelete,
-  userRead,
-  userManage,
-  userLifecycle,
+enum CapabilityResource {
+  agenda,
+  catalog,
+  cadastro,
+  fieldSuggestion,
+  facility,
+  professional,
+  territory,
+  user,
 }
 
-extension AppCapabilityX on AppCapability {
+enum CapabilityAction {
+  read,
+  create,
+  update,
+  delete,
+  manage,
+  review,
+  lifecycle,
+}
+
+extension CapabilityResourceX on CapabilityResource {
   String get wireName => switch (this) {
-    AppCapability.agendaRead => 'agenda.read',
-    AppCapability.agendaCreate => 'agenda.create',
-    AppCapability.agendaUpdate => 'agenda.update',
-    AppCapability.agendaDelete => 'agenda.delete',
-    AppCapability.catalogRead => 'catalog.read',
-    AppCapability.catalogManage => 'catalog.manage',
-    AppCapability.cadastroRead => 'cadastro.read',
-    AppCapability.cadastroReview => 'cadastro.review',
-    AppCapability.fieldSuggestionRead => 'field-suggestion.read',
-    AppCapability.fieldSuggestionReview => 'field-suggestion.review',
-    AppCapability.facilityRead => 'facility.read',
-    AppCapability.facilityCreate => 'facility.create',
-    AppCapability.facilityUpdate => 'facility.update',
-    AppCapability.facilityDelete => 'facility.delete',
-    AppCapability.professionalRead => 'professional.read',
-    AppCapability.professionalUpdate => 'professional.update',
-    AppCapability.territoryRead => 'territory.read',
-    AppCapability.territoryCreate => 'territory.create',
-    AppCapability.territoryUpdate => 'territory.update',
-    AppCapability.territoryDelete => 'territory.delete',
-    AppCapability.userRead => 'user.read',
-    AppCapability.userManage => 'user.manage',
-    AppCapability.userLifecycle => 'user.lifecycle',
+    CapabilityResource.agenda => 'agenda',
+    CapabilityResource.catalog => 'catalog',
+    CapabilityResource.cadastro => 'cadastro',
+    CapabilityResource.fieldSuggestion => 'field-suggestion',
+    CapabilityResource.facility => 'facility',
+    CapabilityResource.professional => 'professional',
+    CapabilityResource.territory => 'territory',
+    CapabilityResource.user => 'user',
   };
 
-  static AppCapability? tryParse(String value) {
-    for (final capability in AppCapability.values) {
-      if (capability.wireName == value) return capability;
+  static CapabilityResource? tryParse(String value) {
+    for (final resource in CapabilityResource.values) {
+      if (resource.wireName == value) return resource;
+    }
+
+    return null;
+  }
+}
+
+extension AppCapabilityActionX on CapabilityAction {
+  String get wireName => switch (this) {
+    .read => 'read',
+    .create => 'create',
+    .update => 'update',
+    .delete => 'delete',
+    .manage => 'manage',
+    .review => 'review',
+    .lifecycle => 'lifecycle',
+  };
+
+  static CapabilityAction? tryParse(String value) {
+    for (final action in CapabilityAction.values) {
+      if (action.wireName == value) return action;
     }
     return null;
   }

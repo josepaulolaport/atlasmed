@@ -4,15 +4,26 @@ class UserCapabilities {
   const UserCapabilities({required this.version, required this.capabilities});
 
   final int version;
-  final Set<AppCapability> capabilities;
+  final Map<CapabilityResource, Set<CapabilityAction>> capabilities;
 
-  bool can(AppCapability capability) => capabilities.contains(capability);
+  bool can(CapabilityResource resource, CapabilityAction action) =>
+      capabilities[resource]?.contains(action) ?? false;
 
   factory UserCapabilities.fromJson(Map<String, dynamic> json) {
-    final parsed = <AppCapability>{};
+    final parsed = <CapabilityResource, Set<CapabilityAction>>{};
     for (final raw in (json['capabilities'] as List? ?? const [])) {
-      final capability = AppCapabilityX.tryParse(raw.toString());
-      if (capability != null) parsed.add(capability);
+      if (raw is! Map) continue;
+      final resource = CapabilityResourceX.tryParse(
+        raw['resource']?.toString() ?? '',
+      );
+      if (resource == null) continue;
+
+      final actions = <CapabilityAction>{};
+      for (final rawAction in (raw['actions'] as List? ?? const [])) {
+        final action = AppCapabilityActionX.tryParse(rawAction.toString());
+        if (action != null) actions.add(action);
+      }
+      if (actions.isNotEmpty) parsed[resource] = actions;
     }
     return UserCapabilities(
       version: (json['version'] as num?)?.toInt() ?? 1,
