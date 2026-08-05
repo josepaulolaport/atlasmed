@@ -1,6 +1,6 @@
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { AccessGrantService } from "../services/access-grant.service";
-import { defineAbilitiesForUser, type Role } from "@atlasmed/access";
+import { getAppCapabilities, type Role } from "@atlasmed/access";
 import { UserNotFoundError } from "../../../../shared/errors";
 
 interface Dependencies {
@@ -21,11 +21,11 @@ export class GetCapabilitiesUseCase {
     const grants = await this.deps.accessGrantService.getActiveGrants(params.userId);
     const role = user.role.name as Role;
 
-    defineAbilitiesForUser(role, grants);
+    const capabilities = getAppCapabilities(role, grants);
 
     return {
-      role,
-      grants,
+      version: 1 as const,
+      capabilities,
     };
   }
 }

@@ -1,7 +1,10 @@
-import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/core/user/models/app_capability.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_capabilities.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   group('AppNavigationItem', () {
@@ -23,10 +26,6 @@ void main() {
 
       expect(agenda.label, 'Agenda');
       expect(agenda.branchIndex, 3);
-      expect(agenda.visibleFor!(UserRoleName.rep), isTrue);
-      expect(agenda.visibleFor!(UserRoleName.manager), isTrue);
-      expect(agenda.visibleFor!(UserRoleName.admin), isTrue);
-      expect(agenda.visibleFor!(UserRoleName.ops), isFalse);
       expect(
         appNavigationItems
             .singleWhere((item) => item.route == '/territories')
@@ -62,17 +61,29 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: MediaQuery(
-          data: MediaQueryData(
-            size: Size(320, 360),
-            textScaler: TextScaler.linear(2),
+      ProviderScope(
+        overrides: [
+          userCapabilitiesProvider.overrideWith(
+            (ref) async => UserCapabilities(
+              version: 1,
+              capabilities: {AppCapability.agendaRead},
+            ),
           ),
-          child: Scaffold(
-            body: AtlasDrawerNavigation(
-              activeBranchIndex: 0,
-              onSelectBranch: _ignoreBranch,
-              role: UserRoleName.admin,
+        ],
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(320, 360),
+              textScaler: TextScaler.linear(2),
+            ),
+            child: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) => AtlasDrawerNavigation(
+                  activeBranchIndex: 0,
+                  onSelectBranch: _ignoreBranch,
+                  ref: ref,
+                ),
+              ),
             ),
           ),
         ),

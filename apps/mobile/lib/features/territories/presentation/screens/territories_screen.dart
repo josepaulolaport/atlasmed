@@ -11,7 +11,8 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/territory_t
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/territory_info_form.dart';
-import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
+    hide isAdminProvider;
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_detail_sheet.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_kind_switch.dart';

@@ -36,12 +36,56 @@ describe("GetCapabilitiesUseCase", () => {
     });
   });
 
-  it("should return role and active grants", async () => {
+  it("should return versioned capabilities and ignore resource-scoped grants for type-level decisions", async () => {
     const result = await useCase.execute({ userId: "user-123" });
 
-    expect(result.role).toBe("MANAGER");
-    expect(result.grants).toHaveLength(1);
-    expect(result.grants[0]?.resourceId).toBe("clinic-1");
+    expect(result.version).toBe(1);
+    expect(result.capabilities).toEqual(
+      expect.arrayContaining([
+        "agenda.read",
+        "catalog.read",
+        "cadastro.read",
+        "cadastro.review",
+        "field-suggestion.read",
+        "field-suggestion.review",
+        "facility.read",
+        "facility.update",
+        "professional.read",
+        "professional.update",
+        "territory.read",
+        "territory.create",
+        "territory.update",
+        "user.read",
+        "user.lifecycle",
+      ])
+    );
+    expect(result.capabilities).not.toContain("agenda.create");
+  });
+
+  it("should include global grants in capability derivation", async () => {
+    mockAccessGrantService = {
+      getActiveGrants: mock(async () => [
+        {
+          id: "grant-2",
+          resource: "user",
+          resourceId: undefined,
+          action: "manage",
+          conditions: null,
+          expiresAt: null,
+        },
+      ]),
+    };
+
+    useCase = new GetCapabilitiesUseCase({
+      userRepository: createMockUserRepository({
+        findById: mock(async () => ({ id: "user-123", role: { name: "REP" } })) as any,
+      }),
+      accessGrantService: mockAccessGrantService as any,
+    });
+
+    const result = await useCase.execute({ userId: "user-123" });
+
+    expect(result.capabilities).toContain("user.manage");
   });
 
   it("should reject when user not found", async () => {
