@@ -61,7 +61,11 @@ Optional query/body `verticalId` is validated against the caller’s allowed set
 
 Scope cache is invalidated when consultant assignments change (assignee + previous assignee).
 
-API lists/details that take `getScope()` filter or `assertResourceInScope` on `facilityIds`. Mobile nav/actions mirror CASL via `role_capabilities.dart`; empty/403 from API remains authoritative.
+API lists/details that take `getScope()` filter or `assertResourceInScope` on `facilityIds`. Mobile nav/actions now mirror the authenticated capability snapshot; empty/403 from API remains authoritative.
+
+Mobile authorization reads `GET /api/v1/user/capabilities/v2` and caches the versioned DTO:
+`{ version: 2, capabilities: [{ resource, actions }] }`. Resources expose only their valid actions; unknown future resources and actions are ignored safely. The version 1 endpoints remain available for clients that consume the legacy flat string list.
+Use capabilities for route/type-level UI decisions; keep resource-specific state in DTO flags like `canMutate`.
 
 Orders: REP list/detail restricted to `sellerId = actor` within facility scope.
 

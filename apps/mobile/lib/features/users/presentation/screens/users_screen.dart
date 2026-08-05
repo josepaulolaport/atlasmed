@@ -13,7 +13,8 @@ class UsersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canManage = ref.watch(canManageUsersProvider);
+    final canManage =
+        ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false;
 
     return Scaffold(
       backgroundColor: Colors.white,

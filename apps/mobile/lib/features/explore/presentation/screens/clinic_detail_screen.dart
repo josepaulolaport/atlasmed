@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_consultant_assignments_repository.dart';
@@ -286,10 +287,11 @@ class _ClinicDetailContent extends ConsumerWidget {
     final doctors = data?.doctors;
     final payers = data?.payerShares;
     final orders = data?.orders;
-    final canMutate = ref.watch(canMutateFacilityProvider);
-    final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
-    final canCreateVisit = ref.watch(canCreateVisitProvider);
-    final canAssignConsultant = ref.watch(canAssignFacilityConsultantProvider);
+    final capabilities = ref.watch(userCapabilitiesProvider);
+    final canMutate = capabilities?.can(.manage, .facility) ?? false;
+    final canSuggest = capabilities?.can(.create, .fieldSuggestion) ?? false;
+    final canCreateVisit = capabilities?.can(.create, .agenda) ?? false;
+    final canAssignConsultant = capabilities?.can(.manage, .territory) ?? false;
     final userLinhaOptions =
         ref.watch(currentUserFacilityVerticalOptionsProvider).valueOrNull ??
         const [];

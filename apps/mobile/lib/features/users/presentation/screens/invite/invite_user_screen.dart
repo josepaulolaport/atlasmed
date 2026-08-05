@@ -312,7 +312,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
     if (!mounted) return;
 
     final role = ref.read(currentUserRoleProvider);
-    if (role == UserRoleName.manager && zones.length == 1) {
+    if (role.valueOrNull == UserRoleName.manager && zones.length == 1) {
       await _applyRepZone(assignment, zones.first);
       return;
     }

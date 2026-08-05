@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
@@ -11,7 +11,7 @@ class AgendaRouteGuard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(userProvider);
+    final repository = ref.watch(userCapabilitiesRepositoryProvider);
 
     return RepositoryBuilder(
       repository: repository,
@@ -19,6 +19,14 @@ class AgendaRouteGuard extends ConsumerWidget {
         if (data == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!data.can(.read, .agenda)) {
+          return const Scaffold(
+            body: Center(
+              child: Text('You are not authorized to access the agenda'),
+            ),
           );
         }
 
@@ -35,7 +43,7 @@ class AgendaEditorRouteGuard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(userProvider);
+    final repository = ref.watch(userCapabilitiesRepositoryProvider);
 
     return RepositoryBuilder(
       repository: repository,
@@ -43,6 +51,14 @@ class AgendaEditorRouteGuard extends ConsumerWidget {
         if (data == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!data.can(.create, .agenda)) {
+          return const Scaffold(
+            body: Center(
+              child: Text('You are not authorized to access the agenda'),
+            ),
           );
         }
 

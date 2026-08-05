@@ -7,10 +7,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 export 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart'
-    show
-        canLifecycleUserProvider,
-        canManageUserAdminProvider,
-        canManageUsersProvider;
+    show userCapabilitiesProvider;
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_list_notifier.dart';
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_list_state.dart';
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_repository_providers.dart';

@@ -10,8 +10,7 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
-import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
-import 'package:atlasmed_mobile_app/core/user/role_capabilities.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -286,8 +285,8 @@ class AppNavigationItem {
   final String route;
   final IconData? icon;
 
-  /// When set, the item is hidden from roles for which this returns `false`.
-  final bool Function(UserRoleName role)? visibleFor;
+  /// When set, the item is hidden from users lacking the capability.
+  final bool Function(WidgetRef ref)? visibleFor;
 
   const AppNavigationItem({
     required this.branchIndex,
@@ -301,7 +300,7 @@ class AppNavigationItem {
       branchIndex == activeBranchIndex;
 }
 
-const appNavigationItems = <AppNavigationItem>[
+final appNavigationItems = <AppNavigationItem>[
   AppNavigationItem(
     branchIndex: 0,
     label: 'Desempenho',
@@ -325,21 +324,24 @@ const appNavigationItems = <AppNavigationItem>[
     label: 'Agenda',
     route: '/agenda',
     icon: Icons.calendar_month_outlined,
-    visibleFor: canReadAgenda,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.read, .agenda) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 4,
     label: 'Territórios',
     route: '/territories',
     icon: Icons.layers_outlined,
-    visibleFor: canReadTerritories,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.read, .territory) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 5,
     label: 'Usuários',
     route: '/users',
     icon: Icons.people_outline_rounded,
-    visibleFor: canManageUsers,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 6,
@@ -352,21 +354,25 @@ const appNavigationItems = <AppNavigationItem>[
     label: 'Cadastros',
     route: '/registrations',
     icon: Icons.fact_check_outlined,
-    visibleFor: canReviewCadastro,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.review, .cadastro) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 8,
     label: 'Não Conformidades',
     route: '/non-conformities',
     icon: Icons.rate_review_outlined,
-    visibleFor: canReadFieldSuggestions,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.read, .fieldSuggestion) ??
+        false,
   ),
   AppNavigationItem(
     branchIndex: 9,
     label: 'Produtos',
     route: '/products',
     icon: Icons.inventory_outlined,
-    visibleFor: canReadCatalog,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.read, .catalog) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 10,
@@ -422,7 +428,7 @@ class AtlasDrawer extends ConsumerWidget {
                       child: AtlasDrawerNavigation(
                         activeBranchIndex: activeBranchIndex,
                         onSelectBranch: onSelectBranch,
-                        role: user?.role.name,
+                        ref: ref,
                       ),
                     ),
                     _DrawerFooter(
@@ -568,13 +574,13 @@ class _DrawerHeader extends StatelessWidget {
 class AtlasDrawerNavigation extends StatelessWidget {
   final int activeBranchIndex;
   final ValueChanged<int> onSelectBranch;
-  final UserRoleName? role;
+  final WidgetRef ref;
 
   const AtlasDrawerNavigation({
     super.key,
     required this.activeBranchIndex,
     required this.onSelectBranch,
-    this.role,
+    required this.ref,
   });
 
   @override
@@ -582,9 +588,7 @@ class AtlasDrawerNavigation extends StatelessWidget {
     final items = appNavigationItems.where((item) {
       final visibleFor = item.visibleFor;
       if (visibleFor == null) return true;
-      // Hide role-gated items while the role is still resolving, so they
-      // never flash on before access is confirmed.
-      return role != null && visibleFor(role!);
+      return visibleFor(ref);
     });
 
     return ListView(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
@@ -23,7 +24,9 @@ class ClinicAdminInfoSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
+    final canSuggest =
+        ref.watch(userCapabilitiesProvider)?.can(.create, .fieldSuggestion) ??
+        false;
     final hasTaxId =
         (detail.registration?.cnpj?.trim().isNotEmpty ?? false) ||
         (detail.registration?.cpf?.trim().isNotEmpty ?? false);

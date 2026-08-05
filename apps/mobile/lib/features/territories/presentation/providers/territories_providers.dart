@@ -1,5 +1,4 @@
-import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
-import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
@@ -12,8 +11,7 @@ final territoryRepositoryProvider = Provider<TerritoryRepository>((ref) {
 });
 
 final isAdminProvider = Provider<bool>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  return user?.role.name == UserRoleName.admin;
+  return ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false;
 });
 
 /// Active business verticals for invite/profile pickers.

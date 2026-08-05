@@ -1,7 +1,9 @@
+import 'package:atlasmed_mobile_app/shared/widgets/can.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/models/app_capability.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_models.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -46,7 +48,8 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
 
     final status = submission.status;
     final pending =
-        submission.isPending && ref.watch(canReviewCadastroProvider);
+        submission.isPending &&
+        (ref.watch(userCapabilitiesProvider)?.can(.review, .cadastro) ?? false);
 
     return Scaffold(
       appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
@@ -137,9 +140,15 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
               ),
             ),
             if (pending)
-              _DecisionBar(
-                onApprove: () => _approve(context, ref, submission),
-                onReject: () => _reject(context, ref, submission),
+              Can(
+                resource: CapabilityResource.cadastro,
+                action: CapabilityAction.review,
+                builder: (context, allowed) => !allowed
+                    ? null
+                    : _DecisionBar(
+                        onApprove: () => _approve(context, ref, submission),
+                        onReject: () => _reject(context, ref, submission),
+                      ),
               ),
           ],
         ),
