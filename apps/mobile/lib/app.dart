@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,9 +30,8 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
+import 'package:atlasmed_mobile_app/features/agenda/presentation/guards/agenda_route_guards.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/interaction_screen.dart';
-import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/agenda_screen.dart';
-import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/calendar_editor_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
@@ -70,52 +68,6 @@ class AtlasMedApp extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<AtlasMedApp> createState() => _AtlasMedAppState();
-}
-
-class _AgendaRouteGuard extends ConsumerWidget {
-  const _AgendaRouteGuard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(userProvider);
-
-    return RepositoryBuilder(
-      repository: repository,
-      builder: (context, data, actions) {
-        if (data == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        return const AgendaScreen();
-      },
-    );
-  }
-}
-
-class AgendaEditorRouteGuard extends ConsumerWidget {
-  const AgendaEditorRouteGuard({super.key, required this.target});
-
-  final CalendarEditorTarget target;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(userProvider);
-
-    return RepositoryBuilder(
-      repository: repository,
-      builder: (context, data, actions) {
-        if (data == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        return CalendarEditorScreen(target: target);
-      },
-    );
-  }
 }
 
 class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
@@ -335,7 +287,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                 GoRoute(
                   path: '/agenda',
                   pageBuilder: (_, _) =>
-                      const NoTransitionPage(child: _AgendaRouteGuard()),
+                      const NoTransitionPage(child: AgendaRouteGuard()),
                 ),
               ],
             ),
