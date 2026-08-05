@@ -156,7 +156,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           final capabilities = ref.read(userCapabilitiesProvider);
           if (location == '/agenda' &&
               capabilities.valueOrNull != null &&
-              !capabilities.valueOrNull!.can(.agenda, .read)) {
+              !capabilities.valueOrNull!.can(.read, .agenda)) {
             return '/dashboard';
           }
           final locationSession = ref.read(locationSessionProvider);

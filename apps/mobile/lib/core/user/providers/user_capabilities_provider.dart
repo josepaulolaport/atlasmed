@@ -30,25 +30,25 @@ final currentUserRoleProvider = Provider<UserRoleName?>((ref) {
 
 final canAgendaReadProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.agenda, .read) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.read, .agenda) ??
       false,
 );
 
 final canAgendaCreateProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.agenda, .create) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.create, .agenda) ??
       false,
 );
 
 final canManageUserAdminProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.manage, .user) ??
       false,
 );
 
 final canLifecycleUserProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .lifecycle) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.lifecycle, .user) ??
       false,
 );
 
@@ -57,7 +57,7 @@ final canCreateTerritoryProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.territory, .create) ??
+          ?.can(.create, .territory) ??
       false,
 );
 
@@ -66,7 +66,7 @@ final canCreateManagerZoneProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.territory, .create) ??
+          ?.can(.create, .territory) ??
       false,
 );
 
@@ -75,7 +75,7 @@ final canCreateRepPatchProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.territory, .create) ??
+          ?.can(.create, .territory) ??
       false,
 );
 
@@ -84,7 +84,7 @@ final canUpdateTerritoryProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.territory, .update) ??
+          ?.can(.update, .territory) ??
       false,
 );
 
@@ -93,7 +93,7 @@ final canUpdateManagerZoneProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.territory, .update) ??
+          ?.can(.update, .territory) ??
       false,
 );
 
@@ -102,7 +102,7 @@ final canUpdateRepPatchProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.territory, .update) ??
+          ?.can(.update, .territory) ??
       false,
 );
 
@@ -111,7 +111,7 @@ final canDeleteTerritoryProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.territory, .delete) ??
+          ?.can(.delete, .territory) ??
       false,
 );
 
@@ -120,7 +120,7 @@ final canCreateFieldSuggestionProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.fieldSuggestion, .read) ??
+          ?.can(.read, .fieldSuggestion) ??
       false,
 );
 
@@ -129,7 +129,7 @@ final canReviewFieldSuggestionsProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.fieldSuggestion, .review) ??
+          ?.can(.review, .fieldSuggestion) ??
       false,
 );
 
@@ -138,7 +138,7 @@ final canAssignFacilityConsultantProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.facility, .update) ??
+          ?.can(.update, .facility) ??
       false,
 );
 
@@ -147,19 +147,19 @@ final canMutateProfessionalProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.professional, .update) ??
+          ?.can(.update, .professional) ??
       false,
 );
 
 final canCreateVisitProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.agenda, .create) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.create, .agenda) ??
       false,
 );
 
 final canManageUsersProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.manage, .user) ??
       false,
 );
 
@@ -168,13 +168,13 @@ final canReviewCadastroProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.cadastro, .review) ??
+          ?.can(.review, .cadastro) ??
       false,
 );
 
 final canReadTerritoriesProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.territory, .read) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.read, .territory) ??
       false,
 );
 
@@ -183,18 +183,18 @@ final canMutateFacilityProvider = Provider<bool>(
       ref
           .watch(userCapabilitiesProvider)
           .valueOrNull
-          ?.can(.facility, .update) ??
+          ?.can(.update, .facility) ??
       false,
 );
 
 final canReadCatalogProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.catalog, .read) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.read, .catalog) ??
       false,
 );
 
 final isAdminProvider = Provider<bool>(
   (ref) =>
-      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
+      ref.watch(userCapabilitiesProvider).valueOrNull?.can(.manage, .user) ??
       false,
 );

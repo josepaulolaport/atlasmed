@@ -6,7 +6,7 @@ class UserCapabilities {
   final int version;
   final Map<CapabilityResource, Set<CapabilityAction>> capabilities;
 
-  bool can(CapabilityResource resource, CapabilityAction action) =>
+  bool can(CapabilityAction action, CapabilityResource resource) =>
       capabilities[resource]?.contains(action) ?? false;
 
   factory UserCapabilities.fromJson(Map<String, dynamic> json) {

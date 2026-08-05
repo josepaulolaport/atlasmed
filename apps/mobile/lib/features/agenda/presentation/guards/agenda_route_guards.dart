@@ -22,7 +22,7 @@ class AgendaRouteGuard extends ConsumerWidget {
           );
         }
 
-        if (!data.can(.agenda, .read)) {
+        if (!data.can(.read, .agenda)) {
           return const Scaffold(
             body: Center(
               child: Text('You are not authorized to access the agenda'),
@@ -54,7 +54,7 @@ class AgendaEditorRouteGuard extends ConsumerWidget {
           );
         }
 
-        if (!data.can(.agenda, .create)) {
+        if (!data.can(.create, .agenda)) {
           return const Scaffold(
             body: Center(
               child: Text('You are not authorized to access the agenda'),

@@ -22,8 +22,8 @@ void main() {
     });
 
     expect(capabilities.version, 2);
-    expect(capabilities.can(.agenda, .read), isTrue);
-    expect(capabilities.can(.facility, .update), isTrue);
+    expect(capabilities.can(.read, .agenda), isTrue);
+    expect(capabilities.can(.update, .facility), isTrue);
     expect(capabilities.capabilities.length, 2);
   });
 }

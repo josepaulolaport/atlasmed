@@ -362,7 +362,7 @@ final appNavigationItems = <AppNavigationItem>[
         ref
             .watch(userCapabilitiesProvider)
             .valueOrNull
-            ?.can(.fieldSuggestion, .read) ??
+            ?.can(.read, .fieldSuggestion) ??
         false,
   ),
   AppNavigationItem(

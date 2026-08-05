@@ -11,7 +11,7 @@ final territoryRepositoryProvider = Provider<TerritoryRepository>((ref) {
 });
 
 final isAdminProvider = Provider<bool>((ref) {
-  return ref.watch(userCapabilitiesProvider).valueOrNull?.can(.user, .manage) ??
+  return ref.watch(userCapabilitiesProvider).valueOrNull?.can(.manage, .user) ??
       false;
 });
 
