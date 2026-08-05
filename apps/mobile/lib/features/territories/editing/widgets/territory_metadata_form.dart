@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
@@ -61,7 +61,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
     _nameController = TextEditingController(text: initial?.name ?? '');
     var kind = initial?.kind ?? widget.initialKind;
     // Spec 0006: managers cannot create manager zones.
-    if (!ref.read(canCreateManagerZoneProvider) &&
+    if (!(ref.read(userCapabilitiesProvider)?.can(.create, .territory) ?? false) &&
         kind == TerritoryKind.managerZone) {
       kind = TerritoryKind.repPatch;
     }
@@ -153,9 +153,8 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                   const SizedBox(height: 6),
                   Builder(
                     builder: (context) {
-                      final canCreateZone = ref.watch(
-                        canCreateManagerZoneProvider,
-                      );
+                      final canCreateZone =
+                          ref.watch(userCapabilitiesProvider)?.can(.create, .territory) ?? false;
                       if (!canCreateZone) {
                         return const Text(
                           'Área de representante',

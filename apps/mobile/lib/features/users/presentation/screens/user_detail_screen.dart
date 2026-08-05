@@ -29,8 +29,9 @@ class UserDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canLifecycle = ref.watch(canLifecycleUserProvider);
-    final canAdmin = ref.watch(canManageUserAdminProvider);
+    final capabilities = ref.watch(userCapabilitiesProvider);
+    final canLifecycle = capabilities?.can(.lifecycle, .user) ?? false;
+    final canAdmin = capabilities?.can(.manage, .user) ?? false;
     final userAsync = ref.watch(userDetailProvider(userId));
 
     return Scaffold(

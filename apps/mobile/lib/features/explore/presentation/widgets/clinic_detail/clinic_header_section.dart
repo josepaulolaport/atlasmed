@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
@@ -247,7 +248,8 @@ class ClinicHeaderSection extends ConsumerWidget {
     final hasPhotos = photos != null && photos.count > 0;
     final isMock =
         detail.id.startsWith('near-') || detail.id.endsWith(':empty');
-    final canUpload = !isMock && ref.read(canMutateFacilityProvider);
+    final canUpload = !isMock &&
+        (ref.read(userCapabilitiesProvider)?.can(.manage, .facility) ?? false);
 
     await showModalBottomSheet<void>(
       context: context,

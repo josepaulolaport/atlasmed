@@ -324,21 +324,22 @@ final appNavigationItems = <AppNavigationItem>[
     label: 'Agenda',
     route: '/agenda',
     icon: Icons.calendar_month_outlined,
-    visibleFor: (ref) => ref.watch(canAgendaReadProvider),
+    visibleFor: (ref) => ref.watch(userCapabilitiesProvider)?.can(.read, .agenda) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 4,
     label: 'Territórios',
     route: '/territories',
     icon: Icons.layers_outlined,
-    visibleFor: (ref) => ref.watch(canReadTerritoriesProvider),
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.read, .territory) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 5,
     label: 'Usuários',
     route: '/users',
     icon: Icons.people_outline_rounded,
-    visibleFor: (ref) => ref.watch(canManageUsersProvider),
+    visibleFor: (ref) => ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 6,
@@ -351,7 +352,8 @@ final appNavigationItems = <AppNavigationItem>[
     label: 'Cadastros',
     route: '/registrations',
     icon: Icons.fact_check_outlined,
-    visibleFor: (ref) => ref.watch(canReviewCadastroProvider),
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.review, .cadastro) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 8,
@@ -359,18 +361,15 @@ final appNavigationItems = <AppNavigationItem>[
     route: '/non-conformities',
     icon: Icons.rate_review_outlined,
     visibleFor: (ref) =>
-        ref
-            .watch(userCapabilitiesProvider)
-            .valueOrNull
-            ?.can(.read, .fieldSuggestion) ??
-        false,
+        ref.watch(userCapabilitiesProvider)?.can(.read, .fieldSuggestion) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 9,
     label: 'Produtos',
     route: '/products',
     icon: Icons.inventory_outlined,
-    visibleFor: (ref) => ref.watch(canReadCatalogProvider),
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.read, .catalog) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 10,

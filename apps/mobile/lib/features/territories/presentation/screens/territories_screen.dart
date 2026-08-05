@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
@@ -45,8 +46,9 @@ class TerritoriesScreen extends ConsumerWidget {
     // Hidden while a territory is selected — it would otherwise sit right
     // on top of the fixed action bar the selection shows at the bottom.
     final hasSelection = ref.watch(selectedTerritoryIdProvider) != null;
-    final canCreate = ref.watch(canCreateTerritoryProvider);
-    final canAssignConsultant = ref.watch(canAssignFacilityConsultantProvider);
+    final capabilities = ref.watch(userCapabilitiesProvider);
+    final canCreate = capabilities?.can(.create, .territory) ?? false;
+    final canAssignConsultant = capabilities?.can(.manage, .territory) ?? false;
     final selectedId = ref.watch(selectedTerritoryIdProvider);
     final kind = ref.watch(selectedTerritoryKindProvider);
     return _TerritoriesPage(
@@ -107,7 +109,8 @@ class _NewTerritoryButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canCreateZone = ref.watch(canCreateManagerZoneProvider);
+    final canCreateZone =
+        ref.watch(userCapabilitiesProvider)?.can(.create, .territory) ?? false;
     final kind = ref.watch(selectedTerritoryKindProvider);
     // Spec 0006: managers only create patches; force patch when zone selected.
     final createKind = !canCreateZone && kind == TerritoryKind.managerZone
@@ -143,7 +146,8 @@ class _TerritoriesBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final kind = ref.watch(selectedTerritoryKindProvider);
     final selectedVerticalId = ref.watch(selectedTerritoryVerticalIdProvider);
-    final isAdmin = ref.watch(isAdminProvider);
+    final isAdmin =
+        ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false;
     final verticalsAsync = isAdmin
         ? ref.watch(businessVerticalsProvider)
         : ref.watch(currentUserFacilityVerticalOptionsProvider);
@@ -1000,9 +1004,10 @@ class _TerritoryActionBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isZone = territory.kind == TerritoryKind.managerZone;
     final canUpdate = isZone
-        ? ref.watch(canUpdateManagerZoneProvider)
-        : ref.watch(canUpdateRepPatchProvider);
-    final canDelete = ref.watch(canDeleteTerritoryProvider);
+        ? (ref.watch(userCapabilitiesProvider)?.can(.update, .territory) ?? false)
+        : (ref.watch(userCapabilitiesProvider)?.can(.update, .territory) ?? false);
+    final canDelete =
+        ref.watch(userCapabilitiesProvider)?.can(.delete, .territory) ?? false;
     final roleLabel = isZone ? 'Gerente' : 'Representante';
     final assignedUserId = territory.assignedUserId;
     final assignedUserAsync = assignedUserId == null

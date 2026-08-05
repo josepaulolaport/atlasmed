@@ -75,7 +75,8 @@ class _EditUserAssignmentsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final canAdmin = ref.watch(canManageUserAdminProvider);
+    final canAdmin =
+        ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false;
     if (!canAdmin) {
       return Scaffold(
         backgroundColor: Colors.white,

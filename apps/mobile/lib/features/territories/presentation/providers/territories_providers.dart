@@ -11,8 +11,7 @@ final territoryRepositoryProvider = Provider<TerritoryRepository>((ref) {
 });
 
 final isAdminProvider = Provider<bool>((ref) {
-  return ref.watch(userCapabilitiesProvider).valueOrNull?.can(.manage, .user) ??
-      false;
+  return ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false;
 });
 
 /// Active business verticals for invite/profile pickers.

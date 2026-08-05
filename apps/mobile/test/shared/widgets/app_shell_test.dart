@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/core/user/models/app_capability.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_capabilities.dart';
 import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:flutter/material.dart';
@@ -63,10 +64,10 @@ void main() {
       ProviderScope(
         overrides: [
           userCapabilitiesProvider.overrideWith(
-            (ref) async => UserCapabilities(
+            (ref) => UserCapabilities(
               version: 2,
               capabilities: {
-                .agenda: {.read},
+                CapabilityResource.agenda: {CapabilityAction.read},
               },
             ),
           ),

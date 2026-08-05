@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/core/user/providers/user_capabilities_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
@@ -41,7 +42,8 @@ class _RepresentativeDetailScreenState
   @override
   Widget build(BuildContext context) {
     final chips = _professional.roleChipLabels;
-    final canEdit = ref.watch(canMutateProfessionalProvider);
+    final canEdit =
+        ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ?? false;
 
     return PopScope(
       canPop: false,
