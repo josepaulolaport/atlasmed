@@ -128,6 +128,38 @@ describe("Access HTTP auth integration", () => {
     );
   });
 
+  it("returns the authenticated capability snapshot grouped by resource in v2", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.manager.email);
+    const response = await authRequest(
+      app,
+      "http://localhost/api/v1/user/capabilities/v2",
+      token
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      version: number;
+      capabilities: Array<{ resource: string; actions: string[] }>;
+    };
+    expect(body).toEqual(
+      expect.objectContaining({
+        version: 2,
+        capabilities: expect.arrayContaining([
+          {
+            resource: "agenda",
+            actions: expect.arrayContaining(["read"]),
+          },
+          {
+            resource: "facility",
+            actions: expect.arrayContaining(["update"]),
+          },
+        ]),
+      })
+    );
+  });
+
   it("returns 401 for unauthenticated capability snapshot", async () => {
     const response = await authRequest(
       app,

@@ -36,30 +36,26 @@ describe("GetCapabilitiesUseCase", () => {
     });
   });
 
-  it("should return versioned capabilities and ignore resource-scoped grants for type-level decisions", async () => {
+  it("should return resource actions and ignore resource-scoped grants for type-level decisions", async () => {
     const result = await useCase.execute({ userId: "user-123" });
 
-    expect(result.version).toBe(1);
+    expect(result.version).toBe(2);
     expect(result.capabilities).toEqual(
       expect.arrayContaining([
-        "agenda.read",
-        "catalog.read",
-        "cadastro.read",
-        "cadastro.review",
-        "field-suggestion.read",
-        "field-suggestion.review",
-        "facility.read",
-        "facility.update",
-        "professional.read",
-        "professional.update",
-        "territory.read",
-        "territory.create",
-        "territory.update",
-        "user.read",
-        "user.lifecycle",
+        { resource: "agenda", actions: ["read"] },
+        { resource: "catalog", actions: ["read"] },
+        { resource: "cadastro", actions: ["read", "review"] },
+        { resource: "field-suggestion", actions: ["read", "review"] },
+        { resource: "facility", actions: ["read", "update"] },
+        { resource: "professional", actions: ["read", "update"] },
+        { resource: "territory", actions: ["read", "create", "update"] },
+        { resource: "user", actions: ["read", "lifecycle"] },
       ])
     );
-    expect(result.capabilities).not.toContain("agenda.create");
+    expect(result.capabilities).not.toContainEqual({
+      resource: "agenda",
+      actions: expect.arrayContaining(["create"]),
+    });
   });
 
   it("should include global grants in capability derivation", async () => {
@@ -85,7 +81,10 @@ describe("GetCapabilitiesUseCase", () => {
 
     const result = await useCase.execute({ userId: "user-123" });
 
-    expect(result.capabilities).toContain("user.manage");
+    expect(result.capabilities).toContainEqual({
+      resource: "user",
+      actions: expect.arrayContaining(["manage"]),
+    });
   });
 
   it("should reject when user not found", async () => {

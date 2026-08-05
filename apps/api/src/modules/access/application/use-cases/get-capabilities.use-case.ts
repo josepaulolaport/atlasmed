@@ -24,7 +24,7 @@ export class GetCapabilitiesUseCase {
     const capabilities = getAppCapabilities(role, grants);
 
     return {
-      version: 1 as const,
+      version: 2 as const,
       capabilities,
     };
   }
