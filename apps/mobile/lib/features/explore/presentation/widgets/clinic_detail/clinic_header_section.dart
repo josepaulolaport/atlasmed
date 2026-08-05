@@ -248,7 +248,8 @@ class ClinicHeaderSection extends ConsumerWidget {
     final hasPhotos = photos != null && photos.count > 0;
     final isMock =
         detail.id.startsWith('near-') || detail.id.endsWith(':empty');
-    final canUpload = !isMock &&
+    final canUpload =
+        !isMock &&
         (ref.read(userCapabilitiesProvider)?.can(.manage, .facility) ?? false);
 
     await showModalBottomSheet<void>(

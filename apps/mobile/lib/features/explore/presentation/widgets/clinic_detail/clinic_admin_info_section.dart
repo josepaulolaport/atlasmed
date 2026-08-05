@@ -25,7 +25,8 @@ class ClinicAdminInfoSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canSuggest =
-        ref.watch(userCapabilitiesProvider)?.can(.create, .fieldSuggestion) ?? false;
+        ref.watch(userCapabilitiesProvider)?.can(.create, .fieldSuggestion) ??
+        false;
     final hasTaxId =
         (detail.registration?.cnpj?.trim().isNotEmpty ?? false) ||
         (detail.registration?.cpf?.trim().isNotEmpty ?? false);

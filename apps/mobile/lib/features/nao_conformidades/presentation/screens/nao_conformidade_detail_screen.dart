@@ -32,7 +32,8 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
     );
     final user = ref.watch(currentUserProvider).valueOrNull;
     final roleCanReview =
-        ref.watch(userCapabilitiesProvider)?.can(.review, .fieldSuggestion) ?? false;
+        ref.watch(userCapabilitiesProvider)?.can(.review, .fieldSuggestion) ??
+        false;
     final effectiveCanReview = canReview && roleCanReview;
 
     return asyncSuggestion.when(

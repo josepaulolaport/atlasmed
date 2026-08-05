@@ -324,7 +324,8 @@ final appNavigationItems = <AppNavigationItem>[
     label: 'Agenda',
     route: '/agenda',
     icon: Icons.calendar_month_outlined,
-    visibleFor: (ref) => ref.watch(userCapabilitiesProvider)?.can(.read, .agenda) ?? false,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.read, .agenda) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 4,
@@ -339,7 +340,8 @@ final appNavigationItems = <AppNavigationItem>[
     label: 'Usuários',
     route: '/users',
     icon: Icons.people_outline_rounded,
-    visibleFor: (ref) => ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false,
+    visibleFor: (ref) =>
+        ref.watch(userCapabilitiesProvider)?.can(.manage, .user) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 6,
@@ -361,7 +363,8 @@ final appNavigationItems = <AppNavigationItem>[
     route: '/non-conformities',
     icon: Icons.rate_review_outlined,
     visibleFor: (ref) =>
-        ref.watch(userCapabilitiesProvider)?.can(.read, .fieldSuggestion) ?? false,
+        ref.watch(userCapabilitiesProvider)?.can(.read, .fieldSuggestion) ??
+        false,
   ),
   AppNavigationItem(
     branchIndex: 9,

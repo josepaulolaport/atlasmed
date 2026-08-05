@@ -211,7 +211,9 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ?? false
+      floatingActionButton:
+          ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ??
+              false
           ? FloatingActionButton(
               onPressed: _openAssociate,
               backgroundColor: AppColors.navyBright,
@@ -273,7 +275,11 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                           crm: d.crm ?? '',
                           distanceKm: 0,
                         ),
-                        onMoreActions: (ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ?? false)
+                        onMoreActions:
+                            (ref
+                                    .watch(userCapabilitiesProvider)
+                                    ?.can(.manage, .professional) ??
+                                false)
                             ? () => _onMoreActions(d)
                             : null,
                         onTap: () => _openProfile(d),

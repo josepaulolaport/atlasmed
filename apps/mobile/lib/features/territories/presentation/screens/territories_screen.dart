@@ -1004,8 +1004,10 @@ class _TerritoryActionBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isZone = territory.kind == TerritoryKind.managerZone;
     final canUpdate = isZone
-        ? (ref.watch(userCapabilitiesProvider)?.can(.update, .territory) ?? false)
-        : (ref.watch(userCapabilitiesProvider)?.can(.update, .territory) ?? false);
+        ? (ref.watch(userCapabilitiesProvider)?.can(.update, .territory) ??
+              false)
+        : (ref.watch(userCapabilitiesProvider)?.can(.update, .territory) ??
+              false);
     final canDelete =
         ref.watch(userCapabilitiesProvider)?.can(.delete, .territory) ?? false;
     final roleLabel = isZone ? 'Gerente' : 'Representante';

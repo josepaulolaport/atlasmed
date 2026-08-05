@@ -193,7 +193,9 @@ class _AdministrativeProfessionalsListScreenState
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ?? false
+      floatingActionButton:
+          ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ??
+              false
           ? FloatingActionButton(
               onPressed: _openAssociate,
               backgroundColor: AppColors.navyBright,

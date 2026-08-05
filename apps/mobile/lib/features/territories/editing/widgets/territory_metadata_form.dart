@@ -61,7 +61,8 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
     _nameController = TextEditingController(text: initial?.name ?? '');
     var kind = initial?.kind ?? widget.initialKind;
     // Spec 0006: managers cannot create manager zones.
-    if (!(ref.read(userCapabilitiesProvider)?.can(.create, .territory) ?? false) &&
+    if (!(ref.read(userCapabilitiesProvider)?.can(.create, .territory) ??
+            false) &&
         kind == TerritoryKind.managerZone) {
       kind = TerritoryKind.repPatch;
     }
@@ -154,7 +155,10 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
                   Builder(
                     builder: (context) {
                       final canCreateZone =
-                          ref.watch(userCapabilitiesProvider)?.can(.create, .territory) ?? false;
+                          ref
+                              .watch(userCapabilitiesProvider)
+                              ?.can(.create, .territory) ??
+                          false;
                       if (!canCreateZone) {
                         return const Text(
                           'Área de representante',

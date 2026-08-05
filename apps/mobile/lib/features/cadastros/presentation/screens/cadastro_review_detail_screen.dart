@@ -47,7 +47,8 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     }
 
     final status = submission.status;
-    final pending = submission.isPending &&
+    final pending =
+        submission.isPending &&
         (ref.watch(userCapabilitiesProvider)?.can(.review, .cadastro) ?? false);
 
     return Scaffold(
