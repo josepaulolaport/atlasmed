@@ -13,18 +13,7 @@ export const userPermissionsRoute = new Elysia({
       userId: params.id,
     });
 
-    return {
-      role: result.role,
-      grants: result.grants.map((grant) => ({
-        id: grant.id,
-        resource: grant.resource,
-        resourceId: grant.resourceId ?? undefined,
-        action: grant.action,
-        conditions: grant.conditions,
-        grantedAt: grant.grantedAt?.toISOString() ?? new Date().toISOString(),
-        expiresAt: grant.expiresAt?.toISOString(),
-      })),
-    };
+    return result;
   })
   .post("/users/:id/permissions", async ({ params, body, getUserId, getUser }: any) => {
     const actor = await getUser();
