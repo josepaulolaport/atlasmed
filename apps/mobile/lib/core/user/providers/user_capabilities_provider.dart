@@ -45,34 +45,118 @@ final canAgendaCreateProvider = Provider<bool>(
           ?.can(AppCapability.agendaCreate) ??
       false,
 );
-final canManageUserAdminProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.userManage) ?? false);
-final canLifecycleUserProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.userLifecycle) ?? false);
-final canCreateTerritoryProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.territoryCreate) ?? false);
-final canCreateManagerZoneProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.territoryCreate) ?? false);
-final canCreateRepPatchProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.territoryCreate) ?? false);
-final canUpdateTerritoryProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.territoryUpdate) ?? false);
-final canUpdateManagerZoneProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.territoryUpdate) ?? false);
-final canUpdateRepPatchProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.territoryUpdate) ?? false);
-final canDeleteTerritoryProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.territoryDelete) ?? false);
-final canCreateFieldSuggestionProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.fieldSuggestionRead) ?? false);
-final canReviewFieldSuggestionsProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.fieldSuggestionReview) ?? false);
-final canAssignFacilityConsultantProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.facilityUpdate) ?? false);
-final canMutateProfessionalProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.professionalUpdate) ?? false);
-final canCreateVisitProvider = Provider<bool>((ref) =>
-    ref.watch(userCapabilitiesProvider).valueOrNull?.can(AppCapability.agendaCreate) ?? false);
+final canManageUserAdminProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.userManage) ??
+      false,
+);
+final canLifecycleUserProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.userLifecycle) ??
+      false,
+);
+final canCreateTerritoryProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.territoryCreate) ??
+      false,
+);
+final canCreateManagerZoneProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.territoryCreate) ??
+      false,
+);
+final canCreateRepPatchProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.territoryCreate) ??
+      false,
+);
+final canUpdateTerritoryProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.territoryUpdate) ??
+      false,
+);
+final canUpdateManagerZoneProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.territoryUpdate) ??
+      false,
+);
+final canUpdateRepPatchProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.territoryUpdate) ??
+      false,
+);
+final canDeleteTerritoryProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.territoryDelete) ??
+      false,
+);
+final canCreateFieldSuggestionProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.fieldSuggestionRead) ??
+      false,
+);
+final canReviewFieldSuggestionsProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.fieldSuggestionReview) ??
+      false,
+);
+final canAssignFacilityConsultantProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.facilityUpdate) ??
+      false,
+);
+final canMutateProfessionalProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.professionalUpdate) ??
+      false,
+);
+final canCreateVisitProvider = Provider<bool>(
+  (ref) =>
+      ref
+          .watch(userCapabilitiesProvider)
+          .valueOrNull
+          ?.can(AppCapability.agendaCreate) ??
+      false,
+);
 final canManageUsersProvider = Provider<bool>(
   (ref) =>
       ref
