@@ -26,7 +26,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   }) : super(
          endpoint: buildEndpoint(
            baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
-           path: '/api/v1/professionals',
+           path: '/api/v1/healthcare-professionals',
            queryParameters: {
              'page': page.toString(),
              'limit': limit.toString(),
@@ -75,7 +75,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   }) {
     return buildEndpoint(
       baseUrl: baseUrl,
-      path: '/api/v1/professionals',
+      path: '/api/v1/healthcare-professionals',
       queryParameters: {
         'page': page.toString(),
         'limit': limit.toString(),
@@ -98,7 +98,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   PaginatedProfessionals fromJson(String json) =>
       PaginatedProfessionals.fromJson(json);
 
-  /// Patches a single person-level field via `PATCH /api/v1/professionals/:id`.
+  /// Patches a single person-level field via `PATCH /api/v1/persons/:id`.
   /// Pass [value] `null` to clear a nullable column.
   Future<ProfessionalDTO> patchProfessionalField({
     required int id,
@@ -107,7 +107,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
+        url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/persons/$id'),
         method: RepositoryHttpMethod.patch,
         headers: const {'Content-Type': 'application/json'},
         body: {fieldKey: value},

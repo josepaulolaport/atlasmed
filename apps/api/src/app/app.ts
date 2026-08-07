@@ -6,6 +6,7 @@ import { healthRoute } from "../infrastructure/health/health.route";
 import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
 import { facility } from "../modules/facility";
+import { person } from "../modules/person";
 import { fieldSuggestions } from "../modules/field-suggestions";
 import { catalog } from "../modules/catalog";
 import { searchSync } from "../modules/search-sync";
@@ -142,6 +143,7 @@ const app = new Elysia()
       .use(access)
       .use(avatarUser)
       .use(facility)
+      .use(person)
       .use(fieldSuggestions)
       .use(catalog)
       .use(searchSync)

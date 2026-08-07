@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_detail_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 
@@ -100,11 +99,12 @@ void main() {
     });
   });
 
-  group('ClinicDetailRepository', () {
-    test('maps the API DTO to the facility domain at the repository seam', () {
-      final facility = ClinicDetailRepository.parse('''
+  group('ClinicDetailRepository seam (FacilityDTO)', () {
+    test('maps the API DTO at the repository seam', () {
+      // Same parser ClinicDetailRepository.fromJson uses.
+      final facility = FacilityDTO.fromJson('''
 {
-  "id": "clinic-1",
+  "id": 1,
   "name": "Clínica Central",
   "professionalCount": 7,
   "streetAddress": "Rua das Flores",
@@ -115,11 +115,11 @@ void main() {
 }
 ''');
 
-      expect(facility.id, 'clinic-1');
+      expect(facility.id, 1);
       expect(facility.name, 'Clínica Central');
       expect(facility.professionalCount, 7);
-      expect(facility.address?.formattedAddress, contains('Rua das Flores'));
-      expect(facility.territory?.consultantSince, DateTime.utc(2026, 1, 2));
+      expect(facility.streetAddress, 'Rua das Flores');
+      expect(facility.consultantSince, '2026-01-02T00:00:00.000Z');
     });
   });
 
@@ -137,7 +137,7 @@ void main() {
 
         expect(
           endpoint.toString(),
-          'https://api.example.test/api/v1/professionals?page=1&limit=20&search=Ana&facilityId=1',
+          'https://api.example.test/api/v1/healthcare-professionals?page=1&limit=20&search=Ana&facilityId=1',
         );
       },
     );

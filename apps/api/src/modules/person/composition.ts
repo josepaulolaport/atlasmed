@@ -1,21 +1,69 @@
+import { searchService } from "../../infrastructure/search/search.service";
+import { DrizzleHealthcareProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-professional.repository";
 import { DrizzlePersonFacilityProjectionRepository } from "./infrastructure/repositories/drizzle/drizzle-person-facility-projection.repository";
+import { DrizzlePersonNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-person-note.repository";
+import { DrizzlePersonRepository } from "./infrastructure/repositories/drizzle/drizzle-person.repository";
+import { DrizzleUserPersonRelationshipRepository } from "./infrastructure/repositories/drizzle/drizzle-user-person-relationship.repository";
+import { ListHealthcareProfessionalsUseCase } from "./application/use-cases/list-healthcare-professionals.use-case";
+import {
+  CreatePersonNoteUseCase,
+  ListPersonNotesUseCase,
+} from "./application/use-cases/person-note.use-cases";
+import {
+  GetPersonUseCase,
+  ListHealthcareSpecialtiesUseCase,
+  PatchPersonUseCase,
+} from "./application/use-cases/person.use-cases";
 import {
   GetPersonFacilityProjectionUseCase,
   ListPersonFacilityProjectionsUseCase,
   PatchPersonFacilityProjectionUseCase,
   UpsertPersonFacilityProjectionUseCase,
 } from "./application/use-cases/person-facility-projection.use-cases";
+import {
+  GetUserPersonRelationshipUseCase,
+  UpsertUserPersonRelationshipUseCase,
+} from "./application/use-cases/user-person-relationship.use-cases";
 
-const repository = new DrizzlePersonFacilityProjectionRepository();
+const projectionRepository = new DrizzlePersonFacilityProjectionRepository();
+const personNoteRepository = new DrizzlePersonNoteRepository();
+const personRepository = new DrizzlePersonRepository();
+const userPersonRelationshipRepository =
+  new DrizzleUserPersonRelationshipRepository();
+const healthcareProfessionalRepository =
+  new DrizzleHealthcareProfessionalRepository();
 
 export const personUseCases = {
   listFacilityProjections: () =>
-    new ListPersonFacilityProjectionsUseCase({ repository }),
-  getFacilityProjection: () => new GetPersonFacilityProjectionUseCase({ repository }),
+    new ListPersonFacilityProjectionsUseCase({ repository: projectionRepository }),
+  getFacilityProjection: () =>
+    new GetPersonFacilityProjectionUseCase({ repository: projectionRepository }),
   upsertFacilityProjection: () =>
-    new UpsertPersonFacilityProjectionUseCase({ repository }),
+    new UpsertPersonFacilityProjectionUseCase({ repository: projectionRepository }),
   patchFacilityProjection: () =>
-    new PatchPersonFacilityProjectionUseCase({ repository }),
+    new PatchPersonFacilityProjectionUseCase({ repository: projectionRepository }),
+
+  getPerson: () => new GetPersonUseCase({ personRepository }),
+  patchPerson: () => new PatchPersonUseCase({ personRepository }),
+
+  listPersonNotes: () =>
+    new ListPersonNotesUseCase({ personNoteRepository }),
+  createPersonNote: () =>
+    new CreatePersonNoteUseCase({ personNoteRepository }),
+
+  getPersonRelationship: () =>
+    new GetUserPersonRelationshipUseCase({ userPersonRelationshipRepository }),
+  upsertPersonRelationship: () =>
+    new UpsertUserPersonRelationshipUseCase({ userPersonRelationshipRepository }),
+
+  listHealthcareProfessionals: () =>
+    new ListHealthcareProfessionalsUseCase({
+      healthcareProfessionalRepository,
+      userPersonRelationshipRepository,
+      searchService,
+    }),
+  listHealthcareSpecialties: () =>
+    new ListHealthcareSpecialtiesUseCase({ personRepository }),
 };
 
 export { CLASSIFICATION } from "./application/use-cases/person-facility-projection.use-cases";

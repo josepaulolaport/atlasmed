@@ -110,6 +110,10 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facility"],
   },
+  "modules/person/application/use-cases/list-healthcare-professionals.use-case.ts": {
+    kind: "repo-filter",
+    patterns: ["facilityIds", "isGlobal", "activeFacilityIds"],
+  },
 
   "modules/potential/application/use-cases/potential.use-cases.ts": {
     kind: "assert-id",

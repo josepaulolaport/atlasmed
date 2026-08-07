@@ -8,7 +8,7 @@ class DoctorDetailRepository extends Repository<ProfessionalDTO>
     with SessionEnvironmentMixin<ProfessionalDTO> {
   DoctorDetailRepository({required int id})
     : super(
-        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
+        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/persons/$id'),
         name: 'DoctorDetailRepository',
       );
 

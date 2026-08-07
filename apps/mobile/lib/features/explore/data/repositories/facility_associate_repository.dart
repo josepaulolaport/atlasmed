@@ -23,7 +23,9 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   FacilityAssociateRepository(this.facilityId, {RepositoryHttpClient? client})
     : _client = client,
       super(
-        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals'),
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/healthcare-professionals',
+        ),
         name: 'FacilityAssociateRepository',
       );
 
@@ -41,7 +43,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   PaginatedProfessionals fromJson(String json) =>
       PaginatedProfessionals.fromJson(json);
 
-  /// Global Explorar search — still hits `GET /professionals` (Q31; may 404).
+  /// Global Explorar search — `GET /healthcare-professionals`.
   Future<List<ProfessionalRoster>> searchDoctors({
     String? search,
     int limit = 40,
@@ -169,21 +171,61 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     );
   }
 
-  /// Person-relationship API not landed — fail closed (no fake success).
+  String get _relationshipPath =>
+      '${AppConfig.apiBaseUrl}/api/v1/persons';
+
+  /// `PATCH /persons/:personId/relationship`.
   Future<int?> updateRelationshipLevel(
     int personId, {
     int? relationshipLevel,
   }) async {
-    // Former: PATCH /facilities/:id/professionals/:professionalId
-    // Match administrative-contacts fail-closed so doctor_detail_screen
-    // reverts optimistic stars instead of showing a saved score that never persists.
-    throw const FacilityAssociateException(
-      'Relacionamento de médico ainda não disponível',
+    if (relationshipLevel == null) {
+      throw const FacilityAssociateException(
+        'Nível de relacionamento é obrigatório',
+      );
+    }
+
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_relationshipPath/$personId/relationship'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'relationshipLevel': relationshipLevel},
+      ),
     );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao salvar relacionamento (${response.statusCode})',
+        );
+      }
+    }
+
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    final level = map['relationshipLevel'];
+    if (level is num) return level.toInt();
+    return relationshipLevel;
   }
 
-  /// Person-relationship API not landed — returns null.
+  /// `GET /persons/:personId/relationship`.
   Future<int?> fetchRelationshipLevel(int personId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_relationshipPath/$personId/relationship'),
+        method: RepositoryHttpMethod.get,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      await onErrorStatusCode(response.statusCode);
+      return null;
+    }
+
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    final level = map['relationshipLevel'];
+    if (level is num) return level.toInt();
     return null;
   }
 

@@ -21,13 +21,12 @@ class ProfessionalFacilityRef {
 
 // ── ProfessionalDTO ──────────────────────────────────────────
 
-/// Unified DTO covering fields from all professional endpoints.
+/// Unified DTO covering fields from healthcare-person endpoints.
 ///
 /// Used by:
-/// - `GET /api/v1/professionals` (paginated list)
-/// - `GET /api/v1/professionals/:id` (detail)
-/// - `POST /api/v1/professionals` (create)
-/// - `PATCH /api/v1/professionals/:id` (update)
+/// - `GET /api/v1/healthcare-professionals` (paginated list)
+/// - `GET /api/v1/persons/:id` (detail)
+/// - `PATCH /api/v1/persons/:id` (update)
 /// - Embedded in facility professional items
 class ProfessionalDTO {
   final int id;
@@ -60,7 +59,7 @@ class ProfessionalDTO {
   final String? notes;
   final List<ProfessionalFacilityRef> facilities;
 
-  /// Active clinics in the caller's scope (`GET /professionals/:id`).
+  /// Distance from search origin when list includes geo (`GET /healthcare-professionals`).
   final double? distanceKm;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -131,7 +130,9 @@ class ProfessionalDTO {
         map['facilities'],
       ).map(ProfessionalFacilityRef.fromMap).toList(growable: false),
       socialName: readNullableString(map['socialName']),
-      taxId: readNullableString(map['taxId']),
+      // COMPAT(remove): API canonical is `cpf`; field still named taxId on DTO.
+      // Drop alias once mobile renames ProfessionalDTO.taxId → cpf.
+      taxId: readNullableString(map['taxId'] ?? map['cpf']),
       websiteUrl: readNullableString(map['websiteUrl']),
       imageUrl: readNullableString(map['imageUrl']),
       imageBlurhash: readNullableString(map['imageBlurhash']),

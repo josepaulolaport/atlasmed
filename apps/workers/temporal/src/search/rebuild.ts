@@ -2,7 +2,13 @@ import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   facilities,
   facilityVerticalProfiles,
+  healthcareSpecialties,
   municipalities,
+  personFacilities,
+  personHealthcareProfileSpecialties,
+  personHealthcareProfiles,
+  personProfessionalRegistrations,
+  persons,
   states,
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "./normalize-search-filter";
@@ -53,12 +59,17 @@ export type FacilitySearchDocument = {
   _geo?: { lat: number; lng: number };
 };
 
+/**
+ * Q31 frozen Meili persons document fields (ADR 0004 §6.4):
+ * id, name, socialName, cpf, specialty, specialtyNormalized,
+ * activeFacilityIds, activeTerritoryIds, crmCouncil, crmNumber, crmState.
+ */
 export type PersonSearchDocument = {
-  /** Meilisearch primary key (decimal string of CRM bigint id). */
+  /** Meilisearch primary key (decimal string of persons.id). */
   id: string;
   name: string;
   socialName: string | null;
-  taxId: string | null;
+  cpf: string | null;
   specialty: string | null;
   specialtyNormalized: string | null;
   activeFacilityIds: number[];
@@ -181,9 +192,8 @@ export function mapPersonSearchDocument(row: {
   id: number;
   firstName: string;
   lastName: string;
-  fullName: string | null;
   socialName: string | null;
-  taxId: string | null;
+  cpf: string | null;
   primarySpecialtyLabel: string | null;
   crmCouncil: string | null;
   crmNumber: string | null;
@@ -202,9 +212,9 @@ export function mapPersonSearchDocument(row: {
 
   return {
     id: String(row.id),
-    name: row.fullName?.trim() || `${row.firstName} ${row.lastName}`.trim(),
+    name: `${row.firstName} ${row.lastName}`.trim(),
     socialName: row.socialName,
-    taxId: row.taxId,
+    cpf: row.cpf,
     specialty: row.primarySpecialtyLabel,
     specialtyNormalized: row.primarySpecialtyLabel
       ? normalizeSearchFilterValue(row.primarySpecialtyLabel)
@@ -387,8 +397,9 @@ async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<Active
   }
   return { verticalIds, territoryIds, funnelData };
 }
+/** Q31 frozen settings — keep in sync with PersonSearchDocument field list. */
 export const PERSON_SETTINGS = {
-  searchableAttributes: ["name", "socialName", "taxId", "specialty", "crmCouncil", "crmNumber", "crmState"],
+  searchableAttributes: ["name", "socialName", "cpf", "specialty", "crmCouncil", "crmNumber", "crmState"],
   filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds", "crmState"],
 };
 
@@ -433,10 +444,149 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
   }
 }
 
-// TODO(ADR-0004): rebuild person search documents from persons + person_facilities.
+async function loadActivePersonAssociations(
+  personIds: number[]
+): Promise<Map<number, Array<{ facilityId: number; territoryId: number | null }>>> {
+  if (personIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      personId: personFacilities.personId,
+      facilityId: personFacilities.facilityId,
+      territoryId: facilityVerticalProfiles.managerZoneId,
+    })
+    .from(personFacilities)
+    .innerJoin(facilities, eq(personFacilities.facilityId, facilities.id))
+    .leftJoin(
+      facilityVerticalProfiles,
+      and(
+        eq(facilityVerticalProfiles.facilityId, facilities.id),
+        eq(facilityVerticalProfiles.isActive, true)
+      )
+    )
+    .where(and(
+      inArray(personFacilities.personId, personIds),
+      isNull(personFacilities.endedAt),
+      isNull(facilities.deactivatedAt)
+    ));
+
+  const associations = new Map<number, Array<{ facilityId: number; territoryId: number | null }>>();
+  for (const row of rows) {
+    const current = associations.get(row.personId) ?? [];
+    const already = current.some(
+      (entry) => entry.facilityId === row.facilityId && entry.territoryId === row.territoryId
+    );
+    if (!already) {
+      current.push({ facilityId: row.facilityId, territoryId: row.territoryId });
+      associations.set(row.personId, current);
+    }
+  }
+  return associations;
+}
+
+async function loadPrimarySpecialtyLabels(
+  personIds: number[]
+): Promise<Map<number, string | null>> {
+  const map = new Map<number, string | null>();
+  if (personIds.length === 0) return map;
+
+  const rows = await db
+    .select({
+      personId: personHealthcareProfileSpecialties.personId,
+      specialtyName: healthcareSpecialties.name,
+    })
+    .from(personHealthcareProfileSpecialties)
+    .innerJoin(
+      healthcareSpecialties,
+      eq(healthcareSpecialties.id, personHealthcareProfileSpecialties.specialtyId)
+    )
+    .where(and(
+      inArray(personHealthcareProfileSpecialties.personId, personIds),
+      eq(personHealthcareProfileSpecialties.isPrimary, true)
+    ));
+
+  for (const id of personIds) map.set(id, null);
+  for (const row of rows) map.set(row.personId, row.specialtyName);
+  return map;
+}
+
+async function loadPrimaryRegistrations(
+  personIds: number[]
+): Promise<Map<number, { crmCouncil: string; crmNumber: string; crmState: string } | null>> {
+  const map = new Map<number, { crmCouncil: string; crmNumber: string; crmState: string } | null>();
+  if (personIds.length === 0) return map;
+
+  for (const id of personIds) map.set(id, null);
+
+  const rows = await db
+    .select({
+      personId: personProfessionalRegistrations.personId,
+      crmCouncil: personProfessionalRegistrations.councilCode,
+      crmNumber: personProfessionalRegistrations.registrationNumber,
+      crmState: personProfessionalRegistrations.stateCode,
+    })
+    .from(personProfessionalRegistrations)
+    .where(and(
+      inArray(personProfessionalRegistrations.personId, personIds),
+      eq(personProfessionalRegistrations.isPrimary, true)
+    ));
+
+  for (const row of rows) {
+    map.set(row.personId, {
+      crmCouncil: row.crmCouncil,
+      crmNumber: row.crmNumber,
+      crmState: row.crmState,
+    });
+  }
+  return map;
+}
+
+/** Persons with healthcare profiles only (D16 / Q31). */
 async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
-  return;
-  yield [];
+  let lastId: number | undefined;
+
+  while (true) {
+    const rows = await db
+      .select({
+        id: persons.id,
+        firstName: persons.firstName,
+        lastName: persons.lastName,
+        socialName: persons.socialName,
+        cpf: persons.cpf,
+        deletedAt: persons.deletedAt,
+      })
+      .from(persons)
+      .innerJoin(
+        personHealthcareProfiles,
+        eq(personHealthcareProfiles.personId, persons.id)
+      )
+      .where(and(isNull(persons.deletedAt), lastId ? gt(persons.id, lastId) : undefined))
+      .orderBy(asc(persons.id))
+      .limit(PAGE_SIZE);
+    if (rows.length === 0) return;
+
+    lastId = rows.at(-1)!.id;
+    const personIds = rows.map((row) => row.id);
+    const [associations, specialties, registrations] = await Promise.all([
+      loadActivePersonAssociations(personIds),
+      loadPrimarySpecialtyLabels(personIds),
+      loadPrimaryRegistrations(personIds),
+    ]);
+
+    yield rows
+      .map((row) => {
+        const registration = registrations.get(row.id);
+        return mapPersonSearchDocument({
+          ...row,
+          primarySpecialtyLabel: specialties.get(row.id) ?? null,
+          crmCouncil: registration?.crmCouncil ?? null,
+          crmNumber: registration?.crmNumber ?? null,
+          crmState: registration?.crmState ?? null,
+          activeAssociations: associations.get(row.id) ?? [],
+        });
+      })
+      .filter((row): row is PersonSearchDocument => row !== null);
+  }
 }
 
 export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<void> {

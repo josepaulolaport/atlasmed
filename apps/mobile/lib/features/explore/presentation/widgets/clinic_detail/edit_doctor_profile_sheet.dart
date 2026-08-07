@@ -4,7 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.da
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// API keys on `PATCH /api/v1/professionals/:id` that the doctor detail UI can edit.
+/// API keys on `PATCH /api/v1/persons/:id` that the doctor detail UI can edit.
 enum DoctorEditableField {
   mobilePhone('mobilePhone', 'Telefone'),
   email('email', 'E-mail'),

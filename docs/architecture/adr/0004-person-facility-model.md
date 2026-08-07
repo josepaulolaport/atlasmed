@@ -12,7 +12,7 @@
 
 **ID / blast (via merge doc M11/M12):** CRM PKs = `bigint` identity; hard wipe OK (app not live). In-wave apps = database + api + mobile; web deferred.
 
-Last updated: 2026-08-06 (M11/M12: bigint cutover + db/api/mobile scope)
+Last updated: 2026-08-07 (STEP 3: notes/relationship + Q31 Meili freeze)
 
 ---
 
@@ -416,14 +416,16 @@ Facility routes may mount projections but call person ports only.
 | GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` | `ADMINISTRATIVE_CONTACT` |
 | GET/PATCH | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` | |
 
-**Still provisional** (defer until notes/relationship/Meili steps):
+**Frozen notes / relationship / Explorar / identity paths** (STEP 3 — 2026-08-07):
 
 | Method | Path | Notes |
 |---|---|---|
+| GET/POST | `/api/v1/persons/:personId/notes` | User-scoped; caller-owned rows only |
+| GET | `/api/v1/persons/:personId/relationship` | `{ relationshipLevel: number \| null }` |
+| PUT/PATCH | `/api/v1/persons/:personId/relationship` | Body `{ relationshipLevel: 1..10 }`; returns `{ personId, relationshipLevel }` |
+| GET/PATCH | `/api/v1/persons/:personId` | Identity + profile; soft-deleted → 404; PATCH partial identity fields; response includes `cpf` + temporary `taxId` alias (**COMPAT(remove)** when mobile DTO field → `cpf`) + `facilityIds` + `hasHealthcareProfile` |
 | GET | `/api/v1/healthcare-professionals` | Global/Meili Explorar (D16 / Q31) |
-| GET/PATCH | `/api/v1/persons/:personId` | Identity + profile |
-| GET/POST | `/api/v1/persons/:personId/notes` | User-scoped |
-| PUT/PATCH | `/api/v1/persons/:personId/relationship` | User-scoped score |
+| GET | `/api/v1/healthcare-professionals/specialties` | Distinct active specialty names used by non-deleted persons (`{ data: string[] }`) |
 
 DTOs differ per projection (healthcare includes specialties/registrations/occupations; admin includes roles/role_title). Same underlying ids. End/delete affiliation, note update/delete, nested registration/occupation routes — define when wiring API.
 
@@ -433,8 +435,20 @@ Subject: `PERSON` (D13). Resource scoping via facility/territory as today for pr
 
 ### 6.4 Meilisearch (D16)
 
-Index id = `persons.id` (string). Documents only for persons **with** `person_healthcare_profiles`.  
-**Q31 = B:** document field list deferred to search implementation — do not freeze here.
+Index uid = `persons`. Document id = `persons.id` (string). Documents only for persons **with** `person_healthcare_profiles` and `deleted_at IS NULL`.
+
+**Q31 frozen field list** (STEP 3 — 2026-08-07; also in `apps/workers/temporal/src/search/rebuild.ts`):
+
+| Field | Source |
+|---|---|
+| `id` | `persons.id` (string) |
+| `name` | `firstName + " " + lastName` |
+| `socialName` | `persons.social_name` |
+| `cpf` | `persons.cpf` |
+| `specialty` / `specialtyNormalized` | primary `healthcare_specialties.name` via `person_healthcare_profile_specialties` |
+| `activeFacilityIds` | `person_facilities` where `ended_at IS NULL` (+ active facility) |
+| `activeTerritoryIds` | `facility_vertical_profiles.manager_zone_id` for those facilities (active profiles) |
+| `crmCouncil` / `crmNumber` / `crmState` | primary `person_professional_registrations` (`council_code`, `registration_number`, `state_code`) |
 
 ### 6.5 Classification seed
 

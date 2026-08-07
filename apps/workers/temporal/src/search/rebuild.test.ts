@@ -120,15 +120,14 @@ describe("search rebuild", () => {
     })).toBeNull();
   });
 
-  test("maps only safe eligible professional fields", () => {
+  test("maps only safe eligible person fields (Q31)", () => {
     expect(
       mapPersonSearchDocument({
         id: 1,
         firstName: "Ana",
         lastName: "Silva",
-        fullName: null,
         socialName: "Dra. Ana",
-        taxId: "123",
+        cpf: "12345678901",
         primarySpecialtyLabel: "Cardiologia",
         crmCouncil: "CRM",
         crmNumber: "12345",
@@ -144,7 +143,7 @@ describe("search rebuild", () => {
       id: "1",
       name: "Ana Silva",
       socialName: "Dra. Ana",
-      taxId: "123",
+      cpf: "12345678901",
       specialty: "Cardiologia",
       specialtyNormalized: "cardiologia",
       activeFacilityIds: [1, 2],

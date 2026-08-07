@@ -18,7 +18,7 @@ class ProfessionalNotesRepository extends Repository<List<ProfessionalNote>>
   }) : _client = client,
        super(
          endpoint: Uri.parse(
-           '${AppConfig.apiBaseUrl}/api/v1/professionals/$professionalId/notes',
+           '${AppConfig.apiBaseUrl}/api/v1/persons/$professionalId/notes',
          ),
          resolveOnCreate: true,
          name: 'ProfessionalNotesRepository',
