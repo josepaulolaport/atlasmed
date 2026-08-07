@@ -2,17 +2,17 @@
 
 ## Status
 
-**Accepted for schema implementation.**  
-§10 questions resolved. Schema not coded yet. This file is the **only** source of truth for the redesign.
+**Accepted — schema + API/mobile wave landed** (Slice C `0051` + after-schema STEPs + role seed `0054`).  
+§10 questions resolved. This file remains the design SoT; path freezes in §6.2 / §6.4 match as-built routes.
 
 **Living document:** update when decisions change.  
-**Legend:** `LOCKED` = decided · provisional API/Meili details freeze in later PRs (Q30/Q31).
+**Legend:** `LOCKED` = decided · §6.2/§6.4 freezes = shipped in this wave.
 
 **See also (P0 wave merge with DB triage):** [`docs/ai/db-overhaul-merged-p0.md`](../../ai/db-overhaul-merged-p0.md) — clash resolutions + slice order with triage P0. Person shape still owned here.
 
 **ID / blast (via merge doc M11/M12):** CRM PKs = `bigint` identity; hard wipe OK (app not live). In-wave apps = database + api + mobile; web deferred.
 
-Last updated: 2026-08-07 (STEP 3: notes/relationship + Q31 Meili freeze)
+Last updated: 2026-08-07 (docs retarget — status reflects as-built)
 
 ---
 
@@ -35,7 +35,7 @@ FE needs two sections (Médicos / Administrativos). Same human can exist twice.
 - Correct scalable model preferred over lean shortcuts  
 - Semantic column types; no blind columns  
 - No catalog **data** seeds until post-overhaul (exception: two classification codes — §6.5)  
-- Feature docs stay “current dual tables” until ship; **this ADR** holds target design  
+- Feature docs retargeted to as-built person model; **this ADR** remains design SoT  
 
 ### 1.3 Separated concepts
 
@@ -485,7 +485,7 @@ Only when projection API lands: two rows in §5.9. Nothing else.
 | `facility_professionals.occupation_code` LEGACY/MED | **Discard** (not CBO) |
 | `facility_professionals.specialty_label` | **Dropped (Q11)** |
 | `facility_professionals.employment_type_code` | **Dropped (Q20)** |
-| `facility_professionals` booleans | Future role_codes (not seeded now) |
+| `facility_professionals` booleans | `person_facility_role_assignments` (codes seeded `0054`) |
 | `facility_representatives` identity | `persons` (+ create/link); `tax_id` → `cpf` |
 | `facility_representatives` link fields | `person_facilities` + classification ADMINISTRATIVE + roles |
 | `facility_representatives.contact_type` | Drop |

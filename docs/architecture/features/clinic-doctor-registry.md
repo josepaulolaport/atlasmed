@@ -1,35 +1,60 @@
-# Feature: Facility and Professional CRM
+# Feature: Facility and Person CRM
 
 ## Current State
 
-AtlasMed has clinic and doctor CRM support: facility records, professional records, facility–professional associations, facility representatives (administrative contacts), notes, relationship scores, Meilisearch indexes, and purchase-recurrence snapshots. CNES registry warehouse ingest and `/registry/*` READ/confirm are **removed**.
+AtlasMed has clinic and person CRM support: facilities, unified `persons` with facility affiliations, healthcare vs administrative classifications, role assignments, private notes, relationship scores, Meilisearch indexes (`facilities` + `persons`), and purchase-recurrence snapshots. CNES registry warehouse ingest and `/registry/*` READ/confirm are **removed**.
 
 User-submitted field corrections and deactivation requests use `public.field_suggestions` (Não Conformidades) — see Spec 0007. That path is not a CNES registry suggestion queue.
 
+Person model design: [ADR 0004](../adr/0004-person-facility-model.md).
+
 ## Current Data Concepts
 
-- **Facility** — Pessoa Jurídica (CNPJ) or Pessoa Física (CPF), discriminated by `taxIdType`. May carry `cnes_code` and other CRM fields.
-- **Professional** — healthcare person record (`professionals`): identity fields plus optional CRM / CNES professional identifiers and primary specialty label.
-- **Facility–professional association** — `facility_professionals` (occupation code, commercial flags such as prescriber/buyer/decision-maker/partner, confirmation and end lifecycle).
-- **Facility representative** — `facility_representatives`: administrative/commercial contact stored **per facility** with its own name/contact fields and role flags (administrator, buyer, decision-maker, partner, biller, secretary). Not the same table as `professionals`.
-- **Professional notes** / **facility notes** — private per-user notes.
-- **User–professional / user–representative relationships** — private 1–10 relationship strength scores.
-- **Occupations** — public CNES CBO lookup catalog (`occupations`).
-- **Field suggestions** — user-submitted Não Conformidades (`field_suggestions`).
+- **Facility** — Pessoa Jurídica (CNPJ) or Pessoa Física (CPF), discriminated by `legal_document_type` / `legal_document`. May carry `cnes_code`, `unit_type_id` / `unit_subtype_id` (CNES TP_UNIDADE catalogs), and other CRM fields.
+- **Person** — one external human (`persons`): identity (`first_name`, `last_name`, `cpf`, phones, email, …). Soft-delete via `deleted_at`.
+- **Healthcare profile** — optional `person_healthcare_profiles` (e.g. CNES professional id) + specialties M2M + professional registrations (CRM triple).
+- **Affiliation** — `person_facilities` (active when `ended_at` is null). Classifications via `person_facility_classification_assignments` (`HEALTHCARE_PROFESSIONAL` / `ADMINISTRATIVE_CONTACT`). Roles via `person_facility_role_assignments` (seeded codes: PRESCRIBER, BUYER, …).
+- **Person notes** / **facility notes** — private per-user notes (`person_notes`, `facility_notes`).
+- **User–person relationships** — private 1–10 relationship strength (`user_person_relationships`).
+- **Occupations** — CNES CBO catalog (`occupations`: `id` + `cnes_id` + `name`); affiliation occupations in `person_facility_occupations`.
+- **Field suggestions** — user-submitted Não Conformidades (`field_suggestions`, `person_id` when person-scoped).
 
-### Facility types
+### Facility legal document types
 
-| `taxIdType` | Tax ID | Meaning |
+| `legalDocumentType` | Document | Meaning |
 |---|---|---|
-| `PJ` | CNPJ | Pessoa Jurídica — legal entity (clinic, hospital, lab) |
-| `PF` | CPF | Pessoa Física — individual practitioner operating as a service point |
+| `CNPJ` | 14 digits | Pessoa Jurídica — legal entity (clinic, hospital, lab) |
+| `CPF` | 11 digits | Pessoa Física — individual practitioner operating as a service point |
+
+## API surfaces (as-built)
+
+Facility-scoped projections (CASL `PERSON` + facility scope):
+
+| Method | Path |
+|---|---|
+| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` |
+| GET/PATCH | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` |
+| PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` |
+| GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` |
+| GET/PATCH | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` |
+| PUT | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId/roles` |
+
+Person-scoped:
+
+| Method | Path |
+|---|---|
+| GET/PATCH | `/api/v1/persons/:personId` |
+| GET/POST | `/api/v1/persons/:personId/notes` |
+| GET + PUT/PATCH | `/api/v1/persons/:personId/relationship` |
+| GET | `/api/v1/healthcare-professionals` (Explorar / Meili) |
+| GET | `/api/v1/healthcare-professionals/specialties` |
+
+Do not call removed registry endpoints (`/registry/*`) or deleted `/api/v1/professionals/*`.
 
 ## Frontend surfaces (current)
 
-- **Web:** facilities, professionals, facility detail (including professionals / representatives where implemented).
-- **Mobile:** Explore + establishment detail — Médicos from CRM `facility_professionals` + `professionals`; Profissionais administrativos from `facility_representatives`. See Spec 0005.
-
-Do not call removed registry endpoints (`/registry/*`, `/facilities/:id/registry/*`).
+- **Web:** facilities and related admin surfaces; person/professional web rewire **deferred** (wave M12).
+- **Mobile:** Explore + establishment detail — Médicos via healthcare projection; administrativos via administrative-contacts projection; doctor detail/notes/relationship/roles on person paths. See Spec 0005.
 
 ## Recurring Purchase Profile and Funnel
 
@@ -113,7 +138,7 @@ Authorization: Bearer $ATLASMED_TOKEN
 { "entity": "facilities" }
 ```
 
-The returned workflow ID is normally `search-sync-facilities-full`; inspect it with `GET /sync/:workflowId`. The rebuild uses a temporary index and atomic swap.
+The returned workflow ID is normally `search-sync-facilities-full`; inspect it with `GET /sync/:workflowId`. The rebuild uses a temporary index and atomic swap. Person Explorar index uid is `persons`; full rebuild via `POST /sync` with `{"entity": "persons"}` (same authorized sync surface; `SearchSyncEntity` includes `facilities` | `persons` | `orders`).
 
 Use this aggregate to compare distributions before and after backfill or a rebuild:
 
@@ -150,6 +175,7 @@ For the architectural rationale, lifecycle, consistency model, concurrency, and 
 
 ## Related specs
 
-- Spec 0002 — Facility and Professional CRM requirements (baseline).
+- Spec 0002 — Facility and Professional CRM requirements (baseline; table names historically pre-person).
 - Spec 0005 — Mobile establishment detail (Médicos / administrativos UX).
 - Spec 0007 — Não Conformidades (`field_suggestions`).
+- ADR 0004 — Person + facility affiliation model.

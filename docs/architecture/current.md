@@ -14,16 +14,16 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, 
 - Jobs: BullMQ.
 - Background workflows: Temporal (`apps/workers/temporal`, package `@atlasmed/temporal-worker`, default queue `atlasmed-workflows`).
 - Logging/observability: structured logger, OpenTelemetry utilities, Prometheus metrics.
-- Search: Meilisearch (facility and professional indexes; rebuild via search-sync workflows).
+- Search: Meilisearch (facility and persons indexes; rebuild via search-sync workflows).
 
 ## Backend Module Boundaries
 
 - `access`: identity, users, roles, sessions, invitations, verification, 2FA, permissions, scopes.
-- `facility`: facilities, facility–professional associations, facility representatives, consultant assignments, cadastro submissions, conformity.
-- `professional`: professionals, professional notes, user–professional relationships.
-- `territory`: territory types, hierarchy, spatial assignment, approval workflows.
+- `facility`: facilities, consultant assignments, cadastro submissions, conformity; HTTP adapters for person–facility projections.
+- `person`: persons, healthcare/admin facility projections, notes, user–person relationships, Explorar list/specialties.
+- `territory`: territory types, hierarchy, spatial assignment (manager approve flow removed).
 - `catalog`: products.
-- `orders`: orders linked to facilities (and optionally professionals).
+- `orders`: orders linked to facilities (and optionally `person_id`).
 - `field-suggestions`: user-submitted Não Conformidades (`field_suggestions`).
 - `dashboard`, `maps`, `potential`, `search-sync`, `sessions`, `user`, `visits`.
 
@@ -38,7 +38,7 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, 
 
 ## Mobile Architecture
 
-- Flutter app under `apps/mobile` (Explore, facility detail, professionals, orders-related surfaces).
+- Flutter app under `apps/mobile` (Explore, facility detail / person roster, orders-related surfaces).
 - ADR 0002 (React Native/Expo) remains **Proposed**; Flutter is the implemented client.
 
 ## Data Architecture
@@ -47,7 +47,7 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, 
 
 PostgreSQL named schemas in use:
 
-- `public` — CRM and operational data (users, sessions, facilities, professionals, territories, catalog, orders, field suggestions, cadastro, CNES lookup catalogs, etc.).
+- `public` — CRM and operational data (users, sessions, facilities, persons / person_facilities, territories, catalog, orders, field suggestions, cadastro, CNES lookup catalogs, etc.).
 - `audit` — `audit_logs` compliance trail.
 
 There is **no** `registry` or `ingestion` schema. CNES FTP/archive warehouse ingest and registry READ/confirm were removed. Public CNES lookup tables and `facilities.cnes_code` remain. Do not reintroduce a registry warehouse without a new ADR and product decision.

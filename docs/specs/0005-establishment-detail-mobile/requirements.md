@@ -70,8 +70,8 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 | UI (pt-BR) | API / DB |
 |------------|----------|
 | Clínica / estabelecimento | `facilities` |
-| Profissionais administrativos | `public.facility_representatives` |
-| Médicos | `public.facility_professionals` + `public.professionals` (CRM, `view=all`) |
+| Profissionais administrativos | `GET/POST/PATCH …/facilities/:id/administrative-contacts` → `persons` + `person_facilities` + classification `ADMINISTRATIVE_CONTACT` + role assignments |
+| Médicos | `GET/POST/PATCH …/facilities/:id/healthcare-professionals` → `persons` + `person_facilities` + classification `HEALTHCARE_PROFESSIONAL` (+ healthcare profile / specialties as returned) |
 | Convênios | `healthcare_providers` + `facility_healthcare_provider_shares` |
 | Pedidos | `orders` + `order_items` |
 | Estabelecimentos próximos | `GET /facilities` geo query scoped to establishment coordinates |
@@ -80,8 +80,8 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 
 | # | Decision |
 |---|----------|
-| 1 | **Administrative professionals** come from `public.facility_representatives` only. CNES registry READ endpoints are removed — do not call or reintroduce `/registry/*` for this screen. |
-| 3 | **Médicos** section shows CRM associations via `GET /facilities/:id/professionals?view=all` (source-active CNES **or** confirmed). **Superseded by v22** (was `view=confirmed`). |
+| 1 | **Administrative professionals** come from the administrative-contacts projection only (`ADMINISTRATIVE_CONTACT`). CNES registry READ endpoints are removed — do not call or reintroduce `/registry/*` for this screen. |
+| 3 | **Médicos** section shows CRM affiliations via `GET /facilities/:id/healthcare-professionals` (active `person_facilities` with healthcare classification). Historical `GET …/professionals?view=*` paths are **removed**. |
 | 4 | **Convênios** in v1 using existing catalog shares API (`GET /facilities/:id/healthcare-provider-shares`). |
 | 6 | Implementation order: **frontend with mocked data first**, then backend contract + wire-up. |
 
