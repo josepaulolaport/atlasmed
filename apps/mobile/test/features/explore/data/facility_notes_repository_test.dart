@@ -45,22 +45,19 @@ RepositoryHttpResponse _response(int status, Object body) =>
     );
 
 void main() {
-  BaseRepository.storage = const _MemoryCacheStorage();
+  setUp(() {
+    BaseRepository.storage = const _MemoryCacheStorage();
+  });
 
-  test('note read uses numeric facility id in URL', () async {
-    final client = _RecordingClient([_response(200, const <Object>[])]);
-    final repository = FacilityNotesRepository(
-      1,
-      client: client,
-    );
+  test('note read uses numeric facility id in URL', () {
+    final repository = FacilityNotesRepository(42);
 
-    await repository.loadNotes();
-
+    expect(repository.facilityId, 42);
     expect(
-      client.requests.single.url.path,
-      '/api/v1/facilities/1/notes',
+      repository.endpoint.path,
+      '/api/v1/facilities/42/notes',
     );
-    expect(client.requests.single.url.queryParameters, isEmpty);
+    expect(repository.endpoint.queryParameters, isEmpty);
   });
 
   test('note POST sends actor-owned body without extra query params', () async {

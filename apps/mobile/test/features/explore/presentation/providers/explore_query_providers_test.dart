@@ -125,7 +125,7 @@ void main() {
     expect(query.commercialStatus, 'ACTIVE');
     expect(query.purchaseBucket, 'active');
     expect(query.productIds, 'product-1,product-2');
-    expect(query.clinicalFocusIds, 1);
+    expect(query.clinicalFocusIds, '1');
     expect(query.purchaseFunnelStages, [PurchaseFunnelStage.purchaseWindow]);
     expect(query.purchaseProfile, PurchaseProfile.monthly);
     expect(query.purchaseIntervalMinDays, 10);

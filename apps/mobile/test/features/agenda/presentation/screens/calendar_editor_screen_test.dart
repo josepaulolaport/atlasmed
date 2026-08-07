@@ -65,10 +65,11 @@ Widget _app(
 );
 
 CalendarOccurrence _recurringOccurrence() => CalendarOccurrence.fromJson({
-  'id': 'calendar-1:key-1',
-  'calendarId': 'calendar-1',
+  'id': 1,
+  'occurrenceId': '1:key-1',
+  'calendarId': 1,
   'recurrenceKey': 'key-1',
-  'ownerUserId': 'rep-1',
+  'ownerUserId': 1,
   'kind': 'PERSONAL_BLOCK',
   'title': 'Bloqueio semanal',
   'startsAt': '2026-08-03T12:00:00.000Z',

@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/interaction_screen.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
@@ -228,6 +229,13 @@ Widget _app(
 void main() {
   setUpAll(() {
     BaseRepository.storage = const _MemoryCacheStorage();
+    SessionEnvironment.instance.timer?.cancel();
+    SessionEnvironment.instance.timer = null;
+  });
+
+  tearDown(() {
+    SessionEnvironment.instance.timer?.cancel();
+    SessionEnvironment.instance.timer = null;
   });
 
   testWidgets('opening shows context and does not auto-start', (tester) async {

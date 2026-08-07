@@ -79,6 +79,17 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "PUT /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_UPDATED" },
   "PATCH /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_UPDATED" },
   "DELETE /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_DEACTIVATED", severity: "WARNING" },
+
+  // --- Interactions / calendar ---
+  "POST /api/v1/interactions/:id/start": { eventType: "INTERACTION.STARTED" },
+  "POST /api/v1/interactions/:id/complete": { eventType: "INTERACTION.COMPLETED" },
+  "PATCH /api/v1/calendar/:id/occurrences/:id": {
+    eventType: "CALENDAR.OCCURRENCE_RESCHEDULED",
+  },
+  "DELETE /api/v1/calendar/:id/occurrences/:id": {
+    eventType: "CALENDAR.OCCURRENCE_CANCELLED",
+    severity: "WARNING",
+  },
 };
 
 /** Numeric CRM ids and legacy cuid-shaped segments → :id */
@@ -86,10 +97,12 @@ const PATH_PARAM_PATTERN = /\/(?:\d+|[0-9a-z]{20,})(?=\/|$)/gi;
 
 /**
  * Normalizes a concrete request path to its route template by replacing
- * numeric / legacy cuid path segments with :id placeholders.
+ * numeric / legacy cuid path segments (and calendar occurrence keys) with :id.
  */
 function normalizePath(path: string): string {
-  return path.replace(PATH_PARAM_PATTERN, "/:id");
+  return path
+    .replace(PATH_PARAM_PATTERN, "/:id")
+    .replace(/\/occurrences\/[^/]+/gi, "/occurrences/:id");
 }
 
 export function resolveAuditEvent(

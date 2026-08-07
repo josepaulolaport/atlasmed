@@ -73,7 +73,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PED-1'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
     expect(find.text('Repetir pedido'), findsNothing);
   });
 }

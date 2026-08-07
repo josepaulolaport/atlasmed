@@ -57,7 +57,8 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
 
 CalendarOccurrence _occurrence({int version = 8, int? overrideVersion}) =>
     CalendarOccurrence.fromJson({
-      'id': '1:key-1',
+      'id': 1,
+      'occurrenceId': '1:key-1',
       'calendarId': 1,
       'recurrenceKey': 'key-1',
       'ownerUserId': 1,
@@ -142,7 +143,7 @@ void main() {
 
       final command = notifier.state.draft.toCreateCommand();
 
-      expect(command.startsAt, '2026-08-03T09:30:00.000+00:00');
+      expect(command.startsAt, '2026-08-03T09:30:00.000-03:00');
       expect(command.recurrence, CalendarRecurrence.monthly);
       expect(command.recurrenceCount, 6);
       expect(command.recurrenceUntil, isNull);
@@ -155,7 +156,8 @@ void main() {
     'series update does not overwrite recurrence when list DTO omitted it',
     () {
       final occurrence = CalendarOccurrence.fromJson({
-        'id': 'calendar-1:key-1',
+        'id': 1,
+        'occurrenceId': '1:key-1',
         'calendarId': 1,
         'recurrenceKey': 'key-1',
         'ownerUserId': 1,
@@ -185,7 +187,8 @@ void main() {
     'explicit recurrence change is included after list DTO omitted recurrence',
     () {
       final occurrence = CalendarOccurrence.fromJson({
-        'id': 'calendar-1:key-1',
+        'id': 1,
+        'occurrenceId': '1:key-1',
         'calendarId': 1,
         'recurrenceKey': 'key-1',
         'ownerUserId': 1,

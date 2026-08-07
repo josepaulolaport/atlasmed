@@ -130,8 +130,8 @@ void main() {
           'message': 'Horário indisponível.',
           'conflicts': [
             {
-              'candidateId': 'candidate-1',
-              'existingId': 'calendar-1',
+              'candidateId': 10,
+              'existingId': 1,
               'candidateStartsAt': '2026-08-03T12:00:00.000Z',
               'candidateEndsAt': '2026-08-03T13:00:00.000Z',
               'existingStartsAt': '2026-08-03T12:30:00.000Z',
