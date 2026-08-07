@@ -651,6 +651,148 @@ const createFacilityVisitRoute = new Elysia()
     }
   );
 
+const MAX_FACILITY_NOTE_LENGTH = 2000;
+
+const listFacilityNotesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+  .get(
+    "/facilities/:id/notes",
+    async ({ params, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return facilityUseCases.listFacilityNotes().execute({
+        facilityId: params.id,
+        userId,
+        scope,
+      });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
+      detail: {
+        summary: "List private field notes for a facility (caller-owned)",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const createFacilityNoteRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .post(
+    "/facilities/:id/notes",
+    async ({ params, body, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return facilityUseCases.createFacilityNote().execute({
+        facilityId: params.id,
+        userId,
+        note: body.note,
+        scope,
+      });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
+      detail: {
+        summary: "Create a private field note for a facility",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        note: t.String({ minLength: 1, maxLength: MAX_FACILITY_NOTE_LENGTH }),
+      }),
+    }
+  );
+
+const listFacilityPhotosRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+  .get(
+    "/facilities/:id/photos",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      return facilityUseCases.listFacilityPhotos().execute({
+        facilityId: params.id,
+        scope,
+      });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
+      detail: {
+        summary: "List photos for a facility",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const uploadFacilityPhotoRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .post(
+    "/facilities/:id/photos",
+    async ({ params, body, getScope, getUserId }) => {
+      const photo = body.photo;
+      if (!(photo instanceof File)) {
+        throw new ValidationError([
+          { field: "photo", message: "Photo file is required" },
+        ]);
+      }
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return facilityUseCases.uploadFacilityPhoto().execute({
+        facilityId: params.id,
+        userId,
+        scope,
+        file: photo,
+      });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
+      detail: {
+        summary: "Upload a facility photo",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        photo: t.File({ description: "JPEG, PNG, or WebP image up to 5 MB" }),
+      }),
+    }
+  );
+
+const downloadFacilityPhotoRoute = new Elysia()
+  .use(auth)
+  .get(
+    "/facilities/photos/*",
+    async ({ params, set }) => {
+      const key = params["*"];
+      if (typeof key !== "string") {
+        throw new ValidationError([
+          { field: "key", message: "Invalid facility photo key" },
+        ]);
+      }
+      const result = await facilityUseCases.downloadFacilityPhoto().execute({
+        storageKey: key,
+      });
+      set.headers["content-type"] = result.contentType;
+      set.headers["cache-control"] = "private, max-age=3600";
+      return result.bytes;
+    },
+    {
+      detail: {
+        summary: "Download a facility photo by storage key",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
 export const facilitiesRoute = new Elysia()
   .use(cadastroSubmissionsRoute)
   .use(mapFacilitiesRoute)

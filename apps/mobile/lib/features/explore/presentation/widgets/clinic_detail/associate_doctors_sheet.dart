@@ -457,9 +457,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     final chosen = _pool.where((d) => _selected.contains(d.id)).toList();
     if (chosen.isEmpty || !_useApi) return;
 
-    // Doctors created via POST /professionals?facilityIds= already linked.
-    // Only call associate for pool picks that were not just created into this
-    // facility (create flow already associates).
+    // Create flow already POSTs healthcare-professionals. Associate only
+    // pool picks not yet linked (POST { personId }).
     setState(() => _saving = true);
     final repo = FacilityAssociateRepository(widget.facilityId!);
     try {

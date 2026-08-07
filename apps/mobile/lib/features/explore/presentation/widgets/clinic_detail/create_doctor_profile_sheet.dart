@@ -3,8 +3,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_ro
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
+// Create body → POST /facilities/:id/healthcare-professionals
+// (firstName/lastName/mobilePhone/email/roleTitle). Role toggles are local-only.
+
 /// Create a doctor profile. When [facilityId] is a real facility, persists via
-/// `POST /professionals` (with facility link) + optional role PATCH.
+/// `POST /facilities/:id/healthcare-professionals`.
 Future<ProfessionalRoster?> showCreateDoctorProfileSheet(
   BuildContext context, {
   int? facilityId,

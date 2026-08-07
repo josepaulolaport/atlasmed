@@ -30,6 +30,10 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   final int facilityId;
   final RepositoryHttpClient? _client;
 
+  String get _healthcarePath =>
+      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
+      '/healthcare-professionals';
+
   @override
   RepositoryHttpClient get client => _client ?? super.client;
 
@@ -37,6 +41,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   PaginatedProfessionals fromJson(String json) =>
       PaginatedProfessionals.fromJson(json);
 
+  /// Global Explorar search — still hits `GET /professionals` (Q31; may 404).
   Future<List<ProfessionalRoster>> searchDoctors({
     String? search,
     int limit = 40,
@@ -56,15 +61,14 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
   }
 
-  Future<void> associateDoctor(int professionalId) async {
+  /// Link an existing person as healthcare professional at this facility.
+  Future<void> associateDoctor(int personId) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId/associate',
-        ),
+        url: Uri.parse(_healthcarePath),
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
+        body: {'personId': personId},
       ),
     );
 
@@ -90,21 +94,19 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     bool isBuyer = false,
     bool isDecisionMaker = false,
   }) async {
+    // CRM / specialty / role booleans are not on the projection create body.
+    // `roleTitle` is the only affiliation label we can persist today.
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals'),
+        url: Uri.parse(_healthcarePath),
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
         body: {
           'firstName': firstName,
           'lastName': lastName,
-          if (specialty != null && specialty.isNotEmpty)
-            'primarySpecialtyLabel': specialty,
-          if (crmNumber != null && crmNumber.isNotEmpty) 'crmNumber': crmNumber,
-          if (crmState != null && crmState.isNotEmpty) 'crmState': crmState,
           if (phone != null && phone.isNotEmpty) 'mobilePhone': phone,
           if (email != null && email.isNotEmpty) 'email': email,
-          'facilityIds': [facilityId],
+          if (specialty != null && specialty.isNotEmpty) 'roleTitle': specialty,
         },
       ),
     );
@@ -119,72 +121,26 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final dto = ProfessionalDTO.fromMap(map);
+    final dto = FacilityProfessionalItemDTO.fromMap(map);
+    final roster = ProfessionalRoster.fromRosterItem(dto);
 
-    final needsRolePatch = isPrescriber || isBuyer || isDecisionMaker;
-    if (needsRolePatch) {
-      await _patchRoles(
-        dto.id,
-        isPrescriber: isPrescriber,
-        isBuyer: isBuyer,
-        isDecisionMaker: isDecisionMaker,
-      );
-    }
-
-    final name = dto.displayName;
-    return ProfessionalRoster(
-      id: dto.id,
-      name: name,
-      initials: initialsFromName(name),
-      hue: hueFromName(name),
-      specialty: specialty ?? dto.specialty,
-      crm: dto.crm.isEmpty ? null : dto.crm,
-      phone: phone ?? dto.phone,
-      email: email ?? dto.email,
+    // Role booleans have no API — keep local flags for UI only.
+    return roster.copyWith(
+      specialty: specialty ?? roster.specialty,
+      crm: _formatCrm(crmNumber, crmState) ?? roster.crm,
+      phone: phone ?? roster.phone,
+      email: email ?? roster.email,
       isPrescriber: isPrescriber,
       isBuyer: isBuyer,
       isDecisionMaker: isDecisionMaker,
       roleBadge: isDecisionMaker ? 'DECISOR' : null,
+      clearRoleBadge: !isDecisionMaker,
     );
   }
 
-  Future<void> _patchRoles(
-    int professionalId, {
-    bool isPartner = false,
-    required bool isPrescriber,
-    required bool isBuyer,
-    required bool isDecisionMaker,
-    bool throwOnError = false,
-  }) async {
-    final response = await client.call(
-      request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId',
-        ),
-        method: RepositoryHttpMethod.patch,
-        headers: const {'Content-Type': 'application/json'},
-        body: {
-          'isPartner': isPartner,
-          'isPrescriber': isPrescriber,
-          'isBuyer': isBuyer,
-          'isDecisionMaker': isDecisionMaker,
-        },
-      ),
-    );
-
-    if (!successfulCondition(response.statusCode, response.body)) {
-      if (throwOnError) {
-        throw FacilityAssociateException(
-          'Falha ao salvar papel (${response.statusCode})',
-        );
-      }
-      // Association already exists; role flags are best-effort on create.
-      await onErrorStatusCode(response.statusCode);
-    }
-  }
-
-  /// Updates facility-scoped role flags for an associated doctor.
+  /// Role boolean assignment API was removed with `facility_professionals`.
+  /// Projection PATCH accepts only identity/roleTitle/notes — cannot map
+  /// isPrescriber/isBuyer/isDecisionMaker. Applies flags locally only.
   Future<ProfessionalRoster> updateDoctorRoles(
     ProfessionalRoster doctor, {
     required bool isPartner,
@@ -192,14 +148,16 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     required bool isBuyer,
     required bool isDecisionMaker,
   }) async {
-    await _patchRoles(
-      doctor.id,
-      isPartner: isPartner,
-      isPrescriber: isPrescriber,
-      isBuyer: isBuyer,
-      isDecisionMaker: isDecisionMaker,
-      throwOnError: true,
-    );
+    // Best-effort: if we have personFacilityId and roleTitle-like specialty,
+    // PATCH notes/roleTitle only. Boolean roles are intentionally not sent.
+    final personFacilityId = doctor.personFacilityId;
+    if (personFacilityId != null) {
+      await _patchAffiliation(
+        personFacilityId,
+        roleTitle: doctor.specialty,
+        throwOnError: false,
+      );
+    }
 
     return doctor.copyWith(
       isPartner: isPartner,
@@ -211,59 +169,53 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     );
   }
 
-  /// User×professional relationship (1–10). Null clears the score.
+  /// Person-relationship API not landed — fail closed (no fake success).
   Future<int?> updateRelationshipLevel(
-    int professionalId, {
+    int personId, {
     int? relationshipLevel,
   }) async {
-    final response = await client.call(
-      request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId',
-        ),
-        method: RepositoryHttpMethod.patch,
-        headers: const {'Content-Type': 'application/json'},
-        body: {'relationshipLevel': relationshipLevel},
-      ),
+    // Former: PATCH /facilities/:id/professionals/:professionalId
+    // Match administrative-contacts fail-closed so doctor_detail_screen
+    // reverts optimistic stars instead of showing a saved score that never persists.
+    throw const FacilityAssociateException(
+      'Relacionamento de médico ainda não disponível',
     );
+  }
 
-    if (!successfulCondition(response.statusCode, response.body)) {
-      throw FacilityAssociateException(
-        'Falha ao salvar relacionamento (${response.statusCode})',
-      );
-    }
-
-    final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final value = map['relationshipLevel'];
-    if (value is int) return value;
-    if (value is num) return value.toInt();
+  /// Person-relationship API not landed — returns null.
+  Future<int?> fetchRelationshipLevel(int personId) async {
     return null;
   }
 
-  /// Current association context including the caller's relationship score.
-  Future<int?> fetchRelationshipLevel(int professionalId) async {
+  Future<void> _patchAffiliation(
+    int personFacilityId, {
+    String? roleTitle,
+    String? notes,
+    bool throwOnError = false,
+  }) async {
+    final body = <String, Object?>{
+      'roleTitle': ?roleTitle,
+      'notes': ?notes,
+    };
+    if (body.isEmpty) return;
+
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId',
-        ),
-        method: RepositoryHttpMethod.get,
+        url: Uri.parse('$_healthcarePath/$personFacilityId'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: body,
       ),
     );
 
     if (!successfulCondition(response.statusCode, response.body)) {
-      return null;
+      if (throwOnError) {
+        throw FacilityAssociateException(
+          'Falha ao atualizar afiliação (${response.statusCode})',
+        );
+      }
+      await onErrorStatusCode(response.statusCode);
     }
-
-    final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final association = map['association'];
-    if (association is! Map) return null;
-    final value = association['relationshipLevel'];
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return null;
   }
 
   ProfessionalRoster _doctorFromDTO(ProfessionalDTO d) {
@@ -279,7 +231,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   }
 }
 
-/// Split a full name into first/last for `POST /professionals`.
+/// Split a full name into first/last for person projection create.
 ({String firstName, String lastName}) splitPersonName(String fullName) {
   final parts = fullName.trim().split(RegExp(r'\s+'));
   if (parts.isEmpty || parts.first.isEmpty) {
@@ -308,4 +260,12 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     return (number: trimmed, state: state);
   }
   return (number: digits, state: state);
+}
+
+String? _formatCrm(String? number, String? state) {
+  final n = number?.trim();
+  if (n == null || n.isEmpty) return null;
+  final s = state?.trim();
+  if (s == null || s.isEmpty) return 'CRM $n';
+  return 'CRM/$s $n';
 }

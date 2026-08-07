@@ -17,7 +17,9 @@ class FacilityRepresentativesException implements Exception {
   String toString() => message ?? 'FacilityRepresentativesException';
 }
 
-/// Paginated CRM administrative professionals for a facility.
+/// Administrative contacts for a facility.
+///
+/// Source: `GET|POST|PATCH /api/v1/facilities/:id/administrative-contacts`
 class FacilityRepresentativesRepository
     extends Repository<PaginatedFacilityRepresentatives>
     with SessionEnvironmentMixin<PaginatedFacilityRepresentatives> {
@@ -31,13 +33,8 @@ class FacilityRepresentativesRepository
        super(
          endpoint: buildEndpoint(
            baseUrl: AppConfig.apiBaseUrl,
-           path: '/api/v1/facilities/$facilityId/representatives',
-           queryParameters: {
-             'page': '$page',
-             'limit': '$limit',
-             if (search != null && search.trim().isNotEmpty)
-               'search': search.trim(),
-           },
+           path: '/api/v1/facilities/$facilityId/administrative-contacts',
+           queryParameters: const {},
          ),
          name: 'FacilityRepresentativesRepository',
        );
@@ -47,6 +44,10 @@ class FacilityRepresentativesRepository
   final int limit;
   final String? search;
   final RepositoryHttpClient? _client;
+
+  String get _contactsPath =>
+      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
+      '/administrative-contacts';
 
   @override
   RepositoryHttpClient get client => _client ?? super.client;
@@ -60,19 +61,34 @@ class FacilityRepresentativesRepository
     if (result == null) {
       throw const FacilityRepresentativesException();
     }
+    var items = result.items
+        .map((item) => item.toDomain())
+        .toList(growable: false);
+    final q = search?.trim();
+    if (q != null && q.isNotEmpty) {
+      final lower = q.toLowerCase();
+      items = items
+          .where((p) => p.name.toLowerCase().contains(lower))
+          .toList(growable: false);
+    }
     return FacilityRosterPage(
-      items: result.items
-          .map((item) => item.toDomain())
-          .toList(growable: false),
-      pagination: result.pagination,
+      items: items,
+      pagination: Pagination(
+        page: 1,
+        limit: items.length,
+        total: items.length,
+        totalPages: 1,
+      ),
     );
   }
 
   Future<AdministrativeProfessional> create({
-    required String representativeName,
+    required String firstName,
+    required String lastName,
     String? roleTitle,
     String? email,
-    String? phone,
+    String? mobilePhone,
+    // Legacy role flags — no longer accepted by API; ignored.
     bool isPartner = false,
     bool isAdministrator = false,
     bool isDecisionMaker = false,
@@ -82,22 +98,16 @@ class FacilityRepresentativesRepository
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/representatives',
-        ),
+        url: Uri.parse(_contactsPath),
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
         body: {
-          'representativeName': representativeName,
+          'firstName': firstName,
+          'lastName': lastName,
           if (roleTitle != null && roleTitle.isNotEmpty) 'roleTitle': roleTitle,
           if (email != null && email.isNotEmpty) 'email': email,
-          if (phone != null && phone.isNotEmpty) 'phone': phone,
-          'isPartner': isPartner,
-          'isAdministrator': isAdministrator,
-          'isDecisionMaker': isDecisionMaker,
-          'isBuyer': isBuyer,
-          'isBiller': isBiller,
-          'isSecretary': isSecretary,
+          if (mobilePhone != null && mobilePhone.isNotEmpty)
+            'mobilePhone': mobilePhone,
         },
       ),
     );
@@ -105,12 +115,15 @@ class FacilityRepresentativesRepository
     return _parseMutationResponse(response, 'criar');
   }
 
+  /// [representativeId] is `personFacilityId` (domain [AdministrativeProfessional.id]).
   Future<AdministrativeProfessional> updateRepresentative({
     required int representativeId,
-    String? representativeName,
+    String? firstName,
+    String? lastName,
     String? roleTitle,
     String? email,
-    String? phone,
+    String? mobilePhone,
+    // Legacy role / relationship fields ignored — API has no equivalents.
     bool? isPartner,
     bool? isAdministrator,
     bool? isDecisionMaker,
@@ -120,28 +133,33 @@ class FacilityRepresentativesRepository
     int? relationshipLevel,
     bool clearRelationshipLevel = false,
   }) async {
+    // Relationship score has no administrative-contacts field.
+    // Former user_representative_relationships PATCH is gone — fail closed
+    // so UI (representative_detail_screen) reverts optimistic local state.
+    final onlyRelationship =
+        firstName == null &&
+        lastName == null &&
+        roleTitle == null &&
+        email == null &&
+        mobilePhone == null &&
+        (relationshipLevel != null || clearRelationshipLevel);
+    if (onlyRelationship) {
+      throw const FacilityRepresentativesException(
+        'Relacionamento de contato administrativo ainda não disponível',
+      );
+    }
+
     final body = <String, Object?>{
-      'representativeName': ?representativeName,
+      'firstName': ?firstName,
+      'lastName': ?lastName,
       'roleTitle': ?roleTitle,
       'email': ?email,
-      'phone': ?phone,
-      'isPartner': ?isPartner,
-      'isAdministrator': ?isAdministrator,
-      'isDecisionMaker': ?isDecisionMaker,
-      'isBuyer': ?isBuyer,
-      'isBiller': ?isBiller,
-      'isSecretary': ?isSecretary,
-      if (clearRelationshipLevel)
-        'relationshipLevel': null
-      else
-        'relationshipLevel': ?relationshipLevel,
+      'mobilePhone': ?mobilePhone,
     };
 
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/representatives/$representativeId',
-        ),
+        url: Uri.parse('$_contactsPath/$representativeId'),
         method: RepositoryHttpMethod.patch,
         headers: const {'Content-Type': 'application/json'},
         body: body,

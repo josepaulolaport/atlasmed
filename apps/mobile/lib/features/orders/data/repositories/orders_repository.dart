@@ -279,18 +279,27 @@ class OrdersRepository extends Repository<OrdersPage>
     required int facilityId,
     required List<CreateOrderItemInput> items,
     int? verticalId,
-    int? professionalId,
+    int? personId,
     String? notes,
     double? freight,
+    String? idempotencyKey,
+    String? interactionId,
   }) async {
+    final headers = <String, String>{
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+        'Idempotency-Key': idempotencyKey,
+    };
+    // [interactionId] accepted for checkout call-site alignment; create-order
+    // body schema does not include it yet (would 422 if sent).
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/orders'),
         method: RepositoryHttpMethod.post,
+        headers: headers,
         body: {
           'facilityId': facilityId,
           'verticalId': ?verticalId,
-          'professionalId': ?professionalId,
+          'personId': ?personId,
           'notes': ?notes,
           'freight': ?freight,
           'items': items.map((item) => item.toJson()).toList(growable: false),

@@ -473,7 +473,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             facilityId: clinic.id,
             idempotencyKey: idempotencyKey,
             interactionId: cart.interactionId,
-            professionalId: cart.doctor?.id,
+            personId: cart.doctor?.id,
             items: cart.items
                 .map(
                   (item) => CreateOrderItemInput(

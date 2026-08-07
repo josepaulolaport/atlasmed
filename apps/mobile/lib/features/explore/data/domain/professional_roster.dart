@@ -2,14 +2,18 @@ import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.d
 
 /// Confirmed CRM doctor at a facility (roster context).
 ///
-/// Maps from [FacilityProfessionalItemDTO] — the facility-scoped
-/// professional association API response.
+/// Maps from flat [FacilityProfessionalItemDTO]
+/// (`/facilities/:id/healthcare-professionals`).
+///
+/// [id] is [personId] (cart/checkout / associate by person).
+/// [personFacilityId] is the affiliation row id for PATCH paths.
 class ProfessionalRoster {
   const ProfessionalRoster({
     required this.id,
     required this.name,
     required this.initials,
     required this.hue,
+    this.personFacilityId,
     this.specialty,
     this.crm,
     this.phone,
@@ -27,18 +31,24 @@ class ProfessionalRoster {
     this.relationshipScore,
   });
 
+  /// Person id — used by cart/checkout (`personId`) and associate.
   final int id;
+
+  /// `person_facilities.id` for PATCH `/healthcare-professionals/:id`.
+  final int? personFacilityId;
+
   final String name;
   final String initials;
   final double hue;
   final String? specialty;
   final String? crm;
 
-  /// Essential contact fields — mirrors `professionals.phone`/`email`.
+  /// Essential contact fields.
   final String? phone;
   final String? email;
 
-  /// Facility-association role flags (`facility_professionals`).
+  /// Legacy role flags — projection API no longer returns booleans.
+  /// Kept for local UI / mock sheets only.
   final bool isPartner;
   final bool isPrescriber;
   final bool isBuyer;
@@ -47,59 +57,41 @@ class ProfessionalRoster {
   /// Small highlight badge, e.g. "DECISORA", "NOVA".
   final String? roleBadge;
 
-  /// "Formação" — no backing field on `professionals` yet.
+  /// "Formação" — no backing field yet.
   final String? education;
 
-  /// "Aniversário" — mirrors `professionals.birthDate` once wired.
+  /// "Aniversário" — not on projection DTO yet.
   final String? birthdayLabel;
 
-  /// "Time" — mirrors `professionals.favoriteTeam` once wired.
+  /// "Time" — not on projection DTO yet.
   final String? favoriteTeam;
 
-  /// "Interesses" — mirrors `professionals.hobbies` once wired.
+  /// "Interesses" — not on projection DTO yet.
   final String? interests;
 
-  /// Most recent note from `professional_notes`, shown as an amber chip.
+  /// Most recent note — person notes API not landed.
   final String? noteText;
 
-  /// Authenticated user's relationship with this professional (1–10),
-  /// from `user_professional_relationships`. Null = not yet assessed.
-  /// Drives Relacionamento stars in the UI.
+  /// Relationship score — person relationship API not landed.
   final int? relationshipScore;
 
   factory ProfessionalRoster.fromRosterItem(FacilityProfessionalItemDTO item) {
-    final professional = item.professional;
-    final association = item.association;
-    final name = professional.fullName?.trim().isNotEmpty == true
-        ? professional.fullName!.trim()
-        : '${professional.firstName} ${professional.lastName}'.trim();
-    final phone = professional.mobilePhone?.trim().isNotEmpty == true
-        ? professional.mobilePhone
-        : professional.landlinePhone;
-    final crm = _formatCrm(professional.crmNumber, professional.crmState);
+    final name = item.displayName;
     return ProfessionalRoster(
-      id: professional.id,
+      id: item.personId,
+      personFacilityId: item.personFacilityId,
       name: name,
       initials: initialsFromName(name),
       hue: hueFromName(name),
-      specialty: professional.specialty ?? association.specialtyLabel,
-      crm: crm,
-      phone: phone,
-      email: professional.email,
-      isPartner: association.isPartner,
-      isPrescriber: association.isPrescriber,
-      isBuyer: association.isBuyer,
-      isDecisionMaker: association.isDecisionMaker,
-      roleBadge: association.isDecisionMaker ? 'DECISOR' : null,
-      birthdayLabel: _formatBirthday(professional.birthDate),
-      favoriteTeam: professional.favoriteTeam,
-      interests: professional.hobbies,
-      relationshipScore: association.relationshipLevel,
+      specialty: item.roleTitle,
+      phone: item.phone,
+      email: item.email,
     );
   }
 
   ProfessionalRoster copyWith({
     int? id,
+    int? personFacilityId,
     String? name,
     String? initials,
     double? hue,
@@ -122,6 +114,7 @@ class ProfessionalRoster {
   }) {
     return ProfessionalRoster(
       id: id ?? this.id,
+      personFacilityId: personFacilityId ?? this.personFacilityId,
       name: name ?? this.name,
       initials: initials ?? this.initials,
       hue: hue ?? this.hue,
@@ -155,30 +148,3 @@ String initialsFromName(String name) {
 }
 
 double hueFromName(String name) => (name.hashCode.abs() % 360).toDouble();
-
-String? _formatCrm(String? number, String? state) {
-  final n = number?.trim();
-  if (n == null || n.isEmpty) return null;
-  final s = state?.trim();
-  if (s == null || s.isEmpty) return 'CRM $n';
-  return 'CRM/$s $n';
-}
-
-String? _formatBirthday(DateTime? date) {
-  if (date == null) return null;
-  const months = [
-    'jan',
-    'fev',
-    'mar',
-    'abr',
-    'mai',
-    'jun',
-    'jul',
-    'ago',
-    'set',
-    'out',
-    'nov',
-    'dez',
-  ];
-  return '${date.day.toString().padLeft(2, '0')}/${months[date.month - 1]}';
-}

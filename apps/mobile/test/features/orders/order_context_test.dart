@@ -44,16 +44,16 @@ void main() {
   test('cart carries interaction context and locks its clinic', () {
     final notifier = CartNotifier();
     notifier.setInteractionContext(
-      interactionId: 'interaction-1',
-      clinic: const SelectableClinic(id: 'facility-1', name: 'Clínica Central'),
+      interactionId: '1',
+      clinic: const SelectableClinic(id: 1, name: 'Clínica Central'),
     );
 
     notifier.setClinic(
-      const SelectableClinic(id: 'facility-2', name: 'Outra clínica'),
+      const SelectableClinic(id: 2, name: 'Outra clínica'),
     );
 
-    expect(notifier.state.interactionId, 'interaction-1');
-    expect(notifier.state.clinic?.id, 'facility-1');
+    expect(notifier.state.interactionId, '1');
+    expect(notifier.state.clinic?.id, 1);
     expect(notifier.state.isClinicLocked, isTrue);
 
     notifier.clearCart();
@@ -61,22 +61,21 @@ void main() {
     expect(notifier.state.clinic, isNull);
   });
 
-  test('create request serializes interactionId', () async {
+  test('create request serializes personId and idempotency key', () async {
     final client = _RecordingClient(
       RepositoryHttpResponse(
         statusCode: 201,
         headers: const {},
         body: jsonEncode({
-          'id': 'order-1',
+          'id': 1,
           'idAvulsaEmultec': null,
-          'interactionId': 'interaction-1',
           'verticalId': null,
           'status': 'PENDING',
           'type': 'SALE',
           'orderedAt': null,
           'createdAt': '2026-08-03T12:00:00.000Z',
           'updatedAt': '2026-08-03T12:00:00.000Z',
-          'facility': {'id': 'facility-1', 'name': 'Clínica Central'},
+          'facility': {'id': 1, 'name': 'Clínica Central'},
           'professional': null,
           'seller': null,
           'itemCount': 1,
@@ -95,13 +94,16 @@ void main() {
     );
 
     await repository.createOrder(
-      facilityId: 'facility-1',
-      interactionId: 'interaction-1',
+      facilityId: 1,
+      interactionId: '42',
       idempotencyKey: 'order-attempt-1',
-      items: const [CreateOrderItemInput(productId: 'product-1', quantity: 1)],
+      personId: 99,
+      items: const [CreateOrderItemInput(productId: 7, quantity: 1)],
     );
 
-    expect(client.request!.body?['interactionId'], 'interaction-1');
+    expect(client.request!.body?['personId'], 99);
+    expect(client.request!.body?.containsKey('professionalId'), isFalse);
+    expect(client.request!.body?.containsKey('interactionId'), isFalse);
     expect(client.request!.headers['Idempotency-Key'], 'order-attempt-1');
   });
 }

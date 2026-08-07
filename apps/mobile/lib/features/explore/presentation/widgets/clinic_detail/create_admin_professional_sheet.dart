@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Create or edit an administrative professional.
 ///
-/// Real [facilityId] → `POST` / `PATCH /facilities/:id/representatives`.
+/// Real [facilityId] → `POST` / `PATCH /facilities/:id/administrative-contacts`.
 Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
   BuildContext context, {
   int? facilityId,
@@ -278,35 +279,27 @@ class _CreateAdminProfessionalSheetState
         return;
       }
 
+      final names = splitPersonName(name);
       final repo = FacilityRepresentativesRepository(widget.facilityId!);
       try {
+        // Role boolean toggles are UI-only — API projection has no role flags.
         final AdministrativeProfessional saved;
         if (_isEdit) {
           saved = await repo.updateRepresentative(
             representativeId: widget.existing!.id,
-            representativeName: name,
+            firstName: names.firstName,
+            lastName: names.lastName,
             roleTitle: roleTitle ?? '',
-            phone: phone ?? '',
+            mobilePhone: phone ?? '',
             email: email ?? '',
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
           );
         } else {
           saved = await repo.create(
-            representativeName: name,
+            firstName: names.firstName,
+            lastName: names.lastName,
             roleTitle: roleTitle,
-            phone: phone,
+            mobilePhone: phone,
             email: email,
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
           );
         }
         if (!mounted) return;

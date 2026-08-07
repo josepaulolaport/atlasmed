@@ -199,75 +199,74 @@ class PaginatedProfessionals {
   final Pagination pagination;
 }
 
-// ── ProfessionalAssociationDTO ───────────────────────────────
-
-class ProfessionalAssociationDTO {
-  final int facilityProfessionalId;
-  final int facilityId;
-  final int professionalId;
-  final String occupationCode;
-  final bool isPartner;
-  final bool isPrescriber;
-  final bool isBuyer;
-  final bool isDecisionMaker;
-  final int? relationshipLevel;
-  final String? specialtyLabel;
-  final String? notes;
-
-  const ProfessionalAssociationDTO({
-    required this.facilityProfessionalId,
-    required this.facilityId,
-    required this.professionalId,
-    this.occupationCode = '',
-    this.isPartner = false,
-    this.isPrescriber = false,
-    this.isBuyer = false,
-    this.isDecisionMaker = false,
-    this.relationshipLevel,
-    this.specialtyLabel,
-    this.notes,
-  });
-
-  factory ProfessionalAssociationDTO.fromMap(Map<String, dynamic> map) {
-    return ProfessionalAssociationDTO(
-      facilityProfessionalId: readCrmId(map['facilityProfessionalId'], 'facilityProfessionalId'),
-      facilityId: readCrmId(map['facilityId'], 'facilityId'),
-      professionalId: readCrmId(map['professionalId'], 'professionalId'),
-      occupationCode: readString(map['occupationCode']),
-      isPartner: map['isPartner'] == true,
-      isPrescriber: map['isPrescriber'] == true,
-      isBuyer: map['isBuyer'] == true,
-      isDecisionMaker: map['isDecisionMaker'] == true,
-      specialtyLabel: readNullableString(map['specialtyLabel']),
-      relationshipLevel: _readLevel(map['relationshipLevel']),
-      notes: readNullableString(map['notes']),
-    );
-  }
-}
-
 // ── FacilityProfessionalItemDTO ──────────────────────────────
 
+/// Flat projection from
+/// `GET|POST|PATCH /facilities/:id/healthcare-professionals`.
 class FacilityProfessionalItemDTO {
-  final int facilityProfessionalId;
-  final ProfessionalDTO professional;
-  final ProfessionalAssociationDTO association;
+  final int personFacilityId;
+  final int personId;
+  final int facilityId;
+  final String firstName;
+  final String lastName;
+  final String? socialName;
+  final String? cpf;
+  final String? email;
+  final String? mobilePhone;
+  final String? landlinePhone;
+  final String? roleTitle;
+  final String? notes;
+  final bool hasHealthcareProfile;
+  final List<String> classificationCodes;
 
   const FacilityProfessionalItemDTO({
-    required this.facilityProfessionalId,
-    required this.professional,
-    required this.association,
+    required this.personFacilityId,
+    required this.personId,
+    required this.facilityId,
+    required this.firstName,
+    required this.lastName,
+    this.socialName,
+    this.cpf,
+    this.email,
+    this.mobilePhone,
+    this.landlinePhone,
+    this.roleTitle,
+    this.notes,
+    this.hasHealthcareProfile = false,
+    this.classificationCodes = const [],
   });
 
   factory FacilityProfessionalItemDTO.fromMap(Map<String, dynamic> map) {
     return FacilityProfessionalItemDTO(
-      facilityProfessionalId: readCrmId(map['facilityProfessionalId'], 'facilityProfessionalId'),
-      professional: ProfessionalDTO.fromMap(
-        (map['professional'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
-      association: ProfessionalAssociationDTO.fromMap(
-        (map['association'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
+      personFacilityId: readCrmId(map['personFacilityId'], 'personFacilityId'),
+      personId: readCrmId(map['personId'], 'personId'),
+      facilityId: readCrmId(map['facilityId'], 'facilityId'),
+      firstName: readString(map['firstName']),
+      lastName: readString(map['lastName']),
+      socialName: readNullableString(map['socialName']),
+      cpf: readNullableString(map['cpf']),
+      email: readNullableString(map['email']),
+      mobilePhone: readNullableString(map['mobilePhone']),
+      landlinePhone: readNullableString(map['landlinePhone']),
+      roleTitle: readNullableString(map['roleTitle']),
+      notes: readNullableString(map['notes']),
+      hasHealthcareProfile: map['hasHealthcareProfile'] == true,
+      classificationCodes: readStringList(map['classificationCodes']),
     );
+  }
+
+  String get displayName {
+    final social = socialName?.trim();
+    if (social != null && social.isNotEmpty) return social;
+    return '$firstName $lastName'.trim();
+  }
+
+  String? get phone {
+    final mobile = mobilePhone?.trim();
+    if (mobile != null && mobile.isNotEmpty) return mobile;
+    final landline = landlinePhone?.trim();
+    if (landline != null && landline.isNotEmpty) return landline;
+    return null;
   }
 }
 
@@ -285,25 +284,25 @@ class PaginatedFacilityProfessionals {
   }
 
   factory PaginatedFacilityProfessionals.fromMap(Map<String, dynamic> map) {
+    final items = readObjectList(
+      map['data'],
+    ).map(FacilityProfessionalItemDTO.fromMap).toList(growable: false);
+    final paginationMap = (map['pagination'] as Map?)?.cast<String, dynamic>();
+    // Projection list endpoints return `{ data: [...] }` with no pagination.
+    final pagination = paginationMap != null
+        ? Pagination.fromMap(paginationMap)
+        : Pagination(
+            page: 1,
+            limit: items.length,
+            total: items.length,
+            totalPages: 1,
+          );
     return PaginatedFacilityProfessionals(
-      items: readObjectList(
-        map['data'],
-      ).map(FacilityProfessionalItemDTO.fromMap).toList(growable: false),
-      pagination: Pagination.fromMap(
-        (map['pagination'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
+      items: items,
+      pagination: pagination,
     );
   }
 
   final List<FacilityProfessionalItemDTO> items;
   final Pagination pagination;
-}
-
-// ── Private helpers ──────────────────────────────────────────
-
-int? _readLevel(Object? value) {
-  if (value == null) return null;
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  return int.tryParse(value.toString());
 }

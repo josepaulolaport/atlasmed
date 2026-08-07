@@ -11,10 +11,10 @@ class FacilityProfessionalsException implements Exception {
   const FacilityProfessionalsException();
 }
 
-/// Paginated CRM doctors associated with a facility.
+/// Healthcare professionals affiliated with a facility.
 ///
-/// Relationship stars come from `association.relationshipLevel`
-/// (`user_professional_relationships` for the authenticated user).
+/// Source: `GET /api/v1/facilities/:id/healthcare-professionals`
+/// (flat projection list; pagination synthesized client-side).
 class FacilityProfessionalsRepository
     extends Repository<PaginatedFacilityProfessionals>
     with SessionEnvironmentMixin<PaginatedFacilityProfessionals> {
@@ -22,10 +22,7 @@ class FacilityProfessionalsRepository
     this.facilityId, {
     this.page = 1,
     this.limit = 20,
-    // `all` = source-active CNES links + confirmed CRM rows. Local/imported
-    // data is almost entirely unconfirmed (`confirmed_at` null), so
-    // `confirmed` alone leaves the Médicos strip empty while Explorar search
-    // still shows the same doctors via Meili `activeFacilityIds`.
+    // Kept for call-site compatibility; projection list has no view filter.
     this.view = 'all',
     this.search,
     RepositoryHttpClient? client,
@@ -33,14 +30,8 @@ class FacilityProfessionalsRepository
        super(
          endpoint: buildEndpoint(
            baseUrl: AppConfig.apiBaseUrl,
-           path: '/api/v1/facilities/$facilityId/professionals',
-           queryParameters: {
-             'page': '$page',
-             'limit': '$limit',
-             'view': view,
-             if (search != null && search.trim().isNotEmpty)
-               'search': search.trim(),
-           },
+           path: '/api/v1/facilities/$facilityId/healthcare-professionals',
+           queryParameters: const {},
          ),
          name: 'FacilityProfessionalsRepository',
        );
@@ -64,11 +55,24 @@ class FacilityProfessionalsRepository
     if (result == null) {
       throw const FacilityProfessionalsException();
     }
+    var items = result.items
+        .map((item) => ProfessionalRoster.fromRosterItem(item))
+        .toList(growable: false);
+    final q = search?.trim();
+    if (q != null && q.isNotEmpty) {
+      final lower = q.toLowerCase();
+      items = items
+          .where((d) => d.name.toLowerCase().contains(lower))
+          .toList(growable: false);
+    }
     return FacilityRosterPage(
-      items: result.items
-          .map((item) => ProfessionalRoster.fromRosterItem(item))
-          .toList(growable: false),
-      pagination: result.pagination,
+      items: items,
+      pagination: Pagination(
+        page: 1,
+        limit: items.length,
+        total: items.length,
+        totalPages: 1,
+      ),
     );
   }
 }
