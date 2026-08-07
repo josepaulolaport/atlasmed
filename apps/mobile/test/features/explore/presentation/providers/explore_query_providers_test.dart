@@ -19,7 +19,7 @@ void main() {
       commercialStatus: 'ACTIVE',
       purchaseBucket: 'active',
       productIds: 'product-1,product-2',
-      clinicalFocusIds: '1,2',
+      clinicalFocusIds: '1',
       purchaseFunnelStages: [PurchaseFunnelStage.purchaseWindow],
       purchaseProfile: PurchaseProfile.monthly,
       purchaseIntervalMinDays: 10,
@@ -104,7 +104,7 @@ void main() {
         'status': ['ACTIVE'],
         'purchaseBucket': ['active'],
         'products': ['product-1', 'product-2'],
-        'clinicalFocusIds': ['1', '2'],
+        'clinicalFocusIds': ['1'],
         'purchaseFunnelStage': ['PURCHASE_WINDOW'],
         'purchaseProfile': ['MONTHLY'],
         'purchaseIntervalMinDays': ['10'],
@@ -125,7 +125,7 @@ void main() {
     expect(query.commercialStatus, 'ACTIVE');
     expect(query.purchaseBucket, 'active');
     expect(query.productIds, 'product-1,product-2');
-    expect(query.clinicalFocusIds, '1,2');
+    expect(query.clinicalFocusIds, 1);
     expect(query.purchaseFunnelStages, [PurchaseFunnelStage.purchaseWindow]);
     expect(query.purchaseProfile, PurchaseProfile.monthly);
     expect(query.purchaseIntervalMinDays, 10);

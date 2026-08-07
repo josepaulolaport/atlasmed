@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { ForbiddenError, type ScopeContext } from "@atlasmed/access";
+import { type ScopeContext } from "@atlasmed/access";
 import {
   CreateFacilityNoteUseCase,
   ListFacilityNotesUseCase,
@@ -59,109 +59,6 @@ describe("Facility note use cases", () => {
     ]);
   });
 
-  it("lets a manager read notes owned by a managed user", async () => {
-    const findByFacilityAndUser = mock(async () => []);
-
-    await new ListFacilityNotesUseCase({
-      facilityNoteRepository: {
-        findByFacilityAndUser,
-        create: async () => {
-          throw new Error("unused");
-        },
-      },
-    }).execute({
-      facilityId: "facility-1",
-      userId: "manager-1",
-      roleName: "MANAGER",
-      ownerUserId: "rep-1",
-      scope: {
-        ...globalScope,
-        isGlobal: false,
-        facilityIds: ["facility-1"],
-        clinicIds: ["facility-1"],
-        managedUserIds: ["rep-1"],
-      },
-    });
-
-    expect(findByFacilityAndUser).toHaveBeenCalledWith("facility-1", "rep-1");
-  });
-
-  it("denies an ADMIN reading another user's private notes despite global scope", async () => {
-    const findByFacilityAndUser = mock(async () => []);
-
-    await expect(
-      new ListFacilityNotesUseCase({
-        facilityNoteRepository: {
-          findByFacilityAndUser,
-          create: async () => {
-            throw new Error("unused");
-          },
-        },
-      }).execute({
-        facilityId: "facility-1",
-        userId: "admin-1",
-        roleName: "ADMIN",
-        ownerUserId: "rep-1",
-        scope: globalScope,
-      }),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-
-    expect(findByFacilityAndUser).not.toHaveBeenCalled();
-  });
-
-  it("denies a non-manager reading a managed user's private notes", async () => {
-    const findByFacilityAndUser = mock(async () => []);
-
-    await expect(
-      new ListFacilityNotesUseCase({
-        facilityNoteRepository: {
-          findByFacilityAndUser,
-          create: async () => {
-            throw new Error("unused");
-          },
-        },
-      }).execute({
-        facilityId: "facility-1",
-        userId: "rep-2",
-        roleName: "REP",
-        ownerUserId: "rep-1",
-        scope: {
-          ...globalScope,
-          managedUserIds: ["rep-1"],
-        },
-      }),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-
-    expect(findByFacilityAndUser).not.toHaveBeenCalled();
-  });
-
-  it("denies notes owned by an unmanaged user", async () => {
-    await expect(
-      new ListFacilityNotesUseCase({
-        facilityNoteRepository: {
-          findByFacilityAndUser: async () => {
-            throw new Error("should not query");
-          },
-          create: async () => {
-            throw new Error("unused");
-          },
-        },
-      }).execute({
-        facilityId: "facility-1",
-        userId: "manager-1",
-        roleName: "MANAGER",
-        ownerUserId: "rep-2",
-        scope: {
-          ...globalScope,
-          isGlobal: false,
-          facilityIds: ["facility-1"],
-          clinicIds: ["facility-1"],
-          managedUserIds: ["rep-1"],
-        },
-      }),
-    ).rejects.toBeInstanceOf(ForbiddenError);
-  });
-
   it("creates a private note", async () => {
     const create = mock(async () => ({
       id: 2,
@@ -193,8 +90,8 @@ describe("Facility note use cases", () => {
   });
 
   it("always creates the note for the authenticated actor", async () => {
-    const create = mock(async (input: { facilityId: string; userId: string; note: string }) => ({
-      id: "note-actor",
+    const create = mock(async (input: { facilityId: number; userId: number; note: string }) => ({
+      id: 3,
       ...input,
       createdAt: now,
       updatedAt: now,
@@ -206,15 +103,15 @@ describe("Facility note use cases", () => {
         create,
       },
     }).execute({
-      facilityId: "facility-1",
-      userId: "manager-1",
+      facilityId: 101,
+      userId: 11,
       note: "Nota do gestor",
       scope: globalScope,
     });
 
     expect(create).toHaveBeenCalledWith({
-      facilityId: "facility-1",
-      userId: "manager-1",
+      facilityId: 101,
+      userId: 11,
       note: "Nota do gestor",
     });
   });

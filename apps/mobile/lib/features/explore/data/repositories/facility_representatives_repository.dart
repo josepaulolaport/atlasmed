@@ -185,11 +185,11 @@ class FacilityRepresentativesRepository
       );
     } else {
       final body = <String, Object?>{
-        'firstName': ?firstName,
-        'lastName': ?lastName,
-        'roleTitle': ?roleTitle,
-        'email': ?email,
-        'mobilePhone': ?mobilePhone,
+        if (firstName != null) 'firstName': firstName,
+        if (lastName != null) 'lastName': lastName,
+        if (roleTitle != null) 'roleTitle': roleTitle,
+        if (email != null) 'email': email,
+        if (mobilePhone != null) 'mobilePhone': mobilePhone,
       };
 
       final response = await client.call(

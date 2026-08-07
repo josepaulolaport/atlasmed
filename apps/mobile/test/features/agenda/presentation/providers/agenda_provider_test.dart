@@ -12,7 +12,7 @@ class _FakeCalendarRepository implements CalendarRepositoryContract {
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async {
     calls += 1;
     lastQuery = AgendaQuery(from: from, to: to, ownerUserId: ownerUserId);
@@ -23,23 +23,23 @@ class _FakeCalendarRepository implements CalendarRepositoryContract {
   Future<List<CalendarAvailabilityInterval>> getAvailability({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) => Future.value(const []);
 
   @override
-  Future<InteractionDetail> getInteraction(String id) =>
+  Future<InteractionDetail> getInteraction(int id) =>
       throw UnimplementedError();
 
   @override
   Future<InteractionDetail> startInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
   }) => throw UnimplementedError();
 
   @override
   Future<InteractionDetail> completeInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
@@ -58,7 +58,7 @@ void main() {
       final query = AgendaQuery(
         from: DateTime(2026, 8, 3),
         to: DateTime(2026, 8, 10),
-        ownerUserId: 'user-2',
+        ownerUserId: 2,
       );
 
       await container.read(agendaProvider(query).future);

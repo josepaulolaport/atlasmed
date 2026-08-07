@@ -11,6 +11,7 @@ import {
   MANAGER_ZONE_TYPE_SLUG,
   REP_PATCH_TYPE_SLUG,
   isManagerZoneType,
+  isRepPatchType,
 } from "../constants/territory-roles.constants";
 import {
   OperationNotAllowedError,
@@ -26,21 +27,21 @@ interface Dependencies {
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
   consultantAssignmentRepository: FacilityConsultantAssignmentRepository;
-  onBoundaryChanged?: (territoryId: string) => Promise<void>;
-  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
+  onBoundaryChanged?: (territoryId: number) => Promise<void>;
+  onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
 }
 
 export type BoundaryImpactClinic = {
-  facilityId: string;
+  facilityId: number;
   facilityName: string;
-  consultantUserId: string;
+  consultantUserId: number;
   consultantName: string;
 };
 
 /** Spec 0006: accepted set must equal impact set exactly. */
 export function assertAcceptedImpactFacilityIds(
-  impactedFacilityIds: string[],
-  acceptedFacilityIds: string[] | undefined
+  impactedFacilityIds: number[],
+  acceptedFacilityIds: number[] | undefined
 ): void {
   if (impactedFacilityIds.length === 0) {
     if (acceptedFacilityIds && acceptedFacilityIds.length > 0) {
@@ -91,7 +92,7 @@ export function assertAcceptedImpactFacilityIds(
 export class TerritoryBoundaryUseCases {
   constructor(private readonly deps: Dependencies) {}
 
-  async getBoundary(input: { territoryId: string; scope: ScopeContext }) {
+  async getBoundary(input: { territoryId: number; scope: ScopeContext }) {
     await this.assertReadable(input.territoryId, input.scope);
 
     const boundary = await this.deps.spatialRepository.getBoundaryAsGeoJson(
@@ -106,7 +107,7 @@ export class TerritoryBoundaryUseCases {
   }
 
   async previewBoundaryImpact(input: {
-    territoryId: string;
+    territoryId: number;
     scope: ScopeContext;
     geoJson: GeoJsonGeometry;
   }) {
@@ -128,10 +129,10 @@ export class TerritoryBoundaryUseCases {
   }
 
   async saveBoundary(input: {
-    territoryId: string;
+    territoryId: number;
     scope: ScopeContext;
     geoJson: GeoJsonGeometry;
-    acceptedFacilityIds?: string[];
+    acceptedFacilityIds?: number[];
   }) {
     const territory = await this.assertWritableBoundary(input.territoryId, input.scope);
     const mode = await this.resolveImpactMode(territory);
@@ -171,7 +172,7 @@ export class TerritoryBoundaryUseCases {
     return serializeBoundaryResolution(resolution);
   }
 
-  async deleteBoundary(input: { territoryId: string; scope: ScopeContext }) {
+  async deleteBoundary(input: { territoryId: number; scope: ScopeContext }) {
     const territory = await this.assertWritableBoundary(input.territoryId, input.scope);
 
     const type =
@@ -186,7 +187,7 @@ export class TerritoryBoundaryUseCases {
 
     await this.deps.spatialRepository.deleteBoundary(input.territoryId);
 
-    if (type?.assignsClinics) {
+    if (type && isRepPatchType(type)) {
       await this.deps.onBoundaryChanged?.(input.territoryId);
     }
 
@@ -208,7 +209,7 @@ export class TerritoryBoundaryUseCases {
     return null;
   }
 
-  private async assertReadable(territoryId: string, scope: ScopeContext): Promise<void> {
+  private async assertReadable(territoryId: number, scope: ScopeContext): Promise<void> {
     const territory = await this.deps.territoryRepository.findById(territoryId);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", territoryId);
@@ -217,7 +218,7 @@ export class TerritoryBoundaryUseCases {
     assertManagerReadableTerritory(scope, territoryId);
   }
 
-  private async assertWritableBoundary(territoryId: string, scope: ScopeContext) {
+  private async assertWritableBoundary(territoryId: number, scope: ScopeContext) {
     const territory = await this.deps.territoryRepository.findById(territoryId);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", territoryId);

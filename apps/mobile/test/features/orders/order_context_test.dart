@@ -44,7 +44,7 @@ void main() {
   test('cart carries interaction context and locks its clinic', () {
     final notifier = CartNotifier();
     notifier.setInteractionContext(
-      interactionId: '1',
+      interactionId: 1,
       clinic: const SelectableClinic(id: 1, name: 'Clínica Central'),
     );
 
@@ -52,7 +52,7 @@ void main() {
       const SelectableClinic(id: 2, name: 'Outra clínica'),
     );
 
-    expect(notifier.state.interactionId, '1');
+    expect(notifier.state.interactionId, 1);
     expect(notifier.state.clinic?.id, 1);
     expect(notifier.state.isClinicLocked, isTrue);
 
@@ -95,7 +95,7 @@ void main() {
 
     await repository.createOrder(
       facilityId: 1,
-      interactionId: '42',
+      interactionId: 42,
       idempotencyKey: 'order-attempt-1',
       personId: 99,
       items: const [CreateOrderItemInput(productId: 7, quantity: 1)],

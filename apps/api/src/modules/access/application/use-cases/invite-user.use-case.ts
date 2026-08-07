@@ -43,8 +43,8 @@ interface Dependencies {
 interface InviteUserParams {
   email?: string | undefined;
   phoneNumber?: string | undefined;
-  roleId: string;
-  invitedByUserId: string;
+  roleId: number;
+  invitedByUserId: number;
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate: string;
@@ -123,8 +123,6 @@ export class InviteUserUseCase {
       roleName: role.name,
       inviterUserId: params.invitedByUserId,
       inviterRoleName: inviterRole.name,
-      managerTerritoryId: assignments.managerTerritoryId,
-      repTerritoryId: assignments.repTerritoryId,
       verticalAssignments: assignments.verticalAssignments,
     });
 
@@ -157,8 +155,6 @@ export class InviteUserUseCase {
       firstName: params.firstName,
       lastName: params.lastName,
       birthDate: new Date(`${toDateOnlyString(params.birthDate)}T00:00:00.000Z`),
-      managerTerritoryId: assignments.managerTerritoryId,
-      repTerritoryId: assignments.repTerritoryId,
       verticalAssignments: assignments.verticalAssignments.map((v) => ({
         verticalId: v.verticalId,
         territoryIds: v.territoryIds,

@@ -35,11 +35,11 @@ describe("TerritoryMembershipService", () => {
       id: CLINIC_ID,
       lat: -23.5,
       lng: -46.6,
-      territoryId: null,
+      managerZoneId: null,
     });
 
     expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, [
-      { verticalId: 1, territoryId: LEAF_TERRITORY_ID },
+      { verticalId: 1, managerZoneId: LEAF_TERRITORY_ID },
     ]);
   });
 
@@ -62,11 +62,11 @@ describe("TerritoryMembershipService", () => {
       id: CLINIC_ID,
       lat: -23.5,
       lng: -46.6,
-      territoryId: null,
+      managerZoneId: null,
     });
 
     expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, [
-      { verticalId: 20, territoryId: 20 },
+      { verticalId: 20, managerZoneId: 20 },
     ]);
   });
 
@@ -85,7 +85,7 @@ describe("TerritoryMembershipService", () => {
       id: CLINIC_ID,
       lat: null,
       lng: null,
-      territoryId: ZONE_TERRITORY_ID,
+      managerZoneId: ZONE_TERRITORY_ID,
     });
 
     expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, []);
@@ -96,13 +96,13 @@ describe("TerritoryMembershipService", () => {
       id: 10,
       lat: 1,
       lng: 1,
-      territoryId: LEAF_TERRITORY_ID,
+      managerZoneId: LEAF_TERRITORY_ID,
     };
     const bboxClinic: ClinicMembershipTarget = {
       id: 11,
       lat: 2,
       lng: 2,
-      territoryId: null,
+      managerZoneId: null,
     };
 
     const clinicWriter = createClinicWriter({
@@ -152,7 +152,7 @@ describe("TerritoryMembershipService", () => {
         id: CLINIC_ID,
         lat: -23.5,
         lng: -46.6,
-        territoryId: REMOVED_TERRITORY_ID,
+        managerZoneId: REMOVED_TERRITORY_ID,
       },
       { excludeTerritoryId: REMOVED_TERRITORY_ID }
     );
@@ -161,14 +161,14 @@ describe("TerritoryMembershipService", () => {
       excludeTerritoryId: REMOVED_TERRITORY_ID,
     });
     expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, [
-      { verticalId: 1, territoryId: 2 },
+      { verticalId: 1, managerZoneId: 2 },
     ]);
   });
 
   it("disassociateClinicsForTerritory re-matches every clinic currently on the territory", async () => {
     const clinics: ClinicMembershipTarget[] = [
-      { id: 1, lat: 1, lng: 1, territoryId: ZONE_TERRITORY_ID },
-      { id: 2, lat: 2, lng: 2, territoryId: ZONE_TERRITORY_ID },
+      { id: 1, lat: 1, lng: 1, managerZoneId: ZONE_TERRITORY_ID },
+      { id: 2, lat: 2, lng: 2, managerZoneId: ZONE_TERRITORY_ID },
     ];
 
     const clinicWriter = createClinicWriter({

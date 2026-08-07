@@ -17,9 +17,10 @@ import type {
   CreateInviteParams,
   AcceptInviteTransactionParams,
   AcceptInviteTransactionResult,
+  UpdatePendingInviteParams,
 } from "../../../application/interfaces/invite.repository.interface";
 
-async function fetchInviteWithRole(inviteId: string) {
+async function fetchInviteWithRole(inviteId: number) {
   const [row] = await db
     .select()
     .from(invitations)
@@ -47,8 +48,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           firstName: params.firstName ?? null,
           lastName: params.lastName ?? null,
           birthDate: params.birthDate ?? null,
-          managerTerritoryId: params.managerTerritoryId ?? null,
-          repTerritoryId: params.repTerritoryId ?? null,
           expiresAt: params.expiresAt,
         })
         .returning({ id: invitations.id });
@@ -97,11 +96,11 @@ export class DrizzleInviteRepository implements InviteRepository {
     return { ...row.invitations, role: row.roles! };
   }
 
-  async findById(inviteId: string) {
+  async findById(inviteId: number) {
     return fetchInviteWithRole(inviteId);
   }
 
-  async findStagedVerticalAssignments(invitationIds: string[]) {
+  async findStagedVerticalAssignments(invitationIds: number[]) {
     if (invitationIds.length === 0) return [];
 
     const verticalRows = await db
@@ -121,7 +120,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       .from(invitationTerritoryAssignments)
       .where(inArray(invitationTerritoryAssignments.invitationId, invitationIds));
 
-    const territoriesByKey = new Map<string, string[]>();
+    const territoriesByKey = new Map<string, number[]>();
     for (const row of territoryRows) {
       const key = `${row.invitationId}:${row.verticalId}`;
       const list = territoriesByKey.get(key) ?? [];
@@ -137,21 +136,7 @@ export class DrizzleInviteRepository implements InviteRepository {
     }));
   }
 
-  async updatePending(params: {
-    inviteId: string;
-    email?: string | undefined;
-    phoneNumber?: string | null | undefined;
-    roleId?: string | undefined;
-    firstName?: string | undefined;
-    lastName?: string | undefined;
-    birthDate?: Date | undefined;
-    managerTerritoryId?: string | null | undefined;
-    repTerritoryId?: string | null | undefined;
-    verticalAssignments?: Array<{
-      verticalId: string;
-      territoryIds: string[];
-    }>;
-  }) {
+  async updatePending(params: UpdatePendingInviteParams) {
     await db.transaction(async (tx) => {
       const updates: Record<string, unknown> = { updatedAt: new Date() };
       if (params.email !== undefined) updates.email = params.email;
@@ -160,12 +145,6 @@ export class DrizzleInviteRepository implements InviteRepository {
       if (params.firstName !== undefined) updates.firstName = params.firstName;
       if (params.lastName !== undefined) updates.lastName = params.lastName;
       if (params.birthDate !== undefined) updates.birthDate = params.birthDate;
-      if (params.managerTerritoryId !== undefined) {
-        updates.managerTerritoryId = params.managerTerritoryId;
-      }
-      if (params.repTerritoryId !== undefined) {
-        updates.repTerritoryId = params.repTerritoryId;
-      }
 
       await tx
         .update(invitations)
@@ -232,7 +211,7 @@ export class DrizzleInviteRepository implements InviteRepository {
     status?: string;
     page?: number;
     limit?: number;
-    invitedByUserId?: string;
+    invitedByUserId?: number;
   }) {
     await this.cleanupExpired();
 
@@ -270,7 +249,7 @@ export class DrizzleInviteRepository implements InviteRepository {
     };
   }
 
-  async markAccepted(inviteId: string, _userId: string) {
+  async markAccepted(inviteId: number, _userId: number) {
     await db
       .update(invitations)
       .set({
@@ -281,7 +260,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       .where(eq(invitations.id, inviteId));
   }
 
-  async revoke(inviteId: string) {
+  async revoke(inviteId: number) {
     await db
       .update(invitations)
       .set({
@@ -292,7 +271,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       .where(eq(invitations.id, inviteId));
   }
 
-  async regenerateToken(inviteId: string, params: { tokenHash: string; expiresAt: Date }) {
+  async regenerateToken(inviteId: number, params: { tokenHash: string; expiresAt: Date }) {
     await db
       .update(invitations)
       .set({
@@ -333,8 +312,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           firstName: invitations.firstName,
           lastName: invitations.lastName,
           birthDate: invitations.birthDate,
-          managerTerritoryId: invitations.managerTerritoryId,
-          repTerritoryId: invitations.repTerritoryId,
           invitedByUserId: invitations.invitedByUserId,
         })
         .from(invitations)
@@ -417,7 +394,7 @@ export class DrizzleInviteRepository implements InviteRepository {
         .where(eq(invitationTerritoryAssignments.invitationId, inviteLock.id));
 
       if (stagedTerritories.length > 0 || stagedVerticals.length > 0) {
-        const seenTerritoryIds = new Set<string>();
+        const seenTerritoryIds = new Set<number>();
         for (const row of stagedTerritories) {
           if (seenTerritoryIds.has(row.territoryId)) continue;
           seenTerritoryIds.add(row.territoryId);
@@ -459,43 +436,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           );
           for (const row of territoryVerticalRows) {
             if (stagedVerticalIds.has(row.verticalId)) continue;
-            await tx
-              .insert(userVerticalAssignments)
-              .values({
-                userId: user.id,
-                verticalId: row.verticalId,
-                assignedByUserId: inviteLock.invitedByUserId,
-              })
-              .onConflictDoNothing();
-          }
-        }
-      } else {
-        const assignedTerritoryIds: string[] = [];
-
-        if (inviteLock.managerTerritoryId) {
-          await tx.insert(userTerritoryAssignments).values({
-            userId: user.id,
-            territoryId: inviteLock.managerTerritoryId,
-            assignedBy: inviteLock.invitedByUserId,
-          });
-          assignedTerritoryIds.push(inviteLock.managerTerritoryId);
-        }
-
-        if (inviteLock.repTerritoryId) {
-          await tx.insert(userTerritoryAssignments).values({
-            userId: user.id,
-            territoryId: inviteLock.repTerritoryId,
-            assignedBy: inviteLock.invitedByUserId,
-          });
-          assignedTerritoryIds.push(inviteLock.repTerritoryId);
-        }
-
-        if (assignedTerritoryIds.length > 0) {
-          const territoryVerticalRows = await tx
-            .select({ verticalId: territories.verticalId })
-            .from(territories)
-            .where(inArray(territories.id, assignedTerritoryIds));
-          for (const row of territoryVerticalRows) {
             await tx
               .insert(userVerticalAssignments)
               .values({

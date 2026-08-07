@@ -92,7 +92,7 @@ class CartState {
   final List<CartItem> items;
   final SelectableClinic? clinic;
   final SelectableDoctor? doctor;
-  final String? interactionId;
+  final int? interactionId;
   final bool isClinicLocked;
 
   const CartState({
@@ -127,7 +127,7 @@ class CartState {
     List<CartItem>? items,
     SelectableClinic? clinic,
     SelectableDoctor? doctor,
-    String? interactionId,
+    int? interactionId,
     bool? isClinicLocked,
     bool clearClinic = false,
     bool clearDoctor = false,
@@ -211,7 +211,7 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 
   void setInteractionContext({
-    required String interactionId,
+    required int interactionId,
     required SelectableClinic clinic,
   }) {
     state = state.copyWith(

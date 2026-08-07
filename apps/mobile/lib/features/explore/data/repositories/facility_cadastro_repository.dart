@@ -393,7 +393,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         'sizeBytes': file.bytes.length,
         'checksum': checksum,
         'role': role,
-        'position': ?position,
+        if (position != null) 'position': position,
       },
     );
 

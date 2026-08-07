@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 /// CRM entity ids are JSON numbers (DB bigint → API number).
 ///
 /// Decode at wire edges only; domain models keep [int].
@@ -49,3 +50,11 @@ int? readCrmIdLoose(Object? value) {
   if (value is String) return int.tryParse(value);
   return null;
 }
+
+/// Negative ids are mock-only facilities (nearby stack / empty state).
+bool isMockFacilityId(int facilityId) => facilityId < 0;
+
+bool isMockNearbyFacilityId(int facilityId) => facilityId < 0;
+
+bool isMockEmptyFacilityId(int facilityId) => facilityId < 0;
+

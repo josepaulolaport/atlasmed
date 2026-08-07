@@ -13,8 +13,8 @@ import type {
 
 export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
   async updateProfileTerritoryMemberships(
-    facilityId: string,
-    memberships: Array<{ verticalId: string; territoryId: string | null }>
+    facilityId: number,
+    memberships: Array<{ verticalId: number; managerZoneId: number | null }>
   ): Promise<void> {
     await db.transaction(async (tx) => {
       await tx
@@ -34,7 +34,7 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
         await tx
           .update(facilityVerticalProfiles)
           .set({
-            managerZoneId: membership.territoryId,
+            managerZoneId: membership.managerZoneId,
             updatedAt: new Date(),
           })
           .where(
@@ -48,32 +48,15 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
     });
   }
 
-  async updateTerritoryMembership(
-    facilityId: string,
-    data: {
-      territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
-      territoryAssignmentSource: "geo" | "manual";
-    }
-  ): Promise<void> {
-    await db
-      .update(facilities)
-      .set({
-        territoryAssignmentStatus: data.territoryAssignmentStatus,
-        territoryAssignmentSource: data.territoryAssignmentSource,
-        updatedAt: new Date(),
-      })
-      .where(eq(facilities.id, facilityId));
-  }
-
   async setProfileTerritory(
-    facilityId: string,
-    verticalId: string,
-    territoryId: string | null,
+    facilityId: number,
+    verticalId: number,
+    managerZoneId: number | null,
   ): Promise<void> {
     await db
       .update(facilityVerticalProfiles)
       .set({
-        managerZoneId: territoryId,
+        managerZoneId,
         updatedAt: new Date(),
       })
       .where(
@@ -86,8 +69,8 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
   }
 
   async findClinicsForMembership(params?: {
-    facilityIds?: string[];
-    territoryIds?: string[];
+    facilityIds?: number[];
+    territoryIds?: number[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]> {
     const conditions = [isNull(facilities.deactivatedAt)];
@@ -119,7 +102,7 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
         id: facilities.id,
         lat: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         lng: sql<number | null>`ST_X(${facilities.location}::geometry)`,
-        territoryId: sql<string | null>`(
+        managerZoneId: sql<number | null>`(
           SELECT ${facilityVerticalProfiles.managerZoneId}
           FROM ${facilityVerticalProfiles}
           WHERE ${facilityVerticalProfiles.facilityId} = ${facilities.id}
@@ -128,8 +111,6 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
           ORDER BY ${facilityVerticalProfiles.updatedAt} DESC
           LIMIT 1
         )`,
-        territoryAssignmentSource: facilities.territoryAssignmentSource,
-        territoryAssignmentStatus: facilities.territoryAssignmentStatus,
       })
       .from(facilities)
       .where(and(...conditions));
@@ -138,15 +119,15 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
   }
 
   async findClinicsWithoutConsultant(params: {
-    managerZoneIds?: string[];
+    managerZoneIds?: number[];
     global: boolean;
   }): Promise<
     Array<{
-      id: string;
+      id: number;
       displayName: string;
       lat: number | null;
       lng: number | null;
-      managerZoneId: string;
+      managerZoneId: number;
       managerZoneName: string | null;
     }>
   > {
@@ -193,13 +174,13 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
         ),
       );
 
-    const seen = new Set<string>();
+    const seen = new Set<number>();
     const unique: Array<{
-      id: string;
+      id: number;
       displayName: string;
       lat: number | null;
       lng: number | null;
-      managerZoneId: string;
+      managerZoneId: number;
       managerZoneName: string | null;
     }> = [];
 

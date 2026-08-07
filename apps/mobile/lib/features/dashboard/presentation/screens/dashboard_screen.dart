@@ -49,7 +49,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     await _triggerFetch();
   }
 
-  void _onVerticalChanged(String? id) {
+  void _onVerticalChanged(int? id) {
     // [ref.listen] below kicks the fetch when selection changes.
     ref.read(dashboardSelectedVerticalIdProvider.notifier).state = id;
   }
@@ -62,7 +62,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       dashboardRepositoryProvider(selectedVerticalId),
     );
 
-    ref.listen<String?>(dashboardSelectedVerticalIdProvider, (prev, next) {
+    ref.listen<int?>(dashboardSelectedVerticalIdProvider, (prev, next) {
       if (next != prev) _triggerFetch();
     });
 
@@ -117,7 +117,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           );
                           final uri = Uri(
                             path: '/dashboard/facilities/$bucket',
-                            queryParameters: {'verticalId': ?verticalId},
+                            queryParameters: verticalId != null
+                                ? {'verticalId': verticalId.toString()}
+                                : const {},
                           );
                           context.push(uri.toString());
                         },

@@ -284,7 +284,7 @@ export class CalendarConflictError extends AppError {
 }
 
 export class CalendarVersionConflictError extends AppError {
-  constructor(calendarId: string, expectedVersion: number) {
+  constructor(calendarId: number, expectedVersion: number) {
     super(
       "CALENDAR_VERSION_CONFLICT",
       409,

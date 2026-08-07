@@ -48,7 +48,7 @@ class InviteIdentityStep extends StatelessWidget {
   final List<VerticalOption> sectors;
   final bool sectorsLoading;
   final bool sectorsError;
-  final Map<String, InviteVerticalAssignment> verticalAssignments;
+  final Map<int, InviteVerticalAssignment> verticalAssignments;
   final void Function(VerticalOption sector, bool selected) onToggleSector;
 
   bool get _showVerticals =>

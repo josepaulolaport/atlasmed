@@ -12,8 +12,8 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class TerritoryMetadataForm extends ConsumerStatefulWidget {
   final TerritoryDraft? initial;
   final TerritoryKind initialKind;
-  final String? initialVerticalId;
-  final String? initialManagerTerritoryId;
+  final int? initialVerticalId;
+  final int? initialManagerTerritoryId;
 
   const TerritoryMetadataForm({
     super.key,
@@ -27,8 +27,8 @@ class TerritoryMetadataForm extends ConsumerStatefulWidget {
     BuildContext context, {
     TerritoryDraft? initial,
     required TerritoryKind initialKind,
-    String? initialVerticalId,
-    String? initialManagerTerritoryId,
+    int? initialVerticalId,
+    int? initialManagerTerritoryId,
   }) {
     return Navigator.of(context).push<TerritoryDraft>(
       MaterialPageRoute(
@@ -51,8 +51,8 @@ class TerritoryMetadataForm extends ConsumerStatefulWidget {
 class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
   late final TextEditingController _nameController;
   late TerritoryKind _kind;
-  String? _verticalId;
-  String? _managerTerritoryId;
+  int? _verticalId;
+  int? _managerTerritoryId;
 
   @override
   void initState() {
@@ -84,7 +84,7 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
       _verticalId != null &&
       (!_isPatch || _managerTerritoryId != null);
 
-  void _setVertical(String? verticalId) {
+  void _setVertical(int? verticalId) {
     if (verticalId == _verticalId) return;
     setState(() {
       _verticalId = verticalId;
@@ -222,8 +222,8 @@ class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
 }
 
 class _VerticalPicker extends ConsumerWidget {
-  final String? selectedVerticalId;
-  final ValueChanged<String?> onChanged;
+  final int? selectedVerticalId;
+  final ValueChanged<int?> onChanged;
 
   const _VerticalPicker({
     required this.selectedVerticalId,

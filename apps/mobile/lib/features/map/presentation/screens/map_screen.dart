@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -899,7 +900,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   static Map<String, Object?> _pinFeature(
     NearbyEstablishment e, {
-    required String? selectedId,
+    int? selectedId,
   }) {
     return {
       'type': 'Feature',
@@ -1365,7 +1366,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       return;
     }
     final id = annotation.customData?['facilityId']?.toString();
-    if (id != null) _openEstablishment(id);
+    if (id != null) _openEstablishment(parseRouteCrmId(id, 'facilityId'));
   }
 
   ({double latitude, double longitude})? _pointFromGeometry(
@@ -1497,7 +1498,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  void _openEstablishment(String id) {
+  void _openEstablishment(int id) {
     for (final clinic in _clinics) {
       if (clinic.id == id) {
         seedClinicDetailShellFromNearby(ref, clinic);
@@ -1509,7 +1510,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final verticalId = ref
         .read(effectiveFacilityVerticalIdProvider)
         .valueOrNull;
-    if (verticalId != null && verticalId.isNotEmpty) {
+    if (verticalId != null && (verticalId > 0)) {
       context.push(
         Uri(
           path: '/explore/clinic/$id',

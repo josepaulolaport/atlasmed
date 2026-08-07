@@ -22,14 +22,14 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
 
   @override
   Future<void> updateCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarUpdateCommand command,
     required String idempotencyKey,
   }) async {}
 
   @override
   Future<void> updateCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarOccurrenceUpdateCommand command,
     required String idempotencyKey,
@@ -39,14 +39,14 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
 
   @override
   Future<void> cancelCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
   }) async {}
 
   @override
   Future<void> cancelCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
@@ -57,10 +57,10 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
 
 CalendarOccurrence _occurrence({int version = 8, int? overrideVersion}) =>
     CalendarOccurrence.fromJson({
-      'id': 'calendar-1:key-1',
-      'calendarId': 'calendar-1',
+      'id': '1:key-1',
+      'calendarId': 1,
       'recurrenceKey': 'key-1',
-      'ownerUserId': 'rep-1',
+      'ownerUserId': 1,
       'kind': 'PERSONAL_BLOCK',
       'title': 'Bloqueio',
       'startsAt': '2026-08-03T12:00:00.000Z',
@@ -69,7 +69,7 @@ CalendarOccurrence _occurrence({int version = 8, int? overrideVersion}) =>
       'durationMinutes': 60,
       'recurrence': 'WEEKLY',
       'version': version,
-      'overrideVersion': ?overrideVersion,
+      if (overrideVersion != null) 'overrideVersion': overrideVersion,
       'canMutate': true,
     });
 
@@ -125,7 +125,7 @@ void main() {
         repository: repository,
         target: const CalendarEditorTarget.creating(
           prefill: CalendarEditorPrefill(
-            facilityId: 'facility-1',
+            facilityId: 1,
             facilityName: 'Clínica Central',
             kind: CalendarEventKind.interaction,
           ),
@@ -156,9 +156,9 @@ void main() {
     () {
       final occurrence = CalendarOccurrence.fromJson({
         'id': 'calendar-1:key-1',
-        'calendarId': 'calendar-1',
+        'calendarId': 1,
         'recurrenceKey': 'key-1',
-        'ownerUserId': 'rep-1',
+        'ownerUserId': 1,
         'kind': 'PERSONAL_BLOCK',
         'title': 'Bloqueio',
         'startsAt': '2026-08-03T12:00:00.000Z',
@@ -186,9 +186,9 @@ void main() {
     () {
       final occurrence = CalendarOccurrence.fromJson({
         'id': 'calendar-1:key-1',
-        'calendarId': 'calendar-1',
+        'calendarId': 1,
         'recurrenceKey': 'key-1',
-        'ownerUserId': 'rep-1',
+        'ownerUserId': 1,
         'kind': 'PERSONAL_BLOCK',
         'title': 'Bloqueio',
         'startsAt': '2026-08-03T12:00:00.000Z',
@@ -282,7 +282,7 @@ void main() {
         repository: repository,
         target: const CalendarEditorTarget.creating(
           prefill: CalendarEditorPrefill(
-            facilityId: 'facility-1',
+            facilityId: 1,
             facilityName: 'Clínica Central',
             kind: CalendarEventKind.interaction,
           ),
@@ -325,7 +325,7 @@ void main() {
       repository: repository,
       target: const CalendarEditorTarget.creating(
         prefill: CalendarEditorPrefill(
-          facilityId: 'facility-1',
+          facilityId: 1,
           facilityName: 'Clínica Central',
           kind: CalendarEventKind.interaction,
         ),

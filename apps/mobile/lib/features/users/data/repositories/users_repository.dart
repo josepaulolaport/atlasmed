@@ -26,11 +26,11 @@ abstract interface class UsersRepository {
   });
 
   /// `GET /access/users/:id`
-  Future<User?> getUserById(String id);
+  Future<User?> getUserById(int id);
 
   /// `PATCH /access/users/:id` — profile fields (name, email, phone, …).
   Future<User> updateUserProfile({
-    required String userId,
+    required int userId,
     required String firstName,
     required String lastName,
     required String email,
@@ -42,63 +42,63 @@ abstract interface class UsersRepository {
   /// `GET /access/users/:id/assignments` (admin-scoped — not yet mounted
   /// on the real API today, only the self-service `GET /user/assignments`
   /// is; the mock behaves as if the admin route already existed).
-  Future<UserAssignments> getUserAssignments(String userId);
+  Future<UserAssignments> getUserAssignments(int userId);
 
   /// Replace the full per-sector assignment set (invite-shaped payload).
   Future<void> replaceVerticalAssignments(
-    String userId,
+    int userId,
     List<InviteVerticalAssignment> verticalAssignments,
   );
 
   /// `GET /access/users/:id/capabilities` (grants slice only — role is
   /// already on [User.role]).
-  Future<List<PermissionGrant>> getUserPermissions(String userId);
+  Future<List<PermissionGrant>> getUserPermissions(int userId);
 
   /// `POST /access/users/:id/activate`
-  Future<void> activateUser(String userId);
+  Future<void> activateUser(int userId);
 
   /// `POST /access/users/:id/deactivate`
-  Future<void> deactivateUser(String userId);
+  Future<void> deactivateUser(int userId);
 
   /// `POST /access/users/:id/suspend`
-  Future<void> suspendUser(String userId, {String? reason});
+  Future<void> suspendUser(int userId, {String? reason});
 
   /// `POST /access/users/:id/unsuspend`
-  Future<void> unsuspendUser(String userId);
+  Future<void> unsuspendUser(int userId);
 
   /// `PATCH /access/users/:id/role`
-  Future<void> changeUserRole(String userId, String roleId);
+  Future<void> changeUserRole(int userId, int roleId);
 
   /// `PATCH /access/users/:id/manager`
-  Future<void> assignManager(String userId, String? managerId);
+  Future<void> assignManager(int userId, int? managerId);
 
   /// `POST /access/users/:id/territories`
-  Future<void> assignTerritory(String userId, String territoryId);
+  Future<void> assignTerritory(int userId, int territoryId);
 
   /// `DELETE /access/users/:id/territories/:territoryId`
-  Future<void> revokeTerritory(String userId, String territoryId);
+  Future<void> revokeTerritory(int userId, int territoryId);
 
   /// `POST /access/users/:id/verticals`
-  Future<void> assignVertical(String userId, String verticalId);
+  Future<void> assignVertical(int userId, int verticalId);
 
   /// `DELETE /access/users/:id/verticals/:verticalId`
-  Future<void> revokeVertical(String userId, String verticalId);
+  Future<void> revokeVertical(int userId, int verticalId);
 
   /// `POST /access/users/:id/permissions`
   Future<void> grantPermission(
-    String userId, {
+    int userId, {
     required String resource,
     required String action,
-    String? resourceId,
+    int? resourceId,
     DateTime? expiresAt,
   });
 
   /// `DELETE /access/users/:id/permissions` — body uses resource/action/resourceId.
   Future<void> revokePermission(
-    String userId, {
+    int userId, {
     required String resource,
     required String action,
-    String? resourceId,
+    int? resourceId,
   });
 
   /// `GET /access/roles`
@@ -108,25 +108,25 @@ abstract interface class UsersRepository {
   Future<List<VerticalOption>> getVerticals();
 
   /// `GET /access/users?role=MANAGER&verticalId=` — managers for a sector.
-  Future<List<ManagerOption>> getManagerOptions({String? verticalId});
+  Future<List<ManagerOption>> getManagerOptions({int? verticalId});
 
   /// `GET /territories?type=manager_zone&verticalId=` — manager zones.
-  Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId});
+  Future<List<TerritoryOption>> getTerritoryOptions({int? verticalId});
 
   /// `GET /access/territories/:id/assignments` — first assignee display name.
-  Future<String?> getTerritoryAssigneeName(String territoryId);
+  Future<String?> getTerritoryAssigneeName(int territoryId);
 
   /// `GET /territories?type=patch&managerTerritoryId=&verticalId=` — patches
   /// under a manager zone (includes [TerritoryOption.isOccupied]).
   Future<List<TerritoryOption>> getPatchesForZone({
-    required String managerZoneId,
-    String? verticalId,
+    required int managerZoneId,
+    int? verticalId,
   });
 
   /// Legacy: patches under a manager user via assignable-territories.
   /// Prefer [getPatchesForZone] for territory-derived invite flow.
   Future<ManagerTerritoryScope> getTerritoriesForManager(
-    String managerId, {
-    String? verticalId,
+    int managerId, {
+    int? verticalId,
   });
 }

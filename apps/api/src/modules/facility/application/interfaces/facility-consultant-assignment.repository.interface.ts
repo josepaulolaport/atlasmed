@@ -1,36 +1,36 @@
 export interface FacilityConsultantAssignmentRecord {
-  id: string;
-  facilityId: string;
-  userId: string;
+  id: number;
+  facilityId: number;
+  userId: number;
   startedAt: Date;
   endedAt: Date | null;
-  assignedByUserId: string | null;
+  assignedByUserId: number | null;
   endReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface FacilityConsultantAssignmentRepository {
-  findByFacility(facilityId: string): Promise<FacilityConsultantAssignmentRecord[]>;
+  findByFacility(facilityId: number): Promise<FacilityConsultantAssignmentRecord[]>;
 
-  findCurrentByFacility(facilityId: string): Promise<FacilityConsultantAssignmentRecord | null>;
+  findCurrentByFacility(facilityId: number): Promise<FacilityConsultantAssignmentRecord | null>;
 
   /** Active (endedAt IS NULL) consultant assignments for a user. */
   findActiveFacilityIdsByUserId(
-    userId: string,
-    verticalIds?: string[],
-  ): Promise<string[]>;
+    userId: number,
+    verticalIds?: number[],
+  ): Promise<number[]>;
 
   assign(params: {
-    facilityId: string;
-    userId: string;
-    verticalId: string;
-    assignedByUserId: string;
+    facilityId: number;
+    userId: number;
+    verticalId: number;
+    assignedByUserId: number;
   }): Promise<FacilityConsultantAssignmentRecord>;
 
   /** End active primary assignments for facilities (Spec 0006 boundary impact). */
   endActiveForFacilities(params: {
-    facilityIds: string[];
+    facilityIds: number[];
     endReason: string;
   }): Promise<number>;
 }

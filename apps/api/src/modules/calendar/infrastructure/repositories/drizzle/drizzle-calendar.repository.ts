@@ -69,7 +69,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
         .groupBy(interactionEvents.interactionId) : Promise.resolve([]),
     ]);
     const ownerById = new Map(ownerRows.map((owner) => [owner.id,
-      { id: owner.id, name: [owner.firstName, owner.lastName].filter(Boolean).join(" ") || owner.id }]));
+      { id: owner.id, name: [owner.firstName, owner.lastName].filter(Boolean).join(" ") || String(owner.id) }]));
     const facilityById = new Map(facilityRows.map((facility) => [facility.id, facility]));
     const orderCountByInteractionId = new Map(orderCounts.map((item) => [item.interactionId, item.count]));
     const lifecycleByInteractionId = new Map(lifecycleRows.map((item) => [item.interactionId,

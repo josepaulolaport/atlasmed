@@ -57,7 +57,7 @@ describe("potential scope enforcement", () => {
       new ListPotentialDefinitionsUseCase({
         potentialRepository: createRepository({ listDefinitions }),
       }).execute({
-        verticalId: "vertical-1",
+        verticalId: 1,
         scope: baseScope,
       }),
     ).rejects.toBeInstanceOf(ForbiddenError);
@@ -71,11 +71,11 @@ describe("potential scope enforcement", () => {
     await new ListPotentialDefinitionsUseCase({
       potentialRepository: createRepository({ listDefinitions }),
     }).execute({
-      verticalId: "vertical-1",
+      verticalId: 1,
       scope: { ...baseScope, isGlobal: true },
     });
 
-    expect(listDefinitions).toHaveBeenCalledWith({ verticalId: "vertical-1" });
+    expect(listDefinitions).toHaveBeenCalledWith({ verticalId: 1 });
   });
 
   it("does not unlink when the linked potential definition cannot be resolved", async () => {
@@ -85,15 +85,15 @@ describe("potential scope enforcement", () => {
       new UnlinkProductPotentialUseCase({
         potentialRepository: createRepository({
           findLinkByProductId: async () => ({
-            productId: "product-1",
-            definitionId: "definition-missing",
+            productId: 1,
+            definitionId: 2,
           }),
           findDefinitionById: async () => null,
           unlinkProduct,
         }),
       }).execute({
-        productId: "product-1",
-        scope: { ...baseScope, assignedVerticalIds: ["vertical-1"] },
+        productId: 1,
+        scope: { ...baseScope, assignedVerticalIds: [1] },
       }),
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
 

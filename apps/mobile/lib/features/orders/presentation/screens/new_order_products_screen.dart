@@ -20,8 +20,8 @@ class NewOrderProductsScreen extends ConsumerStatefulWidget {
     this.facilityName,
   });
 
-  final String? interactionId;
-  final String? facilityId;
+  final int? interactionId;
+  final int? facilityId;
   final String? facilityName;
 
   @override

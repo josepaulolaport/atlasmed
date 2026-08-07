@@ -47,36 +47,33 @@ RepositoryHttpResponse _response(int status, Object body) =>
 void main() {
   BaseRepository.storage = const _MemoryCacheStorage();
 
-  test('manager note read sends ownerUserId query', () async {
+  test('note read uses numeric facility id in URL', () async {
     final client = _RecordingClient([_response(200, const <Object>[])]);
     final repository = FacilityNotesRepository(
-      'facility-1',
-      ownerUserId: 'agent-1',
+      1,
       client: client,
-      baseUrl: 'https://api.atlasmed.test',
     );
 
     await repository.loadNotes();
 
     expect(
-      client.requests.single.url.toString(),
-      'https://api.atlasmed.test/api/v1/facilities/facility-1/notes?ownerUserId=agent-1',
+      client.requests.single.url.path,
+      '/api/v1/facilities/1/notes',
     );
+    expect(client.requests.single.url.queryParameters, isEmpty);
   });
 
-  test('note POST remains actor-owned and omits ownerUserId', () async {
+  test('note POST sends actor-owned body without extra query params', () async {
     final client = _RecordingClient([
       _response(201, {
-        'id': 'note-1',
+        'id': 1,
         'note': 'Retornar em setembro.',
         'createdAt': '2026-08-03T12:00:00.000Z',
       }),
     ]);
     final repository = FacilityNotesRepository(
-      'facility-1',
-      ownerUserId: 'agent-1',
+      1,
       client: client,
-      baseUrl: 'https://api.atlasmed.test',
     );
 
     await repository.createNote('Retornar em setembro.');

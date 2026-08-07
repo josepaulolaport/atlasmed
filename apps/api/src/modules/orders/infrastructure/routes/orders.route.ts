@@ -127,7 +127,7 @@ const createOrderRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) 
         notes: body.notes,
         freight: body.freight,
         orderedAt: body.orderedAt,
-        items: body.items.map((item) => ({
+        items: body.items.map((item: { productId: number; quantity: number; unitPrice: number }) => ({
           ...item,
           productId: item.productId,
         })),

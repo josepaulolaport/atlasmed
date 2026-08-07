@@ -283,7 +283,7 @@ class OrdersRepository extends Repository<OrdersPage>
     String? notes,
     double? freight,
     String? idempotencyKey,
-    String? interactionId,
+    int? interactionId,
   }) async {
     final headers = <String, String>{
       if (idempotencyKey != null && idempotencyKey.isNotEmpty)
@@ -298,10 +298,10 @@ class OrdersRepository extends Repository<OrdersPage>
         headers: headers,
         body: {
           'facilityId': facilityId,
-          'verticalId': ?verticalId,
-          'personId': ?personId,
-          'notes': ?notes,
-          'freight': ?freight,
+          if (verticalId != null) 'verticalId': verticalId,
+          if (personId != null) 'personId': personId,
+          if (notes != null) 'notes': notes,
+          if (freight != null) 'freight': freight,
           'items': items.map((item) => item.toJson()).toList(growable: false),
         },
       ),

@@ -14,8 +14,8 @@ class TerritoryInviteDraft {
   });
 
   final String name;
-  final String verticalId;
-  final String managerTerritoryId;
+  final int verticalId;
+  final int managerTerritoryId;
   final TerritoryGeometry boundary;
   final MapCoordinate centroid;
 

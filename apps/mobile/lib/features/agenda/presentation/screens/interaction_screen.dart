@@ -40,7 +40,7 @@ class InteractionScreen extends ConsumerWidget {
     this.onCancel,
   });
 
-  final String interactionId;
+  final int interactionId;
   final VoidCallback? onNewOrder;
   final VoidCallback? onReschedule;
   final VoidCallback? onCancel;
@@ -173,7 +173,7 @@ Future<void> _cancelOccurrence(
       idempotencyKey: idempotencyKey,
     );
     ref.invalidate(agendaProvider);
-    await ref.read(interactionProvider('${detail.id}').notifier).load();
+    await ref.read(interactionProvider(detail.id).notifier).load();
   } on CalendarApiException catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(

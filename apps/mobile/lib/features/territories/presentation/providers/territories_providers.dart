@@ -28,12 +28,12 @@ final selectedTerritoryKindProvider = StateProvider<TerritoryKind>((ref) {
   return TerritoryKind.managerZone;
 });
 
-final selectedTerritoryVerticalIdProvider = StateProvider<String?>((ref) {
+final selectedTerritoryVerticalIdProvider = StateProvider<int?>((ref) {
   return null;
 });
 
 /// Spec 0006: when viewing patches, show only one rep's shapes (not all overlaps).
-final selectedGeographyRepUserIdProvider = StateProvider<String?>(
+final selectedGeographyRepUserIdProvider = StateProvider<int?>(
   (ref) => null,
 );
 
@@ -61,9 +61,9 @@ final managerZonesUnderlayProvider = FutureProvider<List<Territory>>((
   );
 });
 
-final selectedTerritoryIdProvider = StateProvider<String?>((ref) => null);
+final selectedTerritoryIdProvider = StateProvider<int?>((ref) => null);
 
-final territoryByIdProvider = FutureProvider.family<Territory?, String>((
+final territoryByIdProvider = FutureProvider.family<Territory?, int>((
   ref,
   id,
 ) {

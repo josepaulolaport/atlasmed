@@ -10,20 +10,20 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 class DashboardRepository extends Repository<DashboardSummary>
     with SessionEnvironmentMixin<DashboardSummary> {
   /// [verticalId] null = token-scoped union (no query/header filter).
-  DashboardRepository({String? verticalId})
+  DashboardRepository({int? verticalId})
     : _verticalId = verticalId,
       super(
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/dashboard/summary')
             .replace(
               queryParameters: {
-                if (verticalId != null && verticalId.isNotEmpty)
+                if (verticalId != null && (verticalId > 0))
                   'verticalId': verticalId,
               },
             ),
         resolveOnCreate: false,
       );
 
-  final String? _verticalId;
+  final int? _verticalId;
 
   /// Fetches the summary and emits into the repository stream.
   Future<DashboardSummary> fetchSummary() async {
@@ -32,8 +32,8 @@ class DashboardRepository extends Repository<DashboardSummary>
         url: endpoint,
         method: RepositoryHttpMethod.get,
         headers: {
-          if (_verticalId != null && _verticalId.isNotEmpty)
-            'X-AtlasMed-Vertical-Id': _verticalId,
+          if (_verticalId != null && _verticalId! > 0)
+            'X-AtlasMed-Vertical-Id': _verticalId.toString(),
         },
       ),
     );

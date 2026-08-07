@@ -426,14 +426,21 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         ),
         GoRoute(
           path: '/agenda/interactions/:id',
-          builder: (_, state) =>
-              InteractionScreen(interactionId: state.pathParameters['id']!),
+          builder: (_, state) => InteractionScreen(
+            interactionId: parseRouteCrmId(state.pathParameters['id']!),
+          ),
         ),
         GoRoute(
           path: '/orders/new',
           builder: (_, state) => NewOrderProductsScreen(
-            interactionId: state.uri.queryParameters['interactionId'],
-            facilityId: state.uri.queryParameters['facilityId'],
+            interactionId: parseRouteCrmIdOrNull(
+              state.uri.queryParameters['interactionId'],
+              'interactionId',
+            ),
+            facilityId: parseRouteCrmIdOrNull(
+              state.uri.queryParameters['facilityId'],
+              'facilityId',
+            ),
             facilityName: state.uri.queryParameters['facilityName'],
           ),
         ),
@@ -458,10 +465,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
                 ),
               );
             }
-            return OrderSuccessScreen(
-              order: order,
-              interactionId: state.uri.queryParameters['interactionId'],
-            );
+            return const OrderSuccessScreen();
           },
         ),
         GoRoute(

@@ -3,8 +3,8 @@ import { inviteNewPatchSchema } from "./invite-user.schema";
 
 const verticalAssignmentSchema = z
   .object({
-    verticalId: z.string().min(1),
-    territoryIds: z.array(z.string().min(1)).default([]),
+    verticalId: z.coerce.number().int().positive(),
+    territoryIds: z.array(z.coerce.number().int().positive()).default([]),
     newPatch: inviteNewPatchSchema.optional(),
   })
   .superRefine((data, ctx) => {
@@ -20,7 +20,7 @@ const verticalAssignmentSchema = z
 export const updateInvitationSchema = z.object({
   email: z.string().email().optional(),
   phoneNumber: z.string().nullable().optional(),
-  roleId: z.string().min(1).optional(),
+  roleId: z.coerce.number().int().positive().optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   birthDate: z

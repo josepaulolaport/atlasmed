@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -94,7 +95,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<User?> getUserById(String id) async {
+  Future<User?> getUserById(int id) async {
     final response = await _get(_accessUri('/users/$id'));
     if (response.statusCode == 404) return null;
     _throwIfError(response);
@@ -103,7 +104,7 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<User> updateUserProfile({
-    required String userId,
+    required int userId,
     required String firstName,
     required String lastName,
     required String email,
@@ -128,7 +129,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<UserAssignments> getUserAssignments(String userId) async {
+  Future<UserAssignments> getUserAssignments(int userId) async {
     final response = await _get(_accessUri('/users/$userId/assignments'));
     _throwIfError(response);
     return UserAssignments.fromJson(
@@ -138,7 +139,7 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<void> replaceVerticalAssignments(
-    String userId,
+    int userId,
     List<InviteVerticalAssignment> verticalAssignments,
   ) async {
     final response = await _send(
@@ -159,7 +160,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<PermissionGrant>> getUserPermissions(String userId) async {
+  Future<List<PermissionGrant>> getUserPermissions(int userId) async {
     final response = await _get(_accessUri('/users/$userId/capabilities'));
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -168,10 +169,10 @@ class HttpUsersRepository implements UsersRepository {
     return grants
         .map(
           (g) => PermissionGrant(
-            id: g['id'] as String,
+            id: readCrmId(g['id'], 'id'),
             resource: g['resource'] as String,
             action: g['action'] as String,
-            resourceId: g['resourceId'] as String?,
+            resourceId: readCrmIdOrNull(g['resourceId'], 'resourceId'),
             grantedAt:
                 DateTime.tryParse(g['grantedAt'] as String? ?? '') ??
                 DateTime.now(),
@@ -184,7 +185,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> activateUser(String userId) async {
+  Future<void> activateUser(int userId) async {
     final response = await _send(
       _accessUri('/users/$userId/activate'),
       method: RepositoryHttpMethod.post,
@@ -194,7 +195,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> deactivateUser(String userId) async {
+  Future<void> deactivateUser(int userId) async {
     final response = await _send(
       _accessUri('/users/$userId/deactivate'),
       method: RepositoryHttpMethod.post,
@@ -204,7 +205,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> suspendUser(String userId, {String? reason}) async {
+  Future<void> suspendUser(int userId, {String? reason}) async {
     final response = await _send(
       _accessUri('/users/$userId/suspend'),
       method: RepositoryHttpMethod.post,
@@ -214,7 +215,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> unsuspendUser(String userId) async {
+  Future<void> unsuspendUser(int userId) async {
     final response = await _send(
       _accessUri('/users/$userId/unsuspend'),
       method: RepositoryHttpMethod.post,
@@ -224,7 +225,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> changeUserRole(String userId, String roleId) async {
+  Future<void> changeUserRole(int userId, int roleId) async {
     final response = await _send(
       _accessUri('/users/$userId/role'),
       method: RepositoryHttpMethod.patch,
@@ -234,7 +235,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> assignManager(String userId, String? managerId) async {
+  Future<void> assignManager(int userId, int? managerId) async {
     // Spec 0006: manager is territory-derived — endpoint removed.
     throw UnsupportedError(
       'Atribuição de gerente removida. Use zonas/patches territoriais.',
@@ -242,7 +243,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> assignTerritory(String userId, String territoryId) async {
+  Future<void> assignTerritory(int userId, int territoryId) async {
     final response = await _send(
       _accessUri('/users/$userId/territories'),
       method: RepositoryHttpMethod.post,
@@ -252,7 +253,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> revokeTerritory(String userId, String territoryId) async {
+  Future<void> revokeTerritory(int userId, int territoryId) async {
     final response = await _send(
       _accessUri('/users/$userId/territories/$territoryId'),
       method: RepositoryHttpMethod.delete,
@@ -261,7 +262,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> assignVertical(String userId, String verticalId) async {
+  Future<void> assignVertical(int userId, int verticalId) async {
     final response = await _send(
       _accessUri('/users/$userId/verticals'),
       method: RepositoryHttpMethod.post,
@@ -271,7 +272,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> revokeVertical(String userId, String verticalId) async {
+  Future<void> revokeVertical(int userId, int verticalId) async {
     final response = await _send(
       _accessUri('/users/$userId/verticals/$verticalId'),
       method: RepositoryHttpMethod.delete,
@@ -281,10 +282,10 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<void> grantPermission(
-    String userId, {
+    int userId, {
     required String resource,
     required String action,
-    String? resourceId,
+    int? resourceId,
     DateTime? expiresAt,
   }) async {
     final response = await _send(
@@ -293,7 +294,7 @@ class HttpUsersRepository implements UsersRepository {
       body: {
         'resource': resource,
         'action': action,
-        'resourceId': ?resourceId,
+        if (resourceId != null) 'resourceId': resourceId,
         'expiresAt': ?expiresAt?.toIso8601String(),
       },
     );
@@ -302,15 +303,19 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<void> revokePermission(
-    String userId, {
+    int userId, {
     required String resource,
     required String action,
-    String? resourceId,
+    int? resourceId,
   }) async {
     final response = await _send(
       _accessUri('/users/$userId/permissions'),
       method: RepositoryHttpMethod.delete,
-      body: {'resource': resource, 'action': action, 'resourceId': ?resourceId},
+      body: {
+        'resource': resource,
+        'action': action,
+        if (resourceId != null) 'resourceId': resourceId,
+      },
     );
     _throwIfError(response);
   }
@@ -339,12 +344,12 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<ManagerOption>> getManagerOptions({String? verticalId}) async {
+  Future<List<ManagerOption>> getManagerOptions({int? verticalId}) async {
     final response = await _get(
       _accessUri('/users', {
         'role': 'MANAGER',
         'limit': '100',
-        'verticalId': ?verticalId,
+        if (verticalId != null) 'verticalId': verticalId.toString(),
       }),
     );
     _throwIfError(response);
@@ -363,13 +368,13 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<List<TerritoryOption>> getTerritoryOptions({
-    String? verticalId,
+    int? verticalId,
   }) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': 'manager_zone',
         'format': 'flat',
-        'verticalId': ?verticalId,
+        if (verticalId != null) 'verticalId': verticalId.toString(),
       }),
     );
     _throwIfError(response);
@@ -379,7 +384,7 @@ class HttpUsersRepository implements UsersRepository {
 
     final options = <TerritoryOption>[];
     for (final row in rows) {
-      final id = row['id'] as String;
+      final id = readCrmId(row['id'], 'id');
       final boundaryResponse = await _get(
         _territoryUri('/territories/$id/boundary'),
       );
@@ -399,7 +404,7 @@ class HttpUsersRepository implements UsersRepository {
         TerritoryOption(
           id: id,
           name: row['name'] as String,
-          verticalId: row['verticalId'] as String? ?? verticalId,
+          verticalId: readCrmIdOrNull(row['verticalId'], 'verticalId') ?? verticalId,
           centroid: boundary?.labelAnchor,
           boundary: boundary,
           isOccupied: isOccupied,
@@ -411,7 +416,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<String?> getTerritoryAssigneeName(String territoryId) async {
+  Future<String?> getTerritoryAssigneeName(int territoryId) async {
     final response = await _get(
       _accessUri('/territories/$territoryId/assignments'),
     );
@@ -431,15 +436,15 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<List<TerritoryOption>> getPatchesForZone({
-    required String managerZoneId,
-    String? verticalId,
+    required int managerZoneId,
+    int? verticalId,
   }) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': 'patch',
         'format': 'flat',
-        'managerTerritoryId': managerZoneId,
-        'verticalId': ?verticalId,
+        'managerTerritoryId': managerZoneId.toString(),
+        if (verticalId != null) 'verticalId': verticalId.toString(),
       }),
     );
     _throwIfError(response);
@@ -449,7 +454,7 @@ class HttpUsersRepository implements UsersRepository {
 
     final options = <TerritoryOption>[];
     for (final row in rows) {
-      final id = row['id'] as String;
+      final id = readCrmId(row['id'], 'id');
       final boundaryResponse = await _get(
         _territoryUri('/territories/$id/boundary'),
       );
@@ -465,7 +470,7 @@ class HttpUsersRepository implements UsersRepository {
         TerritoryOption(
           id: id,
           name: row['name'] as String,
-          verticalId: row['verticalId'] as String? ?? verticalId,
+          verticalId: readCrmIdOrNull(row['verticalId'], 'verticalId') ?? verticalId,
           centroid: boundary?.labelAnchor,
           boundary: boundary,
           isOccupied: assignedCount > 0,
@@ -477,10 +482,10 @@ class HttpUsersRepository implements UsersRepository {
 
   @override
   Future<ManagerTerritoryScope> getTerritoriesForManager(
-    String managerId, {
-    String? verticalId,
+    int managerId, {
+    int? verticalId,
   }) async {
-    if (verticalId == null || verticalId.isEmpty) {
+    if (verticalId == null || (verticalId <= 0)) {
       return ManagerTerritoryScope(
         managerId: managerId,
         managerName: '',
@@ -490,7 +495,7 @@ class HttpUsersRepository implements UsersRepository {
 
     final response = await _get(
       _accessUri('/managers/$managerId/assignable-territories', {
-        'verticalId': verticalId,
+        'verticalId': verticalId.toString(),
       }),
     );
     _throwIfError(response);
@@ -517,7 +522,7 @@ class HttpUsersRepository implements UsersRepository {
     return ManagerTerritoryScope(
       managerId: managerId,
       managerName: managerName,
-      managerTerritoryId: firstZone?['id'] as String?,
+      managerTerritoryId: readCrmIdOrNull(firstZone?['id'], 'id'),
       managerTerritoryName: firstZone?['name'] as String?,
       managerZoneCentroid: zoneBoundary?.labelAnchor,
       managerZoneBoundary: zoneBoundary,

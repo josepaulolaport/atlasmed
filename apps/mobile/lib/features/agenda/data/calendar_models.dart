@@ -583,7 +583,8 @@ class CalendarOccurrence extends Equatable {
     final localStart = startsAt.toLocal();
     final localEnd = endsAt.toLocal();
     final occurrenceId =
-        (json['occurrenceId'] as String?) ?? json['id'] as String;
+        (json['occurrenceId'] as String?) ??
+        readCrmId(json['id'], 'id').toString();
     final calendarId = readCrmId(json['calendarId'] ?? json['id'], 'calendarId');
     final ownerUserId = readCrmIdOrNull(json['ownerUserId'], 'ownerUserId')
         ?? readCrmIdOrNull((json['owner'] as Map<String, dynamic>?)?['id'], 'owner.id')
@@ -706,7 +707,7 @@ class CalendarConflictInterval extends Equatable {
 
   final DateTime startsAt;
   final DateTime endsAt;
-  final String? id;
+  final int? id;
 
   @override
   List<Object?> get props => [startsAt, endsAt, id];
@@ -721,7 +722,7 @@ class CalendarConflict extends Equatable {
   factory CalendarConflict.fromJson(Map<String, dynamic> json) =>
       CalendarConflict(
         candidate: CalendarConflictInterval(
-          id: json['candidateId'] as String?,
+          id: readCrmIdOrNull(json['candidateId'], 'candidateId'),
           startsAt: DateTime.parse(
             (json['candidateStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),
@@ -730,7 +731,7 @@ class CalendarConflict extends Equatable {
           ).toUtc(),
         ),
         existing: CalendarConflictInterval(
-          id: (json['existingId'] ?? json['occurrenceId']) as String?,
+          id: readCrmIdOrNull(json['existingId'] ?? json['occurrenceId'], 'existingId'),
           startsAt: DateTime.parse(
             (json['existingStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),

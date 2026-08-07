@@ -328,7 +328,7 @@ describe("CompleteInteractionUseCase", () => {
 describe("MarkOverdueInteractionsUseCase", () => {
   test("marks only ended scheduled interactions and leaves in-progress interactions untouched", async () => {
     const scheduled = new FakeInteractionRepository();
-    const useCase = new MarkOverdueInteractionsUseCase({ repository: scheduled, systemActorUserId: "system", now: () => new Date("2026-08-03T13:01:00.000Z") });
+    const useCase = new MarkOverdueInteractionsUseCase({ repository: scheduled, systemActorUserId: null, now: () => new Date("2026-08-03T13:01:00.000Z") });
     expect(await useCase.execute({ limit: 25 })).toBe(1);
     expect(scheduled.record?.status).toBe("NOT_COMPLETED");
     expect(scheduled.events).toEqual([{ previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED" }]);
@@ -339,7 +339,7 @@ describe("MarkOverdueInteractionsUseCase", () => {
 
     const inProgress = new FakeInteractionRepository();
     inProgress.record = interaction({ status: "IN_PROGRESS" });
-    expect(await new MarkOverdueInteractionsUseCase({ repository: inProgress, systemActorUserId: "system" }).execute({ now: new Date("2026-08-03T20:00:00.000Z") })).toBe(0);
+    expect(await new MarkOverdueInteractionsUseCase({ repository: inProgress, systemActorUserId: null }).execute({ now: new Date("2026-08-03T20:00:00.000Z") })).toBe(0);
     expect(inProgress.record.status).toBe("IN_PROGRESS");
   });
 });

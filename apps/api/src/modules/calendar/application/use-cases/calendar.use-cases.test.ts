@@ -51,7 +51,7 @@ class FakeCalendarRepository implements CalendarRepository {
   created?: CreateCalendarEventInput;
   updated?: UpdateCalendarEventInput;
   override?: UpsertCalendarOverrideInput;
-  deleted?: { id: number; expectedVersion: number; actorUserId?: string; reason?: string; commandKey?: string };
+  deleted?: { id: number; expectedVersion: number; actorUserId?: number; reason?: string; commandKey?: string };
   versionFailure = false;
   ensuredKeys: string[] = [];
   createCalls = 0;
@@ -262,7 +262,7 @@ describe("Calendar application use cases", () => {
 
   it("filters manager interaction rows outside facility scope and rejects unmanaged owners", async () => {
     const repository = new FakeCalendarRepository();
-    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 99, name: "Fora do escopo" }, interactions: [{ id: "i", recurrenceKey: "2026-08-03T09:00[UTC]",
+    repository.events = [baseEvent({ kind: "INTERACTION", facility: { id: 99, name: "Fora do escopo" }, interactions: [{ id: 1, recurrenceKey: "2026-08-03T09:00[UTC]",
       facilityId: 99, modality: "REMOTE", status: "SCHEDULED", version: 1 }] })];
     const useCase = new ListCalendarUseCase({ repository });
     expect(await useCase.execute({ actor: { userId: 2, roleName: "MANAGER" }, scope: managerScope,
@@ -325,14 +325,14 @@ describe("Calendar application use cases", () => {
 
   it("reschedules a scheduled interaction occurrence and rejects non-scheduled interaction cancellation", async () => {
     const repository = new FakeCalendarRepository();
-    repository.events = [baseEvent({ kind: "INTERACTION", interactions: [{ id: "i", recurrenceKey: "2026-08-03T09:00[UTC]",
+    repository.events = [baseEvent({ kind: "INTERACTION", interactions: [{ id: 1, recurrenceKey: "2026-08-03T09:00[UTC]",
       facilityId: 1, modality: "REMOTE", status: "SCHEDULED", version: 1 }] })];
     await new UpdateCalendarOccurrenceUseCase({ repository }).execute({ actor: { userId: 1, roleName: "REP" }, scope: repScope,
       id: 1, recurrenceKey: "2026-08-03T09:00[UTC]", idempotencyKey: "cmd", expectedVersion: 0,
       startsAt: "2026-08-03T12:00:00Z", durationMinutes: 30 });
     expect(repository.override).toMatchObject({ status: "ACTIVE", expectedVersion: 0 });
 
-    repository.events[0] = baseEvent({ kind: "INTERACTION", interactions: [{ id: "i", recurrenceKey: "2026-08-03T09:00[UTC]",
+    repository.events[0] = baseEvent({ kind: "INTERACTION", interactions: [{ id: 1, recurrenceKey: "2026-08-03T09:00[UTC]",
       facilityId: 1, modality: "REMOTE", status: "COMPLETED", version: 2 }] });
     await expect(new CancelCalendarOccurrenceUseCase({ repository }).execute({ actor: { userId: 1, roleName: "REP" }, scope: repScope,
       id: 1, recurrenceKey: "2026-08-03T09:00[UTC]", idempotencyKey: "cmd-cancel", expectedVersion: 0, reason: " Cliente pediu " }))

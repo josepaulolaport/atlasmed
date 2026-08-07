@@ -1,13 +1,13 @@
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 
 class TerritoryEditorTarget {
-  final String? territoryId;
+  final int? territoryId;
   final TerritoryKind? initialKind;
-  final String? initialVerticalId;
+  final int? initialVerticalId;
   final String? initialVerticalName;
 
   /// When creating a rep patch from invite (or similar), preselect this zone.
-  final String? initialManagerTerritoryId;
+  final int? initialManagerTerritoryId;
   final String? initialManagerTerritoryName;
 
   /// Invite path: validate geometry locally and pop [TerritoryInviteDraft]

@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';

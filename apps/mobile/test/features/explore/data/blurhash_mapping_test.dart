@@ -81,7 +81,7 @@ Map<String, dynamic> _userJson({String? avatarBlurhash}) => {
   'email': 'ana@example.com',
   'username': 'ana',
   'avatarUrl': '/avatar.png',
-  'avatarBlurhash': ?avatarBlurhash,
+  if (avatarBlurhash != null) 'avatarBlurhash': avatarBlurhash,
   'status': 'ACTIVE',
   'emailVerified': true,
   'phoneVerified': false,
