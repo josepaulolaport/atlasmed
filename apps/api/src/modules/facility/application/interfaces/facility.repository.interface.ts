@@ -115,12 +115,10 @@ export interface FacilityRecord {
   imageUrl: string | null;
   imageBlurhash: string | null;
   cnesCode: string | null;
-  /** CNES establishment type code → facility_types. */
-  facilityTypeCode: string | null;
-  /** CNES TP_UNIDADE → unit_types. */
-  unitTypeCode: string | null;
-  /** CNES subtype scoped by unitTypeCode → unit_subtypes. */
-  unitSubtypeCode: string | null;
+  /** CNES TP_UNIDADE → unit_types.id. */
+  unitTypeId: number | null;
+  /** CNES subtype → unit_subtypes.id (must belong to unitTypeId when both set). */
+  unitSubtypeId: number | null;
   deactivatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

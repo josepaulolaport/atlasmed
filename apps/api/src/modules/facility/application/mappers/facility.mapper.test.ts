@@ -54,9 +54,8 @@ function baseFacility(
     imageUrl: null,
     imageBlurhash: null,
     cnesCode: null,
-    facilityTypeCode: null,
-    unitTypeCode: null,
-    unitSubtypeCode: null,
+    unitTypeId: null,
+    unitSubtypeId: null,
     deactivatedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -118,9 +117,8 @@ describe("serializeFacility", () => {
       territoryName: "Zona Sul",
       professionalCount: 4,
       distanceKm: 1.2,
-      facilityTypeCode: undefined,
-      unitTypeCode: undefined,
-      unitSubtypeCode: undefined,
+      unitTypeId: undefined,
+      unitSubtypeId: undefined,
       clinicalFocuses: [
         {
           id: 1,

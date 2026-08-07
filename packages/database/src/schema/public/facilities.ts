@@ -30,8 +30,8 @@ import { territories } from "./territories";
 import { businessVerticals } from "./business-verticals";
 import { users } from "./users";
 import {
-  facilityTypes,
   unitTypes,
+  unitSubtypes,
   deactivationReasons,
 } from "./cnes-lookups";
 import { clinicalFocuses } from "./clinical-focuses";
@@ -48,8 +48,6 @@ export const facilities = pgTable(
 
     // --- Registry provenance ---
     cnesCode: text("cnes_code"),
-    /** CNES type code → facility_types (FK deferred until lookups are seeded). */
-    facilityTypeCode: text("facility_type_code"),
     /** CNES deactivation code → deactivation_reasons (FK deferred until lookups are seeded). */
     registryDeactivationCode: text("registry_deactivation_code"),
 
@@ -90,10 +88,16 @@ export const facilities = pgTable(
     imageUrl: text("image_url"),
     /** BlurHash for the facility header image. */
     imageBlurhash: text("image_blurhash"),
-    /** CNES TP_UNIDADE → unit_types (FK deferred until lookups are seeded). */
-    unitTypeCode: text("unit_type_code"),
-    /** CNES subtype code from rlEstabSubTipo; scoped by unit_type_code (FK deferred). */
-    unitSubtypeCode: text("unit_subtype_code"),
+    /** CNES TP_UNIDADE → unit_types.id. */
+    unitTypeId: bigint("unit_type_id", { mode: "number" }).references(
+      () => unitTypes.id,
+      { onDelete: "restrict" }
+    ),
+    /** CNES subtype → unit_subtypes.id (must belong to unitTypeId when both set). */
+    unitSubtypeId: bigint("unit_subtype_id", { mode: "number" }).references(
+      () => unitSubtypes.id,
+      { onDelete: "restrict" }
+    ),
 
     // --- Lifecycle ---
     deactivatedAt: timestamp("deactivated_at"),
@@ -131,12 +135,12 @@ export const facilities = pgTable(
     index("facilities_location_gist_idx")
       .using("gist", t.location)
       .where(sql`${t.location} IS NOT NULL`),
-    index("facilities_facility_type_code_idx")
-      .on(t.facilityTypeCode)
-      .where(sql`${t.facilityTypeCode} IS NOT NULL`),
-    index("facilities_unit_type_code_idx")
-      .on(t.unitTypeCode)
-      .where(sql`${t.unitTypeCode} IS NOT NULL`),
+    index("facilities_unit_type_id_idx")
+      .on(t.unitTypeId)
+      .where(sql`${t.unitTypeId} IS NOT NULL`),
+    index("facilities_unit_subtype_id_idx")
+      .on(t.unitSubtypeId)
+      .where(sql`${t.unitSubtypeId} IS NOT NULL`),
   ]
 );
 
@@ -454,13 +458,13 @@ export const facilityClinicalFocuses = pgTable(
 // --- Relations ---
 
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
-  facilityType: one(facilityTypes, {
-    fields: [facilities.facilityTypeCode],
-    references: [facilityTypes.facilityTypeCode],
+  unitType: one(unitTypes, {
+    fields: [facilities.unitTypeId],
+    references: [unitTypes.id],
   }),
-  unitTypeRef: one(unitTypes, {
-    fields: [facilities.unitTypeCode],
-    references: [unitTypes.unitTypeCode],
+  unitSubtype: one(unitSubtypes, {
+    fields: [facilities.unitSubtypeId],
+    references: [unitSubtypes.id],
   }),
   deactivationReason: one(deactivationReasons, {
     fields: [facilities.registryDeactivationCode],

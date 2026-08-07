@@ -3,7 +3,6 @@ import {
   text,
   boolean,
   timestamp,
-  primaryKey,
   bigint,
   unique,
 } from "drizzle-orm/pg-core";
@@ -29,38 +28,39 @@ export const occupations = pgTable(
   (t) => [unique("occupations_cnes_id_key").on(t.cnesId)]
 );
 
-export const facilityTypes = pgTable("facility_types", {
-  facilityTypeCode: text("facility_type_code").primaryKey(),
-  facilityTypeName: text("facility_type_name").notNull(),
-  conceptDescription: text("concept_description"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-});
-
-export const unitTypes = pgTable("unit_types", {
-  unitTypeCode: text("unit_type_code").primaryKey(),
-  unitTypeName: text("unit_type_name").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-});
-
-export const unitSubtypes = pgTable(
-  "unit_subtypes",
+/**
+ * CNES TP_UNIDADE catalog (occupation-shaped: bigint id + external cnes_id).
+ * Empty until post-overhaul load — Slice E dropped text-PK shape / facility_types axis.
+ */
+export const unitTypes = pgTable(
+  "unit_types",
   {
-    unitTypeCode: text("unit_type_code")
-      .notNull()
-      .references(() => unitTypes.unitTypeCode, { onDelete: "restrict" }),
-    subtypeCode: text("subtype_code").notNull(),
-    subtypeName: text("subtype_name").notNull(),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    cnesId: text("cnes_id").notNull(),
+    name: text("name").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
-  (t) => [
-    primaryKey({
-      name: "unit_subtypes_pkey",
-      columns: [t.unitTypeCode, t.subtypeCode],
-    }),
-  ]
+  (t) => [unique("unit_types_cnes_id_key").on(t.cnesId)]
+);
+
+/**
+ * CNES unit subtypes scoped by parent unit type.
+ * UNIQUE (unit_type_id, cnes_id) — codes are not globally unique.
+ */
+export const unitSubtypes = pgTable(
+  "unit_subtypes",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    unitTypeId: bigint("unit_type_id", { mode: "number" })
+      .notNull()
+      .references(() => unitTypes.id, { onDelete: "restrict" }),
+    cnesId: text("cnes_id").notNull(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [unique("unit_subtypes_unit_type_id_cnes_id_key").on(t.unitTypeId, t.cnesId)]
 );
 
 export const deactivationReasons = pgTable("deactivation_reasons", {
@@ -78,7 +78,7 @@ export const unitTypesRelations = relations(unitTypes, ({ many }) => ({
 
 export const unitSubtypesRelations = relations(unitSubtypes, ({ one }) => ({
   unitType: one(unitTypes, {
-    fields: [unitSubtypes.unitTypeCode],
-    references: [unitTypes.unitTypeCode],
+    fields: [unitSubtypes.unitTypeId],
+    references: [unitTypes.id],
   }),
 }));

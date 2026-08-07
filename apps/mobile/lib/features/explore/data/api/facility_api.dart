@@ -127,9 +127,8 @@ class FacilityDTO {
   final String? imageUrl;
   final String? imageBlurhash;
   final String? cnesCode;
-  final String? facilityTypeCode;
-  final String? unitTypeCode;
-  final String? unitSubtypeCode;
+  final int? unitTypeId;
+  final int? unitSubtypeId;
   final double? distanceKm;
   final String? lastVisitAt;
   final List<ClinicalFocus> clinicalFocuses;
@@ -170,9 +169,8 @@ class FacilityDTO {
     this.imageUrl,
     this.imageBlurhash,
     this.cnesCode,
-    this.facilityTypeCode,
-    this.unitTypeCode,
-    this.unitSubtypeCode,
+    this.unitTypeId,
+    this.unitSubtypeId,
     this.distanceKm,
     this.lastVisitAt,
     this.clinicalFocuses = const [],
@@ -231,9 +229,8 @@ class FacilityDTO {
       imageUrl: readNullableString(map['imageUrl'] ?? map['profileImageUrl']),
       imageBlurhash: readNullableString(map['imageBlurhash']),
       cnesCode: readNullableString(map['cnesCode']),
-      facilityTypeCode: readNullableString(map['facilityTypeCode']),
-      unitTypeCode: readNullableString(map['unitTypeCode']),
-      unitSubtypeCode: readNullableString(map['unitSubtypeCode']),
+      unitTypeId: readCrmIdOrNull(map['unitTypeId'], 'unitTypeId'),
+      unitSubtypeId: readCrmIdOrNull(map['unitSubtypeId'], 'unitSubtypeId'),
       distanceKm: readNullableDouble(map['distanceKm']),
       lastVisitAt: readNullableString(map['lastVisitAt']),
       clinicalFocuses: readObjectList(
