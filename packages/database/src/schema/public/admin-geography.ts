@@ -32,7 +32,7 @@ export const states = pgTable(
     abbreviation: text("abbreviation").notNull(),
     boundary: geometryMultiPolygon("boundary"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("states_ibge_code_uidx").on(t.ibgeCode),
@@ -57,7 +57,7 @@ export const municipalities = pgTable(
     cnesCode: text("cnes_code"),
     boundary: geometryMultiPolygon("boundary"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("municipalities_ibge_code_uidx").on(t.ibgeCode),
@@ -83,7 +83,7 @@ export const neighborhoods = pgTable(
     ibgeCode: text("ibge_code").notNull(),
     boundary: geometryMultiPolygon("boundary"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("neighborhoods_ibge_code_uidx").on(t.ibgeCode),

@@ -27,7 +27,7 @@ export const territoryTypes = pgTable(
     sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [index("territory_types_is_active_idx").on(t.isActive)]
 );
@@ -47,7 +47,7 @@ export const territories = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     boundary: geometryMultiPolygon("boundary"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("territories_vertical_id_slug_uidx").on(t.verticalId, t.slug),
@@ -81,7 +81,7 @@ export const userTerritoryAssignments = pgTable(
     territoryId: bigint("territory_id", { mode: "number" }).notNull().references(() => territories.id, { onDelete: "restrict" }),
     assignedBy: bigint("assigned_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("user_territory_assignments_user_id_territory_id_uidx").on(t.userId, t.territoryId),

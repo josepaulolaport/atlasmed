@@ -27,7 +27,7 @@ export const roles = pgTable(
     description: text("description"),
     priority: bigint("priority", { mode: "number" }).notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [index("roles_priority_idx").on(t.priority)]
 );
@@ -63,7 +63,7 @@ export const users = pgTable(
     metadata: jsonb("metadata"),
     roleId: bigint("role_id", { mode: "number" }).notNull().references(() => roles.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("users_email_lower_uidx").on(sql`lower(${t.email})`),
@@ -99,7 +99,7 @@ export const sessions = pgTable(
     suspiciousActivity: boolean("suspicious_activity").notNull().default(false),
     lastIpAddress: inet("last_ip_address"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("sessions_user_id_idx").on(t.userId),
@@ -123,7 +123,7 @@ export const passwordResets = pgTable(
     ipAddress: inet("ip_address"),
     userAgent: text("user_agent"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("password_resets_user_id_idx").on(t.userId),
@@ -142,7 +142,7 @@ export const verificationTokens = pgTable(
     expiresAt: timestamp("expires_at").notNull(),
     verifiedAt: timestamp("verified_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("verification_tokens_user_id_idx").on(t.userId),
@@ -171,7 +171,7 @@ export const invitations = pgTable(
     lastName: text("last_name"),
     birthDate: timestamp("birth_date"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("invitations_email_idx").on(t.email),
@@ -194,7 +194,7 @@ export const permissions = pgTable(
     grantedBy: bigint("granted_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("permissions_user_id_idx").on(t.userId),

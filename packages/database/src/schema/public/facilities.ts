@@ -98,7 +98,7 @@ export const facilities = pgTable(
     // --- Lifecycle ---
     deactivatedAt: timestamp("deactivated_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     foreignKey({
@@ -150,7 +150,7 @@ export const facilityNotes = pgTable(
       .notNull().references(() => facilities.id, { onDelete: "cascade" }),
     note: text("note").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("facility_notes_facility_id_user_id_created_at_idx").on(
@@ -177,7 +177,7 @@ export const facilityPhotos = pgTable(
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("facility_photos_facility_id_created_at_idx").on(
@@ -204,7 +204,7 @@ export const facilityConsultantAssignments = pgTable(
     }),
     endReason: text("end_reason"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("facility_consultant_assignments_facility_id_idx").on(t.facilityId),
@@ -264,7 +264,7 @@ export const facilityVerticalProfiles = pgTable(
       withTimezone: true,
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     foreignKey({
@@ -326,7 +326,7 @@ export const healthcareProviders = pgTable(
     type: healthcareProviderTypeEnum("type").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [index("healthcare_providers_is_active_idx").on(t.isActive)]
 );
@@ -341,7 +341,7 @@ export const facilityHealthcareProviderShares = pgTable(
     /** Whether this facility treats the provider share as a package (pacote). */
     isPackage: boolean("is_package").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("facility_healthcare_provider_shares_facility_id_provider_id_uidx").on(
@@ -386,7 +386,7 @@ export const conformityRequirements = pgTable(
       .default(209_715_200),
     requiresFrontAndBack: boolean("requires_front_and_back").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("conformity_requirements_vertical_id_idx").on(t.verticalId),
@@ -416,7 +416,7 @@ export const conformityRecords = pgTable(
     fileName: text("file_name"),
     reviewerNote: text("reviewer_note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("conformity_records_facility_id_requirement_id_uidx").on(t.facilityId, t.requirementId),
@@ -439,7 +439,7 @@ export const facilityClinicalFocuses = pgTable(
       .notNull()
       .references(() => clinicalFocuses.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("facility_clinical_focuses_facility_id_clinical_focus_id_uidx").on(

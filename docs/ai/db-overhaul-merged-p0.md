@@ -237,7 +237,7 @@ Answer before or during Slice A–C. Do not invent answers here.
 - [ ] No double work on old professional/occupation tables  
 - [ ] No `reference_year` / `professional_classification`  
 - [ ] No `started_at` / `end_reason` / ingest `source_*` on `person_facilities`  
-- [ ] `$onUpdate` on intended tables  
+- [x] `$onUpdate` on intended tables (`0052`; exact dup `orders_id_avulsa_emultec_idx` dropped)  
 - [ ] Api + mobile compile with each slice; web not required green  
 - [ ] Triage P0 orthogonal items + ADR person graph both landed  
 
@@ -261,3 +261,6 @@ Answer before or during Slice A–C. Do not invent answers here.
 | 2026-08-07 | **Slice A `0047_slice_a_facility_territory_integrity`**: UNIQUE(id,vertical_id); composite territory FKs (hierarchy, FVP manager_zone, invite territories); approval `facility_id` RESTRICT + `superseded_by_id`; no-self CHECK; mun∈state composite FK; unique active legal doc; partial GiST; DROP `facilities.city`/`state`. API/workers display city/UF via JOIN. Create facility requires explicit `legalDocumentType`. |
 | 2026-08-07 | **`0048_drop_invite_legacy_territory_cols`**: DROP `invitations.manager_territory_id` / `rep_territory_id` (+ FKs/indexes). Accept path uses only `invitation_*_assignments`. Dual-write / legacy validator branch removed. |
 | 2026-08-07 | **`0049_drop_territory_approval_requests`**: not shipping manager approve — DROP table + enums; remove API/web approvals. Territory deactivate = admin-only. |
+| 2026-08-07 | **Slice B `0050`**: share_percent numeric+CHECK; jsonb; inet; currency char(3); email `UNIQUE(lower)`; Emultec renames; drop competitor `legacy_id`/`line_number`; permissions NULLS NOT DISTINCT; drop 7 auth dup indexes. |
+| 2026-08-07 | **Slice C `0051`**: person hard cut (ADR 0004); remake occupations; drop professional/rep tables; orders/field_suggestions → `person_id`; API professional surfaces removed; CASL PERSON. Mobile rewire deferred. |
+| 2026-08-07 | **Slice D `0052`**: Drizzle `$onUpdate` on all public CRM `updated_at` (59 cols, schema-only); drop exact dup `orders_id_avulsa_emultec_idx` (unique key remains). |

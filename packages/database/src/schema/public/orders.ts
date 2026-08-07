@@ -52,13 +52,12 @@ export const orders = pgTable(
     expenseAuthorizedById: bigint("expense_authorized_by_id", { mode: "number" }).references(() => users.id),
     expenseAuthorizedAt: timestamp("expense_authorized_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("orders_facility_id_idx").on(t.facilityId),
     index("orders_vertical_id_idx").on(t.verticalId),
     index("orders_status_idx").on(t.status),
-    index("orders_id_avulsa_emultec_idx").on(t.idAvulsaEmultec),
     index("orders_ordered_at_idx").on(t.orderedAt),
     index("orders_person_id_idx").on(t.personId),
     index("orders_interaction_id_idx").on(t.interactionId),
@@ -114,7 +113,7 @@ export const orderItems = pgTable(
     batchNumber: text("batch_number"),
     writtenOff: boolean("written_off").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("order_items_batch_number_idx").on(t.batchNumber),

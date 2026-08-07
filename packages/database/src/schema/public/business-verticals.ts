@@ -21,7 +21,7 @@ export const businessVerticals = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [index("business_verticals_is_active_idx").on(t.isActive)]
 );
@@ -39,7 +39,7 @@ export const userVerticalAssignments = pgTable(
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("user_vertical_assignments_user_id_vertical_id_uidx").on(

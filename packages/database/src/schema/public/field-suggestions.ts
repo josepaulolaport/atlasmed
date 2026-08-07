@@ -46,7 +46,7 @@ export const fieldSuggestions = pgTable(
     }),
     resolutionNote: text("resolution_note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("field_suggestions_status_submitted_at_idx").on(

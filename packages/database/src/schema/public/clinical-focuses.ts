@@ -24,7 +24,7 @@ export const clinicalFocuses = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("clinical_focuses_name_uidx").on(t.name),

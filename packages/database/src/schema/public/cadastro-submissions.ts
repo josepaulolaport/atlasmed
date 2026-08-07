@@ -41,7 +41,7 @@ export const cadastroSubmissions = pgTable(
     version: bigint("version", { mode: "number" }).notNull().default(1),
     submittedAt: timestamp("submitted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("cadastro_submissions_facility_id_idx").on(t.facilityId),
@@ -71,7 +71,7 @@ export const submissionDocuments = pgTable(
     version: bigint("version", { mode: "number" }).notNull().default(1),
     reviewComment: text("review_comment"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("submission_documents_submission_id_idx").on(t.submissionId),
@@ -110,7 +110,7 @@ export const fileAssets = pgTable(
     uploadedAt: timestamp("uploaded_at"),
     processedAt: timestamp("processed_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("file_assets_facility_id_idx").on(t.facilityId),

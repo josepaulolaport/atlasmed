@@ -26,7 +26,7 @@ export const invitationVerticalAssignments = pgTable(
     verticalId: bigint("vertical_id", { mode: "number" })
       .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("invitation_vertical_assignments_invitation_id_vertical_id_uidx").on(
@@ -49,7 +49,7 @@ export const invitationTerritoryAssignments = pgTable(
       .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
     territoryId: bigint("territory_id", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     foreignKey({

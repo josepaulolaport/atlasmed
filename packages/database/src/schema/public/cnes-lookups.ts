@@ -24,7 +24,7 @@ export const occupations = pgTable(
     isHealthOccupation: boolean("is_health_occupation"),
     isRegulated: boolean("is_regulated"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [unique("occupations_cnes_id_key").on(t.cnesId)]
 );
@@ -34,14 +34,14 @@ export const facilityTypes = pgTable("facility_types", {
   facilityTypeName: text("facility_type_name").notNull(),
   conceptDescription: text("concept_description"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const unitTypes = pgTable("unit_types", {
   unitTypeCode: text("unit_type_code").primaryKey(),
   unitTypeName: text("unit_type_name").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const unitSubtypes = pgTable(
@@ -53,7 +53,7 @@ export const unitSubtypes = pgTable(
     subtypeCode: text("subtype_code").notNull(),
     subtypeName: text("subtype_name").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     primaryKey({
@@ -67,7 +67,7 @@ export const deactivationReasons = pgTable("deactivation_reasons", {
   deactivationCode: text("deactivation_code").primaryKey(),
   deactivationReason: text("deactivation_reason").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 // --- Relations ---

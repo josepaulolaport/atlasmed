@@ -40,7 +40,7 @@ export const persons = pgTable(
     hobbies: text("hobbies"),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("persons_last_name_first_name_idx").on(t.lastName, t.firstName),
@@ -65,7 +65,7 @@ export const personHealthcareProfiles = pgTable(
       .references(() => persons.id, { onDelete: "cascade" }),
     cnesProfessionalId: bigint("cnes_professional_id", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("person_healthcare_profiles_cnes_professional_id_uidx")
@@ -82,7 +82,7 @@ export const healthcareSpecialties = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [unique("healthcare_specialties_cnes_id_key").on(t.cnesId)]
 );
@@ -117,7 +117,7 @@ export const personProfessionalRegistrationCouncils = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   }
 );
 
@@ -128,7 +128,7 @@ export const personProfessionalRegistrationTypes = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   }
 );
 
@@ -151,7 +151,7 @@ export const personProfessionalRegistrations = pgTable(
     isPrimary: boolean("is_primary").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("person_professional_registrations_person_id_idx").on(t.personId),
@@ -187,7 +187,7 @@ export const personFacilities = pgTable(
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("person_facilities_person_id_idx").on(t.personId),
@@ -209,7 +209,7 @@ export const personFacilityClassifications = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   }
 );
 
@@ -239,7 +239,7 @@ export const personFacilityRoles = pgTable(
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   }
 );
 
@@ -274,7 +274,7 @@ export const personFacilityOccupations = pgTable(
       .references(() => occupations.id, { onDelete: "restrict" }),
     isPrimary: boolean("is_primary").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     unique("person_facility_occupations_person_facility_occupation_key").on(
@@ -298,7 +298,7 @@ export const personNotes = pgTable(
       .references(() => persons.id, { onDelete: "cascade" }),
     note: text("note").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("person_notes_person_id_user_id_created_at_idx").on(
@@ -322,7 +322,7 @@ export const userPersonRelationships = pgTable(
       .references(() => persons.id, { onDelete: "cascade" }),
     relationshipLevel: smallint("relationship_level").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     unique("user_person_relationships_user_id_person_id_key").on(t.userId, t.personId),

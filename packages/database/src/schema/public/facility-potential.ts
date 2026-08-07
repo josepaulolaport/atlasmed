@@ -31,7 +31,7 @@ export const potentialMetricDefinitions = pgTable(
     sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("potential_metric_definitions_vertical_id_idx").on(t.verticalId),
@@ -54,7 +54,7 @@ export const facilityPotentialValues = pgTable(
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     unique("facility_potential_values_pk").on(t.facilityId, t.definitionId),
@@ -75,7 +75,7 @@ export const productPotentialLinks = pgTable(
     definitionId: bigint("definition_id", { mode: "number" })
       .notNull().references(() => potentialMetricDefinitions.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("product_potential_links_definition_id_idx").on(t.definitionId),

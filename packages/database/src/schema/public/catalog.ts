@@ -49,7 +49,7 @@ export const products = pgTable(
     brasindiceUpdatedAt: date("brasindice_updated_at").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("products_is_active_idx").on(t.isActive),
@@ -87,7 +87,7 @@ export const competitorProducts = pgTable(
     brand: text("brand"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
     countryOfOrigin: text("country_of_origin"),
     price17: numeric("price_17", { precision: 12, scale: 2 }),
     price18: numeric("price_18", { precision: 12, scale: 2 }),
@@ -182,7 +182,7 @@ export const facilityCompetitorProductStandards = pgTable(
     competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => competitorProducts.id, { onDelete: "restrict" }),
     standardizedQuantity: bigint("standardized_quantity", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("facility_competitor_product_standards_pair_uidx").on(t.facilityId, t.competitorProductId),

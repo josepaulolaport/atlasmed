@@ -79,7 +79,7 @@ export const calendar = pgTable(
     cancellationReason: text("cancellation_reason"),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     check("calendar_duration_minutes_positive_check", sql`${t.durationMinutes} > 0`),
@@ -182,7 +182,7 @@ export const interactions = pgTable(
     }),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     unique("interactions_calendar_id_recurrence_key_key").on(t.calendarId, t.recurrenceKey),
