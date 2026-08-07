@@ -40,6 +40,11 @@ class InteractionNotifier extends StateNotifier<InteractionState> {
   final Map<String, String> _commandKeys = {};
 
   Future<void> load() async {
+    final parsedId = int.tryParse(interactionId);
+    if (parsedId == null) {
+      state = state.copyWith(detail: AsyncError(FormatException('Invalid interaction id'), StackTrace.current));
+      return;
+    }
     state = state.copyWith(
       detail: const AsyncLoading(),
       clearError: true,
@@ -47,7 +52,7 @@ class InteractionNotifier extends StateNotifier<InteractionState> {
     );
     try {
       state = state.copyWith(
-        detail: AsyncData(await _repository.getInteraction(interactionId)),
+        detail: AsyncData(await _repository.getInteraction(parsedId)),
       );
     } catch (error, stackTrace) {
       state = state.copyWith(detail: AsyncError(error, stackTrace));
@@ -60,6 +65,8 @@ class InteractionNotifier extends StateNotifier<InteractionState> {
       _runCommand('complete', correctionReason: correctionReason);
 
   Future<bool> _runCommand(String command, {String? correctionReason}) async {
+    final parsedId = int.tryParse(interactionId);
+    if (parsedId == null) return false;
     final detail = state.detail.asData?.value;
     if (detail == null || state.commandInProgress != null) return false;
     final keySlot = '$command:${detail.version}';
@@ -71,19 +78,19 @@ class InteractionNotifier extends StateNotifier<InteractionState> {
     try {
       if (command == 'start') {
         await _repository.startInteraction(
-          interactionId,
+          parsedId,
           expectedVersion: detail.version,
           idempotencyKey: idempotencyKey,
         );
       } else {
         await _repository.completeInteraction(
-          interactionId,
+          parsedId,
           expectedVersion: detail.version,
           idempotencyKey: idempotencyKey,
           correctionReason: correctionReason,
         );
       }
-      final refreshed = await _repository.getInteraction(interactionId);
+      final refreshed = await _repository.getInteraction(parsedId);
       _commandKeys.remove(keySlot);
       state = state.copyWith(
         detail: AsyncData(refreshed),

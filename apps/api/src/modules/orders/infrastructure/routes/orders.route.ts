@@ -5,6 +5,13 @@ import { ResourceNotFoundError, ValidationError } from "../../../../shared/error
 import { ordersUseCases } from "../../composition";
 import type { OrderStatus } from "../../application/interfaces/order.repository.interface";
 
+type Executable = { execute(input: any): Promise<any> };
+export interface OrdersHttpUseCases {
+  listOrders(): Executable;
+  getOrder(): Executable;
+  createOrder(): Executable;
+}
+
 const orderStatuses = [
   "DRAFT",
   "PENDING",
@@ -24,8 +31,8 @@ function parseStatuses(status: string | undefined): OrderStatus[] | undefined {
   return values as OrderStatus[];
 }
 
-const listOrdersRoute = new Elysia()
-  .use(auth)
+const listOrdersRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) => new Elysia()
+  .use(authPlugin)
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/orders",
@@ -35,7 +42,7 @@ const listOrdersRoute = new Elysia()
         getUserId(),
         getAuthContext(),
       ]);
-      return ordersUseCases.listOrders().execute({
+      return useCases.listOrders().execute({
         page: query.page,
         limit: query.limit,
         statuses: parseStatuses(query.status),
@@ -67,8 +74,8 @@ const listOrdersRoute = new Elysia()
     }
   );
 
-const getOrderRoute = new Elysia()
-  .use(auth)
+const getOrderRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) => new Elysia()
+  .use(authPlugin)
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/orders/:id",
@@ -78,7 +85,7 @@ const getOrderRoute = new Elysia()
         getUserId(),
         getAuthContext(),
       ]);
-      const order = await ordersUseCases.getOrder().execute({
+      const order = await useCases.getOrder().execute({
         orderId: params.id,
         scope,
         actor: { userId, roleName: authContext.roleName },
@@ -100,8 +107,8 @@ const getOrderRoute = new Elysia()
     }
   );
 
-const createOrderRoute = new Elysia()
-  .use(auth)
+const createOrderRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) => new Elysia()
+  .use(authPlugin)
   .use(requirePermission("update", "FACILITY"))
   .post(
     "/orders",
@@ -111,7 +118,7 @@ const createOrderRoute = new Elysia()
         getUserId(),
         getAuthContext(),
       ]);
-      return ordersUseCases.createOrder().execute({
+      return useCases.createOrder().execute({
         facilityId: body.facilityId,
         verticalId: body.verticalId,
         professionalId: body.professionalId ?? null,
@@ -162,7 +169,11 @@ const createOrderRoute = new Elysia()
     }
   );
 
-export const ordersRoute = new Elysia()
-  .use(listOrdersRoute)
-  .use(createOrderRoute)
-  .use(getOrderRoute);
+export function createOrdersRoutes(useCases: OrdersHttpUseCases = ordersUseCases, authPlugin: any = auth) {
+  return new Elysia()
+    .use(listOrdersRoute(useCases, authPlugin))
+    .use(createOrderRoute(useCases, authPlugin))
+    .use(getOrderRoute(useCases, authPlugin));
+}
+
+export const ordersRoute = createOrdersRoutes();

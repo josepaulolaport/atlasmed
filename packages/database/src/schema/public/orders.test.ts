@@ -21,10 +21,10 @@ describe("orders schema", () => {
         },
       ),
     ).toEqual([
-      ["actor_user_id", "text", true],
+      ["actor_user_id", "bigint", true],
       ["command_key", "text", true],
       ["request_fingerprint", "text", true],
-      ["order_id", "text", true],
+      ["order_id", "bigint", true],
       ["result", "jsonb", true],
       ["created_at", "timestamp with time zone", true],
     ]);

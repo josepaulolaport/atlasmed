@@ -30,14 +30,14 @@ function isCommandEvent(metadata: Record<string, unknown>, command: string, idem
   return metadata.command === command && metadata.idempotencyKey === idempotencyKey;
 }
 
-export async function collectOverdueCandidates<T extends { interaction: { id: string; updatedAt: Date } }>(input: {
+export async function collectOverdueCandidates<T extends { interaction: { id: number; updatedAt: Date } }>(input: {
   limit: number;
   pageSize: number;
-  fetchPage(cursor: { updatedAt: Date; id: string } | null): Promise<T[]>;
+  fetchPage(cursor: { updatedAt: Date; id: number } | null): Promise<T[]>;
   isOverdue(candidate: T): boolean;
 }): Promise<T[]> {
   const overdue: T[] = [];
-  let cursor: { updatedAt: Date; id: string } | null = null;
+  let cursor: { updatedAt: Date; id: number } | null = null;
   while (overdue.length < input.limit) {
     const candidates = await input.fetchPage(cursor);
     for (const candidate of candidates) {
@@ -54,7 +54,7 @@ export async function collectOverdueCandidates<T extends { interaction: { id: st
 export class DrizzleInteractionRepository implements InteractionRepository {
   constructor(private readonly database: AnyDatabase = db) {}
 
-  async findById(id: string): Promise<InteractionDetailRecord | null> {
+  async findById(id: number): Promise<InteractionDetailRecord | null> {
     const [row] = await this.database
       .select({ interaction: interactions, calendar, facility: facilities, agent: users })
       .from(interactions)
@@ -76,14 +76,14 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     return this.mapDetail(row.interaction, row.calendar, row.facility, row.agent, override[0] ?? null, orderRows);
   }
 
-  async findCommandResult(input: { id: string; command: "start" | "complete"; idempotencyKey: string }) {
+  async findCommandResult(input: { id: number; command: "start" | "complete"; idempotencyKey: string }) {
     const events = await this.database.select({ metadata: interactionEvents.metadata }).from(interactionEvents)
       .where(eq(interactionEvents.interactionId, input.id));
     if (!events.some((event) => isCommandEvent(event.metadata, input.command, input.idempotencyKey))) return null;
     return this.findById(input.id);
   }
 
-  async start(input: { id: string; actorUserId: string; expectedVersion: number; idempotencyKey: string; startedAt: Date }): Promise<InteractionMutationResult | null> {
+  async start(input: { id: number; actorUserId: number; expectedVersion: number; idempotencyKey: string; startedAt: Date }): Promise<InteractionMutationResult | null> {
     return this.inTransaction(async (repository, tx) => {
       const replay = await repository.findCommandResult({ id: input.id, command: "start", idempotencyKey: input.idempotencyKey });
       if (replay) return { interaction: replay, replayed: true };
@@ -108,7 +108,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     });
   }
 
-  async complete(input: { id: string; actorUserId: string; expectedVersion: number; idempotencyKey: string; completedAt: Date; scheduledStartsAt?: Date; correctionReason?: string; persistEffectiveMissed?: boolean }): Promise<InteractionMutationResult | null> {
+  async complete(input: { id: number; actorUserId: number; expectedVersion: number; idempotencyKey: string; completedAt: Date; scheduledStartsAt?: Date; correctionReason?: string; persistEffectiveMissed?: boolean }): Promise<InteractionMutationResult | null> {
     return this.inTransaction(async (repository, tx) => {
       const replay = await repository.findCommandResult({ id: input.id, command: "complete", idempotencyKey: input.idempotencyKey });
       if (replay) return { interaction: replay, replayed: true };
@@ -154,7 +154,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     });
   }
 
-  async markOverdue(input: { now: Date; limit: number; actorUserId: string | null }): Promise<number> {
+  async markOverdue(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number> {
     return this.inTransaction(async (_repository, tx) => {
       const pageSize = Math.max(input.limit * 4, 100);
       const overdue = await collectOverdueCandidates<{
@@ -217,7 +217,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     facility: typeof facilities.$inferSelect,
     agent: typeof users.$inferSelect,
     override: typeof calendarOccurrenceOverrides.$inferSelect | null,
-    linkedOrders: Array<{ id: string; status: string; type: string; orderedAt: Date }>,
+    linkedOrders: Array<{ id: number; status: string; type: string; orderedAt: Date }>,
   ): InteractionDetailRecord {
     return {
       ...row,

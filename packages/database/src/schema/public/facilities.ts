@@ -54,9 +54,8 @@ export const facilities = pgTable(
     registryDeactivationCode: text("registry_deactivation_code"),
 
     // --- Legal document (digits only; type CNPJ=14 / CPF=11) ---
-    legalDocumentType: facilityLegalDocumentTypeEnum("legal_document_type")
-      .notNull()
-      .default("CNPJ"),
+    /** Required on every insert — no DB default (CNPJ vs CPF must be explicit). */
+    legalDocumentType: facilityLegalDocumentTypeEnum("legal_document_type").notNull(),
     legalDocument: text("legal_document"),
 
     // --- Address ---

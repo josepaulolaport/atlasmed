@@ -56,7 +56,7 @@ class AgendaScreen extends ConsumerStatefulWidget {
 class _AgendaScreenState extends ConsumerState<AgendaScreen> {
   late DateTime _periodStart;
   String _search = '';
-  String? _selectedOwnerUserId;
+  int? _selectedOwnerUserId;
   InteractionStatus? _selectedStatus;
   CalendarModality? _selectedModality;
 
@@ -233,7 +233,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         if (users.isEmpty) {
           return const Text('Nenhum representante disponível.');
         }
-        return DropdownButtonFormField<String>(
+        return DropdownButtonFormField<int>(
           key: const Key('agenda-owner-selector'),
           initialValue: _selectedOwnerUserId,
           isExpanded: true,

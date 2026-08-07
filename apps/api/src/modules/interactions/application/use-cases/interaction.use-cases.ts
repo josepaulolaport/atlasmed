@@ -8,7 +8,7 @@ import type {
 } from "../interfaces/interaction.repository.interface";
 
 export interface InteractionActor {
-  userId: string;
+  userId: number;
   roleName: Role;
 }
 
@@ -109,7 +109,7 @@ function toDto(record: InteractionDetailRecord, actor: InteractionActor, now: Da
 
 export class GetInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { id: string; actor: InteractionActor; scope: ScopeContext }) {
+  async execute(input: { id: number; actor: InteractionActor; scope: ScopeContext }) {
     const record = await this.deps.repository.findById(input.id);
     if (!record) throw new ResourceNotFoundError("Interaction", input.id);
     assertReadable(record, input.actor, input.scope);
@@ -119,7 +119,7 @@ export class GetInteractionUseCase {
 
 export class StartInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { id: string; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string }) {
+  async execute(input: { id: number; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string }) {
     const now = this.deps.now?.() ?? new Date();
     const replay = await this.deps.repository.findCommandResult({ id: input.id, command: "start", idempotencyKey: input.idempotencyKey });
     if (replay) {
@@ -142,7 +142,7 @@ export class StartInteractionUseCase {
 
 export class CompleteInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { id: string; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string; correctionReason?: string }) {
+  async execute(input: { id: number; actor: InteractionActor; scope: ScopeContext; expectedVersion: number; idempotencyKey: string; correctionReason?: string }) {
     const now = this.deps.now?.() ?? new Date();
     const replay = await this.deps.repository.findCommandResult({ id: input.id, command: "complete", idempotencyKey: input.idempotencyKey });
     if (replay) {
@@ -172,7 +172,7 @@ export class CompleteInteractionUseCase {
 }
 
 export class MarkOverdueInteractionsUseCase {
-  constructor(private readonly deps: Dependencies & { systemActorUserId?: string | null }) {}
+  constructor(private readonly deps: Dependencies & { systemActorUserId?: number | null }) {}
   async execute(input: { now?: Date; limit?: number } = {}) {
     const limit = Math.max(1, Math.min(input.limit ?? 100, 500));
     return this.deps.repository.markOverdue({ now: input.now ?? this.deps.now?.() ?? new Date(), limit, actorUserId: this.deps.systemActorUserId ?? null });

@@ -27,7 +27,7 @@ class CalendarEditorDraft extends Equatable {
 
   final CalendarEventKind kind;
   final String title;
-  final String? facilityId;
+  final int? facilityId;
   final String? facilityName;
   final CalendarModality modality;
   final DateTime startsAt;
@@ -44,7 +44,7 @@ class CalendarEditorDraft extends Equatable {
   CalendarEditorDraft copyWith({
     CalendarEventKind? kind,
     String? title,
-    String? facilityId,
+    int? facilityId,
     String? facilityName,
     bool clearFacility = false,
     CalendarModality? modality,
@@ -213,7 +213,7 @@ class CalendarEditorNotifier extends StateNotifier<CalendarEditorState> {
       errors['title'] = 'Informe um título.';
     }
     if (draft.kind == CalendarEventKind.interaction &&
-        (draft.facilityId == null || draft.facilityId!.isEmpty)) {
+        draft.facilityId == null) {
       errors['facilityId'] = 'Selecione uma clínica.';
     }
     if (draft.durationMinutes <= 0 || draft.durationMinutes % 30 != 0) {

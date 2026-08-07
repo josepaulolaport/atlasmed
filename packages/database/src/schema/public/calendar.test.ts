@@ -17,7 +17,7 @@ import {
 import { orders } from "./orders";
 
 const recurringMonthly = {
-  ownerUserId: "user-1",
+  ownerUserId: 1,
   kind: "INTERACTION" as const,
   title: "Atendimento",
   anchorLocalDate: "2026-01-31",
@@ -28,14 +28,14 @@ const recurringMonthly = {
 } satisfies typeof calendar.$inferInsert;
 
 const orderWithoutInteraction = {
-  facilityId: "facility-1",
-  verticalId: "vertical-1",
+  facilityId: 1,
+  verticalId: 1,
   orderedAt: new Date("2026-01-31T12:00:00.000Z"),
 } satisfies typeof orders.$inferInsert;
 
 const orderWithInteraction = {
   ...orderWithoutInteraction,
-  interactionId: "interaction-1",
+  interactionId: 1,
 } satisfies typeof orders.$inferInsert;
 
 const columnByName = (table: AnyPgTable, name: string) =>
@@ -91,7 +91,7 @@ describe("calendar and interaction schema", () => {
       timeZone: "America/Sao_Paulo",
     });
     expect(orderWithoutInteraction).not.toHaveProperty("interactionId");
-    expect(orderWithInteraction.interactionId).toBe("interaction-1");
+    expect(orderWithInteraction.interactionId).toBe(1);
   });
 
   test("uses the required physical table names", () => {
@@ -137,7 +137,7 @@ describe("calendar and interaction schema", () => {
         return [column?.name, column?.getSQLType(), column?.notNull];
       }),
     ).toEqual([
-      ["owner_user_id", "text", true],
+      ["owner_user_id", "bigint", true],
       ["kind", "calendar_event_kind", true],
       ["title", "text", true],
       ["anchor_local_date", "date", true],
@@ -151,7 +151,7 @@ describe("calendar and interaction schema", () => {
       ["recurrence_count", "integer", false],
       ["status", "calendar_status", true],
       ["cancelled_at", "timestamp with time zone", false],
-      ["cancelled_by_user_id", "text", false],
+      ["cancelled_by_user_id", "bigint", false],
       ["cancellation_reason", "text", false],
       ["version", "integer", true],
       ["created_at", "timestamp with time zone", true],
@@ -210,7 +210,7 @@ describe("calendar and interaction schema", () => {
         },
       ),
     ).toEqual([
-      ["calendar_id", "text", true],
+      ["calendar_id", "bigint", true],
       ["recurrence_key", "text", true],
       ["starts_at", "timestamp with time zone", true],
       ["ends_at", "timestamp with time zone", true],
@@ -257,21 +257,21 @@ describe("calendar and interaction schema", () => {
         return [column?.name, column?.getSQLType(), column?.notNull];
       }),
     ).toEqual([
-      ["calendar_id", "text", true],
+      ["calendar_id", "bigint", true],
       ["recurrence_key", "text", true],
-      ["facility_id", "text", true],
-      ["agent_user_id", "text", true],
+      ["facility_id", "bigint", true],
+      ["agent_user_id", "bigint", true],
       ["modality", "interaction_modality", true],
       ["status", "interaction_status", true],
       ["actual_started_at", "timestamp with time zone", false],
       ["actual_ended_at", "timestamp with time zone", false],
       ["cancelled_at", "timestamp with time zone", false],
-      ["cancelled_by_user_id", "text", false],
+      ["cancelled_by_user_id", "bigint", false],
       ["cancellation_reason", "text", false],
       ["corrected_at", "timestamp with time zone", false],
-      ["corrected_by_user_id", "text", false],
+      ["corrected_by_user_id", "bigint", false],
       ["correction_reason", "text", false],
-      ["visit_id", "text", false],
+      ["visit_id", "bigint", false],
       ["version", "integer", true],
       ["created_at", "timestamp with time zone", true],
       ["updated_at", "timestamp with time zone", true],
@@ -318,8 +318,8 @@ describe("calendar and interaction schema", () => {
         return [column?.name, column?.getSQLType(), column?.notNull];
       }),
     ).toEqual([
-      ["interaction_id", "text", true],
-      ["actor_user_id", "text", false],
+      ["interaction_id", "bigint", true],
+      ["actor_user_id", "bigint", false],
       ["source", "interaction_event_source", true],
       ["previous_status", "interaction_status", false],
       ["new_status", "interaction_status", true],
@@ -343,10 +343,10 @@ describe("calendar and interaction schema", () => {
         },
       ),
     ).toEqual([
-      ["owner_user_id", "text", true],
+      ["owner_user_id", "bigint", true],
       ["command_key", "text", true],
       ["command_kind", "text", true],
-      ["resource_id", "text", false],
+      ["resource_id", "bigint", false],
       ["request_fingerprint", "text", true],
       ["result", "jsonb", true],
       ["created_at", "timestamp with time zone", true],

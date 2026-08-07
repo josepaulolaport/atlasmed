@@ -10,12 +10,12 @@ export class CalendarIdempotencyConflictError extends AppError {
   }
 }
 
-interface Actor { userId: string; roleName: Role }
+interface Actor { userId: number; roleName: Role }
 interface Dependencies { repository: CalendarRepository; now?: () => Date }
 interface EventData {
   kind: "INTERACTION" | "PERSONAL_BLOCK";
   title: string;
-  facilityId?: string;
+  facilityId?: number;
   modality?: InteractionModality;
   startsAt: string;
   timeZone: string;
@@ -27,9 +27,9 @@ interface EventData {
 
 export interface CalendarOccurrenceDto {
   id: string;
-  calendarId: string;
+  calendarId: number;
   recurrenceKey: string;
-  ownerUserId: string;
+  ownerUserId: number;
   kind: "INTERACTION" | "PERSONAL_BLOCK";
   title: string;
   startsAt: string;
@@ -42,10 +42,10 @@ export interface CalendarOccurrenceDto {
   version: number;
   calendarVersion: number;
   overrideVersion?: number;
-  owner: { id: string; name: string };
-  facility: { id: string; name: string } | null;
+  owner: { id: number; name: string };
+  facility: { id: number; name: string } | null;
   canMutate: boolean;
-  interaction?: { id: string; facilityId: string; modality: InteractionModality; status: string; version: number };
+  interaction?: { id: number; facilityId: number; modality: InteractionModality; status: string; version: number };
 }
 
 const MAX_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
@@ -60,7 +60,7 @@ function assertRange(from: Date, to: Date): void {
   }
 }
 
-function assertOwnerRead(actor: Actor, scope: ScopeContext, ownerUserId?: string): string {
+function assertOwnerRead(actor: Actor, scope: ScopeContext, ownerUserId?: number): number {
   const owner = ownerUserId ?? actor.userId;
   if (owner === actor.userId || scope.isGlobal) return owner;
   if (actor.roleName === "MANAGER" && scope.managedUserIds.includes(owner)) return owner;
@@ -140,7 +140,7 @@ function validateEventData(data: EventData): void {
   if (issues.length) throw new ValidationError(issues);
 }
 
-function eventValues(ownerUserId: string, data: EventData) {
+function eventValues(ownerUserId: number, data: EventData) {
   validateEventData(data);
   const startsAt = new Date(data.startsAt);
   const anchor = localAnchor(startsAt, data.timeZone);
@@ -152,7 +152,7 @@ function eventValues(ownerUserId: string, data: EventData) {
   };
 }
 
-async function loadOwned(repository: CalendarRepository, id: string, actor: Actor) {
+async function loadOwned(repository: CalendarRepository, id: number, actor: Actor) {
   const event = await repository.findById(id);
   if (!event) throw new ResourceNotFoundError("Calendar", id);
   assertMutationOwner(actor, event);
@@ -166,7 +166,7 @@ function firstStartsAt(event: CalendarEventRecord): Date {
   return first.startsAt;
 }
 
-function conflictFrom(event: ReturnType<typeof eventValues>, id: string, overrides: CalendarEventRecord["overrides"] = []): CalendarConflictEntry {
+function conflictFrom(event: ReturnType<typeof eventValues>, id: number | string, overrides: CalendarEventRecord["overrides"] = []): CalendarConflictEntry {
   return { id, rule: { anchorLocalDate: event.anchorLocalDate, anchorLocalTime: event.anchorLocalTime,
     timeZone: event.timeZone, durationMinutes: event.durationMinutes, recurrence: event.recurrence,
     ...(event.recurrenceUntil ? { recurrenceUntil: event.recurrenceUntil } : {}),
@@ -187,11 +187,11 @@ function canonicalize(value: unknown): unknown {
   }
   return value;
 }
-function commandFingerprint(commandKind: string, resourceId: string | null, expectedVersion: number | null, payload: unknown): string {
+function commandFingerprint(commandKind: string, resourceId: number | null, expectedVersion: number | null, payload: unknown): string {
   return new Bun.CryptoHasher("sha256").update(JSON.stringify(canonicalize({ commandKind, resourceId, expectedVersion, payload }))).digest("hex");
 }
-function replayResult<T>(receipt: { commandKind: string; resourceId: string | null; requestFingerprint: string; result: T } | undefined,
-  commandKind: string, resourceId: string | null, requestFingerprint: string): T | undefined {
+function replayResult<T>(receipt: { commandKind: string; resourceId: number | null; requestFingerprint: string; result: T } | undefined,
+  commandKind: string, resourceId: number | null, requestFingerprint: string): T | undefined {
   if (!receipt) return undefined;
   if (receipt.commandKind !== commandKind || receipt.resourceId !== resourceId || receipt.requestFingerprint !== requestFingerprint) {
     throw new CalendarIdempotencyConflictError();
@@ -237,7 +237,7 @@ export class CreateCalendarEventUseCase {
 
 export class ListCalendarUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { actor: Actor; scope: ScopeContext; ownerUserId?: string; from: Date; to: Date }) {
+  async execute(input: { actor: Actor; scope: ScopeContext; ownerUserId?: number; from: Date; to: Date }) {
     assertRange(input.from, input.to);
     const owner = assertOwnerRead(input.actor, input.scope, input.ownerUserId);
     const managerView = input.actor.roleName === "MANAGER" && owner !== input.actor.userId;
@@ -277,14 +277,14 @@ export class ListCalendarUseCase {
 export class GetCalendarAvailabilityUseCase {
   private readonly list: ListCalendarUseCase;
   constructor(deps: Dependencies) { this.list = new ListCalendarUseCase(deps); }
-  async execute(input: { actor: Actor; scope: ScopeContext; ownerUserId?: string; from: Date; to: Date }) {
+  async execute(input: { actor: Actor; scope: ScopeContext; ownerUserId?: number; from: Date; to: Date }) {
     return (await this.list.execute(input)).map(({ startsAt, endsAt }) => ({ startsAt, endsAt }));
   }
 }
 
 export class UpdateCalendarEventUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { actor: Actor; scope: ScopeContext; id: string; idempotencyKey: string; expectedVersion: number;
+  async execute(input: { actor: Actor; scope: ScopeContext; id: number; idempotencyKey: string; expectedVersion: number;
     changes: Partial<{ title: string; startsAt: string; timeZone: string; durationMinutes: number; recurrence: CalendarRecurrence; recurrenceUntil: string | null; recurrenceCount: number | null }> }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
     const commandKind = "UPDATE_SERIES";
@@ -360,10 +360,10 @@ async function interactionFor(repository: CalendarRepository, event: CalendarEve
 
 export class UpdateCalendarOccurrenceUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { actor: Actor; scope: ScopeContext; id: string; recurrenceKey: string; idempotencyKey: string; expectedVersion: number; startsAt: string; durationMinutes: number }) {
+  async execute(input: { actor: Actor; scope: ScopeContext; id: number; recurrenceKey: string; idempotencyKey: string; expectedVersion: number; startsAt: string; durationMinutes: number }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
     const commandKind = "UPDATE_OCCURRENCE";
-    const resourceId = `${input.id}:${input.recurrenceKey}`;
+    const resourceId = input.id;
     const fingerprint = commandFingerprint(commandKind, resourceId, input.expectedVersion, { startsAt: input.startsAt, durationMinutes: input.durationMinutes });
     return this.deps.repository.runWithOwnerLock(owner, async (repository) => {
       const replay = replayResult(await repository.getCommandReceipt<CalendarOverrideRecord>(owner, input.idempotencyKey), commandKind, resourceId, fingerprint);
@@ -396,11 +396,11 @@ function reason(value: string) { const trimmed = value.trim(); if (!trimmed) thr
 
 export class CancelCalendarOccurrenceUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { actor: Actor; scope: ScopeContext; id: string; recurrenceKey: string; idempotencyKey: string; expectedVersion: number; reason: string }) {
+  async execute(input: { actor: Actor; scope: ScopeContext; id: number; recurrenceKey: string; idempotencyKey: string; expectedVersion: number; reason: string }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
     const commandKind = "CANCEL_OCCURRENCE";
-    const resourceId = `${input.id}:${input.recurrenceKey}`;
-    const fingerprint = commandFingerprint(commandKind, resourceId, input.expectedVersion, { reason: input.reason.trim() });
+    const resourceId = input.id;
+    const fingerprint = commandFingerprint(commandKind, resourceId, input.expectedVersion, { reason: input.reason.trim(), recurrenceKey: input.recurrenceKey });
     return this.deps.repository.runWithOwnerLock(owner, async (repository) => {
       const replay = replayResult(await repository.getCommandReceipt<CalendarOverrideRecord>(owner, input.idempotencyKey), commandKind, resourceId, fingerprint);
       if (replay) return receiptOverride(replay);
@@ -426,12 +426,12 @@ export class CancelCalendarOccurrenceUseCase {
 
 export class CancelCalendarEventUseCase {
   constructor(private readonly deps: Dependencies) {}
-  async execute(input: { actor: Actor; scope: ScopeContext; id: string; idempotencyKey: string; expectedVersion: number; reason: string }) {
+  async execute(input: { actor: Actor; scope: ScopeContext; id: number; idempotencyKey: string; expectedVersion: number; reason: string }) {
     const owner = (await loadOwned(this.deps.repository, input.id, input.actor)).ownerUserId;
     const commandKind = "CANCEL_SERIES";
     const fingerprint = commandFingerprint(commandKind, input.id, input.expectedVersion, { reason: input.reason.trim() });
     return this.deps.repository.runWithOwnerLock(owner, async (repository) => {
-      const replay = replayResult(await repository.getCommandReceipt<{ id: string; cancelled: true }>(owner, input.idempotencyKey), commandKind, input.id, fingerprint);
+      const replay = replayResult(await repository.getCommandReceipt<{ id: number; cancelled: true }>(owner, input.idempotencyKey), commandKind, input.id, fingerprint);
       if (replay) return replay;
       const event = await loadOwned(repository, input.id, input.actor);
       if (event.kind === "INTERACTION" && event.interactions.some((item) => item.status !== "SCHEDULED")) throw new ValidationError([{ field: "id", message: "Only scheduled interaction series may be cancelled" }]);

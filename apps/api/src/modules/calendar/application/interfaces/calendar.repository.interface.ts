@@ -6,8 +6,8 @@ export type InteractionModality = "IN_PERSON" | "REMOTE";
 export type InteractionStatus = "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "NOT_COMPLETED" | "CANCELLED";
 
 export interface CalendarOverrideRecord {
-  id: string;
-  calendarId: string;
+  id: number;
+  calendarId: number;
   recurrenceKey: string;
   startsAt: Date;
   endsAt: Date;
@@ -18,21 +18,21 @@ export interface CalendarOverrideRecord {
 
 export interface CalendarCommandReceipt<T> {
   commandKind: string;
-  resourceId: string | null;
+  resourceId: number | null;
   requestFingerprint: string;
   result: T;
 }
 
 export interface CalendarInteractionRecord {
-  id: string;
+  id: number;
   recurrenceKey: string;
-  facilityId: string;
+  facilityId: number;
   modality: InteractionModality;
   status: InteractionStatus;
   cancelledAt?: Date | null;
-  cancelledByUserId?: string | null;
+  cancelledByUserId?: number | null;
   cancellationReason?: string | null;
-  visitId?: string | null;
+  visitId?: number | null;
   linkedOrderCount?: number;
   version: number;
   actualStartedAt?: Date | null;
@@ -41,8 +41,8 @@ export interface CalendarInteractionRecord {
 }
 
 export interface CalendarEventRecord {
-  id: string;
-  ownerUserId: string;
+  id: number;
+  ownerUserId: number;
   kind: CalendarEventKind;
   title: string;
   anchorLocalDate: string;
@@ -56,11 +56,11 @@ export interface CalendarEventRecord {
   recurrenceCount: number | null;
   status: "ACTIVE" | "CANCELLED";
   cancelledAt: Date | null;
-  cancelledByUserId: string | null;
+  cancelledByUserId: number | null;
   cancellationReason: string | null;
   version: number;
-  owner: { id: string; name: string };
-  facility: { id: string; name: string } | null;
+  owner: { id: number; name: string };
+  facility: { id: number; name: string } | null;
   overrides: CalendarOverrideRecord[];
   interactions: CalendarInteractionRecord[];
 }
@@ -73,27 +73,27 @@ export interface CreateCalendarEventInput {
   };
   interaction?: {
     recurrenceKey: string;
-    facilityId: string;
-    agentUserId: string;
+    facilityId: number;
+    agentUserId: number;
     modality: InteractionModality;
   };
 }
 
 export interface UpdateCalendarEventInput {
-  id: string;
+  id: number;
   expectedVersion: number;
   commandKey: string;
   changes: Partial<Pick<CalendarEventRecord, "title" | "anchorLocalDate" | "anchorLocalTime" | "timeZone" | "durationMinutes" | "firstStartsAt" | "firstEndsAt" | "recurrence" | "recurrenceUntil" | "recurrenceCount">>;
 }
 
 export interface UpsertCalendarOverrideInput {
-  calendarId: string;
+  calendarId: number;
   recurrenceKey: string;
   startsAt: Date;
   endsAt: Date;
   status: "ACTIVE" | "CANCELLED";
   reason?: string | null;
-  actorUserId: string;
+  actorUserId: number;
   previousStartsAt?: Date;
   previousEndsAt?: Date;
   expectedVersion: number;
@@ -101,26 +101,26 @@ export interface UpsertCalendarOverrideInput {
 }
 
 export interface CancelCalendarEventInput {
-  id: string;
+  id: number;
   expectedVersion: number;
-  actorUserId: string;
+  actorUserId: number;
   reason: string;
   commandKey: string;
 }
 
 export interface CalendarRepository {
-  runWithOwnerLock<T>(ownerUserId: string, work: (repository: CalendarRepository) => Promise<T>): Promise<T>;
-  listByOwner(ownerUserId: string, range?: { from: Date; to: Date }): Promise<CalendarEventRecord[]>;
-  findById(id: string): Promise<CalendarEventRecord | null>;
-  listConflictEntries(ownerUserId: string, excludeCalendarId?: string, range?: { from: Date; to?: Date }): Promise<CalendarConflictEntry[]>;
-  ensureInteractionsForOccurrences(calendarId: string, recurrenceKeys: string[]): Promise<CalendarInteractionRecord[]>;
-  cancelInteractionOccurrences(input: { calendarId: string; recurrenceKeys?: string[]; actorUserId: string; reason: string }): Promise<number>;
-  getCommandReceipt<T>(ownerUserId: string, commandKey: string): Promise<CalendarCommandReceipt<T> | undefined>;
-  saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null, requestFingerprint: string, result: T): Promise<CalendarCommandReceipt<T>>;
+  runWithOwnerLock<T>(ownerUserId: number, work: (repository: CalendarRepository) => Promise<T>): Promise<T>;
+  listByOwner(ownerUserId: number, range?: { from: Date; to: Date }): Promise<CalendarEventRecord[]>;
+  findById(id: number): Promise<CalendarEventRecord | null>;
+  listConflictEntries(ownerUserId: number, excludeCalendarId?: number, range?: { from: Date; to?: Date }): Promise<CalendarConflictEntry[]>;
+  ensureInteractionsForOccurrences(calendarId: number, recurrenceKeys: string[]): Promise<CalendarInteractionRecord[]>;
+  cancelInteractionOccurrences(input: { calendarId: number; recurrenceKeys?: string[]; actorUserId: number; reason: string }): Promise<number>;
+  getCommandReceipt<T>(ownerUserId: number, commandKey: string): Promise<CalendarCommandReceipt<T> | undefined>;
+  saveCommandReceipt<T>(ownerUserId: number, commandKey: string, commandKind: string, resourceId: number | null, requestFingerprint: string, result: T): Promise<CalendarCommandReceipt<T>>;
   create(input: CreateCalendarEventInput): Promise<CalendarEventRecord>;
   update(input: UpdateCalendarEventInput): Promise<CalendarEventRecord | null>;
-  replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean>;
+  replaceUntouchedInteractions(input: { calendarId: number; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean>;
   upsertOverride(input: UpsertCalendarOverrideInput): Promise<CalendarOverrideRecord | null>;
-  deleteInvalidOverrides(calendarId: string, recurrenceKeys: string[]): Promise<boolean>;
+  deleteInvalidOverrides(calendarId: number, recurrenceKeys: string[]): Promise<boolean>;
   cancel(input: CancelCalendarEventInput): Promise<CalendarEventRecord | null>;
 }

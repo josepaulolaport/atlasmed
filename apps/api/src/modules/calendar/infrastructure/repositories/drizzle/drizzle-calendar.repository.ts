@@ -28,7 +28,7 @@ function mapInteraction(row: typeof interactions.$inferSelect, linkedOrderCount 
     lifecycleEventCount: lifecycle.eventCount ?? 0 };
 }
 export function mapCalendarEvent(row: typeof calendar.$inferSelect, overrides: CalendarOverrideRecord[] = [], interactionRows: CalendarInteractionRecord[] = [],
-  owner: { id: string; name: string } = { id: row.ownerUserId, name: row.ownerUserId }, facility: { id: string; name: string } | null = null): CalendarEventRecord {
+  owner: { id: number; name: string } = { id: row.ownerUserId, name: String(row.ownerUserId) }, facility: { id: number; name: string } | null = null): CalendarEventRecord {
   return { id: row.id, ownerUserId: row.ownerUserId, kind: row.kind, title: row.title,
     anchorLocalDate: row.anchorLocalDate, anchorLocalTime: row.anchorLocalTime.slice(0, 5), timeZone: row.timeZone,
     durationMinutes: row.durationMinutes, firstStartsAt: row.firstStartsAt ?? null, firstEndsAt: row.firstEndsAt ?? null,
@@ -43,10 +43,10 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     private readonly transactionScoped = false,
   ) {}
 
-  async runWithOwnerLock<T>(ownerUserId: string, work: (repository: CalendarRepository) => Promise<T>): Promise<T> {
+  async runWithOwnerLock<T>(ownerUserId: number, work: (repository: CalendarRepository) => Promise<T>): Promise<T> {
     if (this.transactionScoped) return work(this);
     return this.database.transaction(async (tx) => {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${ownerUserId}))`);
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${String(ownerUserId)}))`);
       return work(new DrizzleCalendarRepository(tx, true));
     });
   }
@@ -83,7 +83,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     });
   }
 
-  async listByOwner(ownerUserId: string, range?: { from: Date; to: Date }): Promise<CalendarEventRecord[]> {
+  async listByOwner(ownerUserId: number, range?: { from: Date; to: Date }): Promise<CalendarEventRecord[]> {
     const likelyOverlap = range
       ? or(
         isNull(calendar.firstStartsAt),
@@ -99,11 +99,11 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       eq(calendar.ownerUserId, ownerUserId), eq(calendar.status, "ACTIVE"), likelyOverlap,
     )));
   }
-  async findById(id: string): Promise<CalendarEventRecord | null> {
+  async findById(id: number): Promise<CalendarEventRecord | null> {
     const rows = await this.database.select().from(calendar).where(eq(calendar.id, id)).limit(1);
     return (await this.hydrate(rows))[0] ?? null;
   }
-  async listConflictEntries(ownerUserId: string, excludeCalendarId?: string, range?: { from: Date; to?: Date }): Promise<CalendarConflictEntry[]> {
+  async listConflictEntries(ownerUserId: number, excludeCalendarId?: number, range?: { from: Date; to?: Date }): Promise<CalendarConflictEntry[]> {
     const to = range?.to ?? new Date("9999-12-31T23:59:59.999Z");
     return (await this.listByOwner(ownerUserId, range ? { from: range.from, to } : undefined))
       .filter((event) => event.id !== excludeCalendarId)
@@ -116,7 +116,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
         overrides: Object.fromEntries(event.overrides.map((item) => [item.recurrenceKey, { status: item.status, startsAt: item.startsAt, endsAt: item.endsAt }])),
       }));
   }
-  async ensureInteractionsForOccurrences(calendarId: string, recurrenceKeys: string[]): Promise<CalendarInteractionRecord[]> {
+  async ensureInteractionsForOccurrences(calendarId: number, recurrenceKeys: string[]): Promise<CalendarInteractionRecord[]> {
     if (!this.transactionScoped) {
       return this.database.transaction((tx) =>
         new DrizzleCalendarRepository(tx, true).ensureInteractionsForOccurrences(calendarId, recurrenceKeys),
@@ -146,7 +146,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
       eq(interactions.calendarId, calendarId), inArray(interactions.recurrenceKey, keys.filter((key) => !cancelledKeys.has(key))),
     ))).map((row) => mapInteraction(row));
   }
-  async cancelInteractionOccurrences(input: { calendarId: string; recurrenceKeys?: string[]; actorUserId: string; reason: string }): Promise<number> {
+  async cancelInteractionOccurrences(input: { calendarId: number; recurrenceKeys?: string[]; actorUserId: number; reason: string }): Promise<number> {
     const now = new Date();
     const conditions = [eq(interactions.calendarId, input.calendarId), eq(interactions.status, "SCHEDULED")];
     if (input.recurrenceKeys?.length) conditions.push(inArray(interactions.recurrenceKey, input.recurrenceKeys));
@@ -163,14 +163,14 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     return updated.length;
   }
 
-  async getCommandReceipt<T>(ownerUserId: string, commandKey: string): Promise<CalendarCommandReceipt<T> | undefined> {
+  async getCommandReceipt<T>(ownerUserId: number, commandKey: string): Promise<CalendarCommandReceipt<T> | undefined> {
     const [row] = await this.database.select({ commandKind: calendarCommandReceipts.commandKind,
       resourceId: calendarCommandReceipts.resourceId, requestFingerprint: calendarCommandReceipts.requestFingerprint,
       result: calendarCommandReceipts.result }).from(calendarCommandReceipts)
       .where(and(eq(calendarCommandReceipts.ownerUserId, ownerUserId), eq(calendarCommandReceipts.commandKey, commandKey))).limit(1);
     return row ? { ...row, result: row.result as T } : undefined;
   }
-  async saveCommandReceipt<T>(ownerUserId: string, commandKey: string, commandKind: string, resourceId: string | null,
+  async saveCommandReceipt<T>(ownerUserId: number, commandKey: string, commandKind: string, resourceId: number | null,
     requestFingerprint: string, result: T): Promise<CalendarCommandReceipt<T>> {
     const [row] = await this.database.insert(calendarCommandReceipts).values({ ownerUserId, commandKey, commandKind, resourceId, requestFingerprint, result })
       .onConflictDoNothing({ target: [calendarCommandReceipts.ownerUserId, calendarCommandReceipts.commandKey] })
@@ -192,7 +192,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     }
     return mapCalendarEvent(row, [], interactionRows);
   }
-  async replaceUntouchedInteractions(input: { calendarId: string; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean> {
+  async replaceUntouchedInteractions(input: { calendarId: number; recurrenceKeyMap: Array<{ oldRecurrenceKey: string; newRecurrenceKey: string }> }): Promise<boolean> {
     const rows = await this.database.select().from(interactions).where(eq(interactions.calendarId, input.calendarId)).for("update");
     if (rows.length !== input.recurrenceKeyMap.length) return false;
     const newKeys = input.recurrenceKeyMap.map((item) => item.newRecurrenceKey);
@@ -255,7 +255,7 @@ export class DrizzleCalendarRepository implements CalendarRepository {
     });
     return updated ? mapOverride(updated) : null;
   }
-  async deleteInvalidOverrides(calendarId: string, recurrenceKeys: string[]): Promise<boolean> {
+  async deleteInvalidOverrides(calendarId: number, recurrenceKeys: string[]): Promise<boolean> {
     if (!recurrenceKeys.length) return true;
     await this.database.delete(calendarOccurrenceOverrides).where(and(
       eq(calendarOccurrenceOverrides.calendarId, calendarId), inArray(calendarOccurrenceOverrides.recurrenceKey, recurrenceKeys),

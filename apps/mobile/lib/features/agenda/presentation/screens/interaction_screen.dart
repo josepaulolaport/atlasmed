@@ -11,21 +11,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class InteractionNotesQuery extends Equatable {
-  const InteractionNotesQuery({required this.facilityId, this.ownerUserId});
+  const InteractionNotesQuery({required this.facilityId});
 
-  final String facilityId;
-  final String? ownerUserId;
+  final int facilityId;
 
   @override
-  List<Object?> get props => [facilityId, ownerUserId];
+  List<Object?> get props => [facilityId];
 }
 
 final interactionNotesRepositoryProvider = Provider.autoDispose
     .family<FacilityNotesRepository, InteractionNotesQuery>((ref, query) {
-      final repository = FacilityNotesRepository(
-        query.facilityId,
-        ownerUserId: query.ownerUserId,
-      );
+      final repository = FacilityNotesRepository(query.facilityId);
       ref.onDispose(repository.dispose);
       return repository;
     });
@@ -85,8 +81,8 @@ class InteractionScreen extends ConsumerWidget {
                 Uri(
                   path: '/orders/new',
                   queryParameters: {
-                    'interactionId': detail.id,
-                    'facilityId': detail.facility.id,
+                    'interactionId': '${detail.id}',
+                    'facilityId': '${detail.facility.id}',
                     'facilityName': detail.facility.displayName,
                   },
                 ).toString(),
@@ -177,7 +173,7 @@ Future<void> _cancelOccurrence(
       idempotencyKey: idempotencyKey,
     );
     ref.invalidate(agendaProvider);
-    await ref.read(interactionProvider(detail.id).notifier).load();
+    await ref.read(interactionProvider('${detail.id}').notifier).load();
   } on CalendarApiException catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(
@@ -220,10 +216,7 @@ class _InteractionContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notesQuery = InteractionNotesQuery(
-      facilityId: detail.facility.id,
-      ownerUserId: detail.canMutate ? null : detail.agent.id,
-    );
+    final notesQuery = InteractionNotesQuery(facilityId: detail.facility.id);
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(interactionNotesProvider(notesQuery));
@@ -370,7 +363,7 @@ class _OrdersCard extends StatelessWidget {
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.receipt_long_outlined),
-                title: Text(order.id),
+                title: Text('${order.id}'),
                 subtitle: Text(_orderStatusLabel(order.status)),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push('/orders/${order.id}'),

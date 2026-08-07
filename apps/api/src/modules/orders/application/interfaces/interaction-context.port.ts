@@ -8,10 +8,10 @@ export type InteractionContextStatus =
   | "CANCELLED";
 
 export interface InteractionContext {
-  id: string;
-  ownerUserId: string;
-  agentUserId: string;
-  facilityId: string;
+  id: number;
+  ownerUserId: number;
+  agentUserId: number;
+  facilityId: number;
   status: InteractionContextStatus;
   calendarStatus: "ACTIVE" | "CANCELLED";
   occurrenceStatus: "ACTIVE" | "CANCELLED" | null;
@@ -20,7 +20,7 @@ export interface InteractionContext {
 }
 
 export interface InteractionContextPort {
-  findById(interactionId: string): Promise<InteractionContext | null>;
+  findById(interactionId: number): Promise<InteractionContext | null>;
   /** Re-read interaction/calendar/override state while holding the shared owner lock. */
-  lockAndGetOrderable(interactionId: string, database?: AnyDatabase): Promise<InteractionContext | null>;
+  lockAndGetOrderable(interactionId: number, database?: AnyDatabase): Promise<InteractionContext | null>;
 }

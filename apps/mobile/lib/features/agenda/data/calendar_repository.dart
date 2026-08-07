@@ -7,31 +7,33 @@ import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dar
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 import 'calendar_models.dart';
 
 abstract interface class CalendarRepositoryContract {
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   });
 
   Future<List<CalendarAvailabilityInterval>> getAvailability({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   });
 
-  Future<InteractionDetail> getInteraction(String id);
+  Future<InteractionDetail> getInteraction(int id);
 
   Future<InteractionDetail> startInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
   });
 
   Future<InteractionDetail> completeInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
@@ -45,26 +47,26 @@ abstract interface class CalendarMutationRepositoryContract {
   });
 
   Future<void> updateCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarUpdateCommand command,
     required String idempotencyKey,
   });
 
   Future<void> updateCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarOccurrenceUpdateCommand command,
     required String idempotencyKey,
   });
 
   Future<void> cancelCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
   });
 
   Future<void> cancelCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
@@ -102,7 +104,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async {
     final response = await _call(
       _calendarUri('', from: from, to: to, ownerUserId: ownerUserId),
@@ -125,7 +127,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
   Future<List<CalendarAvailabilityInterval>> getAvailability({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async {
     final response = await _call(
       _calendarUri(
@@ -165,7 +167,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
 
   @override
   Future<void> updateCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarUpdateCommand command,
     required String idempotencyKey,
   }) => _mutate(
@@ -177,7 +179,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
 
   @override
   Future<void> updateCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarOccurrenceUpdateCommand command,
     required String idempotencyKey,
@@ -191,7 +193,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
 
   @override
   Future<void> cancelCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
   }) => _mutate(
@@ -203,7 +205,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
 
   @override
   Future<void> cancelCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
@@ -238,7 +240,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
   }
 
   @override
-  Future<InteractionDetail> getInteraction(String id) async {
+  Future<InteractionDetail> getInteraction(int id) async {
     final response = await _callRequest(
       RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/interactions/$id'),
@@ -249,7 +251,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
 
   @override
   Future<InteractionDetail> startInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
   }) async {
@@ -266,7 +268,7 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
 
   @override
   Future<InteractionDetail> completeInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
@@ -299,14 +301,13 @@ class CalendarRepository extends Repository<List<CalendarOccurrence>>
     String suffix, {
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) => _baseUri.replace(
     path: '/api/v1/calendar$suffix',
     queryParameters: {
       'from': from.toUtc().toIso8601String(),
       'to': to.toUtc().toIso8601String(),
-      if (ownerUserId != null && ownerUserId.isNotEmpty)
-        'ownerUserId': ownerUserId,
+      if (ownerUserId != null) 'ownerUserId': '$ownerUserId',
     },
   );
 
@@ -398,7 +399,7 @@ class CalendarVersionConflictException extends CalendarApiException {
     this.expectedVersion,
   });
 
-  final String? calendarId;
+  final int? calendarId;
   final int? expectedVersion;
 }
 
@@ -442,7 +443,7 @@ class _CalendarErrorPayload {
   final String message;
   final List<Object?> details;
   final List<CalendarConflict> conflicts;
-  final String? calendarId;
+  final int? calendarId;
   final int? expectedVersion;
   final int? actualVersion;
 }
@@ -465,7 +466,7 @@ _CalendarErrorPayload _errorPayload(String body) {
           .cast<Map<String, dynamic>>()
           .map(CalendarConflict.fromJson)
           .toList(growable: false),
-      calendarId: error['calendarId'] as String?,
+      calendarId: readCrmIdOrNull(error['calendarId'], 'calendarId'),
       expectedVersion: error['expectedVersion'] as int?,
       actualVersion: error['actualVersion'] as int?,
     );

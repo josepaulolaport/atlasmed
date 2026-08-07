@@ -1,10 +1,10 @@
 import {
   pgTable,
   text,
-  integer,
   numeric,
   boolean,
   timestamp,
+  jsonb,
   index,
   unique,
   bigint,
@@ -14,6 +14,7 @@ import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
 import { facilities, professionals } from "./facilities";
 import { products } from "./catalog";
+import { interactions } from "./calendar";
 import { users } from "./users";
 
 export const orders = pgTable(
@@ -27,6 +28,9 @@ export const orders = pgTable(
       .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
     sellerId: bigint("seller_id", { mode: "number" }).references(() => users.id),
     professionalId: bigint("professional_id", { mode: "number" }).references(() => professionals.id),
+    interactionId: bigint("interaction_id", { mode: "number" }).references(() => interactions.id, {
+      onDelete: "restrict",
+    }),
     status: orderStatusEnum("status").notNull().default("DRAFT"),
     type: orderTypeEnum("type").notNull().default("SALE"),
     orderedAt: timestamp("ordered_at").notNull(),
@@ -54,6 +58,7 @@ export const orders = pgTable(
     index("orders_legacy_id_idx").on(t.legacyId),
     index("orders_ordered_at_idx").on(t.orderedAt),
     index("orders_professional_id_idx").on(t.professionalId),
+    index("orders_interaction_id_idx").on(t.interactionId),
     index("orders_seller_id_idx").on(t.sellerId),
     index("orders_valid_purchase_facility_ordered_at_idx")
       .on(t.facilityId, t.orderedAt.desc())
@@ -64,6 +69,30 @@ export const orders = pgTable(
     index("orders_updated_at_facility_id_idx").on(t.updatedAt, t.facilityId),
     unique("orders_legacy_id_key").on(t.legacyId),
   ]
+);
+
+export const orderCommandReceipts = pgTable(
+  "order_command_receipts",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    actorUserId: bigint("actor_user_id", { mode: "number" })
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    commandKey: text("command_key").notNull(),
+    requestFingerprint: text("request_fingerprint").notNull(),
+    orderId: bigint("order_id", { mode: "number" })
+      .notNull()
+      .references(() => orders.id, { onDelete: "restrict" }),
+    result: jsonb("result").$type<unknown>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("order_command_receipts_actor_user_id_command_key_key").on(
+      t.actorUserId,
+      t.commandKey,
+    ),
+    index("order_command_receipts_order_id_idx").on(t.orderId),
+  ],
 );
 
 export const orderItems = pgTable(
@@ -93,6 +122,10 @@ export const orderItems = pgTable(
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   facility: one(facilities, { fields: [orders.facilityId], references: [facilities.id] }),
+  interaction: one(interactions, {
+    fields: [orders.interactionId],
+    references: [interactions.id],
+  }),
   items: many(orderItems),
 }));
 

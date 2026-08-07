@@ -256,3 +256,5 @@ Answer before or during Slice A–C. Do not invent answers here.
 | 2026-08-06 | **M11** bigint hard cut (wipe OK — app not live); **M12** wave = db + api + mobile only |
 | 2026-08-06 | **Checkpoint** commit on `feature/territory-clinic-ownership-20260801` (WIP bigint/CNES/docs) before rebase onto `main` |
 | 2026-08-06 | **Rebased onto `origin/main`** (skip duplicate Spec 0006; keep calendar `0045`; drop old WIP migration chain 0046–0091 — regenerate next) |
+| 2026-08-06 | **Prep migration `0046_crm_bigint_identity_cutover`** generated (calendar FKs bigint in schema TS); SQL patched for M11 hard cut (drop FKs → truncate → `USING (0)` text→bigint → re-add FKs). Verified on empty `atlasmed_scratch`. API calendar/interactions/orders + mobile agenda entity ids → `number`/`int`. |
+| 2026-08-07 | Prep absorb: geo + `legal_document*` entangled in `0046` kept (no split). Full-DB wipe OK. `legal_document_type` NOT NULL **no default**. Wipe path: old WIP DBs cannot apply `0046` atop — reset schemas then migrate 0001→0046 (verified on `atlasmed_2_migtest`). |

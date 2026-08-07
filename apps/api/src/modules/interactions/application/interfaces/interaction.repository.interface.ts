@@ -6,24 +6,24 @@ export type InteractionStatus =
   | "CANCELLED";
 
 export interface InteractionDetailRecord {
-  id: string;
-  calendarId: string;
+  id: number;
+  calendarId: number;
   recurrenceKey: string;
-  facilityId: string;
-  agentUserId: string;
+  facilityId: number;
+  agentUserId: number;
   modality: "IN_PERSON" | "REMOTE";
   status: InteractionStatus;
   actualStartedAt: Date | null;
   actualEndedAt: Date | null;
   correctedAt: Date | null;
-  correctedByUserId: string | null;
+  correctedByUserId: number | null;
   correctionReason: string | null;
-  visitId: string | null;
+  visitId: number | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
   calendar: {
-    ownerUserId: string;
+    ownerUserId: number;
     title: string;
     anchorLocalDate: string;
     anchorLocalTime: string;
@@ -42,18 +42,18 @@ export interface InteractionDetailRecord {
     version: number;
   } | null;
   facility: {
-    id: string;
+    id: number;
     displayName: string;
     city: string | null;
     state: string | null;
   };
   agent: {
-    id: string;
+    id: number;
     firstName: string | null;
     lastName: string | null;
   };
   linkedOrders: Array<{
-    id: string;
+    id: number;
     status: string;
     type: string;
     orderedAt: Date;
@@ -66,18 +66,18 @@ export interface InteractionMutationResult {
 }
 
 export interface InteractionRepository {
-  findById(id: string): Promise<InteractionDetailRecord | null>;
-  findCommandResult(input: { id: string; command: "start" | "complete"; idempotencyKey: string }): Promise<InteractionDetailRecord | null>;
+  findById(id: number): Promise<InteractionDetailRecord | null>;
+  findCommandResult(input: { id: number; command: "start" | "complete"; idempotencyKey: string }): Promise<InteractionDetailRecord | null>;
   start(input: {
-    id: string;
-    actorUserId: string;
+    id: number;
+    actorUserId: number;
     expectedVersion: number;
     idempotencyKey: string;
     startedAt: Date;
   }): Promise<InteractionMutationResult | null>;
   complete(input: {
-    id: string;
-    actorUserId: string;
+    id: number;
+    actorUserId: number;
     expectedVersion: number;
     idempotencyKey: string;
     completedAt: Date;
@@ -85,5 +85,5 @@ export interface InteractionRepository {
     correctionReason?: string;
     persistEffectiveMissed?: boolean;
   }): Promise<InteractionMutationResult | null>;
-  markOverdue(input: { now: Date; limit: number; actorUserId: string | null }): Promise<number>;
+  markOverdue(input: { now: Date; limit: number; actorUserId: number | null }): Promise<number>;
 }
