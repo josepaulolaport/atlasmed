@@ -1,19 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 
 /// Section shell for establishment detail.
 ///
-/// Real facilities no longer pull Phase-1 mock bundles (purchase signals,
-/// fake nearby pins, invented specialties). Empty sections mean "not on API
-/// yet" — individual providers (roster, notes, photos, payers) load live data.
+/// Empty shell — individual providers (roster, notes, photos, payers) load
+/// live API data. Kept as a typed container for section widgets that still
+/// read shared location/contact fields when present.
 final establishmentDetailSectionsProvider =
-    FutureProvider.family<EstablishmentDetailSections, String>((
+    FutureProvider.family<EstablishmentDetailSections, int>((
       ref,
       facilityId,
     ) async {
-      if (isMockNearbyFacilityId(facilityId)) {
-        return const EstablishmentDetailSections();
-      }
       return const EstablishmentDetailSections();
     });

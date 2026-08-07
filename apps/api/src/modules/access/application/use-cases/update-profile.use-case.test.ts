@@ -35,12 +35,12 @@ describe("UpdateProfileUseCase", () => {
 
   it("should update profile fields", async () => {
     const result = await updateProfileUseCase.execute({
-      userId: "user-123",
+      userId: 123,
       firstName: "Updated",
       lastName: "Name",
     });
 
-    expect(mockUserRepository.updateProfile).toHaveBeenCalledWith("user-123", {
+    expect(mockUserRepository.updateProfile).toHaveBeenCalledWith(123, {
       firstName: "Updated",
       lastName: "Name",
       avatarUrl: undefined,
@@ -51,16 +51,16 @@ describe("UpdateProfileUseCase", () => {
 
   it("should invalidate auth cache after update", async () => {
     await updateProfileUseCase.execute({
-      userId: "user-123",
+      userId: 123,
       firstName: "Updated",
     });
 
-    expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
+    expect(mockAuthCache.invalidate).toHaveBeenCalledWith(123);
   });
 
   it("should reject empty patch", async () => {
     await expect(
-      updateProfileUseCase.execute({ userId: "user-123" })
+      updateProfileUseCase.execute({ userId: 123 })
     ).rejects.toThrow("Request validation failed");
 
     expect(mockUserRepository.updateProfile).not.toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe("UpdateProfileUseCase", () => {
     mockUserRepository.findById = mock(async () => null);
 
     await expect(
-      updateProfileUseCase.execute({ userId: "non-existent", firstName: "Test" })
+      updateProfileUseCase.execute({ userId: 999, firstName: "Test" })
     ).rejects.toThrow("User not found");
 
     expect(mockUserRepository.updateProfile).not.toHaveBeenCalled();

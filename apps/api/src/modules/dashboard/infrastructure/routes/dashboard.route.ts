@@ -9,7 +9,7 @@ export const dashboardRoute = new Elysia({ prefix: "/dashboard" })
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/summary",
-    async ({ query, request, getScope, getUser }: any) => {
+    async ({ query, request, getScope, getUser }) => {
       const scope = await getScope();
       const actor = await getUser();
       const headerVerticalId = readVerticalIdHeader(request.headers);
@@ -28,7 +28,7 @@ export const dashboardRoute = new Elysia({ prefix: "/dashboard" })
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     },
   );

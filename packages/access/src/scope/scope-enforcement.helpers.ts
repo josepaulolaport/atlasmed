@@ -10,7 +10,7 @@ export type ScopedResourceType = "territory" | "facility" | "user";
 export function assertResourceInScope(
   scope: ScopeContext,
   resourceType: ScopedResourceType,
-  resourceId: string
+  resourceId: number
 ): void {
   if (scope.isGlobal) {
     return;

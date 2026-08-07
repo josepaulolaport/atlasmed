@@ -5,18 +5,16 @@ Use when a task changes authorization behavior (roles, CASL rules, permission he
 ## Load
 
 **Always:**
-- `AGENTS.md`
-- `apps/api/AGENTS.md`
-- `packages/access/AGENTS.md`
+- `AGENTS.md` (§ `apps/api`, § `packages/access`)
 - `docs/architecture/features/access-auth.md`
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
-| observability / audit | `packages/observability/AGENTS.md` |
-| Change surfaces in web UI | `apps/web/AGENTS.md` |
-| Change surfaces in mobile UI | `apps/mobile/AGENTS.md` |
+| observability / audit | `AGENTS.md` § `packages/observability` |
+| Change surfaces in web UI | `AGENTS.md` § `apps/web` |
+| Change surfaces in mobile UI | `AGENTS.md` § `apps/mobile` |
 | testing | `apps/api/TESTING.md` |
 
 ## Work order
@@ -27,7 +25,7 @@ Use when a task changes authorization behavior (roles, CASL rules, permission he
 4. Update frontend gates so UI matches — hide/disable, not enforce.
 5. Add unit tests for the ability and integration tests for the enforcement path.
 6. Emit audit log entries for permission-sensitive events.
-7. Update matching AGENTS.md / docs in same PR if conventions shifted.
+7. Update matching docs in same PR if conventions shifted.
 
 ## Rules
 
@@ -38,5 +36,5 @@ Use when a task changes authorization behavior (roles, CASL rules, permission he
 
 ## Docs to update after
 
-- `packages/access/AGENTS.md`.
+- Root `AGENTS.md` § `packages/access` if conventions shifted.
 - `docs/architecture/features/access-auth.md`.

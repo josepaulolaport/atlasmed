@@ -9,7 +9,7 @@ final fieldSuggestionsRepositoryProvider = Provider<FieldSuggestionsRepository>(
 
 /// Local cache so detail screens (esp. REP mine view without ops GET) work.
 class NaoConformidadeCacheNotifier
-    extends StateNotifier<Map<String, NaoConformidadeSuggestion>> {
+    extends StateNotifier<Map<int, NaoConformidadeSuggestion>> {
   NaoConformidadeCacheNotifier() : super(const {});
 
   void upsert(NaoConformidadeSuggestion suggestion) {
@@ -21,13 +21,13 @@ class NaoConformidadeCacheNotifier
     state = {...state, for (final item in items) item.id: item};
   }
 
-  NaoConformidadeSuggestion? byId(String id) => state[id];
+  NaoConformidadeSuggestion? byId(int id) => state[id];
 }
 
 final naoConformidadeCacheProvider =
     StateNotifierProvider<
       NaoConformidadeCacheNotifier,
-      Map<String, NaoConformidadeSuggestion>
+      Map<int, NaoConformidadeSuggestion>
     >((ref) => NaoConformidadeCacheNotifier());
 
 /// Ops queue — `status` is API value: PENDING | APPROVED | REJECTED | ALL.
@@ -41,7 +41,7 @@ final opsNaoConformidadesProvider = FutureProvider.autoDispose
 
 /// Current user's suggestions for one clinic.
 final mySuggestionsForClinicProvider = FutureProvider.autoDispose
-    .family<List<NaoConformidadeSuggestion>, String>((ref, clinicId) async {
+    .family<List<NaoConformidadeSuggestion>, int>((ref, clinicId) async {
       final repo = ref.watch(fieldSuggestionsRepositoryProvider);
       final items = await repo.listMineForFacility(facilityId: clinicId);
       ref.read(naoConformidadeCacheProvider.notifier).upsertAll(items);
@@ -50,7 +50,7 @@ final mySuggestionsForClinicProvider = FutureProvider.autoDispose
 
 /// Detail lookup: cache first, then ops GET when missing.
 final naoConformidadeByIdProvider = FutureProvider.autoDispose
-    .family<NaoConformidadeSuggestion?, String>((ref, id) async {
+    .family<NaoConformidadeSuggestion?, int>((ref, id) async {
       final cached = ref.watch(naoConformidadeCacheProvider)[id];
       if (cached != null) return cached;
 
@@ -74,7 +74,7 @@ class NaoConformidadeActions {
       _ref.read(fieldSuggestionsRepositoryProvider);
 
   Future<NaoConformidadeSuggestion> submitFieldChange({
-    required String facilityId,
+    required int facilityId,
     required String fieldKey,
     required Object proposedValue,
     String? reason,
@@ -92,7 +92,7 @@ class NaoConformidadeActions {
   }
 
   Future<NaoConformidadeSuggestion> submitDeactivation({
-    required String facilityId,
+    required int facilityId,
     required String reason,
   }) async {
     final created = await _repo.createDeactivation(
@@ -105,12 +105,12 @@ class NaoConformidadeActions {
     return created;
   }
 
-  Future<NaoConformidadeSuggestion> accept(String id) async {
+  Future<NaoConformidadeSuggestion> accept(int id) async {
     final updated = await _repo.approve(id);
     _ref.read(naoConformidadeCacheProvider.notifier).upsert(updated);
     _ref.invalidate(opsNaoConformidadesProvider);
     _ref.invalidate(naoConformidadeByIdProvider(id));
-    if (updated.targetId.isNotEmpty) {
+    if (updated.targetId > 0) {
       _ref.invalidate(mySuggestionsForClinicProvider(updated.targetId));
       // Facility was mutated on approve — refresh open/cached clinic detail.
       final facilityId = updated.targetId;
@@ -124,14 +124,14 @@ class NaoConformidadeActions {
   }
 
   Future<NaoConformidadeSuggestion> reject(
-    String id, {
+    int id, {
     required String note,
   }) async {
     final updated = await _repo.reject(id, resolutionNote: note);
     _ref.read(naoConformidadeCacheProvider.notifier).upsert(updated);
     _ref.invalidate(opsNaoConformidadesProvider);
     _ref.invalidate(naoConformidadeByIdProvider(id));
-    if (updated.targetId.isNotEmpty) {
+    if (updated.targetId > 0) {
       _ref.invalidate(mySuggestionsForClinicProvider(updated.targetId));
     }
     return updated;

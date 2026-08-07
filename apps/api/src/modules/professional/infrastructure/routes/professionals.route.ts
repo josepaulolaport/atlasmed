@@ -44,7 +44,6 @@ const professionalPersonBody = {
   favoriteSport: t.Optional(t.Union([t.String(), t.Null()])),
   languages: t.Optional(t.Union([t.String(), t.Null()])),
   hobbies: t.Optional(t.Union([t.String(), t.Null()])),
-  notes: t.Optional(t.Union([t.String(), t.Null()])),
 };
 
 const listProfessionalsRoute = new Elysia()
@@ -57,8 +56,8 @@ const listProfessionalsRoute = new Elysia()
       const scope = await getScope();
       const filters = parseListProfessionalsQuery(query);
       return doctorUseCases.listProfessionals().execute({
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         search: query.search,
         facilityId: query.facilityId,
         userId: user.id,
@@ -73,10 +72,10 @@ const listProfessionalsRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         search: t.Optional(t.String()),
-        facilityId: t.Optional(t.String()),
+        facilityId: t.Optional(t.Number({ minimum: 1 })),
         latitude: t.Optional(t.String()),
         longitude: t.Optional(t.String()),
         radiusKm: t.Optional(t.String()),
@@ -129,7 +128,7 @@ const createDoctorRoute = new Elysia()
         firstName: t.String(),
         lastName: t.String(),
         ...professionalPersonBody,
-        facilityIds: t.Optional(t.Array(t.String())),
+        facilityIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
       }),
     }
   );
@@ -158,6 +157,7 @@ const getProfessionalRoute = new Elysia()
         tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -187,11 +187,12 @@ const updateDoctorRoute = new Elysia()
         tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         firstName: t.Optional(t.String()),
         lastName: t.Optional(t.String()),
         ...professionalPersonBody,
-        facilityIds: t.Optional(t.Array(t.String(), { minItems: 1 })),
+        facilityIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { minItems: 1 })),
       }),
     }
   );
@@ -225,6 +226,7 @@ const listProfessionalNotesRoute = new Elysia()
         tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -252,6 +254,7 @@ const createProfessionalNoteRoute = new Elysia()
         tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: professionalNoteBody,
     }
   );
@@ -280,6 +283,7 @@ const deleteDoctorRoute = new Elysia()
         tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 

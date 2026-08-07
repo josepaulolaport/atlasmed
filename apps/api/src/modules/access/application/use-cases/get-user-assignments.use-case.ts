@@ -17,20 +17,20 @@ interface GetUserAssignmentsDependencies {
 }
 
 export interface AssignmentTerritoryDto {
-  id: string;
+  id: number;
   name: string;
-  managerZoneId?: string;
+  managerZoneId?: number;
   managerZoneName?: string;
   boundary?: unknown;
 }
 
 export interface AssignmentManagerDto {
-  id: string;
+  id: number;
   name: string;
 }
 
 export interface VerticalAssignmentDto {
-  verticalId: string;
+  verticalId: number;
   verticalName: string;
   /** Distinct managers via zone UTAs covering this vertical's territories. */
   managers: AssignmentManagerDto[];
@@ -40,7 +40,7 @@ export interface VerticalAssignmentDto {
 }
 
 export interface GetUserAssignmentsOutput {
-  userId: string;
+  userId: number;
   isOperationallyActive: boolean;
   verticalAssignments: VerticalAssignmentDto[];
 }
@@ -49,7 +49,7 @@ export class GetUserAssignmentsUseCase {
   constructor(private readonly deps: GetUserAssignmentsDependencies) {}
 
   async execute(params: {
-    targetUserId: string;
+    targetUserId: number;
     actorRole: Role;
     self?: boolean;
   }): Promise<GetUserAssignmentsOutput> {
@@ -84,7 +84,7 @@ export class GetUserAssignmentsUseCase {
         : [];
     const territoryById = new Map(territories.map((t) => [t.id, t]));
 
-    const zoneIds = new Set<string>();
+    const zoneIds = new Set<number>();
     for (const t of territories) {
       if (t.territoryType?.slug === MANAGER_ZONE_TYPE_SLUG) {
         zoneIds.add(t.id);
@@ -93,7 +93,7 @@ export class GetUserAssignmentsUseCase {
       }
     }
 
-    const zoneById = new Map<string, { id: string; name: string }>();
+    const zoneById = new Map<number, { id: number; name: string }>();
     if (zoneIds.size > 0) {
       const zones = await this.deps.territoryRepository.findByIds([
         ...zoneIds,
@@ -103,7 +103,7 @@ export class GetUserAssignmentsUseCase {
       }
     }
 
-    const managersByZoneId = new Map<string, AssignmentManagerDto[]>();
+    const managersByZoneId = new Map<number, AssignmentManagerDto[]>();
     for (const zoneId of zoneIds) {
       const assignees =
         await this.deps.scopeRepository.findUserIdsByTerritoryId(zoneId);
@@ -119,7 +119,7 @@ export class GetUserAssignmentsUseCase {
       managersByZoneId.set(zoneId, managers);
     }
 
-    const territoriesByVertical = new Map<string, AssignmentTerritoryDto[]>();
+    const territoriesByVertical = new Map<number, AssignmentTerritoryDto[]>();
     for (const row of territoryRows) {
       const territory = territoryById.get(row.territoryId);
       if (!territory) continue;
@@ -145,7 +145,7 @@ export class GetUserAssignmentsUseCase {
 
     // UVAs are source of truth; also surface verticals that only appear via
     // territory UTAs (legacy accepts / partial backfills) so Desempenho/map work.
-    const verticalIds = new Set<string>([
+    const verticalIds = new Set<number>([
       ...verticalRows.map((row) => row.verticalId),
       ...territoriesByVertical.keys(),
     ]);
@@ -154,7 +154,7 @@ export class GetUserAssignmentsUseCase {
       (verticalId) => {
         const territoriesForVertical =
           territoriesByVertical.get(verticalId) ?? [];
-        const managerMap = new Map<string, AssignmentManagerDto>();
+        const managerMap = new Map<number, AssignmentManagerDto>();
         for (const t of territoriesForVertical) {
           if (!t.managerZoneId) continue;
           for (const m of managersByZoneId.get(t.managerZoneId) ?? []) {

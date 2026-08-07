@@ -27,12 +27,12 @@ export class UpdateInvitationUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    inviteId: string;
-    actorUserId: string;
+    inviteId: number;
+    actorUserId: number;
     actorRole: Role;
     email?: string;
     phoneNumber?: string | null;
-    roleId?: string;
+    roleId?: number;
     firstName?: string;
     lastName?: string;
     birthDate?: string;

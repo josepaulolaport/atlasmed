@@ -8,7 +8,7 @@ import { TooManyLoginAttemptsError } from "../../../../shared/errors";
 /**
  * Business-aware rate limiting for access module routes.
  *
- * Login uses two layers (see login.route.ts):
+ * Login uses two layers (see sessions.route.ts):
  * - Route middleware below: total request volume per identifier/IP (credential stuffing)
  * - Use-case RateLimiterService: failed attempts only, account lockout, clears on success
  */

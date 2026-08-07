@@ -14,7 +14,7 @@ final currentUserVerticalAssignmentsProvider =
     });
 
 /// Current user's business vertical ids.
-final currentUserVerticalIdsProvider = FutureProvider<List<String>>((
+final currentUserVerticalIdsProvider = FutureProvider<List<int>>((
   ref,
 ) async {
   final verticals = await ref.watch(
@@ -42,7 +42,7 @@ final currentUserFacilityVerticalOptionsProvider =
 
 /// Explicit vertical filter for facilities/map/explore when the user has
 /// multiple verticals. `null` means "union of all assigned verticals".
-final selectedFacilityVerticalIdProvider = StateProvider<String?>(
+final selectedFacilityVerticalIdProvider = StateProvider<int?>(
   (ref) => null,
 );
 
@@ -50,7 +50,7 @@ final selectedFacilityVerticalIdProvider = StateProvider<String?>(
 ///
 /// - 0–1 assigned verticals → omit (`null`) so the API uses its default/union.
 /// - 2+ verticals → [selectedFacilityVerticalIdProvider] (`null` = Todas / union).
-final effectiveFacilityVerticalIdProvider = FutureProvider<String?>((
+final effectiveFacilityVerticalIdProvider = FutureProvider<int?>((
   ref,
 ) async {
   final verticalIds = await ref.watch(currentUserVerticalIdsProvider.future);

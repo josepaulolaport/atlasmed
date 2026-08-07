@@ -10,7 +10,7 @@ export function generateDeviceFingerprint(params: {
 }
 
 export type SessionDeviceIdentity = {
-  id: string;
+  id: number;
   deviceFingerprint?: string | null;
   userAgent?: string | null;
   deviceType?: string | null;

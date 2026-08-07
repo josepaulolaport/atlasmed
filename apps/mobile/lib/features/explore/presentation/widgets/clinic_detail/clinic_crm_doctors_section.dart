@@ -24,7 +24,7 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   });
 
   final List<ProfessionalRoster> doctors;
-  final String? facilityId;
+  final int? facilityId;
 
   /// When true, [onLoadMore] is called as the user reaches the loaded cards.
   final bool hasMore;
@@ -77,7 +77,7 @@ class _DoctorCard extends StatelessWidget {
   });
 
   final ProfessionalRoster doctor;
-  final String? facilityId;
+  final int? facilityId;
   final bool canEditRoles;
   final ValueChanged<ProfessionalRoster>? onDoctorUpdated;
 
@@ -224,7 +224,7 @@ class _DoctorCard extends StatelessWidget {
                 InkWell(
                   onTap: () {
                     final id = facilityId;
-                    final uri = id == null || id.isEmpty
+                    final uri = id == null || (id <= 0)
                         ? '/explore/doctor/${doctor.id}'
                         : '/explore/doctor/${doctor.id}?facilityId=$id';
                     context.push(uri);

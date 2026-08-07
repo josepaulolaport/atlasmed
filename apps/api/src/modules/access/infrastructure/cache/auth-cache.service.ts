@@ -19,15 +19,15 @@ export class AuthCacheService implements IAuthCache {
     this.redis = redisClient;
   }
 
-  private getKey(userId: string): string {
+  private getKey(userId: number): string {
     return `${this.keyPrefix}${userId}`;
   }
 
-  private getValidatedKey(userId: string): string {
+  private getValidatedKey(userId: number): string {
     return `${this.validatedKeyPrefix}${userId}`;
   }
 
-  async get(userId: string): Promise<CachedAuthContext | null> {
+  async get(userId: number): Promise<CachedAuthContext | null> {
     try {
       const data = await this.redis.get(this.getKey(userId));
 
@@ -42,7 +42,7 @@ export class AuthCacheService implements IAuthCache {
     }
   }
 
-  async set(userId: string, context: CachedAuthContext): Promise<void> {
+  async set(userId: number, context: CachedAuthContext): Promise<void> {
     try {
       await this.redis.setex(
         this.getKey(userId),
@@ -54,7 +54,7 @@ export class AuthCacheService implements IAuthCache {
     }
   }
 
-  async invalidate(userId: string): Promise<void> {
+  async invalidate(userId: number): Promise<void> {
     await withRedisRetry(
       () => this.redis.del(this.getValidatedKey(userId), this.getKey(userId)),
       {
@@ -65,7 +65,7 @@ export class AuthCacheService implements IAuthCache {
     );
   }
 
-  async invalidateMultiple(userIds: string[]): Promise<void> {
+  async invalidateMultiple(userIds: number[]): Promise<void> {
     if (userIds.length === 0) {
       return;
     }
@@ -82,7 +82,7 @@ export class AuthCacheService implements IAuthCache {
     });
   }
 
-  async exists(userId: string): Promise<boolean> {
+  async exists(userId: number): Promise<boolean> {
     try {
       const result = await this.redis.exists(this.getKey(userId));
       return result === 1;
@@ -92,7 +92,7 @@ export class AuthCacheService implements IAuthCache {
     }
   }
 
-  async isRecentlyValidated(userId: string): Promise<boolean> {
+  async isRecentlyValidated(userId: number): Promise<boolean> {
     try {
       const result = await this.redis.exists(this.getValidatedKey(userId));
       return result === 1;
@@ -102,7 +102,7 @@ export class AuthCacheService implements IAuthCache {
     }
   }
 
-  async markValidated(userId: string): Promise<void> {
+  async markValidated(userId: number): Promise<void> {
     try {
       await this.redis.setex(
         this.getValidatedKey(userId),

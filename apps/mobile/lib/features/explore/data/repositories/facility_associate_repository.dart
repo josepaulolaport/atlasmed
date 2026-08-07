@@ -27,7 +27,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
         name: 'FacilityAssociateRepository',
       );
 
-  final String facilityId;
+  final int facilityId;
   final RepositoryHttpClient? _client;
 
   @override
@@ -56,7 +56,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
   }
 
-  Future<void> associateDoctor(String professionalId) async {
+  Future<void> associateDoctor(int professionalId) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(
@@ -149,7 +149,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   }
 
   Future<void> _patchRoles(
-    String professionalId, {
+    int professionalId, {
     bool isPartner = false,
     required bool isPrescriber,
     required bool isBuyer,
@@ -213,7 +213,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
 
   /// User×professional relationship (1–10). Null clears the score.
   Future<int?> updateRelationshipLevel(
-    String professionalId, {
+    int professionalId, {
     int? relationshipLevel,
   }) async {
     final response = await client.call(
@@ -242,7 +242,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   }
 
   /// Current association context including the caller's relationship score.
-  Future<int?> fetchRelationshipLevel(String professionalId) async {
+  Future<int?> fetchRelationshipLevel(int professionalId) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(

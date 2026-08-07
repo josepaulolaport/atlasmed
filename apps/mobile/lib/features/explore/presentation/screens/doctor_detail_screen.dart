@@ -28,10 +28,10 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 // ======================================================================
 
 class DoctorDetailScreen extends ConsumerWidget {
-  final String doctorId;
+  final int doctorId;
 
   /// When set (facility roster navigation), relationship can be edited.
-  final String? facilityId;
+  final int? facilityId;
 
   const DoctorDetailScreen({
     super.key,
@@ -177,8 +177,8 @@ class DoctorDetailScreen extends ConsumerWidget {
 class _DoctorDetailContent extends ConsumerWidget {
   final Professional detail;
   final DoctorDetailRepository repository;
-  final String doctorId;
-  final String? facilityId;
+  final int doctorId;
+  final int? facilityId;
   const _DoctorDetailContent({
     required this.detail,
     required this.repository,
@@ -304,10 +304,7 @@ class _DoctorDetailContent extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (facilityId != null &&
-                      facilityId!.isNotEmpty &&
-                      !facilityId!.startsWith('near-') &&
-                      !facilityId!.endsWith(':empty')) ...[
+                  if (facilityId != null && facilityId! > 0) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: _DoctorRelationshipCard(
@@ -370,8 +367,8 @@ class _DoctorRelationshipCard extends StatefulWidget {
     required this.professionalId,
   });
 
-  final String facilityId;
-  final String professionalId;
+  final int facilityId;
+  final int professionalId;
 
   @override
   State<_DoctorRelationshipCard> createState() =>

@@ -7,6 +7,28 @@ import {
 import { accessUseCases, accessRepositories, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
+const userIdParams = t.Object({
+  id: t.Number({ minimum: 1 }),
+});
+
+const userTerritoryParams = t.Object({
+  id: t.Number({ minimum: 1 }),
+  territoryId: t.Number({ minimum: 1 }),
+});
+
+const userVerticalParams = t.Object({
+  id: t.Number({ minimum: 1 }),
+  verticalId: t.Number({ minimum: 1 }),
+});
+
+const managerIdParams = t.Object({
+  managerId: t.Number({ minimum: 1 }),
+});
+
+const territoryIdParams = t.Object({
+  id: t.Number({ minimum: 1 }),
+});
+
 export const userAssignmentsRoute = new Elysia({
   detail: {
     tags: ["Users"],
@@ -16,7 +38,7 @@ export const userAssignmentsRoute = new Elysia({
   .use(requirePermission("manage", "USER"))
   .post(
     "/users/:id/territories",
-    async ({ params, body, getUserId, getUser }: any) => {
+    async ({ params, body, getUserId, getUser }) => {
       const assignedBy = await getUserId();
       const actor = await getUser();
       const parsed = assignUserTerritorySchema.parse(body);
@@ -25,7 +47,7 @@ export const userAssignmentsRoute = new Elysia({
         targetUserId: params.id,
         territoryId: parsed.territoryId,
         assignedBy,
-        actorRole: actor.role.name,
+        actorRole: actor.role.name as Role,
       });
 
       return {
@@ -33,14 +55,15 @@ export const userAssignmentsRoute = new Elysia({
       };
     },
     {
+      params: userIdParams,
       body: t.Object({
-        territoryId: t.String(),
+        territoryId: t.Number({ minimum: 1 }),
       }),
     },
   )
   .delete(
     "/users/:id/territories/:territoryId",
-    async ({ params, getUserId, getUser }: any) => {
+    async ({ params, getUserId, getUser }) => {
       const revokedBy = await getUserId();
       const actor = await getUser();
 
@@ -48,32 +71,39 @@ export const userAssignmentsRoute = new Elysia({
         targetUserId: params.id,
         territoryId: params.territoryId,
         revokedBy,
-        actorRole: actor.role.name,
+        actorRole: actor.role.name as Role,
       });
 
       return {
         message: "User territory revoked successfully",
       };
     },
+    {
+      params: userTerritoryParams,
+    },
   )
   .post(
     "/users/:id/verticals",
-    async ({ params, body, getUserId }: any) => {
+    async ({ params, body, getUserId }) => {
       const assignedByUserId = await getUserId();
 
       await accessRepositories.scope.assignVertical({
         userId: params.id,
-        verticalId: (body as any).verticalId,
+        verticalId: (body as { verticalId: number }).verticalId,
         assignedByUserId,
       });
 
       return { message: "Business vertical assigned successfully" };
     },
     {
+      params: userIdParams,
       body: t.Object({
-        verticalId: t.String({ description: "Business vertical ID to assign to the user" }),
+        verticalId: t.Number({
+          minimum: 1,
+          description: "Business vertical ID to assign to the user",
+        }),
         managerId: t.Optional(
-          t.Union([t.String(), t.Null()], {
+          t.Union([t.Number({ minimum: 1 }), t.Null()], {
             description: "Per-vertical reporting manager (REP)",
           }),
         ),
@@ -82,7 +112,7 @@ export const userAssignmentsRoute = new Elysia({
   )
   .delete(
     "/users/:id/verticals/:verticalId",
-    async ({ params, getUserId }: any) => {
+    async ({ params, getUserId }) => {
       await getUserId();
 
       await accessRepositories.scope.revokeVertical({
@@ -92,14 +122,17 @@ export const userAssignmentsRoute = new Elysia({
 
       return { message: "Business vertical revoked successfully" };
     },
+    {
+      params: userVerticalParams,
+    },
   )
   .get(
     "/users/:id/assignments",
-    async ({ params, getUser }: any) => {
+    async ({ params, getUser }) => {
       const actor = await getUser();
       return accessUseCases.getUserAssignments().execute({
         targetUserId: params.id,
-        actorRole: actor.role.name,
+        actorRole: actor.role.name as Role,
       });
     },
     {
@@ -110,11 +143,12 @@ export const userAssignmentsRoute = new Elysia({
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
+      params: userIdParams,
     },
   )
   .put(
     "/users/:id/assignments",
-    async ({ params, body, getUserId, getUser }: any) => {
+    async ({ params, body, getUserId, getUser }) => {
       const actor = await getUser();
       const assignedBy = await getUserId();
       const parsed = replaceUserAssignmentsSchema.parse(body);
@@ -135,11 +169,12 @@ export const userAssignmentsRoute = new Elysia({
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
+      params: userIdParams,
       body: t.Object({
         verticalAssignments: t.Array(
           t.Object({
-            verticalId: t.String(),
-            territoryIds: t.Array(t.String()),
+            verticalId: t.Number({ minimum: 1 }),
+            territoryIds: t.Array(t.Number({ minimum: 1 })),
           }),
         ),
       }),
@@ -147,7 +182,7 @@ export const userAssignmentsRoute = new Elysia({
   )
   .get(
     "/managers/:managerId/assignable-territories",
-    async ({ params, query, getUser }: any) => {
+    async ({ params, query, getUser }) => {
       const actor = await getUser();
       return accessUseCases.getAssignableTerritoriesForManager().execute({
         managerId: params.managerId,
@@ -161,15 +196,19 @@ export const userAssignmentsRoute = new Elysia({
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
+      params: managerIdParams,
       query: t.Object({
-        verticalId: t.String({ description: "Business vertical ID" }),
+        verticalId: t.Number({ minimum: 1, description: "Business vertical ID" }),
       }),
     },
   )
   .use(requirePermission("read", "TERRITORY"))
   .get(
     "/territories/:id/assignments",
-    async ({ params }: any) => {
+    async ({ params }) => {
       return accessUseCases.getTerritoryAssignments().execute(params.id);
+    },
+    {
+      params: territoryIdParams,
     },
   );

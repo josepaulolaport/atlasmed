@@ -28,7 +28,7 @@ export class ScopeService {
     this.accessGrantService = deps.accessGrantService;
   }
 
-  async resolve(userId: string, roleName: string): Promise<ScopeContext> {
+  async resolve(userId: number, roleName: string): Promise<ScopeContext> {
     let scope = await scopeCacheService.get(userId);
 
     if (!scope) {
@@ -40,12 +40,12 @@ export class ScopeService {
     return mergeGrantsIntoScope(scope, grants);
   }
 
-  async invalidate(userId: string): Promise<void> {
+  async invalidate(userId: number): Promise<void> {
     await scopeCacheService.invalidate(userId);
   }
 
-  async invalidateForTerritoryAssignmentChange(userId: string): Promise<void> {
-    const userIdsToInvalidate = new Set<string>([userId]);
+  async invalidateForTerritoryAssignmentChange(userId: number): Promise<void> {
+    const userIdsToInvalidate = new Set<number>([userId]);
     const managerId = await this.scopeRepository.findManagerIdByUserId(userId);
 
     if (managerId) {
@@ -56,11 +56,11 @@ export class ScopeService {
   }
 
   async invalidateForManagerChange(params: {
-    userId: string;
-    previousManagerId?: string | null;
-    nextManagerId?: string | null;
+    userId: number;
+    previousManagerId?: number | null;
+    nextManagerId?: number | null;
   }): Promise<void> {
-    const userIdsToInvalidate = new Set<string>([params.userId]);
+    const userIdsToInvalidate = new Set<number>([params.userId]);
 
     if (params.previousManagerId) {
       userIdsToInvalidate.add(params.previousManagerId);
@@ -74,7 +74,7 @@ export class ScopeService {
   }
 
   /** Consultant assignment changes expand/contract facilityIds for affected users. */
-  async invalidateForConsultantAssignmentChange(userIds: string[]): Promise<void> {
+  async invalidateForConsultantAssignmentChange(userIds: number[]): Promise<void> {
     const unique = [...new Set(userIds.filter(Boolean))];
     if (unique.length === 0) return;
     await scopeCacheService.invalidateMany(unique);

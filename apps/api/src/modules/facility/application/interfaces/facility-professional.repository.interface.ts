@@ -1,7 +1,7 @@
 export interface FacilityProfessionalRecord {
-  id: string;
-  professionalId: string;
-  facilityId: string;
+  id: number;
+  professionalId: number;
+  facilityId: number;
   occupationCode: string;
   specialtyLabel: string | null;
   isPartner: boolean;
@@ -9,13 +9,10 @@ export interface FacilityProfessionalRecord {
   isBuyer: boolean;
   isDecisionMaker: boolean;
   notes: string | null;
-  sourceActive: boolean;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
   confirmedAt: Date | null;
-  confirmedByUserId: string | null;
+  confirmedByUserId: number | null;
   endedAt: Date | null;
-  endedByUserId: string | null;
+  endedByUserId: number | null;
   endReason: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -24,7 +21,7 @@ export interface FacilityProfessionalRecord {
 export interface FacilityProfessionalWithProfessionalRecord
   extends FacilityProfessionalRecord {
   professional: {
-    id: string;
+    id: number;
     firstName: string;
     lastName: string;
     fullName: string | null;
@@ -45,7 +42,7 @@ export interface FacilityProfessionalWithProfessionalRecord
 export interface FacilityProfessionalContextRecord {
   association: FacilityProfessionalRecord;
   professional: {
-    id: string;
+    id: number;
     firstName: string;
     lastName: string;
     fullName: string | null;
@@ -66,13 +63,12 @@ export interface FacilityProfessionalContextRecord {
     favoriteSport: string | null;
     languages: string | null;
     hobbies: string | null;
-    notes: string | null;
     createdAt: Date;
     updatedAt: Date;
   };
 }
 
-export type FacilityProfessionalView = "source" | "confirmed" | "pending" | "all";
+export type FacilityProfessionalView = "confirmed" | "all";
 
 export interface FacilityProfessionalRoleUpdateInput {
   isPartner?: boolean;
@@ -85,19 +81,19 @@ export interface FacilityProfessionalRoleUpdateInput {
 
 export interface FacilityProfessionalRepository {
   findByProfessionalAndFacility(
-    professionalId: string,
-    facilityId: string,
+    professionalId: number,
+    facilityId: number,
     occupationCode?: string
   ): Promise<FacilityProfessionalRecord | null>;
 
   findActiveWithProfessional(
-    facilityId: string,
-    professionalId: string,
+    facilityId: number,
+    professionalId: number,
     occupationCode?: string
   ): Promise<FacilityProfessionalContextRecord | null>;
 
   findActiveByFacilityWithProfessionals(params: {
-    facilityId: string;
+    facilityId: number;
     view: FacilityProfessionalView;
     page: number;
     limit: number;
@@ -107,67 +103,45 @@ export interface FacilityProfessionalRepository {
     total: number;
   }>;
 
-  findActiveSourceAssociationsByProvider(sourceProvider: string): Promise<
-    Array<{
-      association: FacilityProfessionalRecord;
-      professionalExternalSourceId: string;
-      facilityExternalSourceId: string;
-    }>
-  >;
-
   confirmAssociation(params: {
-    professionalId: string;
-    facilityId: string;
+    professionalId: number;
+    facilityId: number;
     occupationCode?: string;
-    confirmedByUserId: string;
+    confirmedByUserId: number;
   }): Promise<FacilityProfessionalRecord>;
 
   manuallyAssociate(params: {
-    professionalId: string;
-    facilityId: string;
+    professionalId: number;
+    facilityId: number;
     occupationCode?: string;
-    confirmedByUserId: string;
+    confirmedByUserId: number;
   }): Promise<FacilityProfessionalRecord>;
 
   endAssociation(params: {
-    professionalId: string;
-    facilityId: string;
+    professionalId: number;
+    facilityId: number;
     occupationCode?: string;
-    endedByUserId: string;
+    endedByUserId: number;
     endReason: string;
   }): Promise<FacilityProfessionalRecord | null>;
 
   updateAssociationRoles(params: {
-    professionalId: string;
-    facilityId: string;
+    professionalId: number;
+    facilityId: number;
     occupationCode?: string;
     data: FacilityProfessionalRoleUpdateInput;
   }): Promise<FacilityProfessionalRecord | null>;
 
-  upsertSourceAssociation(params: {
-    professionalId: string;
-    facilityId: string;
-    occupationCode?: string;
-    sourceLastSeenAt: Date;
-  }): Promise<{ association: FacilityProfessionalRecord; created: boolean }>;
-
-  markSourceInactive(params: {
-    facilityProfessionalId: string;
-    sourceLastSeenAt: Date;
-  }): Promise<FacilityProfessionalRecord>;
-
-  restoreSourceActive(facilityProfessionalId: string): Promise<FacilityProfessionalRecord>;
-
   endAssociationById(params: {
-    facilityProfessionalId: string;
-    endedByUserId: string;
+    facilityProfessionalId: number;
+    endedByUserId: number;
     endReason: string;
   }): Promise<FacilityProfessionalRecord>;
 
   createConfirmedAssociations(params: {
-    professionalId: string;
-    facilityIds: string[];
+    professionalId: number;
+    facilityIds: number[];
     occupationCode?: string;
-    confirmedByUserId?: string;
+    confirmedByUserId?: number;
   }): Promise<void>;
 }

@@ -1,7 +1,7 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 
 class MapFacility {
-  final String id;
+  final int id;
   final String name;
   final MapCoordinate coordinate;
   final double distanceKm;

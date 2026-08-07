@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 
 /// Sentinel used by [Territory.copyWith] so nullable fields can be
@@ -16,13 +17,13 @@ const _unset = _Unset();
 /// separately via `GET /territories/:id/boundary`, but for this map-first
 /// screen we keep the geometry alongside the rest of the fields.
 class Territory {
-  final String id;
+  final int id;
   final String name;
   final String slug;
   final String code;
-  final String verticalId;
+  final int verticalId;
   final TerritoryType territoryType;
-  final String? managerTerritoryId;
+  final int? managerTerritoryId;
   final bool isActive;
   final int clinicCount;
   final int assignedUserCount;
@@ -35,7 +36,7 @@ class Territory {
   /// display a name/avatar. `null` means unassigned. On the real API this
   /// is a many-to-many join table; the mock model simplifies it to one
   /// assignee per territory.
-  final String? assignedUserId;
+  final int? assignedUserId;
 
   const Territory({
     required this.id,
@@ -58,18 +59,18 @@ class Territory {
     Map<String, dynamic> json, {
     required TerritoryGeometry boundary,
     required MapCoordinate centroid,
-    String? assignedUserId,
+    int? assignedUserId,
   }) {
     return Territory(
-      id: json['id'] as String,
+      id: readCrmId(json['id'], 'id'),
       name: json['name'] as String,
       slug: json['slug'] as String,
       code: json['code'] as String,
-      verticalId: json['verticalId'] as String,
+      verticalId: readCrmId(json['verticalId'], 'verticalId'),
       territoryType: TerritoryType.fromJson(
         json['territoryType'] as Map<String, dynamic>,
       ),
-      managerTerritoryId: json['managerTerritoryId'] as String?,
+      managerTerritoryId: readCrmIdOrNull(json['managerTerritoryId'], 'managerTerritoryId'),
       isActive: json['isActive'] as bool? ?? true,
       clinicCount: (json['clinicCount'] as num?)?.toInt() ?? 0,
       assignedUserCount: (json['assignedUserCount'] as num?)?.toInt() ?? 0,
@@ -84,7 +85,7 @@ class Territory {
 
   Territory copyWith({
     String? name,
-    String? verticalId,
+    int? verticalId,
     bool? isActive,
     TerritoryGeometry? boundary,
     MapCoordinate? centroid,
@@ -101,7 +102,7 @@ class Territory {
       territoryType: territoryType,
       managerTerritoryId: identical(managerTerritoryId, _unset)
           ? this.managerTerritoryId
-          : managerTerritoryId as String?,
+          : managerTerritoryId as int?,
       isActive: isActive ?? this.isActive,
       clinicCount: clinicCount,
       assignedUserCount: assignedUserCount,
@@ -110,7 +111,7 @@ class Territory {
       centroid: centroid ?? this.centroid,
       assignedUserId: identical(assignedUserId, _unset)
           ? this.assignedUserId
-          : assignedUserId as String?,
+          : assignedUserId as int?,
     );
   }
 }

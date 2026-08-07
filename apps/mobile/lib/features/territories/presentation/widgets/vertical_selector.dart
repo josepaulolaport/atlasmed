@@ -5,8 +5,8 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// Horizontal row of business-vertical chips, labeled as "Linha comercial".
 class VerticalSelector extends StatelessWidget {
   final List<BusinessVertical> verticals;
-  final String? selectedVerticalId;
-  final ValueChanged<String?> onChanged;
+  final int? selectedVerticalId;
+  final ValueChanged<int?> onChanged;
 
   /// When true, prepends a "Todas as linhas" chip that clears selection (union).
   final bool allowAll;

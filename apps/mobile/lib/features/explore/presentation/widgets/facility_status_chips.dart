@@ -4,23 +4,23 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurr
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 import 'package:flutter/material.dart';
 
-/// Builds commercial + funnel status chips, with per-linha labels when the
-/// API omits top-level fields because profiles disagree.
+/// Builds commercial + funnel status chips from vertical profiles.
 List<Widget> buildFacilityStatusChips({
-  required String? commercialStatus,
-  required PurchaseRecurrenceSnapshot? purchaseRecurrence,
   required List<FacilityVerticalProfileDTO> verticalProfiles,
+  int? verticalId,
   bool small = true,
   bool onNavy = false,
 }) {
   final chips = <Widget>[];
+  final picked = pickVerticalProfile(verticalProfiles, verticalId: verticalId);
 
-  if (commercialStatus != null && commercialStatus.trim().isNotEmpty) {
+  final pickedCommercial = picked?.commercialStatus?.trim();
+  if (pickedCommercial != null && pickedCommercial.isNotEmpty) {
     chips.add(
       StatusChip(
-        label: CommercialStatusFilter.label(commercialStatus),
-        color: CommercialStatusFilter.color(commercialStatus),
-        bg: CommercialStatusFilter.bg(commercialStatus),
+        label: CommercialStatusFilter.label(pickedCommercial),
+        color: CommercialStatusFilter.color(pickedCommercial),
+        bg: CommercialStatusFilter.bg(pickedCommercial),
         small: small,
         onNavy: onNavy,
       ),
@@ -33,7 +33,18 @@ List<Widget> buildFacilityStatusChips({
               p.commercialStatus!.trim().isNotEmpty,
         )
         .toList(growable: false);
-    if (withCommercial.length > 1) {
+    if (withCommercial.length == 1) {
+      final api = withCommercial.first.commercialStatus!;
+      chips.add(
+        StatusChip(
+          label: CommercialStatusFilter.label(api),
+          color: CommercialStatusFilter.color(api),
+          bg: CommercialStatusFilter.bg(api),
+          small: small,
+          onNavy: onNavy,
+        ),
+      );
+    } else if (withCommercial.length > 1) {
       for (final profile in withCommercial) {
         final api = profile.commercialStatus!;
         chips.add(
@@ -50,13 +61,13 @@ List<Widget> buildFacilityStatusChips({
     }
   }
 
-  final topFunnel = purchaseRecurrence?.funnelStage;
-  if (topFunnel != null) {
+  final pickedFunnel = picked?.purchaseRecurrence?.funnelStage;
+  if (pickedFunnel != null) {
     chips.add(
       StatusChip(
-        label: topFunnel.label,
-        color: topFunnel.color,
-        bg: topFunnel.backgroundColor,
+        label: pickedFunnel.label,
+        color: pickedFunnel.color,
+        bg: pickedFunnel.backgroundColor,
         small: small,
         onNavy: onNavy,
       ),

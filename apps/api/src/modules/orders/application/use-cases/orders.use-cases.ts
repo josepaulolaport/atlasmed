@@ -5,24 +5,22 @@ import {
   type ScopeContext,
 } from "@atlasmed/access";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
-import { AppError, ValidationError } from "../../../../shared/errors";
+import { ValidationError } from "../../../../shared/errors";
 import type {
-  CreateOrderInput,
   CreateOrderItemInput,
   OrderDetailRecord,
   OrderRepository,
   OrderStatus,
 } from "../interfaces/order.repository.interface";
-import type { InteractionContextPort } from "../interfaces/interaction-context.port";
 
 const CREATE_ORDER_TYPES = ["SALE", "CONSIGNMENT", "DONATION", "OTHER"] as const;
 const CREATE_ORDER_STATUSES = ["DRAFT", "PENDING"] as const;
 
 function resolveCreateOrderVerticalId(input: {
   role: string;
-  assignedVerticalIds: string[];
-  verticalId?: string;
-}): string {
+  assignedVerticalIds: number[];
+  verticalId?: number;
+}): number {
   if (input.verticalId) {
     const resolved = resolveVerticalIds({
       role: input.role,
@@ -59,7 +57,6 @@ function serializeListOrder(order: Awaited<ReturnType<OrderRepository["findAll"]
   return {
     id: order.id,
     legacyId: order.legacyId,
-    interactionId: order.interactionId,
     verticalId: order.verticalId,
     status: order.status,
     type: order.type,
@@ -87,7 +84,6 @@ function serializeOrder(order: OrderDetailRecord) {
   return {
     id: order.id,
     legacyId: order.legacyId,
-    interactionId: order.interactionId,
     verticalId: order.verticalId,
     status: order.status,
     type: order.type,
@@ -128,17 +124,16 @@ function serializeOrder(order: OrderDetailRecord) {
 }
 
 export class ListOrdersUseCase {
-  constructor(private readonly deps: { orderRepository: OrderRepository; interactionContextPort?: InteractionContextPort }) {}
+  constructor(private readonly deps: { orderRepository: OrderRepository }) {}
 
   async execute(input: {
     page?: number;
     limit?: number;
     statuses?: OrderStatus[];
-    facilityId?: string;
-    interactionId?: string;
-    verticalId?: string;
+    facilityId?: number;
+    verticalId?: number;
     /** Authenticated user — used for REP seller filter. */
-    actor?: { userId: string; roleName: string };
+    actor?: { userId: number; roleName: string };
     includeItemPreviews?: boolean;
     scope: ScopeContext;
   }) {
@@ -147,19 +142,6 @@ export class ListOrdersUseCase {
 
     if (input.facilityId) {
       assertResourceInScope(input.scope, "facility", input.facilityId);
-    }
-
-    if (input.interactionId && this.deps.interactionContextPort) {
-      const interaction = await this.deps.interactionContextPort.findById(input.interactionId);
-      if (!interaction || !interaction.canRead) throw new ForbiddenError("Interaction outside actor scope");
-      assertResourceInScope(input.scope, "facility", interaction.facilityId);
-      if (!input.actor) throw new ForbiddenError("Interaction actor is required");
-      const isOwner = interaction.agentUserId === input.actor.userId;
-      const isManager = input.actor.roleName === Role.MANAGER && input.scope.managedUserIds.includes(interaction.agentUserId);
-      if (!isOwner && !isManager) throw new ForbiddenError("Interaction outside actor owner/team scope");
-      if (input.facilityId && input.facilityId !== interaction.facilityId) {
-        throw new ForbiddenError("Interaction facility outside requested facility");
-      }
     }
 
     const verticalIds = resolveVerticalIds({
@@ -183,7 +165,6 @@ export class ListOrdersUseCase {
       limit,
       statuses: input.statuses,
       facilityId: input.facilityId,
-      interactionId: input.interactionId,
       verticalIds,
       sellerId,
       includeItemPreviews: input.includeItemPreviews,
@@ -203,10 +184,10 @@ export class GetOrderUseCase {
   constructor(private readonly deps: { orderRepository: OrderRepository }) {}
 
   async execute(input: {
-    orderId: string;
+    orderId: number;
     scope: ScopeContext;
-    actor?: { userId: string; roleName: string };
-    verticalId?: string;
+    actor?: { userId: number; roleName: string };
+    verticalId?: number;
   }) {
     const order = await this.deps.orderRepository.findById(input.orderId);
     if (!order) return null;
@@ -233,61 +214,13 @@ export class GetOrderUseCase {
   }
 }
 
-export class OrderIdempotencyConflictError extends AppError {
-  constructor() {
-    super(
-      "ORDER_IDEMPOTENCY_CONFLICT",
-      409,
-      "Idempotency-Key was already used with a different order payload",
-    );
-  }
-}
-
-function orderRequestFingerprint(input: {
-  facilityId: string;
-  interactionId?: string;
-  verticalId?: string;
-  professionalId?: string | null;
-  status?: string;
-  type?: string;
-  notes?: string | null;
-  freight?: number;
-  orderedAt?: string;
-  items: CreateOrderItemInput[];
-}): string {
-  const canonical = {
-    facilityId: input.facilityId,
-    interactionId: input.interactionId ?? null,
-    verticalId: input.verticalId ?? null,
-    professionalId: input.professionalId ?? null,
-    status: input.status ?? "PENDING",
-    type: input.type ?? "SALE",
-    notes: input.notes ?? null,
-    freight: input.freight ?? 0,
-    orderedAt: input.orderedAt ?? null,
-    items: input.items.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice ?? null,
-    })),
-  };
-  return new Bun.CryptoHasher("sha256").update(JSON.stringify(canonical)).digest("hex");
-}
-
 export class CreateOrderUseCase {
-  constructor(
-    private readonly deps: {
-      orderRepository: OrderRepository;
-      interactionContextPort?: InteractionContextPort;
-    },
-  ) {}
+  constructor(private readonly deps: { orderRepository: OrderRepository }) {}
 
   async execute(input: {
-    facilityId: string;
-    idempotencyKey: string;
-    interactionId?: string;
-    verticalId?: string;
-    professionalId?: string | null;
+    facilityId: number;
+    verticalId?: number;
+    professionalId?: number | null;
     status?: (typeof CREATE_ORDER_STATUSES)[number];
     type?: (typeof CREATE_ORDER_TYPES)[number];
     notes?: string | null;
@@ -295,46 +228,9 @@ export class CreateOrderUseCase {
     orderedAt?: string;
     items: CreateOrderItemInput[];
     scope: ScopeContext;
-    actor: { userId: string; roleName: string };
+    actor: { userId: number; roleName: string };
   }) {
-    const requestFingerprint = orderRequestFingerprint(input);
-    const existingReceipt = await this.deps.orderRepository.findCommandReceipt(
-      input.actor.userId,
-      input.idempotencyKey,
-    );
-    if (existingReceipt) {
-      if (existingReceipt.requestFingerprint !== requestFingerprint) {
-        throw new OrderIdempotencyConflictError();
-      }
-      return serializeOrder(existingReceipt.order);
-    }
-
     assertResourceInScope(input.scope, "facility", input.facilityId);
-
-    if (input.interactionId) {
-      const interaction = await this.deps.interactionContextPort?.findById(input.interactionId);
-      if (!interaction || !interaction.canRead) {
-        throw new ForbiddenError("Interaction outside actor scope");
-      }
-      if (interaction.agentUserId !== input.actor.userId) {
-        throw new ForbiddenError("Interaction owner outside actor scope");
-      }
-      if (interaction.facilityId !== input.facilityId) {
-        throw new ValidationError([
-          { field: "facilityId", message: "Facility must match the interaction" },
-        ]);
-      }
-      if (
-        !interaction.canCreateOrder ||
-        interaction.calendarStatus !== "ACTIVE" ||
-        interaction.occurrenceStatus === "CANCELLED" ||
-        !["SCHEDULED", "IN_PROGRESS"].includes(interaction.status)
-      ) {
-        throw new ValidationError([
-          { field: "interactionId", message: "Interaction status does not allow order creation" },
-        ]);
-      }
-    }
 
     const verticalId = resolveCreateOrderVerticalId({
       role: input.actor.roleName,
@@ -347,11 +243,11 @@ export class CreateOrderUseCase {
     }
 
     const issues: Array<{ field: string; message: string }> = [];
-    const seenProducts = new Set<string>();
+    const seenProducts = new Set<number>();
     for (let index = 0; index < input.items.length; index += 1) {
       const item = input.items[index]!;
       const field = `items[${index}]`;
-      if (!item.productId?.trim()) {
+      if (!(typeof item.productId === "number") || !(item.productId > 0)) {
         issues.push({ field: `${field}.productId`, message: "Required" });
         continue;
       }
@@ -413,9 +309,8 @@ export class CreateOrderUseCase {
       };
     });
 
-    const createInput: CreateOrderInput = {
+    const order = await this.deps.orderRepository.create({
       facilityId: input.facilityId,
-      interactionId: input.interactionId ?? null,
       verticalId,
       sellerId: input.actor.userId,
       professionalId: input.professionalId ?? null,
@@ -425,20 +320,8 @@ export class CreateOrderUseCase {
       freight: input.freight ?? 0,
       orderedAt: input.orderedAt ? new Date(input.orderedAt) : new Date(),
       items,
-    };
-    const result = await this.deps.orderRepository.createIdempotently(
-      input.actor.userId,
-      input.idempotencyKey,
-      requestFingerprint,
-      createInput,
-    );
-    if (result.kind === "mismatch") throw new OrderIdempotencyConflictError();
-    if (result.kind === "interaction_not_orderable") {
-      throw new ValidationError([
-        { field: "interactionId", message: "Interaction status does not allow order creation" },
-      ]);
-    }
+    });
 
-    return serializeOrder(result.order);
+    return serializeOrder(order);
   }
 }

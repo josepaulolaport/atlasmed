@@ -2,11 +2,11 @@ import type { InviteVerticalAssignmentInput } from "@atlasmed/access";
 
 export type NormalizedInviteAssignments = {
   /** Legacy single-territory columns kept for older invite rows until migrate drop. */
-  managerTerritoryId?: string;
-  repTerritoryId?: string;
+  managerTerritoryId?: number;
+  repTerritoryId?: number;
   verticalAssignments: Array<{
-    verticalId: string;
-    territoryIds: string[];
+    verticalId: number;
+    territoryIds: number[];
     newPatch?: InviteVerticalAssignmentInput["newPatch"];
   }>;
 };

@@ -9,28 +9,28 @@ describe("assertAcceptedImpactFacilityIds", () => {
   });
 
   it("rejects extra accepts when impact is empty", () => {
-    expect(() => assertAcceptedImpactFacilityIds([], ["f1"])).toThrow(ValidationError);
+    expect(() => assertAcceptedImpactFacilityIds([], [1])).toThrow(ValidationError);
   });
 
   it("requires accepts when impact is non-empty", () => {
-    expect(() => assertAcceptedImpactFacilityIds(["f1"], undefined)).toThrow(
+    expect(() => assertAcceptedImpactFacilityIds([1], undefined)).toThrow(
       ValidationError
     );
-    expect(() => assertAcceptedImpactFacilityIds(["f1"], [])).toThrow(ValidationError);
+    expect(() => assertAcceptedImpactFacilityIds([1], [])).toThrow(ValidationError);
   });
 
   it("requires exact set match", () => {
-    expect(() => assertAcceptedImpactFacilityIds(["f1", "f2"], ["f1"])).toThrow(
+    expect(() => assertAcceptedImpactFacilityIds([1, 2], [1])).toThrow(
       ValidationError
     );
     expect(() =>
-      assertAcceptedImpactFacilityIds(["f1", "f2"], ["f1", "f2", "f3"])
+      assertAcceptedImpactFacilityIds([1, 2], [1, 2, 3])
     ).toThrow(ValidationError);
     expect(() =>
-      assertAcceptedImpactFacilityIds(["f1", "f2"], ["f1", "f3"])
+      assertAcceptedImpactFacilityIds([1, 2], [1, 3])
     ).toThrow(ValidationError);
     expect(() =>
-      assertAcceptedImpactFacilityIds(["f1", "f2"], ["f2", "f1"])
+      assertAcceptedImpactFacilityIds([1, 2], [2, 1])
     ).not.toThrow();
   });
 });

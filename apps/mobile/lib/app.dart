@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -406,21 +407,21 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
           path: '/dashboard/facilities/:bucket',
           builder: (_, state) => PurchaseBucketFacilitiesScreen(
             bucket: state.pathParameters['bucket']!,
-            verticalId: state.uri.queryParameters['verticalId'],
+            verticalId: parseRouteCrmIdOrNull(state.uri.queryParameters['verticalId'], 'verticalId'),
           ),
         ),
         GoRoute(
           path: '/explore/clinic/:id',
           builder: (_, state) => ClinicDetailScreen(
-            clinicId: state.pathParameters['id']!,
-            initialVerticalId: state.uri.queryParameters['verticalId'],
+            clinicId: parseRouteCrmId(state.pathParameters['id']!),
+            initialVerticalId: parseRouteCrmIdOrNull(state.uri.queryParameters['verticalId'], 'verticalId'),
           ),
         ),
         GoRoute(
           path: '/explore/doctor/:id',
           builder: (_, state) => DoctorDetailScreen(
-            doctorId: state.pathParameters['id']!,
-            facilityId: state.uri.queryParameters['facilityId'],
+            doctorId: parseRouteCrmId(state.pathParameters['id']!),
+            facilityId: parseRouteCrmIdOrNull(state.uri.queryParameters['facilityId'], 'facilityId'),
           ),
         ),
         GoRoute(
@@ -466,29 +467,29 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         GoRoute(
           path: '/orders/:id',
           builder: (_, state) =>
-              OrderDetailScreen(orderId: state.pathParameters['id']!),
+              OrderDetailScreen(orderId: parseRouteCrmId(state.pathParameters['id']!)),
         ),
         GoRoute(
           path: '/orders/:id/tracking',
           builder: (_, state) =>
-              OrderTrackingScreen(orderId: state.pathParameters['id']!),
+              OrderTrackingScreen(orderId: parseRouteCrmId(state.pathParameters['id']!)),
         ),
         GoRoute(
           path: '/registrations/:id',
           builder: (_, state) => CadastroReviewDetailScreen(
-            submissionId: state.pathParameters['id']!,
+            submissionId: parseRouteCrmId(state.pathParameters['id']!),
           ),
         ),
         GoRoute(
           path: '/non-conformities/:id',
           builder: (_, state) => NaoConformidadeDetailScreen(
-            suggestionId: state.pathParameters['id']!,
+            suggestionId: parseRouteCrmId(state.pathParameters['id']!),
           ),
         ),
         GoRoute(
           path: '/products/:familyId',
           builder: (_, state) =>
-              ProductDetailScreen(familyId: state.pathParameters['familyId']!),
+              ProductDetailScreen(familyId: parseRouteCrmId(state.pathParameters['familyId']!, 'familyId')),
         ),
         GoRoute(
           path: '/users/invite',
@@ -501,34 +502,37 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         GoRoute(
           path: '/users/invitations/:invitationId',
           builder: (_, state) => InvitationDetailScreen(
-            invitationId: state.pathParameters['invitationId']!,
+            invitationId: parseRouteCrmId(
+              state.pathParameters['invitationId']!,
+              'invitationId',
+            ),
           ),
         ),
         GoRoute(
           path: '/users/invitations/:invitationId/edit',
           builder: (_, state) => InviteUserScreen(
-            invitationId: state.pathParameters['invitationId'],
+            invitationId: state.pathParameters['invitationId'] != null ? parseRouteCrmId(state.pathParameters['invitationId']!, 'invitationId') : null,
           ),
         ),
         GoRoute(
           path: '/users/:id',
           builder: (_, state) =>
-              UserDetailScreen(userId: state.pathParameters['id']!),
+              UserDetailScreen(userId: parseRouteCrmId(state.pathParameters['id']!)),
         ),
         GoRoute(
           path: '/users/:id/edit',
           builder: (_, state) =>
-              EditUserProfileScreen(userId: state.pathParameters['id']!),
+              EditUserProfileScreen(userId: parseRouteCrmId(state.pathParameters['id']!)),
         ),
         GoRoute(
           path: '/users/:id/assignments',
           builder: (_, state) =>
-              EditUserAssignmentsScreen(userId: state.pathParameters['id']!),
+              EditUserAssignmentsScreen(userId: parseRouteCrmId(state.pathParameters['id']!)),
         ),
         GoRoute(
           path: '/territories/:id/edit',
           builder: (_, state) => TerritoryEditorScreen(
-            target: TerritoryEditorTarget.existing(state.pathParameters['id']!),
+            target: TerritoryEditorTarget.existing(parseRouteCrmId(state.pathParameters['id']!)),
           ),
         ),
         GoRoute(
@@ -564,7 +568,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
         GoRoute(
           path: '/catalog/comparison/:variantId',
           builder: (_, state) => CatalogComparisonScreen(
-            variantId: state.pathParameters['variantId']!,
+            variantId: parseRouteCrmId(state.pathParameters['variantId']!, 'variantId'),
           ),
         ),
         GoRoute(

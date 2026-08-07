@@ -19,7 +19,7 @@ final cadastroReviewQueueProvider =
     });
 
 final cadastroReviewByIdProvider = Provider.autoDispose
-    .family<CadastroReviewSubmission?, String>((ref, id) {
+    .family<CadastroReviewSubmission?, int>((ref, id) {
       final queue = ref.watch(cadastroReviewQueueProvider).valueOrNull;
       if (queue == null) return null;
       for (final item in queue) {

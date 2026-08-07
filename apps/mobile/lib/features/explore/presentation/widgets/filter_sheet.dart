@@ -92,7 +92,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   }
 
   Future<void> _openSpecialtyDrawer() async {
-    final key = widget.kind == 'clinic' ? 'serviceCodes' : 'specialties';
+    final key = widget.kind == 'clinic' ? 'clinicalFocusIds' : 'specialties';
     final result = await SpecialtyFilterDrawer.show(
       context,
       kind: widget.kind,
@@ -108,7 +108,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     var n =
         (widget.hideCommercialStatus ? 0 : (_local['status']?.length ?? 0)) +
         (_local['specialties']?.length ?? 0) +
-        (_local['serviceCodes']?.length ?? 0) +
+        (_local['clinicalFocusIds']?.length ?? 0) +
         (widget.hidePurchaseFunnel
             ? 0
             : (_local['purchaseBucket']?.length ?? 0)) +
@@ -341,7 +341,7 @@ class _ClinicFilters extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
           child: _SpecialtyNavRow(
-            count: local['serviceCodes']?.length ?? 0,
+            count: local['clinicalFocusIds']?.length ?? 0,
             onTap: onOpenSpecialty,
           ),
         ),

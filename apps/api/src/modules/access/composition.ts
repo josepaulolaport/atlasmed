@@ -48,6 +48,7 @@ import { RevokeInviteUseCase } from "./application/use-cases/revoke-invite.use-c
 import { ResendInviteUseCase } from "./application/use-cases/resend-invite.use-case";
 import { RequestPasswordResetUseCase } from "./application/use-cases/request-password-reset.use-case";
 import { ResetPasswordUseCase } from "./application/use-cases/reset-password.use-case";
+import { VerifyPasswordResetTokenUseCase } from "./application/use-cases/verify-password-reset-token.use-case";
 import { DeactivateUserUseCase } from "./application/use-cases/deactivate-user.use-case";
 import { ActivateUserUseCase } from "./application/use-cases/activate-user.use-case";
 import { SuspendUserUseCase } from "./application/use-cases/suspend-user.use-case";
@@ -303,6 +304,11 @@ export const accessUseCases = {
       notificationService: accessServices.notification,
       auditLog: accessInfrastructure.auditLog,
       metrics: accessInfrastructure.metrics,
+    }),
+
+  verifyPasswordResetToken: () =>
+    new VerifyPasswordResetTokenUseCase({
+      passwordResetRepository: accessRepositories.passwordReset,
     }),
 
   changePassword: () =>

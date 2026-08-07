@@ -20,9 +20,9 @@ function formatDate(value: Date | null): string | undefined {
 
 function serializeAssociationRole(
   association: {
-    id: string;
-    facilityId: string;
-    professionalId: string;
+    id: number;
+    facilityId: number;
+    professionalId: number;
     occupationCode: string;
     isPartner: boolean;
     isPrescriber: boolean;
@@ -51,9 +51,9 @@ function serializeAssociationRole(
 
 function serializeAssociation(
   row: {
-    id: string;
-    professionalId: string;
-    facilityId: string;
+    id: number;
+    professionalId: number;
+    facilityId: number;
     occupationCode: string;
     isPartner: boolean;
     isPrescriber: boolean;
@@ -61,14 +61,11 @@ function serializeAssociation(
     isDecisionMaker: boolean;
     specialtyLabel: string | null;
     notes: string | null;
-    sourceActive: boolean;
-    sourceFirstSeenAt: Date | null;
-    sourceLastSeenAt: Date | null;
     confirmedAt: Date | null;
-    confirmedByUserId: string | null;
+    confirmedByUserId: number | null;
     endedAt: Date | null;
     professional: {
-      id: string;
+      id: number;
       firstName: string;
       lastName: string;
       fullName: string | null;
@@ -109,19 +106,15 @@ function serializeAssociation(
     },
     association: {
       ...serializeAssociationRole(row, relationshipLevel),
-      sourceActive: row.sourceActive,
-      sourceFirstSeenAt: row.sourceFirstSeenAt?.toISOString(),
-      sourceLastSeenAt: row.sourceLastSeenAt?.toISOString(),
       confirmedAt: row.confirmedAt?.toISOString(),
       confirmedByUserId: row.confirmedByUserId ?? undefined,
-      pendingConfirmation: row.sourceActive && !row.confirmedAt && !row.endedAt,
     },
   };
 }
 
 function serializeProfessionalFromContext(
   professional: {
-    id: string;
+    id: number;
     firstName: string;
     lastName: string;
     fullName: string | null;
@@ -141,12 +134,11 @@ function serializeProfessionalFromContext(
     favoriteSport: string | null;
     languages: string | null;
     hobbies: string | null;
-    notes: string | null;
     createdAt: Date;
     updatedAt: Date;
   },
-  facilityIds: string[],
-  facilities: Array<{ id: string; name: string }>
+  facilityIds: number[],
+  facilities: Array<{ id: number; name: string }>
 ): ProfessionalProfile {
   return {
     id: professional.id,
@@ -170,7 +162,6 @@ function serializeProfessionalFromContext(
     favoriteSport: professional.favoriteSport ?? undefined,
     languages: professional.languages ?? undefined,
     hobbies: professional.hobbies ?? undefined,
-    notes: professional.notes ?? undefined,
     facilityIds,
     facilities,
     createdAt: professional.createdAt.toISOString(),
@@ -194,9 +185,9 @@ export class ListFacilityProfessionalsUseCase {
   constructor(private readonly deps: RelationshipAwareDependencies) {}
 
   async execute(input: {
-    facilityId: string;
+    facilityId: number;
     scope: ScopeContext;
-    userId: string;
+    userId: number;
     view?: FacilityProfessionalView;
     page?: number;
     limit?: number;
@@ -241,10 +232,10 @@ export class GetFacilityProfessionalContextUseCase {
   constructor(private readonly deps: ContextDependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
+    facilityId: number;
+    professionalId: number;
     scope: ScopeContext;
-    userId: string;
+    userId: number;
   }): Promise<ProfessionalFacilityContext | null> {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -291,9 +282,9 @@ export class UpdateFacilityProfessionalRoleUseCase {
   constructor(private readonly deps: RelationshipAwareDependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    userId: string;
+    facilityId: number;
+    professionalId: number;
+    userId: number;
     scope: ScopeContext;
     isPartner?: boolean;
     isPrescriber?: boolean;
@@ -357,9 +348,9 @@ export class ConfirmProfessionalAtFacilityUseCase {
   constructor(private readonly deps: AssociationDependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    userId: string;
+    facilityId: number;
+    professionalId: number;
+    userId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -383,9 +374,9 @@ export class ManuallyAssociateProfessionalUseCase {
   constructor(private readonly deps: AssociationDependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    userId: string;
+    facilityId: number;
+    professionalId: number;
+    userId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -409,9 +400,9 @@ export class EndFacilityProfessionalUseCase {
   constructor(private readonly deps: AssociationDependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    userId: string;
+    facilityId: number;
+    professionalId: number;
+    userId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);

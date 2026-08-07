@@ -1,7 +1,7 @@
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
 /// Synthetic id for the chart "Outros" bucket (not a catalog provider id).
-const payerOutrosBucketId = '__payer_outros_bucket__';
+const kPayerOutrosBucketId = -1;
 
 /// One donut/legend slice after top-5 + OTHER bucketing.
 class PayerDisplaySlice {
@@ -15,7 +15,7 @@ class PayerDisplaySlice {
     this.members = const [],
   });
 
-  final String id;
+  final int id;
   final String name;
   final double sharePercent;
 
@@ -94,7 +94,7 @@ PayerDisplaySlice _bucketSlice(List<PayerShare> members) {
   final sum = members.fold<double>(0, (s, p) => s + p.sharePercent);
   final hasPackage = members.any((p) => p.isPackage);
   return PayerDisplaySlice(
-    id: payerOutrosBucketId,
+    id: kPayerOutrosBucketId,
     name: 'Outros',
     sharePercent: sum,
     hasPackage: hasPackage,

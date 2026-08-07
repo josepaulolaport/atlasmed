@@ -18,50 +18,50 @@ describe("defineAbilitiesForUser", () => {
   it("allows route-level facility update for USER via role permissions", () => {
     const grants = [
       {
-        id: "grant-1",
+        id: 1,
         resource: "FACILITY",
-        resourceId: "facility-1",
+        resourceId: "1",
         action: "update",
       },
     ];
 
     expect(canAccessRoute(Role.REP, grants, "update", "FACILITY")).toBe(true);
     expect(
-      canAccessResource(Role.REP, grants, "update", "FACILITY", "facility-1")
+      canAccessResource(Role.REP, grants, "update", "FACILITY", 1)
     ).toBe(true);
   });
 
   it("should allow role-wide facility update for any facility id", () => {
     const merged = defineAbilitiesForUser(Role.REP, [
       {
-        id: "grant-1",
+        id: 1,
         resource: "FACILITY",
-        resourceId: "facility-1",
+        resourceId: "1",
         action: "update",
       },
     ]);
 
-    expect(canOnResource(merged, "update", "FACILITY", "facility-1")).toBe(true);
-    expect(canOnResource(merged, "update", "FACILITY", "facility-2")).toBe(true);
+    expect(canOnResource(merged, "update", "FACILITY", 1)).toBe(true);
+    expect(canOnResource(merged, "update", "FACILITY", 2)).toBe(true);
   });
 
   it("maps legacy CLINIC grants to FACILITY subject", () => {
     const withoutGrant = defineAbilitiesForUser(Role.REP, []);
-    expect(canOnResource(withoutGrant, "delete", "FACILITY", "facility-1")).toBe(
+    expect(canOnResource(withoutGrant, "delete", "FACILITY", 1)).toBe(
       false
     );
 
     const merged = defineAbilitiesForUser(Role.REP, [
       {
-        id: "grant-legacy",
+        id: 2,
         resource: "CLINIC",
-        resourceId: "facility-1",
+        resourceId: "1",
         action: "delete",
       },
     ]);
 
-    expect(canOnResource(merged, "delete", "FACILITY", "facility-1")).toBe(true);
-    expect(canOnResource(merged, "delete", "FACILITY", "facility-2")).toBe(false);
+    expect(canOnResource(merged, "delete", "FACILITY", 1)).toBe(true);
+    expect(canOnResource(merged, "delete", "FACILITY", 2)).toBe(false);
   });
 });
 
@@ -79,9 +79,9 @@ describe("route permission helpers", () => {
   it("canAccessRoute uses role-wide facility update for USER", () => {
     const grants = [
       {
-        id: "grant-1",
+        id: 1,
         resource: "FACILITY",
-        resourceId: "facility-1",
+        resourceId: "1",
         action: "update",
       },
     ];
@@ -92,18 +92,18 @@ describe("route permission helpers", () => {
   it("canAccessResource allows USER facility update for matching and other ids", () => {
     const grants = [
       {
-        id: "grant-1",
+        id: 1,
         resource: "FACILITY",
-        resourceId: "facility-1",
+        resourceId: "1",
         action: "update",
       },
     ];
 
     expect(
-      canAccessResource(Role.REP, grants, "update", "FACILITY", "facility-1")
+      canAccessResource(Role.REP, grants, "update", "FACILITY", 1)
     ).toBe(true);
     expect(
-      canAccessResource(Role.REP, grants, "update", "FACILITY", "facility-2")
+      canAccessResource(Role.REP, grants, "update", "FACILITY", 2)
     ).toBe(true);
   });
 });

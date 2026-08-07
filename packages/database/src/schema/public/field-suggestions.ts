@@ -4,9 +4,10 @@ import {
   timestamp,
   jsonb,
   index,
+  integer,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import {
   fieldSuggestionKindEnum,
   fieldSuggestionStatusEnum,
@@ -21,16 +22,13 @@ import { users } from "./users";
 export const fieldSuggestions = pgTable(
   "field_suggestions",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     kind: fieldSuggestionKindEnum("kind").notNull(),
     status: fieldSuggestionStatusEnum("status").notNull().default("PENDING"),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "cascade" }),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
     /** Reserved for a later doctor-target increment; unused in v1. */
-    professionalId: text("professional_id").references(() => professionals.id, {
+    professionalId: bigint("professional_id", { mode: "number" }).references(() => professionals.id, {
       onDelete: "set null",
     }),
     /** Required for FIELD_CHANGE; null for DEACTIVATION. */
@@ -38,12 +36,11 @@ export const fieldSuggestions = pgTable(
     currentValue: jsonb("current_value").notNull().default({}),
     proposedValue: jsonb("proposed_value"),
     reason: text("reason"),
-    submittedByUserId: text("submitted_by_user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    submittedByUserId: bigint("submitted_by_user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
     submittedAt: timestamp("submitted_at").notNull().defaultNow(),
     resolvedAt: timestamp("resolved_at"),
-    resolvedByUserId: text("resolved_by_user_id").references(() => users.id, {
+    resolvedByUserId: bigint("resolved_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     resolutionNote: text("resolution_note"),

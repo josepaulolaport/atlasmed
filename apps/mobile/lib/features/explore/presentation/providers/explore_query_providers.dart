@@ -23,7 +23,7 @@ final doctorsQueryProvider = Provider<DoctorsQuery>((ref) {
 
 ClinicsQuery buildClinicsQuery(
   ExploreState state, {
-  required String? verticalId,
+  int? verticalId,
 }) {
   final sort = _facilitySort(state.sort, hasOrigin: state.origin != null);
   final purchaseBuckets = (state.filters['purchaseBucket'] ?? const [])
@@ -44,7 +44,7 @@ ClinicsQuery buildClinicsQuery(
     commercialStatus: _first(state.filters['status']),
     purchaseBucket: purchaseBuckets.length == 1 ? purchaseBuckets.first : null,
     productIds: _commaJoin(state.filters['products']),
-    serviceCodes: _commaJoin(state.filters['serviceCodes']),
+    clinicalFocusIds: _commaJoin(state.filters['clinicalFocusIds']),
     purchaseFunnelStages: funnelStages
         .map(purchaseFunnelStageFromApi)
         .whereType<PurchaseFunnelStage>()

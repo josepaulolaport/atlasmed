@@ -4,9 +4,9 @@ import { sessionsMatchSameDevice } from "../../../../shared/utils/device-fingerp
 import type { IAuditLog } from "../interfaces/audit-log.interface";
 
 interface RevokeSessionInput {
-  sessionId: string;
-  userId: string;
-  currentSessionId: string;
+  sessionId: number;
+  userId: number;
+  currentSessionId: number;
 }
 
 type RevokeSessionOutput =

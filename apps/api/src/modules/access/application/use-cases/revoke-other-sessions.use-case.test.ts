@@ -15,8 +15,8 @@ describe("RevokeOtherSessionsUseCase", () => {
   let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
 
   const currentSession = {
-    id: "session-current",
-    userId: "user-123",
+    id: 1,
+    userId: 123,
     refreshTokenHash: "hash",
     ipAddress: "192.168.1.1",
     userAgent: "Mozilla/5.0 (Macintosh)",
@@ -32,10 +32,10 @@ describe("RevokeOtherSessionsUseCase", () => {
   beforeEach(() => {
     mockAuditLog = createMockAuditLogService();
     mockSessionRepository = createMockSessionRepository({
-      findById: mock(async (id: string) =>
-        id === "session-current" ? currentSession : null
+      findById: mock(async (id: number) =>
+        id === 1 ? currentSession : null
       ) as any,
-      revokeAllExceptDevice: mock(async () => ["session-other-1", "session-other-2"]),
+      revokeAllExceptDevice: mock(async () => [2, 3]),
     });
     mockSessionCache = createMockSessionCache({
       invalidate: mock(async () => {}),
@@ -50,13 +50,13 @@ describe("RevokeOtherSessionsUseCase", () => {
 
   it("should revoke other sessions and audit each revocation", async () => {
     const result = await useCase.execute({
-      userId: "user-123",
-      currentSessionId: "session-current",
+      userId: 123,
+      currentSessionId: 1,
     });
 
     expect(result).toEqual({ revokedCount: 2 });
     expect(mockSessionRepository.revokeAllExceptDevice).toHaveBeenCalledWith(
-      "user-123",
+      123,
       {
         id: currentSession.id,
         deviceFingerprint: currentSession.deviceFingerprint,
@@ -72,12 +72,12 @@ describe("RevokeOtherSessionsUseCase", () => {
   it("should return zero when current session does not belong to user", async () => {
     mockSessionRepository.findById = mock(async () => ({
       ...currentSession,
-      userId: "other-user",
+      userId: 2,
     })) as any;
 
     const result = await useCase.execute({
-      userId: "user-123",
-      currentSessionId: "session-current",
+      userId: 123,
+      currentSessionId: 1,
     });
 
     expect(result).toEqual({ revokedCount: 0 });
@@ -88,8 +88,8 @@ describe("RevokeOtherSessionsUseCase", () => {
     mockSessionRepository.findById = mock(async () => null);
 
     const result = await useCase.execute({
-      userId: "user-123",
-      currentSessionId: "missing",
+      userId: 123,
+      currentSessionId: 999,
     });
 
     expect(result).toEqual({ revokedCount: 0 });

@@ -6,30 +6,30 @@ describe("mergeGrantsIntoScope", () => {
   it("should merge territory and clinic ids from grants", () => {
     const scope = {
       ...createEmptyScopeContext(),
-      assignedVerticalIds: ["vertical-a"],
-      activeVerticalId: "vertical-a",
+      assignedVerticalIds: [10],
+      activeVerticalId: 10,
     };
     const merged = mergeGrantsIntoScope(scope, [
       {
-        id: "g1",
+        id: 1,
         resource: "TERRITORY",
-        resourceId: "t-1",
+        resourceId: "101",
         action: "read",
       },
       {
-        id: "g2",
+        id: 2,
         resource: "FACILITY",
-        resourceId: "c-1",
+        resourceId: "201",
         action: "read",
       },
     ]);
 
-    expect(merged.grantIds).toEqual(["g1", "g2"]);
-    expect(merged.effectiveTerritoryIds).toContain("t-1");
-    expect(merged.territoryIds).toContain("t-1");
-    expect(merged.facilityIds).toContain("c-1");
+    expect(merged.grantIds).toEqual([1, 2]);
+    expect(merged.effectiveTerritoryIds).toContain(101);
+    expect(merged.territoryIds).toContain(101);
+    expect(merged.facilityIds).toContain(201);
     expect(merged.isOperationallyActive).toBe(true);
-    expect(merged.assignedVerticalIds).toEqual(["vertical-a"]);
-    expect(merged.activeVerticalId).toBe("vertical-a");
+    expect(merged.assignedVerticalIds).toEqual([10]);
+    expect(merged.activeVerticalId).toBe(10);
   });
 });

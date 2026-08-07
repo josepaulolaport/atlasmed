@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('maps catalog product fields and numeric prices from API JSON', () {
     final product = CatalogProduct.fromJson({
-      'id': 'product-1',
+      'id': 1,
       'code': 'ATL-001',
       'name': 'AtlasGel',
       'description': 'Gel ortopédico',
@@ -18,7 +18,7 @@ void main() {
       'isActive': true,
     });
 
-    expect(product.id, 'product-1');
+    expect(product.id, 1);
     expect(product.price, 89.9);
     expect(product.price17, 90);
     expect(product.subtitle, 'Gel ortopédico · 240g');

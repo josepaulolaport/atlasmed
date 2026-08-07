@@ -19,12 +19,12 @@ export class ReplaceUserAssignmentsUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
-    actorUserId: string;
+    targetUserId: number;
+    actorUserId: number;
     actorRole: Role;
     verticalAssignments: Array<{
-      verticalId: string;
-      territoryIds: string[];
+      verticalId: number;
+      territoryIds: number[];
     }>;
   }) {
     if (params.actorRole !== Role.ADMIN) {

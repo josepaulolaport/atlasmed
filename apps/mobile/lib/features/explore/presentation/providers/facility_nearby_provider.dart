@@ -1,24 +1,43 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-Set<String> sharedNearbyVerticalIds({
-  required Iterable<String> clinicVerticalIds,
-  required Iterable<String> userVerticalIds,
+/// Builds map center from live facility detail coordinates.
+EstablishmentLocation? establishmentLocationFromDetail(Facility facility) {
+  final lat = facility.address?.lat;
+  final lng = facility.address?.lng;
+  if (lat == null || lng == null) return null;
+
+  return EstablishmentLocation(
+    latitude: lat,
+    longitude: lng,
+    formattedAddress: facility.address?.formattedAddress,
+  );
+}
+
+/// Clinic verticals the signed-in user can also see (intersection).
+Set<int> sharedNearbyVerticalIds({
+  required Iterable<int> clinicVerticalIds,
+  required Iterable<int> userVerticalIds,
 }) {
   final user = userVerticalIds.toSet();
   if (user.isEmpty) return clinicVerticalIds.toSet();
   return clinicVerticalIds.where(user.contains).toSet();
 }
 
-/// Resolves the vertical used by the nearby facilities query.
-String? resolveNearbyVerticalId({
-  required Set<String> sharedVerticalIds,
-  required String? selectedVerticalId,
-  String? fallbackEffectiveId,
+/// Vertical id for nearby `GET /facilities` given clinic∩user scope.
+///
+/// - empty shared → [fallbackEffectiveId] (user-only filter)
+/// - one shared → that id
+/// - many shared → [selectedVerticalId] when in shared, else `null` (Todas)
+int? resolveNearbyVerticalId({
+  required Set<int> sharedVerticalIds,
+  int? selectedVerticalId,
+  int? fallbackEffectiveId,
 }) {
   if (sharedVerticalIds.isEmpty) return fallbackEffectiveId;
   if (sharedVerticalIds.length == 1) return sharedVerticalIds.single;
@@ -29,25 +48,21 @@ String? resolveNearbyVerticalId({
   return null;
 }
 
-/// Filters the "Todas" result to verticals shared by user and clinic.
+/// When "Todas" among several shared verticals, drop clinics outside that set.
 List<NearbyEstablishment> filterNearbyBySharedVerticals(
   List<NearbyEstablishment> items,
-  Set<String> sharedVerticalIds,
+  Set<int> sharedVerticalIds,
 ) {
   if (sharedVerticalIds.isEmpty) return items;
   return items
-      .where(
-        (item) => item.verticals.any(
-          (vertical) => sharedVerticalIds.contains(vertical.id),
-        ),
-      )
+      .where((e) => e.verticals.any((v) => sharedVerticalIds.contains(v.id)))
       .toList(growable: false);
 }
 
 List<NearbyEstablishment> applyNearbyVerticalScope({
   required List<NearbyEstablishment> items,
-  required Set<String> sharedVerticalIds,
-  required String? queryVerticalId,
+  required Set<int> sharedVerticalIds,
+  int? queryVerticalId,
 }) {
   if (sharedVerticalIds.length > 1 && queryVerticalId == null) {
     return filterNearbyBySharedVerticals(items, sharedVerticalIds);
@@ -65,11 +80,11 @@ class NearbyFacilitiesQuery {
     this.verticalId,
   });
 
-  final String facilityId;
+  final int facilityId;
   final double latitude;
   final double longitude;
   final double radiusKm;
-  final String? verticalId;
+  final int? verticalId;
 
   @override
   bool operator ==(Object other) {
@@ -90,17 +105,13 @@ class NearbyFacilitiesQuery {
 ///
 /// Prefers shell/loaded lat·lng so this does not wait on a second detail GET.
 final facilityNearbyPreviewProvider =
-    FutureProvider.family<List<NearbyEstablishment>, String>((
+    FutureProvider.family<List<NearbyEstablishment>, int>((
       ref,
       facilityId,
     ) async {
-      if (isMockNearbyFacilityId(facilityId)) {
-        return const [];
-      }
-
       double? lat;
       double? lng;
-      Iterable<String> clinicVerticalIds = const [];
+      Iterable<int> clinicVerticalIds = const [];
 
       final display = ref.watch(
         clinicDetailDisplayFacilityProvider(facilityId),
@@ -116,8 +127,8 @@ final facilityNearbyPreviewProvider =
             .watch(clinicDetailRepositoryProvider(facilityId))
             .currentValueOrResolve();
         if (dto == null) return const [];
-        lat = dto.address?.lat;
-        lng = dto.address?.lng;
+        lat = dto.lat;
+        lng = dto.lng;
         clinicVerticalIds = dto.verticalProfiles.map((p) => p.verticalId);
         if (lat == null || lng == null) return const [];
       }
@@ -158,16 +169,12 @@ final facilityNearbyPreviewProvider =
       );
     });
 
-/// Full-screen map: refetch when radius, origin or vertical changes.
+/// Full-screen map: refetch when radius / origin / vertical changes.
 final facilityNearbyProvider =
     FutureProvider.family<List<NearbyEstablishment>, NearbyFacilitiesQuery>((
       ref,
       query,
     ) async {
-      if (isMockNearbyFacilityId(query.facilityId)) {
-        return const [];
-      }
-
       return fetchNearbyFacilities(
         excludeFacilityId: query.facilityId,
         latitude: query.latitude,

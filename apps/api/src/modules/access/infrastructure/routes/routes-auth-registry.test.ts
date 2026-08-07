@@ -5,11 +5,9 @@ import { join } from "node:path";
 const ROUTES_DIR = import.meta.dir;
 
 const PUBLIC_ROUTE_FILES = new Set([
-  "login.route.ts",
-  "verify-2fa-login.route.ts",
-  "refresh-session.route.ts",
   "accept-invite.route.ts",
   "request-password-reset.route.ts",
+  "verify-password-reset.route.ts",
   "reset-password.route.ts",
 ]);
 

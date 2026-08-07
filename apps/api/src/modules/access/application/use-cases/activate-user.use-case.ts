@@ -15,7 +15,7 @@ interface Dependencies {
 export class ActivateUserUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(params: { userId: string; activatedBy: string }) {
+  async execute(params: { userId: number; activatedBy: number }) {
     const user = await this.deps.userRepository.findById(params.userId);
 
     if (!user) {

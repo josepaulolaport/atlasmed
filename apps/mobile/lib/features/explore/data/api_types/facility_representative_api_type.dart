@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -21,14 +22,13 @@ class FacilityRepresentativeApi {
     this.isBiller = false,
     this.isSecretary = false,
     this.relationshipLevel,
-    this.sourceProvider,
     this.confirmedAt,
   });
 
   factory FacilityRepresentativeApi.fromMap(Map<String, dynamic> map) {
     return FacilityRepresentativeApi(
-      id: readString(map['id']),
-      facilityId: readString(map['facilityId']),
+      id: readCrmId(map['id'], 'id'),
+      facilityId: readCrmId(map['facilityId'], 'facilityId'),
       representativeName: readString(map['representativeName']),
       roleTitle: readNullableString(map['roleTitle']),
       email: readNullableString(map['email']),
@@ -44,13 +44,12 @@ class FacilityRepresentativeApi {
       isBiller: map['isBiller'] == true,
       isSecretary: map['isSecretary'] == true,
       relationshipLevel: _readLevel(map['relationshipLevel']),
-      sourceProvider: readNullableString(map['sourceProvider']),
       confirmedAt: readNullableDateTime(map['confirmedAt']),
     );
   }
 
-  final String id;
-  final String facilityId;
+  final int id;
+  final int facilityId;
   final String representativeName;
   final String? roleTitle;
   final String? email;
@@ -64,7 +63,6 @@ class FacilityRepresentativeApi {
   final bool isBiller;
   final bool isSecretary;
   final int? relationshipLevel;
-  final String? sourceProvider;
   final DateTime? confirmedAt;
 
   AdministrativeProfessional toDomain() {

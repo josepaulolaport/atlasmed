@@ -27,7 +27,7 @@ class ProfessionalRoster {
     this.relationshipScore,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String initials;
   final double hue;
@@ -99,7 +99,7 @@ class ProfessionalRoster {
   }
 
   ProfessionalRoster copyWith({
-    String? id,
+    int? id,
     String? name,
     String? initials,
     double? hue,

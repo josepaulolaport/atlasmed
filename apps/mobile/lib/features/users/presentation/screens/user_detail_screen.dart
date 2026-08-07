@@ -25,7 +25,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class UserDetailScreen extends ConsumerWidget {
   const UserDetailScreen({super.key, required this.userId});
 
-  final String userId;
+  final int userId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -545,7 +545,7 @@ class _VerticalAssignmentCard extends ConsumerStatefulWidget {
     required this.canManage,
   });
 
-  final String userId;
+  final int userId;
   final InviteVerticalAssignment assignment;
   final UserAssignments allAssignments;
   final bool showManager;
@@ -647,7 +647,7 @@ class _VerticalAssignmentCardState
     await _persist(assignment.copyWith(territories: picked));
   }
 
-  Future<void> _removeTerritory(String territoryId) async {
+  Future<void> _removeTerritory(int territoryId) async {
     if (!widget.canManage || _busy) return;
     await _persist(
       assignment.copyWith(

@@ -3,9 +3,9 @@
  * Same privacy model as user_professional_relationships.
  */
 export interface UserRepresentativeRelationshipRecord {
-  id: string;
-  userId: string;
-  representativeId: string;
+  id: number;
+  userId: number;
+  representativeId: number;
   relationshipLevel: number;
   createdAt: Date;
   updatedAt: Date;
@@ -13,24 +13,24 @@ export interface UserRepresentativeRelationshipRecord {
 
 export interface UserRepresentativeRelationshipRepository {
   findByUserAndRepresentative(
-    userId: string,
-    representativeId: string
+    userId: number,
+    representativeId: number
   ): Promise<UserRepresentativeRelationshipRecord | null>;
 
   /** Map representativeId → level for the given user (for roster enrichment). */
   findLevelsByUserAndRepresentatives(
-    userId: string,
-    representativeIds: string[]
-  ): Promise<Map<string, number>>;
+    userId: number,
+    representativeIds: number[]
+  ): Promise<Map<number, number>>;
 
   upsert(params: {
-    userId: string;
-    representativeId: string;
+    userId: number;
+    representativeId: number;
     relationshipLevel: number;
   }): Promise<UserRepresentativeRelationshipRecord>;
 
   deleteByUserAndRepresentative(
-    userId: string,
-    representativeId: string
+    userId: number,
+    representativeId: number
   ): Promise<void>;
 }

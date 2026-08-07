@@ -16,7 +16,7 @@ const globalScope: ScopeContext = {
   managedUserIds: [], isOperationallyActive: true,
 };
 
-const VERTICAL = "vertical-orto";
+const VERTICAL = 1;
 
 function repository(input?: {
   exists?: boolean;
@@ -52,7 +52,7 @@ describe("PurchaseRecurrenceService", () => {
   it("keeps the default recurrence for a facility with zero purchases", async () => {
     const fake = repository({ purchaseDates: [] });
     const result = await new PurchaseRecurrenceService(fake.repo).recalculateFacility(
-      "facility-1",
+      1,
       VERTICAL,
       "2026-02-05",
     );
@@ -66,7 +66,7 @@ describe("PurchaseRecurrenceService", () => {
   it("keeps the default interval for a facility with one purchase", async () => {
     const fake = repository({ purchaseDates: ["2026-01-31"] });
     const result = await new PurchaseRecurrenceService(fake.repo).recalculateFacility(
-      "facility-1",
+      1,
       VERTICAL,
       "2026-02-05",
     );
@@ -80,7 +80,7 @@ describe("PurchaseRecurrenceService", () => {
   it("recalculates automatic recurrence from multiple purchase dates", async () => {
     const fake = repository({ purchaseDates: ["2026-01-31", "2026-01-01"] });
     const result = await new PurchaseRecurrenceService(fake.repo).recalculateFacility(
-      "facility-1",
+      1,
       VERTICAL,
       "2026-02-05",
     );
@@ -93,7 +93,7 @@ describe("PurchaseRecurrenceService", () => {
   it("configures a preset and recalculates immediately", async () => {
     const fake = repository({ purchaseDates: ["2026-01-01"] });
     const result = await new PurchaseRecurrenceService(fake.repo).configurePurchaseRecurrence(
-      "facility-1",
+      1,
       VERTICAL,
       { mode: "PRESET", profile: "WEEKLY" },
       globalScope,
@@ -108,7 +108,7 @@ describe("PurchaseRecurrenceService", () => {
   it("configures a custom interval", async () => {
     const fake = repository({ purchaseDates: ["2026-01-01"] });
     const result = await new PurchaseRecurrenceService(fake.repo).configurePurchaseRecurrence(
-      "facility-1",
+      1,
       VERTICAL,
       { mode: "CUSTOM", intervalDays: 45 },
       globalScope,
@@ -125,7 +125,7 @@ describe("PurchaseRecurrenceService", () => {
       configuration: { manualProfile: "WEEKLY", manualIntervalDays: null },
     });
     const result = await new PurchaseRecurrenceService(fake.repo).configurePurchaseRecurrence(
-      "facility-1",
+      1,
       VERTICAL,
       { mode: "AUTOMATIC" },
       globalScope,
@@ -139,7 +139,7 @@ describe("PurchaseRecurrenceService", () => {
   it("turns invalid custom intervals into structured ValidationError", async () => {
     const fake = repository();
     await expect(new PurchaseRecurrenceService(fake.repo).configurePurchaseRecurrence(
-      "facility-1",
+      1,
       VERTICAL,
       { mode: "CUSTOM", intervalDays: 0 },
       globalScope,
@@ -161,7 +161,7 @@ describe("PurchaseRecurrenceService", () => {
     };
     const scope = { ...globalScope, isGlobal: false, facilityIds: [] } as ScopeContext;
     await expect(new PurchaseRecurrenceService(scopedRepo).configurePurchaseRecurrence(
-      "facility-1",
+      1,
       VERTICAL,
       { mode: "AUTOMATIC" },
       scope,
@@ -173,7 +173,7 @@ describe("PurchaseRecurrenceService", () => {
   it("throws ResourceNotFoundError for a missing facility", async () => {
     const fake = repository({ exists: false });
     await expect(new PurchaseRecurrenceService(fake.repo).recalculateFacility(
-      "missing",
+      999,
       VERTICAL,
       "2026-01-01",
     )).rejects.toBeInstanceOf(ResourceNotFoundError);

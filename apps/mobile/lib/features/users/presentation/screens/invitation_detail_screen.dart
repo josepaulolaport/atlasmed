@@ -14,7 +14,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class InvitationDetailScreen extends ConsumerWidget {
   const InvitationDetailScreen({super.key, required this.invitationId});
 
-  final String invitationId;
+  final int invitationId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

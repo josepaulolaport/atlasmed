@@ -35,7 +35,7 @@ Atlasmed should continue as a modular monolith while the product matures. The ba
 - Access, RBAC, grants, MFA, SSO, and audit.
 - Healthcare CRM.
 - Territory management.
-- Calendar, interactions, activities, and follow-ups.
+- Visits and activities.
 - Tasks, reminders, and workflow automation.
 - Notifications.
 - Analytics and reporting.
@@ -43,17 +43,13 @@ Atlasmed should continue as a modular monolith while the product matures. The ba
 - Integrations and data ingestion.
 - Admin operations and monitoring.
 
-The delivered Calendar/Interactions domain is the base for activity history. The target model should treat physical visits as one interaction modality, move metrics from the compatibility `visits` ledger to completed interactions, and retire the ledger only after data and consumer migration.
-
-Calendar concurrency should keep owner-scoped transactional locking and add database-enforced overlap exclusion through the required reviewed migration. See [Calendar and Commercial Interactions](features/calendar-interactions.md).
-
 ## Event-Driven Patterns
 
 Use domain events for cross-domain side effects. Examples:
 
 - User invited -> send email/WhatsApp notification.
-- Interaction completed -> update activity metrics and schedule a follow-up suggestion; physical visits are represented as in-person interactions.
-- Registry ingestion completed -> create suggestions and audit event.
+- Visit completed -> update activity metrics and schedule follow-up suggestion.
+- External data import completed (when product reintroduces an ingest path) -> create reviewable suggestions and audit event.
 - AI action proposed -> create approval/audit record.
 - Task due soon -> enqueue notification.
 

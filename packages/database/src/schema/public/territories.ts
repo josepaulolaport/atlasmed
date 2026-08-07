@@ -4,13 +4,12 @@ import {
   boolean,
   timestamp,
   integer,
-  doublePrecision,
   json,
   index,
   uniqueIndex,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import { geometryMultiPolygon } from "../../types/geometry";
 import {
   territoryApprovalTypeEnum,
@@ -22,16 +21,13 @@ import { businessVerticals } from "./business-verticals";
 export const territoryTypes = pgTable(
   "territory_types",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
     description: text("description"),
     canHaveBoundary: boolean("can_have_boundary").notNull().default(true),
-    assignsClinics: boolean("assigns_clinics").notNull().default(false),
-    assignableToUsers: boolean("assignable_to_users").notNull().default(false),
-    assignableToManagers: boolean("assignable_to_managers").notNull().default(false),
     blockSiblingOverlap: boolean("block_sibling_overlap").notNull().default(false),
-    sortOrder: integer("sort_order").notNull().default(0),
+    sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -42,23 +38,17 @@ export const territoryTypes = pgTable(
 export const territories = pgTable(
   "territories",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     code: text("code").notNull(),
     /** Commercial vertical this territory row belongs to (zones/patches are per vertical). */
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "restrict" }),
-    territoryTypeId: text("territory_type_id").notNull().references(() => territoryTypes.id, { onDelete: "restrict" }),
-    managerTerritoryId: text("manager_territory_id"),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
+    territoryTypeId: bigint("territory_type_id", { mode: "number" }).notNull().references(() => territoryTypes.id, { onDelete: "restrict" }),
+    managerTerritoryId: bigint("manager_territory_id", { mode: "number" }),
     isActive: boolean("is_active").notNull().default(true),
     boundary: geometryMultiPolygon("boundary"),
-    boundaryMinLng: doublePrecision("boundary_min_lng"),
-    boundaryMinLat: doublePrecision("boundary_min_lat"),
-    boundaryMaxLng: doublePrecision("boundary_max_lng"),
-    boundaryMaxLat: doublePrecision("boundary_max_lat"),
-    boundaryAreaSqKm: doublePrecision("boundary_area_sq_km"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -75,10 +65,10 @@ export const territories = pgTable(
 export const userTerritoryAssignments = pgTable(
   "user_territory_assignments",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    territoryId: text("territory_id").notNull().references(() => territories.id, { onDelete: "restrict" }),
-    assignedBy: text("assigned_by").references(() => users.id, { onDelete: "set null" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
+    territoryId: bigint("territory_id", { mode: "number" }).notNull().references(() => territories.id, { onDelete: "restrict" }),
+    assignedBy: bigint("assigned_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -92,20 +82,19 @@ export const userTerritoryAssignments = pgTable(
 export const territoryApprovalRequests = pgTable(
   "territory_approval_requests",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     type: territoryApprovalTypeEnum("type").notNull(),
     status: territoryApprovalStatusEnum("status").notNull().default("pending"),
-    requesterId: text("requester_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
-    reviewerId: text("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+    requesterId: bigint("requester_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "restrict" }),
+    reviewerId: bigint("reviewer_id", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
     entityPayload: json("entity_payload").notNull().default({}),
-    targetTerritoryId: text("target_territory_id").references(() => territories.id, { onDelete: "set null" }),
-    facilityId: text("facility_id"),
-    toTerritoryId: text("to_territory_id").references(() => territories.id, { onDelete: "set null" }),
+    targetTerritoryId: bigint("target_territory_id", { mode: "number" }).references(() => territories.id, { onDelete: "set null" }),
+    facilityId: bigint("facility_id", { mode: "number" }),
+    toTerritoryId: bigint("to_territory_id", { mode: "number" }).references(() => territories.id, { onDelete: "set null" }),
     reason: text("reason"),
     resolutionNote: text("resolution_note"),
-    supersededById: text("superseded_by_id"),
+    supersededById: bigint("superseded_by_id", { mode: "number" }),
     resolvedAt: timestamp("resolved_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

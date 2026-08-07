@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// Real [facilityId] → `POST` / `PATCH /facilities/:id/representatives`.
 Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
   BuildContext context, {
-  String? facilityId,
+  int? facilityId,
   AdministrativeProfessional? existing,
 }) {
   return showModalBottomSheet<AdministrativeProfessional>(
@@ -29,7 +29,7 @@ Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
 class _CreateAdminProfessionalSheet extends StatefulWidget {
   const _CreateAdminProfessionalSheet({this.facilityId, this.existing});
 
-  final String? facilityId;
+  final int? facilityId;
   final AdministrativeProfessional? existing;
 
   @override
@@ -55,8 +55,7 @@ class _CreateAdminProfessionalSheetState
 
   bool get _useApi {
     final id = widget.facilityId;
-    if (id == null || id.isEmpty) return false;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
+    return id != null && id > 0;
   }
 
   @override
@@ -262,7 +261,7 @@ class _CreateAdminProfessionalSheetState
           AdministrativeProfessional(
             id:
                 widget.existing?.id ??
-                'new-adm-${DateTime.now().millisecondsSinceEpoch}',
+                -DateTime.now().millisecondsSinceEpoch,
             name: name,
             roleTitle: roleTitle,
             phone: phone,

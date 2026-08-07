@@ -4,10 +4,14 @@ import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 import { ForbiddenError } from "../../../../shared/errors";
 
+const userIdParams = t.Object({
+  id: t.Number({ minimum: 1 }),
+});
+
 export const adminUserManagementRoute = new Elysia()
   .use(auth)
   .use(requirePermission("manage", "USER"))
-  .patch("/users/:id", async ({ params, body, getUser }: any) => {
+  .patch("/users/:id", async ({ params, body, getUser }) => {
     const actor = await getUser();
     const parsed = updateUserAsAdminSchema.parse(body);
 
@@ -36,6 +40,7 @@ export const adminUserManagementRoute = new Elysia()
       tags: ["Users"],
       security: [{ bearerAuth: [] }],
     },
+    params: userIdParams,
     body: t.Object({
       firstName: t.Optional(t.String({ minLength: 1 })),
       lastName: t.Optional(t.String({ minLength: 1 })),
@@ -45,26 +50,28 @@ export const adminUserManagementRoute = new Elysia()
       birthDate: t.Optional(t.Union([t.String(), t.Null()])),
     }),
   })
-  .post("/users/:id/activate", async ({ params, getUserId }: any) => {
-    const userId = await getUserId();
+  .post("/users/:id/activate", async ({ params, getUserId }) => {
+    const actorId = await getUserId();
 
-    if (params.id === userId) {
+    if (params.id === actorId) {
       throw new ForbiddenError("You cannot activate your own account");
     }
 
     await accessUseCases.activateUser().execute({
       userId: params.id,
-      activatedBy: userId,
+      activatedBy: actorId,
     });
 
     return {
       message: "User activated successfully",
     };
+  }, {
+    params: userIdParams,
   })
-  .patch("/users/:id/role", async ({ params, body, getUserId }: any) => {
-    const userId = await getUserId();
+  .patch("/users/:id/role", async ({ params, body, getUserId }) => {
+    const actorId = await getUserId();
 
-    if (params.id === userId) {
+    if (params.id === actorId) {
       throw new ForbiddenError("You cannot change your own role");
     }
 
@@ -73,58 +80,62 @@ export const adminUserManagementRoute = new Elysia()
     await accessUseCases.changeUserRole().execute({
       targetUserId: params.id,
       newRoleId: parsed.roleId,
-      changedBy: userId,
+      changedBy: actorId,
     });
 
     return {
       message: "User role updated successfully",
     };
   }, {
+    params: userIdParams,
     body: t.Object({
-      roleId: t.String({ description: "Role ID to assign to the user" }),
+      roleId: t.Number({
+        minimum: 1,
+        description: "Role ID to assign to the user",
+      }),
     }),
   });
 
 export const scopedUserManagementRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "USER"))
-  .post("/users/:id/deactivate", async (context: any) => {
-    const { params } = context;
+  .post("/users/:id/deactivate", async ({ params, getUserId, getUser, getScope }) => {
+    const actorId = await getUserId();
 
-    if (params.id === (await context.getUserId())) {
+    if (params.id === actorId) {
       throw new ForbiddenError("You cannot deactivate your own account");
     }
 
-    const actorId = await context.getUserId();
-    const actor = await context.getUser();
-    const scope = await context.getScope();
+    const actor = await getUser();
+    const scope = await getScope();
 
     await accessUseCases.deactivateUser().execute({
       userId: params.id,
       deactivatedBy: actorId,
-      actorRole: actor.role.name,
+      actorRole: actor.role.name as Role,
       scope,
     });
 
     return {
       message: "User deactivated successfully",
     };
+  }, {
+    params: userIdParams,
   })
-  .post("/users/:id/suspend", async (context: any) => {
-    const { params, body } = context;
+  .post("/users/:id/suspend", async ({ params, body, getUserId, getUser, getScope }) => {
+    const actorId = await getUserId();
 
-    if (params.id === (await context.getUserId())) {
+    if (params.id === actorId) {
       throw new ForbiddenError("You cannot suspend your own account");
     }
 
-    const actorId = await context.getUserId();
-    const actor = await context.getUser();
-    const scope = await context.getScope();
+    const actor = await getUser();
+    const scope = await getScope();
 
     await accessUseCases.suspendUser().execute({
       userId: params.id,
       suspendedBy: actorId,
-      actorRole: actor.role.name,
+      actorRole: actor.role.name as Role,
       scope,
       reason: body?.reason,
     });
@@ -133,31 +144,33 @@ export const scopedUserManagementRoute = new Elysia()
       message: "User suspended successfully",
     };
   }, {
+    params: userIdParams,
     body: t.Optional(t.Object({
       reason: t.Optional(t.String()),
     })),
   })
-  .post("/users/:id/unsuspend", async (context: any) => {
-    const { params } = context;
+  .post("/users/:id/unsuspend", async ({ params, getUserId, getUser, getScope }) => {
+    const actorId = await getUserId();
 
-    if (params.id === (await context.getUserId())) {
+    if (params.id === actorId) {
       throw new ForbiddenError("You cannot unsuspend your own account");
     }
 
-    const actorId = await context.getUserId();
-    const actor = await context.getUser();
-    const scope = await context.getScope();
+    const actor = await getUser();
+    const scope = await getScope();
 
     await accessUseCases.unsuspendUser().execute({
       userId: params.id,
       unsuspendedBy: actorId,
-      actorRole: actor.role.name,
+      actorRole: actor.role.name as Role,
       scope,
     });
 
     return {
       message: "User unsuspended successfully",
     };
+  }, {
+    params: userIdParams,
   });
 
 export const userManagementRoute = new Elysia()

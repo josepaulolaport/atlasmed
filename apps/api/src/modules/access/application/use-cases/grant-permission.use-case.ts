@@ -23,12 +23,13 @@ export class GrantPermissionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
+    targetUserId: number;
     resource: string;
-    resourceId?: string;
+    /** CRM entity id — stored as decimal text on permissions.resource_id */
+    resourceId?: number;
     action: string;
     conditions?: Record<string, unknown>;
-    grantedBy: string;
+    grantedBy: number;
     actorRole: Role;
     expiresAt?: Date;
   }) {
@@ -65,11 +66,14 @@ export class GrantPermissionUseCase {
       ]);
     }
 
+    const resourceId =
+      params.resourceId === undefined ? null : String(params.resourceId);
+
     let validatedConditions: Record<string, unknown> | undefined;
     try {
       validatedConditions = validateGrantConditions({
         resource,
-        resourceId: params.resourceId ?? null,
+        resourceId,
         conditions: params.conditions,
       });
     } catch (error) {
@@ -87,7 +91,7 @@ export class GrantPermissionUseCase {
     return await this.deps.accessGrantService.grantPermission({
       userId: params.targetUserId,
       resource,
-      resourceId: params.resourceId,
+      resourceId: resourceId ?? undefined,
       action: params.action,
       conditions: validatedConditions,
       grantedBy: params.grantedBy,

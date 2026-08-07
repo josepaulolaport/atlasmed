@@ -87,10 +87,10 @@ export class DrizzleFieldSuggestionRepository implements FieldSuggestionReposito
 
   async createWithSupersede(input: CreateFieldSuggestionInput): Promise<{
     suggestion: FieldSuggestionRecord;
-    supersededIds: string[];
+    supersededIds: number[];
   }> {
     const supersededIds = await db.transaction(async (tx) => {
-      const ids: string[] = [];
+      const ids: number[] = [];
       const now = new Date();
 
       const pendingConditions: SQL[] = [
@@ -118,43 +118,49 @@ export class DrizzleFieldSuggestionRepository implements FieldSuggestionReposito
             status: "REJECTED",
             resolvedAt: now,
             resolvedByUserId: input.submittedByUserId,
-            resolutionNote: `Superseded by ${input.id}`,
+            resolutionNote: `Superseded by new suggestion`,
             updatedAt: now,
           })
           .where(inArray(fieldSuggestions.id, ids));
       }
 
-      await tx.insert(fieldSuggestions).values({
-        id: input.id,
-        kind: input.kind,
-        status: "PENDING",
-        facilityId: input.facilityId,
-        fieldKey: input.fieldKey,
-        // Cast via text→jsonb so digit-only scalars stay JSON strings in Postgres.
-        currentValue: sql`${JSON.stringify(input.currentValue ?? {})}::jsonb`,
-        proposedValue:
-          input.proposedValue === undefined
-            ? null
-            : sql`${JSON.stringify(input.proposedValue)}::jsonb`,
-        reason: input.reason,
-        submittedByUserId: input.submittedByUserId,
-        submittedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      });
+      const [created] = await tx
+        .insert(fieldSuggestions)
+        .values({
+          kind: input.kind,
+          status: "PENDING",
+          facilityId: input.facilityId,
+          fieldKey: input.fieldKey,
+          // Cast via text→jsonb so digit-only scalars stay JSON strings in Postgres.
+          currentValue: sql`${JSON.stringify(input.currentValue ?? {})}::jsonb`,
+          proposedValue:
+            input.proposedValue === undefined
+              ? null
+              : sql`${JSON.stringify(input.proposedValue)}::jsonb`,
+          reason: input.reason,
+          submittedByUserId: input.submittedByUserId,
+          submittedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: fieldSuggestions.id });
 
-      return ids;
+      if (!created) {
+        throw new Error("Failed to create field suggestion");
+      }
+
+      return { ids, createdId: created.id };
     });
 
-    const suggestion = await this.findById(input.id);
+    const suggestion = await this.findById(supersededIds.createdId);
     if (!suggestion) {
-      throw new Error(`Failed to load created field suggestion ${input.id}`);
+      throw new Error(`Failed to load created field suggestion ${supersededIds.createdId}`);
     }
 
-    return { suggestion, supersededIds };
+    return { suggestion, supersededIds: supersededIds.ids };
   }
 
-  async findById(id: string): Promise<FieldSuggestionRecord | null> {
+  async findById(id: number): Promise<FieldSuggestionRecord | null> {
     const rows = await this.baseSelect().where(eq(fieldSuggestions.id, id)).limit(1);
     const row = rows[0];
     return row ? this.mapSelectRow(row) : null;
@@ -164,9 +170,9 @@ export class DrizzleFieldSuggestionRepository implements FieldSuggestionReposito
     page: number;
     limit: number;
     status?: FieldSuggestionStatus;
-    facilityId?: string;
-    facilityIds?: string[];
-    submittedByUserId?: string;
+    facilityId?: number;
+    facilityIds?: number[];
+    submittedByUserId?: number;
   }): Promise<{ suggestions: FieldSuggestionRecord[]; total: number }> {
     const conditions: SQL[] = [];
 
@@ -207,10 +213,10 @@ export class DrizzleFieldSuggestionRepository implements FieldSuggestionReposito
   }
 
   async resolve(
-    id: string,
+    id: number,
     input: {
       status: "APPROVED" | "REJECTED";
-      resolvedByUserId: string;
+      resolvedByUserId: number;
       resolutionNote?: string | null;
     }
   ): Promise<FieldSuggestionRecord | null> {

@@ -14,10 +14,20 @@ class TestAppError extends AppError {
 }
 
 function createErrorHandlerApp() {
-  return new Elysia().onError(({ error, set }) => {
+  return new Elysia().onError(({ code, error, set }) => {
     if (error instanceof AppError) {
       set.status = error.statusCode;
       return { error: error.toClientJSON() };
+    }
+
+    if (code === "NOT_FOUND") {
+      set.status = 404;
+      return {
+        error: {
+          code: "NOT_FOUND",
+          message: "Route not found",
+        },
+      };
     }
 
     set.status = 500;
@@ -95,5 +105,20 @@ describe("global error handler", () => {
     expect(response.status).toBe(418);
     expect(body.error.code).toBe("TEST_ERROR");
     expect(body.error.message).toBe("Test app error");
+  });
+
+  it("returns 404 for unknown routes instead of 500", async () => {
+    const app = createErrorHandlerApp().get("/exists", () => ({ ok: true }));
+
+    const response = await app.handle(new Request("http://localhost/missing"));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({
+      error: {
+        code: "NOT_FOUND",
+        message: "Route not found",
+      },
+    });
   });
 });

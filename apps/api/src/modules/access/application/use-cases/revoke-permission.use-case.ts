@@ -10,11 +10,11 @@ export class RevokePermissionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
+    targetUserId: number;
     resource: string;
-    resourceId?: string;
+    resourceId?: number;
     action: string;
-    revokedBy: string;
+    revokedBy: number;
     actorRole: Role;
   }) {
     if (params.actorRole !== Role.ADMIN) {
@@ -27,7 +27,8 @@ export class RevokePermissionUseCase {
     await this.deps.accessGrantService.revokePermission({
       userId: params.targetUserId,
       resource: normalizeGrantResource(params.resource),
-      resourceId: params.resourceId,
+      resourceId:
+        params.resourceId === undefined ? undefined : String(params.resourceId),
       action: params.action,
       revokedBy: params.revokedBy,
     });

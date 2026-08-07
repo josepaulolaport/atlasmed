@@ -1,6 +1,6 @@
 export type PotentialDefinitionRecord = {
-  id: string;
-  verticalId: string;
+  id: number;
+  verticalId: number;
   key: string;
   label: string;
   sortOrder: number;
@@ -10,89 +10,89 @@ export type PotentialDefinitionRecord = {
 };
 
 export type FacilityPotentialValueRecord = {
-  facilityId: string;
-  definitionId: string;
+  facilityId: number;
+  definitionId: number;
   quantity: number;
-  updatedByUserId: string | null;
+  updatedByUserId: number | null;
   updatedAt: Date;
 };
 
 export type ProductPotentialLinkRecord = {
-  productId: string;
-  definitionId: string;
+  productId: number;
+  definitionId: number;
   productName: string;
   productCode: string;
 };
 
 export type DefinitionQtySum = {
-  definitionId: string;
+  definitionId: number;
   totalQty: number;
 };
 
 export interface PotentialRepository {
   listDefinitions(input: {
-    verticalId: string;
+    verticalId: number;
     includeDeleted?: boolean;
   }): Promise<PotentialDefinitionRecord[]>;
 
-  findDefinitionById(id: string): Promise<PotentialDefinitionRecord | null>;
+  findDefinitionById(id: number): Promise<PotentialDefinitionRecord | null>;
 
   createDefinition(input: {
-    verticalId: string;
+    verticalId: number;
     key: string;
     label: string;
     sortOrder: number;
   }): Promise<PotentialDefinitionRecord>;
 
   updateDefinition(input: {
-    id: string;
+    id: number;
     label?: string;
     sortOrder?: number;
   }): Promise<PotentialDefinitionRecord | null>;
 
-  softDeleteDefinition(id: string): Promise<boolean>;
+  softDeleteDefinition(id: number): Promise<boolean>;
 
   listFacilityValues(input: {
-    facilityId: string;
-    definitionIds: string[];
+    facilityId: number;
+    definitionIds: number[];
   }): Promise<FacilityPotentialValueRecord[]>;
 
   upsertFacilityValue(input: {
-    facilityId: string;
-    definitionId: string;
+    facilityId: number;
+    definitionId: number;
     quantity: number;
-    updatedByUserId: string;
+    updatedByUserId: number;
   }): Promise<void>;
 
   deleteFacilityValue(input: {
-    facilityId: string;
-    definitionId: string;
+    facilityId: number;
+    definitionId: number;
   }): Promise<void>;
 
   /** Sum SALE item qty over rolling window, keyed by definition. */
   sumAtlasmedQtyByDefinition(input: {
-    facilityId: string;
-    definitionIds: string[];
+    facilityId: number;
+    definitionIds: number[];
     since: Date;
   }): Promise<DefinitionQtySum[]>;
 
   linkProduct(input: {
-    productId: string;
-    definitionId: string;
+    productId: number;
+    definitionId: number;
   }): Promise<void>;
 
-  unlinkProduct(productId: string): Promise<boolean>;
+  unlinkProduct(productId: number): Promise<boolean>;
 
   listProductsForDefinition(
-    definitionId: string,
+    definitionId: number,
   ): Promise<ProductPotentialLinkRecord[]>;
 
   productBelongsToVertical(input: {
-    productId: string;
-    verticalId: string;
+    productId: number;
+    verticalId: number;
   }): Promise<boolean>;
 
   findLinkByProductId(
-    productId: string,
-  ): Promise<{ productId: string; definitionId: string } | null>;
+    productId: number,
+  ): Promise<{ productId: number; definitionId: number } | null>;
 }

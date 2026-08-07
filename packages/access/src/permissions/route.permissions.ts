@@ -46,7 +46,7 @@ export function canAccessResource(
   grants: AccessGrantRecord[],
   action: Action,
   subjectType: Subject,
-  resourceId: string
+  resourceId: number
 ): boolean {
   if (canAccessRoute(role, grants, action, subjectType)) {
     return true;

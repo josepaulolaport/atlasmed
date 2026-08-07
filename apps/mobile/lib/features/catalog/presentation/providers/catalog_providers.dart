@@ -25,7 +25,7 @@ final catalogFamiliesProvider = FutureProvider<List<CatalogFamily>>((ref) {
 /// "Comparativo" for a single AtlasMed variant — that product plus its
 /// registered competitor equivalences only.
 final catalogComparisonProvider =
-    FutureProvider.family<ComparisonGroup, String>((ref, variantId) {
+    FutureProvider.family<ComparisonGroup, int>((ref, variantId) {
       return ref.watch(catalogRepositoryProvider).getComparison(variantId);
     });
 
@@ -45,7 +45,7 @@ final catalogAllCompetitorsProvider = FutureProvider<List<CompetitorProduct>>((
 /// Competitor products not yet linked to [variantId] — the "adicionar
 /// existente" step of the admin competitor picker.
 final catalogUnlinkedCompetitorsProvider =
-    FutureProvider.family<List<CompetitorProduct>, String>((ref, variantId) {
+    FutureProvider.family<List<CompetitorProduct>, int>((ref, variantId) {
       return ref
           .watch(catalogRepositoryProvider)
           .getUnlinkedCompetitors(variantId);
@@ -54,7 +54,7 @@ final catalogUnlinkedCompetitorsProvider =
 /// Invalidates every catalog read provider — call after any admin
 /// mutation (create/update variant, link/unlink competitor) so every
 /// screen reading from the repository refetches immediately.
-void invalidateCatalog(WidgetRef ref, {String? variantId}) {
+void invalidateCatalog(WidgetRef ref, {int? variantId}) {
   ref.invalidate(catalogFamiliesProvider);
   ref.invalidate(catalogPriceIndexProvider);
   ref.invalidate(catalogAllCompetitorsProvider);

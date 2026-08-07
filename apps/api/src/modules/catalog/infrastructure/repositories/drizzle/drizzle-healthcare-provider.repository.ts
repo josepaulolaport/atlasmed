@@ -8,7 +8,7 @@ import type {
 } from "../../../application/interfaces/healthcare-provider.repository.interface";
 
 function mapProvider(row: {
-  id: string;
+  id: number;
   name: string;
   type: HealthcareProviderType;
   isActive: boolean;
@@ -51,7 +51,7 @@ export class DrizzleHealthcareProviderRepository implements HealthcareProviderRe
     return { providers: rows.map(mapProvider), total: Number(countRows[0]?.count ?? 0) };
   }
 
-  async findById(id: string): Promise<HealthcareProviderRecord | null> {
+  async findById(id: number): Promise<HealthcareProviderRecord | null> {
     const rows = await db
       .select()
       .from(healthcareProviders)
@@ -76,7 +76,7 @@ export class DrizzleHealthcareProviderRepository implements HealthcareProviderRe
   }
 
   async update(
-    id: string,
+    id: number,
     data: { name?: string; type?: HealthcareProviderType; isActive?: boolean }
   ): Promise<HealthcareProviderRecord> {
     const [provider] = await db

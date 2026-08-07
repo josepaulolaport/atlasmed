@@ -165,13 +165,6 @@ export const territoriesApi = {
     return response.data;
   },
 
-  unlockClinicGeo: async (facilityId: string): Promise<{ success: boolean }> => {
-    const response = await apiClient.post<{ success: boolean }>(
-      `/territory/facilities/${facilityId}/territory/unlock-geo`
-    );
-    return response.data;
-  },
-
   listApprovalRequests: async (params?: {
     status?: string;
     page?: number;

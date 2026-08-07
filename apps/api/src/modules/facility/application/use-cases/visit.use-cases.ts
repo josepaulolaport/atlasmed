@@ -3,27 +3,27 @@ import { assertResourceInScope } from "@atlasmed/access";
 
 export interface VisitRepositoryPort {
   findByFacilityAndUser(
-    facilityId: string,
-    userId: string,
+    facilityId: number,
+    userId: number,
     options?: { page?: number; limit?: number },
   ): Promise<Array<{
-    id: string;
-    userId: string;
-    facilityId: string;
+    id: number;
+    userId: number;
+    facilityId: number;
     visitedAt: Date;
     createdAt: Date;
   }>>;
 
-  countByFacilityAndUser(facilityId: string, userId: string): Promise<number>;
+  countByFacilityAndUser(facilityId: number, userId: number): Promise<number>;
 
   create(input: {
-    userId: string;
-    facilityId: string;
+    userId: number;
+    facilityId: number;
     visitedAt: Date;
   }): Promise<{
-    id: string;
-    userId: string;
-    facilityId: string;
+    id: number;
+    userId: number;
+    facilityId: number;
     visitedAt: Date;
     createdAt: Date;
   }>;
@@ -33,8 +33,8 @@ export class ListFacilityVisitsUseCase {
   constructor(private readonly deps: { visitRepository: VisitRepositoryPort }) {}
 
   async execute(input: {
-    facilityId: string;
-    userId: string;
+    facilityId: number;
+    userId: number;
     scope: ScopeContext;
     page?: number;
     limit?: number;
@@ -74,8 +74,8 @@ export class CreateFacilityVisitUseCase {
   constructor(private readonly deps: { visitRepository: VisitRepositoryPort }) {}
 
   async execute(input: {
-    facilityId: string;
-    userId: string;
+    facilityId: number;
+    userId: number;
     scope: ScopeContext;
     visitedAt?: string;
   }) {

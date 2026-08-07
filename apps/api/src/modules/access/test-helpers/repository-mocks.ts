@@ -159,7 +159,7 @@ export function createMockRoleRepository(
   return {
     findById: mock(() =>
       Promise.resolve({
-        id: "role-123",
+        id: 1,
         name: "REP",
         priority: ROLE_PRIORITY_BY_NAME.REP,
       }),
@@ -167,7 +167,7 @@ export function createMockRoleRepository(
     findAll: mock(() =>
       Promise.resolve([
         {
-          id: "role-123",
+          id: 1,
           name: "REP",
           description: "Standard user",
           priority: ROLE_PRIORITY_BY_NAME.REP,

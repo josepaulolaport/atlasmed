@@ -19,7 +19,7 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
     this.canReview = true,
   });
 
-  final String suggestionId;
+  final int suggestionId;
 
   /// When false, pending suggestions are view-only (no decision bar).
   final bool canReview;
@@ -410,7 +410,7 @@ class _TargetCard extends StatelessWidget {
   final NaoConformidadeSuggestion suggestion;
 
   void _openClinic(BuildContext context) {
-    if (suggestion.targetId.isEmpty) return;
+    if (suggestion.targetId <= 0) return;
     context.push('/explore/clinic/${suggestion.targetId}');
   }
 

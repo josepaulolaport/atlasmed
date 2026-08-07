@@ -27,7 +27,7 @@ export const verticalsRoute = new Elysia({
         200: t.Object({
           verticals: t.Array(
             t.Object({
-              id: t.String(),
+              id: t.Number(),
               code: t.String(),
               name: t.String(),
             })

@@ -39,41 +39,11 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertCanMutateUser"],
   },
 
-  "modules/calendar/application/use-cases/calendar.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertOwnerRead", "assertMutationOwner", "facilityIds"],
-  },
-
   "modules/catalog/application/use-cases/catalog.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facility"],
   },
 
-  "modules/dashboard/application/get-dashboard-summary.use-case.ts": {
-    kind: "repo-filter",
-    patterns: ["resolveVerticalIds", "facilityIds", "countPurchaseBuckets"],
-  },
-
-  "modules/facility/application/use-cases/facility-note.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertResourceInScope", "roleName !== \"MANAGER\"", "managedUserIds"],
-  },
-  "modules/facility/application/use-cases/facility-photo.use-cases.ts": {
-    kind: "assert-id",
-    patterns: ["assertResourceInScope", "facility"],
-  },
-  "modules/facility/application/use-cases/facility-representative.use-cases.ts": {
-    kind: "assert-id",
-    patterns: ["assertResourceInScope", "findByIdForFacility"],
-  },
-  "modules/facility/application/use-cases/list-map-facility-points.use-case.ts": {
-    kind: "repo-filter",
-    patterns: ["buildFacilityListScope", "listMapPoints"],
-  },
-  "modules/facility/application/use-cases/visit.use-cases.ts": {
-    kind: "assert-id",
-    patterns: ["assertResourceInScope", "facility"],
-  },
   "modules/facility/application/use-cases/conformity.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
@@ -90,7 +60,7 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
   },
-  "modules/facility/application/use-cases/facility-registry.use-cases.ts": {
+  "modules/facility/application/use-cases/facility-consultant.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
   },
@@ -98,43 +68,50 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facilityIds"],
   },
+  "modules/facility/application/use-cases/facility-note.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
+  "modules/facility/application/use-cases/facility-photo.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
+  "modules/facility/application/use-cases/facility-representative.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
+  "modules/facility/application/use-cases/list-map-facility-points.use-case.ts": {
+    kind: "repo-filter",
+    patterns: ["buildFacilityListScope", "listMapPoints"],
+  },
+  "modules/facility/application/use-cases/visit.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
+
+  "modules/dashboard/application/get-dashboard-summary.use-case.ts": {
+    kind: "repo-filter",
+    patterns: ["facilityIds", "isGlobal"],
+  },
 
   "modules/field-suggestions/application/use-cases/field-suggestion.use-cases.ts": {
     kind: "assert-id",
-    patterns: ["assertResourceInScope", "resolveFacilityScope", "facilityIds"],
-  },
-
-  "modules/interactions/application/use-cases/interaction.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertReadable", "assertOwner", "assertResourceInScope"],
+    patterns: ["assertResourceInScope", "facilityIds"],
   },
 
   "modules/orders/application/use-cases/orders.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertResourceInScope", "resolveVerticalIds", "sellerId", "facilityIds"],
+    kind: "assert-id",
+    patterns: ["assertResourceInScope", "facilityIds"],
   },
+
   "modules/potential/application/use-cases/potential.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertVerticalAccess", "assertResourceInScope"],
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
   },
 
   "modules/professional/application/use-cases/professional.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "assertProfessionalAccessible", "facilityIds"],
-  },
-
-  "modules/visits/application/use-cases/visit.use-cases.ts": {
-    kind: "repo-filter",
-    patterns: ["assertResourceInScope", "scope.isGlobal", "facilityIds"],
-  },
-
-  "modules/registry-ingestion/application/services/registry-read.service.ts": {
-    kind: "assert-id",
-    patterns: ["assertResourceInScope"],
-  },
-  "modules/registry-ingestion/application/use-cases/suggestion.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertSuggestionInScope", "resolveSuggestionFacilityScope", "facilityIds"],
   },
 
   "modules/territory/application/use-cases/territory-approval.use-cases.ts": {
@@ -152,6 +129,11 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
   "modules/territory/application/use-cases/territory-membership.use-cases.ts": {
     kind: "inline-scope",
     patterns: ["scope.isGlobal", "facilityIds"],
+  },
+
+  "modules/visits/application/use-cases/visit.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope", "facilityIds"],
   },
 };
 

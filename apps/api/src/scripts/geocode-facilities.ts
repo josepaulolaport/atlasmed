@@ -19,8 +19,8 @@
  *   # re-geocode only rows that already have a point
  *   bun run db:geocode:facilities:apply -- --refresh --concurrency=3 --delay-ms=50
  *
- *   # only excel-enrich rows
- *   bun run db:geocode:facilities:apply -- --source=excel-enrich
+ *   # only rows with a CNES code (post source_* drop; replaces --source=cnes)
+ *   bun run db:geocode:facilities:apply -- --cnes-only
  *
  * Env: MAPBOX_SECRET_TOKEN (preferred) or MAPBOX_PUBLIC_TOKEN / MAPBOX_ACCESS_TOKEN
  *      DATABASE_URL
@@ -60,14 +60,14 @@ type Mode = "missing" | "all" | "refresh";
 interface CliOptions {
   apply: boolean;
   mode: Mode;
-  source: string | null;
+  cnesOnly: boolean;
   limit: number | null;
   delayMs: number;
   concurrency: number;
 }
 
 interface FacilityRow {
-  id: string;
+  id: number;
   name: string;
   street_address: string | null;
   street_number: string | null;
@@ -76,7 +76,7 @@ interface FacilityRow {
   city: string | null;
   state: string | null;
   postal_code: string | null;
-  source_provider: string | null;
+  cnes_code: string | null;
   has_location: boolean;
 }
 
@@ -119,7 +119,7 @@ const BR_BBOX = { minLat: -34.0, maxLat: 5.5, minLng: -74.5, maxLng: -32.0 };
 function parseArgs(argv: string[]): CliOptions {
   let apply = false;
   let mode: Mode = "missing";
-  let source: string | null = null;
+  let cnesOnly = false;
   let limit: number | null = null;
   let delayMs = 150;
   let concurrency = 1;
@@ -129,8 +129,17 @@ function parseArgs(argv: string[]): CliOptions {
     else if (arg === "--all") mode = "all";
     else if (arg === "--missing") mode = "missing";
     else if (arg === "--refresh") mode = "refresh";
-    else if (arg.startsWith("--source=")) source = arg.slice("--source=".length) || null;
-    else if (arg.startsWith("--limit=")) {
+    else if (arg === "--cnes-only") cnesOnly = true;
+    else if (arg.startsWith("--source=")) {
+      // source_* columns removed; --source=cnes maps to --cnes-only
+      const value = arg.slice("--source=".length);
+      if (value === "cnes") cnesOnly = true;
+      else {
+        console.warn(
+          `Ignoring --source=${value} (facility source_* columns removed; use --cnes-only)`
+        );
+      }
+    } else if (arg.startsWith("--limit=")) {
       const n = Number(arg.slice("--limit=".length));
       limit = Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
     } else if (arg.startsWith("--delay-ms=")) {
@@ -142,7 +151,7 @@ function parseArgs(argv: string[]): CliOptions {
     }
   }
 
-  return { apply, mode, source, limit, delayMs, concurrency };
+  return { apply, mode, cnesOnly, limit, delayMs, concurrency };
 }
 
 function mapboxToken(): string {
@@ -204,8 +213,8 @@ async function loadFacilities(opts: CliOptions): Promise<FacilityRow[]> {
   } else if (opts.mode === "refresh") {
     filters.push(sql`location is not null`);
   }
-  if (opts.source) {
-    filters.push(sql`source_provider = ${opts.source}`);
+  if (opts.cnesOnly) {
+    filters.push(sql`cnes_code is not null`);
   }
 
   const where = sql.join(filters, sql` and `);
@@ -223,7 +232,7 @@ async function loadFacilities(opts: CliOptions): Promise<FacilityRow[]> {
       city,
       state,
       postal_code,
-      source_provider,
+      cnes_code,
       (location is not null) as has_location
     from facilities
     where ${where}
@@ -232,7 +241,7 @@ async function loadFacilities(opts: CliOptions): Promise<FacilityRow[]> {
   `)) as unknown as Record<string, unknown>[];
 
   return result.map((row) => ({
-    id: String(row.id),
+    id: Number(row.id),
     name: String(row.name),
     street_address: (row.street_address as string | null) ?? null,
     street_number: (row.street_number as string | null) ?? null,
@@ -241,13 +250,13 @@ async function loadFacilities(opts: CliOptions): Promise<FacilityRow[]> {
     city: (row.city as string | null) ?? null,
     state: (row.state as string | null) ?? null,
     postal_code: (row.postal_code as string | null) ?? null,
-    source_provider: (row.source_provider as string | null) ?? null,
+    cnes_code: (row.cnes_code as string | null) ?? null,
     has_location: Boolean(row.has_location),
   }));
 }
 
 async function persistLocation(
-  id: string,
+  id: number,
   lat: number,
   lng: number
 ): Promise<void> {
@@ -374,7 +383,7 @@ async function main(): Promise<number> {
 
   console.log(`=== geocode-facilities [${opts.apply ? "APPLY" : "DRY-RUN"}] ===`);
   console.log(`mode: ${opts.mode}`);
-  console.log(`source: ${opts.source ?? "(any)"}`);
+  console.log(`cnes-only: ${opts.cnesOnly ? "yes" : "no"}`);
   console.log(`candidates (city+state required): ${rows.length}`);
   console.log(
     `rate: concurrency=${opts.concurrency} delayMs=${opts.delayMs} → ~${formatEta(etaSec)} ETA`

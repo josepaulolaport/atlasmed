@@ -20,30 +20,30 @@ describe("RevokePermissionUseCase", () => {
 
   it("should revoke permission when actor is admin", async () => {
     await useCase.execute({
-      targetUserId: "user-123",
+      targetUserId: 123,
       resource: "FACILITY",
-      resourceId: "clinic-1",
+      resourceId: 1,
       action: "update",
-      revokedBy: "admin-1",
+      revokedBy: 1,
       actorRole: Role.ADMIN,
     });
 
     expect(mockAccessGrantService.revokePermission).toHaveBeenCalledWith({
-      userId: "user-123",
+      userId: 123,
       resource: "FACILITY",
-      resourceId: "clinic-1",
+      resourceId: "1",
       action: "update",
-      revokedBy: "admin-1",
+      revokedBy: 1,
     });
   });
 
   it("should throw when actor is not admin", async () => {
     await expect(
       useCase.execute({
-        targetUserId: "user-123",
+        targetUserId: 123,
         resource: "FACILITY",
         action: "update",
-        revokedBy: "manager-1",
+        revokedBy: 1,
         actorRole: Role.MANAGER,
       })
     ).rejects.toThrow(InsufficientPermissionsError);

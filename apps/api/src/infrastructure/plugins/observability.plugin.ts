@@ -116,7 +116,7 @@ function resolveErrorStatusCode(candidate: unknown): number {
 /**
  * Extract user ID from context (if authenticated)
  */
-async function resolveUserId(context: Record<string, unknown>): Promise<string | undefined> {
+async function resolveUserId(context: Record<string, unknown>): Promise<number | undefined> {
   const getUserId = context.getUserId;
   
   if (typeof getUserId !== 'function') {
@@ -125,7 +125,7 @@ async function resolveUserId(context: Record<string, unknown>): Promise<string |
   
   try {
     const userId = await getUserId();
-    return typeof userId === 'string' ? userId : undefined;
+    return typeof userId === 'number' ? userId : undefined;
   } catch {
     return undefined;
   }
@@ -138,7 +138,7 @@ function buildLogContext(
   observation: RequestObservation,
   statusCode: number,
   durationMs: number,
-  userId?: string
+  userId?: number
 ) {
   return {
     'app.namespace': observation.namespace,
@@ -159,7 +159,7 @@ function logRequestOutcome(params: {
   error?: unknown;
   observation: RequestObservation;
   statusCode: number;
-  userId?: string;
+  userId?: number;
 }): void {
   const context = buildLogContext(
     params.observation,

@@ -21,15 +21,14 @@ function formatSharePercent(value: number): string {
 const sharePercentNumeric = sql`replace(${facilityHealthcareProviderShares.sharePercent}, '%', '')::numeric`;
 
 function mapShare(row: {
-  id: string;
-  facilityId: string;
-  healthcareProviderId: string;
+  id: number;
+  facilityId: number;
+  healthcareProviderId: number;
   sharePercent: string;
   isPackage: boolean;
-  source: "MANUAL" | "REGISTRY" | "IMPORT";
   createdAt: Date;
   updatedAt: Date;
-  healthcareProvider: { id: string; name: string; type: string };
+  healthcareProvider: { id: number; name: string; type: string };
 }): FacilityHealthcareProviderShareRecord {
   return {
     id: row.id,
@@ -37,7 +36,6 @@ function mapShare(row: {
     healthcareProviderId: row.healthcareProviderId,
     sharePercent: parseSharePercent(row.sharePercent),
     isPackage: row.isPackage,
-    source: row.source,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     healthcareProvider: row.healthcareProvider,
@@ -50,7 +48,6 @@ const shareSelect = {
   healthcareProviderId: facilityHealthcareProviderShares.healthcareProviderId,
   sharePercent: facilityHealthcareProviderShares.sharePercent,
   isPackage: facilityHealthcareProviderShares.isPackage,
-  source: facilityHealthcareProviderShares.source,
   createdAt: facilityHealthcareProviderShares.createdAt,
   updatedAt: facilityHealthcareProviderShares.updatedAt,
   healthcareProvider: {
@@ -63,7 +60,7 @@ const shareSelect = {
 export class DrizzleFacilityHealthcareProviderShareRepository
   implements FacilityHealthcareProviderShareRepository
 {
-  async findByFacility(facilityId: string): Promise<FacilityHealthcareProviderShareRecord[]> {
+  async findByFacility(facilityId: number): Promise<FacilityHealthcareProviderShareRecord[]> {
     const rows = await db
       .select(shareSelect)
       .from(facilityHealthcareProviderShares)
@@ -78,8 +75,8 @@ export class DrizzleFacilityHealthcareProviderShareRepository
   }
 
   async create(data: {
-    facilityId: string;
-    healthcareProviderId: string;
+    facilityId: number;
+    healthcareProviderId: number;
     sharePercent: number;
     isPackage?: boolean;
   }): Promise<FacilityHealthcareProviderShareRecord> {
@@ -90,7 +87,6 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         healthcareProviderId: data.healthcareProviderId,
         sharePercent: formatSharePercent(data.sharePercent),
         isPackage: data.isPackage ?? false,
-        source: "MANUAL",
       })
       .returning({ id: facilityHealthcareProviderShares.id });
 
@@ -107,9 +103,9 @@ export class DrizzleFacilityHealthcareProviderShareRepository
   }
 
   async replaceByFacility(
-    facilityId: string,
+    facilityId: number,
     shares: Array<{
-      healthcareProviderId: string;
+      healthcareProviderId: number;
       sharePercent: number;
       isPackage?: boolean;
     }>
@@ -129,8 +125,6 @@ export class DrizzleFacilityHealthcareProviderShareRepository
           healthcareProviderId: share.healthcareProviderId,
           sharePercent: formatSharePercent(share.sharePercent),
           isPackage: share.isPackage ?? false,
-          source: "MANUAL" as const,
-          manuallyEditedAt: new Date(),
         }))
       );
     });
@@ -138,7 +132,7 @@ export class DrizzleFacilityHealthcareProviderShareRepository
     return this.findByFacility(facilityId);
   }
 
-  async sumSharePercentForFacility(facilityId: string): Promise<number> {
+  async sumSharePercentForFacility(facilityId: number): Promise<number> {
     const [result] = await db
       .select({ sum: sql<string>`sum(${sharePercentNumeric})` })
       .from(facilityHealthcareProviderShares)

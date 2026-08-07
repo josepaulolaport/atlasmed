@@ -76,11 +76,6 @@ jobs:
       STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
       STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
       STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT || 'https://storage.tdomains.uk' }}
-      CNES_ARCHIVE_BACKEND: s3
-      CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
-      CNES_FTP_MODE: ${{ vars.CNES_FTP_MODE || 'mock' }}
-      CNES_LOAD_MODE: ${{ vars.CNES_LOAD_MODE || 'dev' }}
-      CNES_LOAD_CONCURRENCY: ${{ vars.CNES_LOAD_CONCURRENCY || '4' }}
       NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
       NEXT_PUBLIC_HEALTH_URL: https://atlasmed-api.b1ixob.uncld.dev
 

@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 /// A single sellable presentation of an AtlasMed product (mirrors a row of
 /// the `products` table: code, simpro/brasindice/tiss coding, ICMS pricing).
 ///
@@ -24,7 +25,7 @@ class CatalogVariant {
     this.verticalIds = const [],
   });
 
-  final String id;
+  final int id;
   final String code;
   final String name;
   final String familyName;
@@ -50,7 +51,7 @@ class CatalogVariant {
   /// Commercial sectors this product belongs to (`verticalIds` on the
   /// `products` table) — required, non-empty when creating a product on
   /// the real API.
-  final List<String> verticalIds;
+  final List<int> verticalIds;
 
   /// Full label used inside comparison tables, e.g. "REVISCON 1.0% - 20MG / 2ML".
   String get comparisonLabel =>
@@ -67,7 +68,7 @@ class CatalogVariant {
     final name = json['name'] as String;
 
     return CatalogVariant(
-      id: json['id'] as String,
+      id: readCrmId(json['id'], 'id'),
       code: json['code'] as String,
       name: name,
       familyName: (productGroup?.trim().isNotEmpty ?? false)
@@ -88,13 +89,12 @@ class CatalogVariant {
         json['brasindiceUpdatedAt'] as String,
       ),
       isActive: json['isActive'] as bool? ?? true,
-      verticalIds:
-          (json['verticalIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      verticalIds: readCrmIdList(json['verticalIds'], 'verticalIds'),
     );
   }
 
   CatalogVariant copyWith({
-    String? id,
+    int? id,
     String? code,
     String? name,
     String? familyName,
@@ -110,7 +110,7 @@ class CatalogVariant {
     double? price20,
     DateTime? brasindiceUpdatedAt,
     bool? isActive,
-    List<String>? verticalIds,
+    List<int>? verticalIds,
   }) {
     return CatalogVariant(
       id: id ?? this.id,

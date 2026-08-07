@@ -15,7 +15,7 @@ export class ListConformityRequirementsUseCase {
         name: requirement.name,
         description: requirement.description ?? undefined,
         verticalId: requirement.verticalId ?? undefined,
-        appliesToTaxIdType: requirement.appliesToTaxIdType ?? undefined,
+        appliesToLegalDocumentType: requirement.appliesToLegalDocumentType ?? undefined,
         isActive: requirement.isActive,
         createdAt: requirement.createdAt.toISOString(),
       })),
@@ -26,7 +26,7 @@ export class ListConformityRequirementsUseCase {
 export class ListFacilityConformityRecordsUseCase {
   constructor(private readonly deps: { conformityRepository: ConformityRepository }) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const records = await this.deps.conformityRepository.findRecordsByFacility(input.facilityId);
@@ -41,7 +41,7 @@ export class ListFacilityConformityRecordsUseCase {
           slug: record.requirement.slug,
           name: record.requirement.name,
           description: record.requirement.description ?? undefined,
-          appliesToTaxIdType: record.requirement.appliesToTaxIdType ?? undefined,
+          appliesToLegalDocumentType: record.requirement.appliesToLegalDocumentType ?? undefined,
         },
         status: record.status,
         submittedAt: record.submittedAt?.toISOString(),
@@ -62,8 +62,8 @@ export class CreateFacilityConformityRecordUseCase {
   constructor(private readonly deps: { conformityRepository: ConformityRepository }) {}
 
   async execute(input: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     scope: ScopeContext;
     status?: "PENDING" | "SUBMITTED";
   }) {

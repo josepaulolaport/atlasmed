@@ -6,7 +6,7 @@ import { ValidationError } from "../../../../shared/errors";
 import { visitUseCases } from "../../composition";
 
 const recordVisitSchema = z.object({
-  facilityId: z.string().min(1),
+  facilityId: z.number().int().positive(),
   visitedAt: z.string().datetime({ offset: true }).optional(),
 });
 
@@ -31,7 +31,10 @@ const recordVisitRoute = new Elysia()
     },
     {
       detail: { summary: "Record clinic visit", tags: ["Visits"], security: [{ bearerAuth: [] }] },
-      body: t.Object({ facilityId: t.String({ minLength: 1 }), visitedAt: t.Optional(t.String()) }),
+      body: t.Object({
+        facilityId: t.Number({ minimum: 1 }),
+        visitedAt: t.Optional(t.String()),
+      }),
     }
   );
 

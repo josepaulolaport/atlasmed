@@ -5,7 +5,7 @@ import {
   facilities,
 } from "@atlasmed/database";
 import { eq, and, or, isNull, isNotNull, ilike, inArray, sql, asc, desc, getTableColumns } from "drizzle-orm";
-import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
+import { normalizeSearchFilterValue } from "../../../../../shared/normalize-search-filter";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 import type {
@@ -15,19 +15,18 @@ import type {
   ProfessionalNoteRecord,
   ProfessionalRecord,
   ProfessionalRepository,
-  ProfessionalSourceUpsertInput,
   ProfessionalUpdateInput,
 } from "../../../application/interfaces/professional.repository.interface";
 
 type ProfessionalRow = typeof professionals.$inferSelect;
 type ProfessionalFacilityAssociation = {
-  facilityId: string;
+  facilityId: number;
   facilityName: string;
   endedAt: Date | null;
 };
 
 function resolveFacilityName(row: {
-  id: string;
+  id: number;
   displayName: string | null;
   legalName: string | null;
   tradeName: string | null;
@@ -36,7 +35,7 @@ function resolveFacilityName(row: {
     row.displayName?.trim() ||
     row.tradeName?.trim() ||
     row.legalName?.trim() ||
-    row.id
+    String(row.id)
   );
 }
 
@@ -77,19 +76,10 @@ function mapProfessional(
     favoriteSport: professional.favoriteSport,
     languages: professional.languages,
     hobbies: professional.hobbies,
-    notes: professional.notes,
     specialty: professional.primarySpecialtyLabel,
     crmCouncil: professional.crmCouncil,
     crmNumber: professional.crmNumber,
     crmState: professional.crmState,
-    sourceProvider: professional.sourceProvider,
-    externalSourceId: professional.externalSourceId,
-    sourceContentHash: professional.sourceContentHash,
-    sourceFirstSeenAt: professional.sourceFirstSeenAt,
-    sourceLastSeenAt: professional.sourceLastSeenAt,
-    sourcePresent: professional.sourcePresent,
-    sourceTracked: professional.sourceTracked,
-    manuallyEditedAt: professional.manuallyEditedAt,
     facilityIds: [...new Set(activeFacilities.map((association) => association.facilityId))],
     displayFacility: displayFacility
       ? { id: displayFacility.facilityId, name: displayFacility.facilityName }
@@ -101,9 +91,9 @@ function mapProfessional(
 }
 
 async function loadAssociationsMap(
-  professionalIds: string[],
-  visibleFacilityIds?: string[]
-): Promise<Map<string, ProfessionalFacilityAssociation[]>> {
+  professionalIds: number[],
+  visibleFacilityIds?: number[]
+): Promise<Map<number, ProfessionalFacilityAssociation[]>> {
   if (professionalIds.length === 0) {
     return new Map();
   }
@@ -129,7 +119,7 @@ async function loadAssociationsMap(
       )
     );
 
-  const map = new Map<string, ProfessionalFacilityAssociation[]>();
+  const map = new Map<number, ProfessionalFacilityAssociation[]>();
   for (const row of rows) {
     if (!map.has(row.professionalId)) map.set(row.professionalId, []);
     map.get(row.professionalId)!.push({
@@ -147,7 +137,7 @@ async function loadAssociationsMap(
 }
 
 async function loadAssociationsForOne(
-  professionalId: string
+  professionalId: number
 ): Promise<ProfessionalFacilityAssociation[]> {
   const map = await loadAssociationsMap([professionalId]);
   return map.get(professionalId) ?? [];
@@ -171,7 +161,6 @@ function buildPersonCreateData(data: ProfessionalCreateInput) {
     favoriteSport: data.favoriteSport ?? null,
     languages: data.languages ?? null,
     hobbies: data.hobbies ?? null,
-    notes: data.notes ?? null,
     primarySpecialtyLabel: data.specialty ?? null,
     crmCouncil: data.crmCouncil ?? null,
     crmNumber: data.crmNumber ?? null,
@@ -198,12 +187,10 @@ function buildPersonUpdateData(data: ProfessionalUpdateInput) {
   if (data.favoriteSport !== undefined) patch.favoriteSport = data.favoriteSport;
   if (data.languages !== undefined) patch.languages = data.languages;
   if (data.hobbies !== undefined) patch.hobbies = data.hobbies;
-  if (data.notes !== undefined) patch.notes = data.notes;
   if (data.specialty !== undefined) patch.primarySpecialtyLabel = data.specialty;
   if (data.crmCouncil !== undefined) patch.crmCouncil = data.crmCouncil;
   if (data.crmNumber !== undefined) patch.crmNumber = data.crmNumber;
   if (data.crmState !== undefined) patch.crmState = data.crmState;
-  if (data.manuallyEditedAt !== undefined) patch.manuallyEditedAt = data.manuallyEditedAt;
 
   return patch;
 }
@@ -218,7 +205,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     page: number;
     limit: number;
     search?: string;
-    facilityId?: string;
+    facilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -226,7 +213,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     sort?: string;
     order?: "asc" | "desc";
     scope: ProfessionalListScopeFilter;
-    candidateIds?: string[];
+    candidateIds?: number[];
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }> {
     const conditions = [isNull(professionals.deletedAt)];
 
@@ -237,7 +224,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     if (!params.scope.isGlobal) {
       const facilityIds = params.scope.facilityIds?.length
         ? params.scope.facilityIds
-        : ["__none__"];
+        : [-1];
 
       conditions.push(
         inArray(
@@ -287,7 +274,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     // through the active scope. An association outside scope cannot affect a result.
     const scopedFacilityIds = params.scope.isGlobal
       ? undefined
-      : (params.scope.facilityIds?.length ? params.scope.facilityIds : ["__none__"]);
+      : (params.scope.facilityIds?.length ? params.scope.facilityIds : [-1]);
     const distanceScope = scopedFacilityIds
       ? sql` and fp.facility_id in (${sql.join(scopedFacilityIds.map((id) => sql`${id}`), sql`, `)})`
       : sql``;
@@ -345,7 +332,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
 
     const visibleFacilityIds = params.scope.isGlobal
       ? undefined
-      : (params.scope.facilityIds?.length ? params.scope.facilityIds : ["__none__"]);
+      : (params.scope.facilityIds?.length ? params.scope.facilityIds : [-1]);
     const associationsMap = await loadAssociationsMap(
       rows.map((p) => p.id),
       visibleFacilityIds
@@ -368,7 +355,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     ];
 
     if (!scope.isGlobal) {
-      const facilityIds = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
+      const facilityIds = scope.facilityIds?.length ? scope.facilityIds : [-1];
       conditions.push(
         inArray(
           professionals.id,
@@ -399,8 +386,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
   }
 
   async findAllByIds(params: {
-    ids: string[];
-    facilityId?: string;
+    ids: number[];
+    facilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -420,7 +407,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     return professionals;
   }
 
-  async findById(id: string): Promise<ProfessionalRecord | null> {
+  async findById(id: number): Promise<ProfessionalRecord | null> {
     const [professional] = await db
       .select()
       .from(professionals)
@@ -433,46 +420,23 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     return mapProfessional(professional!, associations);
   }
 
-  async findByExternalId(
-    sourceProvider: string,
-    externalSourceId: string
-  ): Promise<ProfessionalRecord | null> {
-    const [professional] = await db
-      .select()
+  async findIdByCnesProfessionalId(
+    cnesProfessionalId: string
+  ): Promise<number | null> {
+    const [row] = await db
+      .select({ id: professionals.id })
       .from(professionals)
       .where(
         and(
-          eq(professionals.sourceProvider, sourceProvider),
-          eq(professionals.externalSourceId, externalSourceId),
+          eq(professionals.cnesProfessionalId, cnesProfessionalId),
           isNull(professionals.deletedAt)
         )
       )
       .limit(1);
-
-    if (!professional) return null;
-
-    const associations = await loadAssociationsForOne(professional!.id);
-    return mapProfessional(professional!, associations);
+    return row?.id ?? null;
   }
 
-  async findSourceTrackedByProvider(sourceProvider: string): Promise<ProfessionalRecord[]> {
-    const rows = await db
-      .select()
-      .from(professionals)
-      .where(
-        and(
-          eq(professionals.sourceProvider, sourceProvider),
-          eq(professionals.sourceTracked, true),
-          isNull(professionals.deletedAt)
-        )
-      );
-
-    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id));
-
-    return rows.map((p) => mapProfessional(p, associationsMap.get(p.id) ?? []));
-  }
-
-  async findActiveFacilities(professionalId: string): Promise<ProfessionalFacilitySummary[]> {
+  async findActiveFacilities(professionalId: number): Promise<ProfessionalFacilitySummary[]> {
     const rows = await db
       .select({
         id: facilities.id,
@@ -503,8 +467,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
   }
 
   async findNotesByProfessionalAndUser(
-    professionalId: string,
-    userId: string
+    professionalId: number,
+    userId: number
   ): Promise<ProfessionalNoteRecord[]> {
     return db
       .select()
@@ -519,8 +483,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
   }
 
   async createNote(input: {
-    professionalId: string;
-    userId: string;
+    professionalId: number;
+    userId: number;
     note: string;
   }): Promise<ProfessionalNoteRecord> {
     const [note] = await db.insert(professionalNotes).values(input).returning();
@@ -551,7 +515,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     return mapProfessional(professional!, associations);
   }
 
-  async update(id: string, data: ProfessionalUpdateInput): Promise<ProfessionalRecord> {
+  async update(id: number, data: ProfessionalUpdateInput): Promise<ProfessionalRecord> {
     const [existing] = await db
       .select({
         firstName: professionals.firstName,
@@ -587,101 +551,14 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     return mapProfessional(professional!, associations);
   }
 
-  async softDelete(id: string): Promise<void> {
+  async softDelete(id: number): Promise<void> {
     await db
       .update(professionals)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(eq(professionals.id, id));
   }
 
-  async markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void> {
-    await db
-      .update(professionals)
-      .set({ sourcePresent: false, sourceLastSeenAt, updatedAt: new Date() })
-      .where(eq(professionals.id, id));
-  }
-
-  async upsertFromSource(input: ProfessionalSourceUpsertInput): Promise<{
-    professional: ProfessionalRecord;
-    created: boolean;
-    updated: boolean;
-  }> {
-    const [existing] = await db
-      .select()
-      .from(professionals)
-      .where(
-        and(
-          eq(professionals.sourceProvider, input.sourceProvider),
-          eq(professionals.externalSourceId, input.externalSourceId)
-        )
-      )
-      .limit(1);
-
-    const sourcePersonFields = {
-      firstName: input.firstName,
-      lastName: input.lastName,
-      fullName:
-        input.fullName?.trim() || resolveFullName(input.firstName, input.lastName, null),
-      socialName: input.socialName ?? null,
-      taxId: input.taxId ?? null,
-      primarySpecialtyLabel: input.specialty,
-      crmCouncil: input.crmCouncil ?? null,
-      crmNumber: input.crmNumber ?? null,
-      crmState: input.crmState ?? null,
-    };
-
-    if (!existing) {
-      const [professional] = await db
-        .insert(professionals)
-        .values({
-          ...sourcePersonFields,
-          sourceProvider: input.sourceProvider,
-          externalSourceId: input.externalSourceId,
-          sourceContentHash: input.sourceContentHash,
-          sourceFirstSeenAt: input.sourceLastSeenAt,
-          sourceLastSeenAt: input.sourceLastSeenAt,
-          sourcePresent: true,
-          sourceTracked: true,
-        })
-        .returning();
-
-      const associations = await loadAssociationsForOne(professional!.id);
-      return {
-        professional: mapProfessional(professional!, associations),
-        created: true,
-        updated: false,
-      };
-    }
-
-    const hashUnchanged = existing.sourceContentHash === input.sourceContentHash;
-
-    const updateData: Partial<typeof professionals.$inferInsert> & { updatedAt: Date } = {
-      sourceContentHash: input.sourceContentHash,
-      sourceLastSeenAt: input.sourceLastSeenAt,
-      sourcePresent: true,
-      sourceTracked: true,
-      updatedAt: new Date(),
-    };
-
-    if (!existing.manuallyEditedAt) {
-      Object.assign(updateData, sourcePersonFields);
-    }
-
-    const [professional] = await db
-      .update(professionals)
-      .set(updateData)
-      .where(eq(professionals.id, existing.id))
-      .returning();
-
-    const associations = await loadAssociationsForOne(professional!.id);
-    return {
-      professional: mapProfessional(professional!, associations),
-      created: false,
-      updated: !hashUnchanged || !existing.manuallyEditedAt,
-    };
-  }
-
-  async findExistingFacilityIds(facilityIds: string[]): Promise<string[]> {
+  async findExistingFacilityIds(facilityIds: number[]): Promise<number[]> {
     if (facilityIds.length === 0) return [];
 
     const rows = await db

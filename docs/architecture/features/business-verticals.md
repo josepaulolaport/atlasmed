@@ -198,9 +198,9 @@ Goal: Ortopedia runs through a vertical-aware model; ADMIN can filter; REP/MANAG
 | # | Work item |
 |---|---|
 | P1.1 | Product↔vertical membership as catalog visibility path — **shipped**: list/get/price-index resolve caller verticals via `product_verticals` (`resolveVerticalIds`). |
-| P1.2 | Seed/configure Dermatologia + feature flag (**after** territory×vertical addendum — see design) — **catalog seed shipped** (`0027`); kill switch = `business_verticals.is_active`. Local configure: `bun run db:seed:dermatologia` (zone/patch clone + sample profiles/consultants; local DB only). |
+| P1.2 | Seed/configure Dermatologia + feature flag (**after** territory×vertical addendum — see design) — **catalog seed shipped** (`0027`); kill switch = `business_verticals.is_active`. |
 | P1.3 | Medical specialty catalog + M2M + vertical↔specialty (if needed for filtering) — deferred until Derm explore needs specialty×vertical filters |
-| P1.4 | Territory×vertical ownership — design accepted: [`vertical-ownership-design.md`](../../specs/0003-territory-management/vertical-ownership-design.md). Types `manager_zone`/`patch` seeded in `0028`. Local territories from real consultant books: `bun run db:seed:sp-territories` in `apps/api` (hulls; no invented assigns). |
+| P1.4 | Territory×vertical ownership — design accepted: [`vertical-ownership-design.md`](../../specs/0003-territory-management/vertical-ownership-design.md). Types `manager_zone`/`patch` seeded in `0028`. |
 | P1.5 | Orders store `vertical_id`; one vertical per order — **shipped** (`0029`/`0030` + list/get + `POST /orders` with profile/product vertical validation). Mobile `OrdersRepository.createOrder` ready; checkout still mock clinic/doctor pickers. |
 | P1.6 | Search indexes include `vertical_ids` — **shipped**: Meili facilities docs + filterable `verticalIds`; list search uses `verticalIds IN […]` (rebuild required). |
 | P1.7 | Vertical admin UX polish |

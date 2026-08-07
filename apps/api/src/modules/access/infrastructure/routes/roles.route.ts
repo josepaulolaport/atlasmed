@@ -21,7 +21,7 @@ export const rolesRoute = new Elysia({
     response: {
       200: t.Object({
         roles: t.Array(t.Object({
-          id: t.String(),
+          id: t.Number(),
           name: t.String(),
           description: t.Nullable(t.String()),
         })),

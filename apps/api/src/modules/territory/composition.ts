@@ -43,14 +43,14 @@ const territoryContainmentService = new TerritoryContainmentService({
   spatialRepository: territoryRepositories.spatial,
 });
 
-async function enqueueMembershipRecompute(territoryId?: string): Promise<void> {
+async function enqueueMembershipRecompute(territoryId?: number): Promise<void> {
   await territoryMembershipQueue.enqueue({
     territoryId,
     reason: territoryId ? "boundary_change" : "manual_recompute",
   });
 }
 
-async function onTerritoryBoundaryChanged(territoryId: string): Promise<void> {
+async function onTerritoryBoundaryChanged(territoryId: number): Promise<void> {
   // Spec 0006: clinic membership follows manager zones only. Patch boundary
   // changes do not rewrite manager_zone_id (impact/deassign flow handles owners).
   const territory = await territoryRepositories.territory.findById(territoryId);
@@ -64,18 +64,18 @@ async function onTerritoryBoundaryChanged(territoryId: string): Promise<void> {
   await invalidateScopeForTerritories([territoryId]);
 }
 
-async function onManagerTerritoryChanged(managerTerritoryId: string): Promise<void> {
+async function onManagerTerritoryChanged(managerTerritoryId: number): Promise<void> {
   await invalidateScopeForTerritories([managerTerritoryId]);
 }
 
-async function enqueueClinicMembershipUpdate(facilityId: string): Promise<void> {
+async function enqueueClinicMembershipUpdate(facilityId: number): Promise<void> {
   await territoryMembershipQueue.enqueue({
     facilityIds: [facilityId],
     reason: "clinic_update",
   });
 }
 
-async function invalidateScopeForTerritories(territoryIds: string[]): Promise<void> {
+async function invalidateScopeForTerritories(territoryIds: number[]): Promise<void> {
   const userIds =
     await territoryHierarchyPort.findUsersAssignedToRelatedTerritories(territoryIds);
   await scopeCacheService.invalidateMany(userIds);
@@ -166,18 +166,11 @@ export const territoryUseCases = {
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
     }),
-  unlockClinicGeo: () =>
-    new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
-      membershipService: territoryMembershipService,
-      clinicWriter: facilityMembershipWriter,
-    }),
   submitApproval: () =>
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
       territoryCrud,
-      clinicWriter: facilityMembershipWriter,
       invalidateScopeForTerritories,
       enqueueMembershipRecompute,
       auditLog: auditLogAdapter,
@@ -187,14 +180,12 @@ export const territoryUseCases = {
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
       territoryCrud,
-      clinicWriter: facilityMembershipWriter,
     }),
   approveRequest: () =>
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
       territoryCrud,
-      clinicWriter: facilityMembershipWriter,
       invalidateScopeForTerritories,
       enqueueMembershipRecompute,
       auditLog: auditLogAdapter,
@@ -204,6 +195,5 @@ export const territoryUseCases = {
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
       territoryCrud,
-      clinicWriter: facilityMembershipWriter,
     }),
 };

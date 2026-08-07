@@ -5,9 +5,8 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 ## Load
 
 **Always:**
-- `AGENTS.md`
+- `AGENTS.md` (relevant domain sections only)
 - `docs/ai/integration-tasks/api-web.md` OR `docs/ai/integration-tasks/api-mobile.md` (pick the frontend side)
-- Affected app `AGENTS.md` files — do NOT load unrelated apps
 
 **Conditional:**
 
@@ -31,7 +30,7 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 7. Frontend: fetch → state → UI → loading/empty/error states.
 8. Observability + audit for permission-sensitive events.
 9. Verify permissions end-to-end.
-10. Update matching AGENTS.md / docs in same PR if conventions shifted.
+10. Update matching docs in same PR if conventions shifted.
 
 ## Rules
 
@@ -44,6 +43,6 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 
 ## Docs to update after
 
-- Every affected AGENTS.md.
+- Root `AGENTS.md` domain sections if conventions shifted.
 - `docs/architecture/features/<feature>.md` — if a new domain concept emerged.
 - Relevant `docs/specs/*/design.md` — if the feature is tracked by a spec.

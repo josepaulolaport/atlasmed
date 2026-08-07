@@ -67,7 +67,7 @@ class FieldSuggestionsRepository
   }
 
   Future<List<NaoConformidadeSuggestion>> listMineForFacility({
-    required String facilityId,
+    required int facilityId,
     int page = 1,
     int limit = 100,
   }) async {
@@ -79,7 +79,7 @@ class FieldSuggestionsRepository
     return _getList(url);
   }
 
-  Future<NaoConformidadeSuggestion> getById(String id) async {
+  Future<NaoConformidadeSuggestion> getById(int id) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/field-suggestions/$id'),
@@ -91,7 +91,7 @@ class FieldSuggestionsRepository
   }
 
   Future<NaoConformidadeSuggestion> createFieldChange({
-    required String facilityId,
+    required int facilityId,
     required String fieldKey,
     required Object proposedValue,
     String? reason,
@@ -108,7 +108,7 @@ class FieldSuggestionsRepository
   }
 
   Future<NaoConformidadeSuggestion> createDeactivation({
-    required String facilityId,
+    required int facilityId,
     required String reason,
   }) async {
     return _create(
@@ -118,21 +118,21 @@ class FieldSuggestionsRepository
   }
 
   Future<NaoConformidadeSuggestion> approve(
-    String id, {
+    int id, {
     String? resolutionNote,
   }) async {
     return _resolve(id, approve: true, resolutionNote: resolutionNote);
   }
 
   Future<NaoConformidadeSuggestion> reject(
-    String id, {
+    int id, {
     required String resolutionNote,
   }) async {
     return _resolve(id, approve: false, resolutionNote: resolutionNote);
   }
 
   Future<NaoConformidadeSuggestion> _create({
-    required String facilityId,
+    required int facilityId,
     required Map<String, dynamic> body,
   }) async {
     final response = await client.call(
@@ -150,7 +150,7 @@ class FieldSuggestionsRepository
   }
 
   Future<NaoConformidadeSuggestion> _resolve(
-    String id, {
+    int id, {
     required bool approve,
     String? resolutionNote,
   }) async {

@@ -3,7 +3,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/professio
 
 /// Provides a [ProfessionalNotesRepository] for a given professional [id].
 final professionalNotesRepositoryProvider = Provider.autoDispose
-    .family<ProfessionalNotesRepository, String>((ref, professionalId) {
+    .family<ProfessionalNotesRepository, int>((ref, professionalId) {
       final repository = ProfessionalNotesRepository(professionalId);
       ref.onDispose(repository.dispose);
       return repository;

@@ -9,7 +9,7 @@ function toNumberOrNull(value: string | null): number | null {
 }
 
 function mapCompetitorProduct(row: {
-  id: string;
+  id: number;
   code: string | null;
   name: string;
   manufacturer: string | null;
@@ -41,7 +41,7 @@ function mapCompetitorProduct(row: {
 }
 
 export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRepository {
-  async findLinkedByProduct(productId: string): Promise<CompetitorProductRecord[]> {
+  async findLinkedByProduct(productId: number): Promise<CompetitorProductRecord[]> {
     const rows = await db
       .select({
         id: competitorProducts.id,
@@ -65,7 +65,7 @@ export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRe
     return rows.map(mapCompetitorProduct);
   }
 
-  async findUnlinkedByProduct(productId: string): Promise<CompetitorProductRecord[]> {
+  async findUnlinkedByProduct(productId: number): Promise<CompetitorProductRecord[]> {
     const linked = db
       .select({ competitorProductId: productEquivalences.competitorProductId })
       .from(productEquivalences)
@@ -81,7 +81,7 @@ export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRe
     return rows.map(mapCompetitorProduct);
   }
 
-  async exists(productId: string, competitorProductId: string): Promise<boolean> {
+  async exists(productId: number, competitorProductId: number): Promise<boolean> {
     const rows = await db
       .select({ id: productEquivalences.id })
       .from(productEquivalences)
@@ -94,7 +94,7 @@ export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRe
     return rows.length > 0;
   }
 
-  async link(productId: string, competitorProductId: string, notes?: string | null): Promise<void> {
+  async link(productId: number, competitorProductId: number, notes?: string | null): Promise<void> {
     await db.insert(productEquivalences).values({
       productId,
       competitorProductId,
@@ -102,7 +102,7 @@ export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRe
     });
   }
 
-  async unlink(productId: string, competitorProductId: string): Promise<boolean> {
+  async unlink(productId: number, competitorProductId: number): Promise<boolean> {
     const deleted = await db
       .delete(productEquivalences)
       .where(

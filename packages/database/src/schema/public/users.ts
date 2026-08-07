@@ -7,9 +7,9 @@ import {
   json,
   index,
   uniqueIndex,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import {
   userStatusEnum,
   authSessionDeviceTypeEnum,
@@ -21,10 +21,10 @@ import {
 export const roles = pgTable(
   "roles",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     name: text("name").notNull().unique(),
     description: text("description"),
-    priority: integer("priority").notNull().default(0),
+    priority: bigint("priority", { mode: "number" }).notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -34,7 +34,7 @@ export const roles = pgTable(
 export const users = pgTable(
   "users",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     email: text("email").notNull().unique(),
     username: text("username").notNull().unique(),
     phoneNumber: text("phone_number").unique(),
@@ -51,7 +51,7 @@ export const users = pgTable(
     avatarUrl: text("avatar_url"),
     avatarBlurhash: text("avatar_blurhash"),
     status: userStatusEnum("status").notNull().default("PENDING"),
-    tokenVersion: integer("token_version").notNull().default(1),
+    tokenVersion: bigint("token_version", { mode: "number" }).notNull().default(1),
     lastLoginAt: timestamp("last_login_at"),
     passwordChangedAt: timestamp("password_changed_at"),
     deactivatedAt: timestamp("deactivated_at"),
@@ -60,7 +60,7 @@ export const users = pgTable(
     twoFactorSecret: text("two_factor_secret"),
     deletedAt: timestamp("deleted_at"),
     metadata: json("metadata"),
-    roleId: text("role_id").notNull().references(() => roles.id),
+    roleId: bigint("role_id", { mode: "number" }).notNull().references(() => roles.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -76,14 +76,14 @@ export const users = pgTable(
 export const sessions = pgTable(
   "sessions",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
     refreshTokenHash: text("refresh_token_hash").notNull().unique(),
     expiresAt: timestamp("expires_at").notNull(),
     revokedAt: timestamp("revoked_at"),
     revokedReason: text("revoked_reason"),
-    revokedByUserId: text("revoked_by_user_id"),
-    replacedBySessionId: text("replaced_by_session_id"),
+    revokedByUserId: bigint("revoked_by_user_id", { mode: "number" }),
+    replacedBySessionId: bigint("replaced_by_session_id", { mode: "number" }),
     previousRefreshTokenHash: text("previous_refresh_token_hash"),
     lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
     userAgent: text("user_agent"),
@@ -117,8 +117,8 @@ export const sessions = pgTable(
 export const passwordResets = pgTable(
   "password_resets",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull().unique(),
     expiresAt: timestamp("expires_at").notNull(),
     usedAt: timestamp("used_at"),
@@ -137,8 +137,8 @@ export const passwordResets = pgTable(
 export const verificationTokens = pgTable(
   "verification_tokens",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
     type: verificationTokenTypeEnum("type").notNull(),
     tokenHash: text("token_hash").notNull().unique(),
     newValue: text("new_value"),
@@ -158,24 +158,24 @@ export const verificationTokens = pgTable(
 export const invitations = pgTable(
   "invitations",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     email: text("email"),
     phoneNumber: text("phone_number"),
     tokenHash: text("token_hash").notNull().unique(),
     status: invitationStatusEnum("status").notNull().default("PENDING"),
     expiresAt: timestamp("expires_at").notNull(),
     acceptedAt: timestamp("accepted_at"),
-    acceptedByUserId: text("accepted_by_user_id"),
+    acceptedByUserId: bigint("accepted_by_user_id", { mode: "number" }),
     revokedAt: timestamp("revoked_at"),
-    resendCount: integer("resend_count").notNull().default(0),
+    resendCount: bigint("resend_count", { mode: "number" }).notNull().default(0),
     lastResendAt: timestamp("last_resend_at"),
-    roleId: text("role_id").notNull().references(() => roles.id),
-    invitedByUserId: text("invited_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+    roleId: bigint("role_id", { mode: "number" }).notNull().references(() => roles.id),
+    invitedByUserId: bigint("invited_by_user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "restrict" }),
     firstName: text("first_name"),
     lastName: text("last_name"),
     birthDate: timestamp("birth_date"),
-    managerTerritoryId: text("manager_territory_id"),
-    repTerritoryId: text("rep_territory_id"),
+    managerTerritoryId: bigint("manager_territory_id", { mode: "number" }),
+    repTerritoryId: bigint("rep_territory_id", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -194,13 +194,13 @@ export const invitations = pgTable(
 export const permissions = pgTable(
   "permissions",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
     resource: text("resource").notNull(),
     resourceId: text("resource_id"),
     action: text("action").notNull(),
     conditions: json("conditions"),
-    grantedBy: text("granted_by").references(() => users.id, { onDelete: "set null" }),
+    grantedBy: bigint("granted_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -1,28 +1,28 @@
 export interface FacilityPhotoRecord {
-  id: string;
-  facilityId: string;
+  id: number;
+  facilityId: number;
   storageKey: string;
   url: string;
   contentType: string;
   blurhash: string | null;
-  uploadedByUserId: string | null;
+  uploadedByUserId: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface FacilityPhotoRepository {
-  findByFacility(facilityId: string): Promise<FacilityPhotoRecord[]>;
+  findByFacility(facilityId: number): Promise<FacilityPhotoRecord[]>;
 
   create(input: {
-    facilityId: string;
+    facilityId: number;
     storageKey: string;
     url: string;
     contentType: string;
     blurhash?: string | null;
-    uploadedByUserId: string;
+    uploadedByUserId: number;
   }): Promise<FacilityPhotoRecord>;
 
-  findById(id: string): Promise<FacilityPhotoRecord | null>;
+  findById(id: number): Promise<FacilityPhotoRecord | null>;
 
   findByStorageKey(storageKey: string): Promise<FacilityPhotoRecord | null>;
 }

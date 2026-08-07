@@ -5,39 +5,33 @@ import { TerritoryAssignmentPolicyService } from "./territory-assignment-policy.
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 
-const TERRITORY_ID = "territory-1";
-const TARGET_USER_ID = "user-target";
+const TERRITORY_ID = 1;
+const TARGET_USER_ID = 100;
+const OTHER_USER_ID = 200;
 
 function buildService(options: {
-  territoryTypeOverrides?: Partial<{
-    assignsClinics: boolean;
-    assignableToUsers: boolean;
-    assignableToManagers: boolean;
-  }>;
+  territoryTypeOverrides?: Partial<{ slug: string }>;
   territoryOverrides?: Partial<{ isActive: boolean }>;
-  conflictingAssignments?: Array<{ userId: string }>;
+  conflictingAssignments?: Array<{ userId: number }>;
 } = {}) {
   const territoryRepository: Pick<TerritoryRepository, "findById" | "findConflictingAssignments"> = {
     findById: mock(async () => ({
       id: TERRITORY_ID,
       name: "Territory 1",
-      slug: "territory-1",
+      slug: "patch",
       code: "T1",
-      verticalId: "vertical-1",
-      territoryTypeId: "type-1",
+      verticalId: 1,
+      territoryTypeId: 1,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
       managerTerritoryId: null,
       territoryType: {
-        id: "type-1",
+        id: 1,
         slug: "patch",
         name: "Patch",
         description: null,
         canHaveBoundary: true,
-        assignsClinics: true,
-        assignableToUsers: true,
-        assignableToManagers: false,
         blockSiblingOverlap: false,
         sortOrder: 0,
         isActive: true,
@@ -77,7 +71,7 @@ describe("TerritoryAssignmentPolicyService", () => {
 
   it("rejects assigning a REP when another REP already holds the patch", async () => {
     const { service, territoryRepository } = buildService({
-      conflictingAssignments: [{ userId: "other-user" }],
+      conflictingAssignments: [{ userId: OTHER_USER_ID }],
     });
 
     await expect(
@@ -109,7 +103,7 @@ describe("TerritoryAssignmentPolicyService", () => {
 
   it("checks for MANAGER conflicts (not REP) when assigning a manager", async () => {
     const { service, territoryRepository } = buildService({
-      territoryTypeOverrides: { assignableToManagers: true },
+      territoryTypeOverrides: { slug: "manager_zone" },
       conflictingAssignments: [],
     });
 
@@ -140,9 +134,9 @@ describe("TerritoryAssignmentPolicyService", () => {
     ).rejects.toBeInstanceOf(OperationNotAllowedError);
   });
 
-  it("rejects assigning a REP to a type that is not assignable to users", async () => {
+  it("rejects assigning a REP to a non-patch territory type", async () => {
     const { service } = buildService({
-      territoryTypeOverrides: { assignableToUsers: false },
+      territoryTypeOverrides: { slug: "manager_zone" },
     });
 
     await expect(
@@ -154,9 +148,9 @@ describe("TerritoryAssignmentPolicyService", () => {
     ).rejects.toBeInstanceOf(OperationNotAllowedError);
   });
 
-  it("rejects assigning a manager to a type that is not assignable to managers", async () => {
+  it("rejects assigning a manager to a non-manager-zone territory type", async () => {
     const { service } = buildService({
-      territoryTypeOverrides: { assignableToManagers: false },
+      territoryTypeOverrides: { slug: "patch" },
     });
 
     await expect(

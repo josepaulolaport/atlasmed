@@ -3,16 +3,17 @@ import {
   resolveAccessibleVerticalIds,
 } from "@atlasmed/access";
 import { ForbiddenError } from "../../../../shared/errors";
+import { parseCrmId } from "../../../../shared/utils/parse-crm-id";
 
 export { VERTICAL_ID_HEADER };
 
 export interface ResolveVerticalIdsInput {
   role: string;
-  assignedVerticalIds: string[];
+  assignedVerticalIds: number[];
   /** Optional query/body filter. */
-  queryVerticalId?: string | null;
+  queryVerticalId?: number | null;
   /** Optional header filter (wins over query when both set). */
-  headerVerticalId?: string | null;
+  headerVerticalId?: number | null;
 }
 
 /**
@@ -20,8 +21,8 @@ export interface ResolveVerticalIdsInput {
  * Filter source: header `X-AtlasMed-Vertical-Id` preferred, else query/body.
  * Always ∩ token assignments (`user_vertical_assignments` via scope).
  */
-export function resolveVerticalIds(input: ResolveVerticalIdsInput): string[] {
-  const filterVerticalId = input.headerVerticalId?.trim() || input.queryVerticalId?.trim() || null;
+export function resolveVerticalIds(input: ResolveVerticalIdsInput): number[] {
+  const filterVerticalId = input.headerVerticalId ?? input.queryVerticalId ?? null;
 
   const result = resolveAccessibleVerticalIds({
     role: input.role,
@@ -36,6 +37,13 @@ export function resolveVerticalIds(input: ResolveVerticalIdsInput): string[] {
   return result.verticalIds;
 }
 
-export function readVerticalIdHeader(headers: Headers | { get(name: string): string | null }): string | null {
-  return headers.get(VERTICAL_ID_HEADER) ?? headers.get("X-AtlasMed-Vertical-Id");
+export function readVerticalIdHeader(
+  headers: Headers | { get(name: string): string | null }
+): number | null {
+  const raw =
+    headers.get(VERTICAL_ID_HEADER) ?? headers.get("X-AtlasMed-Vertical-Id");
+  if (!raw?.trim()) {
+    return null;
+  }
+  return parseCrmId(raw, "vertical id");
 }

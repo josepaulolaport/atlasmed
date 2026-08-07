@@ -38,9 +38,9 @@ export class ListFacilityRepresentativesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
+    facilityId: number;
     scope: ScopeContext;
-    userId: string;
+    userId: number;
     page?: number;
     limit?: number;
     search?: string;
@@ -79,9 +79,9 @@ export class CreateFacilityRepresentativeUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
+    facilityId: number;
     scope: ScopeContext;
-    userId: string;
+    userId: number;
     representativeName: string;
     roleTitle?: string | null;
     email?: string | null;
@@ -123,10 +123,10 @@ export class UpdateFacilityRepresentativeUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    representativeId: string;
+    facilityId: number;
+    representativeId: number;
     scope: ScopeContext;
-    userId: string;
+    userId: number;
     representativeName?: string;
     roleTitle?: string | null;
     email?: string | null;

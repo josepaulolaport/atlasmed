@@ -28,7 +28,7 @@ describe("UpdateAvatarUseCase", () => {
     });
 
     expect(storage.upload).toHaveBeenCalledWith(
-      expect.stringMatching(/^avatars\/user-123\/[a-z0-9-]+\.png$/),
+      expect.stringMatching(new RegExp(`^avatars\\/${user.id}\\/[a-z0-9-]+\\.png$`)),
       expect.any(Uint8Array),
       "image/png",
     );
@@ -51,13 +51,16 @@ describe("UpdateAvatarUseCase", () => {
   });
 
   it("removes the stored object and clears the avatar URL", async () => {
-    const avatarUser = { ...user, avatarUrl: "/api/v1/user/avatar/avatars/user-123/current.png" };
+    const avatarUser = {
+      ...user,
+      avatarUrl: `/api/v1/user/avatar/avatars/${user.id}/current.png`,
+    };
     repository.findById = mock(async () => avatarUser);
     repository.updateProfile = mock(async (_id, data) => ({ ...avatarUser, avatarUrl: data.avatarUrl ?? null }));
 
     const result = await useCase.remove({ userId: user.id });
 
-    expect(storage.delete).toHaveBeenCalledWith("avatars/user-123/current.png");
+    expect(storage.delete).toHaveBeenCalledWith(`avatars/${user.id}/current.png`);
     expect(repository.updateProfile).toHaveBeenCalledWith(user.id, { avatarUrl: null, avatarBlurhash: null });
     expect(result.avatarUrl).toBeNull();
   });

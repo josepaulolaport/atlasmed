@@ -9,10 +9,10 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 | `apps/api` | Bun + Elysia | Backend API, Drizzle ORM, PostgreSQL/PostGIS, CASL authorization |
 | `apps/mobile` | Flutter | Mobile app (migration to React Native/Expo — see `docs/architecture/adr/0002-mobile-stack.md`) |
 | `apps/web` | Next.js 16 | Admin/web app |
-| `apps/workers` | Temporal | Workflow workers (registry ingestion, background jobs) |
+| `apps/workers/temporal` | Temporal | Background workflows (search-sync, purchase-recurrence, cadastro) — package `@atlasmed/temporal-worker` |
 | `packages/database` | Drizzle | Schema, migrations (Drizzle Kit), DB client, PostGIS geometry types |
 | `packages/access` | CASL | Authorization rules, roles, row-level access |
-| `packages/cnes-ingestion` | — | CNES/DataSUS adapters (FTP, parsing) |
+| ~~`packages/cnes-ingestion`~~ | — | **Removed** — CNES ingest + `registry`/`ingestion` schemas deleted |
 | `packages/mapbox` | — | Mapbox API client wrappers (geocoding, directions, matrix) |
 | `packages/config` | Zod | Shared runtime config, env parsing, feature flags |
 | `packages/observability` | — | Structured logging, distributed tracing, metrics |
@@ -168,7 +168,7 @@ Each section below covers one app or package. Use these instead of the per-direc
 
 ## apps/api
 
-**Scope:** API routes, use-cases, services, auth, authorization, session management, CNES ingestion pipeline, Temporal workflow triggers from API side, backend validation, DTO mapping.
+**Scope:** API routes, use-cases, services, auth, authorization, session management, Temporal workflow triggers (search-sync / purchase-recurrence / cadastro — not CNES ingest), backend validation, DTO mapping. CNES registry warehouse READ/confirm removed with the `registry` / `ingestion` schemas.
 
 ### Module layout
 
@@ -260,7 +260,7 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 | General API work | `docs/architecture/current.md`, `docs/architecture/target.md` |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
 | Database change | this file → `packages/database` section |
-| CNES / registry ingestion | this file → `packages/cnes-ingestion` + `apps/workers` sections, `docs/architecture/features/clinic-doctor-registry.md` |
+| (CNES warehouse removed) | n/a — public CNES lookups + `facilities.cnes_code` only; do not re-add registry READ without ADR |
 | Multi-tenancy | `docs/specs/0001-multi-tenancy/design.md`, `docs/specs/0001-multi-tenancy/tasks.md` |
 | Territory logic | `docs/specs/0003-territory-management/requirements.md` |
 
@@ -268,7 +268,7 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 
 ## apps/web
 
-**Scope:** Admin screens (facilities, professionals, territories, users, registry-suggestions), manager/BI dashboards, tables/filters/forms, auth flows (login, 2fa, register, forgot/reset password).
+**Scope:** Admin screens (facilities, professionals, territories, users, field-suggestions), manager/BI dashboards, tables/filters/forms, auth flows (login, 2fa, register, forgot/reset password).
 
 ### Stack
 
@@ -291,7 +291,7 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 | General web work | this file → `apps/web` section, `apps/web/README.md` |
 | Auth screens | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
 | Facility / professional / territory | `docs/architecture/features/clinic-doctor-registry.md`, `docs/specs/0003-territory-management/requirements.md` |
-| Registry suggestions | `docs/architecture/features/clinic-doctor-registry.md`, this file → `apps/api` section |
+| Não Conformidades / field suggestions | `docs/specs/0007-nao-conformidades/requirements.md`, this file → `apps/api` section |
 | API-backed feature | `docs/ai/integration-tasks/api-web.md` |
 | Multi-tenancy UI | `docs/specs/0001-multi-tenancy/design.md` |
 
@@ -337,7 +337,7 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 ## apps/workers
 
-**Scope:** Temporal workflow workers, registry/CNES ingestion workflows, long-running background jobs orchestrated via Temporal.
+**Scope:** Temporal workflow workers in `apps/workers/temporal` (`@atlasmed/temporal-worker`) — search-sync, purchase-recurrence, cadastro-file. Task queue default: `atlasmed-workflows`.
 
 ### Conventions
 
@@ -345,14 +345,14 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 - Activities are idempotent — safe to retry.
 - Use versioning/patches when changing workflow logic already running in production.
 - Long-running workflows must survive process restarts — do not hold in-memory state.
-- Emit structured audit events (see `run_registry_ingestion` pattern) for observability.
+- Emit structured audit events for observability.
 
 ### Required docs
 
 | Task | Load |
 |---|---|
 | General worker work | `docs/architecture/current.md`, `docs/architecture/target.md` |
-| CNES ingestion | `docs/architecture/features/clinic-doctor-registry.md`, this file → `packages/cnes-ingestion` section |
+| (CNES ingest removed) | n/a — do not add FTP/Temporal CNES ingest without a new ADR |
 | Persistence from workflow | this file → `packages/database` section |
 | Workflow triggered by API | this file → `apps/api` section (only the trigger surface) |
 
@@ -360,7 +360,7 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 - Do not call external services directly from workflow code — only from activities.
 - Do not import framework code from `apps/api` unless strictly needed; prefer `packages/*`.
-- Do not add Temporal SDK dependencies elsewhere in the monorepo — keep scoped to `apps/workers` and (when necessary) `packages/cnes-ingestion`.
+- Do not add Temporal SDK dependencies elsewhere in the monorepo — keep scoped to `apps/workers/*`.
 
 ---
 
@@ -401,10 +401,8 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 | pg schema | Purpose |
 |---|---|
-| `public` | Core CRM data (users, facilities, territories, etc.) |
+| `public` | Core CRM data (users, facilities, territories, CNES lookup tables, etc.) |
 | `audit` | `audit_logs` — compliance trail |
-| `registry` | Raw CNES source data as-ingested from FTP |
-| `ingestion` | Pipeline workflow: `cnes_runs`, `cnes_diffs`, `cnes_suggestions` |
 
 ### Migration workflow (MANDATORY)
 
@@ -590,29 +588,13 @@ DATABASE_URL=<url> bun run db:migrate
 
 ---
 
-## packages/cnes-ingestion
+## packages/cnes-ingestion — REMOVED
 
-**Scope:** CNES/DataSUS ingestion adapters — FTP clients, ZIP file mapping, parsing helpers, archive storage, workflow-id helpers.
+Package deleted. CNES FTP/archive/Temporal monthly ingest, registry warehouse READ/confirm, and Postgres schemas `registry` / `ingestion` are gone (`facilities.cnes_unit_id` dropped).
 
-### Rules
+**Still in repo:** public CNES lookup tables, `facilities.cnes_code`, Spec 0007 `field_suggestions`, Temporal worker at `apps/workers/temporal` (`@atlasmed/temporal-worker`, queue `atlasmed-workflows`).
 
-- Adapters implement a port. New sources add an adapter, not new consumers.
-- No side effects on import — factory functions build the adapter.
-- Parsing is pure. Storage/network is behind adapters.
-- FTP timeouts are explicit — never rely on client defaults.
-
-### Required docs
-
-| Task | Load |
-|---|---|
-| Any change here | `docs/architecture/features/clinic-doctor-registry.md` |
-| Workflow orchestration | this file → `apps/workers` section |
-| Persistence | this file → `packages/database` section |
-
-### Anti-patterns
-
-- Do not import Temporal SDK code — orchestration lives in `apps/workers`.
-- Do not read secrets from `process.env` inside functions; pass configuration explicitly.
+Do not reintroduce CNES ingest / registry warehouse without an ADR + product decision.
 
 ---
 

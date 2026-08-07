@@ -54,8 +54,8 @@ function serializePurchaseRecurrence(recurrence: {
 
 export function serializeFacility(
   clinic: FacilityRecord | FacilityListRecord,
-  verticalIds?: string[],
-  options?: { exposeProfileVerticalIds?: string[] },
+  verticalIds?: number[],
+  options?: { exposeProfileVerticalIds?: number[] },
 ) {
   const list = clinic as FacilityListRecord;
   const verticalContext = applyVerticalProfileContext(clinic, verticalIds, {
@@ -72,6 +72,8 @@ export function serializeFacility(
     streetNumber: clinic.streetNumber,
     addressComplement: clinic.addressComplement,
     postalCode: clinic.postalCode,
+    stateId: clinic.stateId,
+    municipalityId: clinic.municipalityId,
     phone: clinic.phone,
     whatsapp: clinic.whatsapp,
     email: clinic.email,
@@ -81,33 +83,20 @@ export function serializeFacility(
     openingHours: clinic.openingHours,
     /** "Cliente desde" — system createdAt until a dedicated commercial date exists. */
     registeredSince: clinic.createdAt.toISOString(),
-    taxIdType: clinic.taxIdType,
-    cnpj: clinic.cnpj,
-    cpf: clinic.cpf,
+    legalDocumentType: clinic.legalDocumentType,
+    legalDocument: clinic.legalDocument,
     lat: clinic.lat ?? undefined,
     lng: clinic.lng ?? undefined,
     territoryId: clinic.territoryId ?? undefined,
     territoryName: clinic.territoryName ?? undefined,
     territoryAssignmentStatus: clinic.territoryAssignmentStatus,
-    ...(verticalContext.commercialStatus !== undefined
-      ? { commercialStatus: verticalContext.commercialStatus }
-      : {}),
-    ...(verticalContext.purchaseStatus !== undefined
-      ? { purchaseStatus: verticalContext.purchaseStatus }
-      : {}),
+    // Commercial / purchase / recurrence: only on verticalProfiles (per Linha).
     ...(verticalContext.verticalProfiles
       ? {
           verticalProfiles: verticalContext.verticalProfiles.map(serializeVerticalProfile),
         }
       : {}),
     conformityStatus: clinic.conformityStatus,
-    ...(verticalContext.purchaseRecurrence
-      ? {
-          purchaseRecurrence: serializePurchaseRecurrence(
-            verticalContext.purchaseRecurrence,
-          ),
-        }
-      : {}),
     professionalCount: list.professionalCount ?? 0,
     lastVisitAt: list.lastVisitAt?.toISOString() ?? undefined,
     consultantName: clinic.consultantName,
@@ -115,8 +104,12 @@ export function serializeFacility(
     managerName: clinic.managerName,
     imageUrl: clinic.imageUrl ?? undefined,
     imageBlurhash: clinic.imageBlurhash ?? undefined,
+    cnesCode: clinic.cnesCode ?? undefined,
+    facilityTypeCode: clinic.facilityTypeCode ?? undefined,
+    unitTypeCode: clinic.unitTypeCode ?? undefined,
+    unitSubtypeCode: clinic.unitSubtypeCode ?? undefined,
     distanceKm: list.distanceKm ?? undefined,
-    services: clinic.services ?? [],
+    clinicalFocuses: clinic.clinicalFocuses ?? [],
     createdAt: clinic.createdAt.toISOString(),
     updatedAt: clinic.updatedAt.toISOString(),
   };

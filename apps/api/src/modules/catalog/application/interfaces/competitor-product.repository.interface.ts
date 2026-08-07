@@ -1,5 +1,5 @@
 export interface CompetitorProductRecord {
-  id: string;
+  id: number;
   code: string | null;
   name: string;
   manufacturer: string | null;
@@ -22,7 +22,7 @@ export interface CompetitorProductRepository {
     isActive?: boolean;
   }): Promise<{ competitorProducts: CompetitorProductRecord[]; total: number }>;
 
-  findById(id: string): Promise<CompetitorProductRecord | null>;
+  findById(id: number): Promise<CompetitorProductRecord | null>;
 
   /** All active competitor products, unpaginated — backs the price index. */
   findAllActive(): Promise<CompetitorProductRecord[]>;
@@ -41,7 +41,7 @@ export interface CompetitorProductRepository {
   }): Promise<CompetitorProductRecord>;
 
   update(
-    id: string,
+    id: number,
     data: {
       code?: string | null;
       name?: string;

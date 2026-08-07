@@ -1,4 +1,5 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
+import { Role } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 import { inviteResendRateLimit } from "../middleware/rate-limit.middleware";
@@ -14,44 +15,50 @@ export const resendInviteRoute = new Elysia({
   .use(auth)
   .use(requirePermission("update", "INVITATION"))
   .use(inviteResendRateLimit)
-  .post("/invites/:id/resend", async ({ params, getUser, getScope }: any) => {
-    const user = await getUser();
-    const scope = await getScope();
+  .post(
+    "/invites/:id/resend",
+    async ({ params, getUser, getScope }) => {
+      const user = await getUser();
+      const scope = await getScope();
 
-    const result = await accessUseCases.resendInvite().execute({
-      inviteId: params.id,
-      actorId: user.id,
-      actorRole: user.role.name,
-      scope,
-    });
-
-    if (result.invite.email) {
-      await sendInviteEmail(result.invite.email, result.token, {
-        invitedByName: user.firstName
-          ? `${user.firstName} ${user.lastName || ""}`.trim()
-          : user.username,
-        roleName: result.invite.role?.name,
-        inviteUrl: resolveInviteAcceptUrl(),
+      const result = await accessUseCases.resendInvite().execute({
+        inviteId: params.id,
+        actorId: user.id,
+        actorRole: user.role.name as Role,
+        scope,
       });
-    } else if (result.invite.phoneNumber) {
-      await sendInviteWhatsApp(result.invite.phoneNumber, result.token, {
-        invitedByName: user.firstName
-          ? `${user.firstName} ${user.lastName || ""}`.trim()
-          : user.username,
-        roleName: result.invite.role?.name,
-      });
-    }
 
-    return {
-      invite: {
-        id: result.invite.id,
-        email: result.invite.email ?? undefined,
-        phoneNumber: result.invite.phoneNumber ?? undefined,
-        status: result.invite.status,
-        expiresAt: result.invite.expiresAt.toISOString(),
-        resendCount: result.invite.resendCount,
-        lastResendAt: result.invite.lastResendAt?.toISOString() ?? undefined,
-      },
-      message: "Invitation resent successfully",
-    };
-  });
+      if (result.invite.email) {
+        await sendInviteEmail(result.invite.email, result.token, {
+          invitedByName: user.firstName
+            ? `${user.firstName} ${user.lastName || ""}`.trim()
+            : user.username,
+          roleName: result.invite.role?.name,
+          inviteUrl: resolveInviteAcceptUrl(),
+        });
+      } else if (result.invite.phoneNumber) {
+        await sendInviteWhatsApp(result.invite.phoneNumber, result.token, {
+          invitedByName: user.firstName
+            ? `${user.firstName} ${user.lastName || ""}`.trim()
+            : user.username,
+          roleName: result.invite.role?.name,
+        });
+      }
+
+      return {
+        invite: {
+          id: result.invite.id,
+          email: result.invite.email ?? undefined,
+          phoneNumber: result.invite.phoneNumber ?? undefined,
+          status: result.invite.status,
+          expiresAt: result.invite.expiresAt.toISOString(),
+          resendCount: result.invite.resendCount,
+          lastResendAt: result.invite.lastResendAt?.toISOString() ?? undefined,
+        },
+        message: "Invitation resent successfully",
+      };
+    },
+    {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    },
+  );

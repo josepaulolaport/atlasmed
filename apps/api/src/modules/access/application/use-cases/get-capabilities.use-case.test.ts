@@ -10,7 +10,7 @@ describe("GetCapabilitiesUseCase", () => {
   };
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     role: { name: "MANAGER" },
   };
 
@@ -18,7 +18,7 @@ describe("GetCapabilitiesUseCase", () => {
     mockAccessGrantService = {
       getActiveGrants: mock(async () => [
         {
-          id: "grant-1",
+          id: 1,
           resource: "clinic",
           resourceId: "clinic-1",
           action: "read",
@@ -37,7 +37,7 @@ describe("GetCapabilitiesUseCase", () => {
   });
 
   it("should return role and active grants", async () => {
-    const result = await useCase.execute({ userId: "user-123" });
+    const result = await useCase.execute({ userId: 123 });
 
     expect(result.role).toBe("MANAGER");
     expect(result.grants).toHaveLength(1);
@@ -52,7 +52,7 @@ describe("GetCapabilitiesUseCase", () => {
       accessGrantService: mockAccessGrantService as any,
     });
 
-    await expect(useCase.execute({ userId: "missing" })).rejects.toThrow(
+    await expect(useCase.execute({ userId: 999 })).rejects.toThrow(
       UserNotFoundError
     );
   });

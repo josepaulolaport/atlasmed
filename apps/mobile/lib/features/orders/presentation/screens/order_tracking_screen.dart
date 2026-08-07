@@ -12,7 +12,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_w
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
-  final String orderId;
+  final int orderId;
   final String? orderStatus;
 
   const OrderTrackingScreen({
@@ -149,7 +149,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     final ts = detail.createdAt.toIso8601String();
     final updatedTs = detail.updatedAt.toIso8601String();
     return TrackingOrderDetail(
-      id: detail.displayId,
+      id: detail.id,
       status: status,
       createdAt: ts,
       estimatedDelivery: '',

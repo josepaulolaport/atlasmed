@@ -1,7 +1,7 @@
 import type { VerificationTokenType } from "@atlasmed/database";
 
 export interface CreateVerificationTokenParams {
-  userId: string;
+  userId: number;
   type: VerificationTokenType;
   tokenHash: string;
   newValue?: string;
@@ -10,21 +10,21 @@ export interface CreateVerificationTokenParams {
 
 export interface FindValidVerificationTokenParams {
   tokenHash: string;
-  userId: string;
+  userId: number;
   type: VerificationTokenType;
 }
 
 export interface VerificationTokenRecord {
-  id: string;
+  id: number;
   newValue: string | null;
 }
 
 export interface VerificationTokenRepository {
-  deleteUnusedByUserAndType(userId: string, type: VerificationTokenType): Promise<void>;
+  deleteUnusedByUserAndType(userId: number, type: VerificationTokenType): Promise<void>;
 
   create(params: CreateVerificationTokenParams): Promise<void>;
 
   findValidToken(params: FindValidVerificationTokenParams): Promise<VerificationTokenRecord | null>;
 
-  markVerified(id: string): Promise<void>;
+  markVerified(id: number): Promise<void>;
 }

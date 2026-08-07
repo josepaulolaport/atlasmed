@@ -7,7 +7,7 @@ import type {
 } from "../../../application/interfaces/business-vertical.repository.interface";
 
 function mapVertical(row: {
-  id: string;
+  id: number;
   code: string;
   name: string;
   isActive: boolean;
@@ -48,7 +48,7 @@ export class DrizzleBusinessVerticalRepository implements BusinessVerticalReposi
     return { verticals: rows.map(mapVertical), total: Number(countRows[0]?.count ?? 0) };
   }
 
-  async findById(id: string): Promise<BusinessVerticalRecord | null> {
+  async findById(id: number): Promise<BusinessVerticalRecord | null> {
     const rows = await db.select().from(businessVerticals).where(eq(businessVerticals.id, id));
     return rows[0] ? mapVertical(rows[0]) : null;
   }
@@ -70,7 +70,7 @@ export class DrizzleBusinessVerticalRepository implements BusinessVerticalReposi
   }
 
   async update(
-    id: string,
+    id: number,
     data: { code?: string; name?: string; isActive?: boolean }
   ): Promise<BusinessVerticalRecord> {
     const [vertical] = await db

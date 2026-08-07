@@ -16,7 +16,7 @@ export type PurchaseStatusBuckets = {
 };
 
 export type DashboardTerritoryFeature = {
-  id: string;
+  id: number;
   name: string;
   boundary: unknown;
 };
@@ -31,8 +31,8 @@ export class DrizzleDashboardRepository {
    * neverBought = NEVER_PURCHASED + INACTIVE (+ null)
    */
   async countPurchaseBuckets(input: {
-    verticalIds: string[];
-    facilityIds: string[] | null;
+    verticalIds: number[];
+    facilityIds: number[] | null;
   }): Promise<PurchaseStatusBuckets> {
     if (input.verticalIds.length === 0) {
       return { active: 0, inactive: 0, neverBought: 0, total: 0 };
@@ -78,8 +78,8 @@ export class DrizzleDashboardRepository {
   }
 
   async countDoctors(input: {
-    verticalIds: string[];
-    facilityIds: string[] | null;
+    verticalIds: number[];
+    facilityIds: number[] | null;
   }): Promise<number> {
     if (input.verticalIds.length === 0) return 0;
 
@@ -110,8 +110,8 @@ export class DrizzleDashboardRepository {
 
   /** Territories assigned to the user that belong to any of the verticals. */
   async listAssignedTerritoryFeatures(input: {
-    userId: string;
-    verticalIds: string[];
+    userId: number;
+    verticalIds: number[];
   }): Promise<DashboardTerritoryFeature[]> {
     if (input.verticalIds.length === 0) return [];
 
@@ -143,7 +143,7 @@ export class DrizzleDashboardRepository {
 
   /** All territories with boundaries for verticals (ADMIN overview). */
   async listVerticalTerritoryFeatures(
-    verticalIds: string[],
+    verticalIds: number[],
   ): Promise<DashboardTerritoryFeature[]> {
     if (verticalIds.length === 0) return [];
 

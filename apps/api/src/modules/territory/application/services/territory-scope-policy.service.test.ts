@@ -7,17 +7,20 @@ import {
 } from "./territory-scope-policy.service";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 
+const PATCH_IN_SCOPE = 1;
+const OTHER_PATCH = 2;
+
 const scopedManager: ScopeContext = {
   isGlobal: false,
   assignedTerritoryIds: [],
-  effectiveTerritoryIds: ["patch-in-scope"],
-  analyticsEffectiveTerritoryIds: ["patch-in-scope"],
-  territoryIds: ["patch-in-scope"],
-  facilityIds: ["facility-1"],
-  analyticsFacilityIds: ["facility-1"],
-  clinicIds: ["facility-1"],
-  analyticsClinicIds: ["facility-1"],
-  managedUserIds: ["user-1"],
+  effectiveTerritoryIds: [PATCH_IN_SCOPE],
+  analyticsEffectiveTerritoryIds: [PATCH_IN_SCOPE],
+  territoryIds: [PATCH_IN_SCOPE],
+  facilityIds: [1],
+  analyticsFacilityIds: [1],
+  clinicIds: [1],
+  analyticsClinicIds: [1],
+  managedUserIds: [1],
   isOperationallyActive: true,
 };
 
@@ -25,15 +28,16 @@ function createTerritoryRepository(
   overrides: Partial<TerritoryRepository> = {}
 ): TerritoryRepository {
   return {
-    findById: mock(async (id: string) =>
-      id === "patch-in-scope"
+    findById: mock(async (id: number) =>
+      id === PATCH_IN_SCOPE
         ? {
             id,
             name: "Patch",
             slug: "patch",
             code: "PATCH",
-            territoryTypeId: "tt_patch",
-            managerTerritoryId: "manager-zone-1",
+            verticalId: 1,
+            territoryTypeId: 1,
+            managerTerritoryId: 50,
             isActive: true,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -46,10 +50,10 @@ function createTerritoryRepository(
 
 describe("TerritoryScopePolicyService", () => {
   it("checks territorial jurisdiction", () => {
-    expect(isInTerritorialJurisdiction(scopedManager, "patch-in-scope")).toBe(
+    expect(isInTerritorialJurisdiction(scopedManager, PATCH_IN_SCOPE)).toBe(
       true
     );
-    expect(isInTerritorialJurisdiction(scopedManager, "other-patch")).toBe(false);
+    expect(isInTerritorialJurisdiction(scopedManager, OTHER_PATCH)).toBe(false);
   });
 
   it("allows manager to deactivate a territory in their jurisdiction", async () => {
@@ -57,7 +61,7 @@ describe("TerritoryScopePolicyService", () => {
       scope: scopedManager,
       territoryRepository: createTerritoryRepository(),
       type: "deactivate_territory",
-      targetTerritoryId: "patch-in-scope",
+      targetTerritoryId: PATCH_IN_SCOPE,
     });
   });
 
@@ -67,31 +71,7 @@ describe("TerritoryScopePolicyService", () => {
         scope: scopedManager,
         territoryRepository: createTerritoryRepository(),
         type: "deactivate_territory",
-        targetTerritoryId: "other-patch",
-      })
-    ).rejects.toThrow("outside your territorial jurisdiction");
-  });
-
-  it("rejects facility move when facility is out of scope", async () => {
-    await expect(
-      assertManagerTerritoryApprovalRequest({
-        scope: scopedManager,
-        territoryRepository: createTerritoryRepository(),
-        type: "clinic_territory_change",
-        facilityId: "facility-out",
-        toTerritoryId: "patch-in-scope",
-      })
-    ).rejects.toThrow("Facility is outside your scope");
-  });
-
-  it("rejects facility move when target territory is outside jurisdiction", async () => {
-    await expect(
-      assertManagerTerritoryApprovalRequest({
-        scope: scopedManager,
-        territoryRepository: createTerritoryRepository(),
-        type: "clinic_territory_change",
-        facilityId: "facility-1",
-        toTerritoryId: "other-patch",
+        targetTerritoryId: OTHER_PATCH,
       })
     ).rejects.toThrow("outside your territorial jurisdiction");
   });
@@ -100,7 +80,7 @@ describe("TerritoryScopePolicyService", () => {
     expect(() =>
       assertTerritorialJurisdiction(
         { isGlobal: true, effectiveTerritoryIds: [] },
-        "any",
+        999,
         "test"
       )
     ).not.toThrow();

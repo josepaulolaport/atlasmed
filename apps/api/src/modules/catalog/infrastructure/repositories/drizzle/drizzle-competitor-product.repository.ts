@@ -11,7 +11,7 @@ function toNumberOrNull(value: string | null): number | null {
 }
 
 function mapCompetitorProduct(row: {
-  id: string;
+  id: number;
   code: string | null;
   name: string;
   manufacturer: string | null;
@@ -80,7 +80,7 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
     };
   }
 
-  async findById(id: string): Promise<CompetitorProductRecord | null> {
+  async findById(id: number): Promise<CompetitorProductRecord | null> {
     const rows = await db.select().from(competitorProducts).where(eq(competitorProducts.id, id));
     return rows[0] ? mapCompetitorProduct(rows[0]) : null;
   }
@@ -125,7 +125,7 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
   }
 
   async update(
-    id: string,
+    id: number,
     data: {
       code?: string | null;
       name?: string;

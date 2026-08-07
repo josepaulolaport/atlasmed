@@ -8,16 +8,30 @@ import type {
   UpdateProfessionalInput,
 } from "@atlasmed/access";
 
-export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
+export type TerritoryAssignmentStatus = "assigned" | "unassigned";
 
-export type PurchaseStatus = "NAO_COMPRA" | "COMPRA" | "COMPRA_POUCO" | "COMPRA_MUITO";
+export type FacilityPurchaseStatus =
+  | "NON_BUYER"
+  | "LOW_BUYER"
+  | "REGULAR_BUYER"
+  | "HIGH_BUYER";
 
-export type FacilityTaxIdType = "PJ" | "PF";
+export type FacilityLegalDocumentType = "CNPJ" | "CPF";
 
-export interface FacilityServiceItem {
-  serviceCode: string;
-  classificationCode: string;
-  serviceName?: string;
+export interface FacilityClinicalFocusItem {
+  id: number;
+  name: string;
+  cnesCode?: string | null;
+}
+
+export interface FacilityVerticalProfileItem {
+  verticalId: number;
+  verticalCode?: string;
+  verticalName?: string;
+  isActive?: boolean;
+  commercialStatus?: string;
+  purchaseStatus?: FacilityPurchaseStatus;
+  territoryId?: number | null;
 }
 
 export interface Facility {
@@ -28,15 +42,15 @@ export interface Facility {
   stateCode?: string;
   lat?: number;
   lng?: number;
-  taxIdType?: FacilityTaxIdType | null;
-  cnpj?: string | null;
-  cpf?: string | null;
+  legalDocumentType?: FacilityLegalDocumentType | null;
+  legalDocument?: string | null;
   territoryId?: string;
   territoryAssignmentStatus?: TerritoryAssignmentStatus;
-  purchaseStatus?: PurchaseStatus;
+  /** Per-Linha commercial state — never a facility top-level SoT. */
+  verticalProfiles?: FacilityVerticalProfileItem[];
   professionalCount?: number;
   consultantName?: string | null;
-  services?: FacilityServiceItem[];
+  clinicalFocuses?: FacilityClinicalFocusItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -77,7 +91,8 @@ export interface CreateClinicRequest {
   address?: string;
   city?: string;
   stateCode?: string;
-  cnpj?: string;
+  legalDocumentType?: FacilityLegalDocumentType;
+  legalDocument?: string;
   lat?: number;
   lng?: number;
 }
@@ -87,20 +102,17 @@ export interface UpdateClinicRequest {
   address?: string | null;
   city?: string | null;
   stateCode?: string | null;
-  cnpj?: string | null;
+  legalDocumentType?: FacilityLegalDocumentType | null;
+  legalDocument?: string | null;
   lat?: number | null;
   lng?: number | null;
 }
 
-export type FacilityProfessionalView = "source" | "confirmed" | "pending" | "all";
+export type FacilityProfessionalView = "confirmed" | "all";
 
 export interface FacilityProfessionalAssociationView extends FacilityProfessionalRole {
-  sourceActive: boolean;
-  sourceFirstSeenAt?: string;
-  sourceLastSeenAt?: string;
   confirmedAt?: string;
   confirmedByUserId?: string;
-  pendingConfirmation: boolean;
 }
 
 export interface FacilityProfessionalListItem {
@@ -117,38 +129,4 @@ export interface FacilityProfessionalListItem {
     updatedAt: string;
   };
   association: FacilityProfessionalAssociationView;
-}
-
-export interface RegistrySuggestion {
-  id: string;
-  ingestionRunId: string;
-  type: "FACILITY_REGISTRY_DEACTIVATED" | "FACILITY_REGISTRY_REACTIVATED" | "DOCTOR_FACILITY_REGISTRY_DEACTIVATED";
-  status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "SUPERSEDED";
-  facilityId?: string;
-  professionalId?: string;
-  facilityProfessionalId?: string;
-  reason?: string;
-  payload: Record<string, unknown>;
-  suggestedAt: string;
-  resolvedAt?: string;
-  resolvedByUserId?: string;
-  resolutionNote?: string;
-}
-
-export interface RegistryDemoResult {
-  steps: Array<{
-    fixture: string;
-    label: string;
-    skipped: boolean;
-    reason?: string;
-    runId?: string;
-    suggestionsCreated?: number;
-  }>;
-  pendingSuggestions: RegistrySuggestion[];
-  summary: {
-    pendingCount: number;
-    clinicRemovals: number;
-    clinicReactivations: number;
-    doctorClinicRemovals: number;
-  };
 }

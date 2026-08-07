@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_status_chips.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -13,11 +13,9 @@ class ClinicRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusChips = buildFacilityStatusChips(
-      commercialStatus: clinic.commercialStatus,
-      purchaseRecurrence: clinic.purchaseRecurrence,
       verticalProfiles: clinic.verticalProfiles,
     );
-    final serviceChip = FacilityServiceLabels.chipSummary(
+    final serviceChip = ClinicalFocusLabels.chipSummary(
       clinic.displayServices,
     );
 
@@ -148,7 +146,7 @@ class ClinicRow extends StatelessWidget {
                           _ServiceChip(label: '+${serviceChip.overflow}'),
                       ] else
                         const _ServiceChip(
-                          label: 'Sem especialidade',
+                          label: 'Sem foco clínico',
                           muted: true,
                         ),
                     ],

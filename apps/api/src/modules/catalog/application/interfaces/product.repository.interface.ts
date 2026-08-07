@@ -1,5 +1,5 @@
 export interface ProductRecord {
-  id: string;
+  id: number;
   code: string;
   name: string;
   description: string | null;
@@ -8,7 +8,7 @@ export interface ProductRecord {
   productClassification: string | null;
   brand: string | null;
   unit: string | null;
-  verticalIds: string[];
+  verticalIds: number[];
   pictureUrl: string | null;
   simproCode: string;
   brasindiceCode: string;
@@ -30,20 +30,20 @@ export interface ProductRepository {
     page: number;
     limit: number;
     /** Restrict to products linked to any of these verticals (empty ⇒ no rows). */
-    verticalIds: string[];
+    verticalIds: number[];
     search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }>;
 
-  findById(id: string): Promise<ProductRecord | null>;
+  findById(id: number): Promise<ProductRecord | null>;
 
   /** All active products in the given verticals, unpaginated — backs the price index. */
-  findAllActive(params: { verticalIds: string[] }): Promise<ProductRecord[]>;
+  findAllActive(params: { verticalIds: number[] }): Promise<ProductRecord[]>;
 
   create(data: {
     code: string;
     name: string;
-    verticalIds: string[];
+    verticalIds: number[];
     pictureUrl?: string | null;
     simproCode: string;
     brasindiceCode: string;
@@ -59,11 +59,11 @@ export interface ProductRepository {
   }): Promise<ProductRecord>;
 
   update(
-    id: string,
+    id: number,
     data: {
       code?: string;
       name?: string;
-      verticalIds?: string[];
+      verticalIds?: number[];
       pictureUrl?: string | null;
       simproCode?: string;
       brasindiceCode?: string;

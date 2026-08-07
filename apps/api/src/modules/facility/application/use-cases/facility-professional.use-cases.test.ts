@@ -12,9 +12,9 @@ import {
   UpdateFacilityProfessionalRoleUseCase,
 } from "./facility-professional.use-cases";
 
-const facilityId = "facility-1";
-const professionalId = "professional-1";
-const userId = "user-1";
+const facilityId = 1;
+const professionalId = 1;
+const userId = 1;
 
 const professional = {
   id: professionalId,
@@ -44,7 +44,6 @@ const professional = {
 
 function baseAssociation(
   overrides: Partial<{
-    sourceActive: boolean;
     confirmedAt: Date | null;
     endedAt: Date | null;
     isPartner: boolean;
@@ -52,7 +51,7 @@ function baseAssociation(
   }> = {}
 ) {
   return {
-    id: "assoc-1",
+    id: 1,
     professionalId,
     facilityId,
     occupationCode: "LEGACY",
@@ -62,9 +61,6 @@ function baseAssociation(
     isBuyer: false,
     isDecisionMaker: false,
     notes: null as string | null,
-    sourceActive: true,
-    sourceFirstSeenAt: new Date("2024-01-01"),
-    sourceLastSeenAt: new Date("2024-01-02"),
     confirmedAt: null as Date | null,
     confirmedByUserId: null,
     endedAt: null as Date | null,
@@ -80,7 +76,7 @@ describe("Facility professional use cases", () => {
   let facilityProfessionalRepository: FacilityProfessionalRepository;
   let professionalRepository: ProfessionalRepository;
   let userProfessionalRelationshipRepository: UserProfessionalRelationshipRepository;
-  let levelsByProfessional: Map<string, number>;
+  let levelsByProfessional: Map<number, number>;
 
   beforeEach(() => {
     levelsByProfessional = new Map();
@@ -105,11 +101,9 @@ describe("Facility professional use cases", () => {
           updatedAt: professional.updatedAt,
         };
         const associations =
-          view === "pending"
-            ? [{ ...row, professional: listProfessional }]
-            : view === "confirmed"
-              ? []
-              : [{ ...row, professional: listProfessional }];
+          view === "confirmed"
+            ? []
+            : [{ ...row, professional: listProfessional }];
 
         return { associations, total: associations.length };
       }),
@@ -131,7 +125,6 @@ describe("Facility professional use cases", () => {
       })),
       manuallyAssociate: mock(async ({ confirmedByUserId }) => ({
         ...baseAssociation({
-          sourceActive: false,
           confirmedAt: new Date("2024-02-01"),
         }),
         confirmedByUserId,
@@ -156,7 +149,7 @@ describe("Facility professional use cases", () => {
         const level = levelsByProfessional.get(professionalIdArg);
         if (level == null) return null;
         return {
-          id: "upr-1",
+          id: 1,
           userId,
           professionalId: professionalIdArg,
           relationshipLevel: level,
@@ -168,7 +161,7 @@ describe("Facility professional use cases", () => {
       upsert: mock(async ({ relationshipLevel }) => {
         levelsByProfessional.set(professionalId, relationshipLevel);
         return {
-          id: "upr-1",
+          id: 1,
           userId,
           professionalId,
           relationshipLevel,
@@ -182,7 +175,7 @@ describe("Facility professional use cases", () => {
     };
   });
 
-  it("lists professionals for pending view and hydrates user relationship", async () => {
+  it("lists professionals for all view and hydrates user relationship", async () => {
     levelsByProfessional.set(professionalId, 4);
     const useCase = new ListFacilityProfessionalsUseCase({
       facilityProfessionalRepository,
@@ -193,18 +186,18 @@ describe("Facility professional use cases", () => {
       facilityId,
       scope: createGlobalScopeContext(),
       userId,
-      view: "pending",
+      view: "all",
     });
 
     expect(result.data).toHaveLength(1);
-    expect(result.data[0]?.association.pendingConfirmation).toBe(true);
+    expect(result.data[0]?.association.confirmedAt).toBeUndefined();
     expect(result.data[0]?.association.relationshipLevel).toBe(4);
     expect(
       userProfessionalRelationshipRepository.findLevelsByUserAndProfessionals
     ).toHaveBeenCalledWith(userId, [professionalId]);
     expect(
       facilityProfessionalRepository.findActiveByFacilityWithProfessionals
-    ).toHaveBeenCalledWith(expect.objectContaining({ facilityId, view: "pending" }));
+    ).toHaveBeenCalledWith(expect.objectContaining({ facilityId, view: "all" }));
   });
 
   it("clears user relationship when relationshipLevel is null", async () => {
@@ -280,7 +273,7 @@ describe("Facility professional use cases", () => {
     });
   });
 
-  it("confirms a pending professional at facility", async () => {
+  it("confirms a professional at facility", async () => {
     const useCase = new ConfirmProfessionalAtFacilityUseCase({ facilityProfessionalRepository });
 
     const result = await useCase.execute({

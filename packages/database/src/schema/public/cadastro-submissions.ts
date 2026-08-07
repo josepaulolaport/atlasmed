@@ -5,10 +5,9 @@ import {
   integer,
   bigint,
   index,
-  uniqueIndex,
+  uniqueIndex
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import {
   cadastroSubmissionStatusEnum,
   cadastroDocumentStatusEnum,
@@ -29,20 +28,17 @@ import { users } from "./users";
 export const cadastroSubmissions = pgTable(
   "cadastro_submissions",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id").references(() => businessVerticals.id, {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" }).references(() => businessVerticals.id, {
       onDelete: "restrict",
     }),
-    submittedByUserId: text("submitted_by_user_id").references(() => users.id, {
+    submittedByUserId: bigint("submitted_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     status: cadastroSubmissionStatusEnum("status").notNull().default("DRAFT"),
-    version: integer("version").notNull().default(1),
+    version: bigint("version", { mode: "number" }).notNull().default(1),
     submittedAt: timestamp("submitted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -65,18 +61,14 @@ export const cadastroSubmissions = pgTable(
 export const submissionDocuments = pgTable(
   "submission_documents",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    submissionId: text("submission_id")
-      .notNull()
-      .references(() => cadastroSubmissions.id, { onDelete: "cascade" }),
-    requirementId: text("requirement_id")
-      .notNull()
-      .references(() => conformityRequirements.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    submissionId: bigint("submission_id", { mode: "number" })
+      .notNull().references(() => cadastroSubmissions.id, { onDelete: "cascade" }),
+    requirementId: bigint("requirement_id", { mode: "number" })
+      .notNull().references(() => conformityRequirements.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
     status: cadastroDocumentStatusEnum("status").notNull().default("DRAFT"),
-    version: integer("version").notNull().default(1),
+    version: bigint("version", { mode: "number" }).notNull().default(1),
     reviewComment: text("review_comment"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -96,12 +88,9 @@ export const submissionDocuments = pgTable(
 export const fileAssets = pgTable(
   "file_assets",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
     storageProvider: text("storage_provider").notNull().default("s3"),
     bucket: text("bucket").notNull(),
     objectKey: text("object_key").notNull(),
@@ -113,9 +102,9 @@ export const fileAssets = pgTable(
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     sha256: text("sha256"),
     status: cadastroFileAssetStatusEnum("status").notNull().default("PENDING_UPLOAD"),
-    pageCount: integer("page_count"),
-    width: integer("width"),
-    height: integer("height"),
+    pageCount: bigint("page_count", { mode: "number" }),
+    width: bigint("width", { mode: "number" }),
+    height: bigint("height", { mode: "number" }),
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
     uploadedAt: timestamp("uploaded_at"),
@@ -134,16 +123,12 @@ export const fileAssets = pgTable(
 export const documentFiles = pgTable(
   "document_files",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    submissionDocumentId: text("submission_document_id")
-      .notNull()
-      .references(() => submissionDocuments.id, { onDelete: "cascade" }),
-    fileAssetId: text("file_asset_id")
-      .notNull()
-      .references(() => fileAssets.id, { onDelete: "restrict" }),
-    position: integer("position").notNull().default(1),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    submissionDocumentId: bigint("submission_document_id", { mode: "number" })
+      .notNull().references(() => submissionDocuments.id, { onDelete: "cascade" }),
+    fileAssetId: bigint("file_asset_id", { mode: "number" })
+      .notNull().references(() => fileAssets.id, { onDelete: "restrict" }),
+    position: bigint("position", { mode: "number" }).notNull().default(1),
     role: cadastroDocumentFileRoleEnum("role").notNull().default("PAGE"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -164,15 +149,12 @@ export const documentFiles = pgTable(
 export const uploadSessions = pgTable(
   "upload_sessions",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    fileAssetId: text("file_asset_id")
-      .notNull()
-      .references(() => fileAssets.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    fileAssetId: bigint("file_asset_id", { mode: "number" })
+      .notNull().references(() => fileAssets.id, { onDelete: "cascade" }),
     storageUploadId: text("storage_upload_id").notNull(),
     status: cadastroUploadSessionStatusEnum("status").notNull().default("PENDING"),
-    partSize: integer("part_size").notNull(),
+    partSize: bigint("part_size", { mode: "number" }).notNull(),
     expiresAt: timestamp("expires_at").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     completedAt: timestamp("completed_at"),
@@ -187,15 +169,12 @@ export const uploadSessions = pgTable(
 export const uploadParts = pgTable(
   "upload_parts",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    uploadSessionId: text("upload_session_id")
-      .notNull()
-      .references(() => uploadSessions.id, { onDelete: "cascade" }),
-    partNumber: integer("part_number").notNull(),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    uploadSessionId: bigint("upload_session_id", { mode: "number" })
+      .notNull().references(() => uploadSessions.id, { onDelete: "cascade" }),
+    partNumber: bigint("part_number", { mode: "number" }).notNull(),
     etag: text("etag"),
-    sizeBytes: integer("size_bytes"),
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
     completedAt: timestamp("completed_at"),
   },
   (t) => [
@@ -210,19 +189,15 @@ export const uploadParts = pgTable(
 export const reviewDecisions = pgTable(
   "review_decisions",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    submissionDocumentId: text("submission_document_id")
-      .notNull()
-      .references(() => submissionDocuments.id, { onDelete: "cascade" }),
-    reviewerId: text("reviewer_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    submissionDocumentId: bigint("submission_document_id", { mode: "number" })
+      .notNull().references(() => submissionDocuments.id, { onDelete: "cascade" }),
+    reviewerId: bigint("reviewer_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "restrict" }),
     decision: cadastroReviewDecisionEnum("decision").notNull(),
     reasonCode: text("reason_code"),
     comment: text("comment"),
-    documentVersion: integer("document_version").notNull(),
+    documentVersion: bigint("document_version", { mode: "number" }).notNull(),
     flaggedFileAssetIds: text("flagged_file_asset_ids").array().notNull().default([]),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -235,17 +210,14 @@ export const reviewDecisions = pgTable(
 export const processingEvents = pgTable(
   "processing_events",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    fileAssetId: text("file_asset_id")
-      .notNull()
-      .references(() => fileAssets.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    fileAssetId: bigint("file_asset_id", { mode: "number" })
+      .notNull().references(() => fileAssets.id, { onDelete: "cascade" }),
     processingStep: text("processing_step").notNull(),
     status: cadastroProcessingStepStatusEnum("status").notNull(),
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
-    attempt: integer("attempt").notNull().default(1),
+    attempt: bigint("attempt", { mode: "number" }).notNull().default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

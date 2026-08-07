@@ -34,7 +34,7 @@ function mapDefinition(
 
 export class DrizzlePotentialRepository implements PotentialRepository {
   async listDefinitions(input: {
-    verticalId: string;
+    verticalId: number;
     includeDeleted?: boolean;
   }): Promise<PotentialDefinitionRecord[]> {
     const conditions = [
@@ -55,7 +55,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async findDefinitionById(
-    id: string,
+    id: number,
   ): Promise<PotentialDefinitionRecord | null> {
     const [row] = await db
       .select()
@@ -66,7 +66,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async createDefinition(input: {
-    verticalId: string;
+    verticalId: number;
     key: string;
     label: string;
     sortOrder: number;
@@ -84,7 +84,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async updateDefinition(input: {
-    id: string;
+    id: number;
     label?: string;
     sortOrder?: number;
   }): Promise<PotentialDefinitionRecord | null> {
@@ -106,7 +106,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return row ? mapDefinition(row) : null;
   }
 
-  async softDeleteDefinition(id: string): Promise<boolean> {
+  async softDeleteDefinition(id: number): Promise<boolean> {
     const [row] = await db
       .update(potentialMetricDefinitions)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -121,8 +121,8 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async listFacilityValues(input: {
-    facilityId: string;
-    definitionIds: string[];
+    facilityId: number;
+    definitionIds: number[];
   }): Promise<FacilityPotentialValueRecord[]> {
     if (input.definitionIds.length === 0) return [];
     const rows = await db
@@ -144,10 +144,10 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async upsertFacilityValue(input: {
-    facilityId: string;
-    definitionId: string;
+    facilityId: number;
+    definitionId: number;
     quantity: number;
-    updatedByUserId: string;
+    updatedByUserId: number;
   }): Promise<void> {
     await db
       .insert(facilityPotentialValues)
@@ -171,8 +171,8 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async deleteFacilityValue(input: {
-    facilityId: string;
-    definitionId: string;
+    facilityId: number;
+    definitionId: number;
   }): Promise<void> {
     await db
       .delete(facilityPotentialValues)
@@ -185,8 +185,8 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async sumAtlasmedQtyByDefinition(input: {
-    facilityId: string;
-    definitionIds: string[];
+    facilityId: number;
+    definitionIds: number[];
     since: Date;
   }): Promise<DefinitionQtySum[]> {
     if (input.definitionIds.length === 0) return [];
@@ -219,8 +219,8 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async linkProduct(input: {
-    productId: string;
-    definitionId: string;
+    productId: number;
+    definitionId: number;
   }): Promise<void> {
     await db
       .insert(productPotentialLinks)
@@ -237,7 +237,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       });
   }
 
-  async unlinkProduct(productId: string): Promise<boolean> {
+  async unlinkProduct(productId: number): Promise<boolean> {
     const deleted = await db
       .delete(productPotentialLinks)
       .where(eq(productPotentialLinks.productId, productId))
@@ -246,7 +246,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async listProductsForDefinition(
-    definitionId: string,
+    definitionId: number,
   ): Promise<ProductPotentialLinkRecord[]> {
     const rows = await db
       .select({
@@ -263,8 +263,8 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async productBelongsToVertical(input: {
-    productId: string;
-    verticalId: string;
+    productId: number;
+    verticalId: number;
   }): Promise<boolean> {
     const [row] = await db
       .select({ id: productVerticals.id })
@@ -280,8 +280,8 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async findLinkByProductId(
-    productId: string,
-  ): Promise<{ productId: string; definitionId: string } | null> {
+    productId: number,
+  ): Promise<{ productId: number; definitionId: number } | null> {
     const [row] = await db
       .select({
         productId: productPotentialLinks.productId,

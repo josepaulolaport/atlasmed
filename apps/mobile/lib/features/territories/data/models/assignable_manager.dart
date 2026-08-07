@@ -6,7 +6,7 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.da
 /// `TerritoryRepository.getAssignableManagers`.
 class AssignableManager {
   final AppUser manager;
-  final String zoneTerritoryId;
+  final int zoneTerritoryId;
   final String zoneName;
 
   const AssignableManager({

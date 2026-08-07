@@ -9,7 +9,7 @@ describe("GetUserByIdUseCase", () => {
   it("returns the serialized user for an ADMIN actor", async () => {
     const userRepository = createMockUserRepository({
       findById: mock(async () => ({
-        id: "user-1",
+        id: 1,
         email: "rep@example.com",
         username: "rep1",
         firstName: "Rep",
@@ -18,16 +18,16 @@ describe("GetUserByIdUseCase", () => {
         status: "ACTIVE",
         emailVerified: true,
         phoneVerified: false,
-        role: { id: "role-rep", name: Role.REP },
+        role: { id: 3, name: Role.REP },
         createdAt: new Date("2025-01-01T00:00:00.000Z"),
         updatedAt: new Date("2025-01-01T00:00:00.000Z"),
       })) as any,
     });
 
     const useCase = new GetUserByIdUseCase({ userRepository });
-    const result = await useCase.execute({ targetUserId: "user-1", actorRole: Role.ADMIN });
+    const result = await useCase.execute({ targetUserId: 1, actorRole: Role.ADMIN });
 
-    expect(result.id).toBe("user-1");
+    expect(result.id).toBe(1);
     expect(result.username).toBe("rep1");
   });
 
@@ -36,7 +36,7 @@ describe("GetUserByIdUseCase", () => {
     const useCase = new GetUserByIdUseCase({ userRepository });
 
     await expect(
-      useCase.execute({ targetUserId: "user-1", actorRole: Role.MANAGER })
+      useCase.execute({ targetUserId: 1, actorRole: Role.MANAGER })
     ).rejects.toThrow(InsufficientPermissionsError);
   });
 
@@ -47,7 +47,7 @@ describe("GetUserByIdUseCase", () => {
     const useCase = new GetUserByIdUseCase({ userRepository });
 
     await expect(
-      useCase.execute({ targetUserId: "missing", actorRole: Role.ADMIN })
+      useCase.execute({ targetUserId: 999, actorRole: Role.ADMIN })
     ).rejects.toThrow(UserNotFoundError);
   });
 });

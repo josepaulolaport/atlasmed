@@ -13,11 +13,11 @@ export class AccessGrantCacheService {
     this.redis = redisClient;
   }
 
-  private getKey(userId: string): string {
+  private getKey(userId: number): string {
     return `${CACHE_KEY_PREFIX}${userId}`;
   }
 
-  async get(userId: string): Promise<AccessGrantRecord[] | null> {
+  async get(userId: number): Promise<AccessGrantRecord[] | null> {
     try {
       const data = await this.redis.get(this.getKey(userId));
       if (!data) {
@@ -30,7 +30,7 @@ export class AccessGrantCacheService {
     }
   }
 
-  async set(userId: string, grants: AccessGrantRecord[]): Promise<void> {
+  async set(userId: number, grants: AccessGrantRecord[]): Promise<void> {
     try {
       await this.redis.setex(
         this.getKey(userId),
@@ -42,7 +42,7 @@ export class AccessGrantCacheService {
     }
   }
 
-  async invalidate(userId: string): Promise<void> {
+  async invalidate(userId: number): Promise<void> {
     try {
       await this.redis.del(this.getKey(userId));
     } catch (error) {

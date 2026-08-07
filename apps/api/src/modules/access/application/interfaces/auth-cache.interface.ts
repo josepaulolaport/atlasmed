@@ -1,17 +1,17 @@
 export interface CachedAuthContext {
-  userId: string;
-  roleId: string;
+  userId: number;
+  roleId: number;
   roleName: string;
   status: string;
   tokenVersion: number;
 }
 
 export interface IAuthCache {
-  get(userId: string): Promise<CachedAuthContext | null>;
-  set(userId: string, context: CachedAuthContext): Promise<void>;
-  invalidate(userId: string): Promise<void>;
-  invalidateMultiple(userIds: string[]): Promise<void>;
-  exists(userId: string): Promise<boolean>;
-  isRecentlyValidated(userId: string): Promise<boolean>;
-  markValidated(userId: string): Promise<void>;
+  get(userId: number): Promise<CachedAuthContext | null>;
+  set(userId: number, context: CachedAuthContext): Promise<void>;
+  invalidate(userId: number): Promise<void>;
+  invalidateMultiple(userIds: number[]): Promise<void>;
+  exists(userId: number): Promise<boolean>;
+  isRecentlyValidated(userId: number): Promise<boolean>;
+  markValidated(userId: number): Promise<void>;
 }

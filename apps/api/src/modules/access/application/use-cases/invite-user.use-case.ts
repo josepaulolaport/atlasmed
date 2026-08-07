@@ -43,8 +43,8 @@ interface Dependencies {
 interface InviteUserParams {
   email?: string | undefined;
   phoneNumber?: string | undefined;
-  roleId: string;
-  invitedByUserId: string;
+  roleId: number;
+  invitedByUserId: number;
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate: string;

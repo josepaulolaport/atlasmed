@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
@@ -155,7 +156,7 @@ void main() {
           home: Scaffold(
             body: ClinicRow(
               clinic: FacilityEntry(
-                id: '1',
+                id: 1,
                 name: 'Clínica com nome muito comprido para tela estreita',
                 city: 'São Paulo',
                 neighborhood: 'Centro',
@@ -167,6 +168,18 @@ void main() {
                   sampleSize: 0,
                   funnelStage: PurchaseFunnelStage.neverPurchased,
                 ),
+                verticalProfiles: const [
+                  FacilityVerticalProfileDTO(
+                    verticalId: 1,
+                    verticalName: 'Ortopedia',
+                    commercialStatus: CommercialStatusFilter.registered,
+                    purchaseRecurrence: PurchaseRecurrenceSnapshot(
+                      intervalDays: 30,
+                      sampleSize: 0,
+                      funnelStage: PurchaseFunnelStage.neverPurchased,
+                    ),
+                  ),
+                ],
               ),
               onTap: () {},
             ),

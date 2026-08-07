@@ -12,7 +12,7 @@ import type {
 
 const now = new Date("2026-01-01T00:00:00.000Z");
 
-function professionalRecord(id: string): ProfessionalRecord {
+function professionalRecord(id: number): ProfessionalRecord {
   return {
     id,
     firstName: "Ana",
@@ -31,20 +31,11 @@ function professionalRecord(id: string): ProfessionalRecord {
     favoriteSport: null,
     languages: null,
     hobbies: null,
-    notes: null,
-    specialty: "Cardiologia",
+        specialty: "Cardiologia",
     crmCouncil: null,
     crmNumber: "123456",
     crmState: "SP",
-    sourceProvider: null,
-    externalSourceId: null,
-    sourceContentHash: null,
-    sourceFirstSeenAt: null,
-    sourceLastSeenAt: null,
-    sourcePresent: true,
-    sourceTracked: false,
-    manuallyEditedAt: null,
-    facilityIds: ["facility-1"],
+    facilityIds: [1],
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -59,25 +50,18 @@ function fakeRepository(
     listDistinctSpecialties: async () => [],
     findAllByIds: async () => [],
     findById: async () => null,
-    findByExternalId: async () => null,
-    findSourceTrackedByProvider: async () => [],
     findActiveFacilities: async () => [],
-    create: async () => professionalRecord("created"),
-    update: async () => professionalRecord("updated"),
+    create: async () => professionalRecord(999),
+    update: async () => professionalRecord(998),
     softDelete: async () => {},
-    markSourceAbsent: async () => {},
-    upsertFromSource: async () => ({
-      professional: professionalRecord("upserted"),
-      created: true,
-      updated: false,
-    }),
     findExistingFacilityIds: async (ids) => ids,
+    findIdByCnesProfessionalId: async () => null,
     findNotesByProfessionalAndUser: async () => [],
-    createNote: async () => ({ id: "note-1", userId: "user-1", professionalId: "professional-1", note: "note", createdAt: now, updatedAt: now }),
+    createNote: async () => ({ id: 1, userId: 1, professionalId: 1, note: "note", createdAt: now, updatedAt: now }),
   };
 }
 
-function relationshipRepository(levels: Map<string, number>) {
+function relationshipRepository(levels: Map<number, number>) {
   return {
     findLevelsByUserAndProfessionals: mock(async () => levels),
   } as never;
@@ -97,7 +81,7 @@ describe("ListProfessionalSpecialtiesUseCase", () => {
         effectiveTerritoryIds: [],
         analyticsEffectiveTerritoryIds: [],
         territoryIds: [],
-        facilityIds: ["facility-1"],
+        facilityIds: [1],
         analyticsFacilityIds: [],
         clinicIds: [],
         analyticsClinicIds: [],
@@ -108,7 +92,7 @@ describe("ListProfessionalSpecialtiesUseCase", () => {
 
     expect(repository.listDistinctSpecialties).toHaveBeenCalledWith({
       isGlobal: false,
-      facilityIds: ["facility-1"],
+      facilityIds: [1],
     });
     expect(result).toEqual({ data: ["Cardiologia", "Ortopedia"] });
   });
@@ -117,10 +101,10 @@ describe("ListProfessionalSpecialtiesUseCase", () => {
 describe("ListProfessionalsUseCase", () => {
   it("enriches summaries with a display facility and marks only level 10 as priority", async () => {
     const priority = {
-      ...professionalRecord("doctor-priority"),
-      displayFacility: { id: "facility-1", name: "Clínica Central" },
+      ...professionalRecord(10),
+      displayFacility: { id: 1, name: "Clínica Central" },
     };
-    const regular = professionalRecord("doctor-regular");
+    const regular = professionalRecord(11);
     const useCase = new ListProfessionalsUseCase({
       doctorRepository: fakeRepository(async () => ({
         professionals: [priority, regular],
@@ -135,7 +119,7 @@ describe("ListProfessionalsUseCase", () => {
     });
 
     const result = await useCase.execute({
-      userId: "user-1",
+      userId: 1,
       scope: {
         isGlobal: true,
         assignedTerritoryIds: [],
@@ -152,7 +136,7 @@ describe("ListProfessionalsUseCase", () => {
     });
 
     expect(result.data[0]).toMatchObject({
-      displayFacility: { id: "facility-1", name: "Clínica Central" },
+      displayFacility: { id: 1, name: "Clínica Central" },
       relationshipLevel: RELATIONSHIP_LEVEL_MAX,
       isPriority: true,
     });
@@ -165,7 +149,7 @@ describe("ListProfessionalsUseCase", () => {
   it("returns pagination totals from the repository", async () => {
     const useCase = new ListProfessionalsUseCase({
       doctorRepository: fakeRepository(async () => ({
-        professionals: [professionalRecord("doctor-1")],
+        professionals: [professionalRecord(1)],
         total: 42,
       })),
     });
@@ -201,14 +185,14 @@ describe("ListProfessionalsUseCase", () => {
     let receivedScope: unknown;
     const scope: ScopeContext = {
       isGlobal: false,
-      assignedTerritoryIds: ["territory-1"],
-      effectiveTerritoryIds: ["territory-1"],
-      analyticsEffectiveTerritoryIds: ["territory-1"],
-      territoryIds: ["territory-1"],
-      facilityIds: ["facility-1"],
-      analyticsFacilityIds: ["facility-1"],
-      clinicIds: ["facility-1"],
-      analyticsClinicIds: ["facility-1"],
+      assignedTerritoryIds: [1],
+      effectiveTerritoryIds: [1],
+      analyticsEffectiveTerritoryIds: [1],
+      territoryIds: [1],
+      facilityIds: [1],
+      analyticsFacilityIds: [1],
+      clinicIds: [1],
+      analyticsClinicIds: [1],
       managedUserIds: [],
       isOperationallyActive: true,
     };
@@ -223,7 +207,7 @@ describe("ListProfessionalsUseCase", () => {
 
     expect(receivedScope).toEqual({
       isGlobal: false,
-      facilityIds: ["facility-1"],
+      facilityIds: [1],
     });
   });
 
@@ -232,14 +216,14 @@ describe("ListProfessionalsUseCase", () => {
     const repository = fakeRepository(async () => ({ professionals: [], total: 0 }));
     repository.findAllByIds = async (params) => {
       receivedParams = params;
-      return [professionalRecord("professional-1"), professionalRecord("professional-2")];
+      return [professionalRecord(1), professionalRecord(2)];
     };
     const useCase = new ListProfessionalsUseCase({
       doctorRepository: repository,
       searchService: {
         isConfigured: () => true,
         search: async <T extends Record<string, unknown>>() => ({
-          hits: [{ id: "professional-2" }, { id: "professional-1" }] as unknown as T[],
+          hits: [{ id: 2 }, { id: 1 }] as unknown as T[],
           estimatedTotalHits: 7,
         }),
       },
@@ -247,18 +231,18 @@ describe("ListProfessionalsUseCase", () => {
 
     const result = await useCase.execute({
       search: "CRM 123456",
-      facilityId: "facility-1",
+      facilityId: 1,
       specialty: "Cardiologia",
-      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: ["facility-1"], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [1], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     });
 
     expect(receivedParams).toMatchObject({
-      ids: ["professional-2", "professional-1"],
-      facilityId: "facility-1",
+      ids: [2, 1],
+      facilityId: 1,
       specialty: "Cardiologia",
-      scope: { isGlobal: false, facilityIds: ["facility-1"] },
+      scope: { isGlobal: false, facilityIds: [1] },
     });
-    expect(result.data.map((professional) => professional.id)).toEqual(["professional-2", "professional-1"]);
+    expect(result.data.map((professional) => professional.id)).toEqual([2, 1]);
     expect(result.pagination.total).toBe(7);
   });
 
@@ -288,15 +272,15 @@ describe("ListProfessionalsUseCase", () => {
 
     await useCase.execute({
       search: "ana",
-      facilityId: "facility-1",
+      facilityId: 1,
       specialty: " Cirurgia VÁSCULAR ",
-      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: ["facility-2", "facility-1"], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [2, 1], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     });
 
     expect(options).toEqual({
       limit: 20,
       offset: 0,
-      filter: "specialtyNormalized = 'cirurgia vascular' AND activeFacilityIds = 'facility-1' AND activeFacilityIds IN ['facility-1', 'facility-2']",
+      filter: "specialtyNormalized = 'cirurgia vascular' AND activeFacilityIds = 1 AND activeFacilityIds IN [1, 2]",
     });
   });
 
@@ -313,7 +297,7 @@ describe("ListProfessionalsUseCase", () => {
       search: "ana",
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     });
-    expect(options?.filter).toBe("activeFacilityIds = '__none__'");
+    expect(options?.filter).toBe("activeFacilityIds = -1");
   });
 
   it("keeps representable professional filters when association scope exceeds the safe bound", async () => {
@@ -332,7 +316,8 @@ describe("ListProfessionalsUseCase", () => {
     await useCase.execute({
       search: "ana",
       specialty: "Cardiologia",
-      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 1_000 }, (_, index) => `facility-${index}-${"x".repeat(20)}`), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+      // Numeric CRM ids are short — need enough ids to exceed MEILI_FILTER_MAX_LENGTH.
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 2_500 }, (_, index) => index + 1), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     });
 
     expect(options?.filter).toBe("specialtyNormalized = 'cardiologia'");

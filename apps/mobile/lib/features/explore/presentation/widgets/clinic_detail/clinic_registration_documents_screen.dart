@@ -13,7 +13,7 @@ class ClinicRegistrationDocumentsScreen extends ConsumerStatefulWidget {
     required this.facilityName,
   });
 
-  final String facilityId;
+  final int facilityId;
   final String facilityName;
 
   @override
@@ -69,8 +69,8 @@ class _ClinicRegistrationDocumentsScreenState
         ),
         data: (checklist) {
           final documents = checklist.documents;
-          final hasTaxType =
-              checklist.taxIdType == 'PF' || checklist.taxIdType == 'PJ';
+          final hasTaxType = checklist.legalDocumentType == 'CPF' ||
+              checklist.legalDocumentType == 'CNPJ';
           final fileDocs = checklist.fileDocuments;
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -95,9 +95,9 @@ class _ClinicRegistrationDocumentsScreenState
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
-                    'Defina se o estabelecimento é PF ou PJ em '
-                    'Dados administrativos (CNPJ/CPF) para carregar '
-                    'a lista correta de documentos.',
+                    'Defina se o estabelecimento é Pessoa Física (CPF) ou '
+                    'Pessoa Jurídica (CNPJ) em Dados administrativos para '
+                    'carregar a lista correta de documentos.',
                     style: TextStyle(
                       fontSize: 12.5,
                       height: 1.35,

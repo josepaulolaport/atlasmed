@@ -8,22 +8,29 @@ void main() {
   group('PurchaseRecurrenceSnapshot', () {
     test('parses the complete facility response', () {
       final facility = FacilityDTO.fromMap({
-        'id': 'facility-1',
+        'id': 1,
         'name': 'Clínica Central',
         'professionalCount': 2,
-        'purchaseRecurrence': {
-          'observedIntervalDays': 31,
-          'intervalDays': 30,
-          'source': 'CALCULATED',
-          'profile': 'MONTHLY',
-          'lastPurchaseDate': '2026-07-03',
-          'sampleSize': 5,
-          'funnelStage': 'PURCHASE_WINDOW',
-          'nextTransitionDate': '2026-08-15',
-        },
+        'verticalProfiles': [
+          {
+            'verticalId': 1,
+            'verticalName': 'Ortopedia',
+            'purchaseRecurrence': {
+              'observedIntervalDays': 31,
+              'intervalDays': 30,
+              'source': 'CALCULATED',
+              'profile': 'MONTHLY',
+              'lastPurchaseDate': '2026-07-03',
+              'sampleSize': 5,
+              'funnelStage': 'PURCHASE_WINDOW',
+              'nextTransitionDate': '2026-08-15',
+            },
+          },
+        ],
       });
 
-      final recurrence = facility.purchaseRecurrence!;
+      final recurrence = pickVerticalProfile(facility.verticalProfiles)!
+          .purchaseRecurrence!;
       expect(recurrence.observedIntervalDays, 31);
       expect(recurrence.intervalDays, 30);
       expect(recurrence.source, PurchaseRecurrenceSource.calculated);
@@ -36,22 +43,29 @@ void main() {
 
     test('preserves raw unknown enum values without defaulting them', () {
       final facility = FacilityDTO.fromMap({
-        'id': 'facility-1',
+        'id': 1,
         'name': 'Clínica Central',
         'professionalCount': 0,
-        'purchaseRecurrence': {
-          'observedIntervalDays': null,
-          'intervalDays': 45,
-          'source': 'FUTURE_SOURCE',
-          'profile': 'FUTURE_PROFILE',
-          'lastPurchaseDate': null,
-          'sampleSize': 0,
-          'funnelStage': 'FUTURE_STAGE',
-          'nextTransitionDate': null,
-        },
+        'verticalProfiles': [
+          {
+            'verticalId': 1,
+            'verticalName': 'Ortopedia',
+            'purchaseRecurrence': {
+              'observedIntervalDays': null,
+              'intervalDays': 45,
+              'source': 'FUTURE_SOURCE',
+              'profile': 'FUTURE_PROFILE',
+              'lastPurchaseDate': null,
+              'sampleSize': 0,
+              'funnelStage': 'FUTURE_STAGE',
+              'nextTransitionDate': null,
+            },
+          },
+        ],
       });
 
-      final recurrence = facility.purchaseRecurrence!;
+      final recurrence = pickVerticalProfile(facility.verticalProfiles)!
+          .purchaseRecurrence!;
       expect(recurrence.source, isNull);
       expect(recurrence.rawSource, 'FUTURE_SOURCE');
       expect(recurrence.funnelStage, isNull);
@@ -128,31 +142,40 @@ void main() {
 
   test('API clinic parses commercial status without inventing a default', () {
     final active = FacilityDTO.fromMap({
-      'id': 'facility-1',
+      'id': 1,
       'name': 'Clínica Central',
       'professionalCount': 0,
-      'commercialStatus': 'REGISTERED',
+      'verticalProfiles': [
+        {
+          'verticalId': 1,
+          'verticalName': 'Ortopedia',
+          'commercialStatus': 'REGISTERED',
+        },
+      ],
     });
     final absent = FacilityDTO.fromMap({
-      'id': 'facility-2',
+      'id': 2,
       'name': 'Clínica Sem Status',
       'professionalCount': 0,
     });
 
-    expect(active.commercialStatus, 'REGISTERED');
-    expect(absent.commercialStatus, isNull);
+    expect(
+      pickVerticalProfile(active.verticalProfiles)?.commercialStatus,
+      'REGISTERED',
+    );
+    expect(pickVerticalProfile(absent.verticalProfiles), isNull);
   });
 
   test('builds the PATCH request with the typed command payload', () {
     final request = FacilityPurchaseRecurrenceRepository.makePatchRequest(
       'https://api.example.test',
-      'facility-1',
+      1,
       const PresetPurchaseRecurrence(PurchaseProfile.monthly),
     );
 
     expect(
       request.url.toString(),
-      'https://api.example.test/api/v1/facilities/facility-1',
+      'https://api.example.test/api/v1/facilities/1',
     );
     expect(request.method.name, 'patch');
     expect(request.body, {

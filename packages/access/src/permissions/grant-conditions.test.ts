@@ -13,22 +13,22 @@ describe("grant conditions", () => {
   it("applies scoped CASL conditions for subjects outside role permissions", () => {
     const withoutGrant = defineAbilitiesForUser(Role.REP, []);
     expect(
-      canOnResource(withoutGrant, "read", "REGISTRY_SUGGESTION", "sug-1")
+      canOnResource(withoutGrant, "read", "FIELD_SUGGESTION", 1)
     ).toBe(false);
 
     const ability = defineAbilitiesForUser(Role.REP, [
       {
-        id: "grant-1",
-        resource: "REGISTRY_SUGGESTION",
-        resourceId: "sug-1",
+        id: 1,
+        resource: "FIELD_SUGGESTION",
+        resourceId: "1",
         action: "read",
       },
     ]);
 
-    expect(canOnResource(ability, "read", "REGISTRY_SUGGESTION", "sug-1")).toBe(
+    expect(canOnResource(ability, "read", "FIELD_SUGGESTION", 1)).toBe(
       true
     );
-    expect(canOnResource(ability, "read", "REGISTRY_SUGGESTION", "sug-2")).toBe(
+    expect(canOnResource(ability, "read", "FIELD_SUGGESTION", 2)).toBe(
       false
     );
   });
@@ -36,24 +36,24 @@ describe("grant conditions", () => {
   it("supports scoped id provided only via conditions", () => {
     const ability = defineAbilitiesForUser(Role.REP, [
       {
-        id: "grant-2",
-        resource: "REGISTRY_SUGGESTION",
+        id: 2,
+        resource: "FIELD_SUGGESTION",
         resourceId: null,
         action: "read",
-        conditions: { id: "sug-9" },
+        conditions: { id: "fs-9" },
       },
     ]);
 
     expect(
       ability.can(
         "read",
-        subject("REGISTRY_SUGGESTION", { id: "sug-9" }) as never
+        subject("FIELD_SUGGESTION", { id: "fs-9" }) as never
       )
     ).toBe(true);
     expect(
       ability.can(
         "read",
-        subject("REGISTRY_SUGGESTION", { id: "sug-8" }) as never
+        subject("FIELD_SUGGESTION", { id: "fs-8" }) as never
       )
     ).toBe(false);
   });
@@ -62,7 +62,7 @@ describe("grant conditions", () => {
     expect(() =>
       validateGrantConditions({
         resource: "FACILITY",
-        resourceId: "facility-1",
+        resourceId: "1",
         conditions: { territoryId: "t-1" },
       })
     ).toThrow(GrantConditionValidationError);
@@ -72,21 +72,21 @@ describe("grant conditions", () => {
     expect(() =>
       validateGrantConditions({
         resource: "FACILITY",
-        resourceId: "facility-1",
-        conditions: { id: "facility-2" },
+        resourceId: "1",
+        conditions: { id: "2" },
       })
     ).toThrow(GrantConditionValidationError);
   });
 
   it("buildCaslConditionsFromGrant prefers resourceId when conflict exists", () => {
     const conditions = buildCaslConditionsFromGrant({
-      id: "grant-3",
+      id: 3,
       resource: "FACILITY",
-      resourceId: "facility-1",
+      resourceId: "1",
       action: "read",
-      conditions: { id: "facility-2" },
+      conditions: { id: "2" },
     });
 
-    expect(conditions).toEqual({ id: "facility-1" });
+    expect(conditions).toEqual({ id: "1" });
   });
 });

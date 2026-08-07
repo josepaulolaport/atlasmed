@@ -5,7 +5,7 @@ import type { TerritoryTypeRepository } from "../interfaces/territory-type.repos
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
-import { isManagerZoneType } from "../constants/territory-roles.constants";
+import { isManagerZoneType, isRepPatchType } from "../constants/territory-roles.constants";
 import {
   applyTerritoryBoundary,
   assertBoundaryProvidedForType,
@@ -19,7 +19,7 @@ import {
 } from "../../../../shared/errors";
 
 export interface TerritoryDeletionMembershipPort {
-  disassociateClinicsForTerritory(territoryId: string): Promise<{ processed: number }>;
+  disassociateClinicsForTerritory(territoryId: number): Promise<{ processed: number }>;
 }
 
 interface TerritoryCrudDependencies {
@@ -28,9 +28,9 @@ interface TerritoryCrudDependencies {
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
   membershipService?: TerritoryDeletionMembershipPort;
-  onTerritoryDeactivated?: (territoryId: string) => Promise<void>;
-  onBoundaryChanged?: (territoryId: string) => Promise<void>;
-  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
+  onTerritoryDeactivated?: (territoryId: number) => Promise<void>;
+  onBoundaryChanged?: (territoryId: number) => Promise<void>;
+  onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
 }
 
 function serializeTerritoryType(type: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>) {
@@ -40,9 +40,6 @@ function serializeTerritoryType(type: NonNullable<Awaited<ReturnType<TerritoryTy
     name: type.name,
     description: type.description ?? undefined,
     canHaveBoundary: type.canHaveBoundary,
-    assignsClinics: type.assignsClinics,
-    assignableToUsers: type.assignableToUsers,
-    assignableToManagers: type.assignableToManagers,
     blockSiblingOverlap: type.blockSiblingOverlap,
     sortOrder: type.sortOrder,
     isActive: type.isActive,
@@ -50,14 +47,14 @@ function serializeTerritoryType(type: NonNullable<Awaited<ReturnType<TerritoryTy
 }
 
 function serializeTerritory(territory: {
-  id: string;
+  id: number;
   name: string;
   slug: string;
   code: string;
-  verticalId: string;
-  territoryTypeId: string;
+  verticalId: number;
+  territoryTypeId: number;
   territoryType?: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>;
-  managerTerritoryId: string | null;
+  managerTerritoryId: number | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -95,8 +92,8 @@ export class TerritoryCrudUseCases {
   async createTerritory(input: {
     name: string;
     slug: string;
-    verticalId: string;
-    territoryTypeId?: string;
+    verticalId: number;
+    territoryTypeId?: number;
     typeSlug?: string;
     boundary?: GeoJsonGeometry;
   }) {
@@ -167,7 +164,7 @@ export class TerritoryCrudUseCases {
     };
   }
 
-  async getTerritory(id: string) {
+  async getTerritory(id: number) {
     const territory = await this.deps.territoryRepository.findById(id);
     if (!territory) {
       return null;
@@ -178,7 +175,7 @@ export class TerritoryCrudUseCases {
   async listTerritories(
     format: "tree" | "flat" = "flat",
     scope?: ScopeContext,
-    filters?: { typeSlug?: string; managerTerritoryId?: string; verticalId?: string }
+    filters?: { typeSlug?: string; managerTerritoryId?: number; verticalId?: number }
   ) {
     const territories = await this.deps.territoryRepository.findAllActive(
       filters?.verticalId,
@@ -217,7 +214,7 @@ export class TerritoryCrudUseCases {
   }
 
   async updateTerritory(
-    id: string,
+    id: number,
     input: {
       name?: string;
       isActive?: boolean;
@@ -251,7 +248,7 @@ export class TerritoryCrudUseCases {
     return serializeTerritory(await this.enrichTerritory(updated.id));
   }
 
-  async deactivateTerritory(id: string) {
+  async deactivateTerritory(id: number) {
     return this.updateTerritory(id, { isActive: false });
   }
 
@@ -263,7 +260,7 @@ export class TerritoryCrudUseCases {
    * deletion — those require a deliberate human decision and are not
    * auto-resolved.
    */
-  async deleteTerritory(id: string) {
+  async deleteTerritory(id: number) {
     const territory = await this.deps.territoryRepository.findById(id);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", id);
@@ -278,7 +275,7 @@ export class TerritoryCrudUseCases {
 
     await this.validateDeactivate(id, territoryType, { skipClinicCheck: true });
 
-    if (territoryType.assignsClinics && this.deps.membershipService) {
+    if (isRepPatchType(territoryType) && this.deps.membershipService) {
       await this.deps.membershipService.disassociateClinicsForTerritory(id);
     }
 
@@ -286,7 +283,7 @@ export class TerritoryCrudUseCases {
   }
 
   private async validateDeactivate(
-    id: string,
+    id: number,
     territoryType: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>,
     options?: { skipClinicCheck?: boolean }
   ): Promise<void> {
@@ -319,7 +316,7 @@ export class TerritoryCrudUseCases {
     }
   }
 
-  private async enrichTerritory(id: string) {
+  private async enrichTerritory(id: number) {
     const territory = await this.deps.territoryRepository.findById(id);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", id);
@@ -378,8 +375,8 @@ export class TerritoryCrudUseCases {
 }
 
 export function assertManagerReadScope(
-  scope: { isGlobal: boolean; effectiveTerritoryIds: string[] },
-  territoryId: string
+  scope: { isGlobal: boolean; effectiveTerritoryIds: number[] },
+  territoryId: number
 ): void {
   if (scope.isGlobal) {
     return;

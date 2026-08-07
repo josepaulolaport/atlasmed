@@ -29,7 +29,9 @@ export const resetPasswordRoute = new Elysia({
     },
     body: t.Object({
       token: t.String({
-        description: "Password reset token",
+        description: "Six-digit password reset code",
+        minLength: 6,
+        maxLength: 6,
       }),
       newPassword: t.String({
         description: "New password (min 8 characters)",

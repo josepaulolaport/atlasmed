@@ -8,16 +8,20 @@ const FILTER_FIELDS = [
   "specialtyNormalized",
   "activeFacilityIds",
   "activeTerritoryIds",
-  "purchaseFunnelStage",
-  "purchaseIntervalSource",
-  "manualPurchaseProfile",
-  "purchaseIntervalDays",
+  "verticalFunnelStages",
+  "verticalPurchaseIntervalSources",
+  "verticalManualPurchaseProfiles",
+  "purchaseFunnelStagesAny",
 ] as const;
 
 type FilterField = (typeof FILTER_FIELDS)[number];
 
 type FilterClause = { expression: string };
-type NumericFilterField = "purchaseIntervalDays";
+type NumericFilterField =
+  | "purchaseFunnelStageRank"
+  | "purchaseIntervalDaysMin"
+  | "hasLastValidPurchase"
+  | "lastValidPurchaseSortAt";
 
 function escapeValue(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
@@ -27,14 +31,25 @@ function quoted(value: string): string {
   return `'${escapeValue(value)}'`;
 }
 
-export function eqFilter(field: FilterField, value: string): FilterClause {
-  return { expression: `${field} = ${quoted(value)}` };
+function formatFilterValue(value: string | number): string {
+  return typeof value === "number" ? String(value) : quoted(value);
 }
 
-export function inFilter(field: FilterField, values: string[]): FilterClause | undefined {
-  const uniqueValues = [...new Set(values)].sort();
+export function eqFilter(field: FilterField, value: string | number): FilterClause {
+  return { expression: `${field} = ${formatFilterValue(value)}` };
+}
+
+export function inFilter(
+  field: FilterField,
+  values: Array<string | number>,
+): FilterClause | undefined {
+  const uniqueValues = [...new Set(values.map((v) => (typeof v === "number" ? v : v)))].sort(
+    (a, b) => (typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b))),
+  );
   if (uniqueValues.length === 0) return undefined;
-  return { expression: `${field} IN [${uniqueValues.map(quoted).join(", ")}]` };
+  return {
+    expression: `${field} IN [${uniqueValues.map(formatFilterValue).join(", ")}]`,
+  };
 }
 
 export function isNullFilter(field: FilterField): FilterClause {
@@ -48,6 +63,8 @@ export function gteFilter(field: NumericFilterField, value: number): FilterClaus
 export function lteFilter(field: NumericFilterField, value: number): FilterClause {
   return { expression: `${field} <= ${value}` };
 }
+
+export type { FilterClause };
 
 export function geoRadiusFilter(latitude: number, longitude: number, radiusMeters: number): FilterClause {
   return { expression: `_geoRadius(${latitude}, ${longitude}, ${radiusMeters})` };

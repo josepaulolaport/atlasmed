@@ -17,14 +17,14 @@ class ManagerPickerSheet extends StatefulWidget {
   });
 
   final List<ManagerOption> managers;
-  final String? selectedId;
+  final int? selectedId;
 
-  static Future<String?> show(
+  static Future<int?> show(
     BuildContext context, {
     required List<ManagerOption> managers,
-    String? selectedId,
+    int? selectedId,
   }) {
-    return showModalBottomSheet<String>(
+    return showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,

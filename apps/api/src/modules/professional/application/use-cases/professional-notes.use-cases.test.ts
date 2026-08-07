@@ -7,16 +7,16 @@ import {
 } from "./professional.use-cases";
 
 const professional = {
-  id: "professional-1",
-  facilityIds: ["facility-1"],
+  id: 1,
+  facilityIds: [1],
 };
 
 function createRepository() {
   const notes = [
     {
-      id: "note-other-user",
-      professionalId: "professional-1",
-      userId: "user-other",
+      id: 1,
+      professionalId: 1,
+      userId: 2,
       note: "Nota de outra pessoa",
       createdAt: new Date("2026-01-01T10:00:00.000Z"),
       updatedAt: new Date("2026-01-01T10:00:00.000Z"),
@@ -25,13 +25,13 @@ function createRepository() {
 
   return {
     findById: async () => professional,
-    findNotesByProfessionalAndUser: async (professionalId: string, userId: string) =>
+    findNotesByProfessionalAndUser: async (professionalId: number, userId: number) =>
       notes.filter(
         (note) => note.professionalId === professionalId && note.userId === userId
       ),
-    createNote: async (input: { professionalId: string; userId: string; note: string }) => {
+    createNote: async (input: { professionalId: number; userId: number; note: string }) => {
       const note = {
-        id: "note-new",
+        id: 2,
         ...input,
         createdAt: new Date("2026-01-02T10:00:00.000Z"),
         updatedAt: new Date("2026-01-02T10:00:00.000Z"),
@@ -50,8 +50,8 @@ describe("professional notes use cases", () => {
     });
 
     const result = await useCase.execute({
-      professionalId: "professional-1",
-      userId: "user-current",
+      professionalId: 1,
+      userId: 1,
       scope: createGlobalScopeContext(),
     });
 
@@ -65,14 +65,14 @@ describe("professional notes use cases", () => {
     });
 
     const result = await useCase.execute({
-      professionalId: "professional-1",
-      userId: "user-current",
+      professionalId: 1,
+      userId: 1,
       note: "Lembrar de confirmar o retorno.",
       scope: createGlobalScopeContext(),
     });
 
     expect(result).toEqual({
-      id: "note-new",
+      id: 2,
       note: "Lembrar de confirmar o retorno.",
       createdAt: "2026-01-02T10:00:00.000Z",
       updatedAt: "2026-01-02T10:00:00.000Z",
@@ -89,7 +89,7 @@ describe("professional notes use cases", () => {
       assignedTerritoryIds: [],
       effectiveTerritoryIds: [],
       analyticsEffectiveTerritoryIds: [],
-      facilityIds: ["facility-other"],
+      facilityIds: [99],
       analyticsFacilityIds: [],
       managedUserIds: [],
       isOperationallyActive: true,
@@ -97,8 +97,8 @@ describe("professional notes use cases", () => {
 
     await expect(
       useCase.execute({
-        professionalId: "professional-1",
-        userId: "user-current",
+        professionalId: 1,
+        userId: 1,
         scope,
       })
     ).rejects.toBeInstanceOf(ForbiddenError);

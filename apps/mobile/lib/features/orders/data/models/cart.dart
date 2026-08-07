@@ -2,7 +2,7 @@ import 'price_mode.dart';
 
 // ── Product model (mock) ─────────────────────────────────────
 class Product {
-  final String id;
+  final int id;
   final String name;
   final String sub;
   final double unit;
@@ -21,7 +21,7 @@ class Product {
 
 // ── Cart item ────────────────────────────────────────────────
 class CartItem {
-  final String productId;
+  final int productId;
   final String productName;
   final String productSubtitle;
   final int qty;

@@ -24,7 +24,7 @@ class ProfessionalNotesRepository extends Repository<List<ProfessionalNote>>
          name: 'ProfessionalNotesRepository',
        );
 
-  final String professionalId;
+  final int professionalId;
   final RepositoryHttpClient? _client;
 
   @override

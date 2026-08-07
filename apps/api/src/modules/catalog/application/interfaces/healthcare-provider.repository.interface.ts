@@ -1,7 +1,7 @@
 export type HealthcareProviderType = "PRIVATE" | "PUBLIC" | "MIXED" | "OTHER";
 
 export interface HealthcareProviderRecord {
-  id: string;
+  id: number;
   name: string;
   type: HealthcareProviderType;
   isActive: boolean;
@@ -16,7 +16,7 @@ export interface HealthcareProviderRepository {
     isActive?: boolean;
   }): Promise<{ providers: HealthcareProviderRecord[]; total: number }>;
 
-  findById(id: string): Promise<HealthcareProviderRecord | null>;
+  findById(id: number): Promise<HealthcareProviderRecord | null>;
 
   create(data: {
     name: string;
@@ -25,7 +25,7 @@ export interface HealthcareProviderRepository {
   }): Promise<HealthcareProviderRecord>;
 
   update(
-    id: string,
+    id: number,
     data: { name?: string; type?: HealthcareProviderType; isActive?: boolean }
   ): Promise<HealthcareProviderRecord>;
 }

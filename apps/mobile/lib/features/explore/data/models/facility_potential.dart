@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 class FacilityPotentialItem {
   const FacilityPotentialItem({
     required this.definitionId,
@@ -9,7 +10,7 @@ class FacilityPotentialItem {
     this.penetration,
   });
 
-  final String definitionId;
+  final int definitionId;
   final String key;
   final String label;
   final int sortOrder;
@@ -21,7 +22,7 @@ class FacilityPotentialItem {
 
   factory FacilityPotentialItem.fromJson(Map<String, dynamic> json) {
     return FacilityPotentialItem(
-      definitionId: json['definitionId'] as String,
+      definitionId: readCrmId(json['definitionId'], 'definitionId'),
       key: json['key'] as String? ?? '',
       label: json['label'] as String? ?? '',
       sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
@@ -35,13 +36,13 @@ class FacilityPotentialItem {
 class FacilityPotentialsPage {
   const FacilityPotentialsPage({required this.verticalId, required this.items});
 
-  final String verticalId;
+  final int verticalId;
   final List<FacilityPotentialItem> items;
 
   factory FacilityPotentialsPage.fromJson(Map<String, dynamic> json) {
     final list = json['items'];
     return FacilityPotentialsPage(
-      verticalId: json['verticalId'] as String? ?? '',
+      verticalId: readCrmId(json['verticalId'], 'verticalId'),
       items: list is List
           ? list
                 .whereType<Map>()

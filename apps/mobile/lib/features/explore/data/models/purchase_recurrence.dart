@@ -224,7 +224,7 @@ sealed class PurchaseRecurrenceCommand {
   const PurchaseRecurrenceCommand({this.verticalId});
 
   /// Linha comercial — required by API when clinic has multiple profiles.
-  final String? verticalId;
+  final int? verticalId;
 
   void validate() {}
 
@@ -232,8 +232,7 @@ sealed class PurchaseRecurrenceCommand {
     validate();
     return {
       'purchaseRecurrence': recurrenceBody(),
-      if (verticalId != null && verticalId!.trim().isNotEmpty)
-        'verticalId': verticalId!.trim(),
+      if (verticalId != null && verticalId! > 0) 'verticalId': verticalId,
     };
   }
 

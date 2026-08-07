@@ -253,7 +253,7 @@ class _TerritoriesBody extends ConsumerWidget {
                 final repIds =
                     territories
                         .map((t) => t.assignedUserId)
-                        .whereType<String>()
+                        .whereType<int>()
                         .toSet()
                         .toList()
                       ..sort();
@@ -334,9 +334,9 @@ class _RepGeographyFilter extends ConsumerWidget {
     required this.onChanged,
   });
 
-  final List<String> repUserIds;
-  final String? selectedRepUserId;
-  final ValueChanged<String> onChanged;
+  final List<int> repUserIds;
+  final int? selectedRepUserId;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -582,7 +582,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
   }
 
   void _handleTap(PolygonAnnotation annotation) {
-    final territoryId = annotation.customData?['territoryId'] as String?;
+    final territoryId = annotation.customData?['territoryId'] as int?;
     final territory = _findTerritory(territoryId);
     if (territory == null) return;
 
@@ -590,7 +590,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     _selectTerritory(territory);
   }
 
-  Territory? _findTerritory(String? id) {
+  Territory? _findTerritory(int? id) {
     if (id == null) return null;
     for (final territory in widget.territories) {
       if (territory.id == id) return territory;
@@ -698,7 +698,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     );
     if (result == null) return;
 
-    final userId = result == clearAssignee ? null : result;
+    final userId = result == kClearAssigneeId ? null : result;
     try {
       await ref
           .read(territoryRepositoryProvider)
@@ -720,7 +720,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
 
   /// Confirms, then deletes [territory]. For a manager zone, the copy
   /// warns that its rep patches will be left unassigned rather than
-  /// cascade-deleted (see `MockTerritoryRepository.deleteTerritory`).
+  /// cascade-deleted (see API territory delete behavior).
   Future<void> _confirmAndDelete(Territory territory) async {
     final isZone = territory.kind == TerritoryKind.managerZone;
     final confirmed = await showDialog<bool>(

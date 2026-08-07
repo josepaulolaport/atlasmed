@@ -31,7 +31,7 @@ export class SearchService {
     return this.index(indexName).updateDocuments(documents);
   }
 
-  async deleteDocument(indexName: string, id: string | number) {
+  async deleteDocument(indexName: string, id: number | number) {
     return this.index(indexName).deleteDocument(id);
   }
 }

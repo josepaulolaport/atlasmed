@@ -4,21 +4,21 @@ import type { InviteStagedVerticalAssignment } from "../interfaces/invite.reposi
 export function serializeInvitation(params: {
   invite: InviteRecord;
   invitedBy?: {
-    id: string;
+    id: number;
     username: string;
     email: string | null;
     firstName?: string | null;
     lastName?: string | null;
   } | null;
   verticalAssignments?: Array<{
-    verticalId: string;
+    verticalId: number;
     verticalName?: string;
-    managerId?: string | null;
+    managerId?: number | null;
     managerName?: string;
     territories: Array<{
-      id: string;
+      id: number;
       name: string;
-      verticalId?: string;
+      verticalId?: number;
       verticalName?: string;
       boundary?: unknown;
     }>;
@@ -77,8 +77,8 @@ export function serializeInvitation(params: {
 
 export function groupStagedAssignments(
   rows: InviteStagedVerticalAssignment[],
-): Map<string, InviteStagedVerticalAssignment[]> {
-  const map = new Map<string, InviteStagedVerticalAssignment[]>();
+): Map<number, InviteStagedVerticalAssignment[]> {
+  const map = new Map<number, InviteStagedVerticalAssignment[]>();
   for (const row of rows) {
     const list = map.get(row.invitationId) ?? [];
     list.push(row);

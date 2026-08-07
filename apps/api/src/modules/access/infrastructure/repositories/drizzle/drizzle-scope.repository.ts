@@ -14,7 +14,7 @@ const MANAGER_ZONE_TYPE_SLUG = "manager_zone";
 const REP_PATCH_TYPE_SLUG = "patch";
 
 export class DrizzleScopeRepository implements ScopeRepository {
-  async findTerritoryIdsByUserId(userId: string): Promise<string[]> {
+  async findTerritoryIdsByUserId(userId: number): Promise<number[]> {
     const rows = await db
       .select({ territoryId: userTerritoryAssignments.territoryId })
       .from(userTerritoryAssignments)
@@ -23,7 +23,7 @@ export class DrizzleScopeRepository implements ScopeRepository {
     return rows.map((row) => row.territoryId);
   }
 
-  async findTerritoryIdsByUserIds(userIds: string[]): Promise<string[]> {
+  async findTerritoryIdsByUserIds(userIds: number[]): Promise<number[]> {
     if (userIds.length === 0) {
       return [];
     }
@@ -40,7 +40,7 @@ export class DrizzleScopeRepository implements ScopeRepository {
    * Spec 0006: REPs with a patch UTA under this manager's zones.
    * Not users.manager_id — territory-derived (multi-manager REPs allowed).
    */
-  async findManagedUserIds(managerId: string): Promise<string[]> {
+  async findManagedUserIds(managerId: number): Promise<number[]> {
     const rows = await db.execute(sql`
       SELECT DISTINCT patch_uta.user_id AS id
       FROM user_territory_assignments zone_uta
@@ -58,15 +58,15 @@ export class DrizzleScopeRepository implements ScopeRepository {
         AND zone_tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
         AND patch_tt.slug = ${REP_PATCH_TYPE_SLUG}
         AND u.deleted_at IS NULL
-    `) as Array<{ id: string }>;
+    `) as Array<{ id: number }>;
 
     return rows.map((row) => row.id);
   }
 
   async assignTerritory(params: {
-    userId: string;
-    territoryId: string;
-    assignedBy: string;
+    userId: number;
+    territoryId: number;
+    assignedBy: number;
   }): Promise<void> {
     await db
       .insert(userTerritoryAssignments)
@@ -84,7 +84,7 @@ export class DrizzleScopeRepository implements ScopeRepository {
       });
   }
 
-  async revokeTerritory(params: { userId: string; territoryId: string }): Promise<void> {
+  async revokeTerritory(params: { userId: number; territoryId: number }): Promise<void> {
     await db
       .delete(userTerritoryAssignments)
       .where(
@@ -95,9 +95,9 @@ export class DrizzleScopeRepository implements ScopeRepository {
       );
   }
 
-  async findTerritoryAssignmentsByUserId(userId: string): Promise<
+  async findTerritoryAssignmentsByUserId(userId: number): Promise<
     Array<{
-      territoryId: string;
+      territoryId: number;
       assignedAt: Date;
     }>
   > {
@@ -116,8 +116,8 @@ export class DrizzleScopeRepository implements ScopeRepository {
     }));
   }
 
-  async findUserIdsByTerritoryId(territoryId: string): Promise<
-    Array<{ userId: string; assignedAt: Date }>
+  async findUserIdsByTerritoryId(territoryId: number): Promise<
+    Array<{ userId: number; assignedAt: Date }>
   > {
     const rows = await db
       .select({
@@ -134,12 +134,12 @@ export class DrizzleScopeRepository implements ScopeRepository {
     }));
   }
 
-  async findManagerIdByUserId(_userId: string): Promise<string | null> {
+  async findManagerIdByUserId(_userId: number): Promise<number | null> {
     // Spec 0006: users.manager_id dropped — manager is territory-derived.
     return null;
   }
 
-  async findVerticalIdsByUserId(userId: string): Promise<string[]> {
+  async findVerticalIdsByUserId(userId: number): Promise<number[]> {
     const [uvaRows, territoryRows] = await Promise.all([
       db
         .select({ verticalId: userVerticalAssignments.verticalId })
@@ -164,10 +164,10 @@ export class DrizzleScopeRepository implements ScopeRepository {
   }
 
   async assignVertical(params: {
-    userId: string;
-    verticalId: string;
-    assignedByUserId: string;
-    managerId?: string | null;
+    userId: number;
+    verticalId: number;
+    assignedByUserId: number;
+    managerId?: number | null;
   }): Promise<void> {
     await db
       .insert(userVerticalAssignments)
@@ -185,7 +185,7 @@ export class DrizzleScopeRepository implements ScopeRepository {
       });
   }
 
-  async revokeVertical(params: { userId: string; verticalId: string }): Promise<void> {
+  async revokeVertical(params: { userId: number; verticalId: number }): Promise<void> {
     await db
       .delete(userVerticalAssignments)
       .where(
@@ -196,8 +196,8 @@ export class DrizzleScopeRepository implements ScopeRepository {
       );
   }
 
-  async findVerticalAssignmentsByUserId(userId: string): Promise<
-    Array<{ verticalId: string; managerId: string | null; assignedAt: Date }>
+  async findVerticalAssignmentsByUserId(userId: number): Promise<
+    Array<{ verticalId: number; managerId: number | null; assignedAt: Date }>
   > {
     const rows = await db
       .select({
@@ -216,11 +216,11 @@ export class DrizzleScopeRepository implements ScopeRepository {
   }
 
   async replaceAssignments(params: {
-    userId: string;
-    assignedByUserId: string;
+    userId: number;
+    assignedByUserId: number;
     verticalAssignments: Array<{
-      verticalId: string;
-      territoryIds: string[];
+      verticalId: number;
+      territoryIds: number[];
     }>;
   }): Promise<void> {
     await db.transaction(async (tx) => {
@@ -249,7 +249,7 @@ export class DrizzleScopeRepository implements ScopeRepository {
     });
   }
 
-  async listActiveVerticals(): Promise<Array<{ id: string; code: string; name: string }>> {
+  async listActiveVerticals(): Promise<Array<{ id: number; code: string; name: string }>> {
     const rows = await db
       .select({ id: businessVerticals.id, code: businessVerticals.code, name: businessVerticals.name })
       .from(businessVerticals)

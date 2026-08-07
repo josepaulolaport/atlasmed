@@ -2,6 +2,7 @@ import {
   conformityRecords,
   conformityRequirements,
   facilities,
+  type FacilityLegalDocumentType,
 } from "@atlasmed/database";
 import { and, asc, count, desc, eq } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
@@ -10,7 +11,6 @@ import type {
   ConformityRecordStatus,
   ConformityRepository,
   ConformityRequirementRecord,
-  FacilityTaxIdType,
 } from "../../../application/interfaces/conformity.repository.interface";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 
@@ -23,7 +23,8 @@ function mapRequirement(row: RequirementRow): ConformityRequirementRecord {
     name: row.name,
     description: row.description,
     verticalId: row.verticalId,
-    appliesToTaxIdType: (row.appliesToTaxIdType as FacilityTaxIdType | null) ?? null,
+    appliesToLegalDocumentType:
+      (row.appliesToLegalDocumentType as FacilityLegalDocumentType | null) ?? null,
     isActive: row.isActive,
     allowedMimeTypes: row.allowedMimeTypes ?? [],
     maxFiles: row.maxFiles,
@@ -56,19 +57,19 @@ const recordWithRequirementSelect = {
     slug: conformityRequirements.slug,
     name: conformityRequirements.name,
     description: conformityRequirements.description,
-    appliesToTaxIdType: conformityRequirements.appliesToTaxIdType,
+    appliesToLegalDocumentType: conformityRequirements.appliesToLegalDocumentType,
   },
 } as const;
 
 type RecordWithRequirement = {
-  id: string;
-  facilityId: string;
-  requirementId: string;
+  id: number;
+  facilityId: number;
+  requirementId: number;
   status: ConformityRecordStatus;
   submittedAt: Date | null;
   validatedAt: Date | null;
   expiresAt: Date | null;
-  validatedByUserId: string | null;
+  validatedByUserId: number | null;
   storageKey: string | null;
   url: string | null;
   contentType: string | null;
@@ -77,16 +78,16 @@ type RecordWithRequirement = {
   createdAt: Date;
   updatedAt: Date;
   requirement: {
-    id: string;
+    id: number;
     slug: string;
     name: string;
     description: string | null;
-    appliesToTaxIdType: FacilityTaxIdType | null;
+    appliesToLegalDocumentType: FacilityLegalDocumentType | null;
   };
   facility?: {
-    id: string;
+    id: number;
     name: string;
-    taxIdType: FacilityTaxIdType | null;
+    legalDocumentType: FacilityLegalDocumentType | null;
   };
 };
 
@@ -112,14 +113,15 @@ function mapRecord(row: RecordWithRequirement): ConformityRecordRow {
       slug: row.requirement.slug,
       name: row.requirement.name,
       description: row.requirement.description,
-      appliesToTaxIdType:
-        (row.requirement.appliesToTaxIdType as FacilityTaxIdType | null) ?? null,
+      appliesToLegalDocumentType:
+        (row.requirement.appliesToLegalDocumentType as FacilityLegalDocumentType | null) ??
+        null,
     },
     facility: row.facility,
   };
 }
 
-async function loadRecordById(id: string): Promise<ConformityRecordRow | null> {
+async function loadRecordById(id: number): Promise<ConformityRecordRow | null> {
   const [record] = await db
     .select(recordWithRequirementSelect)
     .from(conformityRecords)
@@ -134,27 +136,34 @@ async function loadRecordById(id: string): Promise<ConformityRecordRow | null> {
 
 export class DrizzleConformityRepository implements ConformityRepository {
   async findActiveRequirements(params?: {
-    taxIdType?: FacilityTaxIdType | null;
+    legalDocumentType?: FacilityLegalDocumentType | null;
   }): Promise<ConformityRequirementRecord[]> {
     // No params → full active catalog (admin list).
-    // Explicit taxIdType PF/PJ → ONLY that tax catalog (no shared/null rows —
+    // Explicit legalDocumentType CNPJ/CPF → ONLY that catalog (no shared/null rows —
     // legacy shared requirements must not appear in Cadastro checklists).
-    // Explicit null/unknown → empty (caller should set taxIdType first).
-    if (params !== undefined && params.taxIdType !== "PF" && params.taxIdType !== "PJ") {
+    // Explicit null/unknown → empty (caller should set legalDocumentType first).
+    if (
+      params !== undefined &&
+      params.legalDocumentType !== "CNPJ" &&
+      params.legalDocumentType !== "CPF"
+    ) {
       return [];
     }
 
-    const taxFilter =
+    const typeFilter =
       params === undefined
         ? undefined
-        : eq(conformityRequirements.appliesToTaxIdType, params.taxIdType!);
+        : eq(
+            conformityRequirements.appliesToLegalDocumentType,
+            params.legalDocumentType!
+          );
 
     const rows = await db
       .select()
       .from(conformityRequirements)
       .where(
-        taxFilter
-          ? and(eq(conformityRequirements.isActive, true), taxFilter)
+        typeFilter
+          ? and(eq(conformityRequirements.isActive, true), typeFilter)
           : eq(conformityRequirements.isActive, true)
       )
       .orderBy(asc(conformityRequirements.name));
@@ -162,7 +171,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
     return rows.map(mapRequirement);
   }
 
-  async findRequirementById(id: string): Promise<ConformityRequirementRecord | null> {
+  async findRequirementById(id: number): Promise<ConformityRequirementRecord | null> {
     const [row] = await db
       .select()
       .from(conformityRequirements)
@@ -172,7 +181,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
     return row ? mapRequirement(row) : null;
   }
 
-  async findRecordsByFacility(facilityId: string): Promise<ConformityRecordRow[]> {
+  async findRecordsByFacility(facilityId: number): Promise<ConformityRecordRow[]> {
     const rows = await db
       .select(recordWithRequirementSelect)
       .from(conformityRecords)
@@ -186,13 +195,13 @@ export class DrizzleConformityRepository implements ConformityRepository {
     return rows.map(mapRecord);
   }
 
-  async findRecordById(id: string): Promise<ConformityRecordRow | null> {
+  async findRecordById(id: number): Promise<ConformityRecordRow | null> {
     return loadRecordById(id);
   }
 
   async findRecordByFacilityAndRequirement(
-    facilityId: string,
-    requirementId: string
+    facilityId: number,
+    requirementId: number
   ): Promise<ConformityRecordRow | null> {
     const [record] = await db
       .select(recordWithRequirementSelect)
@@ -246,7 +255,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
         facility: {
           id: facilities.id,
           name: facilities.displayName,
-          taxIdType: facilities.taxIdType,
+          legalDocumentType: facilities.legalDocumentType,
         },
       })
       .from(conformityRecords)
@@ -267,7 +276,9 @@ export class DrizzleConformityRepository implements ConformityRepository {
           facility: {
             id: row.facility.id,
             name: row.facility.name,
-            taxIdType: (row.facility.taxIdType as FacilityTaxIdType | null) ?? null,
+            legalDocumentType:
+              (row.facility.legalDocumentType as FacilityLegalDocumentType | null) ??
+              null,
           },
         })
       ),
@@ -276,8 +287,8 @@ export class DrizzleConformityRepository implements ConformityRepository {
   }
 
   async createRecord(params: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     status?: ConformityRecordStatus;
   }): Promise<ConformityRecordRow> {
     const [inserted] = await db
@@ -297,8 +308,8 @@ export class DrizzleConformityRepository implements ConformityRepository {
   }
 
   async upsertSubmittedRecord(params: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     storageKey: string;
     url: string;
     contentType: string;
@@ -346,8 +357,8 @@ export class DrizzleConformityRepository implements ConformityRepository {
   }
 
   async approveRecord(params: {
-    recordId: string;
-    validatedByUserId: string;
+    recordId: number;
+    validatedByUserId: number;
   }): Promise<ConformityRecordRow> {
     const now = new Date();
     const [updated] = await db
@@ -374,8 +385,8 @@ export class DrizzleConformityRepository implements ConformityRepository {
   }
 
   async rejectRecord(params: {
-    recordId: string;
-    validatedByUserId: string;
+    recordId: number;
+    validatedByUserId: number;
     reviewerNote: string;
   }): Promise<ConformityRecordRow> {
     const now = new Date();

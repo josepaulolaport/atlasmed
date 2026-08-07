@@ -10,18 +10,18 @@ import type {
 type TerritoryApprovalStatus = typeof territoryApprovalStatusEnum.enumValues[number];
 
 function mapApproval(record: {
-  id: string;
+  id: number;
   type: TerritoryApprovalRecord["type"];
   status: TerritoryApprovalRecord["status"];
-  requesterId: string;
-  reviewerId: string | null;
+  requesterId: number;
+  reviewerId: number | null;
   entityPayload: unknown;
-  targetTerritoryId: string | null;
-  facilityId: string | null;
-  toTerritoryId: string | null;
+  targetTerritoryId: number | null;
+  facilityId: number | null;
+  toTerritoryId: number | null;
   reason: string | null;
   resolutionNote: string | null;
-  supersededById: string | null;
+  supersededById: number | null;
   resolvedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -62,7 +62,7 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
     return mapApproval(record!);
   }
 
-  async findById(id: string): Promise<TerritoryApprovalRecord | null> {
+  async findById(id: number): Promise<TerritoryApprovalRecord | null> {
     const rows = await db
       .select()
       .from(territoryApprovalRequests)
@@ -72,8 +72,8 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
 
   async findPendingByEntity(params: {
     type: TerritoryApprovalRecord["type"];
-    targetTerritoryId?: string | null;
-    facilityId?: string | null;
+    targetTerritoryId?: number | null;
+    facilityId?: number | null;
   }): Promise<TerritoryApprovalRecord[]> {
     const conditions = [
       eq(territoryApprovalRequests.type, params.type),
@@ -95,9 +95,9 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
 
   async findPendingByRequesterAndEntity(params: {
     type: TerritoryApprovalRecord["type"];
-    requesterId: string;
-    targetTerritoryId?: string | null;
-    facilityId?: string | null;
+    requesterId: number;
+    targetTerritoryId?: number | null;
+    facilityId?: number | null;
   }): Promise<TerritoryApprovalRecord | null> {
     const conditions = [
       eq(territoryApprovalRequests.type, params.type),
@@ -119,7 +119,7 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
     return rows[0] ? mapApproval(rows[0]) : null;
   }
 
-  async supersede(id: string, supersededById: string): Promise<void> {
+  async supersede(id: number, supersededById: number): Promise<void> {
     await db
       .update(territoryApprovalRequests)
       .set({ status: "superseded", supersededById, updatedAt: new Date() })
@@ -127,10 +127,10 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
   }
 
   async resolve(
-    id: string,
+    id: number,
     data: {
       status: "approved" | "rejected";
-      reviewerId: string;
+      reviewerId: number;
       resolutionNote?: string | null;
     }
   ): Promise<TerritoryApprovalRecord> {

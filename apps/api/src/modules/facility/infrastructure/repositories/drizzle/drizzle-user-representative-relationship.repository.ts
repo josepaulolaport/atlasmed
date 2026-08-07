@@ -43,8 +43,8 @@ export class DrizzleUserRepresentativeRelationshipRepository
   implements UserRepresentativeRelationshipRepository
 {
   async findByUserAndRepresentative(
-    userId: string,
-    representativeId: string
+    userId: number,
+    representativeId: number
   ): Promise<UserRepresentativeRelationshipRecord | null> {
     const [row] = await db
       .select()
@@ -61,9 +61,9 @@ export class DrizzleUserRepresentativeRelationshipRepository
   }
 
   async findLevelsByUserAndRepresentatives(
-    userId: string,
-    representativeIds: string[]
-  ): Promise<Map<string, number>> {
+    userId: number,
+    representativeIds: number[]
+  ): Promise<Map<number, number>> {
     if (representativeIds.length === 0) return new Map();
 
     const rows = await db
@@ -88,8 +88,8 @@ export class DrizzleUserRepresentativeRelationshipRepository
   }
 
   async upsert(params: {
-    userId: string;
-    representativeId: string;
+    userId: number;
+    representativeId: number;
     relationshipLevel: number;
   }): Promise<UserRepresentativeRelationshipRecord> {
     assertLevel(params.relationshipLevel);
@@ -117,8 +117,8 @@ export class DrizzleUserRepresentativeRelationshipRepository
   }
 
   async deleteByUserAndRepresentative(
-    userId: string,
-    representativeId: string
+    userId: number,
+    representativeId: number
   ): Promise<void> {
     await db
       .delete(userRepresentativeRelationships)

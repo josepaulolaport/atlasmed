@@ -1,20 +1,20 @@
 import type { AccessGrantRecord } from "@atlasmed/access";
 
 export interface AccessGrantRepository {
-  findActiveByUserId(userId: string): Promise<AccessGrantRecord[]>;
+  findActiveByUserId(userId: number): Promise<AccessGrantRecord[]>;
 
   create(params: {
-    userId: string;
+    userId: number;
     resource: string;
     resourceId?: string;
     action: string;
     conditions?: Record<string, unknown>;
-    grantedBy: string;
+    grantedBy: number;
     expiresAt?: Date;
   }): Promise<AccessGrantRecord>;
 
   deleteMany(params: {
-    userId: string;
+    userId: number;
     resource: string;
     resourceId?: string;
     action: string;

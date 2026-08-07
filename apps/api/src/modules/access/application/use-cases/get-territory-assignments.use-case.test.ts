@@ -13,16 +13,16 @@ describe("GetTerritoryAssignmentsUseCase", () => {
     const assignedAt = new Date("2025-01-15T10:00:00.000Z");
 
     const userRepository = createMockUserRepository({
-      findById: mock(async (id: string) => {
-        if (id === "user-1") {
+      findById: mock(async (id: number) => {
+        if (id === 1) {
           return {
-            id: "user-1",
+            id: 1,
             username: "rep1",
             email: "rep1@example.com",
             firstName: "Rep",
             lastName: "One",
             avatarUrl: null,
-            role: { id: "role-rep", name: Role.REP },
+            role: { id: 3, name: Role.REP },
           };
         }
         return null;
@@ -31,12 +31,12 @@ describe("GetTerritoryAssignmentsUseCase", () => {
 
     const scopeRepository = createMockScopeRepository({
       findUserIdsByTerritoryId: mock(() =>
-        Promise.resolve([{ userId: "user-1", assignedAt }])
+        Promise.resolve([{ userId: 1, assignedAt }])
       ),
     });
 
     const territoryRepository = {
-      findById: mock(async () => ({ id: "territory-a" })),
+      findById: mock(async () => ({ id: 1 })),
     };
 
     const useCase = new GetTerritoryAssignmentsUseCase({
@@ -45,17 +45,17 @@ describe("GetTerritoryAssignmentsUseCase", () => {
       territoryRepository,
     });
 
-    const result = await useCase.execute("territory-a");
+    const result = await useCase.execute(1);
 
     expect(result).toEqual([
       {
-        userId: "user-1",
+        userId: 1,
         username: "rep1",
         email: "rep1@example.com",
         firstName: "Rep",
         lastName: "One",
         avatarUrl: null,
-        role: { id: "role-rep", name: Role.REP },
+        role: { id: 3, name: Role.REP },
         assignedAt: assignedAt.toISOString(),
       },
     ]);
@@ -67,11 +67,11 @@ describe("GetTerritoryAssignmentsUseCase", () => {
     });
     const scopeRepository = createMockScopeRepository({
       findUserIdsByTerritoryId: mock(() =>
-        Promise.resolve([{ userId: "ghost", assignedAt: new Date() }])
+        Promise.resolve([{ userId: 999, assignedAt: new Date() }])
       ),
     });
     const territoryRepository = {
-      findById: mock(async () => ({ id: "territory-a" })),
+      findById: mock(async () => ({ id: 1 })),
     };
 
     const useCase = new GetTerritoryAssignmentsUseCase({
@@ -80,7 +80,7 @@ describe("GetTerritoryAssignmentsUseCase", () => {
       territoryRepository,
     });
 
-    const result = await useCase.execute("territory-a");
+    const result = await useCase.execute(1);
 
     expect(result).toEqual([]);
   });
@@ -98,6 +98,6 @@ describe("GetTerritoryAssignmentsUseCase", () => {
       territoryRepository,
     });
 
-    await expect(useCase.execute("missing")).rejects.toThrow(ResourceNotFoundError);
+    await expect(useCase.execute(999)).rejects.toThrow(ResourceNotFoundError);
   });
 });

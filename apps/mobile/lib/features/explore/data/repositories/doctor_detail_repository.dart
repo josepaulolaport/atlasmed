@@ -6,7 +6,7 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 /// Repository for fetching a single professional's detail from the API.
 class DoctorDetailRepository extends Repository<ProfessionalDTO>
     with SessionEnvironmentMixin<ProfessionalDTO> {
-  DoctorDetailRepository({required String id})
+  DoctorDetailRepository({required int id})
     : super(
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
         name: 'DoctorDetailRepository',

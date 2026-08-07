@@ -21,13 +21,13 @@ describe("TerritoryContainmentService", () => {
       territoryTypeRepository: {} as never,
       spatialRepository: {
         findContainingManagerZones: mock(async () => [
-          { id: "zone-1", code: "ZONE-1", name: "Zone 1" },
+          { id: 1, code: "ZONE-1", name: "Zone 1" },
         ]),
       } as never,
     });
 
     const resolution = await service.resolveRepPatchManagerZone(polygon);
-    expect(resolution.managerTerritoryId).toBe("zone-1");
+    expect(resolution.managerTerritoryId).toBe(1);
   });
 
   it("rejects when no manager zone contains the patch", async () => {
@@ -50,8 +50,8 @@ describe("TerritoryContainmentService", () => {
       territoryTypeRepository: {} as never,
       spatialRepository: {
         findContainingManagerZones: mock(async () => [
-          { id: "zone-1", code: "ZONE-1", name: "Zone 1" },
-          { id: "zone-2", code: "ZONE-2", name: "Zone 2" },
+          { id: 1, code: "ZONE-1", name: "Zone 1" },
+          { id: 2, code: "ZONE-2", name: "Zone 2" },
         ]),
       } as never,
     });

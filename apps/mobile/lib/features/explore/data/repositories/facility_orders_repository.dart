@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
@@ -25,7 +26,7 @@ class FacilityOrdersPage {
 
 FacilityOrderSummary _mapOrder(Map<String, dynamic> json) {
   final legacyId = json['legacyId'];
-  final id = json['id'] as String;
+  final id = readCrmId(json['id'], 'id');
   final itemsRaw = json['items'];
   final items = itemsRaw is List
       ? itemsRaw
@@ -36,7 +37,7 @@ FacilityOrderSummary _mapOrder(Map<String, dynamic> json) {
 
   return FacilityOrderSummary(
     id: id,
-    displayId: legacyId == null ? id : 'PED-$legacyId',
+    displayId: legacyId == null ? id.toString() : 'PED-$legacyId',
     status: (json['status'] as String?) ?? 'PENDING',
     type: (json['type'] as String?) ?? 'SALE',
     orderedAt:
@@ -85,15 +86,15 @@ class FacilityOrdersRepository extends Repository<FacilityOrdersPage>
          endpoint: Uri.parse(
            '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/orders'
            '?page=$page&limit=$limit'
-           '${verticalId != null && verticalId.isNotEmpty ? '&verticalId=$verticalId' : ''}',
+           '${verticalId != null && (verticalId > 0) ? '&verticalId=$verticalId' : ''}',
          ),
          name: 'FacilityOrdersRepository',
        );
 
-  final String facilityId;
+  final int facilityId;
   final int page;
   final int limit;
-  final String? verticalId;
+  final int? verticalId;
   final RepositoryHttpClient? _injectedClient;
 
   @override

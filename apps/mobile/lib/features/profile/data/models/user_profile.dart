@@ -1,6 +1,6 @@
 // ── User profile model ───────────────────────────────────────
 class UserProfile {
-  final String id;
+  final int id;
   final String displayName;
   final String initials;
   final String role;

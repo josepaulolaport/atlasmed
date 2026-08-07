@@ -3,7 +3,7 @@ import type { Subject } from "../subjects/subjects";
 
 /** Active permission row used for CASL and scope expansion. */
 export interface AccessGrantRecord {
-  id: string;
+  id: number;
   resource: string;
   resourceId: string | null;
   action: string;
@@ -30,8 +30,6 @@ export const GRANT_RESOURCE_TO_SUBJECT: Record<string, Subject> = {
   PROFESSIONAL: "PROFESSIONAL",
   TERRITORY: "TERRITORY",
   INVITATION: "INVITATION",
-  REGISTRY_INGESTION: "REGISTRY_INGESTION",
-  REGISTRY_SUGGESTION: "REGISTRY_SUGGESTION",
   CATALOG: "CATALOG",
   SEARCH_SYNC: "SEARCH_SYNC",
   VISIT: "VISIT",

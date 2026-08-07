@@ -9,14 +9,11 @@ import type {
 } from "../../../application/interfaces/territory-type.repository.interface";
 
 function mapType(record: {
-  id: string;
+  id: number;
   slug: string;
   name: string;
   description: string | null;
   canHaveBoundary: boolean;
-  assignsClinics: boolean;
-  assignableToUsers: boolean;
-  assignableToManagers: boolean;
   blockSiblingOverlap: boolean;
   sortOrder: number;
   isActive: boolean;
@@ -27,7 +24,7 @@ function mapType(record: {
 }
 
 export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
-  async findById(id: string): Promise<TerritoryTypeRecord | null> {
+  async findById(id: number): Promise<TerritoryTypeRecord | null> {
     const rows = await db
       .select()
       .from(territoryTypes)
@@ -60,9 +57,6 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
         name: input.name,
         description: input.description ?? null,
         canHaveBoundary: input.canHaveBoundary ?? true,
-        assignsClinics: input.assignsClinics ?? false,
-        assignableToUsers: input.assignableToUsers ?? false,
-        assignableToManagers: input.assignableToManagers ?? false,
         blockSiblingOverlap: input.blockSiblingOverlap ?? false,
         sortOrder: input.sortOrder ?? 0,
       })
@@ -70,7 +64,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
     return mapType(record!);
   }
 
-  async update(id: string, input: UpdateTerritoryTypeInput): Promise<TerritoryTypeRecord> {
+  async update(id: number, input: UpdateTerritoryTypeInput): Promise<TerritoryTypeRecord> {
     const [record] = await db
       .update(territoryTypes)
       .set({ ...input, updatedAt: new Date() })
@@ -79,7 +73,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
     return mapType(record!);
   }
 
-  async countTerritoriesUsingType(id: string): Promise<number> {
+  async countTerritoriesUsingType(id: number): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)` })
       .from(territories)

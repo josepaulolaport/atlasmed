@@ -45,7 +45,7 @@ class FacilityProfessionalsRepository
          name: 'FacilityProfessionalsRepository',
        );
 
-  final String facilityId;
+  final int facilityId;
   final int page;
   final int limit;
   final String view;

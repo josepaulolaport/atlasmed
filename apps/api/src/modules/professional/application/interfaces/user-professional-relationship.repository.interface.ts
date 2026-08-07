@@ -3,9 +3,9 @@
  * Same privacy model as professional_notes — never facility-scoped.
  */
 export interface UserProfessionalRelationshipRecord {
-  id: string;
-  userId: string;
-  professionalId: string;
+  id: number;
+  userId: number;
+  professionalId: number;
   relationshipLevel: number;
   createdAt: Date;
   updatedAt: Date;
@@ -13,25 +13,25 @@ export interface UserProfessionalRelationshipRecord {
 
 export interface UserProfessionalRelationshipRepository {
   findByUserAndProfessional(
-    userId: string,
-    professionalId: string
+    userId: number,
+    professionalId: number
   ): Promise<UserProfessionalRelationshipRecord | null>;
 
   /** Map professionalId → level for the given user (for roster enrichment). */
   findLevelsByUserAndProfessionals(
-    userId: string,
-    professionalIds: string[]
-  ): Promise<Map<string, number>>;
+    userId: number,
+    professionalIds: number[]
+  ): Promise<Map<number, number>>;
 
   upsert(params: {
-    userId: string;
-    professionalId: string;
+    userId: number;
+    professionalId: number;
     relationshipLevel: number;
   }): Promise<UserProfessionalRelationshipRecord>;
 
   /** Clears the user's relationship score for a professional. */
   deleteByUserAndProfessional(
-    userId: string,
-    professionalId: string
+    userId: number,
+    professionalId: number
   ): Promise<void>;
 }

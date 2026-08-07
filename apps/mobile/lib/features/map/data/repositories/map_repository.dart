@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
@@ -85,7 +86,7 @@ class MapRepository extends Repository<MapData>
     return _combineBoundaries(boundaries);
   }
 
-  Future<TerritoryGeometry?> _fetchBoundary(String territoryId) async {
+  Future<TerritoryGeometry?> _fetchBoundary(int territoryId) async {
     final url = Uri.parse('$_baseUrl/api/v1/territories/$territoryId/boundary');
     final request = RepositoryHttpRequest(url: url);
     final response = await client.call(request: request);
@@ -194,7 +195,7 @@ class MapRepository extends Repository<MapData>
     return data.map((item) {
       final map = item as Map<String, dynamic>;
       return MapFacility(
-        id: map['id'] as String? ?? '',
+        id: readCrmId(map['id'], 'id'),
         name: map['name'] as String? ?? '',
         coordinate: MapCoordinate(
           longitude: (map['longitude'] as num?)?.toDouble() ?? 0,

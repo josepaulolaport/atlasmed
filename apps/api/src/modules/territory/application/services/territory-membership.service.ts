@@ -1,4 +1,3 @@
-import type { TerritoryAssignmentSource } from "@atlasmed/database";
 import type {
   ClinicAssignmentTerritoryMatch,
   TerritorySpatialRepository,
@@ -6,38 +5,28 @@ import type {
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 
 export interface ClinicMembershipTarget {
-  id: string;
+  id: number;
   lat: number | null;
   lng: number | null;
-  territoryId: string | null;
-  territoryAssignmentSource: TerritoryAssignmentSource;
-  territoryAssignmentStatus?: "assigned" | "unassigned" | "ambiguous";
+  territoryId: number | null;
 }
 
 export interface ClinicMembershipWriter {
   updateProfileTerritoryMemberships(
-    facilityId: string,
-    memberships: Array<{ verticalId: string; territoryId: string | null }>
-  ): Promise<void>;
-
-  updateTerritoryMembership(
-    facilityId: string,
-    data: {
-      territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
-      territoryAssignmentSource: TerritoryAssignmentSource;
-    }
+    facilityId: number,
+    memberships: Array<{ verticalId: number; territoryId: number | null }>
   ): Promise<void>;
 
   /** Set one vertical profile's territory without clearing other verticals. */
   setProfileTerritory(
-    facilityId: string,
-    verticalId: string,
-    territoryId: string | null,
+    facilityId: number,
+    verticalId: number,
+    territoryId: number | null,
   ): Promise<void>;
 
   findClinicsForMembership(params?: {
-    facilityIds?: string[];
-    territoryIds?: string[];
+    facilityIds?: number[];
+    territoryIds?: number[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]>;
 
@@ -46,15 +35,15 @@ export interface ClinicMembershipWriter {
    * When managerZoneIds is omitted/empty and global is true, all zones.
    */
   findClinicsWithoutConsultant(params: {
-    managerZoneIds?: string[];
+    managerZoneIds?: number[];
     global: boolean;
   }): Promise<
     Array<{
-      id: string;
+      id: number;
       displayName: string;
       lat: number | null;
       lng: number | null;
-      managerZoneId: string;
+      managerZoneId: number;
       managerZoneName: string | null;
     }>
   >;
@@ -71,18 +60,10 @@ export class TerritoryMembershipService {
 
   async assignClinicByGeo(
     clinic: ClinicMembershipTarget,
-    options?: { excludeTerritoryId?: string; force?: boolean }
+    options?: { excludeTerritoryId?: number }
   ): Promise<void> {
-    if (clinic.territoryAssignmentSource === "manual" && !options?.force) {
-      return;
-    }
-
     if (clinic.lat === null || clinic.lng === null) {
       await this.deps.clinicWriter.updateProfileTerritoryMemberships(clinic.id, []);
-      await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-        territoryAssignmentStatus: "unassigned",
-        territoryAssignmentSource: "geo",
-      });
       return;
     }
 
@@ -92,7 +73,7 @@ export class TerritoryMembershipService {
       { excludeTerritoryId: options?.excludeTerritoryId }
     );
 
-    const { singleMatches, hasAmbiguousMatch } = this.resolveVerticalMatches(matches);
+    const singleMatches = this.resolveVerticalMatches(matches);
     await this.deps.clinicWriter.updateProfileTerritoryMemberships(
       clinic.id,
       singleMatches.map((match) => ({
@@ -100,34 +81,27 @@ export class TerritoryMembershipService {
         territoryId: match.id,
       }))
     );
-
-    await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-      territoryAssignmentStatus:
-        singleMatches.length > 0 ? "assigned" : hasAmbiguousMatch ? "ambiguous" : "unassigned",
-      territoryAssignmentSource: "geo",
-    });
   }
 
   /**
    * Clears clinic membership for a territory that is about to be deleted.
    * Re-runs geo matching excluding this territory so clinics land on whatever
    * other active territory covers them (or become unassigned) instead of
-   * blocking deletion. Manually-pinned clinics are forced through too — a
-   * manual pin to a territory being deleted is no longer a valid override.
+   * blocking deletion.
    */
-  async disassociateClinicsForTerritory(territoryId: string): Promise<{ processed: number }> {
+  async disassociateClinicsForTerritory(territoryId: number): Promise<{ processed: number }> {
     const clinics = await this.deps.clinicWriter.findClinicsForMembership({
       territoryIds: [territoryId],
     });
 
     for (const clinic of clinics) {
-      await this.assignClinicByGeo(clinic, { excludeTerritoryId: territoryId, force: true });
+      await this.assignClinicByGeo(clinic, { excludeTerritoryId: territoryId });
     }
 
     return { processed: clinics.length };
   }
 
-  async assignFacilityById(facilityId: string): Promise<void> {
+  async assignFacilityById(facilityId: number): Promise<void> {
     const clinics = await this.deps.clinicWriter.findClinicsForMembership({
       facilityIds: [facilityId],
     });
@@ -158,8 +132,8 @@ export class TerritoryMembershipService {
     return { processed: clinics.length, updated };
   }
 
-  async recomputeForTerritoryBoundary(territoryId: string): Promise<{ processed: number }> {
-    const clinicsById = new Map<string, ClinicMembershipTarget>();
+  async recomputeForTerritoryBoundary(territoryId: number): Promise<{ processed: number }> {
+    const clinicsById = new Map<number, ClinicMembershipTarget>();
 
     const assignedToTerritory = await this.deps.clinicWriter.findClinicsForMembership({
       territoryIds: [territoryId],
@@ -180,9 +154,6 @@ export class TerritoryMembershipService {
 
     let processed = 0;
     for (const clinic of clinicsById.values()) {
-      if (clinic.territoryAssignmentSource === "manual") {
-        continue;
-      }
       await this.assignClinicByGeo(clinic);
       processed += 1;
     }
@@ -190,11 +161,10 @@ export class TerritoryMembershipService {
     return { processed };
   }
 
-  private resolveVerticalMatches(matches: ClinicAssignmentTerritoryMatch[]): {
-    singleMatches: ClinicAssignmentTerritoryMatch[];
-    hasAmbiguousMatch: boolean;
-  } {
-    const matchesByVerticalId = new Map<string, ClinicAssignmentTerritoryMatch[]>();
+  private resolveVerticalMatches(
+    matches: ClinicAssignmentTerritoryMatch[]
+  ): ClinicAssignmentTerritoryMatch[] {
+    const matchesByVerticalId = new Map<number, ClinicAssignmentTerritoryMatch[]>();
     for (const match of matches) {
       const verticalMatches = matchesByVerticalId.get(match.verticalId) ?? [];
       verticalMatches.push(match);
@@ -202,15 +172,13 @@ export class TerritoryMembershipService {
     }
 
     const singleMatches: ClinicAssignmentTerritoryMatch[] = [];
-    let hasAmbiguousMatch = false;
     for (const verticalMatches of matchesByVerticalId.values()) {
       if (verticalMatches.length === 1) {
         singleMatches.push(verticalMatches[0]!);
-      } else {
-        hasAmbiguousMatch = true;
       }
+      // Multiple matches for a vertical → leave that vertical unassigned (cleared by writer).
     }
 
-    return { singleMatches, hasAmbiguousMatch };
+    return singleMatches;
   }
 }

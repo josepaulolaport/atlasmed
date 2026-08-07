@@ -9,7 +9,7 @@ import type {
 
 const now = new Date("2026-01-01T00:00:00.000Z");
 
-function facilityRecord(id: string): FacilityListRecord {
+function facilityRecord(id: number): FacilityListRecord {
   return {
     id,
     name: `Facility ${id}`,
@@ -20,6 +20,8 @@ function facilityRecord(id: string): FacilityListRecord {
     streetNumber: null,
     addressComplement: null,
     postalCode: null,
+    stateId: 1,
+    municipalityId: 1,
     phone: null,
     whatsapp: null,
     email: null,
@@ -27,39 +29,24 @@ function facilityRecord(id: string): FacilityListRecord {
     billingEmail: null,
     responsibleName: null,
     openingHours: null,
-    taxIdType: "PJ",
-    cnpj: null,
-    cpf: null,
+    legalDocumentType: "CNPJ",
+    legalDocument: null,
     lat: null,
     lng: null,
-    territoryId: "territory-1",
+    territoryId: 1,
     territoryName: null,
     territoryAssignmentStatus: "assigned",
-    territoryAssignmentSource: "manual",
     commercialStatus: null,
     purchaseStatus: null,
-    observedPurchaseIntervalDays: null,
-    purchaseIntervalDays: 30,
-    purchaseIntervalSource: "DEFAULT" as const,
-    manualPurchaseProfile: null,
-    manualPurchaseIntervalDays: null,
-    lastValidPurchaseDate: null,
-    purchaseRecurrenceSampleSize: 0,
-    purchaseFunnelStage: "NEVER_PURCHASED" as const,
-    nextPurchaseFunnelTransitionDate: null,
     conformityStatus: "INCOMPLETE",
-    sourceProvider: null,
-    externalSourceId: null,
-    sourceContentHash: null,
-    sourceFirstSeenAt: null,
-    sourceLastSeenAt: null,
-    sourcePresent: true,
-    sourceTracked: false,
-    manuallyEditedAt: null,
-    deactivatedAt: null,
+    cnesCode: null,
+    facilityTypeCode: null,
+    unitTypeCode: null,
+    unitSubtypeCode: null,
+        deactivatedAt: null,
     createdAt: now,
     updatedAt: now,
-    services: [],
+    clinicalFocuses: [],
     professionalCount: 3,
     lastVisitAt: null,
     consultantName: null,
@@ -77,27 +64,19 @@ function fakeRepository(
     findAll,
     findAllByIds: async () => [],
     findById: async () => null,
-    listServiceCatalog: async () => [],
-    findByExternalId: async () => null,
-    findSourceTrackedByProvider: async () => [],
-    create: async () => facilityRecord("created"),
-    update: async () => facilityRecord("updated"),
+    listClinicalFocusCatalog: async () => [],
+    create: async () => facilityRecord(100),
+    update: async () => facilityRecord(101),
     softDelete: async () => {},
-    reactivate: async () => facilityRecord("reactivated"),
-    markSourceAbsent: async () => {},
-    upsertFromSource: async () => ({
-      facility: facilityRecord("upserted"),
-      created: true,
-      updated: false,
-    }),
+    reactivate: async () => facilityRecord(102),
     findIdsByTerritoryIds: async () => [],
     listMapPoints: async () => [],
-    applyApprovedFieldUpdates: async () => facilityRecord("approved"),
+    applyApprovedFieldUpdates: async () => facilityRecord(103),
     findActiveFacilityIdsByVerticalIds: async () => [],
     findVerticalProfilesByFacilityIds: async () => new Map(),
     updateVerticalProfileCommercialStatus: async () => {},
     ensureVerticalProfile: async () => ({
-      verticalId: "vertical-1",
+      verticalId: 1,
       commercialStatus: null,
       purchaseStatus: null,
       isActive: true,
@@ -108,14 +87,14 @@ function fakeRepository(
 const adminRole = Role.ADMIN;
 
 function withRole<T extends Record<string, unknown>>(input: T) {
-  return { ...input, role: adminRole, userId: "user-1" };
+  return { ...input, role: adminRole, userId: 1 };
 }
 
 describe("ListFacilitiesUseCase", () => {
   it("returns pagination totals from the repository", async () => {
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: fakeRepository(async () => ({
-        facilities: [facilityRecord("facility-1")],
+        facilities: [facilityRecord(1)],
         total: 27,
       })),
     });
@@ -149,7 +128,7 @@ describe("ListFacilitiesUseCase", () => {
 
   it("serializes neighborhood, city, and state in list DTOs", async () => {
     const facility = {
-      ...facilityRecord("facility-location"),
+      ...facilityRecord(42),
       neighborhood: "Centro",
       city: "Rio de Janeiro",
       state: "RJ",
@@ -188,14 +167,14 @@ describe("ListFacilitiesUseCase", () => {
     let receivedScope: unknown;
     const scope: ScopeContext = {
       isGlobal: false,
-      assignedTerritoryIds: ["territory-1"],
-      effectiveTerritoryIds: ["territory-1"],
-      analyticsEffectiveTerritoryIds: ["territory-1"],
-      territoryIds: ["territory-1"],
-      facilityIds: ["facility-1"],
-      analyticsFacilityIds: ["facility-1"],
-      clinicIds: ["facility-1"],
-      analyticsClinicIds: ["facility-1"],
+      assignedTerritoryIds: [1],
+      effectiveTerritoryIds: [1],
+      analyticsEffectiveTerritoryIds: [1],
+      territoryIds: [1],
+      facilityIds: [1],
+      analyticsFacilityIds: [1],
+      clinicIds: [1],
+      analyticsClinicIds: [1],
       managedUserIds: [],
       isOperationallyActive: true,
     };
@@ -210,21 +189,21 @@ describe("ListFacilitiesUseCase", () => {
 
     expect(receivedScope).toEqual({
       isGlobal: false,
-      facilityIds: ["facility-1"],
+      facilityIds: [1],
       restrictToVerticalProfiles: true,
       verticalIds: [],
     });
   });
 
   it("hydrates Meilisearch facility candidates in rank order while applying canonical scope and filters", async () => {
-    let hydratedIds: string[] | undefined;
+    let hydratedIds: number[] | undefined;
     let receivedParams: unknown;
     let searchCalls = 0;
     const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
     repository.findAllByIds = async (params) => {
       hydratedIds = params.ids;
       receivedParams = params;
-      return [facilityRecord("facility-1"), facilityRecord("facility-2")];
+      return [facilityRecord(1), facilityRecord(2)];
     };
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: repository,
@@ -233,7 +212,7 @@ describe("ListFacilitiesUseCase", () => {
         search: async <T extends Record<string, unknown>>() => {
           searchCalls += 1;
           return {
-            hits: [{ id: "facility-2" }, { id: "facility-1" }] as unknown as T[],
+            hits: [{ id: 2 }, { id: 1 }] as unknown as T[],
             estimatedTotalHits: 8,
           };
         },
@@ -245,14 +224,14 @@ describe("ListFacilitiesUseCase", () => {
       page: 2,
       limit: 2,
       commercialStatus: "REGISTERED",
-      productIds: ["product-1"],
+      productIds: [1],
       scope: {
         isGlobal: false,
         assignedTerritoryIds: [],
         effectiveTerritoryIds: [],
         analyticsEffectiveTerritoryIds: [],
         territoryIds: [],
-        facilityIds: ["facility-1", "facility-2"],
+        facilityIds: [1, 2],
         analyticsFacilityIds: [],
         clinicIds: [],
         analyticsClinicIds: [],
@@ -262,25 +241,25 @@ describe("ListFacilitiesUseCase", () => {
     }));
 
     expect(searchCalls).toBe(1);
-    expect(hydratedIds).toEqual(["facility-2", "facility-1"]);
+    expect(hydratedIds).toEqual([2, 1]);
     expect(receivedParams).toMatchObject({
       commercialStatus: "REGISTERED",
-      productIds: ["product-1"],
-      scope: { isGlobal: false, facilityIds: ["facility-1", "facility-2"] },
+      productIds: [1],
+      scope: { isGlobal: false, facilityIds: [1, 2] },
     });
-    expect(result.data.map((facility) => facility.id)).toEqual(["facility-2", "facility-1"]);
+    expect(result.data.map((facility) => facility.id)).toEqual([2, 1]);
     expect(result.pagination.total).toBe(8);
   });
 
   it("returns a short Meilisearch page when canonical hydration rejects stale candidates", async () => {
     const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
-    repository.findAllByIds = async () => [facilityRecord("facility-2")];
+    repository.findAllByIds = async () => [facilityRecord(2)];
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: repository,
       searchService: {
         isConfigured: () => true,
         search: async <T extends Record<string, unknown>>() => ({
-          hits: [{ id: "facility-1" }, { id: "facility-2" }] as unknown as T[],
+          hits: [{ id: 1 }, { id: 2 }] as unknown as T[],
           estimatedTotalHits: 2,
         }),
       },
@@ -288,7 +267,7 @@ describe("ListFacilitiesUseCase", () => {
 
     const result = await useCase.execute(withRole({ search: "CNES", limit: 2, scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } }));
 
-    expect(result.data.map((facility) => facility.id)).toEqual(["facility-2"]);
+    expect(result.data.map((facility) => facility.id)).toEqual([2]);
     expect(result.pagination.total).toBe(2);
   });
 
@@ -325,13 +304,13 @@ describe("ListFacilitiesUseCase", () => {
       longitude: -46.63,
       radiusKm: 5,
       sort: "distance",
-      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: ["facility-2", "facility-1"], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [2, 1], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
 
     expect(options).toEqual({
       limit: 20,
       offset: 0,
-      filter: "_geoRadius(-23.55, -46.63, 5000) AND id IN ['facility-1', 'facility-2']",
+      filter: "_geoRadius(-23.55, -46.63, 5000) AND id IN [1, 2]",
       sort: ["_geoPoint(-23.55, -46.63):asc"],
     });
   });
@@ -349,7 +328,7 @@ describe("ListFacilitiesUseCase", () => {
       search: "central",
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
-    expect(options?.filter).toBe("id = '__none__'");
+    expect(options?.filter).toBe("id = -1");
   });
 
   it("drops oversized scope filter and keeps geo/vertical Meili clauses when bound exceeded", async () => {
@@ -368,7 +347,7 @@ describe("ListFacilitiesUseCase", () => {
     await useCase.execute(withRole({
       search: "central",
       commercialStatus: "REGISTERED",
-      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 1_000 }, (_, index) => `facility-${index}-${"x".repeat(20)}`), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 2_500 }, (_, index) => index + 1), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
 
     // commercialStatus is applied in Postgres hydrate; oversized id IN is dropped.

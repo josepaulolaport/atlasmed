@@ -23,7 +23,7 @@ function mapPhoto(row: PhotoRow): FacilityPhotoRecord {
 }
 
 export class DrizzleFacilityPhotoRepository implements FacilityPhotoRepository {
-  async findByFacility(facilityId: string): Promise<FacilityPhotoRecord[]> {
+  async findByFacility(facilityId: number): Promise<FacilityPhotoRecord[]> {
     const rows = await db
       .select()
       .from(facilityPhotos)
@@ -34,18 +34,18 @@ export class DrizzleFacilityPhotoRepository implements FacilityPhotoRepository {
   }
 
   async create(input: {
-    facilityId: string;
+    facilityId: number;
     storageKey: string;
     url: string;
     contentType: string;
     blurhash?: string | null;
-    uploadedByUserId: string;
+    uploadedByUserId: number;
   }): Promise<FacilityPhotoRecord> {
     const [row] = await db.insert(facilityPhotos).values(input).returning();
     return mapPhoto(row!);
   }
 
-  async findById(id: string): Promise<FacilityPhotoRecord | null> {
+  async findById(id: number): Promise<FacilityPhotoRecord | null> {
     const [row] = await db
       .select()
       .from(facilityPhotos)

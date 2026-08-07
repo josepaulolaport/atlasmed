@@ -29,7 +29,7 @@ class ChangeRoleSheet extends ConsumerStatefulWidget {
 }
 
 class _ChangeRoleSheetState extends ConsumerState<ChangeRoleSheet> {
-  String? _selectedRoleId;
+  int? _selectedRoleId;
   bool _saving = false;
 
   @override

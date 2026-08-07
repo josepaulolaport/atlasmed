@@ -8,32 +8,32 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 
 | Domain | Load |
 |---|---|
-| api | `apps/api/AGENTS.md` |
-| web | `apps/web/AGENTS.md` |
-| mobile | `apps/mobile/AGENTS.md` |
-| workers | `apps/workers/AGENTS.md` |
-| shared-package | `packages/<name>/AGENTS.md` |
+| api | root `AGENTS.md` § `apps/api` |
+| web | root `AGENTS.md` § `apps/web`, `apps/web/README.md` |
+| mobile | root `AGENTS.md` § `apps/mobile` |
+| workers | root `AGENTS.md` § `apps/workers` |
+| shared-package | root `AGENTS.md` § matching `packages/*` |
 
 ## By concern
 
 | Concern | Load |
 |---|---|
-| authorization / security | `packages/access/AGENTS.md` |
-| persistence / domain model | `AGENTS.md` § `packages/database` (Migration workflow) |
-| messaging / background jobs | `apps/workers/AGENTS.md` |
-| data pipeline / integration | `packages/cnes-ingestion/AGENTS.md` |
-| observability / audit | `packages/observability/AGENTS.md` |
-| api contract / serialization | affected app AGENTS |
-| offline-first / device sensors | `apps/mobile/AGENTS.md` |
-| notifications | affected app AGENTS (no dedicated package yet) |
-| caching / real-time | affected app AGENTS |
-| rate-limiting | `apps/api/AGENTS.md` (rate-limit middleware) |
-| compliance | `packages/observability/AGENTS.md` (audit events) + affected domain AGENTS |
+| authorization / security | root `AGENTS.md` § `packages/access`, `docs/architecture/features/access-auth.md` |
+| persistence / domain model | root `AGENTS.md` § `packages/database` (Migration workflow) |
+| messaging / background jobs | root `AGENTS.md` § `apps/workers` |
+| data pipeline / integration | root `AGENTS.md` § `apps/workers` (CNES ingest package removed) |
+| observability / audit | root `AGENTS.md` § `packages/observability` |
+| api contract / serialization | root `AGENTS.md` § affected app |
+| offline-first / device sensors | root `AGENTS.md` § `apps/mobile` |
+| notifications | root `AGENTS.md` § affected app (no dedicated package yet) |
+| caching / real-time | root `AGENTS.md` § affected app |
+| rate-limiting | root `AGENTS.md` § `apps/api` |
+| compliance | root `AGENTS.md` § `packages/observability` + affected domain |
 | ci-cd / deployment | `.github/`, `.githooks/`, `scripts/install-git-hooks.sh` |
-| configuration | `packages/config/AGENTS.md` |
-| styling / layout / interaction / accessibility | `apps/web/AGENTS.md` |
-| state management / data fetching / forms | `apps/web/AGENTS.md` |
-| business logic / refactor | affected app AGENTS |
+| configuration | root `AGENTS.md` § `packages/config` |
+| styling / layout / interaction / accessibility | root `AGENTS.md` § `apps/web` |
+| state management / data fetching / forms | root `AGENTS.md` § `apps/web` |
+| business logic / refactor | root `AGENTS.md` § affected app |
 | testing | `apps/api/TESTING.md` (for api) |
 | docs | root `AGENTS.md` § When restructuring documentation |
 
@@ -43,14 +43,17 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 |---|---|
 | Auth / access / users | `docs/architecture/features/access-auth.md` |
 | Business verticals (legacy: sectors) | `docs/architecture/features/business-verticals.md`, `docs/architecture/features/access-auth.md` |
-| Facilities / professionals / registry | `docs/architecture/features/clinic-doctor-registry.md` |
+| Facilities / professionals / representatives (current) | `docs/architecture/features/clinic-doctor-registry.md` |
+| Person model redesign (accepted for schema) | `docs/architecture/adr/0004-person-facility-model.md` |
+| DB P0 overhaul merge (triage + person ADR) | `docs/ai/db-overhaul-merged-p0.md` |
+| DB suggestion triage (#1–#40 placements) | `docs/ai/db-suggestion-triage.md` |
+| Não Conformidades / field suggestions | `docs/specs/0007-nao-conformidades/requirements.md` |
 | Territory management | `docs/specs/0003-territory-management/requirements.md` |
 | Territory × vertical ownership (P1 accepted) | `docs/specs/0003-territory-management/vertical-ownership-design.md` |
 | Multi-tenancy | `docs/specs/0001-multi-tenancy/design.md`, `docs/specs/0001-multi-tenancy/tasks.md` |
 | CRM baseline | `docs/specs/0002-clinic-doctor-crm/requirements.md` |
 | AI assistant / agent behavior | `docs/specs/0004-ai-assistant/requirements.md` |
 | Product overview | `docs/product/overview.md` |
-| Historical state | `docs/current-state.md`, `docs/implementation/completed.md` |
 
 ## Cross-boundary → integration doc
 

@@ -111,7 +111,7 @@ class TerritoryDetailSheet extends ConsumerWidget {
 
 class _AssignedUserRow extends ConsumerWidget {
   final String label;
-  final String userId;
+  final int userId;
 
   const _AssignedUserRow({required this.label, required this.userId});
 
@@ -128,7 +128,7 @@ class _AssignedUserRow extends ConsumerWidget {
 }
 
 class _ManagerZoneRow extends ConsumerWidget {
-  final String managerTerritoryId;
+  final int managerTerritoryId;
 
   const _ManagerZoneRow({required this.managerTerritoryId});
 

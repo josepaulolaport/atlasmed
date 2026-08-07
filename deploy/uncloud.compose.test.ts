@@ -6,7 +6,7 @@ const composePath = resolve(import.meta.dir, "uncloud.compose.yml");
 const dockerfilePaths = [
   "api.Dockerfile",
   "api-worker.Dockerfile",
-  "cnes-worker.Dockerfile",
+  "temporal-worker.Dockerfile",
   "web.Dockerfile",
 ].map((name) => resolve(import.meta.dir, "docker", name));
 const workflowPath = resolve(
@@ -29,7 +29,7 @@ describe("production deployment", () => {
       "atlasmed-web",
       "atlasmed-api",
       "atlasmed-api-worker",
-      "atlasmed-cnes-worker",
+      "atlasmed-temporal-worker",
     ]) {
       const serviceStart = compose.indexOf(`  ${serviceName}:`);
       const nextService = compose.indexOf("\n  atlasmed-", serviceStart + 1);
@@ -83,17 +83,18 @@ describe("production deployment", () => {
     expect(volumes).toContain("  atlasmed_meilisearch_data_v148:");
   });
 
-  it("configures the CNES worker with the internal Meilisearch endpoint and deployed key", () => {
+  it("configures the Temporal worker with the internal Meilisearch endpoint and deployed key", () => {
     const { compose } = readDeploymentConfig();
-    const cnesWorker = compose.slice(
-      compose.indexOf("  atlasmed-cnes-worker:"),
+    const temporalWorker = compose.slice(
+      compose.indexOf("  atlasmed-temporal-worker:"),
       compose.indexOf("  atlasmed-temporal-db:"),
     );
 
-    expect(cnesWorker).toContain(
+    expect(temporalWorker).toContain(
       "MEILISEARCH_URL=http://atlasmed-meilisearch:7700",
     );
-    expect(cnesWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
+    expect(temporalWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
+    expect(temporalWorker).toContain("TEMPORAL_TASK_QUEUE=atlasmed-workflows");
   });
 
   it("recreates application services when deploying their mutable production images", () => {
@@ -102,7 +103,7 @@ describe("production deployment", () => {
     expect(compose).toContain("image: atlasmed/api:prod");
     expect(compose).toContain("image: atlasmed/web:prod");
     expect(workflow).toContain(
-      "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --recreate --yes",
+      "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker atlasmed-web --recreate --yes",
     );
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",

@@ -26,10 +26,10 @@ class FacilityVerticalFilterBar extends ConsumerWidget {
   });
 
   final EdgeInsetsGeometry padding;
-  final ValueChanged<String?>? onChanged;
+  final ValueChanged<int?>? onChanged;
 
   /// If non-null, only these vertical ids are offered (intersection with user).
-  final Set<String>? allowedVerticalIds;
+  final Set<int>? allowedVerticalIds;
 
   /// When false, omits "Todas as linhas".
   final bool allowAll;
@@ -39,7 +39,7 @@ class FacilityVerticalFilterBar extends ConsumerWidget {
 
   /// Controlled selection (clinic-local). When null and [syncExploreSelection],
   /// uses Explorar provider.
-  final String? selectedVerticalId;
+  final int? selectedVerticalId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,7 +81,7 @@ class FacilityVerticalFilterBar extends ConsumerWidget {
 
   static List<BusinessVertical> _filterOptions(
     List<BusinessVertical> options,
-    Set<String>? allowed,
+    Set<int>? allowed,
   ) {
     if (allowed == null) return options;
     if (allowed.isEmpty) return const [];

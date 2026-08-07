@@ -21,11 +21,11 @@ interface Dependencies {
 }
 
 interface ChangePasswordParams {
-  userId: string;
+  userId: number;
   currentPassword: string;
   newPassword: string;
   revokeOtherSessions?: boolean;
-  sessionId?: string;
+  sessionId?: number;
   ipAddress?: string;
   userAgent?: string;
 }

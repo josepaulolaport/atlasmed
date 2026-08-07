@@ -12,7 +12,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_w
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
-  final String orderId;
+  final int orderId;
 
   const OrderDetailScreen({super.key, required this.orderId});
 
@@ -36,7 +36,7 @@ class OrderDetailScreen extends ConsumerWidget {
               (item) => MapEntry(
                 Product(
                   id: item.productId,
-                  name: item.name ?? item.productId,
+                  name: item.name ?? item.productId.toString(),
                   sub: '',
                   unit: item.unitPrice ?? 0,
                   category: '',
@@ -125,7 +125,7 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  detail.id,
+                  detail.id.toString(),
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,

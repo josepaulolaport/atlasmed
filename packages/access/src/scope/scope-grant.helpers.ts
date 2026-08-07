@@ -2,6 +2,15 @@ import type { AccessGrantRecord } from "../contracts/access-grant.contract";
 import type { ScopeContext } from "../contracts/scope-context.contract";
 import { withTerritoryScopeAliases } from "../contracts/scope-context.contract";
 
+function grantResourceIdAsNumber(resourceId: string): number | null {
+  const trimmed = resourceId.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function mergeGrantsIntoScope(
   scope: ScopeContext,
   grants: AccessGrantRecord[]
@@ -19,13 +28,19 @@ export function mergeGrantsIntoScope(
     }
 
     if (resource === "TERRITORY") {
-      effectiveTerritoryIds.add(grant.resourceId);
-      analyticsEffectiveTerritoryIds.add(grant.resourceId);
+      const territoryId = grantResourceIdAsNumber(grant.resourceId);
+      if (territoryId !== null) {
+        effectiveTerritoryIds.add(territoryId);
+        analyticsEffectiveTerritoryIds.add(territoryId);
+      }
     }
 
     if (resource === "FACILITY" || resource === "CLINIC") {
-      facilityIds.add(grant.resourceId);
-      analyticsFacilityIds.add(grant.resourceId);
+      const facilityId = grantResourceIdAsNumber(grant.resourceId);
+      if (facilityId !== null) {
+        facilityIds.add(facilityId);
+        analyticsFacilityIds.add(facilityId);
+      }
     }
   }
 

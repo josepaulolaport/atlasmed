@@ -4,11 +4,23 @@ import type { FacilityListRecord } from "../interfaces/facility.repository.inter
 
 const now = new Date("2026-01-01T00:00:00.000Z");
 
+const defaultPurchaseRecurrence = {
+  observedPurchaseIntervalDays: null,
+  purchaseIntervalDays: 30,
+  purchaseIntervalSource: "DEFAULT" as const,
+  manualPurchaseProfile: null,
+  manualPurchaseIntervalDays: null,
+  lastValidPurchaseDate: null,
+  purchaseRecurrenceSampleSize: 0,
+  purchaseFunnelStage: "NEVER_PURCHASED" as const,
+  nextPurchaseFunnelTransitionDate: null,
+};
+
 function baseFacility(
   overrides: Partial<FacilityListRecord> = {}
 ): FacilityListRecord {
   return {
-    id: "facility-1",
+    id: 1,
     name: "Clínica Exemplo",
     neighborhood: "Centro",
     city: "São Paulo",
@@ -17,6 +29,8 @@ function baseFacility(
     streetNumber: "1000",
     addressComplement: "Conj. 12",
     postalCode: "01310-100",
+    stateId: 1,
+    municipalityId: 2,
     phone: "1130405060",
     whatsapp: "11987654321",
     email: "contato@exemplo.com",
@@ -24,48 +38,44 @@ function baseFacility(
     billingEmail: "financeiro@exemplo.com",
     responsibleName: "Dr. Silva",
     openingHours: "Seg–Sex 08:00–18:00",
-    taxIdType: "PJ",
-    cnpj: "12345678000199",
-    cpf: null,
+    legalDocumentType: "CNPJ",
+    legalDocument: "12345678000199",
     lat: -23.5614,
     lng: -46.6559,
-    territoryId: "territory-1",
+    territoryId: 1,
     territoryName: "Zona Sul",
     territoryAssignmentStatus: "assigned",
-    territoryAssignmentSource: "geo",
-    commercialStatus: "REGISTERED",
-    purchaseStatus: "REGULAR_BUYER",
-    observedPurchaseIntervalDays: null,
-    purchaseIntervalDays: 30,
-    purchaseIntervalSource: "DEFAULT" as const,
-    manualPurchaseProfile: null,
-    manualPurchaseIntervalDays: null,
-    lastValidPurchaseDate: null,
-    purchaseRecurrenceSampleSize: 0,
-    purchaseFunnelStage: "NEVER_PURCHASED" as const,
-    nextPurchaseFunnelTransitionDate: null,
+    commercialStatus: null,
+    purchaseStatus: null,
     conformityStatus: "COMPLETE",
     consultantName: "Ana Silva",
     consultantSince: new Date("2023-03-01T00:00:00.000Z"),
     managerName: "Roberto Mendes",
     imageUrl: null,
     imageBlurhash: null,
-    sourceProvider: null,
-    externalSourceId: null,
-    sourceContentHash: null,
-    sourceFirstSeenAt: null,
-    sourceLastSeenAt: null,
-    sourcePresent: true,
-    sourceTracked: false,
-    manuallyEditedAt: null,
+    cnesCode: null,
+    facilityTypeCode: null,
+    unitTypeCode: null,
+    unitSubtypeCode: null,
     deactivatedAt: null,
     createdAt: now,
     updatedAt: now,
-    services: [
+    clinicalFocuses: [
       {
-        serviceCode: "123",
-        classificationCode: "01",
-        serviceName: "SERVICO DE TESTE",
+        id: 1,
+        name: "Ortopedia",
+        cnesCode: "155",
+      },
+    ],
+    verticalProfiles: [
+      {
+        verticalId: 1,
+        verticalCode: "ORTOPEDIA",
+        verticalName: "Ortopedia",
+        isActive: true,
+        commercialStatus: "REGISTERED",
+        purchaseStatus: "REGULAR_BUYER",
+        purchaseRecurrence: defaultPurchaseRecurrence,
       },
     ],
     professionalCount: 4,
@@ -80,7 +90,7 @@ describe("serializeFacility", () => {
     const dto = serializeFacility(baseFacility());
 
     expect(dto).toMatchObject({
-      id: "facility-1",
+      id: 1,
       name: "Clínica Exemplo",
       neighborhood: "Centro",
       city: "São Paulo",
@@ -97,11 +107,10 @@ describe("serializeFacility", () => {
       responsibleName: "Dr. Silva",
       openingHours: "Seg–Sex 08:00–18:00",
       registeredSince: now.toISOString(),
-      taxIdType: "PJ",
-      cnpj: "12345678000199",
+      legalDocumentType: "CNPJ",
+      legalDocument: "12345678000199",
       lat: -23.5614,
       lng: -46.6559,
-      commercialStatus: "REGISTERED",
       conformityStatus: "COMPLETE",
       consultantName: "Ana Silva",
       consultantSince: "2023-03-01T00:00:00.000Z",
@@ -109,15 +118,27 @@ describe("serializeFacility", () => {
       territoryName: "Zona Sul",
       professionalCount: 4,
       distanceKm: 1.2,
-      services: [
-      {
-        serviceCode: "123",
-        classificationCode: "01",
-        serviceName: "SERVICO DE TESTE",
-      },
-    ],
+      facilityTypeCode: undefined,
+      unitTypeCode: undefined,
+      unitSubtypeCode: undefined,
+      clinicalFocuses: [
+        {
+          id: 1,
+          name: "Ortopedia",
+          cnesCode: "155",
+        },
+      ],
     });
-    expect(dto.purchaseStatus).toBe("REGULAR_BUYER");
+    expect(dto).not.toHaveProperty("commercialStatus");
+    expect(dto).not.toHaveProperty("purchaseStatus");
+    expect(dto).not.toHaveProperty("purchaseRecurrence");
+    expect(dto.verticalProfiles).toEqual([
+      expect.objectContaining({
+        verticalId: 1,
+        commercialStatus: "REGISTERED",
+        purchaseStatus: "REGULAR_BUYER",
+      }),
+    ]);
     expect(dto.createdAt).toBe(now.toISOString());
   });
 
@@ -128,6 +149,17 @@ describe("serializeFacility", () => {
     expect(dto.lng).toBeUndefined();
   });
 
+  it("exposes derived territoryAssignmentStatus without source", () => {
+    const assigned = serializeFacility(baseFacility({ territoryAssignmentStatus: "assigned" }));
+    const unassigned = serializeFacility(
+      baseFacility({ territoryId: null, territoryAssignmentStatus: "unassigned" }),
+    );
+
+    expect(assigned.territoryAssignmentStatus).toBe("assigned");
+    expect(unassigned.territoryAssignmentStatus).toBe("unassigned");
+    expect("territoryAssignmentSource" in assigned).toBe(false);
+  });
+
   it("serializes the requesting user's latest visit when present", () => {
     const lastVisitAt = new Date("2025-12-20T14:30:00.000Z");
 
@@ -136,22 +168,29 @@ describe("serializeFacility", () => {
     expect(dto.lastVisitAt).toBe(lastVisitAt.toISOString());
   });
   it("returns null nextEstimatedPurchaseDate when there is no last purchase", () => {
-    const dto = serializeFacility(
-      baseFacility({ lastValidPurchaseDate: null, purchaseIntervalDays: 30 }),
-    );
+    const dto = serializeFacility(baseFacility());
 
-    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBeNull();
+    expect(dto.verticalProfiles![0]!.purchaseRecurrence!.nextEstimatedPurchaseDate).toBeNull();
   });
 
   it("calculates nextEstimatedPurchaseDate from last purchase date + interval", () => {
     const dto = serializeFacility(
       baseFacility({
-        lastValidPurchaseDate: "2025-12-15",
-        purchaseIntervalDays: 30,
+        verticalProfiles: [{
+          verticalId: 1,
+          isActive: true,
+          commercialStatus: "REGISTERED",
+          purchaseStatus: "REGULAR_BUYER",
+          purchaseRecurrence: {
+            ...defaultPurchaseRecurrence,
+            lastValidPurchaseDate: "2025-12-15",
+            purchaseIntervalDays: 30,
+          },
+        }],
       }),
     );
 
-    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
+    expect(dto.verticalProfiles![0]!.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
       "2026-01-14T00:00:00.000Z",
     );
   });
@@ -159,12 +198,21 @@ describe("serializeFacility", () => {
   it("calculates nextEstimatedPurchaseDate with a 7-day interval", () => {
     const dto = serializeFacility(
       baseFacility({
-        lastValidPurchaseDate: "2026-01-10",
-        purchaseIntervalDays: 7,
+        verticalProfiles: [{
+          verticalId: 1,
+          isActive: true,
+          commercialStatus: "REGISTERED",
+          purchaseStatus: "REGULAR_BUYER",
+          purchaseRecurrence: {
+            ...defaultPurchaseRecurrence,
+            lastValidPurchaseDate: "2026-01-10",
+            purchaseIntervalDays: 7,
+          },
+        }],
       }),
     );
 
-    expect(dto.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
+    expect(dto.verticalProfiles![0]!.purchaseRecurrence!.nextEstimatedPurchaseDate).toBe(
       "2026-01-17T00:00:00.000Z",
     );
   });

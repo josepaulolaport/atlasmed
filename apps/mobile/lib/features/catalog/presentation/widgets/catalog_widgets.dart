@@ -241,7 +241,7 @@ class CatalogSearchBar extends StatelessWidget {
 /// manufacturer/country of origin so a rep can narrow "only what VSY
 /// makes" or "only German-made" alongside the usual family filter.
 class ProductFilterSelection {
-  final String? familyId;
+  final int? familyId;
   final String? manufacturer;
   final String? country;
 
@@ -255,7 +255,7 @@ class ProductFilterSelection {
       [familyId, manufacturer, country].where((v) => v != null).length;
 
   ProductFilterSelection copyWith({
-    String? Function()? familyId,
+    int? Function()? familyId,
     String? Function()? manufacturer,
     String? Function()? country,
   }) {
@@ -315,14 +315,14 @@ class _ProductFilterSheet extends StatefulWidget {
 class _ProductFilterSheetState extends State<_ProductFilterSheet> {
   late ProductFilterSelection _selection = widget.initial;
 
-  String? _familyName(String? familyId) {
+  String? _familyName(int? familyId) {
     for (final family in widget.families) {
       if (family.id == familyId) return family.name;
     }
     return null;
   }
 
-  String? _familyIdForName(String? name) {
+  int? _familyIdForName(String? name) {
     for (final family in widget.families) {
       if (family.name == name) return family.id;
     }

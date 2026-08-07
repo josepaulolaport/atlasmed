@@ -3,8 +3,8 @@ import type { ISessionCache } from "../interfaces/session-cache.interface";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
 
 interface RevokeOtherSessionsInput {
-  userId: string;
-  currentSessionId: string;
+  userId: number;
+  currentSessionId: number;
 }
 
 interface RevokeOtherSessionsDependencies {

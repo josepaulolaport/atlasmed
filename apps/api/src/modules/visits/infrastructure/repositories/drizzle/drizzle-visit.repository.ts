@@ -4,13 +4,13 @@ import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
 import type { VisitRecord, VisitRepository } from "../../../application/interfaces/visit.repository.interface";
 
-function facilityScopeCondition(facilityIds?: string[]) {
+function facilityScopeCondition(facilityIds?: number[]) {
   if (facilityIds === undefined) return undefined;
-  return inArray(facilities.id, facilityIds.length ? facilityIds : ["__none__"]);
+  return inArray(facilities.id, facilityIds.length ? facilityIds : [-1]);
 }
 
 export class DrizzleVisitRepository implements VisitRepository {
-  async create(input: { userId: string; facilityId: string; visitedAt: Date }): Promise<VisitRecord> {
+  async create(input: { userId: number; facilityId: number; visitedAt: Date }): Promise<VisitRecord> {
     const [visit] = await db.insert(visits).values(input).returning();
     if (!visit) {
       throw new DatabaseError("create visit");
@@ -19,10 +19,10 @@ export class DrizzleVisitRepository implements VisitRepository {
   }
 
   async countDistinctFacilitiesForUserInPeriod(input: {
-    userId: string;
+    userId: number;
     start: Date;
     end: Date;
-    facilityIds?: string[];
+    facilityIds?: number[];
   }): Promise<number> {
     const scope = facilityScopeCondition(input.facilityIds);
     const conditions = [
@@ -39,7 +39,7 @@ export class DrizzleVisitRepository implements VisitRepository {
     return row?.count ?? 0;
   }
 
-  async countFacilities(input: { facilityIds?: string[] }): Promise<number> {
+  async countFacilities(input: { facilityIds?: number[] }): Promise<number> {
     const scope = facilityScopeCondition(input.facilityIds);
     const conditions = [isNull(facilities.deactivatedAt)];
     if (scope) conditions.push(scope);

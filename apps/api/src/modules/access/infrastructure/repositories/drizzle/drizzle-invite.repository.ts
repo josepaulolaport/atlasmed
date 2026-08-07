@@ -19,7 +19,7 @@ import type {
   AcceptInviteTransactionResult,
 } from "../../../application/interfaces/invite.repository.interface";
 
-async function fetchInviteWithRole(inviteId: string) {
+async function fetchInviteWithRole(inviteId: number) {
   const [row] = await db
     .select()
     .from(invitations)
@@ -97,11 +97,11 @@ export class DrizzleInviteRepository implements InviteRepository {
     return { ...row.invitations, role: row.roles! };
   }
 
-  async findById(inviteId: string) {
+  async findById(inviteId: number) {
     return fetchInviteWithRole(inviteId);
   }
 
-  async findStagedVerticalAssignments(invitationIds: string[]) {
+  async findStagedVerticalAssignments(invitationIds: number[]) {
     if (invitationIds.length === 0) return [];
 
     const verticalRows = await db
@@ -121,7 +121,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       .from(invitationTerritoryAssignments)
       .where(inArray(invitationTerritoryAssignments.invitationId, invitationIds));
 
-    const territoriesByKey = new Map<string, string[]>();
+    const territoriesByKey = new Map<string, number[]>();
     for (const row of territoryRows) {
       const key = `${row.invitationId}:${row.verticalId}`;
       const list = territoriesByKey.get(key) ?? [];
@@ -138,18 +138,18 @@ export class DrizzleInviteRepository implements InviteRepository {
   }
 
   async updatePending(params: {
-    inviteId: string;
+    inviteId: number;
     email?: string | undefined;
     phoneNumber?: string | null | undefined;
-    roleId?: string | undefined;
+    roleId?: number | undefined;
     firstName?: string | undefined;
     lastName?: string | undefined;
     birthDate?: Date | undefined;
-    managerTerritoryId?: string | null | undefined;
-    repTerritoryId?: string | null | undefined;
+    managerTerritoryId?: number | null | undefined;
+    repTerritoryId?: number | null | undefined;
     verticalAssignments?: Array<{
-      verticalId: string;
-      territoryIds: string[];
+      verticalId: number;
+      territoryIds: number[];
     }>;
   }) {
     await db.transaction(async (tx) => {
@@ -232,7 +232,7 @@ export class DrizzleInviteRepository implements InviteRepository {
     status?: string;
     page?: number;
     limit?: number;
-    invitedByUserId?: string;
+    invitedByUserId?: number;
   }) {
     await this.cleanupExpired();
 
@@ -270,7 +270,7 @@ export class DrizzleInviteRepository implements InviteRepository {
     };
   }
 
-  async markAccepted(inviteId: string, _userId: string) {
+  async markAccepted(inviteId: number, _userId: number) {
     await db
       .update(invitations)
       .set({
@@ -281,7 +281,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       .where(eq(invitations.id, inviteId));
   }
 
-  async revoke(inviteId: string) {
+  async revoke(inviteId: number) {
     await db
       .update(invitations)
       .set({
@@ -292,7 +292,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       .where(eq(invitations.id, inviteId));
   }
 
-  async regenerateToken(inviteId: string, params: { tokenHash: string; expiresAt: Date }) {
+  async regenerateToken(inviteId: number, params: { tokenHash: string; expiresAt: Date }) {
     await db
       .update(invitations)
       .set({
@@ -417,7 +417,7 @@ export class DrizzleInviteRepository implements InviteRepository {
         .where(eq(invitationTerritoryAssignments.invitationId, inviteLock.id));
 
       if (stagedTerritories.length > 0 || stagedVerticals.length > 0) {
-        const seenTerritoryIds = new Set<string>();
+        const seenTerritoryIds = new Set<number>();
         for (const row of stagedTerritories) {
           if (seenTerritoryIds.has(row.territoryId)) continue;
           seenTerritoryIds.add(row.territoryId);
@@ -470,7 +470,7 @@ export class DrizzleInviteRepository implements InviteRepository {
           }
         }
       } else {
-        const assignedTerritoryIds: string[] = [];
+        const assignedTerritoryIds: number[] = [];
 
         if (inviteLock.managerTerritoryId) {
           await tx.insert(userTerritoryAssignments).values({

@@ -5,10 +5,14 @@ import type { PurchaseRecurrenceCommand, PurchaseRecurrenceService } from "../se
 import { ValidationError } from "../../../../shared/errors";
 import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
-import { buildMeiliFilter, eqFilter, geoRadiusFilter, gteFilter, inFilter, isNullFilter, lteFilter } from "../../../../infrastructure/search/meili-filter";
+import { buildMeiliFilter, eqFilter, geoRadiusFilter, gteFilter, inFilter, lteFilter } from "../../../../infrastructure/search/meili-filter";
 import { purchaseBucketToFunnelFilter } from "../list-facilities-query";
 import { serializeFacility } from "../mappers/facility.mapper";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
+import {
+  meiliFunnelStageFilter,
+  meiliPurchaseProfileFilter,
+} from "../utils/meili-funnel-filter.utils";
 
 export interface SearchService {
   isConfigured(): boolean;
@@ -19,9 +23,9 @@ export interface SearchService {
   ): Promise<{ hits: T[]; estimatedTotalHits?: number }>;
 }
 
-export function orderSearchResultsById<T extends { id: string }>(
+export function orderSearchResultsById<T extends { id: number }>(
   records: T[],
-  ids: string[]
+  ids: number[]
 ): T[] {
   const recordsById = new Map(records.map((record) => [record.id, record]));
   return ids.flatMap((id) => {
@@ -34,7 +38,7 @@ interface Dependencies {
   facilityRepository: FacilityRepository;
   searchService?: SearchService;
   facilityGeocodingService?: FacilityGeocodingService;
-  onFacilityLocationChanged?: (facilityId: string) => Promise<void>;
+  onFacilityLocationChanged?: (facilityId: number) => Promise<void>;
   purchaseRecurrenceService?: PurchaseRecurrenceService;
 }
 
@@ -50,18 +54,18 @@ export class ListFacilitiesUseCase {
     radiusKm?: number;
     commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: "active" | "inactive" | "neverBought";
-    productIds?: string[];
-    serviceCodes?: string[];
+    productIds?: number[];
+    clinicalFocusIds?: number[];
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
     purchaseIntervalMaxDays?: number;
     sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
     order?: "asc" | "desc";
-    userId: string;
+    userId: number;
     scope: ScopeContext;
     role: string;
-    verticalId?: string;
+    verticalId?: number;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
@@ -86,7 +90,7 @@ export class ListFacilitiesUseCase {
         commercialStatus: input.commercialStatus,
         purchaseBucket: input.purchaseBucket,
         productIds: input.productIds,
-        serviceCodes: input.serviceCodes,
+        clinicalFocusIds: input.clinicalFocusIds,
         purchaseFunnelStages: input.purchaseFunnelStages,
         purchaseProfile: input.purchaseProfile,
         purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -108,40 +112,34 @@ export class ListFacilitiesUseCase {
       throw new ServiceUnavailableError("Search");
     }
 
-    let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
+    let result: { hits: Array<{ id: number }>; estimatedTotalHits?: number };
     try {
       // commercialStatus remains canonical-Postgres-only; recurrence filters are indexed.
       const purchaseBucketFunnel = input.purchaseBucket
         ? purchaseBucketToFunnelFilter(input.purchaseBucket)
         : undefined;
       const purchaseBucketMeiliFilter = purchaseBucketFunnel
-        ? purchaseBucketFunnel.includeNull
-          ? {
-              expression: `(purchaseFunnelStage IN [${[...purchaseBucketFunnel.stages]
-                .sort()
-                .map((stage) => `'${stage}'`)
-                .join(", ")}] OR purchaseFunnelStage IS NULL)`,
-            }
-          : inFilter("purchaseFunnelStage", purchaseBucketFunnel.stages)
+        ? meiliFunnelStageFilter(
+            listScope.verticalIds,
+            purchaseBucketFunnel.stages,
+            { includeNull: purchaseBucketFunnel.includeNull },
+          )
         : undefined;
       const canonicalFilters = [
         input.radiusKm !== undefined && input.latitude !== undefined && input.longitude !== undefined
           ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
           : undefined,
-        // Explicit stage filter wins; otherwise Desempenho bucket.
         input.purchaseFunnelStages?.length
-          ? inFilter("purchaseFunnelStage", input.purchaseFunnelStages)
+          ? meiliFunnelStageFilter(listScope.verticalIds, input.purchaseFunnelStages)
           : purchaseBucketMeiliFilter,
-        input.purchaseProfile === "AUTOMATIC"
-          ? isNullFilter("manualPurchaseProfile")
-          : input.purchaseProfile
-            ? eqFilter("manualPurchaseProfile", input.purchaseProfile)
-            : undefined,
+        input.purchaseProfile
+          ? meiliPurchaseProfileFilter(listScope.verticalIds, input.purchaseProfile)
+          : undefined,
         input.purchaseIntervalMinDays !== undefined
-          ? gteFilter("purchaseIntervalDays", input.purchaseIntervalMinDays)
+          ? gteFilter("purchaseIntervalDaysMin", input.purchaseIntervalMinDays)
           : undefined,
         input.purchaseIntervalMaxDays !== undefined
-          ? lteFilter("purchaseIntervalDays", input.purchaseIntervalMaxDays)
+          ? lteFilter("purchaseIntervalDaysMin", input.purchaseIntervalMaxDays)
           : undefined,
       ];
       const verticalFilter =
@@ -152,7 +150,7 @@ export class ListFacilitiesUseCase {
         ? undefined
         : input.scope.facilityIds.length > 0
           ? inFilter("id", input.scope.facilityIds)
-          : eqFilter("id", "__none__");
+          : eqFilter("id", -1);
       const filterClauses = [...canonicalFilters, verticalFilter, scopeFilter];
       const filter = buildMeiliFilter(filterClauses);
       if (filterClauses.some(Boolean) && !filter) {
@@ -161,7 +159,7 @@ export class ListFacilitiesUseCase {
           radiusKm: input.radiusKm, commercialStatus: input.commercialStatus,
           purchaseBucket: input.purchaseBucket,
           productIds: input.productIds,
-          serviceCodes: input.serviceCodes,
+          clinicalFocusIds: input.clinicalFocusIds,
           purchaseFunnelStages: input.purchaseFunnelStages,
           purchaseProfile: input.purchaseProfile, purchaseIntervalMinDays: input.purchaseIntervalMinDays,
           purchaseIntervalMaxDays: input.purchaseIntervalMaxDays, sort, order,
@@ -178,13 +176,13 @@ export class ListFacilitiesUseCase {
         : sort === "purchaseFunnelStage"
           ? [`purchaseFunnelStageRank:${order}`, "name:asc", "id:asc"]
           : sort === "purchaseIntervalDays"
-            ? [`purchaseIntervalDays:${order}`, "name:asc", "id:asc"]
+            ? [`purchaseIntervalDaysMin:${order}`, "name:asc", "id:asc"]
             : sort === "lastPurchaseDate"
               ? ["hasLastValidPurchase:desc", `lastValidPurchaseSortAt:${order}`, "name:asc", "id:asc"]
               : sort === "name"
                 ? [`name:${order}`, "id:asc"]
                 : undefined;
-      result = await searchService.search<{ id: string }>("facilities", search, {
+      result = await searchService.search<{ id: number }>("facilities", search, {
         limit,
         offset: (page - 1) * limit,
         ...(filter ? { filter } : {}),
@@ -205,7 +203,7 @@ export class ListFacilitiesUseCase {
             commercialStatus: input.commercialStatus,
             purchaseBucket: input.purchaseBucket,
             productIds: input.productIds,
-            serviceCodes: input.serviceCodes,
+            clinicalFocusIds: input.clinicalFocusIds,
             purchaseFunnelStages: input.purchaseFunnelStages,
             purchaseProfile: input.purchaseProfile,
             purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -227,15 +225,16 @@ export class ListFacilitiesUseCase {
   }
 }
 
-export class ListFacilityServicesUseCase {
+export class ListClinicalFocusesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute() {
-    const catalog = await this.deps.facilityRepository.listServiceCatalog();
+    const catalog = await this.deps.facilityRepository.listClinicalFocusCatalog();
     return {
       data: catalog.map((row) => ({
-        serviceCode: row.serviceCode,
-        serviceName: row.serviceName,
+        id: row.id,
+        name: row.name,
+        cnesCode: row.cnesCode ?? undefined,
       })),
     };
   }
@@ -244,7 +243,7 @@ export class ListFacilityServicesUseCase {
 export class GetFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext; role: string; verticalId?: string }) {
+  async execute(input: { facilityId: number; scope: ScopeContext; role: string; verticalId?: number }) {
     const listScope = buildFacilityListScope({
       scope: input.scope,
       role: input.role,
@@ -292,6 +291,8 @@ export class CreateFacilityUseCase {
 
   async execute(input: {
     name: string;
+    stateId: number;
+    municipalityId: number;
     lat?: number;
     lng?: number;
   }) {
@@ -304,6 +305,8 @@ export class CreateFacilityUseCase {
 
     const clinic = await this.deps.facilityRepository.create({
       name: input.name,
+      stateId: input.stateId,
+      municipalityId: input.municipalityId,
       lat: coordinates.lat,
       lng: coordinates.lng,
     });
@@ -321,14 +324,14 @@ export class UpdateFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
+    facilityId: number;
     scope: ScopeContext;
     name?: string;
     lat?: number | null;
     lng?: number | null;
     purchaseRecurrence?: PurchaseRecurrenceCommand;
     /** Required when updating purchaseRecurrence for multi-vertical clinics. */
-    verticalId?: string;
+    verticalId?: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -360,7 +363,7 @@ export class UpdateFacilityUseCase {
         input.facilityId,
         verticalId,
         {
-          fields: { name: input.name, manuallyEditedAt: new Date() },
+          fields: { name: input.name },
           configuration,
           today: new Date().toISOString().slice(0, 10),
         },
@@ -386,7 +389,6 @@ export class UpdateFacilityUseCase {
       name: input.name,
       lat: coordinates.lat,
       lng: coordinates.lng,
-      manuallyEditedAt: new Date(),
     });
 
     if (locationChanged) {
@@ -401,7 +403,7 @@ export class UpdateFacilityUseCase {
 export class DeleteFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const existing = await this.deps.facilityRepository.findById(input.facilityId);

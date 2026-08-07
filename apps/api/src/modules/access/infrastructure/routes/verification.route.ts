@@ -10,7 +10,7 @@ export const verificationRoute = new Elysia({
 })
   .use(auth)
   .use(verificationRateLimit)
-  .post("/email/request", async ({ getUserId }: any) => {
+  .post("/email/request", async ({ getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.requestEmailVerification({
@@ -27,7 +27,7 @@ export const verificationRoute = new Elysia({
       tags: ["Users"],
     },
   })
-  .post("/email/verify", async ({ body, getUserId }: any) => {
+  .post("/email/verify", async ({ body, getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.verifyEmail({
@@ -48,7 +48,7 @@ export const verificationRoute = new Elysia({
       token: t.String({ description: "Verification token" }),
     }),
   })
-  .post("/phone/request", async ({ getUserId }: any) => {
+  .post("/phone/request", async ({ getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.requestPhoneVerification({
@@ -65,7 +65,7 @@ export const verificationRoute = new Elysia({
       tags: ["Users"],
     },
   })
-  .post("/phone/verify", async ({ body, getUserId }: any) => {
+  .post("/phone/verify", async ({ body, getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.verifyPhone({
@@ -86,7 +86,7 @@ export const verificationRoute = new Elysia({
       token: t.String({ description: "Verification code" }),
     }),
   })
-  .post("/email/change", async ({ body, getUserId }: any) => {
+  .post("/email/change", async ({ body, getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.requestEmailChange({
@@ -107,7 +107,7 @@ export const verificationRoute = new Elysia({
       newEmail: t.String({ format: "email", description: "New email address" }),
     }),
   })
-  .post("/email/change/confirm", async ({ body, getUserId }: any) => {
+  .post("/email/change/confirm", async ({ body, getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.changeEmail({
@@ -130,7 +130,7 @@ export const verificationRoute = new Elysia({
       token: t.String({ description: "Verification token" }),
     }),
   })
-  .post("/phone/change", async ({ body, getUserId }: any) => {
+  .post("/phone/change", async ({ body, getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.requestPhoneChange({
@@ -151,7 +151,7 @@ export const verificationRoute = new Elysia({
       newPhone: t.String({ description: "New phone number" }),
     }),
   })
-  .post("/phone/change/confirm", async ({ body, getUserId }: any) => {
+  .post("/phone/change/confirm", async ({ body, getUserId }) => {
     const userId = await getUserId();
     
     await accessServices.verification.changePhone({

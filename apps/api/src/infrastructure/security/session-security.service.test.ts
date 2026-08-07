@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { environment } from "../../app/config/environment";
 import { createMockAuditLogService } from "../../modules/access/test-helpers/audit-mocks";
 import { createMockMetricsService } from "../../modules/access/test-helpers/metrics-mocks";
+
+const sessionSecurityIsStrict = environment.SESSION_SECURITY_MODE === "strict";
 
 const mockLogSuspiciousActivity = mock(async () => {});
 const mockRecordSuspiciousActivity = mock(() => {});
@@ -39,8 +42,8 @@ describe("SessionSecurityService", () => {
       });
 
       const result = await sessionSecurityService.validateSessionSecurity({
-        userId: "user-123",
-        sessionId: "session-123",
+        userId: 123,
+        sessionId: 1,
         ipAddress: "192.168.1.10",
         userAgent: CHROME_UA,
         deviceFingerprint: fingerprint,
@@ -57,15 +60,15 @@ describe("SessionSecurityService", () => {
 
     it("flags suspicious when IP changes to a different /24 network", async () => {
       const result = await sessionSecurityService.validateSessionSecurity({
-        userId: "user-123",
-        sessionId: "session-123",
+        userId: 123,
+        sessionId: 1,
         ipAddress: "10.0.0.1",
         userAgent: CHROME_UA,
         sessionIpAddress: "192.168.1.1",
         sessionUserAgent: CHROME_UA,
       });
 
-      expect(result.valid).toBe(false);
+      expect(result.valid).toBe(!sessionSecurityIsStrict ? true : false);
       expect(result.suspicious).toBe(true);
       expect(result.reason).toContain("IP address changed significantly");
       expect(mockLogSuspiciousActivity).toHaveBeenCalledTimes(1);
@@ -74,15 +77,15 @@ describe("SessionSecurityService", () => {
 
     it("flags suspicious when user agent browser family changes", async () => {
       const result = await sessionSecurityService.validateSessionSecurity({
-        userId: "user-123",
-        sessionId: "session-123",
+        userId: 123,
+        sessionId: 1,
         ipAddress: "192.168.1.1",
         userAgent: FIREFOX_UA,
         sessionIpAddress: "192.168.1.1",
         sessionUserAgent: CHROME_UA,
       });
 
-      expect(result.valid).toBe(false);
+      expect(result.valid).toBe(!sessionSecurityIsStrict ? true : false);
       expect(result.suspicious).toBe(true);
       expect(result.reason).toContain("User agent changed significantly");
       expect(mockLogSuspiciousActivity).toHaveBeenCalledTimes(1);
@@ -102,8 +105,8 @@ describe("SessionSecurityService", () => {
       });
 
       const result = await sessionSecurityService.validateSessionSecurity({
-        userId: "user-123",
-        sessionId: "session-123",
+        userId: 123,
+        sessionId: 1,
         ipAddress: "192.168.1.1",
         userAgent: CHROME_UA,
         deviceFingerprint: currentFingerprint,
@@ -112,7 +115,7 @@ describe("SessionSecurityService", () => {
         sessionDeviceFingerprint: sessionFingerprint,
       });
 
-      expect(result.valid).toBe(false);
+      expect(result.valid).toBe(!sessionSecurityIsStrict ? true : false);
       expect(result.suspicious).toBe(true);
       expect(result.reason).toContain("Device fingerprint mismatch");
       expect(mockLogSuspiciousActivity).toHaveBeenCalledTimes(1);

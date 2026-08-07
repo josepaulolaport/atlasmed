@@ -24,7 +24,7 @@ describe("Disable2FAUseCase", () => {
   let passwordHash: string;
 
   const baseUser = {
-    id: "user-123",
+    id: 123,
     twoFactorEnabled: true,
     twoFactorSecret: "encrypted-secret",
     get passwordHash() {
@@ -62,29 +62,29 @@ describe("Disable2FAUseCase", () => {
 
   it("should disable 2FA with valid password and code", async () => {
     const result = await useCase.execute({
-      userId: "user-123",
+      userId: 123,
       password: "CorrectPassword1!",
       code: "123456",
-      sessionId: "session-current",
+      sessionId: 1,
     });
 
     expect(result.success).toBe(true);
     expect(mockAuditLog.log2FADisable).toHaveBeenCalledTimes(1);
-    expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
+    expect(mockAuthCache.invalidate).toHaveBeenCalledWith(123);
     expect(mockRevokeAllByUserId).toHaveBeenCalledWith(
-      "user-123",
-      "session-current"
+      123,
+      1
     );
     expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith(
-      "user-123",
-      "session-current"
+      123,
+      1
     );
   });
 
   it("should reject invalid password", async () => {
     await expect(
       useCase.execute({
-        userId: "user-123",
+        userId: 123,
         password: "WrongPassword1!",
         code: "123456",
       })
@@ -96,7 +96,7 @@ describe("Disable2FAUseCase", () => {
 
     await expect(
       useCase.execute({
-        userId: "user-123",
+        userId: 123,
         password: "CorrectPassword1!",
         code: "000000",
       })
@@ -124,7 +124,7 @@ describe("Disable2FAUseCase", () => {
 
     await expect(
       useCase.execute({
-        userId: "user-123",
+        userId: 123,
         password: "CorrectPassword1!",
         code: "123456",
       })
@@ -148,7 +148,7 @@ describe("Disable2FAUseCase", () => {
 
     await expect(
       useCase.execute({
-        userId: "missing",
+        userId: 999,
         password: "CorrectPassword1!",
         code: "123456",
       })

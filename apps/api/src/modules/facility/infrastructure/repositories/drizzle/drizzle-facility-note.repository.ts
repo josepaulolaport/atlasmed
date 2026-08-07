@@ -21,8 +21,8 @@ function mapNote(row: NoteRow): FacilityNoteRecord {
 
 export class DrizzleFacilityNoteRepository implements FacilityNoteRepository {
   async findByFacilityAndUser(
-    facilityId: string,
-    userId: string
+    facilityId: number,
+    userId: number
   ): Promise<FacilityNoteRecord[]> {
     const rows = await db
       .select()
@@ -39,8 +39,8 @@ export class DrizzleFacilityNoteRepository implements FacilityNoteRepository {
   }
 
   async create(input: {
-    facilityId: string;
-    userId: string;
+    facilityId: number;
+    userId: number;
     note: string;
   }): Promise<FacilityNoteRecord> {
     const [note] = await db.insert(facilityNotes).values(input).returning();

@@ -1,24 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
+import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
-
-FacilityRosterPage<T> _emptyRosterPage<T>({required int page}) {
-  return FacilityRosterPage<T>(
-    items: const [],
-    pagination: Pagination(
-      page: page,
-      limit: facilityRosterPageSize,
-      total: 0,
-      totalPages: 0,
-    ),
-  );
-}
 
 /// Accumulated state for a paginated facility roster strip.
 class FacilityRosterState<T> {
@@ -67,7 +53,7 @@ class FacilityRosterState<T> {
 
 typedef FacilityRosterPageLoader<T> =
     Future<FacilityRosterPage<T>> Function({
-      required String facilityId,
+      required int facilityId,
       required int page,
     });
 
@@ -80,7 +66,7 @@ class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>> {
     _loadInitial();
   }
 
-  final String facilityId;
+  final int facilityId;
   final FacilityRosterPageLoader<T> _loadPage;
   bool _fetchInFlight = false;
 
@@ -143,14 +129,11 @@ final facilityDoctorsRosterProvider = StateNotifierProvider.autoDispose
     .family<
       FacilityRosterNotifier<ProfessionalRoster>,
       FacilityRosterState<ProfessionalRoster>,
-      String
+      int
     >((ref, facilityId) {
       return FacilityRosterNotifier<ProfessionalRoster>(
         facilityId: facilityId,
         loadPage: ({required facilityId, required page}) async {
-          if (isMockNearbyFacilityId(facilityId)) {
-            return _emptyRosterPage(page: page);
-          }
           final repo = FacilityProfessionalsRepository(
             facilityId,
             page: page,
@@ -170,14 +153,11 @@ final facilityAdministratorsRosterProvider = StateNotifierProvider.autoDispose
     .family<
       FacilityRosterNotifier<AdministrativeProfessional>,
       FacilityRosterState<AdministrativeProfessional>,
-      String
+      int
     >((ref, facilityId) {
       return FacilityRosterNotifier<AdministrativeProfessional>(
         facilityId: facilityId,
         loadPage: ({required facilityId, required page}) async {
-          if (isMockNearbyFacilityId(facilityId)) {
-            return _emptyRosterPage(page: page);
-          }
           final repo = FacilityRepresentativesRepository(
             facilityId,
             page: page,

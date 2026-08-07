@@ -1,21 +1,21 @@
 import type { RelationshipLevel } from "@atlasmed/database";
 
 export interface ProfessionalFacilitySummary {
-  id: string;
+  id: number;
   name: string;
 }
 
 export interface ProfessionalNoteRecord {
-  id: string;
-  userId: string;
-  professionalId: string;
+  id: number;
+  userId: number;
+  professionalId: number;
   note: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface ProfessionalRecord {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   fullName: string | null;
@@ -32,20 +32,11 @@ export interface ProfessionalRecord {
   favoriteSport: string | null;
   languages: string | null;
   hobbies: string | null;
-  notes: string | null;
   specialty: string | null;
   crmCouncil: string | null;
   crmNumber: string | null;
   crmState: string | null;
-  sourceProvider: string | null;
-  externalSourceId: string | null;
-  sourceContentHash: string | null;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  sourcePresent: boolean;
-  sourceTracked: boolean;
-  manuallyEditedAt: Date | null;
-  facilityIds: string[];
+  facilityIds: number[];
   /**
    * Deterministic display facility for list surfaces: the first active,
    * visible association ordered by facility name.
@@ -60,23 +51,7 @@ export interface ProfessionalRecord {
 
 export interface ProfessionalListScopeFilter {
   isGlobal: boolean;
-  facilityIds?: string[];
-}
-
-export interface ProfessionalSourceUpsertInput {
-  sourceProvider: string;
-  externalSourceId: string;
-  firstName: string;
-  lastName: string;
-  fullName?: string | null;
-  socialName?: string | null;
-  taxId?: string | null;
-  specialty: string | null;
-  crmCouncil?: string | null;
-  crmNumber?: string | null;
-  crmState?: string | null;
-  sourceContentHash: string;
-  sourceLastSeenAt: Date;
+  facilityIds?: number[];
 }
 
 export interface ProfessionalCreateInput {
@@ -96,13 +71,12 @@ export interface ProfessionalCreateInput {
   favoriteSport?: string | null;
   languages?: string | null;
   hobbies?: string | null;
-  notes?: string | null;
   specialty?: string | null;
   crmCouncil?: string | null;
   crmNumber?: string | null;
   crmState?: string | null;
-  facilityIds: string[];
-  confirmedByUserId?: string;
+  facilityIds: number[];
+  confirmedByUserId?: number;
 }
 
 export interface ProfessionalUpdateInput {
@@ -122,25 +96,21 @@ export interface ProfessionalUpdateInput {
   favoriteSport?: string | null;
   languages?: string | null;
   hobbies?: string | null;
-  notes?: string | null;
   specialty?: string | null;
   crmCouncil?: string | null;
   crmNumber?: string | null;
   crmState?: string | null;
-  manuallyEditedAt?: Date;
 }
 
 /** @deprecated Use ProfessionalListScopeFilter */
 export type DoctorListScopeFilter = ProfessionalListScopeFilter;
-/** @deprecated Use ProfessionalSourceUpsertInput */
-export type DoctorSourceUpsertInput = ProfessionalSourceUpsertInput;
 
 export interface ProfessionalRepository {
   findAll(params: {
     page: number;
     limit: number;
     search?: string;
-    facilityId?: string;
+    facilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -149,7 +119,7 @@ export interface ProfessionalRepository {
     sort?: string;
     order?: "asc" | "desc";
     /** Internal canonical hydration constraint for a Meilisearch result page. */
-    candidateIds?: string[];
+    candidateIds?: number[];
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }>;
 
   /** Distinct non-empty specialty labels visible under the caller's facility scope. */
@@ -157,8 +127,8 @@ export interface ProfessionalRepository {
 
   /** Hydrates ranked search candidates while enforcing canonical list eligibility. */
   findAllByIds(params: {
-    ids: string[];
-    facilityId?: string;
+    ids: number[];
+    facilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
@@ -166,41 +136,28 @@ export interface ProfessionalRepository {
     scope: ProfessionalListScopeFilter;
   }): Promise<ProfessionalRecord[]>;
 
-  findById(id: string): Promise<ProfessionalRecord | null>;
+  findById(id: number): Promise<ProfessionalRecord | null>;
 
-  findByExternalId(
-    sourceProvider: string,
-    externalSourceId: string
-  ): Promise<ProfessionalRecord | null>;
+  findIdByCnesProfessionalId(cnesProfessionalId: string): Promise<number | null>;
 
-  findSourceTrackedByProvider(sourceProvider: string): Promise<ProfessionalRecord[]>;
-
-  findActiveFacilities(professionalId: string): Promise<ProfessionalFacilitySummary[]>;
+  findActiveFacilities(professionalId: number): Promise<ProfessionalFacilitySummary[]>;
 
   findNotesByProfessionalAndUser(
-    professionalId: string,
-    userId: string
+    professionalId: number,
+    userId: number
   ): Promise<ProfessionalNoteRecord[]>;
 
   createNote(input: {
-    professionalId: string;
-    userId: string;
+    professionalId: number;
+    userId: number;
     note: string;
   }): Promise<ProfessionalNoteRecord>;
 
   create(data: ProfessionalCreateInput): Promise<ProfessionalRecord>;
 
-  update(id: string, data: ProfessionalUpdateInput): Promise<ProfessionalRecord>;
+  update(id: number, data: ProfessionalUpdateInput): Promise<ProfessionalRecord>;
 
-  softDelete(id: string): Promise<void>;
+  softDelete(id: number): Promise<void>;
 
-  markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void>;
-
-  upsertFromSource(input: ProfessionalSourceUpsertInput): Promise<{
-    professional: ProfessionalRecord;
-    created: boolean;
-    updated: boolean;
-  }>;
-
-  findExistingFacilityIds(facilityIds: string[]): Promise<string[]>;
+  findExistingFacilityIds(facilityIds: number[]): Promise<number[]>;
 }

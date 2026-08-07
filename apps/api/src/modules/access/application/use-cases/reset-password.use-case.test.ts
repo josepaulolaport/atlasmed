@@ -36,7 +36,7 @@ describe("ResetPasswordUseCase", () => {
   let currentPasswordHash: string;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
@@ -45,14 +45,14 @@ describe("ResetPasswordUseCase", () => {
     },
     passwordHistory: [] as string[],
     role: {
-      id: "role-123",
+      id: 1,
       name: "USER",
     },
   };
 
   const mockPasswordReset = {
-    id: "reset-123",
-    userId: "user-123",
+    id: 123,
+    userId: 123,
     tokenHash: hashToken("valid-token"),
     expiresAt: new Date(Date.now() + 1000 * 60 * 60),
     usedAt: null,
@@ -105,10 +105,10 @@ describe("ResetPasswordUseCase", () => {
 
       expect(result.success).toBe(true);
       expect(mockUserRepository.resetPasswordTransaction).toHaveBeenCalledTimes(1);
-      expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
-      expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith("user-123");
+      expect(mockAuthCache.invalidate).toHaveBeenCalledWith(123);
+      expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith(123);
       expect(mockAuditLog.logPasswordChange).toHaveBeenCalledWith({
-        userId: "user-123",
+        userId: 123,
         method: "reset",
         ipAddress: "192.168.1.1",
       });

@@ -32,8 +32,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
              'limit': limit.toString(),
              if (searchQuery != null && searchQuery.trim().isNotEmpty)
                'search': searchQuery.trim(),
-             if (facilityId != null && facilityId.trim().isNotEmpty)
-               'facilityId': facilityId.trim(),
+             if (facilityId != null && facilityId > 0)
+               'facilityId': facilityId.toString(),
              if (latitude != null) 'latitude': latitude.toString(),
              if (longitude != null) 'longitude': longitude.toString(),
              if (radiusKm != null) 'radiusKm': radiusKm.toString(),
@@ -50,7 +50,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   final int page;
   final int limit;
   final String? searchQuery;
-  final String? facilityId;
+  final int? facilityId;
   final double? latitude;
   final double? longitude;
   final double? radiusKm;
@@ -65,7 +65,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
     required int page,
     required int limit,
     String? searchQuery,
-    String? facilityId,
+    int? facilityId,
     double? latitude,
     double? longitude,
     double? radiusKm,
@@ -81,8 +81,8 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
         'limit': limit.toString(),
         if (searchQuery != null && searchQuery.trim().isNotEmpty)
           'search': searchQuery.trim(),
-        if (facilityId != null && facilityId.trim().isNotEmpty)
-          'facilityId': facilityId.trim(),
+        if (facilityId != null && facilityId > 0)
+          'facilityId': facilityId.toString(),
         if (latitude != null) 'latitude': latitude.toString(),
         if (longitude != null) 'longitude': longitude.toString(),
         if (radiusKm != null) 'radiusKm': radiusKm.toString(),
@@ -101,7 +101,7 @@ class DoctorsRepository extends Repository<PaginatedProfessionals>
   /// Patches a single person-level field via `PATCH /api/v1/professionals/:id`.
   /// Pass [value] `null` to clear a nullable column.
   Future<ProfessionalDTO> patchProfessionalField({
-    required String id,
+    required int id,
     required String fieldKey,
     required String? value,
   }) async {

@@ -7,9 +7,9 @@ export class DrizzleFacilityAssociationPort implements FacilityAssociationPort {
   ) {}
 
   async getAssociatedFacilityIds(
-    userId: string,
-    verticalIds?: string[],
-  ): Promise<string[]> {
+    userId: number,
+    verticalIds?: number[],
+  ): Promise<number[]> {
     return this.consultantAssignmentRepository.findActiveFacilityIdsByUserId(
       userId,
       verticalIds,

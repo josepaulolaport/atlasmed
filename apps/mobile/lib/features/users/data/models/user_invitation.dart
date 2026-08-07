@@ -3,6 +3,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_a
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 /// Mirrors the DB `invitation_status` enum.
 enum InvitationStatus { pending, accepted, expired, revoked }
@@ -59,14 +60,14 @@ class UserInvitation extends Equatable {
     required this.resendCount,
   });
 
-  final String id;
+  final int id;
   final String email;
   final String roleName;
   final InvitationStatus status;
   final String invitedByName;
 
   /// Role id used when editing (e.g. `role-rep`). Optional on older list rows.
-  final String? roleId;
+  final int? roleId;
   final String? firstName;
   final String? lastName;
 
@@ -95,10 +96,10 @@ class UserInvitation extends Equatable {
   }
 
   factory UserInvitation.fromJson(Map<String, dynamic> json) => UserInvitation(
-    id: json['id'] as String,
+    id: readCrmId(json['id'], 'id'),
     email: json['email'] as String,
     roleName: json['roleName'] as String,
-    roleId: json['roleId'] as String?,
+    roleId: readCrmIdOrNull(json['roleId'], 'roleId'),
     status: InvitationStatus.values.firstWhere(
       (s) => s.name.toUpperCase() == (json['status'] as String).toUpperCase(),
       orElse: () => InvitationStatus.pending,
@@ -114,7 +115,7 @@ class UserInvitation extends Equatable {
         (json['verticalAssignments'] as List<dynamic>? ?? const [])
             .map(
               (raw) => InviteVerticalAssignment(
-                verticalId: raw['verticalId'] as String,
+                verticalId: readCrmId(raw['verticalId'], 'verticalId'),
                 verticalName: raw['verticalName'] as String,
                 managerDisplayName: raw['managerName'] as String?,
                 territories: (raw['territories'] as List<dynamic>? ?? const [])
@@ -134,7 +135,7 @@ class UserInvitation extends Equatable {
   UserInvitation copyWith({
     String? email,
     String? roleName,
-    String? roleId,
+    int? roleId,
     InvitationStatus? status,
     String? firstName,
     String? lastName,

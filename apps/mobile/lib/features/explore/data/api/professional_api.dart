@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 
@@ -9,12 +10,12 @@ class ProfessionalFacilityRef {
 
   factory ProfessionalFacilityRef.fromMap(Map<String, dynamic> map) {
     return ProfessionalFacilityRef(
-      id: readString(map['id']),
+      id: readCrmId(map['id'], 'id'),
       name: readString(map['name']),
     );
   }
 
-  final String id;
+  final int id;
   final String name;
 }
 
@@ -29,7 +30,7 @@ class ProfessionalFacilityRef {
 /// - `PATCH /api/v1/professionals/:id` (update)
 /// - Embedded in facility professional items
 class ProfessionalDTO {
-  final String id;
+  final int id;
   final String firstName;
   final String lastName;
   final String? fullName;
@@ -43,7 +44,7 @@ class ProfessionalDTO {
   final String? favoriteTeam;
   final String? hobbies;
   final String? languages;
-  final List<String> facilityIds;
+  final List<int> facilityIds;
   final ProfessionalFacilityRef? displayFacility;
   final int? relationshipLevel;
   final bool isPriority;
@@ -99,7 +100,7 @@ class ProfessionalDTO {
 
   factory ProfessionalDTO.fromMap(Map<String, dynamic> map) {
     return ProfessionalDTO(
-      id: readString(map['id']),
+      id: readCrmId(map['id'], 'id'),
       firstName: readString(map['firstName']),
       lastName: readString(map['lastName']),
       fullName: readNullableString(map['fullName']),
@@ -116,7 +117,7 @@ class ProfessionalDTO {
       favoriteSport: readNullableString(map['favoriteSport']),
       hobbies: readNullableString(map['hobbies']),
       languages: readNullableString(map['languages']),
-      facilityIds: readStringList(map['facilityIds']),
+      facilityIds: readCrmIdList(map['facilityIds'], 'facilityIds'),
       displayFacility: map['displayFacility'] is Map
           ? ProfessionalFacilityRef.fromMap(
               (map['displayFacility'] as Map).cast<String, dynamic>(),
@@ -201,9 +202,9 @@ class PaginatedProfessionals {
 // ── ProfessionalAssociationDTO ───────────────────────────────
 
 class ProfessionalAssociationDTO {
-  final String facilityProfessionalId;
-  final String facilityId;
-  final String professionalId;
+  final int facilityProfessionalId;
+  final int facilityId;
+  final int professionalId;
   final String occupationCode;
   final bool isPartner;
   final bool isPrescriber;
@@ -229,9 +230,9 @@ class ProfessionalAssociationDTO {
 
   factory ProfessionalAssociationDTO.fromMap(Map<String, dynamic> map) {
     return ProfessionalAssociationDTO(
-      facilityProfessionalId: readString(map['facilityProfessionalId']),
-      facilityId: readString(map['facilityId']),
-      professionalId: readString(map['professionalId']),
+      facilityProfessionalId: readCrmId(map['facilityProfessionalId'], 'facilityProfessionalId'),
+      facilityId: readCrmId(map['facilityId'], 'facilityId'),
+      professionalId: readCrmId(map['professionalId'], 'professionalId'),
       occupationCode: readString(map['occupationCode']),
       isPartner: map['isPartner'] == true,
       isPrescriber: map['isPrescriber'] == true,
@@ -247,7 +248,7 @@ class ProfessionalAssociationDTO {
 // ── FacilityProfessionalItemDTO ──────────────────────────────
 
 class FacilityProfessionalItemDTO {
-  final String facilityProfessionalId;
+  final int facilityProfessionalId;
   final ProfessionalDTO professional;
   final ProfessionalAssociationDTO association;
 
@@ -259,7 +260,7 @@ class FacilityProfessionalItemDTO {
 
   factory FacilityProfessionalItemDTO.fromMap(Map<String, dynamic> map) {
     return FacilityProfessionalItemDTO(
-      facilityProfessionalId: readString(map['facilityProfessionalId']),
+      facilityProfessionalId: readCrmId(map['facilityProfessionalId'], 'facilityProfessionalId'),
       professional: ProfessionalDTO.fromMap(
         (map['professional'] as Map?)?.cast<String, dynamic>() ?? const {},
       ),

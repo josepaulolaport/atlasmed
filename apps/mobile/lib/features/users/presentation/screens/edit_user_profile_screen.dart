@@ -10,7 +10,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class EditUserProfileScreen extends ConsumerStatefulWidget {
   const EditUserProfileScreen({super.key, required this.userId});
 
-  final String userId;
+  final int userId;
 
   @override
   ConsumerState<EditUserProfileScreen> createState() =>

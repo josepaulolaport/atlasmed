@@ -27,13 +27,13 @@ class ClinicLocationSection extends StatefulWidget {
     this.clinicVerticalIds = const {},
   });
 
-  final String facilityId;
+  final int facilityId;
   final String facilityName;
   final EstablishmentLocation location;
   final List<NearbyEstablishment> nearbyEstablishments;
 
   /// Vertical ids on the current clinic (for nearby map filter + badges).
-  final Set<String> clinicVerticalIds;
+  final Set<int> clinicVerticalIds;
 
   @override
   State<ClinicLocationSection> createState() => _ClinicLocationSectionState();
@@ -170,7 +170,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
   /// Opens the radius-slider nearby-clinics map. When [focusId] is given
   /// (from a card's "Ver mais"), that establishment is centered/zoomed in
   /// on with its callout already open, instead of showing the overview.
-  Future<void> _openNearbyMap({String? focusId}) async {
+  Future<void> _openNearbyMap({int? focusId}) async {
     await _openFullMap(
       ClinicNearbyMapScreen(
         facilityId: widget.facilityId,

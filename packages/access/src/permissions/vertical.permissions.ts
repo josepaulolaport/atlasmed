@@ -7,8 +7,8 @@ export const VERTICAL_ID_HEADER = "x-atlasmed-vertical-id";
  */
 export function canAccessVertical(input: {
   role: string;
-  assignedVerticalIds: string[];
-  verticalId: string;
+  assignedVerticalIds: number[];
+  verticalId: number;
 }): boolean {
   const { assignedVerticalIds, verticalId } = input;
   if (!verticalId) return false;
@@ -23,11 +23,11 @@ export function canAccessVertical(input: {
  */
 export function resolveAccessibleVerticalIds(input: {
   role: string;
-  assignedVerticalIds: string[];
+  assignedVerticalIds: number[];
   /** Optional narrowing filter (header preferred over query). */
-  filterVerticalId?: string | null;
-}): { ok: true; verticalIds: string[] } | { ok: false; reason: "forbidden" } {
-  const filter = input.filterVerticalId?.trim() || null;
+  filterVerticalId?: number | null;
+}): { ok: true; verticalIds: number[] } | { ok: false; reason: "forbidden" } {
+  const filter = input.filterVerticalId ?? null;
 
   if (!filter) {
     return { ok: true, verticalIds: input.assignedVerticalIds };

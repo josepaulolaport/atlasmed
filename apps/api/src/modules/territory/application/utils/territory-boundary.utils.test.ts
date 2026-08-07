@@ -89,9 +89,9 @@ describe("assertSinglePolygonForEditableTerritory", () => {
     ],
   };
 
-  const repPatchType = { slug: "patch", assignsClinics: true };
-  const managerZoneType = { slug: "manager_zone", assignsClinics: false };
-  const otherType = { slug: "other", assignsClinics: false };
+  const repPatchType = { slug: "patch" };
+  const managerZoneType = { slug: "manager_zone" };
+  const otherType = { slug: "other" };
 
   it("rejects a MultiPolygon for a rep patch", () => {
     expect(() =>

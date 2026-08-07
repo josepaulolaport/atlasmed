@@ -7,107 +7,107 @@ export interface IAuditLog {
     reason: string;
     ipAddress?: string;
     userAgent?: string;
-    userId?: string;
+    userId?: number;
   }): Promise<void>;
   logUserLogin(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string;
     userAgent?: string;
     success: boolean;
     errorMessage?: string;
   }): Promise<void>;
   logUserLogout(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string;
   }): Promise<void>;
   logPasswordChange(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
     userAgent?: string;
     method: "reset" | "change";
   }): Promise<void>;
   logPasswordResetRequest(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void>;
   logRevokeInvite(params: {
-    revokedByUserId: string;
-    inviteId: string;
+    revokedByUserId: number;
+    inviteId: number;
     email?: string;
     phoneNumber?: string;
   }): Promise<void>;
   logInviteUser(params: {
-    invitedByUserId: string;
-    inviteId: string;
+    invitedByUserId: number;
+    inviteId: number;
     email?: string;
     phoneNumber?: string;
-    roleId: string;
+    roleId: number;
   }): Promise<void>;
   logResendInvite(params: {
-    resentByUserId: string;
-    inviteId: string;
+    resentByUserId: number;
+    inviteId: number;
     email?: string;
     phoneNumber?: string;
     resendCount: number;
   }): Promise<void>;
   logAcceptInvite(params: {
-    userId: string;
-    inviteId: string;
+    userId: number;
+    inviteId: number;
     username: string;
   }): Promise<void>;
   logUserRegister(params: {
-    userId: string;
+    userId: number;
     username: string;
     email: string;
   }): Promise<void>;
   logUserStatusChange(params: {
-    userId: string;
-    targetUserId: string;
+    userId: number;
+    targetUserId: number;
     oldStatus: string;
     newStatus: string;
     reason?: string;
   }): Promise<void>;
   logRoleChange(params: {
-    userId: string;
-    targetUserId: string;
-    oldRoleId: string;
-    newRoleId: string;
+    userId: number;
+    targetUserId: number;
+    oldRoleId: number;
+    newRoleId: number;
   }): Promise<void>;
   logSessionRevoke(params: {
-    userId: string;
-    sessionId: string;
-    revokedByUserId: string;
+    userId: number;
+    sessionId: number;
+    revokedByUserId: number;
     reason?: string;
   }): Promise<void>;
   logSuspiciousActivity(params: {
-    userId?: string;
-    sessionId?: string;
+    userId?: number;
+    sessionId?: number;
     reason: string;
     ipAddress?: string;
     userAgent?: string;
     details?: Record<string, unknown>;
   }): Promise<void>;
   logEmailVerification(params: {
-    userId: string;
+    userId: number;
     email: string;
   }): Promise<void>;
   logPhoneVerification(params: {
-    userId: string;
+    userId: number;
     phoneNumber: string;
   }): Promise<void>;
-  log2FAEnable(params: { userId: string; ipAddress?: string }): Promise<void>;
-  log2FADisable(params: { userId: string; ipAddress?: string }): Promise<void>;
+  log2FAEnable(params: { userId: number; ipAddress?: string }): Promise<void>;
+  log2FADisable(params: { userId: number; ipAddress?: string }): Promise<void>;
   logSessionCreate(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void>;
   log2FARequired(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void>;

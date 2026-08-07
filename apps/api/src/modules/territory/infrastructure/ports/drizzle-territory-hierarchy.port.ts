@@ -9,9 +9,9 @@ export class DrizzleTerritoryHierarchyPort implements TerritoryHierarchyPort {
   constructor(private readonly territoryRepository: TerritoryRepository) {}
 
   async resolveEffectiveTerritoryIds(
-    assignedTerritoryIds: string[],
+    assignedTerritoryIds: number[],
     activeOnly = true
-  ): Promise<string[]> {
+  ): Promise<number[]> {
     if (assignedTerritoryIds.length === 0) {
       return [];
     }
@@ -20,8 +20,8 @@ export class DrizzleTerritoryHierarchyPort implements TerritoryHierarchyPort {
       assignedTerritoryIds
     );
 
-    const effective = new Set<string>();
-    const managerZoneIds: string[] = [];
+    const effective = new Set<number>();
+    const managerZoneIds: number[] = [];
 
     for (const territory of assignedTerritories) {
       if (!territory.isActive && activeOnly) {
@@ -51,13 +51,13 @@ export class DrizzleTerritoryHierarchyPort implements TerritoryHierarchyPort {
    * manager zone that owns one of them (so a manager zone change also
    * invalidates the scope cache of reps assigned to its rep patches).
    */
-  async findUsersAssignedToRelatedTerritories(territoryIds: string[]): Promise<string[]> {
+  async findUsersAssignedToRelatedTerritories(territoryIds: number[]): Promise<number[]> {
     if (territoryIds.length === 0) {
       return [];
     }
 
     const territories = await this.territoryRepository.findByIds(territoryIds);
-    const relatedTerritoryIds = new Set<string>(territoryIds);
+    const relatedTerritoryIds = new Set<number>(territoryIds);
 
     for (const territory of territories) {
       if (territory.managerTerritoryId) {

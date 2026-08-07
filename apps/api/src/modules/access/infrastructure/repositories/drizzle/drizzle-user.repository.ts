@@ -26,7 +26,7 @@ import type {
   FindAllUsersParams,
 } from "../../../application/interfaces/user.repository.interface";
 
-async function fetchUserWithRole(userId: string, client: AnyDatabase = db) {
+async function fetchUserWithRole(userId: number, client: AnyDatabase = db) {
   const [row] = await client
     .select()
     .from(users)
@@ -60,11 +60,11 @@ export class DrizzleUserRepository implements UserRepository {
     return { ...row.users, role: row.roles! };
   }
 
-  async findById(id: string) {
+  async findById(id: number) {
     return fetchUserWithRole(id);
   }
 
-  async findUserAuthStatus(id: string) {
+  async findUserAuthStatus(id: number) {
     const [row] = await db
       .select({
         status: users.status,
@@ -108,7 +108,7 @@ export class DrizzleUserRepository implements UserRepository {
     return result!;
   }
 
-  async updateLastLogin(userId: string) {
+  async updateLastLogin(userId: number) {
     await db
       .update(users)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
@@ -126,7 +126,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, params.userId));
   }
 
-  async deactivate(userId: string) {
+  async deactivate(userId: number) {
     await db
       .update(users)
       .set({
@@ -138,7 +138,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId));
   }
 
-  async activate(userId: string) {
+  async activate(userId: number) {
     await db
       .update(users)
       .set({
@@ -149,7 +149,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId));
   }
 
-  async suspend(userId: string) {
+  async suspend(userId: number) {
     await db
       .update(users)
       .set({
@@ -160,14 +160,14 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId));
   }
 
-  async unsuspend(userId: string) {
+  async unsuspend(userId: number) {
     await db
       .update(users)
       .set({ status: "ACTIVE", updatedAt: new Date() })
       .where(eq(users.id, userId));
   }
 
-  async updateRole(userId: string, roleId: string) {
+  async updateRole(userId: number, roleId: number) {
     await db
       .update(users)
       .set({ roleId, updatedAt: new Date() })
@@ -175,8 +175,8 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async changeRoleTransaction(params: {
-    userId: string;
-    newRoleId: string;
+    userId: number;
+    newRoleId: number;
   }): Promise<void> {
     await db.transaction(async (tx) => {
       await tx
@@ -202,12 +202,12 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async changePasswordTransaction(params: {
-    userId: string;
+    userId: number;
     newPasswordHash: string;
     previousPasswordHash: string;
     passwordHistory: string[];
     revokeOtherSessions: boolean;
-    keepSessionId?: string;
+    keepSessionId?: number;
   }) {
     return await db.transaction(async (tx) => {
       await tx
@@ -249,7 +249,7 @@ export class DrizzleUserRepository implements UserRepository {
     });
   }
 
-  async enableTwoFactor(params: { userId: string; encryptedSecret: string }) {
+  async enableTwoFactor(params: { userId: number; encryptedSecret: string }) {
     await db
       .update(users)
       .set({
@@ -261,7 +261,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, params.userId));
   }
 
-  async disableTwoFactor(userId: string) {
+  async disableTwoFactor(userId: number) {
     await db
       .update(users)
       .set({
@@ -277,7 +277,7 @@ export class DrizzleUserRepository implements UserRepository {
    * Increments tokenVersion to invalidate all outstanding JWTs.
    * Intended for privilege changes (e.g. role change) — call alongside session revocation and cache invalidation.
    */
-  async incrementTokenVersion(userId: string): Promise<number> {
+  async incrementTokenVersion(userId: number): Promise<number> {
     const [updated] = await db
       .update(users)
       .set({
@@ -375,7 +375,7 @@ export class DrizzleUserRepository implements UserRepository {
     });
   }
 
-  async findEmailVerificationState(userId: string) {
+  async findEmailVerificationState(userId: number) {
     const [row] = await db
       .select({ email: users.email, emailVerified: users.emailVerified })
       .from(users)
@@ -385,7 +385,7 @@ export class DrizzleUserRepository implements UserRepository {
     return row ?? null;
   }
 
-  async findPhoneVerificationState(userId: string) {
+  async findPhoneVerificationState(userId: number) {
     const [row] = await db
       .select({
         phoneNumber: users.phoneNumber,
@@ -418,7 +418,7 @@ export class DrizzleUserRepository implements UserRepository {
     return row ?? null;
   }
 
-  async markEmailVerified(userId: string) {
+  async markEmailVerified(userId: number) {
     await db
       .update(users)
       .set({
@@ -429,7 +429,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId));
   }
 
-  async markPhoneVerified(userId: string) {
+  async markPhoneVerified(userId: number) {
     await db
       .update(users)
       .set({
@@ -440,7 +440,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId));
   }
 
-  async updateEmail(userId: string, newEmail: string) {
+  async updateEmail(userId: number, newEmail: string) {
     await db
       .update(users)
       .set({
@@ -452,7 +452,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId));
   }
 
-  async updatePhone(userId: string, newPhone: string) {
+  async updatePhone(userId: number, newPhone: string) {
     await db
       .update(users)
       .set({
@@ -555,7 +555,7 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async updateProfile(
-    userId: string,
+    userId: number,
     data: {
       firstName?: string;
       lastName?: string;
@@ -587,7 +587,7 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async updateAsAdmin(
-    userId: string,
+    userId: number,
     data: {
       firstName?: string;
       lastName?: string;
@@ -625,7 +625,7 @@ export class DrizzleUserRepository implements UserRepository {
     return result!;
   }
 
-  async getMetadata(userId: string): Promise<unknown> {
+  async getMetadata(userId: number): Promise<unknown> {
     const [row] = await db
       .select({ metadata: users.metadata })
       .from(users)
@@ -636,7 +636,7 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async updateMetadata(
-    userId: string,
+    userId: number,
     metadata: Record<string, unknown>,
   ): Promise<void> {
     await db

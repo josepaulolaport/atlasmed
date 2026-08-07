@@ -63,7 +63,7 @@ describe("RequestPasswordResetUseCase", () => {
       });
 
       const mockUser = {
-        id: "user-123",
+        id: 123,
         email: "user@example.com",
         phoneNumber: null,
       };
@@ -71,7 +71,7 @@ describe("RequestPasswordResetUseCase", () => {
       mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser)) as any;
 
       const mockPasswordReset = {
-        id: "reset-123",
+        id: 123,
         userId: mockUser.id,
         tokenHash: "hash-123",
         expiresAt: new Date(),
@@ -100,7 +100,7 @@ describe("RequestPasswordResetUseCase", () => {
       });
 
       const mockUser = {
-        id: "user-123",
+        id: 123,
         email: null,
         phoneNumber: "+5511999999999",
       };
@@ -108,7 +108,7 @@ describe("RequestPasswordResetUseCase", () => {
       mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser)) as any;
 
       const mockPasswordReset = {
-        id: "reset-123",
+        id: 123,
         userId: mockUser.id,
         tokenHash: "hash-123",
         expiresAt: new Date(),
@@ -137,7 +137,7 @@ describe("RequestPasswordResetUseCase", () => {
       });
 
       const mockUser = {
-        id: "user-123",
+        id: 123,
         email: "user@example.com",
         phoneNumber: "+5511999999999",
       };
@@ -146,7 +146,7 @@ describe("RequestPasswordResetUseCase", () => {
 
       mockPasswordResetRepository.create = mock(() =>
         Promise.resolve({
-          id: "reset-123",
+          id: 123,
           userId: mockUser.id,
           tokenHash: "hash-123",
           expiresAt: new Date(),

@@ -4,7 +4,7 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.da
 /// this is only what the assignment/search UI needs, not a general user
 /// management API.
 abstract interface class UserRepository {
-  Future<AppUser?> getUserById(String id);
+  Future<AppUser?> getUserById(int id);
 
   /// Users matching [role] (and, when given, [verticalId]) whose name
   /// contains [query] (case-insensitive). An empty [query] returns every
@@ -12,6 +12,6 @@ abstract interface class UserRepository {
   Future<List<AppUser>> searchUsers({
     required UserRole role,
     String query = '',
-    String? verticalId,
+    int? verticalId,
   });
 }

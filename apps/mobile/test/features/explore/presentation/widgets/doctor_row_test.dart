@@ -8,7 +8,7 @@ void main() {
     tester,
   ) async {
     const doctor = ProfessionalEntry(
-      id: 'professional-1',
+      id: 1,
       name: 'Ana Silva',
       initials: 'AS',
       hue: 0,

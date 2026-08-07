@@ -8,11 +8,10 @@ PostgreSQL + PostGIS runs **locally on your machine** — it is intentionally no
 # 1. Start supporting services (Redis, MinIO, Meilisearch)
 bun run infra:up
 
-# 2. Apply migrations and seed (requires local Postgres with PostGIS)
+# 2. Apply migrations (requires local Postgres with PostGIS)
 bun run db:migrate
-bun run db:seed
 
-# 3. (Optional) Start Temporal for CNES ingestion workflows
+# 3. (Optional) Start Temporal for background workers
 bun run temporal:up
 
 # 4. (Optional) Start SigNoz observability stack
@@ -52,7 +51,7 @@ bun run web:dev
 Copy the `.env.development.example` files in each app:
 
 - `apps/api/.env.development.example` → `apps/api/.env`
-- `apps/workers/cnes-ingestion/.env.development.example` → `apps/workers/cnes-ingestion/.env`
+- `apps/workers/temporal/.env.development.example` → `apps/workers/temporal/.env`
 - `apps/web/.env.development.local.example` → `apps/web/.env.local`
 
 ## PostgreSQL setup
@@ -80,17 +79,17 @@ Production backend services deploy to Uncloud with `deploy/uncloud.compose.yml`.
 | `atlasmed-web` | `https://atlasmed-web.b1ixob.uncld.dev` | Admin/web app. |
 | `atlasmed-api` | `https://atlasmed-api.b1ixob.uncld.dev` | Public HTTP API. |
 | `atlasmed-api-worker` | private | BullMQ workers: notifications, cleanup, territory membership. |
-| `atlasmed-cnes-worker` | private | Temporal worker for CNES ingestion workflows. |
+| `atlasmed-temporal-worker` | private | Temporal worker (search-sync, purchase-recurrence, cadastro). |
 | `atlasmed-temporal` | private | Temporal server. |
 | `atlasmed-temporal-ui` | `https://atlasmed-temporal-ui.b1ixob.uncld.dev` | Temporal UI protected by the existing cluster Authelia guard. |
 | `atlasmed-temporal-db` | private | Postgres only for Temporal metadata. The app Postgres remains remote. |
 | `atlasmed-redis` | private | BullMQ, cache, and rate limiting. |
 | `atlasmed-meilisearch` | private | Search index. |
-| `atlasmed-minio` | `https://storage.tdomains.uk` (S3 API) | S3-compatible storage for app files and CNES archives. Console stays private. Presigned URLs use `STORAGE_PUBLIC_ENDPOINT`; API still talks to MinIO on the internal `STORAGE_ENDPOINT`. |
+| `atlasmed-minio` | `https://storage.tdomains.uk` (S3 API) | S3-compatible storage for app files. Console stays private. Presigned URLs use `STORAGE_PUBLIC_ENDPOINT`; API still talks to MinIO on the internal `STORAGE_ENDPOINT`. |
 
 All service names use the `atlasmed-` prefix to avoid collisions with other services already running in the cluster.
 All production services are pinned to the Uncloud machine named `atlasmed` via `x-machines: atlasmed`.
-The API creates `STORAGE_BUCKET` on startup when object storage is configured. The CNES worker creates `CNES_ARCHIVE_S3_BUCKET` on startup when the archive backend is `s3` or `minio`.
+The API creates `STORAGE_BUCKET` on startup when object storage is configured.
 
 ## One-time setup
 
@@ -106,10 +105,11 @@ The API creates `STORAGE_BUCKET` on startup when object storage is configured. T
    ```bash
    uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes
    ```
-6. Deploy app services. Bucket creation happens during `atlasmed-api` and `atlasmed-cnes-worker` startup; re-running the app deploy is safe because bucket creation first checks whether each bucket already exists.
+6. Deploy app services. Bucket creation happens during `atlasmed-api` startup; re-running the app deploy is safe because bucket creation first checks whether each bucket already exists.
    ```bash
-   uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --yes
+   uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker atlasmed-web --yes
    ```
+7. **After first deploy of the Temporal worker rename:** Uncloud does **not** remove retired services. Drain Temporal queue `cnes-ingestion` if needed, then manually remove legacy `atlasmed-cnes-worker` (backlog: `backlog-retire-legacy-cnes-worker`). New queue is `atlasmed-workflows`.
 
 ## Meilisearch v1.13 to v1.48 rollout
 

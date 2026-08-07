@@ -10,16 +10,16 @@ interface Dependencies {
 interface CreateInviteParams {
   email?: string | undefined;
   phoneNumber?: string | undefined;
-  roleId: string;
-  invitedByUserId: string;
+  roleId: number;
+  invitedByUserId: number;
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
-  managerTerritoryId?: string | undefined;
-  repTerritoryId?: string | undefined;
+  managerTerritoryId?: number | undefined;
+  repTerritoryId?: number | undefined;
   verticalAssignments?: Array<{
-    verticalId: string;
-    territoryIds: string[];
+    verticalId: number;
+    territoryIds: number[];
   }>;
 }
 
@@ -63,7 +63,7 @@ export class InviteService {
     return { token, tokenHash, expiresAt };
   }
 
-  async rotateInviteToken(inviteId: string) {
+  async rotateInviteToken(inviteId: number) {
     const { token, tokenHash, expiresAt } = this.buildRotatedInviteCredentials();
 
     const invite = await this.deps.inviteRepository.regenerateToken(inviteId, {

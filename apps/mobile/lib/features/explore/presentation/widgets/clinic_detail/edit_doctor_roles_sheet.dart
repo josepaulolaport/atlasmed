@@ -7,7 +7,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 Future<ProfessionalRoster?> showEditDoctorRolesSheet(
   BuildContext context, {
   required ProfessionalRoster doctor,
-  String? facilityId,
+  int? facilityId,
 }) {
   return showModalBottomSheet<ProfessionalRoster>(
     context: context,
@@ -26,7 +26,7 @@ class _EditDoctorRolesSheet extends StatefulWidget {
   const _EditDoctorRolesSheet({required this.doctor, this.facilityId});
 
   final ProfessionalRoster doctor;
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   State<_EditDoctorRolesSheet> createState() => _EditDoctorRolesSheetState();
@@ -41,8 +41,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
 
   bool get _useApi {
     final id = widget.facilityId;
-    if (id == null || id.isEmpty) return false;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
+    return id != null && id > 0;
   }
 
   @override

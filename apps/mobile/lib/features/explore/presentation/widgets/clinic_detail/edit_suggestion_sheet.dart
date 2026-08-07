@@ -12,7 +12,7 @@ Future<void> showEditSuggestionSheet(
   required String? currentValue,
   WidgetRef? ref,
   NaoConformidadeTargetType? targetType,
-  String? targetId,
+  int? targetId,
   String? targetName,
   String? facilityName,
   String? fieldKey,

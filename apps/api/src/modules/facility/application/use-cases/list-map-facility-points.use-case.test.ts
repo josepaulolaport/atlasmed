@@ -15,14 +15,14 @@ describe("ListMapFacilityPointsUseCase", () => {
   it("returns GeoJSON FeatureCollection of thin points", async () => {
     const listMapPoints = mock(async () => [
       {
-        id: "f1",
+        id: 1,
         name: "Clinic A",
         lat: -23.5,
         lng: -46.6,
         purchaseBucket: "active" as const,
       },
       {
-        id: "f2",
+        id: 2,
         name: "Clinic B",
         lat: -23.6,
         lng: -46.7,
@@ -45,7 +45,7 @@ describe("ListMapFacilityPointsUseCase", () => {
       type: "Feature",
       geometry: { type: "Point", coordinates: [-46.6, -23.5] },
       properties: {
-        facilityId: "f1",
+        facilityId: 1,
         name: "Clinic A",
         purchaseBucket: "active",
       },
@@ -61,17 +61,17 @@ describe("ListMapFacilityPointsUseCase", () => {
     await useCase.execute({
       scope: {
         ...createEmptyScopeContext(),
-        facilityIds: ["a", "b"],
-        assignedVerticalIds: ["v1"],
+        facilityIds: [1, 2],
+        assignedVerticalIds: [1],
       },
       role: "REP",
-      verticalId: "v1",
+      verticalId: 1,
     });
 
     expect(listMapPoints).toHaveBeenCalledWith({
       isGlobal: false,
-      facilityIds: ["a", "b"],
-      verticalIds: ["v1"],
+      facilityIds: [1, 2],
+      verticalIds: [1],
       restrictToVerticalProfiles: true,
     });
   });

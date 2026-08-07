@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_display.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/payer_outros_detail_screen.dart';

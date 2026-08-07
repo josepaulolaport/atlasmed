@@ -8,7 +8,7 @@ void main() {
   testWidgets('renders administrative professional rows', (tester) async {
     const professionals = [
       AdministrativeProfessional(
-        id: '1',
+        id: 1,
         name: 'Carlos Mendes',
         roleTitle: 'Diretor administrativo',
         email: 'carlos@test.com',
@@ -57,7 +57,7 @@ void main() {
     (tester) async {
       const professionals = [
         AdministrativeProfessional(
-          id: '1',
+          id: 1,
           name: 'Carlos Mendes',
           roleTitle: 'Diretor administrativo',
           email: 'carlos@test.com',

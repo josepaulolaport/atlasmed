@@ -96,7 +96,7 @@ export interface TerritoryApprovalRequest {
   updatedAt: string;
 }
 
-export type TerritoryApprovalType = "deactivate_territory" | "clinic_territory_change";
+export type TerritoryApprovalType = "deactivate_territory";
 
 export type TerritoryApprovalStatus =
   | "pending"
@@ -104,7 +104,7 @@ export type TerritoryApprovalStatus =
   | "rejected"
   | "superseded";
 
-export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
+export type TerritoryAssignmentStatus = "assigned" | "unassigned";
 
 export interface SubmitApprovalRequest {
   type: TerritoryApprovalType;

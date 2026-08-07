@@ -80,7 +80,7 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 
 | # | Decision |
 |---|----------|
-| 1 | **Administrative professionals** come from `public.facility_representatives` only. Do **not** use registry read endpoints (`/registry/professionals`, `/registry/representatives`) on mobile for this screen. |
+| 1 | **Administrative professionals** come from `public.facility_representatives` only. CNES registry READ endpoints are removed — do not call or reintroduce `/registry/*` for this screen. |
 | 3 | **Médicos** section shows CRM associations via `GET /facilities/:id/professionals?view=all` (source-active CNES **or** confirmed). **Superseded by v22** (was `view=confirmed`). |
 | 4 | **Convênios** in v1 using existing catalog shares API (`GET /facilities/:id/healthcare-provider-shares`). |
 | 6 | Implementation order: **frontend with mocked data first**, then backend contract + wire-up. |
@@ -243,7 +243,7 @@ WHEN `GET /facilities/:id/representatives` is called by a user with read access 
 
 WHEN there are no active representatives THEN the mobile UI SHALL show an empty state (“Nenhum contato administrativo cadastrado”).
 
-**Explicit exclusion:** no reads from `registry.facility_representatives` or `/registry/representatives` on this screen. There is **no** global “associate from pool” search for administrativos — create in place via `POST /facilities/:id/representatives`.
+**Explicit exclusion:** do not read from a removed `registry` schema or `/registry/*` endpoints. There is **no** global “associate from pool” search for administrativos — create in place via `POST /facilities/:id/representatives`.
 
 **Create / edit:**
 - Mobile FAB / empty CTA opens **Criar perfil** directly (no empty associate search sheet).

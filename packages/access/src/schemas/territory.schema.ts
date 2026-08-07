@@ -2,9 +2,6 @@ import { z } from "zod";
 
 export const territoryTypeFlagSchema = z.object({
   canHaveBoundary: z.boolean().optional(),
-  assignsClinics: z.boolean().optional(),
-  assignableToUsers: z.boolean().optional(),
-  assignableToManagers: z.boolean().optional(),
   blockSiblingOverlap: z.boolean().optional(),
 });
 
@@ -34,7 +31,7 @@ export const territoryBoundarySchema = z.object({
 export const createTerritorySchema = z.object({
   name: z.string().trim().min(1).max(200),
   slug: z.string().trim().min(3).max(60),
-  territoryTypeId: z.string().trim().min(1).optional(),
+  territoryTypeId: z.number().int().positive().optional(),
   typeSlug: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
   boundary: territoryBoundarySchema.optional(),
@@ -47,16 +44,16 @@ export const updateTerritorySchema = z.object({
 });
 
 export const territoryApprovalRequestSchema = z.object({
-  type: z.enum(["deactivate_territory", "clinic_territory_change"]),
+  type: z.enum(["deactivate_territory"]),
   entityPayload: z.record(z.string(), z.unknown()).optional(),
-  targetTerritoryId: z.string().trim().min(1).optional(),
-  facilityId: z.string().trim().min(1).optional(),
-  toTerritoryId: z.string().trim().min(1).optional(),
+  targetTerritoryId: z.number().int().positive().optional(),
+  facilityId: z.number().int().positive().optional(),
+  toTerritoryId: z.number().int().positive().optional(),
   reason: z.string().trim().max(500).optional(),
 });
 
 export const facilityTerritoryOverrideSchema = z.object({
-  territoryId: z.string().trim().min(1),
+  territoryId: z.number().int().positive(),
   reason: z.string().trim().max(500).optional(),
 });
 

@@ -73,7 +73,7 @@ class CadastroPreviewPage {
     this.remoteUrl,
   });
 
-  final String id;
+  final int id;
 
   /// Generated name for gallery chrome / share — not shown in the carousel UI.
   final String fileName;
@@ -111,7 +111,7 @@ class CadastroDocumentPagesPreview extends StatefulWidget {
   });
 
   final List<CadastroPreviewPage> pages;
-  final Future<String> Function(String fileId)? resolveUrl;
+  final Future<String> Function(int fileId)? resolveUrl;
   final double height;
   final String emptyLabel;
 
@@ -124,7 +124,7 @@ class _CadastroDocumentPagesPreviewState
     extends State<CadastroDocumentPagesPreview> {
   late PageController _controller;
   int _index = 0;
-  final Map<String, String> _urlCache = {};
+  final Map<int, String> _urlCache = {};
   bool _expanding = false;
 
   @override
@@ -745,8 +745,8 @@ class _RemoteOrLocalImageState extends State<_RemoteOrLocalImage> {
 /// Resolve one uploaded file into gallery providers (1 image, or N PDF pages).
 Future<List<ImageProvider?>> resolveCadastroFileProviders(
   CadastroPreviewPage page, {
-  Future<String> Function(String fileId)? resolveUrl,
-  Map<String, String>? urlCache,
+  Future<String> Function(int fileId)? resolveUrl,
+  Map<int, String>? urlCache,
 }) async {
   try {
     String? url = page.remoteUrl?.trim();

@@ -45,21 +45,21 @@ void main() {
           statusCode: 201,
           headers: {},
           body:
-              '{"id":"note-1","note":"Retornar amanhã","createdAt":"2026-01-01T10:00:00.000Z","updatedAt":"2026-01-01T10:00:00.000Z"}',
+              '{"id":1,"note":"Retornar amanhã","createdAt":"2026-01-01T10:00:00.000Z","updatedAt":"2026-01-01T10:00:00.000Z"}',
         ),
         const RepositoryHttpResponse(statusCode: 200, headers: {}, body: '[]'),
       ]);
       final repository = ProfessionalNotesRepository(
-        'professional-1',
+        1,
         client: client,
       );
 
       final note = await repository.createNote('Retornar amanhã');
 
-      expect(note.id, 'note-1');
+      expect(note.id, 1);
       expect(
         client.requests.first.url.path,
-        '/api/v1/professionals/professional-1/notes',
+        '/api/v1/professionals/1/notes',
       );
       expect(client.requests.first.method, RepositoryHttpMethod.post);
       expect(client.requests.first.body, {'note': 'Retornar amanhã'});

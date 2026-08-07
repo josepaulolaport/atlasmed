@@ -22,9 +22,9 @@ export class AssignUserTerritoryUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
-    territoryId: string;
-    assignedBy: string;
+    targetUserId: number;
+    territoryId: number;
+    assignedBy: number;
     actorRole: Role;
   }) {
     if (params.actorRole !== Role.ADMIN) {
@@ -67,7 +67,7 @@ export class AssignUserTerritoryUseCase {
       severity: "INFO",
       action: "assign_territory",
       resource: "user",
-      resourceId: params.targetUserId,
+      resourceId: String(params.targetUserId),
       actorId: params.assignedBy,
       details: {
         targetUserId: params.targetUserId,

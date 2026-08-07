@@ -50,7 +50,7 @@ function toValidationError(error: unknown): ValidationError {
 export class GetUserPreferencesUseCase {
   constructor(private readonly deps: UserPreferencesDependencies) {}
 
-  async execute(params: { userId: string }): Promise<UserPreferencesInput> {
+  async execute(params: { userId: number }): Promise<UserPreferencesInput> {
     const metadata = await this.deps.userRepository.getMetadata(params.userId);
     return parseMetadataPreferences(metadata);
   }
@@ -60,7 +60,7 @@ export class UpdateUserPreferencesUseCase {
   constructor(private readonly deps: UserPreferencesDependencies) {}
 
   async execute(
-    params: { userId: string } & UpdateUserPreferencesInput,
+    params: { userId: number } & UpdateUserPreferencesInput,
   ): Promise<UserPreferencesInput> {
     const { userId, ...patch } = params;
     const parsedPatch = updateUserPreferencesSchema.safeParse(patch);

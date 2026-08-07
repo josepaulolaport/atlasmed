@@ -3,7 +3,7 @@ import type { IAuthCache } from "../interfaces/auth-cache.interface";
 import { UserNotFoundError, ValidationError } from "../../../../shared/errors";
 
 interface UpdateProfileInput {
-  userId: string;
+  userId: number;
   firstName?: string;
   lastName?: string;
   avatarUrl?: string | null;

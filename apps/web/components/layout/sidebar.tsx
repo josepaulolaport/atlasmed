@@ -44,15 +44,6 @@ export function Sidebar() {
 
   const overview: NavItem[] = [
     { name: "Painel", href: "/dashboard", icon: "solar:widget-linear" },
-    ...(hasMinimumRole(roleName, "MANAGER")
-      ? [
-          {
-            name: "Sugestões de cadastro",
-            href: "/registry-suggestions",
-            icon: "solar:inbox-in-linear",
-          } as NavItem,
-        ]
-      : []),
   ];
 
   const directory: NavItem[] = [

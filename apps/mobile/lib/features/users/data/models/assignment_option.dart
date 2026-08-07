@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:equatable/equatable.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 /// Slim view models for assignment pickers (manager, territory, sector).
 /// These intentionally don't reuse the full territories-feature models —
@@ -19,7 +20,7 @@ class ManagerOption extends Equatable {
     this.verticalIds = const [],
   });
 
-  final String id;
+  final int id;
   final String name;
 
   /// Optional avatar URL — when null the picker falls back to initials.
@@ -28,7 +29,7 @@ class ManagerOption extends Equatable {
 
   /// Manager-zone territory this manager owns, if any. Used to filter
   /// selectable REP patches to those nested under this zone.
-  final String? territoryId;
+  final int? territoryId;
 
   /// Display name of [territoryId].
   final String? territoryName;
@@ -40,14 +41,14 @@ class ManagerOption extends Equatable {
 
   /// Sectors this manager operates in — invite manager pickers are scoped
   /// per sector via `GET /access/users?role=MANAGER&verticalId=`.
-  final List<String> verticalIds;
+  final List<int> verticalIds;
 
   factory ManagerOption.fromJson(Map<String, dynamic> json) => ManagerOption(
-    id: json['id'] as String,
+    id: readCrmId(json['id'], 'id'),
     name: json['name'] as String,
     avatarUrl: json['avatarUrl'] as String?,
     avatarBlurhash: json['avatarBlurhash'] as String?,
-    territoryId: json['territoryId'] as String?,
+    territoryId: readCrmIdOrNull(json['territoryId'], 'territoryId'),
     territoryName: json['territoryName'] as String?,
     territoryCentroid: json['territoryCentroid'] == null
         ? null
@@ -61,11 +62,7 @@ class ManagerOption extends Equatable {
         : TerritoryGeometry.tryFromGeoJson(
             json['territoryBoundary'] as Map<String, dynamic>,
           ),
-    verticalIds:
-        (json['verticalIds'] as List<dynamic>?)
-            ?.map((e) => e as String)
-            .toList(growable: false) ??
-        const [],
+    verticalIds: readCrmIdList(json['verticalIds'], 'verticalIds'),
   );
 
   @override
@@ -95,9 +92,9 @@ class ManagerTerritoryScope extends Equatable {
     required this.territories,
   });
 
-  final String managerId;
+  final int managerId;
   final String managerName;
-  final String? managerTerritoryId;
+  final int? managerTerritoryId;
   final String? managerTerritoryName;
   final MapCoordinate? managerZoneCentroid;
   final TerritoryGeometry? managerZoneBoundary;
@@ -128,9 +125,9 @@ class TerritoryOption extends Equatable {
     this.managerTerritoryId,
   });
 
-  final String id;
+  final int id;
   final String name;
-  final String? verticalId;
+  final int? verticalId;
   final String? verticalName;
   final MapCoordinate? centroid;
   final TerritoryGeometry? boundary;
@@ -145,13 +142,13 @@ class TerritoryOption extends Equatable {
   /// themselves (or unparented territories). The API filters by this via
   /// `GET /territories?managerId=` ([ManagerTerritoryScope]); clients should
   /// not rely on local filtering of the full catalog for REP selection.
-  final String? managerTerritoryId;
+  final int? managerTerritoryId;
 
   factory TerritoryOption.fromJson(Map<String, dynamic> json) =>
       TerritoryOption(
-        id: json['id'] as String,
+        id: readCrmId(json['id'], 'id'),
         name: json['name'] as String,
-        verticalId: json['verticalId'] as String?,
+        verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
         verticalName: json['verticalName'] as String?,
         centroid: json['centroid'] == null
             ? null
@@ -166,7 +163,7 @@ class TerritoryOption extends Equatable {
               ),
         isOccupied: json['isOccupied'] as bool? ?? false,
         assignedUserName: json['assignedUserName'] as String?,
-        managerTerritoryId: json['managerTerritoryId'] as String?,
+        managerTerritoryId: readCrmIdOrNull(json['managerTerritoryId'], 'managerTerritoryId'),
       );
 
   @override
@@ -186,11 +183,11 @@ class TerritoryOption extends Equatable {
 class VerticalOption extends Equatable {
   const VerticalOption({required this.id, required this.name});
 
-  final String id;
+  final int id;
   final String name;
 
   factory VerticalOption.fromJson(Map<String, dynamic> json) =>
-      VerticalOption(id: json['id'] as String, name: json['name'] as String);
+      VerticalOption(id: readCrmId(json['id'], 'id'), name: json['name'] as String);
 
   @override
   List<Object?> get props => [id, name];

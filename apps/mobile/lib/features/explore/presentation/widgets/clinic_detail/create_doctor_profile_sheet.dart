@@ -7,7 +7,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// `POST /professionals` (with facility link) + optional role PATCH.
 Future<ProfessionalRoster?> showCreateDoctorProfileSheet(
   BuildContext context, {
-  String? facilityId,
+  int? facilityId,
 }) {
   return showModalBottomSheet<ProfessionalRoster>(
     context: context,
@@ -24,7 +24,7 @@ Future<ProfessionalRoster?> showCreateDoctorProfileSheet(
 class _CreateDoctorProfileSheet extends StatefulWidget {
   const _CreateDoctorProfileSheet({this.facilityId});
 
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   State<_CreateDoctorProfileSheet> createState() =>
@@ -44,8 +44,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
 
   bool get _useApi {
     final id = widget.facilityId;
-    if (id == null || id.isEmpty) return false;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
+    return id != null && id > 0;
   }
 
   @override
@@ -211,7 +210,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
         if (!mounted) return;
         Navigator.of(context).pop(
           ProfessionalRoster(
-            id: 'new-doc-${DateTime.now().millisecondsSinceEpoch}',
+            id: -DateTime.now().millisecondsSinceEpoch,
             name: name,
             initials: initialsFromName(name),
             hue: hueFromName(name),

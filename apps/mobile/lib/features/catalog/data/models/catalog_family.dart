@@ -13,7 +13,7 @@ class CatalogFamily {
     required this.simproPublishedAt,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String manufacturer;
   final String countryOfOrigin;

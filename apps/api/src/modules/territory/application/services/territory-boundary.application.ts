@@ -21,15 +21,15 @@ export interface ApplyTerritoryBoundaryDeps {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
-  onBoundaryChanged?: (territoryId: string) => Promise<void>;
-  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
+  onBoundaryChanged?: (territoryId: number) => Promise<void>;
+  onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
 }
 
 export type TerritoryBoundaryResolution =
   | {
       mode: "rep_patch";
-      managerTerritoryId: string;
-      managerZoneCandidates: Array<{ id: string; code: string; name: string }>;
+      managerTerritoryId: number;
+      managerZoneCandidates: Array<{ id: number; code: string; name: string }>;
       clinicRecomputeEnqueued: boolean;
     }
   | {
@@ -64,7 +64,6 @@ export async function applyTerritoryBoundary(
     });
 
     await deps.spatialRepository.saveBoundary(territory.id, boundary);
-    await deps.spatialRepository.updateBoundaryMetadata(territory.id);
 
     await deps.territoryRepository.update(territory.id, {
       managerTerritoryId: resolution.managerTerritoryId,
@@ -89,7 +88,6 @@ export async function applyTerritoryBoundary(
     );
 
     await deps.spatialRepository.saveBoundary(territory.id, boundary);
-    await deps.spatialRepository.updateBoundaryMetadata(territory.id);
 
     const repPatchCount = await deps.territoryRepository.countRepPatchesByManagerZone(
       territory.id
@@ -113,7 +111,6 @@ export async function applyTerritoryBoundary(
   await deps.spatialRepository.saveBoundary(territory.id, boundary, {
     repairInvalid: true,
   });
-  await deps.spatialRepository.updateBoundaryMetadata(territory.id);
 
   return { mode: "other" };
 }

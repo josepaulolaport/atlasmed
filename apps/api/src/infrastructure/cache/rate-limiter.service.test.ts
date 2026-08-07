@@ -29,7 +29,7 @@ describe("RateLimiterService", () => {
         windowMs: 60000,
       };
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check("test", "123", config);
 
       expect(result.allowed).toBe(true);
       expect(result.remaining).toBe(4);
@@ -43,7 +43,7 @@ describe("RateLimiterService", () => {
         windowMs: 60000,
       };
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check("test", "123", config);
 
       expect(result.allowed).toBe(false);
       expect(result.remaining).toBe(0);
@@ -58,7 +58,7 @@ describe("RateLimiterService", () => {
         blockDurationMs: 300000,
       };
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check("test", "123", config);
 
       expect(result.allowed).toBe(false);
       expect(result.blockedUntil).toBeDefined();
@@ -75,7 +75,7 @@ describe("RateLimiterService", () => {
         blockDurationMs: 300000,
       };
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check("test", "123", config);
 
       expect(result.allowed).toBe(false);
       expect(result.blockedUntil).toBeDefined();
@@ -89,7 +89,7 @@ describe("RateLimiterService", () => {
         windowMs: 60000,
       };
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check("test", "123", config);
 
       expect(result.allowed).toBe(true);
       expect(result.remaining).toBe(5);
@@ -98,17 +98,17 @@ describe("RateLimiterService", () => {
 
   describe("reset", () => {
     test("should reset rate limit and block keys", async () => {
-      await rateLimiter.reset("test", "user-123");
+      await rateLimiter.reset("test", "123");
 
       expect(mockRedis.del).toHaveBeenCalledTimes(2);
-      expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:test:user-123");
-      expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:block:test:user-123");
+      expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:test:123");
+      expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:block:test:123");
     });
 
     test("should handle Redis errors gracefully", async () => {
       mockRedis.del = mock(() => Promise.reject(new Error("Redis error")));
       await expect(
-        rateLimiter.reset("test", "user-123")
+        rateLimiter.reset("test", "123")
       ).resolves.toBeUndefined();
     });
   });
@@ -119,7 +119,7 @@ describe("RateLimiterService", () => {
 
       const remaining = await rateLimiter.getRemainingAttempts(
         "test",
-        "user-123",
+        "123",
         5
       );
 
@@ -131,7 +131,7 @@ describe("RateLimiterService", () => {
 
       const remaining = await rateLimiter.getRemainingAttempts(
         "test",
-        "user-123",
+        "123",
         5
       );
 
@@ -143,7 +143,7 @@ describe("RateLimiterService", () => {
 
       const remaining = await rateLimiter.getRemainingAttempts(
         "test",
-        "user-123",
+        "123",
         5
       );
 

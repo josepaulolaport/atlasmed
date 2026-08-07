@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 
@@ -24,9 +25,13 @@ String? fieldKeyForLabel(String label) {
     case 'horário de funcionamento':
       return 'openingHours';
     case 'cnpj':
-      return 'cnpj';
     case 'cpf':
-      return 'cpf';
+    case 'documento':
+    case 'documento legal':
+      return 'legalDocument';
+    case 'tipo':
+    case 'tipo do estabelecimento':
+      return 'legalDocumentType';
     case 'endereço':
     case 'endereco':
       return 'address';
@@ -41,18 +46,18 @@ NaoConformidadeSuggestion suggestionFromApi(Map<String, dynamic> map) {
   final roleRaw = (map['submittedByRole'] as String? ?? 'REP').toUpperCase();
 
   return NaoConformidadeSuggestion(
-    id: map['id'] as String,
+    id: readCrmId(map['id'], 'id'),
     kind: kindRaw == 'DEACTIVATION'
         ? NaoConformidadeKind.deactivation
         : NaoConformidadeKind.fieldChange,
     targetType: NaoConformidadeTargetType.clinic,
-    targetId: map['facilityId'] as String,
+    targetId: readCrmId(map['facilityId'], 'facilityId'),
     targetName: map['facilityName'] as String? ?? '',
     fieldLabel: map['fieldLabel'] as String? ?? 'Campo',
     currentValue: formatSuggestionValue(map['currentValue']),
     suggestedValue: formatSuggestionValue(map['proposedValue']),
     reason: map['reason'] as String?,
-    submittedByUserId: map['submittedByUserId'] as String?,
+    submittedByUserId: readCrmIdOrNull(map['submittedByUserId'], 'submittedByUserId'),
     submittedByName: map['submittedByName'] as String? ?? 'Usuário',
     submittedByRole: roleRaw.contains('MANAGER')
         ? NaoConformidadeSubmitterRole.manager

@@ -13,19 +13,16 @@ export interface FacilityRepresentativeRoleFlags {
 }
 
 export interface FacilityRepresentativeRecord extends FacilityRepresentativeRoleFlags {
-  id: string;
-  facilityId: string;
+  id: number;
+  facilityId: number;
   representativeName: string;
   roleTitle: string | null;
   email: string | null;
   phone: string | null;
   taxId: string | null;
   contactType: FacilityRepresentativeContactType;
-  sourceProvider: string | null;
-  externalSourceKey: string | null;
-  sourceActive: boolean;
   confirmedAt: Date | null;
-  confirmedByUserId: string | null;
+  confirmedByUserId: number | null;
   endedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -42,67 +39,40 @@ export interface FacilityRepresentativeListPage {
 export type FacilityRepresentativeRolePatch = Partial<FacilityRepresentativeRoleFlags>;
 
 export interface FacilityRepresentativeRepository {
-  findByFacilityAndExternalKey(
-    facilityId: string,
-    externalKey: string
-  ): Promise<FacilityRepresentativeRecord | null>;
-
   findByIdForFacility(
-    facilityId: string,
-    representativeId: string
+    facilityId: number,
+    representativeId: number
   ): Promise<FacilityRepresentativeRecord | null>;
 
   /** Active CRM representatives (`ended_at IS NULL`), name ascending. */
   findActiveByFacility(params: {
-    facilityId: string;
+    facilityId: number;
     page?: number;
     limit?: number;
     search?: string;
   }): Promise<FacilityRepresentativeListPage>;
 
-  upsertFromRegistry(params: {
-    facilityId: string;
-    externalSourceKey: string;
-    representativeName: string;
-    roleTitle?: string | null;
-    email?: string | null;
-    taxId?: string | null;
-  }): Promise<FacilityRepresentativeRecord>;
-
-  confirm(params: {
-    facilityId: string;
-    externalSourceKey: string;
-    confirmedByUserId: string;
-  }): Promise<FacilityRepresentativeRecord>;
-
-  /** Manual CRM create (no registry external key). */
+  /** Manual CRM create. */
   createManual(params: {
-    facilityId: string;
+    facilityId: number;
     representativeName: string;
     roleTitle?: string | null;
     email?: string | null;
     phone?: string | null;
     contactType?: FacilityRepresentativeContactType;
     roles?: FacilityRepresentativeRolePatch;
-    confirmedByUserId: string;
+    confirmedByUserId: number;
   }): Promise<FacilityRepresentativeRecord>;
 
   updateManual(params: {
-    facilityId: string;
-    representativeId: string;
+    facilityId: number;
+    representativeId: number;
     representativeName?: string;
     roleTitle?: string | null;
     email?: string | null;
     phone?: string | null;
     contactType?: FacilityRepresentativeContactType;
     roles?: FacilityRepresentativeRolePatch;
-  }): Promise<FacilityRepresentativeRecord | null>;
-
-  endSourceRepresentative(params: {
-    facilityId: string;
-    externalSourceKey: string;
-    endedByUserId: string;
-    endReason?: string;
   }): Promise<FacilityRepresentativeRecord | null>;
 }
 

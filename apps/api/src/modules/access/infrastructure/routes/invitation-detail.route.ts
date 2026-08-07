@@ -12,7 +12,7 @@ export const invitationDetailRoute = new Elysia({
   .use(requirePermission("read", "USER"))
   .get(
     "/invitations/:id",
-    async ({ params, getUser }: any) => {
+    async ({ params, getUser }) => {
       const actor = await getUser();
       return accessUseCases.getInvitationById().execute({
         inviteId: params.id,
@@ -25,12 +25,13 @@ export const invitationDetailRoute = new Elysia({
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     },
   )
   .use(requirePermission("update", "INVITATION"))
   .patch(
     "/invites/:id",
-    async ({ params, body, getUser }: any) => {
+    async ({ params, body, getUser }) => {
       const actor = await getUser();
       const parsed = updateInvitationSchema.parse(body);
 
@@ -53,10 +54,11 @@ export const invitationDetailRoute = new Elysia({
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         email: t.Optional(t.String({ format: "email" })),
         phoneNumber: t.Optional(t.Union([t.String(), t.Null()])),
-        roleId: t.Optional(t.String()),
+        roleId: t.Optional(t.Number({ minimum: 1 })),
         firstName: t.Optional(t.String({ minLength: 1 })),
         lastName: t.Optional(t.String({ minLength: 1 })),
         birthDate: t.Optional(
@@ -65,12 +67,12 @@ export const invitationDetailRoute = new Elysia({
         verticalAssignments: t.Optional(
           t.Array(
             t.Object({
-              verticalId: t.String(),
-              territoryIds: t.Optional(t.Array(t.String())),
+              verticalId: t.Number({ minimum: 1 }),
+              territoryIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
               newPatch: t.Optional(
                 t.Object({
                   name: t.String({ minLength: 1 }),
-                  managerZoneId: t.String(),
+                  managerZoneId: t.Number({ minimum: 1 }),
                   slug: t.Optional(t.String()),
                   boundary: t.Object({
                     type: t.Union([

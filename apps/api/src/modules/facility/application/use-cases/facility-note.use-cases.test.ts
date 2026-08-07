@@ -26,9 +26,9 @@ describe("Facility note use cases", () => {
   it("lists private notes for the current user", async () => {
     const findByFacilityAndUser = mock(async () => [
       {
-        id: "note-1",
-        userId: "user-1",
-        facilityId: "facility-1",
+        id: 1,
+        userId: 1,
+        facilityId: 1,
         note: "Levar amostra",
         createdAt: now,
         updatedAt: now,
@@ -43,15 +43,15 @@ describe("Facility note use cases", () => {
         },
       } satisfies FacilityNoteRepository,
     }).execute({
-      facilityId: "facility-1",
-      userId: "user-1",
+      facilityId: 1,
+      userId: 1,
       scope: globalScope,
     });
 
-    expect(findByFacilityAndUser).toHaveBeenCalledWith("facility-1", "user-1");
+    expect(findByFacilityAndUser).toHaveBeenCalledWith(1, 1);
     expect(result).toEqual([
       {
-        id: "note-1",
+        id: 1,
         note: "Levar amostra",
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -164,9 +164,9 @@ describe("Facility note use cases", () => {
 
   it("creates a private note", async () => {
     const create = mock(async () => ({
-      id: "note-2",
-      userId: "user-1",
-      facilityId: "facility-1",
+      id: 2,
+      userId: 1,
+      facilityId: 1,
       note: "Retornar em agosto",
       createdAt: now,
       updatedAt: now,
@@ -178,15 +178,15 @@ describe("Facility note use cases", () => {
         create,
       },
     }).execute({
-      facilityId: "facility-1",
-      userId: "user-1",
+      facilityId: 1,
+      userId: 1,
       note: "Retornar em agosto",
       scope: globalScope,
     });
 
     expect(create).toHaveBeenCalledWith({
-      facilityId: "facility-1",
-      userId: "user-1",
+      facilityId: 1,
+      userId: 1,
       note: "Retornar em agosto",
     });
     expect(result.note).toBe("Retornar em agosto");
@@ -231,13 +231,13 @@ describe("Facility note use cases", () => {
           },
         },
       }).execute({
-        facilityId: "facility-out",
-        userId: "user-1",
+        facilityId: 999,
+        userId: 1,
         scope: {
           ...globalScope,
           isGlobal: false,
-          facilityIds: ["facility-1"],
-          clinicIds: ["facility-1"],
+          facilityIds: [1],
+          clinicIds: [1],
         },
       })
     ).rejects.toMatchObject({ statusCode: 403 });

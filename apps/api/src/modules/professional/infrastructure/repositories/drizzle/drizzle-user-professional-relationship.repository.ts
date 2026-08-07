@@ -43,8 +43,8 @@ export class DrizzleUserProfessionalRelationshipRepository
   implements UserProfessionalRelationshipRepository
 {
   async findByUserAndProfessional(
-    userId: string,
-    professionalId: string
+    userId: number,
+    professionalId: number
   ): Promise<UserProfessionalRelationshipRecord | null> {
     const [row] = await db
       .select()
@@ -61,9 +61,9 @@ export class DrizzleUserProfessionalRelationshipRepository
   }
 
   async findLevelsByUserAndProfessionals(
-    userId: string,
-    professionalIds: string[]
-  ): Promise<Map<string, number>> {
+    userId: number,
+    professionalIds: number[]
+  ): Promise<Map<number, number>> {
     if (professionalIds.length === 0) return new Map();
 
     const rows = await db
@@ -85,8 +85,8 @@ export class DrizzleUserProfessionalRelationshipRepository
   }
 
   async upsert(params: {
-    userId: string;
-    professionalId: string;
+    userId: number;
+    professionalId: number;
     relationshipLevel: number;
   }): Promise<UserProfessionalRelationshipRecord> {
     assertLevel(params.relationshipLevel);
@@ -114,8 +114,8 @@ export class DrizzleUserProfessionalRelationshipRepository
   }
 
   async deleteByUserAndProfessional(
-    userId: string,
-    professionalId: string
+    userId: number,
+    professionalId: number
   ): Promise<void> {
     await db
       .delete(userProfessionalRelationships)

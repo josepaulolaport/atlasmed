@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_consultant_assignments_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_consultant_assignments_provider.dart';
@@ -10,22 +10,28 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.da
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_zip_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_visits_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/purchase_recurrence_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/quick_actions.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_payers_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/administrative_professionals_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_context_section.dart';
@@ -45,31 +51,111 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_payer_sources_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_section.dart';
-import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
 // ===============================================================
-class ClinicDetailScreen extends ConsumerWidget {
+class ClinicDetailScreen extends ConsumerStatefulWidget {
+  final int clinicId;
+
+  /// Linha from navigation (Desempenho / Explorar filter), if any.
+  final int? initialVerticalId;
+
   const ClinicDetailScreen({
     super.key,
     required this.clinicId,
     this.initialVerticalId,
   });
 
-  final String clinicId;
-  final String? initialVerticalId;
+  @override
+  ConsumerState<ClinicDetailScreen> createState() => _ClinicDetailScreenState();
+}
+
+class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
+    with WidgetsBindingObserver, RouteAware {
+  /// Avoid refetch storms when resume + didPopNext fire close together.
+  static const _minRefreshGap = Duration(seconds: 15);
+  DateTime? _lastVisibilityRefreshAt;
+  var _seededEntryVertical = false;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(
-      clinicDetailScopeProvider((
-        facilityId: clinicId,
-        initialVerticalId: initialVerticalId,
-      )),
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _seedEntryVerticalIfNeeded() {
+    if (_seededEntryVertical) return;
+    final entryId = widget.initialVerticalId;
+    if (entryId == null) {
+      _seededEntryVertical = true;
+      return;
+    }
+    _seededEntryVertical = true;
+    // Must not write providers during build/initState — schedule after frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+              .read(
+                clinicDetailEntryVerticalIdProvider(widget.clinicId).notifier,
+              )
+              .state =
+          entryId;
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshClinicIfStale();
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // A route above this screen was popped — clinic is visible again.
+    _refreshClinicIfStale();
+  }
+
+  void _refreshClinicIfStale() {
+    final now = DateTime.now();
+    final last = _lastVisibilityRefreshAt;
+    if (last != null && now.difference(last) < _minRefreshGap) return;
+    _lastVisibilityRefreshAt = now;
+
+    final clinicId = widget.clinicId;
+    // Refresh vertical-scoped detail + photos only — keep section notifiers.
+    // ignore: unused_result
+    ref.read(clinicDetailRepositoryProvider(clinicId)).refresh();
+    // ignore: unused_result
+    ref.read(facilityPhotosRepositoryProvider(clinicId)).refresh();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _seedEntryVerticalIfNeeded();
+    final clinicId = widget.clinicId;
+    final repo = ref.watch(facilityZipRepositoryProvider(clinicId));
+    final displayFallback = ref.watch(
+      clinicDetailDisplayFacilityProvider(clinicId),
     );
-    final repository = ref.watch(facilityZipRepositoryProvider(clinicId));
 
     return Scaffold(
       backgroundColor: AppColors.navyBright,
@@ -92,22 +178,111 @@ class ClinicDetailScreen extends ConsumerWidget {
           const SizedBox(width: 6),
         ],
       ),
-      body: RepositoryBuilder<FacilityZipRepository, FacilityDetailData>(
-        repository: repository,
-        builder: (context, data, repository) => _ClinicDetailContent(
-          data: data,
-          clinicId: clinicId,
-          repository: repository,
+      body: RepositoryBuilder<FacilityZipRepository, FacilityWithIntegrations>(
+        repository: repo,
+        builder: (context, data, repository) {
+          final zipFacility = data?.facility;
+          if (zipFacility != null &&
+              zipFacility.id > 0 &&
+              _shouldUpdateLoadedFacility(
+                ref.read(clinicDetailLoadedFacilityProvider(clinicId)),
+                zipFacility,
+              )) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              ref
+                      .read(
+                        clinicDetailLoadedFacilityProvider(clinicId).notifier,
+                      )
+                      .state =
+                  zipFacility;
+            });
+          }
+          // Prefer live zip; fall back to loaded/shell so Linha refetch and
+          // list→detail navigation do not flash a full-page skeleton.
+          final detail = (zipFacility != null && zipFacility.id > 0)
+              ? zipFacility
+              : displayFallback;
+          if (detail == null || detail.id <= 0) {
+            return _loadingSkeleton(context);
+          }
+          return _ClinicDetailBody(
+            detail: detail,
+            clinicId: clinicId,
+            repository: repository,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _loadingSkeleton(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          _buildHeaderSkeleton(context),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: List.generate(
+                6,
+                (_) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _SkeletonBlock(height: 100),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderSkeleton(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
+    return Container(
+      height: 180 + top,
+      decoration: const BoxDecoration(
+        color: AppColors.navyBright,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: Colors.white),
       ),
     );
   }
 }
 
+String _friendlyLoadError(Object error) {
+  final raw = error.toString().toLowerCase();
+  if (raw.contains('socket') ||
+      raw.contains('network') ||
+      raw.contains('failed host lookup') ||
+      raw.contains('connection') ||
+      raw.contains('timeout') ||
+      raw.contains('timed out') ||
+      raw.contains('unreachable')) {
+    return 'Verifique sua conexão com a internet e tente novamente.';
+  }
+  if (raw.contains('not found') || raw.contains('404')) {
+    return 'Este estabelecimento não foi encontrado ou não está disponível.';
+  }
+  if (raw.contains('403') || raw.contains('forbidden')) {
+    return 'Você não tem permissão para acessar este estabelecimento.';
+  }
+  if (raw.contains('401') || raw.contains('unauthorized')) {
+    return 'Sua sessão expirou. Faça login novamente.';
+  }
+  return 'Algo deu errado ao buscar os dados. Tente novamente em instantes.';
+}
+
 Future<void> _openAdministratorsList(
   BuildContext context,
-  FacilityZipRepository repository, {
-  required String clinicId,
+  WidgetRef ref, {
+  required int clinicId,
   required String facilityName,
   required List<AdministrativeProfessional> rosterFallback,
 }) async {
@@ -120,13 +295,16 @@ Future<void> _openAdministratorsList(
       ),
     ),
   );
-  await repository.refreshAdministrators();
+  // Prefer retry over invalidate — keeps strip items visible while refetching.
+  await ref
+      .read(facilityAdministratorsRosterProvider(clinicId).notifier)
+      .retry();
 }
 
 Future<void> _openDoctorsList(
   BuildContext context,
-  FacilityZipRepository repository, {
-  required String clinicId,
+  WidgetRef ref, {
+  required int clinicId,
   required String facilityName,
   required List<ProfessionalRoster> rosterFallback,
 }) async {
@@ -139,18 +317,18 @@ Future<void> _openDoctorsList(
       ),
     ),
   );
-  await repository.refreshDoctors();
+  await ref.read(facilityDoctorsRosterProvider(clinicId).notifier).retry();
 }
 
 Future<void> _openPayerSourcesEditor(
-  BuildContext context, {
-  required FacilityZipRepository repository,
-  required String clinicId,
+  BuildContext context,
+  WidgetRef ref, {
+  required int clinicId,
   required List<PayerShare> payers,
 }) async {
-  late final List<PayerCatalogEntry> catalog;
+  List<PayerCatalogEntry> catalog;
   try {
-    catalog = await repository.loadPayerCatalog();
+    catalog = await ref.read(healthcareProvidersCatalogProvider.future);
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -184,7 +362,10 @@ Future<void> _openPayerSourcesEditor(
   if (updated == null || !context.mounted) return;
 
   try {
-    await repository.replacePayerShares(updated);
+    await ref.read(facilityPayersProvider(clinicId).notifier).replace(updated);
+    ref.invalidate(healthcareProvidersCatalogProvider);
+    // Pull again from API so chart/legend match persisted shares (type, pacote…).
+    await ref.read(facilityPayersProvider(clinicId).notifier).retry();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -241,7 +422,7 @@ Future<void> _openPurchaseRecurrenceEditor(
                 if (sheetContext.mounted) Navigator.of(sheetContext).pop();
               },
               refreshDetail: () {
-                ref.read(facilityZipRepositoryProvider(detail.id)).refresh();
+                ref.invalidate(clinicDetailRepositoryProvider(detail.id));
               },
               refreshExplore: ref
                   .read(exploreProvider.notifier)
@@ -262,645 +443,625 @@ Future<void> _openPurchaseRecurrenceEditor(
 }
 
 // ===============================================================
-// Scrollable content body — section order per Spec 0005 redesign
+// Body — fixed blue header (outside the scroll) + scrollable sections
 // ===============================================================
-class _ClinicDetailContent extends ConsumerWidget {
-  const _ClinicDetailContent({
-    required this.data,
+class _ClinicDetailBody extends ConsumerWidget {
+  const _ClinicDetailBody({
+    required this.detail,
     required this.clinicId,
     required this.repository,
   });
 
-  final FacilityDetailData? data;
-  final String clinicId;
+  final Facility detail;
+  final int clinicId;
   final FacilityZipRepository repository;
-
-  Future<void> _refresh() => repository.refresh();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail =
-        data?.facility ??
-        ref.watch(clinicDetailDisplayFacilityProvider(clinicId));
-    final administrators = data?.administrators;
-    final doctors = data?.doctors;
-    final payers = data?.payerShares;
-    final orders = data?.orders;
-    final canMutate = ref.watch(canMutateFacilityProvider);
-    final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
-    final canCreateVisit = ref.watch(canCreateVisitProvider);
-    final canAssignConsultant = ref.watch(canAssignFacilityConsultantProvider);
-    final userLinhaOptions =
-        ref.watch(currentUserFacilityVerticalOptionsProvider).valueOrNull ??
-        const [];
-    final linhaOptions = detail == null
-        ? const <BusinessVertical>[]
-        : clinicDetailLinhaOptions(
-            userOptions: userLinhaOptions,
-            clinicProfiles: detail.verticalProfiles,
-          );
-    final clinicProfileIds =
-        detail?.verticalProfiles
-            .map((profile) => profile.verticalId)
-            .where((id) => id.isNotEmpty)
-            .toSet() ??
-        const <String>{};
-    final activeLinhaId = ref.watch(
-      clinicDetailActiveLinhaIdProvider(clinicId),
-    );
-    final showLinhaSwitcher = shouldShowClinicDetailLinhaSwitcher(linhaOptions);
-    final payersApplyToLinha =
-        detail == null ||
-        isClinicLinhaOrtopedia(
-          profiles: detail.verticalProfiles,
-          activeVerticalId: activeLinhaId,
-        );
-
-    void onLinhaChanged(String id) {
-      ref.read(clinicDetailSelectedLinhaIdProvider(clinicId).notifier).state =
-          id;
-    }
+    final sections = ref
+        .watch(establishmentDetailSectionsProvider(clinicId))
+        .valueOrNull;
 
     return RefreshIndicator(
       color: AppColors.navyBright,
       backgroundColor: Colors.white,
-      onRefresh: _refresh,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Column(
-            children: [
-              Expanded(child: Container(color: AppColors.navyBright)),
-              Expanded(child: Container(color: AppColors.surfaceTertiary)),
-            ],
-          ),
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: ColoredBox(
-                  color: AppColors.surfaceTertiary,
-                  child: Column(
-                    children: [
-                      ClinicHeaderSection(detail: detail, photos: data?.photos),
-                      ClinicDetailQuickActions(
-                        detail: detail,
-                        canCreateVisit: canCreateVisit,
-                      ),
-                      ClinicDetailShortcuts(
-                        facilityId: clinicId,
-                        detail: detail,
-                      ),
-                      ClinicAdministrativeSection(
-                        repository: repository,
-                        clinicId: clinicId,
-                        facilityName: detail?.name,
-                        roster: administrators,
-                        isLoadingMore: data?.administratorsLoadingMore ?? false,
-                        canMutate: canMutate,
-                      ),
-                      ClinicDoctorsSection(
-                        repository: repository,
-                        clinicId: clinicId,
-                        facilityName: detail?.name,
-                        roster: doctors,
-                        isLoadingMore: data?.doctorsLoadingMore ?? false,
-                        canMutate: canMutate,
-                      ),
-                      ClinicFieldNotesSection(
-                        facilityId: clinicId,
-                        notes: data?.notes,
-                        canAdd: canMutate,
-                        onCreate: repository.createNote,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (showLinhaSwitcher && activeLinhaId != null)
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: ClinicDetailLinhaHeaderDelegate(
-                    options: linhaOptions,
-                    selectedVerticalId: activeLinhaId,
-                    onChanged: onLinhaChanged,
-                  ),
-                ),
-              SliverToBoxAdapter(
-                child: ColoredBox(
-                  color: AppColors.surfaceTertiary,
-                  child: Column(
-                    children: [
-                      ClinicPotentialSection(
-                        verticalId: activeLinhaId,
-                        page: data?.potentials,
-                        canEdit: canMutate,
-                        onSave: repository.replacePotentialValues,
-                      ),
-                      if (payersApplyToLinha)
-                        ClinicPayersSection(
-                          repository: repository,
-                          clinicId: clinicId,
-                          facilityName: detail?.name,
-                          payers: payers,
-                          canMutate: canMutate,
-                        ),
-                      ClinicMapSection(
-                        clinicId: clinicId,
-                        facilityName: detail?.name,
-                        detail: detail,
-                        nearby: data?.nearby,
-                        clinicVerticalIds: clinicProfileIds,
-                      ),
-                      ClinicOrdersHistorySection(
-                        clinicId: clinicId,
-                        orders: orders,
-                      ),
-                      ClinicTeamSection(
-                        clinicId: clinicId,
-                        detail: detail,
-                        activeVerticalId: activeLinhaId,
-                        canManageConsultant: canAssignConsultant,
-                      ),
-                      ClinicPurchaseSection(
-                        detail: detail,
-                        canMutate: canMutate,
-                      ),
-                      if (canSuggest) const _SuggestEditBanner(),
-                      if (canSuggest && detail != null)
-                        _ClinicDeactivateButton(
-                          clinicId: clinicId,
-                          clinicName: detail.name,
-                          commercialStatus: parseFacilityCommercialStatus(
-                            detail.commercial?.commercialStatus,
-                          ),
-                        ),
-                      SizedBox(height: MediaQuery.of(context).padding.bottom),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+      onRefresh: () async {
+        ref.invalidate(establishmentDetailSectionsProvider(clinicId));
+        ref.invalidate(clinicVisitsRepositoryProvider(clinicId));
+        ref.invalidate(facilityNotesProvider(clinicId));
+        ref.invalidate(facilityNearbyPreviewProvider(clinicId));
+        final doctorsNotifier = ref.read(
+          facilityDoctorsRosterProvider(clinicId).notifier,
+        );
+        final adminsNotifier = ref.read(
+          facilityAdministratorsRosterProvider(clinicId).notifier,
+        );
+        await Future.wait([
+          ref.read(clinicDetailRepositoryProvider(clinicId)).refresh(),
+          ref.read(facilityPhotosRepositoryProvider(clinicId)).refresh(),
+          ref.read(establishmentDetailSectionsProvider(clinicId).future),
+          ref.read(facilityNearbyPreviewProvider(clinicId).future),
+          ref.read(facilityNotesProvider(clinicId).future),
+          doctorsNotifier.retry(),
+          adminsNotifier.retry(),
+          ref.read(facilityPayersProvider(clinicId).notifier).retry(),
+          ref.read(facilityOrdersProvider(clinicId).notifier).retry(),
+        ]);
+      },
+      child: _ClinicDetailContent(
+        detail: detail,
+        clinicId: clinicId,
+        sections: sections,
+        repository: repository,
       ),
     );
   }
 }
 
-class ClinicDetailQuickActions extends ConsumerWidget {
-  const ClinicDetailQuickActions({
-    super.key,
+// ===============================================================
+// Scrollable content body — section order per Spec 0005 redesign
+// ===============================================================
+class _ClinicDetailContent extends ConsumerWidget {
+  final Facility detail;
+  final int clinicId;
+  final EstablishmentDetailSections? sections;
+  final FacilityZipRepository repository;
+  const _ClinicDetailContent({
     required this.detail,
-    required this.canCreateVisit,
+    required this.clinicId,
+    required this.repository,
+    this.sections,
   });
-
-  final Facility? detail;
-  final bool canCreateVisit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail = this.detail;
-    if (detail == null) return const _SectionLoadingCard(height: 72);
+    final sectionsAsync = ref.watch(
+      establishmentDetailSectionsProvider(clinicId),
+    );
+    final adminsRoster = ref.watch(
+      facilityAdministratorsRosterProvider(clinicId),
+    );
+    final doctorsRoster = ref.watch(facilityDoctorsRosterProvider(clinicId));
+    final payersState = ref.watch(facilityPayersProvider(clinicId));
+    final ordersState = ref.watch(facilityOrdersProvider(clinicId));
 
-    Widget icon(IconData value) => CircleAvatar(
-      backgroundColor: AppColors.navyBright.createSecondary(),
-      radius: 18,
-      child: Icon(value, size: 18, color: AppColors.navyBright),
+    final userLinhaOptions =
+        ref.watch(currentUserFacilityVerticalOptionsProvider).valueOrNull ??
+        const [];
+    final linhaOptions = clinicDetailLinhaOptions(
+      userOptions: userLinhaOptions,
+      clinicProfiles: detail.verticalProfiles,
+    );
+    final clinicProfileIds = detail.verticalProfiles
+        .map((p) => p.verticalId)
+        .where((id) => (id > 0))
+        .toSet();
+    final knownIds = ref.watch(clinicDetailKnownProfileIdsProvider(clinicId));
+    if (clinicProfileIds.isNotEmpty &&
+        !_sameIdSet(knownIds, clinicProfileIds)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ref.read(clinicDetailKnownProfileIdsProvider(clinicId).notifier).state =
+            clinicProfileIds;
+      });
+    }
+    final activeLinhaId = ref.watch(
+      clinicDetailActiveLinhaIdProvider(clinicId),
+    );
+    final showLinhaSwitcher = shouldShowClinicDetailLinhaSwitcher(linhaOptions);
+    final payersApplyToLinha = isClinicLinhaOrtopedia(
+      profiles: detail.verticalProfiles,
+      activeVerticalId: activeLinhaId,
     );
 
-    return DetailQuickActions(
-      themeColor: AppColors.navyBright,
-      actions: [
-        QuickActionItem(
-          icon: icon(Icons.phone_rounded),
-          label: const Text('Ligar'),
-          onTap: () => launchContactUrl(
-            context,
-            url: callUrl(detail.contact?.phone),
-            contactLabel: 'telefone',
-          ),
-        ),
-        QuickActionItem(
-          icon: icon(Icons.chat_rounded),
-          label: const Text('WhatsApp'),
-          onTap: () => launchContactUrl(
-            context,
-            url: whatsappUrl(detail.contact?.whatsapp ?? detail.contact?.phone),
-            contactLabel: 'WhatsApp',
-          ),
-        ),
-        QuickActionItem(
-          icon: icon(Icons.directions_rounded),
-          label: const Text('Rota'),
-          onTap: () => launchMapsRoute(
-            context,
-            latitude: detail.address?.lat,
-            longitude: detail.address?.lng,
-            address: detail.address?.formattedAddress,
-          ),
-        ),
-        if (canCreateVisit)
-          QuickActionItem(
-            icon: icon(Icons.calendar_month_rounded),
-            label: const Text('Agendar interação'),
-            onTap: () => context.push(
-              '/agenda/new',
-              extra: CalendarEditorPrefill(
-                facilityId: detail.id,
-                facilityName: detail.name,
-                kind: CalendarEventKind.interaction,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
+    final effectivePayers = payersApplyToLinha
+        ? payersState.payers
+        : const <PayerShare>[];
+    final effectivePayersSummary = buildPayerMixSummary(effectivePayers);
+    final effectiveOrders = ordersState.orders;
+    final location = establishmentLocationFromDetail(detail);
+    final nearbyAsync = ref.watch(facilityNearbyPreviewProvider(clinicId));
+    final canMutate = ref.watch(canMutateFacilityProvider);
+    final canAssignConsultant = ref.watch(canAssignFacilityConsultantProvider);
+    final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
 
-class ClinicDetailShortcuts extends StatelessWidget {
-  const ClinicDetailShortcuts({
-    super.key,
-    required this.facilityId,
-    required this.detail,
-  });
+    void onLinhaChanged(int id) {
+      ref.read(clinicDetailSelectedLinhaIdProvider(clinicId).notifier).state =
+          id;
+    }
 
-  final String facilityId;
-  final Facility? detail;
-
-  @override
-  Widget build(BuildContext context) {
-    final detail = this.detail;
-    if (detail == null) return const _SectionLoadingCard();
-    return ClinicTopShortcutsSection(
-      facilityId: facilityId,
-      facilityName: detail.name,
-      detail: detail,
-    );
-  }
-}
-
-class ClinicPurchaseSection extends ConsumerWidget {
-  const ClinicPurchaseSection({
-    super.key,
-    required this.detail,
-    required this.canMutate,
-  });
-
-  final Facility? detail;
-  final bool canMutate;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detail = this.detail;
-    return Column(
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Compras',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
-                  letterSpacing: -0.3,
+        Column(
+          children: [
+            Expanded(child: Container(color: AppColors.navyBright)),
+            Expanded(child: Container(color: AppColors.surfaceTertiary)),
+          ],
+        ),
+        CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: ColoredBox(
+                color: AppColors.surfaceTertiary,
+                child: Column(
+                  children: [
+                    RepositoryBuilder<
+                      FacilityZipRepository,
+                      FacilityWithIntegrations
+                    >(
+                      repository: repository,
+                      builder: (context, data, _) {
+                        final zipPhotos = data?.photos;
+                        final photos = zipPhotos != null && zipPhotos.isNotEmpty
+                            ? zipPhotos.first
+                            : sections?.photos;
+                        return ClinicHeaderSection(
+                          detail: detail,
+                          sections: sections,
+                          photos: photos,
+                        );
+                      },
+                    ),
+                    DetailQuickActions(
+                      themeColor: AppColors.navyBright,
+                      actions: [
+                        QuickActionItem(
+                          icon: CircleAvatar(
+                            backgroundColor: AppColors.navyBright
+                                .createSecondary(),
+                            radius: 18,
+                            child: const Icon(
+                              Icons.phone_rounded,
+                              size: 18,
+                              color: AppColors.navyBright,
+                            ),
+                          ),
+                          label: const Text('Ligar'),
+                          onTap: () => launchContactUrl(
+                            context,
+                            url: callUrl(detail.contact?.phone),
+                            contactLabel: 'telefone',
+                          ),
+                        ),
+                        QuickActionItem(
+                          icon: CircleAvatar(
+                            backgroundColor: AppColors.navyBright
+                                .createSecondary(),
+                            radius: 18,
+                            child: const Icon(
+                              Icons.chat_rounded,
+                              size: 18,
+                              color: AppColors.navyBright,
+                            ),
+                          ),
+                          label: const Text('WhatsApp'),
+                          onTap: () => launchContactUrl(
+                            context,
+                            url: whatsappUrl(
+                              detail.contact?.whatsapp ?? detail.contact?.phone,
+                            ),
+                            contactLabel: 'WhatsApp',
+                          ),
+                        ),
+                        QuickActionItem(
+                          icon: CircleAvatar(
+                            backgroundColor: AppColors.navyBright
+                                .createSecondary(),
+                            radius: 18,
+                            child: const Icon(
+                              Icons.directions_rounded,
+                              size: 18,
+                              color: AppColors.navyBright,
+                            ),
+                          ),
+                          label: const Text('Rota'),
+                          onTap: () => launchMapsRoute(
+                            context,
+                            latitude: detail.address?.lat,
+                            longitude: detail.address?.lng,
+                            address: detail.address?.formattedAddress,
+                          ),
+                        ),
+                        if (ref.watch(canCreateVisitProvider))
+                          QuickActionItem(
+                            icon: CircleAvatar(
+                              backgroundColor: AppColors.navyBright
+                                  .createSecondary(),
+                              radius: 18,
+                              child: const Icon(
+                                Icons.calendar_month_rounded,
+                                size: 18,
+                                color: AppColors.navyBright,
+                              ),
+                            ),
+                            label: const Text('Visita'),
+                            onTap: () async {
+                              try {
+                                final repo = ref.read(
+                                  clinicVisitsRepositoryProvider(detail.id),
+                                );
+                                await repo.createVisit();
+                                ref.invalidate(
+                                  clinicVisitsRepositoryProvider(detail.id),
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Visita registrada com sucesso',
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              } catch (_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Erro ao registrar visita'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        QuickActionItem(
+                          icon: CircleAvatar(
+                            backgroundColor: AppColors.navyBright
+                                .createSecondary(),
+                            radius: 18,
+                            child: const Icon(
+                              Icons.note_add_rounded,
+                              size: 18,
+                              color: AppColors.navyBright,
+                            ),
+                          ),
+                          label: const Text('Pedido'),
+                          onTap: () => context.push('/orders/new'),
+                        ),
+                      ],
+                    ),
+                    ClinicTopShortcutsSection(
+                      facilityId: clinicId,
+                      facilityName: detail.name,
+                      detail: detail,
+                    ),
+                    ClinicSectionHeader(
+                      title: 'Administrativo',
+                      badge: adminsRoster.total == 0
+                          ? null
+                          : _CountBadge(count: adminsRoster.total),
+                      trailing: adminsRoster.items.isEmpty
+                          ? null
+                          : _HeaderLinkButton(
+                              label: 'Ver todos',
+                              onTap: () => _openAdministratorsList(
+                                context,
+                                ref,
+                                clinicId: clinicId,
+                                facilityName: detail.name,
+                                rosterFallback: adminsRoster.items,
+                              ),
+                            ),
+                    ),
+                    if (adminsRoster.loading && adminsRoster.items.isEmpty)
+                      const _SectionLoadingCard()
+                    else if (adminsRoster.error != null &&
+                        adminsRoster.items.isEmpty)
+                      _SectionErrorCard(
+                        message: _friendlyLoadError(adminsRoster.error!),
+                        onRetry: () => ref
+                            .read(
+                              facilityAdministratorsRosterProvider(
+                                clinicId,
+                              ).notifier,
+                            )
+                            .retry(),
+                      )
+                    else
+                      ClinicAdminProfessionalsSection(
+                        professionals: adminsRoster.items,
+                        facilityName: detail.name,
+                        facilityId: clinicId,
+                        hasMore: adminsRoster.hasMore,
+                        isLoadingMore: adminsRoster.loadingMore,
+                        onLoadMore: () => ref
+                            .read(
+                              facilityAdministratorsRosterProvider(
+                                clinicId,
+                              ).notifier,
+                            )
+                            .loadMore(),
+                        onAssociate: canMutate
+                            ? () => _openAdministratorsList(
+                                context,
+                                ref,
+                                clinicId: clinicId,
+                                facilityName: detail.name,
+                                rosterFallback: adminsRoster.items,
+                              )
+                            : null,
+                      ),
+                    ClinicSectionHeader(
+                      title: 'Médicos',
+                      badge: doctorsRoster.total == 0
+                          ? null
+                          : _CountBadge(count: doctorsRoster.total),
+                      trailing: doctorsRoster.items.isEmpty
+                          ? null
+                          : _HeaderLinkButton(
+                              label: 'Ver todos / Associar médico',
+                              onTap: () => _openDoctorsList(
+                                context,
+                                ref,
+                                clinicId: clinicId,
+                                facilityName: detail.name,
+                                rosterFallback: doctorsRoster.items,
+                              ),
+                            ),
+                    ),
+                    if (doctorsRoster.loading && doctorsRoster.items.isEmpty)
+                      const _SectionLoadingCard()
+                    else if (doctorsRoster.error != null &&
+                        doctorsRoster.items.isEmpty)
+                      _SectionErrorCard(
+                        message: _friendlyLoadError(doctorsRoster.error!),
+                        onRetry: () => ref
+                            .read(
+                              facilityDoctorsRosterProvider(clinicId).notifier,
+                            )
+                            .retry(),
+                      )
+                    else
+                      ClinicCrmDoctorsSection(
+                        doctors: doctorsRoster.items,
+                        facilityId: clinicId,
+                        hasMore: doctorsRoster.hasMore,
+                        isLoadingMore: doctorsRoster.loadingMore,
+                        onLoadMore: () => ref
+                            .read(
+                              facilityDoctorsRosterProvider(clinicId).notifier,
+                            )
+                            .loadMore(),
+                        onAssociate: canMutate
+                            ? () => _openDoctorsList(
+                                context,
+                                ref,
+                                clinicId: clinicId,
+                                facilityName: detail.name,
+                                rosterFallback: doctorsRoster.items,
+                              )
+                            : null,
+                        onDoctorUpdated: canMutate
+                            ? (updated) {
+                                ref
+                                    .read(
+                                      facilityDoctorsRosterProvider(
+                                        clinicId,
+                                      ).notifier,
+                                    )
+                                    .replaceWhere(
+                                      (d) => d.id == updated.id,
+                                      (_) => updated,
+                                    );
+                              }
+                            : null,
+                      ),
+                    const ClinicSectionHeader(title: 'Notas de campo'),
+                    ClinicFieldNotesSection(facilityId: clinicId),
+                  ],
                 ),
               ),
-              if (canMutate && detail != null)
-                _HeaderLinkButton(
-                  label: 'Editar',
-                  onTap: () =>
-                      _openPurchaseRecurrenceEditor(context, ref, detail),
-                ),
-            ],
-          ),
-        ),
-        if (detail == null)
-          const _SectionLoadingCard()
-        else
-          PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
-      ],
-    );
-  }
-}
-
-class ClinicAdministrativeSection extends StatelessWidget {
-  const ClinicAdministrativeSection({
-    super.key,
-    required this.repository,
-    required this.clinicId,
-    required this.facilityName,
-    required this.roster,
-    required this.isLoadingMore,
-    required this.canMutate,
-  });
-
-  final FacilityZipRepository repository;
-  final String clinicId;
-  final String? facilityName;
-  final FacilityRosterPage<AdministrativeProfessional>? roster;
-  final bool isLoadingMore;
-  final bool canMutate;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = roster?.items ?? const [];
-    final hasMore =
-        roster != null &&
-        roster!.pagination.page < roster!.pagination.totalPages;
-
-    void openList() {
-      _openAdministratorsList(
-        context,
-        repository,
-        clinicId: clinicId,
-        facilityName: facilityName ?? '',
-        rosterFallback: items,
-      );
-    }
-
-    return Column(
-      children: [
-        ClinicSectionHeader(
-          title: 'Administrativo',
-          badge: _countBadge(roster?.pagination.total),
-          trailing: items.isEmpty
-              ? null
-              : _HeaderLinkButton(label: 'Ver todos', onTap: openList),
-        ),
-        if (roster == null || facilityName == null)
-          const _SectionLoadingCard()
-        else
-          ClinicAdminProfessionalsSection(
-            professionals: items,
-            facilityName: facilityName!,
-            facilityId: clinicId,
-            hasMore: hasMore,
-            isLoadingMore: isLoadingMore,
-            onLoadMore: repository.loadMoreAdministrators,
-            onAssociate: canMutate ? openList : null,
-          ),
-      ],
-    );
-  }
-}
-
-class ClinicDoctorsSection extends StatelessWidget {
-  const ClinicDoctorsSection({
-    super.key,
-    required this.repository,
-    required this.clinicId,
-    required this.facilityName,
-    required this.roster,
-    required this.isLoadingMore,
-    required this.canMutate,
-  });
-
-  final FacilityZipRepository repository;
-  final String clinicId;
-  final String? facilityName;
-  final FacilityRosterPage<ProfessionalRoster>? roster;
-  final bool isLoadingMore;
-  final bool canMutate;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = roster?.items ?? const [];
-    final hasMore =
-        roster != null &&
-        roster!.pagination.page < roster!.pagination.totalPages;
-
-    void openList() {
-      _openDoctorsList(
-        context,
-        repository,
-        clinicId: clinicId,
-        facilityName: facilityName ?? '',
-        rosterFallback: items,
-      );
-    }
-
-    return Column(
-      children: [
-        ClinicSectionHeader(
-          title: 'Médicos',
-          badge: _countBadge(roster?.pagination.total),
-          trailing: items.isEmpty
-              ? null
-              : _HeaderLinkButton(label: 'Ver todos', onTap: openList),
-        ),
-        if (roster == null || facilityName == null)
-          const _SectionLoadingCard()
-        else
-          ClinicCrmDoctorsSection(
-            doctors: items,
-            facilityId: clinicId,
-            hasMore: hasMore,
-            isLoadingMore: isLoadingMore,
-            onLoadMore: repository.loadMoreDoctors,
-            onAssociate: canMutate ? openList : null,
-            onDoctorUpdated: canMutate
-                ? (_) => repository.refreshDoctors()
-                : null,
-          ),
-      ],
-    );
-  }
-}
-
-class ClinicPayersSection extends StatelessWidget {
-  const ClinicPayersSection({
-    super.key,
-    required this.repository,
-    required this.clinicId,
-    required this.facilityName,
-    required this.payers,
-    required this.canMutate,
-  });
-
-  final FacilityZipRepository repository;
-  final String clinicId;
-  final String? facilityName;
-  final List<PayerShare>? payers;
-  final bool canMutate;
-
-  @override
-  Widget build(BuildContext context) {
-    void edit() {
-      final loadedPayers = payers;
-      if (loadedPayers == null || facilityName == null) return;
-      _openPayerSourcesEditor(
-        context,
-        repository: repository,
-        clinicId: clinicId,
-        payers: loadedPayers,
-      );
-    }
-
-    return Column(
-      children: [
-        ClinicSectionHeader(
-          title: 'Fontes Pagadoras',
-          trailing: !canMutate || payers == null || payers!.isEmpty
-              ? null
-              : _HeaderLinkButton(label: 'Editar', onTap: edit),
-        ),
-        if (payers == null || facilityName == null)
-          const _SectionLoadingCard()
-        else
-          ClinicPayersBarSection(
-            payers: payers!,
-            summary: buildPayerMixSummary(payers!),
-            facilityName: facilityName,
-          ),
-      ],
-    );
-  }
-}
-
-class ClinicMapSection extends StatelessWidget {
-  const ClinicMapSection({
-    super.key,
-    required this.clinicId,
-    required this.facilityName,
-    required this.detail,
-    required this.nearby,
-    required this.clinicVerticalIds,
-  });
-
-  final String clinicId;
-  final String? facilityName;
-  final Facility? detail;
-  final List<NearbyEstablishment>? nearby;
-  final Set<String> clinicVerticalIds;
-
-  @override
-  Widget build(BuildContext context) {
-    final detail = this.detail;
-    final location = detail == null
-        ? null
-        : establishmentLocationFromFacility(detail);
-    return Column(
-      children: [
-        const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
-        if (detail == null)
-          const _SectionLoadingCard(height: 180)
-        else if (location == null)
-          const ClinicDetailCard(
-            child: Text(
-              'Localização não disponível para este estabelecimento',
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
             ),
-          )
-        else if (nearby == null || facilityName == null)
-          const _SectionLoadingCard(height: 180)
-        else
-          ClinicLocationSection(
-            facilityId: clinicId,
-            facilityName: facilityName!,
-            location: location,
-            nearbyEstablishments: nearby!,
-            clinicVerticalIds: clinicVerticalIds,
-          ),
-      ],
-    );
-  }
-}
-
-class ClinicOrdersHistorySection extends StatelessWidget {
-  const ClinicOrdersHistorySection({
-    super.key,
-    required this.clinicId,
-    required this.orders,
-  });
-
-  final String clinicId;
-  final List<FacilityOrderSummary>? orders;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ClinicSectionHeader(
-          title: 'Histórico de pedidos',
-          badge: _countBadge(orders?.length),
-          trailing: orders == null || orders!.isEmpty
-              ? null
-              : _HeaderLinkButton(
-                  label: 'Ver todos',
-                  onTap: () => context.go('/orders'),
+            if (showLinhaSwitcher && activeLinhaId != null)
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: ClinicDetailLinhaHeaderDelegate(
+                  options: linhaOptions,
+                  selectedVerticalId: activeLinhaId,
+                  onChanged: onLinhaChanged,
                 ),
+              ),
+            SliverToBoxAdapter(
+              child: ColoredBox(
+                color: AppColors.surfaceTertiary,
+                child: Column(
+                  children: [
+                    ClinicPotentialSection(
+                      facilityId: clinicId,
+                      canEdit: canMutate,
+                    ),
+                    if (payersApplyToLinha) ...[
+                      ClinicSectionHeader(
+                        title: 'Fontes Pagadoras',
+                        trailing: !canMutate
+                            ? null
+                            : _HeaderLinkButton(
+                                label: 'Editar',
+                                onTap: () => _openPayerSourcesEditor(
+                                  context,
+                                  ref,
+                                  clinicId: clinicId,
+                                  payers: effectivePayers,
+                                ),
+                              ),
+                      ),
+                      if (payersState.loading && effectivePayers.isEmpty)
+                        const _SectionLoadingCard()
+                      else if (payersState.error != null &&
+                          effectivePayers.isEmpty)
+                        _SectionErrorCard(
+                          message: _friendlyLoadError(payersState.error!),
+                          onRetry: () => ref
+                              .read(facilityPayersProvider(clinicId).notifier)
+                              .retry(),
+                        )
+                      else
+                        ClinicPayersBarSection(
+                          payers: effectivePayers,
+                          summary: effectivePayersSummary,
+                          facilityName: detail.name,
+                        ),
+                    ],
+                    const ClinicSectionHeader(
+                      title: 'Mapa e clínicas próximas',
+                    ),
+                    if (location == null)
+                      const ClinicDetailCard(
+                        child: Text(
+                          'Localização não disponível para este estabelecimento',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.gray400,
+                          ),
+                        ),
+                      )
+                    else
+                      nearbyAsync.when(
+                        loading: () => const _SectionLoadingCard(),
+                        error: (err, _) => _SectionErrorCard(
+                          message: _friendlyLoadError(err),
+                          onRetry: () => ref.invalidate(
+                            facilityNearbyPreviewProvider(clinicId),
+                          ),
+                        ),
+                        data: (nearby) => ClinicLocationSection(
+                          facilityId: clinicId,
+                          facilityName: detail.name,
+                          location: location,
+                          nearbyEstablishments: nearby,
+                          clinicVerticalIds: detail.verticalProfiles
+                              .map((p) => p.verticalId)
+                              .toSet(),
+                        ),
+                      ),
+
+                    ClinicSectionHeader(
+                      title: 'Histórico de pedidos',
+                      badge: effectiveOrders.isEmpty
+                          ? null
+                          : _CountBadge(count: effectiveOrders.length),
+                      trailing: effectiveOrders.isEmpty
+                          ? null
+                          : _HeaderLinkButton(
+                              label: 'Ver todos',
+                              // Shell branch route — must go(), not push().
+                              onTap: () => context.go('/orders'),
+                            ),
+                    ),
+                    if (ordersState.loading && effectiveOrders.isEmpty)
+                      const _SectionLoadingCard()
+                    else if (ordersState.error != null &&
+                        effectiveOrders.isEmpty)
+                      _SectionErrorCard(
+                        message: _friendlyLoadError(ordersState.error!),
+                        onRetry: () => ref
+                            .read(facilityOrdersProvider(clinicId).notifier)
+                            .retry(),
+                      )
+                    else
+                      ClinicOrdersSection(
+                        orders: effectiveOrders,
+                        facilityId: clinicId,
+                      ),
+                    const ClinicSectionHeader(title: 'Equipe responsável'),
+                    sectionsAsync.when(
+                      loading: () => const _SectionLoadingCard(),
+                      error: (err, _) => _SectionErrorCard(
+                        message: _friendlyLoadError(err),
+                        onRetry: () => ref.invalidate(
+                          establishmentDetailSectionsProvider(clinicId),
+                        ),
+                      ),
+                      data: (sections) => ClinicContextSection(
+                        consultantName:
+                            detail.territory?.consultantName ??
+                            sections.consultantName,
+                        consultantSince:
+                            detail.territory?.consultantSince ??
+                            sections.consultantSince,
+                        // Manager is derived from the consultor's users.manager_id — no
+                        // facility tenure. Prefer live; no mock fallback (would invent a manager).
+                        managerName: detail.territory?.managerName,
+                        managerSince: null,
+                        regionZoneLabel:
+                            detail.territory?.territoryName ??
+                            sections.regionZoneLabel,
+                        city: (detail.address?.city.isNotEmpty ?? false)
+                            ? detail.address!.city
+                            : null,
+                        canManageConsultant: canAssignConsultant,
+                        onAssignConsultant: canAssignConsultant
+                            ? () => _assignClinicConsultant(
+                                context,
+                                ref,
+                                facilityId: clinicId,
+                                verticalId: activeLinhaId,
+                              )
+                            : null,
+                        onUnassignConsultant:
+                            canAssignConsultant &&
+                                (detail.territory?.consultantName
+                                        ?.trim()
+                                        .isNotEmpty ==
+                                    true)
+                            ? () => _unassignClinicConsultant(
+                                context,
+                                ref,
+                                facilityId: clinicId,
+                              )
+                            : null,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Compras',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0f1729),
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          if (canMutate)
+                            _HeaderLinkButton(
+                              label: 'Editar',
+                              onTap: () => _openPurchaseRecurrenceEditor(
+                                context,
+                                ref,
+                                detail,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
+                    if (canSuggest) const _SuggestEditBanner(),
+                    if (canSuggest)
+                      _ClinicDeactivateButton(
+                        clinicId: clinicId,
+                        clinicName: detail.name,
+                        commercialStatus: sectionsAsync
+                            .valueOrNull
+                            ?.statusSignals
+                            ?.commercialStatus,
+                      ),
+                    SizedBox(height: MediaQuery.of(context).padding.bottom),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
-        if (orders == null)
-          const _SectionLoadingCard()
-        else
-          ClinicOrdersSection(orders: orders!, facilityId: clinicId),
       ],
     );
   }
-}
-
-class ClinicTeamSection extends ConsumerWidget {
-  const ClinicTeamSection({
-    super.key,
-    required this.clinicId,
-    required this.detail,
-    required this.activeVerticalId,
-    required this.canManageConsultant,
-  });
-
-  final String clinicId;
-  final Facility? detail;
-  final String? activeVerticalId;
-  final bool canManageConsultant;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detail = this.detail;
-    return Column(
-      children: [
-        const ClinicSectionHeader(title: 'Equipe responsável'),
-        if (detail == null)
-          const _SectionLoadingCard()
-        else
-          ClinicContextSection(
-            consultantName: detail.territory?.consultantName,
-            consultantSince: detail.territory?.consultantSince,
-            managerName: detail.territory?.managerName,
-            managerSince: null,
-            regionZoneLabel: detail.territory?.territoryName,
-            city: (detail.address?.city.isNotEmpty ?? false)
-                ? detail.address!.city
-                : null,
-            canManageConsultant: canManageConsultant,
-            onAssignConsultant: canManageConsultant
-                ? () => _assignClinicConsultant(
-                    context,
-                    ref,
-                    facilityId: clinicId,
-                    verticalId: activeVerticalId,
-                  )
-                : null,
-            onUnassignConsultant:
-                canManageConsultant &&
-                    (detail.territory?.consultantName?.trim().isNotEmpty ==
-                        true)
-                ? () => _unassignClinicConsultant(
-                    context,
-                    ref,
-                    facilityId: clinicId,
-                  )
-                : null,
-          ),
-      ],
-    );
-  }
-}
-
-Widget? _countBadge(int? count) {
-  return count == null || count == 0 ? null : _CountBadge(count: count);
 }
 
 class _CountBadge extends StatelessWidget {
@@ -959,22 +1120,68 @@ class _HeaderLinkButton extends StatelessWidget {
 }
 
 class _SectionLoadingCard extends StatelessWidget {
-  const _SectionLoadingCard({this.height = 80});
-
-  final double height;
+  const _SectionLoadingCard();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: AtlasShimmer(
-        child: Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionErrorCard extends StatelessWidget {
+  const _SectionErrorCard({required this.message, this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.red50,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: AppColors.red,
+              height: 1.4,
+            ),
+          ),
+          if (onRetry != null) ...[
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Tentar novamente'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.red,
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1026,7 +1233,7 @@ class _ClinicDeactivateButton extends ConsumerWidget {
     this.commercialStatus,
   });
 
-  final String clinicId;
+  final int clinicId;
   final String clinicName;
   final FacilityCommercialStatus? commercialStatus;
 
@@ -1065,25 +1272,45 @@ class _ClinicDeactivateButton extends ConsumerWidget {
   }
 }
 
+bool _sameIdSet(Set<int> a, Set<int> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  return a.containsAll(b);
+}
+
+bool _shouldUpdateLoadedFacility(Facility? previous, Facility next) {
+  if (previous == null) return true;
+  return previous.updatedAt != next.updatedAt ||
+      previous.name != next.name ||
+      previous.territory?.consultantName != next.territory?.consultantName ||
+      previous.territory?.managerName != next.territory?.managerName ||
+      previous.purchaseRecurrence != next.purchaseRecurrence ||
+      previous.commercial?.purchaseStatus != next.commercial?.purchaseStatus ||
+      previous.commercial?.commercialStatus !=
+          next.commercial?.commercialStatus ||
+      previous.verticalProfiles.length != next.verticalProfiles.length;
+}
+
 Future<void> _assignClinicConsultant(
   BuildContext context,
   WidgetRef ref, {
-  required String facilityId,
-  String? verticalId,
+  required int facilityId,
+  int? verticalId,
 }) async {
   final userId = await UserPickerSheet.pickAssignee(
     context,
     role: UserRole.rep,
     verticalId: verticalId,
   );
-  if (userId == null || userId == clearAssignee) return;
+  if (userId == null || userId == kClearAssigneeId) return;
   if (!context.mounted) return;
 
   try {
     await ref
         .read(facilityConsultantAssignmentsRepositoryProvider(facilityId))
         .assign(userId: userId, verticalId: verticalId);
-    await ref.read(facilityZipRepositoryProvider(facilityId)).refresh();
+    ref.invalidate(clinicDetailRepositoryProvider(facilityId));
+    ref.invalidate(establishmentDetailSectionsProvider(facilityId));
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -1108,7 +1335,7 @@ Future<void> _assignClinicConsultant(
 Future<void> _unassignClinicConsultant(
   BuildContext context,
   WidgetRef ref, {
-  required String facilityId,
+  required int facilityId,
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -1135,7 +1362,8 @@ Future<void> _unassignClinicConsultant(
     await ref
         .read(facilityConsultantAssignmentsRepositoryProvider(facilityId))
         .unassignCurrent();
-    await ref.read(facilityZipRepositoryProvider(facilityId)).refresh();
+    ref.invalidate(clinicDetailRepositoryProvider(facilityId));
+    ref.invalidate(establishmentDetailSectionsProvider(facilityId));
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -1166,3 +1394,20 @@ Future<void> _unassignClinicConsultant(
 // for the old implementation. `ClinicAdminInfoSection` should use
 // `displayTaxIdentifier` (from `tax_identifier.dart`) for its CNPJ/CPF row.
 // ===============================================================
+class _SkeletonBlock extends StatelessWidget {
+  final double height;
+  const _SkeletonBlock({required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return AtlasShimmer(
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSecondary,
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+    );
+  }
+}

@@ -2,7 +2,8 @@ import {
   facilities,
   facilityProfessionals,
   facilityConsultantAssignments,
-  facilityServices,
+  clinicalFocuses,
+  facilityClinicalFocuses,
   facilityVerticalProfiles,
   businessVerticals,
   territories,
@@ -10,28 +11,27 @@ import {
   visits,
   orders,
   orderItems,
-  services as cnesServices,
+  municipalities,
 } from "@atlasmed/database";
-import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns } from "drizzle-orm";
+import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
-import { ResourceNotFoundError } from "../../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../../shared/errors";
 import {
   purchaseBucketToFunnelFilter,
   type FacilityPurchaseBucket,
 } from "../../../application/list-facilities-query";
 import type {
+  FacilityClinicalFocus,
   FacilityCommercialStatus,
   FacilityListRecord,
   FacilityListScopeFilter,
   FacilityMapPoint,
+  FacilityPurchaseFunnelStage,
   FacilityRecord,
   FacilityRepository,
-  FacilityService,
-  FacilitySourceUpsertInput,
   FacilityVerticalProfileRecord,
 } from "../../../application/interfaces/facility.repository.interface";
-import { compareFacilityServices } from "../../../application/utils/facility-service-display.utils";
-
+import { normalizeLegalDocument } from "../../../application/utils/facility-tax-id.utils";
 type FacilityRow = typeof facilities.$inferSelect;
 
 type FacilityRowWithCoords = FacilityRow & {
@@ -47,17 +47,28 @@ function locationPointSql(lat: number, lng: number) {
 }
 
 function deriveProfileTerritoryId(
-  profiles: Array<{ territoryId?: string | null }>,
-): string | null {
+  profiles: Array<{ territoryId?: number | null }>,
+): number | null {
   const ids = [
     ...new Set(
       profiles
         .map((p) => p.territoryId)
-        .filter((id): id is string => typeof id === "string" && id.length > 0),
+        .filter((id): id is number => typeof id === "number" && id > 0),
     ),
   ];
   if (ids.length === 1) return ids[0]!;
   return null;
+}
+
+/** Facility-level membership: any active profile with a zone ⇒ assigned. */
+function deriveTerritoryAssignmentStatus(
+  profiles?: Array<{ isActive: boolean; territoryId?: number | null }>,
+): "assigned" | "unassigned" {
+  if (!profiles?.length) return "unassigned";
+  const hasZone = profiles.some(
+    (p) => p.isActive && typeof p.territoryId === "number" && p.territoryId > 0,
+  );
+  return hasZone ? "assigned" : "unassigned";
 }
 
 export function mapFacility(
@@ -65,11 +76,11 @@ export function mapFacility(
   options: {
     lat?: number | null;
     lng?: number | null;
-    services?: FacilityService[];
+    clinicalFocuses?: FacilityClinicalFocus[];
     consultantName?: string | null;
     consultantSince?: Date | null;
     managerName?: string | null;
-    territoryId?: string | null;
+    territoryId?: number | null;
     territoryName?: string | null;
     commercialStatus?: FacilityCommercialStatus | null;
     purchaseStatus?: FacilityRecord["purchaseStatus"];
@@ -87,6 +98,8 @@ export function mapFacility(
     streetNumber: facility.streetNumber,
     addressComplement: facility.addressComplement,
     postalCode: facility.postalCode,
+    stateId: facility.stateId,
+    municipalityId: facility.municipalityId,
     phone: facility.phoneNumber,
     whatsapp: facility.whatsappNumber,
     email: facility.email,
@@ -94,9 +107,8 @@ export function mapFacility(
     billingEmail: facility.billingEmail ?? null,
     responsibleName: facility.responsibleName,
     openingHours: facility.openingHours,
-    taxIdType: facility.taxIdType ?? "PJ",
-    cnpj: facility.cnpj,
-    cpf: facility.cpf,
+    legalDocumentType: facility.legalDocumentType ?? "CNPJ",
+    legalDocument: facility.legalDocument,
     lat: options.lat !== undefined ? options.lat : (withCoords.lat ?? null),
     lng: options.lng !== undefined ? options.lng : (withCoords.lng ?? null),
     territoryId:
@@ -106,37 +118,23 @@ export function mapFacility(
           ? deriveProfileTerritoryId(options.verticalProfiles)
           : null,
     territoryName: options.territoryName ?? null,
-    territoryAssignmentStatus: facility.territoryAssignmentStatus,
-    territoryAssignmentSource: facility.territoryAssignmentSource,
+    territoryAssignmentStatus: deriveTerritoryAssignmentStatus(options.verticalProfiles),
     commercialStatus: options.commercialStatus ?? null,
     purchaseStatus: options.purchaseStatus ?? null,
-    observedPurchaseIntervalDays: facility.observedPurchaseIntervalDays ?? null,
-    purchaseIntervalDays: facility.purchaseIntervalDays,
-    purchaseIntervalSource: facility.purchaseIntervalSource,
-    manualPurchaseProfile: facility.manualPurchaseProfile ?? null,
-    manualPurchaseIntervalDays: facility.manualPurchaseIntervalDays ?? null,
-    lastValidPurchaseDate: facility.lastValidPurchaseDate ?? null,
-    purchaseRecurrenceSampleSize: facility.purchaseRecurrenceSampleSize,
-    purchaseFunnelStage: facility.purchaseFunnelStage,
-    nextPurchaseFunnelTransitionDate: facility.nextPurchaseFunnelTransitionDate ?? null,
     conformityStatus: facility.conformityStatus,
     consultantName: options.consultantName ?? null,
     consultantSince: options.consultantSince ?? null,
     managerName: options.managerName ?? null,
     imageUrl: facility.imageUrl ?? null,
     imageBlurhash: facility.imageBlurhash ?? null,
-    sourceProvider: facility.sourceProvider,
-    externalSourceId: facility.externalSourceId,
-    sourceContentHash: facility.sourceContentHash,
-    sourceFirstSeenAt: facility.sourceFirstSeenAt,
-    sourceLastSeenAt: facility.sourceLastSeenAt,
-    sourcePresent: facility.sourcePresent,
-    sourceTracked: facility.sourceTracked,
-    manuallyEditedAt: facility.manuallyEditedAt,
+    cnesCode: facility.cnesCode ?? null,
+    facilityTypeCode: facility.facilityTypeCode ?? null,
+    unitTypeCode: facility.unitTypeCode ?? null,
+    unitSubtypeCode: facility.unitSubtypeCode ?? null,
     deactivatedAt: facility.deactivatedAt,
     createdAt: facility.createdAt,
     updatedAt: facility.updatedAt,
-    services: options.services ?? [],
+    clinicalFocuses: options.clinicalFocuses ?? [],
     verticalProfiles: options.verticalProfiles,
   };
 }
@@ -144,7 +142,7 @@ export function mapFacility(
 function buildScopeCondition(scope: FacilityListScopeFilter) {
   const conditions = [];
   if (!scope.isGlobal) {
-    const ids = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
+    const ids = scope.facilityIds?.length ? scope.facilityIds : [-1];
     conditions.push(inArray(facilities.id, ids));
   }
   if (scope.restrictToVerticalProfiles && scope.verticalIds && scope.verticalIds.length > 0) {
@@ -169,9 +167,9 @@ function buildScopeCondition(scope: FacilityListScopeFilter) {
 }
 
 async function loadVerticalProfiles(
-  facilityIds: string[],
-  verticalIds?: string[],
-): Promise<Map<string, FacilityVerticalProfileRecord[]>> {
+  facilityIds: number[],
+  verticalIds?: number[],
+): Promise<Map<number, FacilityVerticalProfileRecord[]>> {
   if (facilityIds.length === 0) return new Map();
 
   const profileConditions = [inArray(facilityVerticalProfiles.facilityId, facilityIds)];
@@ -207,7 +205,7 @@ async function loadVerticalProfiles(
     .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))
     .where(and(...profileConditions));
 
-  const map = new Map<string, FacilityVerticalProfileRecord[]>();
+  const map = new Map<number, FacilityVerticalProfileRecord[]>();
   for (const row of rows) {
     const list = map.get(row.facilityId) ?? [];
     list.push({
@@ -233,6 +231,26 @@ async function loadVerticalProfiles(
     map.set(row.facilityId, list);
   }
   return map;
+}
+
+function activeProfileMatchCondition(
+  verticalIds: number[] | undefined,
+  extraConditions: SQL[],
+) {
+  const profileConditions = [
+    eq(facilityVerticalProfiles.isActive, true),
+    ...extraConditions,
+  ];
+  if (verticalIds && verticalIds.length > 0) {
+    profileConditions.push(inArray(facilityVerticalProfiles.verticalId, verticalIds));
+  }
+  return inArray(
+    facilities.id,
+    db
+      .select({ facilityId: facilityVerticalProfiles.facilityId })
+      .from(facilityVerticalProfiles)
+      .where(and(...profileConditions)),
+  );
 }
 
 function deriveProfileCommercialFields(
@@ -262,8 +280,8 @@ function displayName(
 }
 
 async function loadConsultantInfo(
-  facilityIds: string[]
-): Promise<Map<string, ConsultantInfo>> {
+  facilityIds: number[]
+): Promise<Map<number, ConsultantInfo>> {
   if (facilityIds.length === 0) return new Map();
 
   const consultantRows = await db
@@ -301,12 +319,12 @@ async function loadConsultantInfo(
       AND mgr.deleted_at IS NULL
     ORDER BY fvp.facility_id, fvp.updated_at DESC
   `) as Array<{
-    facility_id: string;
+    facility_id: number;
     first_name: string | null;
     last_name: string | null;
   }>;
 
-  const zoneManagerNameByFacility = new Map<string, string | null>();
+  const zoneManagerNameByFacility = new Map<number, string | null>();
   for (const row of zoneManagerRows) {
     zoneManagerNameByFacility.set(
       row.facility_id,
@@ -327,12 +345,12 @@ async function loadConsultantInfo(
 }
 
 async function loadTerritoryNames(
-  territoryIds: Array<string | null | undefined>
-): Promise<Map<string, string>> {
+  territoryIds: Array<number | null | undefined>
+): Promise<Map<number, string>> {
   const ids = [
     ...new Set(
       territoryIds.filter(
-        (id): id is string => typeof id === "string" && id.length > 0
+        (id): id is number => typeof id === "number" && id > 0
       )
     ),
   ];
@@ -347,9 +365,9 @@ async function loadTerritoryNames(
 }
 
 async function loadLastVisitAt(
-  facilityIds: string[],
-  userId: string,
-): Promise<Map<string, Date>> {
+  facilityIds: number[],
+  userId: number,
+): Promise<Map<number, Date>> {
   if (facilityIds.length === 0) return new Map();
 
   const rows = await db
@@ -369,39 +387,39 @@ async function loadLastVisitAt(
   return new Map(rows.map((row) => [row.facilityId, row.lastVisitAt]));
 }
 
-/** Batch-load CNES services (with names), prioritized for UI chips. */
-async function loadFacilityServicesByFacilityIds(
-  facilityIds: string[],
-): Promise<Map<string, FacilityService[]>> {
-  const result = new Map<string, FacilityService[]>();
+/** Batch-load clinical focuses, alphabetical for UI chips. */
+async function loadClinicalFocusesByFacilityIds(
+  facilityIds: number[],
+): Promise<Map<number, FacilityClinicalFocus[]>> {
+  const result = new Map<number, FacilityClinicalFocus[]>();
   if (facilityIds.length === 0) return result;
 
   const rows = await db
     .select({
-      facilityId: facilityServices.facilityId,
-      serviceCode: facilityServices.serviceCode,
-      classificationCode: facilityServices.classificationCode,
-      serviceName: cnesServices.serviceName,
+      facilityId: facilityClinicalFocuses.facilityId,
+      id: clinicalFocuses.id,
+      name: clinicalFocuses.name,
+      cnesCode: clinicalFocuses.cnesCode,
     })
-    .from(facilityServices)
+    .from(facilityClinicalFocuses)
     .innerJoin(
-      cnesServices,
-      eq(cnesServices.serviceCode, facilityServices.serviceCode),
+      clinicalFocuses,
+      eq(clinicalFocuses.id, facilityClinicalFocuses.clinicalFocusId),
     )
-    .where(inArray(facilityServices.facilityId, facilityIds));
+    .where(inArray(facilityClinicalFocuses.facilityId, facilityIds));
 
   for (const row of rows) {
     const list = result.get(row.facilityId) ?? [];
     list.push({
-      serviceCode: row.serviceCode,
-      classificationCode: row.classificationCode,
-      serviceName: row.serviceName,
+      id: row.id,
+      name: row.name,
+      cnesCode: row.cnesCode,
     });
     result.set(row.facilityId, list);
   }
 
   for (const [facilityId, list] of result) {
-    list.sort(compareFacilityServices);
+    list.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     result.set(facilityId, list);
   }
   return result;
@@ -413,13 +431,13 @@ export function buildFacilityListConditions(params: {
   search?: string;
   commercialStatus?: FacilityCommercialStatus;
   purchaseBucket?: FacilityPurchaseBucket;
-  productIds?: string[];
-  serviceCodes?: string[];
-  purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
+  productIds?: number[];
+  clinicalFocusIds?: number[];
+  purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
   purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
   purchaseIntervalMinDays?: number;
   purchaseIntervalMaxDays?: number;
-  candidateIds?: string[];
+  candidateIds?: number[];
 }) {
   const conditions = [isNull(facilities.deactivatedAt)];
   const scopeCondition = buildScopeCondition(params.scope);
@@ -429,8 +447,8 @@ export function buildFacilityListConditions(params: {
     const pattern = `%${params.search}%`;
     conditions.push(or(
       ilike(facilities.displayName, pattern), ilike(facilities.legalName, pattern),
-      ilike(facilities.tradeName, pattern), ilike(facilities.cnpj, pattern),
-      ilike(facilities.cpf, pattern), ilike(facilities.cnesCode, pattern),
+      ilike(facilities.tradeName, pattern), ilike(facilities.legalDocument, pattern),
+      ilike(facilities.cnesCode, pattern),
       ilike(facilities.city, pattern), ilike(facilities.state, pattern),
     )!);
   }
@@ -443,171 +461,156 @@ export function buildFacilityListConditions(params: {
       ))));
   }
   if (params.purchaseBucket) {
-    // Must match dashboard countPurchaseBuckets (funnel stages, not purchaseStatus).
-    // When vertical scope is set, filter on profile stage (any matching profile).
     const bucket = purchaseBucketToFunnelFilter(params.purchaseBucket);
     const verticalIds = params.scope.verticalIds;
-    if (verticalIds && verticalIds.length > 0) {
-      const stageCond = bucket.includeNull
-        ? or(
-            inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages),
-            isNull(facilityVerticalProfiles.purchaseFunnelStage),
-          )!
-        : inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages);
-      conditions.push(
-        inArray(
-          facilities.id,
-          db
-            .select({ facilityId: facilityVerticalProfiles.facilityId })
-            .from(facilityVerticalProfiles)
-            .where(
-              and(
-                eq(facilityVerticalProfiles.isActive, true),
-                inArray(facilityVerticalProfiles.verticalId, verticalIds),
-                stageCond,
-              ),
-            ),
-        ),
-      );
-    } else {
-      conditions.push(
-        bucket.includeNull
-          ? or(
-              inArray(facilities.purchaseFunnelStage, bucket.stages),
-              isNull(facilities.purchaseFunnelStage),
-            )!
-          : inArray(facilities.purchaseFunnelStage, bucket.stages),
-      );
-    }
+    const stageCond = bucket.includeNull
+      ? or(
+          inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages),
+          isNull(facilityVerticalProfiles.purchaseFunnelStage),
+        )!
+      : inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages);
+    conditions.push(activeProfileMatchCondition(verticalIds, [stageCond]));
   }
   if (params.productIds?.length) conditions.push(inArray(facilities.id, db.select({ facilityId: orders.facilityId })
     .from(orders).innerJoin(orderItems, eq(orderItems.orderId, orders.id))
     .where(inArray(orderItems.productId, params.productIds))));
-  if (params.serviceCodes?.length) {
-    // AND: clinic must offer every selected specialty (not any-of / OR).
-    const codes = [...new Set(params.serviceCodes)];
+  if (params.clinicalFocusIds?.length) {
+    // AND: clinic must offer every selected clinical focus.
+    const ids = [...new Set(params.clinicalFocusIds)];
     conditions.push(
       inArray(
         facilities.id,
         db
-          .select({ facilityId: facilityServices.facilityId })
-          .from(facilityServices)
-          .where(inArray(facilityServices.serviceCode, codes))
-          .groupBy(facilityServices.facilityId)
+          .select({ facilityId: facilityClinicalFocuses.facilityId })
+          .from(facilityClinicalFocuses)
+          .where(inArray(facilityClinicalFocuses.clinicalFocusId, ids))
+          .groupBy(facilityClinicalFocuses.facilityId)
           .having(
-            sql`count(distinct ${facilityServices.serviceCode}) = ${codes.length}`,
+            sql`count(distinct ${facilityClinicalFocuses.clinicalFocusId}) = ${ids.length}`,
           ),
       ),
     );
   }
   if (params.purchaseFunnelStages?.length) {
-    const verticalIds = params.scope.verticalIds;
-    if (verticalIds && verticalIds.length > 0) {
-      conditions.push(
+    conditions.push(
+      activeProfileMatchCondition(params.scope.verticalIds, [
         inArray(
-          facilities.id,
-          db
-            .select({ facilityId: facilityVerticalProfiles.facilityId })
-            .from(facilityVerticalProfiles)
-            .where(
-              and(
-                eq(facilityVerticalProfiles.isActive, true),
-                inArray(facilityVerticalProfiles.verticalId, verticalIds),
-                inArray(
-                  facilityVerticalProfiles.purchaseFunnelStage,
-                  params.purchaseFunnelStages,
-                ),
-              ),
-            ),
+          facilityVerticalProfiles.purchaseFunnelStage,
+          params.purchaseFunnelStages,
         ),
-      );
-    } else {
-      conditions.push(
-        inArray(facilities.purchaseFunnelStage, params.purchaseFunnelStages),
-      );
-    }
+      ]),
+    );
   }
   if (params.purchaseProfile === "AUTOMATIC") {
-    const verticalIds = params.scope.verticalIds;
-    if (verticalIds && verticalIds.length > 0) {
-      conditions.push(
-        inArray(
-          facilities.id,
-          db
-            .select({ facilityId: facilityVerticalProfiles.facilityId })
-            .from(facilityVerticalProfiles)
-            .where(
-              and(
-                eq(facilityVerticalProfiles.isActive, true),
-                inArray(facilityVerticalProfiles.verticalId, verticalIds),
-                isNull(facilityVerticalProfiles.manualPurchaseProfile),
-              ),
-            ),
-        ),
-      );
-    } else {
-      conditions.push(isNull(facilities.manualPurchaseProfile));
-    }
+    conditions.push(
+      activeProfileMatchCondition(params.scope.verticalIds, [
+        isNull(facilityVerticalProfiles.manualPurchaseProfile),
+      ]),
+    );
   } else if (params.purchaseProfile) {
-    const verticalIds = params.scope.verticalIds;
-    if (verticalIds && verticalIds.length > 0) {
-      conditions.push(
-        inArray(
-          facilities.id,
-          db
-            .select({ facilityId: facilityVerticalProfiles.facilityId })
-            .from(facilityVerticalProfiles)
-            .where(
-              and(
-                eq(facilityVerticalProfiles.isActive, true),
-                inArray(facilityVerticalProfiles.verticalId, verticalIds),
-                eq(
-                  facilityVerticalProfiles.manualPurchaseProfile,
-                  params.purchaseProfile,
-                ),
-              ),
-            ),
+    conditions.push(
+      activeProfileMatchCondition(params.scope.verticalIds, [
+        eq(
+          facilityVerticalProfiles.manualPurchaseProfile,
+          params.purchaseProfile,
         ),
-      );
-    } else {
-      conditions.push(
-        eq(facilities.manualPurchaseProfile, params.purchaseProfile),
-      );
-    }
+      ]),
+    );
   }
   if (params.purchaseIntervalMinDays !== undefined) {
     conditions.push(
-      gte(facilities.purchaseIntervalDays, params.purchaseIntervalMinDays),
+      activeProfileMatchCondition(params.scope.verticalIds, [
+        gte(
+          facilityVerticalProfiles.purchaseIntervalDays,
+          params.purchaseIntervalMinDays,
+        ),
+      ]),
     );
   }
   if (params.purchaseIntervalMaxDays !== undefined) {
     conditions.push(
-      lte(facilities.purchaseIntervalDays, params.purchaseIntervalMaxDays),
+      activeProfileMatchCondition(params.scope.verticalIds, [
+        lte(
+          facilityVerticalProfiles.purchaseIntervalDays,
+          params.purchaseIntervalMaxDays,
+        ),
+      ]),
     );
   }
   return and(...conditions);
 }
 
-const purchaseFunnelStageRank = sql<number>`case ${facilities.purchaseFunnelStage}
+const profileFunnelStageRankSql = sql<number>`case p.purchase_funnel_stage
   when 'NEVER_PURCHASED' then 0 when 'OUTSIDE_WINDOW' then 1
   when 'PURCHASE_WINDOW' then 2 when 'CHURN' then 3 when 'INACTIVE' then 4 end`;
+
+function profileVerticalFilterSql(verticalIds?: number[]) {
+  return verticalIds && verticalIds.length > 0
+    ? sql`and p.vertical_id in (${sql.join(
+        verticalIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})`
+    : sql``;
+}
+
+function profileFunnelStageRankSubquery(verticalIds?: number[]) {
+  return sql<number>`(
+    select coalesce(max(${profileFunnelStageRankSql}), 0)
+    from ${facilityVerticalProfiles} p
+    where p.facility_id = ${facilities.id}
+      and p.is_active = true
+      ${profileVerticalFilterSql(verticalIds)}
+  )`;
+}
+
+function profileMinIntervalDaysSubquery(verticalIds?: number[]) {
+  return sql<number>`(
+    select coalesce(min(p.purchase_interval_days), 30)
+    from ${facilityVerticalProfiles} p
+    where p.facility_id = ${facilities.id}
+      and p.is_active = true
+      ${profileVerticalFilterSql(verticalIds)}
+  )`;
+}
+
+function profileMaxLastPurchaseSubquery(verticalIds?: number[]) {
+  return sql<string | null>`(
+    select max(p.last_valid_purchase_date)
+    from ${facilityVerticalProfiles} p
+    where p.facility_id = ${facilities.id}
+      and p.is_active = true
+      ${profileVerticalFilterSql(verticalIds)}
+  )`;
+}
 
 export function buildFacilityListOrderBy(params: {
   sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
   order?: "asc" | "desc";
+  verticalIds?: number[];
 }) {
   const direction = params.order === "desc" ? desc : asc;
   switch (params.sort) {
-    case "purchaseFunnelStage": return [direction(purchaseFunnelStageRank), asc(facilities.displayName), asc(facilities.id)];
-    case "purchaseIntervalDays": return [direction(facilities.purchaseIntervalDays), asc(facilities.displayName), asc(facilities.id)];
-    case "lastPurchaseDate": return [
-      isNull(facilities.lastValidPurchaseDate),
-      params.order === "desc"
-        ? desc(facilities.lastValidPurchaseDate)
-        : asc(facilities.lastValidPurchaseDate),
-      asc(facilities.displayName),
-      asc(facilities.id),
-    ];
+    case "purchaseFunnelStage":
+      return [
+        direction(profileFunnelStageRankSubquery(params.verticalIds)),
+        asc(facilities.displayName),
+        asc(facilities.id),
+      ];
+    case "purchaseIntervalDays":
+      return [
+        direction(profileMinIntervalDaysSubquery(params.verticalIds)),
+        asc(facilities.displayName),
+        asc(facilities.id),
+      ];
+    case "lastPurchaseDate":
+      return [
+        sql`${profileMaxLastPurchaseSubquery(params.verticalIds)} is null`,
+        params.order === "desc"
+          ? desc(profileMaxLastPurchaseSubquery(params.verticalIds))
+          : asc(profileMaxLastPurchaseSubquery(params.verticalIds)),
+        asc(facilities.displayName),
+        asc(facilities.id),
+      ];
     default: return [asc(facilities.displayName), asc(facilities.id)];
   }
 }
@@ -622,17 +625,17 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     radiusKm?: number;
     commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: FacilityPurchaseBucket;
-    productIds?: string[];
-    serviceCodes?: string[];
-    purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
+    productIds?: number[];
+    clinicalFocusIds?: number[];
+    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
     purchaseIntervalMaxDays?: number;
     sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
     order?: "asc" | "desc";
-    userId: string;
+    userId: number;
     scope: FacilityListScopeFilter;
-    candidateIds?: string[];
+    candidateIds?: number[];
   }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
     const referencePoint =
       params.latitude === undefined
@@ -672,7 +675,11 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         .orderBy(
           ...(distanceKm && !isSpecificSort
             ? [asc(distanceKm), asc(facilities.displayName), asc(facilities.id)]
-            : buildFacilityListOrderBy(params))
+            : buildFacilityListOrderBy({
+                sort: params.sort,
+                order: params.order,
+                verticalIds: params.scope.verticalIds,
+              }))
         )
         .offset(skip)
         .limit(params.limit),
@@ -698,7 +705,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       consultantMap,
       territoryNameById,
       lastVisitAtByFacility,
-      servicesByFacility,
+      clinicalFocusesByFacility,
     ] = await Promise.all([
       db
         .select({
@@ -716,7 +723,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       loadConsultantInfo(ids),
       loadTerritoryNames(derivedTerritoryIds),
       loadLastVisitAt(ids, params.userId),
-      loadFacilityServicesByFacilityIds(ids),
+      loadClinicalFocusesByFacilityIds(ids),
     ]);
 
     const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
@@ -731,7 +738,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           ...mapFacility(row, {
             lat: row.lat,
             lng: row.lng,
-            services: servicesByFacility.get(row.id) ?? [],
+            clinicalFocuses: clinicalFocusesByFacility.get(row.id) ?? [],
             consultantName: consultant?.name ?? null,
             consultantSince: consultant?.since ?? null,
             managerName: consultant?.managerName ?? null,
@@ -753,21 +760,21 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   }
 
   async findAllByIds(params: {
-    ids: string[];
+    ids: number[];
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
     commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: FacilityPurchaseBucket;
-    productIds?: string[];
-    serviceCodes?: string[];
-    purchaseFunnelStages?: FacilityRecord["purchaseFunnelStage"][];
+    productIds?: number[];
+    clinicalFocusIds?: number[];
+    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
     purchaseIntervalMaxDays?: number;
     sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
     order?: "asc" | "desc";
-    userId: string;
+    userId: number;
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]> {
     if (params.ids.length === 0) {
@@ -783,26 +790,25 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return rows;
   }
 
-  async listServiceCatalog(): Promise<
-    Array<{ serviceCode: string; serviceName: string }>
-  > {
+  async listClinicalFocusCatalog(): Promise<FacilityClinicalFocus[]> {
     const rows = await db
       .select({
-        serviceCode: cnesServices.serviceCode,
-        serviceName: cnesServices.serviceName,
+        id: clinicalFocuses.id,
+        name: clinicalFocuses.name,
+        cnesCode: clinicalFocuses.cnesCode,
       })
-      .from(cnesServices)
-      .orderBy(asc(cnesServices.serviceName));
+      .from(clinicalFocuses)
+      .where(eq(clinicalFocuses.isActive, true))
+      .orderBy(asc(clinicalFocuses.sortOrder), asc(clinicalFocuses.name));
 
-    return rows
-      .map((row) => ({
-        serviceCode: row.serviceCode,
-        serviceName: row.serviceName,
-      }))
-      .sort(compareFacilityServices);
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      cnesCode: row.cnesCode,
+    }));
   }
 
-  async findById(id: string): Promise<FacilityRecord | null> {
+  async findById(id: number): Promise<FacilityRecord | null> {
     const [facility] = await db
       .select({
         ...getTableColumns(facilities),
@@ -819,9 +825,9 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     const profiles = profilesByFacility.get(id) ?? [];
     const territoryId = deriveProfileTerritoryId(profiles);
 
-    const [servicesByFacility, consultantMap, territoryNameById] =
+    const [clinicalFocusesByFacility, consultantMap, territoryNameById] =
       await Promise.all([
-        loadFacilityServicesByFacilityIds([id]),
+        loadClinicalFocusesByFacilityIds([id]),
         loadConsultantInfo([id]),
         loadTerritoryNames([territoryId]),
       ]);
@@ -831,7 +837,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return mapFacility(facility, {
       lat: facility.lat,
       lng: facility.lng,
-      services: servicesByFacility.get(id) ?? [],
+      clinicalFocuses: clinicalFocusesByFacility.get(id) ?? [],
       consultantName: consultant?.name ?? null,
       consultantSince: consultant?.since ?? null,
       managerName: consultant?.managerName ?? null,
@@ -845,60 +851,39 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     });
   }
 
-  async findByExternalId(
-    sourceProvider: string,
-    externalSourceId: string
-  ): Promise<FacilityRecord | null> {
-    const [facility] = await db
-      .select({
-        ...getTableColumns(facilities),
-        lat: locationLatSql,
-        lng: locationLngSql,
-      })
-      .from(facilities)
-      .where(
-        and(
-          eq(facilities.sourceProvider, sourceProvider),
-          eq(facilities.externalSourceId, externalSourceId)
-        )
-      )
-      .limit(1);
-
-    return facility
-      ? mapFacility(facility, { lat: facility.lat, lng: facility.lng })
-      : null;
-  }
-
-  async findSourceTrackedByProvider(sourceProvider: string): Promise<FacilityRecord[]> {
-    const rows = await db
-      .select({
-        ...getTableColumns(facilities),
-        lat: locationLatSql,
-        lng: locationLngSql,
-      })
-      .from(facilities)
-      .where(
-        and(
-          eq(facilities.sourceProvider, sourceProvider),
-          eq(facilities.sourceTracked, true)
-        )
-      );
-
-    return rows.map((row) =>
-      mapFacility(row, { lat: row.lat, lng: row.lng })
-    );
-  }
-
   async create(data: {
     name: string;
+    stateId: number;
+    municipalityId: number;
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord> {
+    const [mun] = await db
+      .select({ id: municipalities.id, stateId: municipalities.stateId })
+      .from(municipalities)
+      .where(eq(municipalities.id, data.municipalityId))
+      .limit(1);
+    if (!mun) {
+      throw new ValidationError([
+        { field: "municipalityId", message: "Municipality not found" },
+      ]);
+    }
+    if (mun.stateId !== data.stateId) {
+      throw new ValidationError([
+        {
+          field: "municipalityId",
+          message: "Municipality does not belong to the given state",
+        },
+      ]);
+    }
+
     const hasCoords = data.lat != null && data.lng != null;
     const [facility] = await db
       .insert(facilities)
       .values({
         displayName: data.name,
+        stateId: data.stateId,
+        municipalityId: data.municipalityId,
         ...(hasCoords
           ? { location: locationPointSql(data.lat!, data.lng!) }
           : {}),
@@ -912,7 +897,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   }
 
   async update(
-    id: string,
+    id: number,
     data: {
       name?: string;
       lat?: number | null;
@@ -920,14 +905,13 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       imageUrl?: string | null;
       imageBlurhash?: string | null;
       billingEmail?: string | null;
-      taxIdType?: "PJ" | "PF";
+      legalDocumentType?: "CNPJ" | "CPF";
+      legalDocument?: string | null;
       conformityStatus?: FacilityRecord["conformityStatus"];
-      manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord> {
     const setData: Record<string, unknown> = {
       updatedAt: new Date(),
-      manuallyEditedAt: data.manuallyEditedAt,
     };
 
     if (data.name !== undefined) {
@@ -946,8 +930,12 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       setData.billingEmail = data.billingEmail;
     }
 
-    if (data.taxIdType !== undefined) {
-      setData.taxIdType = data.taxIdType;
+    if (data.legalDocumentType !== undefined) {
+      setData.legalDocumentType = data.legalDocumentType;
+    }
+
+    if (data.legalDocument !== undefined) {
+      setData.legalDocument = normalizeLegalDocument(data.legalDocument);
     }
 
     if (data.conformityStatus !== undefined) {
@@ -972,14 +960,14 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return refreshed ?? mapFacility(facility!);
   }
 
-  async softDelete(id: string): Promise<void> {
+  async softDelete(id: number): Promise<void> {
     await db
       .update(facilities)
       .set({ deactivatedAt: new Date(), updatedAt: new Date() })
       .where(eq(facilities.id, id));
   }
 
-  async reactivate(id: string): Promise<FacilityRecord> {
+  async reactivate(id: number): Promise<FacilityRecord> {
     const [facility] = await db
       .update(facilities)
       .set({ deactivatedAt: null, updatedAt: new Date() })
@@ -990,86 +978,8 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return refreshed ?? mapFacility(facility!);
   }
 
-  async markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void> {
-    await db
-      .update(facilities)
-      .set({ sourcePresent: false, sourceLastSeenAt, updatedAt: new Date() })
-      .where(eq(facilities.id, id));
-  }
-
-  async upsertFromSource(input: FacilitySourceUpsertInput): Promise<{
-    facility: FacilityRecord;
-    created: boolean;
-    updated: boolean;
-  }> {
-    const [existing] = await db
-      .select()
-      .from(facilities)
-      .where(
-        and(
-          eq(facilities.sourceProvider, input.sourceProvider),
-          eq(facilities.externalSourceId, input.externalSourceId)
-        )
-      )
-      .limit(1);
-
-    if (!existing) {
-      const hasCoords = input.lat != null && input.lng != null;
-      const [facility] = await db
-        .insert(facilities)
-        .values({
-          displayName: input.name,
-          ...(hasCoords
-            ? { location: locationPointSql(input.lat!, input.lng!) }
-            : {}),
-          sourceProvider: input.sourceProvider,
-          externalSourceId: input.externalSourceId,
-          sourceContentHash: input.sourceContentHash,
-          sourceFirstSeenAt: input.sourceLastSeenAt,
-          sourceLastSeenAt: input.sourceLastSeenAt,
-          sourcePresent: true,
-          sourceTracked: true,
-        })
-        .returning();
-
-      return {
-        facility: mapFacility(facility!, {
-          lat: input.lat ?? null,
-          lng: input.lng ?? null,
-        }),
-        created: true,
-        updated: false,
-      };
-    }
-
-    const hashUnchanged = existing.sourceContentHash === input.sourceContentHash;
-
-    const [facility] = await db
-      .update(facilities)
-      .set({
-        sourceContentHash: input.sourceContentHash,
-        sourceLastSeenAt: input.sourceLastSeenAt,
-        sourcePresent: true,
-        sourceTracked: true,
-        updatedAt: new Date(),
-      })
-      .where(eq(facilities.id, existing.id))
-      .returning();
-
-    const refreshed = await this.findByExternalId(
-      input.sourceProvider,
-      input.externalSourceId
-    );
-
-    return {
-      facility: refreshed ?? mapFacility(facility!),
-      created: false,
-      updated: !hashUnchanged,
-    };
-  }
-
   async applyApprovedFieldUpdates(
-    id: string,
+    id: number,
     updates: {
       name?: string;
       legalName?: string | null;
@@ -1079,9 +989,8 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       websiteUrl?: string | null;
       responsibleName?: string | null;
       openingHours?: string | null;
-      taxIdType?: "PJ" | "PF" | null;
-      cnpj?: string | null;
-      cpf?: string | null;
+      legalDocumentType?: "CNPJ" | "CPF" | null;
+      legalDocument?: string | null;
       neighborhood?: string | null;
       streetAddress?: string | null;
       streetNumber?: string | null;
@@ -1092,12 +1001,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       country?: string | null;
       lat?: number | null;
       lng?: number | null;
-      manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord> {
     const setData: Record<string, unknown> = {
       updatedAt: new Date(),
-      manuallyEditedAt: updates.manuallyEditedAt ?? new Date(),
     };
 
     if (updates.name !== undefined) setData.displayName = updates.name;
@@ -1112,9 +1019,12 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       setData.responsibleName = updates.responsibleName;
     }
     if (updates.openingHours !== undefined) setData.openingHours = updates.openingHours;
-    if (updates.taxIdType !== undefined) setData.taxIdType = updates.taxIdType;
-    if (updates.cnpj !== undefined) setData.cnpj = updates.cnpj;
-    if (updates.cpf !== undefined) setData.cpf = updates.cpf;
+    if (updates.legalDocumentType !== undefined) {
+      setData.legalDocumentType = updates.legalDocumentType;
+    }
+    if (updates.legalDocument !== undefined) {
+      setData.legalDocument = normalizeLegalDocument(updates.legalDocument);
+    }
     if (updates.neighborhood !== undefined) setData.neighborhood = updates.neighborhood;
     if (updates.streetAddress !== undefined) setData.streetAddress = updates.streetAddress;
     if (updates.streetNumber !== undefined) setData.streetNumber = updates.streetNumber;
@@ -1150,46 +1060,34 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     );
 
     const verticalIds = scope.verticalIds;
-    // Priority: any PURCHASE_WINDOW → active; else OUTSIDE/CHURN → inactive; else neverBought.
-    // When verticals resolve, read profile stage(s); otherwise facility rollup.
-    // Correlate with bare `facilities.id` — `${facilities.id}` inside EXISTS is
-    // parameterized by Drizzle and breaks the outer-row join (all → neverBought).
-    const purchaseBucketSql =
+    const verticalFilterSql =
       verticalIds && verticalIds.length > 0
-        ? sql<"active" | "inactive" | "neverBought">`(
-            CASE
-              WHEN EXISTS (
-                SELECT 1
-                FROM ${facilityVerticalProfiles} p
-                WHERE p.facility_id = facilities.id
-                  AND p.is_active = true
-                  AND p.vertical_id IN (${sql.join(
-                    verticalIds.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})
-                  AND p.purchase_funnel_stage = 'PURCHASE_WINDOW'
-              ) THEN 'active'
-              WHEN EXISTS (
-                SELECT 1
-                FROM ${facilityVerticalProfiles} p
-                WHERE p.facility_id = facilities.id
-                  AND p.is_active = true
-                  AND p.vertical_id IN (${sql.join(
-                    verticalIds.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})
-                  AND p.purchase_funnel_stage IN ('OUTSIDE_WINDOW', 'CHURN')
-              ) THEN 'inactive'
-              ELSE 'neverBought'
-            END
-          )`
-        : sql<"active" | "inactive" | "neverBought">`(
-            CASE
-              WHEN ${facilities.purchaseFunnelStage} = 'PURCHASE_WINDOW' THEN 'active'
-              WHEN ${facilities.purchaseFunnelStage} IN ('OUTSIDE_WINDOW', 'CHURN') THEN 'inactive'
-              ELSE 'neverBought'
-            END
-          )`;
+        ? sql`and p.vertical_id in (${sql.join(
+            verticalIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`
+        : sql``;
+    const purchaseBucketSql = sql<"active" | "inactive" | "neverBought">`(
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM ${facilityVerticalProfiles} p
+          WHERE p.facility_id = facilities.id
+            AND p.is_active = true
+            ${verticalFilterSql}
+            AND p.purchase_funnel_stage = 'PURCHASE_WINDOW'
+        ) THEN 'active'
+        WHEN EXISTS (
+          SELECT 1
+          FROM ${facilityVerticalProfiles} p
+          WHERE p.facility_id = facilities.id
+            AND p.is_active = true
+            ${verticalFilterSql}
+            AND p.purchase_funnel_stage IN ('OUTSIDE_WINDOW', 'CHURN')
+        ) THEN 'inactive'
+        ELSE 'neverBought'
+      END
+    )`;
 
     const rows = await db
       .select({
@@ -1222,7 +1120,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     });
   }
 
-  async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {
+  async findIdsByTerritoryIds(territoryIds: number[]): Promise<number[]> {
     if (territoryIds.length === 0) return [];
 
     // Membership = facility_vertical_profiles.manager_zone_id (Spec 0006).
@@ -1244,7 +1142,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return [...new Set(profileRows.map((r) => r.id))];
   }
 
-  async findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]> {
+  async findActiveFacilityIdsByVerticalIds(verticalIds: number[]): Promise<number[]> {
     if (verticalIds.length === 0) return [];
 
     const rows = await db
@@ -1261,15 +1159,15 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   }
 
   async findVerticalProfilesByFacilityIds(
-    facilityIds: string[],
-    verticalIds?: string[],
-  ): Promise<Map<string, FacilityVerticalProfileRecord[]>> {
+    facilityIds: number[],
+    verticalIds?: number[],
+  ): Promise<Map<number, FacilityVerticalProfileRecord[]>> {
     return loadVerticalProfiles(facilityIds, verticalIds);
   }
 
   async updateVerticalProfileCommercialStatus(input: {
-    facilityId: string;
-    verticalId: string;
+    facilityId: number;
+    verticalId: number;
     commercialStatus: FacilityCommercialStatus;
   }): Promise<void> {
     await db
@@ -1287,8 +1185,8 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   }
 
   async ensureVerticalProfile(input: {
-    facilityId: string;
-    verticalId: string;
+    facilityId: number;
+    verticalId: number;
   }): Promise<FacilityVerticalProfileRecord> {
     const existing = await db
       .select({

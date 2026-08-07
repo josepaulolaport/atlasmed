@@ -8,11 +8,11 @@ export type OrderStatus =
 
 export interface OrderScopeFilter {
   isGlobal: boolean;
-  facilityIds?: string[];
+  facilityIds?: number[];
 }
 
 export interface OrderIdentity {
-  id: string;
+  id: number;
   name: string;
 }
 
@@ -23,10 +23,9 @@ export interface OrderListItemPreview {
 }
 
 export interface OrderListRecord {
-  id: string;
+  id: number;
   legacyId: number | null;
-  interactionId: string | null;
-  verticalId: string;
+  verticalId: number;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
   seller: OrderIdentity | null;
@@ -42,10 +41,9 @@ export interface OrderListRecord {
 }
 
 export interface OrderDetailRecord {
-  id: string;
+  id: number;
   legacyId: number | null;
-  interactionId: string | null;
-  verticalId: string;
+  verticalId: number;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
   seller: OrderIdentity | null;
@@ -62,20 +60,20 @@ export interface OrderDetailRecord {
   netWeight: number;
   currency: string;
   usdExchangeRate: number | null;
-  finalizedById: string | null;
+  finalizedById: number | null;
   finalizedAt: Date | null;
-  rejectedById: string | null;
+  rejectedById: number | null;
   rejectionReason: string | null;
-  noBillingById: string | null;
+  noBillingById: number | null;
   noBillingAt: Date | null;
   noBillingNotes: string | null;
-  expenseAuthorizedById: string | null;
+  expenseAuthorizedById: number | null;
   expenseAuthorizedAt: Date | null;
   items: Array<{
-    id: string;
+    id: number;
     legacyId: number | null;
     lineNumber: number | null;
-    product: { id: string; name: string; code: string } | null;
+    product: { id: number; name: string; code: string } | null;
     legacyProductId: number | null;
     quantity: number;
     unitPrice: number;
@@ -88,17 +86,16 @@ export interface OrderDetailRecord {
 }
 
 export interface CreateOrderItemInput {
-  productId: string;
+  productId: number;
   quantity: number;
   unitPrice?: number;
 }
 
 export interface CreateOrderInput {
-  facilityId: string;
-  interactionId?: string | null;
-  verticalId: string;
-  sellerId: string | null;
-  professionalId?: string | null;
+  facilityId: number;
+  verticalId: number;
+  sellerId: number | null;
+  professionalId?: number | null;
   status?: OrderStatus;
   type?: string;
   notes?: string | null;
@@ -107,48 +104,32 @@ export interface CreateOrderInput {
   items: CreateOrderItemInput[];
 }
 
-export type CreateOrderIdempotentResult =
-  | { kind: "created" | "replay"; order: OrderDetailRecord }
-  | { kind: "mismatch" }
-  | { kind: "interaction_not_orderable" };
-
 export interface OrderRepository {
   findAll(input: {
     page: number;
     limit: number;
     statuses?: OrderStatus[];
-    facilityId?: string;
-    interactionId?: string;
+    facilityId?: number;
     /** Restrict to orders in these verticals (empty ⇒ no rows). */
-    verticalIds: string[];
+    verticalIds: number[];
     /** When set (REP), only orders sold by this user. */
-    sellerId?: string;
+    sellerId?: number;
     /** Include up to 2 line-item previews per order. */
     includeItemPreviews?: boolean;
     scope: OrderScopeFilter;
   }): Promise<{ orders: OrderListRecord[]; total: number }>;
-  findById(id: string): Promise<OrderDetailRecord | null>;
+  findById(id: number): Promise<OrderDetailRecord | null>;
   create(input: CreateOrderInput): Promise<OrderDetailRecord>;
-  findCommandReceipt(
-    actorUserId: string,
-    commandKey: string,
-  ): Promise<{ requestFingerprint: string; order: OrderDetailRecord } | null>;
-  createIdempotently(
-    actorUserId: string,
-    commandKey: string,
-    requestFingerprint: string,
-    input: CreateOrderInput,
-  ): Promise<CreateOrderIdempotentResult>;
   hasActiveFacilityVerticalProfile(
-    facilityId: string,
-    verticalId: string
+    facilityId: number,
+    verticalId: number
   ): Promise<boolean>;
   /** Product ids among `productIds` that belong to the vertical. */
   findProductIdsInVertical(
-    productIds: string[],
-    verticalId: string
-  ): Promise<string[]>;
+    productIds: number[],
+    verticalId: number
+  ): Promise<number[]>;
   findProductUnitPrices(
-    productIds: string[]
-  ): Promise<Map<string, number>>;
+    productIds: number[]
+  ): Promise<Map<number, number>>;
 }

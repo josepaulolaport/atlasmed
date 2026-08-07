@@ -14,16 +14,22 @@ void main() {
   const clinicsQuery = ClinicsQuery(limit: 20);
   const doctorsQuery = DoctorsQuery(limit: 20);
   const clinicDto = FacilityDTO(
-    id: 'clinic-1',
+    id: 1,
     name: 'Clínica Central',
     city: 'São Paulo',
     neighborhood: 'Centro',
     distanceKm: 1,
-    commercialStatus: 'ACTIVE',
     professionalCount: 1,
+    verticalProfiles: [
+      FacilityVerticalProfileDTO(
+        verticalId: 1,
+        verticalName: 'Ortopedia',
+        commercialStatus: 'ACTIVE',
+      ),
+    ],
   );
   const doctorDto = ProfessionalDTO(
-    id: 'doctor-1',
+    id: 1,
     firstName: 'Dra.',
     lastName: 'Ana',
     fullName: 'Dra. Ana',
@@ -76,7 +82,7 @@ void main() {
 
   testWidgets('global index 20 renders page two offset zero', (tester) async {
     final secondPageClinic = FacilityDTO(
-      id: 'clinic-page-2',
+      id: 21,
       name: 'Clínica da página 2',
       professionalCount: 0,
     );
@@ -181,7 +187,7 @@ void main() {
             body: ClinicsPagedResults(
               query: clinicsQuery,
               bottomInset: 0,
-              preferredVerticalId: 'vertical-1',
+              preferredVerticalId: 1,
             ),
           ),
         ),
@@ -219,7 +225,7 @@ void main() {
     await tester.tap(find.text('Clínica Central'));
     await tester.pumpAndSettle();
 
-    expect(navigatedLocation, '/explore/clinic/clinic-1?verticalId=vertical-1');
+    expect(navigatedLocation, '/explore/clinic/1?verticalId=1');
   });
 
   testWidgets('opens a clinic through the explore route', (tester) async {
@@ -267,7 +273,7 @@ void main() {
     await tester.tap(find.text('Clínica Central'));
     await tester.pumpAndSettle();
 
-    expect(navigatedLocation, '/explore/clinic/clinic-1');
+    expect(navigatedLocation, '/explore/clinic/1');
   });
 
   testWidgets('opens a doctor through the explore route', (tester) async {
@@ -315,6 +321,6 @@ void main() {
     await tester.tap(find.text('Dra. Ana'));
     await tester.pumpAndSettle();
 
-    expect(navigatedLocation, '/explore/doctor/doctor-1');
+    expect(navigatedLocation, '/explore/doctor/1');
   });
 }

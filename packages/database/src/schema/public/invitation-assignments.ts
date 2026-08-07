@@ -4,9 +4,10 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  integer,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import { invitations } from "./users";
 import { businessVerticals } from "./business-verticals";
 import { territories } from "./territories";
@@ -18,15 +19,11 @@ import { territories } from "./territories";
 export const invitationVerticalAssignments = pgTable(
   "invitation_vertical_assignments",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    invitationId: text("invitation_id")
-      .notNull()
-      .references(() => invitations.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    invitationId: bigint("invitation_id", { mode: "number" })
+      .notNull().references(() => invitations.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -44,18 +41,13 @@ export const invitationVerticalAssignments = pgTable(
 export const invitationTerritoryAssignments = pgTable(
   "invitation_territory_assignments",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    invitationId: text("invitation_id")
-      .notNull()
-      .references(() => invitations.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "cascade" }),
-    territoryId: text("territory_id")
-      .notNull()
-      .references(() => territories.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    invitationId: bigint("invitation_id", { mode: "number" })
+      .notNull().references(() => invitations.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
+    territoryId: bigint("territory_id", { mode: "number" })
+      .notNull().references(() => territories.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

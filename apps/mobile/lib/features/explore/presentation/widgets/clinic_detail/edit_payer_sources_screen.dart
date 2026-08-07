@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_payer_shares_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -32,7 +32,7 @@ class EditPayerSourcesScreen extends StatefulWidget {
   const EditPayerSourcesScreen({
     super.key,
     required this.initialPayers,
-    this.catalog = mockPayerCatalog,
+    required this.catalog,
   });
 
   final List<PayerShare> initialPayers;
@@ -267,7 +267,7 @@ class _EditablePayer {
     this.isPackage = false,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String? type;
   final TextEditingController percentCtrl;
@@ -808,7 +808,7 @@ class _AddPayerSourcesSheet extends StatefulWidget {
 class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
   late final TextEditingController _queryCtrl;
   late List<PayerCatalogEntry> _catalog;
-  final Set<String> _selectedIds = {};
+  final Set<int> _selectedIds = {};
 
   @override
   void initState() {

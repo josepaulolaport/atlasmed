@@ -1,5 +1,4 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 /// Lightweight facility model for explore list/search results.
@@ -7,7 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurr
 /// Substitue o antigo [Clinic] de [models/clinic.dart].
 /// Mapeia de [FacilityDTO] — o DTO unificado da API.
 class FacilityEntry {
-  final String id;
+  final int id;
   final String name;
   final String? neighborhood;
   final String city;
@@ -18,7 +17,7 @@ class FacilityEntry {
   final int? lastVisitDays;
   final int doctorCount;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
-  final List<ClinicService> services;
+  final List<ClinicalFocus> clinicalFocuses;
   final List<FacilityVerticalProfileDTO> verticalProfiles;
 
   const FacilityEntry({
@@ -31,16 +30,11 @@ class FacilityEntry {
     this.lastVisitDays,
     required this.doctorCount,
     this.purchaseRecurrence,
-    this.services = const [],
+    this.clinicalFocuses = const [],
     this.verticalProfiles = const [],
   });
 
-  /// CNES services, or vertical names when CNES list empty.
-  List<ClinicService> get displayServices =>
-      FacilityServiceLabels.resolveDisplayServices(
-        services: services,
-        verticalProfiles: verticalProfiles,
-      );
+  List<ClinicalFocus> get displayServices => clinicalFocuses;
 
   String? get locationLabel {
     final normalizedNeighborhood = neighborhood?.trim() ?? '';
@@ -61,12 +55,19 @@ class FacilityEntry {
       if (dto.city?.trim().isNotEmpty ?? false) dto.city!.trim(),
       if (dto.state?.trim().isNotEmpty ?? false) dto.state!.trim(),
     ];
-    final status = dto.commercialStatus?.trim();
-    final lastVisitAt = DateTime.tryParse(dto.lastVisitAt ?? '');
-    final reference = now ?? DateTime.now();
+    final profile = pickVerticalProfile(dto.verticalProfiles);
+    final status = profile?.commercialStatus?.trim();
+    final lastVisitAt = DateTime.tryParse(dto.lastVisitAt ?? '')?.toLocal();
+    final reference = (now ?? DateTime.now()).toLocal();
     final lastVisitDays = lastVisitAt == null
         ? null
-        : calendarDaysBetweenBr(lastVisitAt, reference);
+        : DateTime(reference.year, reference.month, reference.day)
+              .difference(
+                DateTime(lastVisitAt.year, lastVisitAt.month, lastVisitAt.day),
+              )
+              .inDays
+              .clamp(0, 1 << 31)
+              .toInt();
     return FacilityEntry(
       id: dto.id,
       name: dto.name,
@@ -76,27 +77,11 @@ class FacilityEntry {
       commercialStatus: (status == null || status.isEmpty) ? null : status,
       lastVisitDays: lastVisitDays,
       doctorCount: dto.professionalCount,
-      purchaseRecurrence: dto.purchaseRecurrence,
-      services: dto.services
-          .where((s) => s.serviceName.trim().isNotEmpty)
+      purchaseRecurrence: profile?.purchaseRecurrence,
+      clinicalFocuses: dto.clinicalFocuses
+          .where((focus) => focus.name.trim().isNotEmpty)
           .toList(growable: false),
       verticalProfiles: dto.verticalProfiles,
     );
   }
-}
-
-/// Calendar-day delta in Brazil (UTC−3, no DST since 2019).
-///
-/// Host `.toLocal()` shifts midnight-adjacent visits on UTC CI runners and
-/// changes "Há N dias". Always measure business calendar days in BRT.
-int calendarDaysBetweenBr(DateTime from, DateTime to) {
-  final start = _brazilianCalendarDate(from);
-  final end = _brazilianCalendarDate(to);
-  return end.difference(start).inDays.clamp(0, 1 << 31).toInt();
-}
-
-DateTime _brazilianCalendarDate(DateTime instant) {
-  // Shift absolute instant into BRT wall time, then take Y/M/D.
-  final brt = instant.toUtc().subtract(const Duration(hours: 3));
-  return DateTime.utc(brt.year, brt.month, brt.day);
 }

@@ -1,5 +1,5 @@
 export interface BusinessVerticalRecord {
-  id: string;
+  id: number;
   code: string;
   name: string;
   isActive: boolean;
@@ -14,12 +14,12 @@ export interface BusinessVerticalRepository {
     isActive?: boolean;
   }): Promise<{ verticals: BusinessVerticalRecord[]; total: number }>;
 
-  findById(id: string): Promise<BusinessVerticalRecord | null>;
+  findById(id: number): Promise<BusinessVerticalRecord | null>;
 
   create(data: { code: string; name: string; isActive?: boolean }): Promise<BusinessVerticalRecord>;
 
   update(
-    id: string,
+    id: number,
     data: { code?: string; name?: string; isActive?: boolean }
   ): Promise<BusinessVerticalRecord>;
 }

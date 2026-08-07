@@ -1,16 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_photos_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 
 final facilityPhotosProvider = FutureProvider.autoDispose
-    .family<PhotoGallerySummary, String>((ref, facilityId) async {
-      if (isMockNearbyFacilityId(facilityId)) {
-        return const PhotoGallerySummary(count: 0);
-      }
-
+    .family<PhotoGallerySummary, int>((ref, facilityId) async {
       final repo = FacilityPhotosRepository(facilityId);
       try {
         return await repo.loadGallery();
@@ -20,7 +15,7 @@ final facilityPhotosProvider = FutureProvider.autoDispose
     });
 
 final facilityPhotoUploadProvider = StateNotifierProvider.autoDispose
-    .family<FacilityPhotoUploadController, AsyncValue<void>, String>((
+    .family<FacilityPhotoUploadController, AsyncValue<void>, int>((
       ref,
       facilityId,
     ) {
@@ -32,12 +27,10 @@ class FacilityPhotoUploadController extends StateNotifier<AsyncValue<void>> {
     : super(const AsyncData(null));
 
   final Ref _ref;
-  final String facilityId;
+  final int facilityId;
   final ImagePicker _picker = ImagePicker();
 
   Future<void> pickAndUpload(ImageSource source) async {
-    if (isMockNearbyFacilityId(facilityId)) return;
-
     XFile? picked;
     try {
       picked = await _picker.pickImage(

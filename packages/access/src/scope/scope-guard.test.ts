@@ -10,37 +10,37 @@ import { ForbiddenError } from "../errors/forbidden.error";
 describe("scope-guard", () => {
   it("assertScopedFacility allows global scope", () => {
     expect(() =>
-      assertScopedFacility(createGlobalScopeContext(), "facility-1")
+      assertScopedFacility(createGlobalScopeContext(), 1)
     ).not.toThrow();
   });
 
   it("assertScopedFacility denies out-of-scope facility", () => {
     const scope = {
       ...createEmptyScopeContext(),
-      facilityIds: ["facility-1"],
+      facilityIds: [1],
       isOperationallyActive: true,
     };
 
-    expect(() => assertScopedFacility(scope, "facility-2")).toThrow(ForbiddenError);
+    expect(() => assertScopedFacility(scope, 2)).toThrow(ForbiddenError);
   });
 
   it("assertScopedTerritory denies out-of-scope territory", () => {
     const scope = {
       ...createEmptyScopeContext(),
-      effectiveTerritoryIds: ["t-1"],
+      effectiveTerritoryIds: [1],
       isOperationallyActive: true,
     };
 
-    expect(() => assertScopedTerritory(scope, "t-2")).toThrow(ForbiddenError);
+    expect(() => assertScopedTerritory(scope, 2)).toThrow(ForbiddenError);
   });
 
   it("assertScopedUser denies out-of-scope user", () => {
     const scope = {
       ...createEmptyScopeContext(),
-      managedUserIds: ["user-1"],
+      managedUserIds: [1],
       isOperationallyActive: true,
     };
 
-    expect(() => assertScopedUser(scope, "user-2")).toThrow(ForbiddenError);
+    expect(() => assertScopedUser(scope, 2)).toThrow(ForbiddenError);
   });
 });

@@ -196,9 +196,9 @@ export class LoginUseCase {
     });
 
     const accessToken = await this.deps.tokenService.signAccessToken({
-      sub: user.id,
+      sub: String(user.id),
 
-      sid: session.id,
+      sid: String(session.id),
 
       role: user.role.name as any,
 

@@ -9,7 +9,7 @@ import type { GeocodingPort } from "../../../maps/application/interfaces/geocodi
 
 function facilityStub(overrides: Record<string, unknown> = {}) {
   return {
-    id: "clinic-1",
+    id: 1,
     name: "Clinic",
     neighborhood: "Jardim Paulista",
     city: "São Paulo",
@@ -18,21 +18,21 @@ function facilityStub(overrides: Record<string, unknown> = {}) {
     streetNumber: "1000",
     addressComplement: null,
     postalCode: "01310-100",
+    stateId: 1,
+    municipalityId: 1,
     phone: null,
     whatsapp: null,
     email: null,
     website: null,
     responsibleName: null,
     openingHours: null,
-    taxIdType: null,
-    cnpj: null,
-    cpf: null,
+    legalDocumentType: "CNPJ",
+    legalDocument: null,
     lat: null,
     lng: null,
     territoryId: null,
     territoryName: null,
     territoryAssignmentStatus: "unassigned" as const,
-    territoryAssignmentSource: "geo" as const,
     commercialStatus: null,
     purchaseStatus: null,
     conformityStatus: "INCOMPLETE" as const,
@@ -40,18 +40,14 @@ function facilityStub(overrides: Record<string, unknown> = {}) {
     consultantSince: null,
     managerName: null,
     imageUrl: null,
-    sourceProvider: null,
-    externalSourceId: null,
-    sourceContentHash: null,
-    sourceFirstSeenAt: null,
-    sourceLastSeenAt: null,
-    sourcePresent: false,
-    sourceTracked: false,
-    manuallyEditedAt: null,
-    createdAt: new Date(),
+    cnesCode: null,
+    facilityTypeCode: null,
+    unitTypeCode: null,
+    unitSubtypeCode: null,
+        createdAt: new Date(),
     updatedAt: new Date(),
     deactivatedAt: null,
-    services: [],
+    clinicalFocuses: [],
     ...overrides,
   };
 }
@@ -259,7 +255,7 @@ describe("FacilityGeocodingService", () => {
       geocodingPort,
     });
 
-    const result = await service.ensureCoordinatesPersisted("clinic-1");
+    const result = await service.ensureCoordinatesPersisted(1);
 
     expect(result).toEqual({
       lat: -23.5505,
@@ -272,7 +268,7 @@ describe("FacilityGeocodingService", () => {
       country: "br",
       limit: 5,
     });
-    expect(facilityRepository.update).toHaveBeenCalledWith("clinic-1", {
+    expect(facilityRepository.update).toHaveBeenCalledWith(1, {
       lat: -23.5505,
       lng: -46.6333,
     });
@@ -287,7 +283,7 @@ describe("FacilityGeocodingService", () => {
       facilityRepository,
       geocodingPort,
     });
-    const result = await service.ensureCoordinatesPersisted("clinic-1");
+    const result = await service.ensureCoordinatesPersisted(1);
 
     expect(result).toEqual({
       lat: -23.5505,
@@ -316,7 +312,7 @@ describe("FacilityGeocodingService", () => {
       geocodingPort,
     });
 
-    const result = await service.ensureCoordinatesPersisted("clinic-1");
+    const result = await service.ensureCoordinatesPersisted(1);
 
     expect(result).toEqual({ lat: null, lng: null, geocoded: false });
     expect(geocodingPort.forwardGeocode).not.toHaveBeenCalled();

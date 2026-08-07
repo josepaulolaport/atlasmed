@@ -11,7 +11,7 @@ interface Dependencies {
 export class GetCapabilitiesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(params: { userId: string }) {
+  async execute(params: { userId: number }) {
     const user = await this.deps.userRepository.findById(params.userId);
 
     if (!user) {

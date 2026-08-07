@@ -1,87 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 /// "Notas de campo" — private, facility-scoped notes only the current user sees.
-class ClinicFieldNotesSection extends StatelessWidget {
-  const ClinicFieldNotesSection({
-    super.key,
-    required this.facilityId,
-    required this.notes,
-    required this.canAdd,
-    required this.onCreate,
-  });
+class ClinicFieldNotesSection extends ConsumerWidget {
+  const ClinicFieldNotesSection({super.key, required this.facilityId});
 
-  final String facilityId;
-  final List<FacilityFieldNote>? notes;
-  final bool canAdd;
-  final Future<void> Function(String text) onCreate;
+  final int facilityId;
 
   @override
-  Widget build(BuildContext context) {
-    final loadedNotes = notes;
-    return Column(
-      children: [
-        const ClinicSectionHeader(title: 'Notas de campo'),
-        if (loadedNotes == null)
-          ClinicDetailCard(
-            child: AtlasShimmer(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 14,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(width: 220, height: 14, color: Colors.white),
-                ],
-              ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(facilityNotesProvider(facilityId));
+
+    return notesAsync.when(
+      loading: () => const ClinicDetailCard(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          )
-        else
-          _NotesBody(
-            facilityId: facilityId,
-            notes: loadedNotes,
-            canAdd: canAdd,
-            onCreate: onCreate,
           ),
-      ],
+        ),
+      ),
+      error: (err, _) => ClinicDetailCard(
+        child: Column(
+          children: [
+            const Text(
+              'Não foi possível carregar as notas.',
+              style: TextStyle(fontSize: 13, color: AppColors.gray400),
+            ),
+            TextButton(
+              onPressed: () =>
+                  ref.invalidate(facilityNotesProvider(facilityId)),
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
+      data: (notes) => _NotesBody(
+        facilityId: facilityId,
+        notes: notes,
+        canAdd: ref.watch(canMutateFacilityProvider),
+      ),
     );
   }
 }
 
-class _NotesBody extends StatefulWidget {
+class _NotesBody extends ConsumerStatefulWidget {
   const _NotesBody({
     required this.facilityId,
     required this.notes,
     required this.canAdd,
-    required this.onCreate,
   });
 
-  final String facilityId;
+  final int facilityId;
   final List<FacilityFieldNote> notes;
   final bool canAdd;
-  final Future<void> Function(String text) onCreate;
 
   @override
-  State<_NotesBody> createState() => _NotesBodyState();
+  ConsumerState<_NotesBody> createState() => _NotesBodyState();
 }
 
-class _NotesBodyState extends State<_NotesBody> {
+class _NotesBodyState extends ConsumerState<_NotesBody> {
   bool _saving = false;
 
-  bool get _useApi {
-    final id = widget.facilityId;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
-  }
+  bool get _useApi => widget.facilityId > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -139,11 +132,9 @@ class _NotesBodyState extends State<_NotesBody> {
     if (text == null || text.isEmpty || !mounted) return;
 
     if (!_useApi) {
-      // Mock facilities stay local-only for the session via provider invalidate
-      // isn't needed — mock provider returns static mock data.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nota salva localmente (clínica de demonstração)'),
+          content: Text('Estabelecimento inválido.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -152,7 +143,15 @@ class _NotesBodyState extends State<_NotesBody> {
 
     setState(() => _saving = true);
     try {
-      await widget.onCreate(text);
+      // Use the shared repository — createNote() refreshes its cache. A
+      // throwaway repo would refresh a different instance while the provider
+      // kept serving stale currentValue via currentValueOrResolve().
+      await ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .createNote(text);
+      if (!mounted) return;
+      ref.invalidate(facilityNotesProvider(widget.facilityId));
+      await ref.read(facilityNotesProvider(widget.facilityId).future);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

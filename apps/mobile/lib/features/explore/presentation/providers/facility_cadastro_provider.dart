@@ -5,20 +5,9 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_upload_normalize.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
-
-bool _isMockFacilityId(String facilityId) => isMockNearbyFacilityId(facilityId);
 
 final facilityCadastroProvider = FutureProvider.autoDispose
-    .family<FacilityCadastroChecklist, String>((ref, facilityId) async {
-      if (_isMockFacilityId(facilityId)) {
-        return FacilityCadastroChecklist(
-          facilityId: facilityId,
-          documents: const [],
-          pendingAction: 0,
-        );
-      }
-
+    .family<FacilityCadastroChecklist, int>((ref, facilityId) async {
       final repo = FacilityCadastroRepository(facilityId);
       try {
         return await repo.loadChecklist();
@@ -28,7 +17,7 @@ final facilityCadastroProvider = FutureProvider.autoDispose
     });
 
 final facilityCadastroControllerProvider = Provider.autoDispose
-    .family<FacilityCadastroController, String>((ref, facilityId) {
+    .family<FacilityCadastroController, int>((ref, facilityId) {
       return FacilityCadastroController(ref, facilityId);
     });
 
@@ -36,7 +25,7 @@ class FacilityCadastroController {
   FacilityCadastroController(this._ref, this.facilityId);
 
   final Ref _ref;
-  final String facilityId;
+  final int facilityId;
 
   Future<void> refresh() async {
     _ref.invalidate(facilityCadastroProvider(facilityId));
@@ -44,7 +33,6 @@ class FacilityCadastroController {
   }
 
   Future<void> updateBillingEmail(String email) async {
-    if (_isMockFacilityId(facilityId)) return;
     final repo = FacilityCadastroRepository(facilityId);
     try {
       await repo.updateBillingEmail(email);
@@ -57,7 +45,7 @@ class FacilityCadastroController {
   /// Uploads files one-by-one; each file begins server-side processing
   /// as soon as its upload completes.
   Future<EstablishmentDocument> submitDocument({
-    required String requirementId,
+    required int requirementId,
     required List<({String localPath, String fileName, String contentType})>
     files,
     void Function(int index, int total)? onFileStarted,
@@ -65,25 +53,11 @@ class FacilityCadastroController {
     FutureOr<void> Function(
       int index,
       int total, {
-      String? fileId,
+      int? fileId,
       String? status,
     })?
     onFileCompleted,
   }) async {
-    if (_isMockFacilityId(facilityId)) {
-      return EstablishmentDocument(
-        id: requirementId,
-        requirementId: requirementId,
-        title: files.first.fileName,
-        description: '',
-        status: EstablishmentDocumentStatus.pending,
-        submittedAt: DateTime.now(),
-        fileName: files.first.fileName,
-        localPath: files.first.localPath,
-        mimeType: files.first.contentType,
-      );
-    }
-
     final normalized = <FacilityCadastroFile>[];
     for (final file in files) {
       normalized.add(
@@ -124,7 +98,7 @@ class FacilityCadastroController {
     }
   }
 
-  Future<String> signedFileUrl(String fileAssetId) async {
+  Future<String> signedFileUrl(int fileAssetId) async {
     final repo = FacilityCadastroRepository(facilityId);
     try {
       return await repo.getFileSignedUrl(fileAssetId);
@@ -133,8 +107,7 @@ class FacilityCadastroController {
     }
   }
 
-  Future<void> submitPackage(String submissionId) async {
-    if (_isMockFacilityId(facilityId)) return;
+  Future<void> submitPackage(int submissionId) async {
     final repo = FacilityCadastroRepository(facilityId);
     try {
       await repo.submitPackage(submissionId);
@@ -144,8 +117,7 @@ class FacilityCadastroController {
     }
   }
 
-  Future<void> deleteDraft(String submissionId) async {
-    if (_isMockFacilityId(facilityId)) return;
+  Future<void> deleteDraft(int submissionId) async {
     final repo = FacilityCadastroRepository(facilityId);
     try {
       await repo.deleteDraft(submissionId);
@@ -156,9 +128,8 @@ class FacilityCadastroController {
   }
 
   Future<List<CadastroRequirementSubmission>> listRequirementSubmissions(
-    String requirementId,
+    int requirementId,
   ) async {
-    if (_isMockFacilityId(facilityId)) return const [];
     final repo = FacilityCadastroRepository(facilityId);
     try {
       return await repo.listRequirementSubmissions(requirementId);
@@ -168,10 +139,9 @@ class FacilityCadastroController {
   }
 
   Future<void> submitRequirement({
-    required String requirementId,
-    String? documentId,
+    required int requirementId,
+    int? documentId,
   }) async {
-    if (_isMockFacilityId(facilityId)) return;
     final repo = FacilityCadastroRepository(facilityId);
     try {
       await repo.submitRequirement(

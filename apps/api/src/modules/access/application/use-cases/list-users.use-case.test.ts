@@ -5,7 +5,7 @@ import { createEmptyScopeContext, createGlobalScopeContext, withTerritoryScopeAl
 
 describe("ListUsersUseCase", () => {
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
@@ -18,7 +18,7 @@ describe("ListUsersUseCase", () => {
     emailVerifiedAt: new Date("2024-01-01T00:00:00.000Z"),
     phoneVerifiedAt: null,
     role: {
-      id: "role-123",
+      id: 1,
       name: "USER",
       description: "Standard user",
     },
@@ -54,7 +54,7 @@ describe("ListUsersUseCase", () => {
     expect(result).toEqual({
       data: [
         {
-          id: "user-123",
+          id: 123,
           email: "user@example.com",
           username: "testuser",
           phoneNumber: undefined,
@@ -72,7 +72,7 @@ describe("ListUsersUseCase", () => {
           suspendedAt: undefined,
           deactivatedAt: undefined,
           role: {
-            id: "role-123",
+            id: 1,
             name: "USER",
             description: "Standard user",
           },
@@ -163,10 +163,10 @@ describe("ListUsersUseCase", () => {
 
     const scope = withTerritoryScopeAliases({
       isGlobal: false,
-      assignedTerritoryIds: ["territory-1"],
-      effectiveTerritoryIds: ["territory-1"],
+      assignedTerritoryIds: [1],
+      effectiveTerritoryIds: [1],
       facilityIds: [],
-      managedUserIds: ["report-1", "report-2"],
+      managedUserIds: [2, 3],
       isOperationallyActive: true,
     });
 
@@ -184,8 +184,8 @@ describe("ListUsersUseCase", () => {
       sortDir: undefined,
       scope: {
         isGlobal: false,
-        territoryIds: ["territory-1"],
-        managedUserIds: ["report-1", "report-2"],
+        territoryIds: [1],
+        managedUserIds: [2, 3],
       },
     });
   });
@@ -197,10 +197,10 @@ describe("ListUsersUseCase", () => {
 
     const scope = withTerritoryScopeAliases({
       isGlobal: false,
-      assignedTerritoryIds: ["territory-shared"],
-      effectiveTerritoryIds: ["territory-shared"],
+      assignedTerritoryIds: [2],
+      effectiveTerritoryIds: [2],
       facilityIds: [],
-      managedUserIds: ["direct-report-1"],
+      managedUserIds: [3],
       isOperationallyActive: true,
     });
 
@@ -218,15 +218,15 @@ describe("ListUsersUseCase", () => {
       sortDir: undefined,
       scope: {
         isGlobal: false,
-        territoryIds: ["territory-shared"],
-        managedUserIds: ["direct-report-1"],
+        territoryIds: [2],
+        managedUserIds: [3],
       },
     });
 
     const firstCall = (userRepository.findAll as ReturnType<typeof mock>).mock.calls[0];
     expect(firstCall).toBeDefined();
     const callScope = firstCall![0].scope;
-    expect(callScope.managedUserIds).toEqual(["direct-report-1"]);
+    expect(callScope.managedUserIds).toEqual([3]);
     expect(callScope.isGlobal).toBe(false);
   });
 

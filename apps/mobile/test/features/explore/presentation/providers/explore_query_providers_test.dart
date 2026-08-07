@@ -19,14 +19,14 @@ void main() {
       commercialStatus: 'ACTIVE',
       purchaseBucket: 'active',
       productIds: 'product-1,product-2',
-      serviceCodes: 'service-1,service-2',
+      clinicalFocusIds: '1,2',
       purchaseFunnelStages: [PurchaseFunnelStage.purchaseWindow],
       purchaseProfile: PurchaseProfile.monthly,
       purchaseIntervalMinDays: 10,
       purchaseIntervalMaxDays: 40,
       sort: FacilitySort.lastPurchaseDate,
       order: SortOrder.desc,
-      verticalId: 'vertical-1',
+      verticalId: 1,
     );
 
     final pageTwo = query.copyWith(page: 2);
@@ -40,7 +40,7 @@ void main() {
     expect(pageTwo.commercialStatus, query.commercialStatus);
     expect(pageTwo.purchaseBucket, query.purchaseBucket);
     expect(pageTwo.productIds, query.productIds);
-    expect(pageTwo.serviceCodes, query.serviceCodes);
+    expect(pageTwo.clinicalFocusIds, query.clinicalFocusIds);
     expect(pageTwo.purchaseFunnelStages, query.purchaseFunnelStages);
     expect(pageTwo.purchaseProfile, query.purchaseProfile);
     expect(pageTwo.purchaseIntervalMinDays, query.purchaseIntervalMinDays);
@@ -55,7 +55,7 @@ void main() {
       page: 1,
       limit: 25,
       searchQuery: 'ana',
-      facilityId: 'facility-1',
+      facilityId: 1,
       latitude: -23.5,
       longitude: -46.6,
       radiusKm: 15,
@@ -104,7 +104,7 @@ void main() {
         'status': ['ACTIVE'],
         'purchaseBucket': ['active'],
         'products': ['product-1', 'product-2'],
-        'serviceCodes': ['service-1', 'service-2'],
+        'clinicalFocusIds': ['1', '2'],
         'purchaseFunnelStage': ['PURCHASE_WINDOW'],
         'purchaseProfile': ['MONTHLY'],
         'purchaseIntervalMinDays': ['10'],
@@ -115,7 +115,7 @@ void main() {
       radiusKm: 25,
     );
 
-    final query = buildClinicsQuery(state, verticalId: 'vertical-1');
+    final query = buildClinicsQuery(state, verticalId: 1);
 
     expect(query.page, 1);
     expect(query.searchQuery, 'central');
@@ -125,14 +125,14 @@ void main() {
     expect(query.commercialStatus, 'ACTIVE');
     expect(query.purchaseBucket, 'active');
     expect(query.productIds, 'product-1,product-2');
-    expect(query.serviceCodes, 'service-1,service-2');
+    expect(query.clinicalFocusIds, '1,2');
     expect(query.purchaseFunnelStages, [PurchaseFunnelStage.purchaseWindow]);
     expect(query.purchaseProfile, PurchaseProfile.monthly);
     expect(query.purchaseIntervalMinDays, 10);
     expect(query.purchaseIntervalMaxDays, 40);
     expect(query.sort, FacilitySort.lastPurchaseDate);
     expect(query.order, SortOrder.desc);
-    expect(query.verticalId, 'vertical-1');
+    expect(query.verticalId, 1);
   });
 
   test('multiple purchase buckets expand into funnel stages', () {

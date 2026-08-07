@@ -13,15 +13,15 @@ const listBusinessVerticalsRoute = new Elysia()
     "/business-verticals",
     async ({ query }) =>
       catalogUseCases.listBusinessVerticals().execute({
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
       }),
     {
       detail: { summary: "List business verticals", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
         isActive: t.Optional(t.String()),
       }),
     }
@@ -58,6 +58,7 @@ const updateBusinessVerticalRoute = new Elysia()
     },
     {
       detail: { summary: "Update business vertical", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         code: t.Optional(t.String()),
         name: t.Optional(t.String()),
@@ -74,8 +75,8 @@ const listProductsRoute = new Elysia()
     async ({ query, getScope, getAuthContext }) => {
       const [scope, authContext] = await Promise.all([getScope(), getAuthContext()]);
       return catalogUseCases.listProducts().execute({
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         verticalId: query.verticalId,
         search: query.search,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
@@ -86,9 +87,9 @@ const listProductsRoute = new Elysia()
     {
       detail: { summary: "List products", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-        verticalId: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
         search: t.Optional(t.String()),
         isActive: t.Optional(t.String()),
       }),
@@ -111,8 +112,9 @@ const getProductRoute = new Elysia()
     },
     {
       detail: { summary: "Get product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       query: t.Object({
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -122,13 +124,17 @@ const createProductRoute = new Elysia()
   .use(requirePermission("create", "CATALOG"))
   .post(
     "/products",
-    async ({ body }) => catalogUseCases.createProduct().execute(body),
+    async ({ body }) =>
+      catalogUseCases.createProduct().execute({
+        ...body,
+        verticalIds: body.verticalIds,
+      }),
     {
       detail: { summary: "Create product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
       body: t.Object({
         code: t.String(),
         name: t.String(),
-        verticalIds: t.Array(t.String(), { minItems: 1 }),
+        verticalIds: t.Array(t.Number({ minimum: 1 }), { minItems: 1 }),
         pictureUrl: t.Optional(t.Nullable(t.String())),
         simproCode: t.String(),
         brasindiceCode: t.String(),
@@ -150,14 +156,23 @@ const updateProductRoute = new Elysia()
   .use(requirePermission("update", "CATALOG"))
   .patch(
     "/products/:id",
-    async ({ params, body }) =>
-      catalogUseCases.updateProduct().execute({ productId: params.id, ...body }),
+    async ({ params, body }) => {
+      const { verticalIds: rawVerticalIds, ...rest } = body;
+      return catalogUseCases.updateProduct().execute({
+        productId: params.id,
+        ...rest,
+        ...(rawVerticalIds
+          ? { verticalIds: rawVerticalIds }
+          : {}),
+      });
+    },
     {
       detail: { summary: "Update product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         code: t.Optional(t.String()),
         name: t.Optional(t.String()),
-        verticalIds: t.Optional(t.Array(t.String(), { minItems: 1 })),
+        verticalIds: t.Optional(t.Array(t.Number({ minimum: 1 }), { minItems: 1 })),
         pictureUrl: t.Optional(t.Nullable(t.String())),
         simproCode: t.Optional(t.String()),
         brasindiceCode: t.Optional(t.String()),
@@ -183,8 +198,8 @@ const listHealthcareProvidersRoute = new Elysia()
     "/healthcare-providers",
     async ({ query }) =>
       catalogUseCases.listHealthcareProviders().execute({
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
       }),
     {
@@ -194,8 +209,8 @@ const listHealthcareProvidersRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
         isActive: t.Optional(t.String()),
       }),
     }
@@ -232,13 +247,17 @@ const updateHealthcareProviderRoute = new Elysia()
   .patch(
     "/healthcare-providers/:id",
     async ({ params, body }) =>
-      catalogUseCases.updateHealthcareProvider().execute({ providerId: params.id, ...body }),
+      catalogUseCases.updateHealthcareProvider().execute({
+        providerId: params.id,
+        ...body,
+      }),
     {
       detail: {
         summary: "Update healthcare provider",
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         name: t.Optional(t.String()),
         type: t.Optional(
@@ -272,6 +291,7 @@ const listFacilitySharesRoute = new Elysia()
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -296,8 +316,9 @@ const createFacilityShareRoute = new Elysia()
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
-        healthcareProviderId: t.String(),
+        healthcareProviderId: t.Number({ minimum: 1 }),
         sharePercent: t.Number(),
         isPackage: t.Optional(t.Boolean()),
       }),
@@ -323,10 +344,11 @@ const replaceFacilitySharesRoute = new Elysia()
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         shares: t.Array(
           t.Object({
-            healthcareProviderId: t.String(),
+            healthcareProviderId: t.Number({ minimum: 1 }),
             sharePercent: t.Number(),
             isPackage: t.Optional(t.Boolean()),
           })

@@ -1,6 +1,6 @@
 export interface CachedSession {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   refreshTokenHash: string;
   expiresAt: string;
   revokedAt: string | null;
@@ -9,45 +9,45 @@ export interface CachedSession {
   lastSeenAt: string;
   createdAt: string;
   user?: {
-    id: string;
+    id: number;
     email: string;
     username: string;
     status: string;
     tokenVersion: number;
     role: {
-      id: string;
+      id: number;
       name: string;
     };
   };
 }
 
 export interface SupersededRefreshTokenInfo {
-  sessionId: string;
-  userId: string;
+  sessionId: number;
+  userId: number;
 }
 
 export interface ISessionCache {
-  getById(sessionId: string): Promise<CachedSession | null>;
+  getById(sessionId: number): Promise<CachedSession | null>;
   getByTokenHash(tokenHash: string): Promise<CachedSession | null>;
   getSupersededSession(
     tokenHash: string
   ): Promise<SupersededRefreshTokenInfo | null>;
   set(session: CachedSession): Promise<void>;
-  invalidate(sessionId: string): Promise<void>;
-  invalidateByUserId(userId: string, excludeSessionId?: string): Promise<void>;
-  updateLastSeen(sessionId: string): Promise<void>;
+  invalidate(sessionId: number): Promise<void>;
+  invalidateByUserId(userId: number, excludeSessionId?: number): Promise<void>;
+  updateLastSeen(sessionId: number): Promise<void>;
   updateAfterRefresh(
     session: CachedSession,
     previousRefreshTokenHash: string
   ): Promise<void>;
-  isMarkedRevoked(sessionId: string): Promise<boolean>;
+  isMarkedRevoked(sessionId: number): Promise<boolean>;
   /**
    * Clears a (possibly stale/false-positive) revoked marker for a session
    * that DB revalidation has confirmed is still healthy. Without this, a
    * marker set by a transient error can never self-heal — it just keeps
    * renewing its own TTL every time `invalidate` runs again.
    */
-  clearRevoked(sessionId: string): Promise<void>;
-  isRecentlyValidated(sessionId: string): Promise<boolean>;
-  markValidated(sessionId: string): Promise<void>;
+  clearRevoked(sessionId: number): Promise<void>;
+  isRecentlyValidated(sessionId: number): Promise<boolean>;
+  markValidated(sessionId: number): Promise<void>;
 }

@@ -5,7 +5,7 @@ import type { AccessGrantRecord } from "@atlasmed/access";
 import type { AccessGrantRepository } from "../../../application/interfaces/access-grant.repository.interface";
 
 function mapRow(row: {
-  id: string;
+  id: number;
   resource: string;
   resourceId: string | null;
   action: string;
@@ -25,7 +25,7 @@ function mapRow(row: {
 }
 
 export class DrizzleAccessGrantRepository implements AccessGrantRepository {
-  async findActiveByUserId(userId: string): Promise<AccessGrantRecord[]> {
+  async findActiveByUserId(userId: number): Promise<AccessGrantRecord[]> {
     const rows = await db
       .select({
         id: permissions.id,
@@ -47,12 +47,12 @@ export class DrizzleAccessGrantRepository implements AccessGrantRepository {
   }
 
   async create(params: {
-    userId: string;
+    userId: number;
     resource: string;
     resourceId?: string;
     action: string;
     conditions?: Record<string, unknown>;
-    grantedBy: string;
+    grantedBy: number;
     expiresAt?: Date;
   }): Promise<AccessGrantRecord> {
     const [row] = await db
@@ -80,7 +80,7 @@ export class DrizzleAccessGrantRepository implements AccessGrantRepository {
   }
 
   async deleteMany(params: {
-    userId: string;
+    userId: number;
     resource: string;
     resourceId?: string;
     action: string;

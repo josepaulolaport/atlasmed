@@ -12,7 +12,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// Bottom-sheet modal for setting quantity + unit price on a product.
 class ProductOrderSheet extends ConsumerStatefulWidget {
   final CatalogProduct product;
-  final String? clinicId;
+  final int? clinicId;
   final String? clinicName;
   final int initialQty;
   final double? initialUnit;

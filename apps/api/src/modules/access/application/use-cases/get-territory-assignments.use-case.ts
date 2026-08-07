@@ -3,7 +3,7 @@ import type { ScopeRepository } from "../interfaces/scope.repository.interface";
 import { ResourceNotFoundError } from "../../../../shared/errors";
 
 export interface TerritoryAssignmentRepositoryPort {
-  findById(id: string): Promise<{ id: string } | null>;
+  findById(id: number): Promise<{ id: number } | null>;
 }
 
 interface GetTerritoryAssignmentsDependencies {
@@ -13,13 +13,13 @@ interface GetTerritoryAssignmentsDependencies {
 }
 
 export interface TerritoryAssignmentEntry {
-  userId: string;
+  userId: number;
   username: string;
   email: string | null;
   firstName?: string;
   lastName?: string;
   avatarUrl: string | null;
-  role: { id: string; name: string };
+  role: { id: number; name: string };
   assignedAt: string;
 }
 
@@ -31,7 +31,7 @@ export interface TerritoryAssignmentEntry {
 export class GetTerritoryAssignmentsUseCase {
   constructor(private readonly deps: GetTerritoryAssignmentsDependencies) {}
 
-  async execute(territoryId: string): Promise<TerritoryAssignmentEntry[]> {
+  async execute(territoryId: number): Promise<TerritoryAssignmentEntry[]> {
     const territory = await this.deps.territoryRepository.findById(territoryId);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", territoryId);

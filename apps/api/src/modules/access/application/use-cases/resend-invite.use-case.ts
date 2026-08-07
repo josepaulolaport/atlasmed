@@ -19,8 +19,8 @@ interface Dependencies {
 }
 
 interface ResendInviteInput {
-  inviteId: string;
-  actorId: string;
+  inviteId: number;
+  actorId: number;
   actorRole: Role;
   scope: ScopeContext;
 }

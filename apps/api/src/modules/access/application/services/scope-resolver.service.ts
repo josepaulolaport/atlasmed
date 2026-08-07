@@ -18,7 +18,7 @@ export interface ScopeResolverDependencies {
 export class ScopeResolver {
   constructor(private readonly deps: ScopeResolverDependencies) {}
 
-  async resolve(userId: string, roleName: string): Promise<ScopeContext> {
+  async resolve(userId: number, roleName: string): Promise<ScopeContext> {
     return tracer.with(
       "scope.resolve",
       async () => this.resolveScope(userId, roleName),
@@ -26,7 +26,7 @@ export class ScopeResolver {
     );
   }
 
-  private async resolveScope(userId: string, roleName: string): Promise<ScopeContext> {
+  private async resolveScope(userId: number, roleName: string): Promise<ScopeContext> {
     if (roleName === Role.ADMIN) {
       // Prefer explicit user_vertical_assignments (derm-only admin, etc.).
       // Fallback: all active verticals when admin has no UVA rows yet.
@@ -58,7 +58,7 @@ export class ScopeResolver {
   }
 
   /** REP: patches for org/map; clinic list = consultant assigns only (Q4). */
-  private async resolveRepScope(userId: string): Promise<ScopeContext> {
+  private async resolveRepScope(userId: number): Promise<ScopeContext> {
     const [assignedVerticalIds, rawTerritoryIds] = await Promise.all([
       this.deps.scopeRepository.findVerticalIdsByUserId(userId),
       this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
@@ -91,7 +91,7 @@ export class ScopeResolver {
   }
 
   /** OPS: all profiled facilities in assigned verticals; no zone cover (Q4c). */
-  private async resolveOpsScope(userId: string): Promise<ScopeContext> {
+  private async resolveOpsScope(userId: number): Promise<ScopeContext> {
     const [assignedVerticalIds, rawTerritoryIds] = await Promise.all([
       this.deps.scopeRepository.findVerticalIdsByUserId(userId),
       this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
@@ -124,7 +124,7 @@ export class ScopeResolver {
     });
   }
 
-  private async resolveManagerScope(userId: string): Promise<ScopeContext> {
+  private async resolveManagerScope(userId: number): Promise<ScopeContext> {
     const [assignedVerticalIds, managedUserIds, ownAssignments] = await Promise.all([
       this.deps.scopeRepository.findVerticalIdsByUserId(userId),
       this.deps.scopeRepository.findManagedUserIds(userId),
@@ -205,10 +205,10 @@ export class ScopeResolver {
 
   /** Territory clinics ∪ active facility_consultant_assignments for the user. */
   private async mergeAssociatedFacilityIds(
-    userId: string,
-    territoryFacilityIds: string[],
-    verticalIds: string[],
-  ): Promise<string[]> {
+    userId: number,
+    territoryFacilityIds: number[],
+    verticalIds: number[],
+  ): Promise<number[]> {
     const associated =
       await this.deps.facilityAssociationPort.getAssociatedFacilityIds(
         userId,

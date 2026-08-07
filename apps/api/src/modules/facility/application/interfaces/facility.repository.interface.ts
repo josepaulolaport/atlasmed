@@ -1,8 +1,8 @@
-export interface FacilityService {
-  serviceCode: string;
-  classificationCode: string;
-  /** Human-readable CNES service name from `services.service_name`. */
-  serviceName: string;
+export interface FacilityClinicalFocus {
+  id: number;
+  name: string;
+  /** Optional CNES code when mapped from official catalogs. */
+  cnesCode: string | null;
 }
 
 export type FacilityCommercialStatus =
@@ -53,20 +53,20 @@ export interface FacilityVerticalProfilePurchaseRecurrence {
 }
 
 export interface FacilityVerticalProfileRecord {
-  verticalId: string;
+  verticalId: number;
   verticalCode?: string;
   verticalName?: string;
   isActive: boolean;
   commercialStatus: FacilityCommercialStatus | null;
   purchaseStatus: FacilityPurchaseStatus | null;
   /** Profile membership territory (source of truth; not facilities.territory_id). */
-  territoryId?: string | null;
+  territoryId?: number | null;
   /** Per-linha funnel/recurrence (orders of this verticalId). */
   purchaseRecurrence?: FacilityVerticalProfilePurchaseRecurrence;
 }
 
 export interface FacilityRecord {
-  id: string;
+  id: number;
   name: string;
   neighborhood: string | null;
   city: string | null;
@@ -75,6 +75,10 @@ export interface FacilityRecord {
   streetNumber: string | null;
   addressComplement: string | null;
   postalCode: string | null;
+  /** Admin geography FK (`states.id`); never null. */
+  stateId: number;
+  /** Admin geography FK (`municipalities.id`); never null; belongs to `stateId`. */
+  municipalityId: number;
   phone: string | null;
   whatsapp: string | null;
   email: string | null;
@@ -83,27 +87,20 @@ export interface FacilityRecord {
   billingEmail: string | null;
   responsibleName: string | null;
   openingHours: string | null;
-  taxIdType: "PJ" | "PF";
-  cnpj: string | null;
-  cpf: string | null;
+  legalDocumentType: "CNPJ" | "CPF";
+  legalDocument: string | null;
   lat: number | null;
   lng: number | null;
-  territoryId: string | null;
+  territoryId: number | null;
   /** Display name of `territoryId` when loaded (list + detail). */
   territoryName: string | null;
-  territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
-  territoryAssignmentSource: "geo" | "manual";
+  /**
+   * Derived from active vertical profiles: `assigned` if any has managerZoneId,
+   * otherwise `unassigned`. Not persisted on facilities.
+   */
+  territoryAssignmentStatus: "assigned" | "unassigned";
   commercialStatus: FacilityCommercialStatus | null;
   purchaseStatus: FacilityPurchaseStatus | null;
-  observedPurchaseIntervalDays: number | null;
-  purchaseIntervalDays: number;
-  purchaseIntervalSource: "DEFAULT" | "CALCULATED" | "MANUAL";
-  manualPurchaseProfile: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM" | null;
-  manualPurchaseIntervalDays: number | null;
-  lastValidPurchaseDate: string | null;
-  purchaseRecurrenceSampleSize: number;
-  purchaseFunnelStage: FacilityPurchaseFunnelStage;
-  nextPurchaseFunnelTransitionDate: string | null;
   conformityStatus: FacilityConformityStatus;
   /** Active consultant display name when loaded (list + detail). */
   consultantName: string | null;
@@ -117,19 +114,18 @@ export interface FacilityRecord {
   /** Profile / header image URL (`facilities.image_url`). */
   imageUrl: string | null;
   imageBlurhash: string | null;
-  sourceProvider: string | null;
-  externalSourceId: string | null;
-  sourceContentHash: string | null;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  sourcePresent: boolean;
-  sourceTracked: boolean;
-  manuallyEditedAt: Date | null;
+  cnesCode: string | null;
+  /** CNES establishment type code → facility_types. */
+  facilityTypeCode: string | null;
+  /** CNES TP_UNIDADE → unit_types. */
+  unitTypeCode: string | null;
+  /** CNES subtype scoped by unitTypeCode → unit_subtypes. */
+  unitSubtypeCode: string | null;
   deactivatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  /** Populated only on findById, empty array on list queries. */
-  services: FacilityService[];
+  /** Clinical focuses linked to this facility (list + detail). */
+  clinicalFocuses: FacilityClinicalFocus[];
   /** Loaded when vertical context is resolved; may be empty. */
   verticalProfiles?: FacilityVerticalProfileRecord[];
 }
@@ -144,31 +140,21 @@ export interface FacilityListRecord extends FacilityRecord {
 
 export interface FacilityListScopeFilter {
   isGlobal: boolean;
-  facilityIds?: string[];
+  facilityIds?: number[];
   /** Restrict to facilities with active profiles in these verticals (non-ADMIN default). */
-  verticalIds?: string[];
+  verticalIds?: number[];
   /** When true, only facilities with matching active vertical profiles are returned. */
   restrictToVerticalProfiles?: boolean;
 }
 
 /** Thin map pin — no list hydration. */
 export interface FacilityMapPoint {
-  id: string;
+  id: number;
   name: string;
   lat: number;
   lng: number;
   /** Desempenho bucket: active | inactive | neverBought. */
   purchaseBucket: "active" | "inactive" | "neverBought";
-}
-
-export interface FacilitySourceUpsertInput {
-  sourceProvider: string;
-  externalSourceId: string;
-  name: string;
-  lat?: number | null;
-  lng?: number | null;
-  sourceContentHash: string;
-  sourceLastSeenAt: Date;
 }
 
 export type FacilityPurchaseProfileFilter = "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
@@ -187,63 +173,56 @@ export interface FacilityRepository {
     /** Desempenho donut bucket — see countPurchaseBuckets. */
     purchaseBucket?: "active" | "inactive" | "neverBought";
     /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
-    productIds?: string[];
-    /** CNES service codes — facility must offer at least one. */
-    serviceCodes?: string[];
+    productIds?: number[];
+    /** Clinical focus IDs — facility must offer every selected (AND). */
+    clinicalFocusIds?: number[];
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
     purchaseIntervalMaxDays?: number;
     sort?: FacilityListSort;
     order?: FacilityListOrder;
-    userId: string;
+    userId: number;
     scope: FacilityListScopeFilter;
     /** Internal canonical hydration constraint for a Meilisearch result page. */
-    candidateIds?: string[];
+    candidateIds?: number[];
   }): Promise<{ facilities: FacilityListRecord[]; total: number }>;
 
   /** Hydrates ranked search candidates while enforcing canonical list eligibility. */
   findAllByIds(params: {
-    ids: string[];
+    ids: number[];
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
     commercialStatus?: FacilityCommercialStatus;
     purchaseBucket?: "active" | "inactive" | "neverBought";
-    productIds?: string[];
-    serviceCodes?: string[];
+    productIds?: number[];
+    clinicalFocusIds?: number[];
     purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
     purchaseProfile?: FacilityPurchaseProfileFilter;
     purchaseIntervalMinDays?: number;
     purchaseIntervalMaxDays?: number;
     sort?: FacilityListSort;
     order?: FacilityListOrder;
-    userId: string;
+    userId: number;
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]>;
 
-  findById(id: string): Promise<FacilityRecord | null>;
+  findById(id: number): Promise<FacilityRecord | null>;
 
-  /** CNES service catalog for Explorar filters (code + name). */
-  listServiceCatalog(): Promise<
-    Array<{ serviceCode: string; serviceName: string }>
-  >;
-
-  findByExternalId(
-    sourceProvider: string,
-    externalSourceId: string
-  ): Promise<FacilityRecord | null>;
-
-  findSourceTrackedByProvider(sourceProvider: string): Promise<FacilityRecord[]>;
+  /** Clinical focus catalog for Explorar filters. */
+  listClinicalFocusCatalog(): Promise<FacilityClinicalFocus[]>;
 
   create(data: {
     name: string;
+    stateId: number;
+    municipalityId: number;
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord>;
 
   update(
-    id: string,
+    id: number,
     data: {
       name?: string;
       lat?: number | null;
@@ -251,25 +230,17 @@ export interface FacilityRepository {
       imageUrl?: string | null;
       imageBlurhash?: string | null;
       billingEmail?: string | null;
-      taxIdType?: "PJ" | "PF";
+      legalDocumentType?: "CNPJ" | "CPF";
+      legalDocument?: string | null;
       conformityStatus?: FacilityConformityStatus;
-      manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord>;
 
-  softDelete(id: string): Promise<void>;
+  softDelete(id: number): Promise<void>;
 
-  reactivate(id: string): Promise<FacilityRecord>;
+  reactivate(id: number): Promise<FacilityRecord>;
 
-  markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void>;
-
-  upsertFromSource(input: FacilitySourceUpsertInput): Promise<{
-    facility: FacilityRecord;
-    created: boolean;
-    updated: boolean;
-  }>;
-
-  findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]>;
+  findIdsByTerritoryIds(territoryIds: number[]): Promise<number[]>;
 
   /**
    * All in-scope geocoded facilities as thin map points (id/name/lat/lng).
@@ -277,26 +248,26 @@ export interface FacilityRepository {
    */
   listMapPoints(scope: FacilityListScopeFilter): Promise<FacilityMapPoint[]>;
 
-  findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]>;
+  findActiveFacilityIdsByVerticalIds(verticalIds: number[]): Promise<number[]>;
 
   findVerticalProfilesByFacilityIds(
-    facilityIds: string[],
-    verticalIds?: string[],
-  ): Promise<Map<string, FacilityVerticalProfileRecord[]>>;
+    facilityIds: number[],
+    verticalIds?: number[],
+  ): Promise<Map<number, FacilityVerticalProfileRecord[]>>;
 
   updateVerticalProfileCommercialStatus(input: {
-    facilityId: string;
-    verticalId: string;
+    facilityId: number;
+    verticalId: number;
     commercialStatus: FacilityCommercialStatus;
   }): Promise<void>;
 
   ensureVerticalProfile(input: {
-    facilityId: string;
-    verticalId: string;
+    facilityId: number;
+    verticalId: number;
   }): Promise<FacilityVerticalProfileRecord>;
 
   applyApprovedFieldUpdates(
-    id: string,
+    id: number,
     updates: {
       name?: string;
       legalName?: string | null;
@@ -306,9 +277,8 @@ export interface FacilityRepository {
       websiteUrl?: string | null;
       responsibleName?: string | null;
       openingHours?: string | null;
-      taxIdType?: "PJ" | "PF" | null;
-      cnpj?: string | null;
-      cpf?: string | null;
+      legalDocumentType?: "CNPJ" | "CPF" | null;
+      legalDocument?: string | null;
       neighborhood?: string | null;
       streetAddress?: string | null;
       streetNumber?: string | null;
@@ -319,7 +289,6 @@ export interface FacilityRepository {
       country?: string | null;
       lat?: number | null;
       lng?: number | null;
-      manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord>;
 }

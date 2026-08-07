@@ -31,16 +31,16 @@ function redactObject(obj: Record<string, unknown>): Record<string, unknown> {
 }
 
 export interface SiemAuditEvent {
-  id: string;
+  id: number;
   timestamp: string;
   eventType: string;
   severity: string;
   action: string;
-  actorId: string | null;
-  userId: string | null;
+  actorId: number | null;
+  userId: number | null;
   resource: string | null;
   resourceId: string | null;
-  sessionId: string | null;
+  sessionId: number | null;
   outcome: string | null;
   ipAddress: string | null;
   details: Record<string, unknown> | null;

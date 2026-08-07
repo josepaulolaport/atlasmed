@@ -1,8 +1,8 @@
 export interface TerritoryHierarchyPort {
   resolveEffectiveTerritoryIds(
-    assignedTerritoryIds: string[],
+    assignedTerritoryIds: number[],
     activeOnly?: boolean
-  ): Promise<string[]>;
+  ): Promise<number[]>;
 
-  findUsersAssignedToRelatedTerritories(territoryIds: string[]): Promise<string[]>;
+  findUsersAssignedToRelatedTerritories(territoryIds: number[]): Promise<number[]>;
 }

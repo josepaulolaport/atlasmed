@@ -29,7 +29,7 @@ class TerritoryInfoForm extends ConsumerStatefulWidget {
 class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
   late final TextEditingController _nameController;
   late bool _isActive;
-  String? _managerTerritoryId;
+  int? _managerTerritoryId;
   bool _saving = false;
 
   bool get _isPatch => widget.territory.kind == TerritoryKind.repPatch;

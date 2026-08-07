@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 /// A competitor's equivalent product (mirrors `competitor_products`), used
 /// only inside comparison tables against an AtlasMed [CatalogVariant].
 class CompetitorProduct {
@@ -13,7 +14,7 @@ class CompetitorProduct {
     required this.brasindiceUpdatedAt,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String manufacturer;
   final String? brand;
@@ -31,7 +32,7 @@ class CompetitorProduct {
     };
 
     return CompetitorProduct(
-      id: json['id'] as String,
+      id: readCrmId(json['id'], 'id'),
       name: json['name'] as String,
       manufacturer: json['manufacturer'] as String? ?? '',
       brand: json['brand'] as String?,
@@ -46,7 +47,7 @@ class CompetitorProduct {
   }
 
   CompetitorProduct copyWith({
-    String? id,
+    int? id,
     String? name,
     String? manufacturer,
     String? brand,

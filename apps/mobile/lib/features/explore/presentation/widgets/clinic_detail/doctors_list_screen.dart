@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
+import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterListPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
@@ -36,7 +36,7 @@ class DoctorsListScreen extends ConsumerStatefulWidget {
   final String facilityName;
 
   /// When set, load a larger roster page after first frame.
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   ConsumerState<DoctorsListScreen> createState() => _DoctorsListScreenState();
@@ -56,26 +56,22 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
   Future<void> _hydrateFullList({bool force = false}) async {
     final facilityId = widget.facilityId;
-    if (facilityId == null || facilityId.isEmpty) return;
+    if (facilityId == null || (facilityId <= 0)) return;
 
-    List<ProfessionalRoster> next;
-    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-      next = const [];
-    } else {
-      final repo = FacilityProfessionalsRepository(
-        facilityId,
-        page: 1,
-        limit: facilityRosterListPageSize,
-        view: 'all',
-      );
-      try {
-        final page = await repo.loadPage();
-        next = page.items;
-      } catch (_) {
-        return;
-      } finally {
-        repo.dispose();
-      }
+    final repo = FacilityProfessionalsRepository(
+      facilityId,
+      page: 1,
+      limit: facilityRosterListPageSize,
+      view: 'all',
+    );
+    final List<ProfessionalRoster> next;
+    try {
+      final page = await repo.loadPage();
+      next = page.items;
+    } catch (_) {
+      return;
+    } finally {
+      repo.dispose();
     }
 
     if (!mounted) return;
@@ -91,7 +87,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       _doctors = [..._doctors, ...added.where((d) => !existing.contains(d.id))];
     });
     final facilityId = widget.facilityId;
-    if (facilityId != null && facilityId.isNotEmpty) {
+    if (facilityId != null && (facilityId > 0)) {
       // Refresh detail strip behind this route + re-hydrate list from API.
       await ref
           .read(facilityDoctorsRosterProvider(facilityId).notifier)
@@ -349,7 +345,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
   void _openProfile(ProfessionalRoster doctor) {
     final facilityId = widget.facilityId;
-    final uri = facilityId == null || facilityId.isEmpty
+    final uri = facilityId == null || (facilityId <= 0)
         ? '/explore/doctor/${doctor.id}'
         : '/explore/doctor/${doctor.id}?facilityId=$facilityId';
     context.push(uri);
@@ -371,7 +367,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     });
 
     final facilityId = widget.facilityId;
-    if (facilityId != null && facilityId.isNotEmpty) {
+    if (facilityId != null && (facilityId > 0)) {
       ref
           .read(facilityDoctorsRosterProvider(facilityId).notifier)
           .replaceWhere((d) => d.id == updated.id, (_) => updated);

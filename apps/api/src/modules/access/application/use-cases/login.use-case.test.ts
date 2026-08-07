@@ -25,12 +25,12 @@ describe("LoginUseCase", () => {
   let validPasswordHash: string;
 
   const createMockUser = () => ({
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
     passwordHash: validPasswordHash,
-    roleId: "role-123",
+    roleId: 1,
     firstName: "Test",
     lastName: "User",
     status: "ACTIVE",
@@ -43,7 +43,7 @@ describe("LoginUseCase", () => {
     twoFactorEnabled: false,
     twoFactorSecret: null,
     role: {
-      id: "role-123",
+      id: 1,
       name: "USER",
       description: null,
       createdAt: new Date(),
@@ -154,7 +154,7 @@ describe("LoginUseCase", () => {
       });
 
       expect(result.user).toBeDefined();
-      expect(result.user!.id).toBe("user-123");
+      expect(result.user!.id).toBe(123);
       expect(result.user!.email).toBe("user@example.com");
       expect(result.user!.username).toBe("testuser");
     });
@@ -175,7 +175,7 @@ describe("LoginUseCase", () => {
       });
 
       expect(mockUserRepository.updateLastLogin).toHaveBeenCalledTimes(1);
-      expect(mockUserRepository.updateLastLogin).toHaveBeenCalledWith("user-123");
+      expect(mockUserRepository.updateLastLogin).toHaveBeenCalledWith(123);
     });
 
     it("should include ipAddress in session", async () => {
@@ -264,7 +264,7 @@ describe("LoginUseCase", () => {
         reason: "invalid_password",
         ipAddress: undefined,
         userAgent: undefined,
-        userId: "user-123",
+        userId: 123,
       });
     });
 

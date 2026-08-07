@@ -8,6 +8,7 @@ import {
   type AccessGrantRecord,
 } from "@atlasmed/access";
 import { ForbiddenError } from "../../../../shared/errors";
+import { parseRouteId } from "../../../../shared/utils/parse-route-id";
 
 let permissionPluginSeq = 0;
 
@@ -44,15 +45,19 @@ async function assertPermission(
   }
 
   const resourceIdParam = options?.resourceIdParam;
-  const params = context.params as Record<string, string> | undefined;
+  const params = context.params as Record<string, string | number> | undefined;
+  const rawResourceId = resourceIdParam
+    ? params?.[resourceIdParam]
+    : undefined;
 
-  if (resourceIdParam && params?.[resourceIdParam]) {
+  // onBeforeHandle may see path params before or after Elysia coercion
+  if (resourceIdParam && rawResourceId !== undefined && rawResourceId !== "") {
     const allowed = canAccessResource(
       user.role.name,
       grants,
       action,
       subject,
-      params[resourceIdParam]
+      parseRouteId(String(rawResourceId), resourceIdParam)
     );
 
     if (!allowed) {

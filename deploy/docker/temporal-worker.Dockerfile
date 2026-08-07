@@ -1,0 +1,21 @@
+ARG DEPLOY_PLATFORM=linux/arm64
+FROM --platform=${DEPLOY_PLATFORM} oven/bun:1.3.14 AS prepare
+
+WORKDIR /app
+COPY . .
+
+RUN bunx turbo prune @atlasmed/temporal-worker --docker
+
+FROM --platform=${DEPLOY_PLATFORM} oven/bun:1.3.14 AS runtime
+
+WORKDIR /app
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+COPY --from=prepare /app/out/json/ ./
+RUN for i in 1 2 3; do bun install --frozen-lockfile --ignore-scripts && exit 0; echo "bun install failed (attempt $i), retrying..."; sleep 5; done; exit 1
+COPY --from=prepare /app/out/full/ ./
+
+ENV NODE_ENV=production
+
+ENTRYPOINT ["bun", "apps/workers/temporal/src/worker.ts"]

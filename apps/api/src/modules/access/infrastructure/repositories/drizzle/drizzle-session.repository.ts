@@ -17,7 +17,6 @@ export class DrizzleSessionRepository implements SessionRepository {
     const [session] = await db
       .insert(sessions)
       .values({
-        id: params.id,
         userId: params.userId,
         refreshTokenHash: params.refreshTokenHash,
         ipAddress: params.ipAddress ?? null,
@@ -73,7 +72,7 @@ export class DrizzleSessionRepository implements SessionRepository {
     return row ?? null;
   }
 
-  async findById(sessionId: string) {
+  async findById(sessionId: number) {
     const [row] = await db
       .select()
       .from(sessions)
@@ -86,7 +85,7 @@ export class DrizzleSessionRepository implements SessionRepository {
     return { ...row.sessions, user: { ...row.users!, role: row.roles! } };
   }
 
-  async findSessionStatus(sessionId: string) {
+  async findSessionStatus(sessionId: number) {
     const [row] = await db
       .select({
         userId: sessions.userId,
@@ -100,7 +99,7 @@ export class DrizzleSessionRepository implements SessionRepository {
     return row ?? null;
   }
 
-  async findByUserId(userId: string) {
+  async findByUserId(userId: number) {
     const activeSessions = await db
       .select()
       .from(sessions)
@@ -130,14 +129,14 @@ export class DrizzleSessionRepository implements SessionRepository {
     return activeSessionsPerDevice;
   }
 
-  async revoke(sessionId: string) {
+  async revoke(sessionId: number) {
     await db
       .update(sessions)
       .set({ revokedAt: new Date(), updatedAt: new Date() })
       .where(eq(sessions.id, sessionId));
   }
 
-  async revokeForSecurityViolation(sessionId: string) {
+  async revokeForSecurityViolation(sessionId: number) {
     await db
       .update(sessions)
       .set({
@@ -149,7 +148,7 @@ export class DrizzleSessionRepository implements SessionRepository {
       .where(eq(sessions.id, sessionId));
   }
 
-  async revokeAllByUserId(userId: string, excludeSessionId?: string) {
+  async revokeAllByUserId(userId: number, excludeSessionId?: number) {
     const conditions = [eq(sessions.userId, userId), isNull(sessions.revokedAt)];
 
     if (excludeSessionId) {
@@ -167,13 +166,13 @@ export class DrizzleSessionRepository implements SessionRepository {
   }
 
   async revokeActiveByUserAndDeviceFingerprint(
-    userId: string,
+    userId: number,
     deviceFingerprint: string,
     options?: {
       reason?: string;
-      excludeSessionId?: string;
+      excludeSessionId?: number;
     },
-  ): Promise<string[]> {
+  ): Promise<number[]> {
     const conditions = [
       eq(sessions.userId, userId),
       eq(sessions.deviceFingerprint, deviceFingerprint as any),
@@ -208,9 +207,9 @@ export class DrizzleSessionRepository implements SessionRepository {
   }
 
   async revokeAllActiveForDevice(
-    userId: string,
+    userId: number,
     targetSession: {
-      id: string;
+      id: number;
       deviceFingerprint?: string | null;
       userAgent?: string | null;
       deviceType?: string | null;
@@ -218,7 +217,7 @@ export class DrizzleSessionRepository implements SessionRepository {
     options?: {
       reason?: string;
     },
-  ): Promise<string[]> {
+  ): Promise<number[]> {
     const activeSessions = await db
       .select({
         id: sessions.id,
@@ -257,7 +256,7 @@ export class DrizzleSessionRepository implements SessionRepository {
     return sessionIds;
   }
 
-  async updateLastSeen(sessionId: string) {
+  async updateLastSeen(sessionId: number) {
     await db
       .update(sessions)
       .set({ lastSeenAt: new Date(), updatedAt: new Date() })
@@ -265,9 +264,9 @@ export class DrizzleSessionRepository implements SessionRepository {
   }
 
   async revokeAllExceptDevice(
-    userId: string,
+    userId: number,
     currentSession: {
-      id: string;
+      id: number;
       deviceFingerprint?: string | null;
       userAgent?: string | null;
       deviceType?: string | null;
@@ -275,7 +274,7 @@ export class DrizzleSessionRepository implements SessionRepository {
     options?: {
       reason?: string;
     },
-  ): Promise<string[]> {
+  ): Promise<number[]> {
     const activeSessions = await db
       .select({
         id: sessions.id,
@@ -343,7 +342,7 @@ export class DrizzleSessionRepository implements SessionRepository {
         .for("update");
 
       const targetSession = {
-        id: params.id,
+        id: 0,
         deviceFingerprint: params.deviceMatch.deviceFingerprint,
         userAgent: params.deviceMatch.userAgent,
         deviceType: params.deviceMatch.deviceType,
@@ -406,7 +405,6 @@ export class DrizzleSessionRepository implements SessionRepository {
       const [session] = await tx
         .insert(sessions)
         .values({
-          id: params.id,
           userId: params.userId,
           refreshTokenHash: params.refreshTokenHash,
           ipAddress: params.ipAddress ?? null,

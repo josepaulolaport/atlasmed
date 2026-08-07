@@ -19,7 +19,6 @@ const LABEL_MAP: Record<string, string> = {
   sessions: "Sessões",
   security: "Segurança",
   health: "Saúde do sistema",
-  "registry-suggestions": "Sugestões de cadastro",
 };
 
 function humanize(segment: string): string {

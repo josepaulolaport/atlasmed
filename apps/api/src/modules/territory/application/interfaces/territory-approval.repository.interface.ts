@@ -4,18 +4,18 @@ import type {
 } from "@atlasmed/database";
 
 export interface TerritoryApprovalRecord {
-  id: string;
+  id: number;
   type: TerritoryApprovalType;
   status: TerritoryApprovalStatus;
-  requesterId: string;
-  reviewerId: string | null;
+  requesterId: number;
+  reviewerId: number | null;
   entityPayload: Record<string, unknown>;
-  targetTerritoryId: string | null;
-  facilityId: string | null;
-  toTerritoryId: string | null;
+  targetTerritoryId: number | null;
+  facilityId: number | null;
+  toTerritoryId: number | null;
   reason: string | null;
   resolutionNote: string | null;
-  supersededById: string | null;
+  supersededById: number | null;
   resolvedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -23,39 +23,39 @@ export interface TerritoryApprovalRecord {
 
 export interface CreateApprovalInput {
   type: TerritoryApprovalType;
-  requesterId: string;
+  requesterId: number;
   entityPayload: Record<string, unknown>;
-  targetTerritoryId?: string | null;
-  facilityId?: string | null;
-  toTerritoryId?: string | null;
+  targetTerritoryId?: number | null;
+  facilityId?: number | null;
+  toTerritoryId?: number | null;
   reason?: string | null;
 }
 
 export interface TerritoryApprovalRepository {
   create(input: CreateApprovalInput): Promise<TerritoryApprovalRecord>;
 
-  findById(id: string): Promise<TerritoryApprovalRecord | null>;
+  findById(id: number): Promise<TerritoryApprovalRecord | null>;
 
   findPendingByEntity(params: {
     type: TerritoryApprovalType;
-    targetTerritoryId?: string | null;
-    facilityId?: string | null;
+    targetTerritoryId?: number | null;
+    facilityId?: number | null;
   }): Promise<TerritoryApprovalRecord[]>;
 
   findPendingByRequesterAndEntity(params: {
     type: TerritoryApprovalType;
-    requesterId: string;
-    targetTerritoryId?: string | null;
-    facilityId?: string | null;
+    requesterId: number;
+    targetTerritoryId?: number | null;
+    facilityId?: number | null;
   }): Promise<TerritoryApprovalRecord | null>;
 
-  supersede(id: string, supersededById: string): Promise<void>;
+  supersede(id: number, supersededById: number): Promise<void>;
 
   resolve(
-    id: string,
+    id: number,
     data: {
       status: "approved" | "rejected";
-      reviewerId: string;
+      reviewerId: number;
       resolutionNote?: string | null;
     }
   ): Promise<TerritoryApprovalRecord>;

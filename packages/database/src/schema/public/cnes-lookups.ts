@@ -2,7 +2,7 @@ import {
   pgTable,
   text,
   timestamp,
-  primaryKey,
+  primaryKey
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -10,32 +10,6 @@ import { relations } from "drizzle-orm";
  * CNES lookup catalogs (public schema).
  * Seeded separately from CNES CSV import — schema only here.
  */
-
-export const services = pgTable("services", {
-  serviceCode: text("service_code").primaryKey(),
-  serviceName: text("service_name").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const serviceClassifications = pgTable(
-  "service_classifications",
-  {
-    serviceCode: text("service_code")
-      .notNull()
-      .references(() => services.serviceCode, { onDelete: "restrict" }),
-    classificationCode: text("classification_code").notNull(),
-    classificationName: text("classification_name").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    primaryKey({
-      name: "service_classifications_pkey",
-      columns: [t.serviceCode, t.classificationCode],
-    }),
-  ]
-);
 
 export const occupations = pgTable("occupations", {
   occupationCode: text("occupation_code").primaryKey(),
@@ -90,20 +64,6 @@ export const deactivationReasons = pgTable("deactivation_reasons", {
 });
 
 // --- Relations ---
-
-export const servicesRelations = relations(services, ({ many }) => ({
-  classifications: many(serviceClassifications),
-}));
-
-export const serviceClassificationsRelations = relations(
-  serviceClassifications,
-  ({ one }) => ({
-    service: one(services, {
-      fields: [serviceClassifications.serviceCode],
-      references: [services.serviceCode],
-    }),
-  })
-);
 
 export const unitTypesRelations = relations(unitTypes, ({ many }) => ({
   subtypes: many(unitSubtypes),

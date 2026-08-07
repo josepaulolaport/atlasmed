@@ -1,9 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
-
 class FacilityOrdersState {
   const FacilityOrdersState({
     this.orders = const [],
@@ -35,8 +33,8 @@ class FacilityOrdersNotifier extends StateNotifier<FacilityOrdersState> {
     _load();
   }
 
-  final String facilityId;
-  final String? verticalId;
+  final int facilityId;
+  final int? verticalId;
   bool _inFlight = false;
 
   Future<void> _load() async {
@@ -44,11 +42,6 @@ class FacilityOrdersNotifier extends StateNotifier<FacilityOrdersState> {
     _inFlight = true;
     state = state.copyWith(loading: true, clearError: true);
     try {
-      if (isMockNearbyFacilityId(facilityId)) {
-        state = const FacilityOrdersState(orders: []);
-        return;
-      }
-
       final repo = FacilityOrdersRepository(
         facilityId: facilityId,
         limit: 5,
@@ -71,7 +64,7 @@ class FacilityOrdersNotifier extends StateNotifier<FacilityOrdersState> {
 }
 
 final facilityOrdersProvider = StateNotifierProvider.autoDispose
-    .family<FacilityOrdersNotifier, FacilityOrdersState, String>((
+    .family<FacilityOrdersNotifier, FacilityOrdersState, int>((
       ref,
       facilityId,
     ) {

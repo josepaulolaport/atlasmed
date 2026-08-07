@@ -3,7 +3,6 @@ import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { facilityUseCases } from "../../composition";
 import { ordersUseCases } from "../../../orders/composition";
-import { registryReadService } from "../../../registry-ingestion/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
@@ -14,13 +13,13 @@ const listFacilitiesRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/facilities",
-    async ({ query, getScope, getUser }: any) => {
+    async ({ query, getScope, getUser }) => {
       const scope = await getScope();
       const actor = await getUser();
       const filters = parseListFacilitiesQuery(query);
       return facilityUseCases.listFacilities().execute({
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         search: query.search,
         ...filters,
         scope,
@@ -36,38 +35,43 @@ const listFacilitiesRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         search: t.Optional(t.String()),
         latitude: t.Optional(t.String()),
         longitude: t.Optional(t.String()),
         radiusKm: t.Optional(t.String()),
         commercialStatus: t.Optional(t.String()),
         purchaseBucket: t.Optional(t.String()),
-        productIds: t.Optional(t.String()),
-        serviceCodes: t.Optional(t.String()),
+        productIds: t.Optional(
+          t.String({
+            description:
+              "Comma-separated CRM product ids (positive integers); parsed server-side",
+          }),
+        ),
+        clinicalFocusIds: t.Optional(t.String()),
         purchaseFunnelStage: t.Optional(t.String()),
         purchaseProfile: t.Optional(t.String()),
         purchaseIntervalMinDays: t.Optional(t.String()),
         purchaseIntervalMaxDays: t.Optional(t.String()),
         sort: t.Optional(t.String()),
         order: t.Optional(t.String()),
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
 
-const listFacilityServicesRoute = new Elysia()
+const listClinicalFocusesRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY"))
   .get(
-    "/facilities/services",
+    "/facilities/clinical-focuses",
     async () => {
-      return facilityUseCases.listFacilityServices().execute();
+      return facilityUseCases.listClinicalFocuses().execute();
     },
     {
       detail: {
-        summary: "List CNES facility service catalog for filters",
+        summary: "List clinical focus catalog for filters",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -90,6 +94,8 @@ const createFacilityRoute = new Elysia()
       },
       body: t.Object({
         name: t.String(),
+        stateId: t.Integer({ minimum: 1 }),
+        municipalityId: t.Integer({ minimum: 1 }),
         lat: t.Optional(t.Number()),
         lng: t.Optional(t.Number()),
       }),
@@ -101,7 +107,7 @@ const getFacilityRoute = new Elysia()
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
     "/facilities/:id",
-    async ({ params, getScope, getUser, query }: any) => {
+    async ({ params, getScope, getUser, query }) => {
       const scope = await getScope();
       const actor = await getUser();
       const clinic = await facilityUseCases.getFacility().execute({
@@ -118,13 +124,16 @@ const getFacilityRoute = new Elysia()
       return clinic;
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Get clinic by id",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -165,6 +174,9 @@ const updateFacilityRoute = new Elysia()
       return clinic;
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Update clinic",
         tags: ["Clinics"],
@@ -176,7 +188,7 @@ const updateFacilityRoute = new Elysia()
         lng: t.Optional(t.Union([t.Number(), t.Null()])),
         purchaseRecurrence: t.Optional(purchaseRecurrenceType),
         /** Linha comercial — required when clinic has multiple vertical profiles. */
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -200,6 +212,9 @@ const deleteFacilityRoute = new Elysia()
       return { message: "Facility deleted successfully" };
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Delete clinic",
         tags: ["Clinics"],
@@ -220,13 +235,16 @@ const listFacilityProfessionalsRoute = new Elysia()
         facilityId: params.id,
         scope,
         userId,
-        view: query.view as "source" | "confirmed" | "pending" | "all" | undefined,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        view: query.view as "confirmed" | "all" | undefined,
+        page: query.page,
+        limit: query.limit,
         search: query.search,
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List doctors for a clinic by association view",
         tags: ["Clinics"],
@@ -235,14 +253,12 @@ const listFacilityProfessionalsRoute = new Elysia()
       query: t.Object({
         view: t.Optional(
           t.Union([
-            t.Literal("source"),
             t.Literal("confirmed"),
-            t.Literal("pending"),
             t.Literal("all"),
           ])
         ),
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         search: t.Optional(t.String()),
       }),
     }
@@ -269,20 +285,23 @@ const listFacilityRepresentativesRoute = new Elysia()
         facilityId: params.id,
         scope,
         userId,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         search: query.search,
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List active CRM administrative professionals for a facility",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         search: t.Optional(t.String()),
       }),
     }
@@ -314,6 +333,9 @@ const createFacilityRepresentativeRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Create an administrative professional on a facility",
         tags: ["Clinics"],
@@ -364,6 +386,10 @@ const updateFacilityRepresentativeRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        repId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary:
           "Update facility representative fields/role flags; relationshipLevel is user×representative",
@@ -412,6 +438,9 @@ const listFacilityNotesRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List private field notes for a facility",
         tags: ["Clinics"],
@@ -438,6 +467,9 @@ const createFacilityNoteRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Create a private field note for a facility",
         tags: ["Clinics"],
@@ -462,6 +494,9 @@ const listFacilityPhotosRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List photos for a facility",
         tags: ["Clinics"],
@@ -491,6 +526,9 @@ const uploadFacilityPhotoRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Upload a facility photo",
         tags: ["Clinics"],
@@ -545,6 +583,10 @@ const confirmDoctorRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        professionalId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Confirm a source-listed doctor at a clinic",
         tags: ["Clinics"],
@@ -569,6 +611,10 @@ const associateDoctorRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        professionalId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Manually associate a professional with a facility",
         tags: ["Facilities"],
@@ -599,6 +645,10 @@ const getFacilityProfessionalContextRoute = new Elysia()
       return context;
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        professionalId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Get professional registration context for a facility",
         tags: ["Facilities"],
@@ -630,6 +680,10 @@ const updateFacilityProfessionalRoleRoute = new Elysia()
       return association;
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        professionalId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary:
           "Update facility-scoped professional role flags; relationshipLevel is user×professional",
@@ -675,126 +729,13 @@ const endDoctorAssociationRoute = new Elysia()
       return result;
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        professionalId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "End facility-professional association",
         tags: ["Clinics"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
-
-const getRegistryFacilityRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
-  .get(
-    "/facilities/:id/registry/facility",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      const result = await registryReadService.getRegistryFacility({
-        facilityId: params.id,
-        scope,
-      });
-      if (!result) throw new ResourceNotFoundError("RegistryFacility", params.id);
-      return result;
-    },
-    {
-      detail: {
-        summary: "Get registry facility projection",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
-
-const getRegistryProfessionalsRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
-  .get(
-    "/facilities/:id/registry/professionals",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      return registryReadService.getRegistryProfessionals({
-        facilityId: params.id,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "List registry professionals for facility",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
-
-const getRegistryRepresentativesRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
-  .get(
-    "/facilities/:id/registry/representatives",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      return registryReadService.getRegistryRepresentatives({
-        facilityId: params.id,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "List registry representatives for facility",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
-
-const confirmRegistryProfessionalRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
-  .post(
-    "/facilities/:id/registry/professionals/:professionalId/confirm",
-    async ({ params, body, getUserId, getScope }) => {
-      const scope = await getScope();
-      const userId = await getUserId();
-      return facilityUseCases.confirmRegistryProfessional().execute({
-        facilityId: params.id,
-        professionalId: params.professionalId,
-        occupationCode: body.occupationCode,
-        userId,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "Confirm registry professional at facility",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-      body: t.Object({
-        occupationCode: t.String(),
-      }),
-    }
-  );
-
-const confirmRegistryRepresentativeRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
-  .post(
-    "/facilities/:id/registry/representatives/:externalKey/confirm",
-    async ({ params, getUserId, getScope }) => {
-      const scope = await getScope();
-      const userId = await getUserId();
-      return facilityUseCases.confirmRegistryRepresentative().execute({
-        facilityId: params.id,
-        externalKey: params.externalKey,
-        userId,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "Confirm registry representative at facility",
-        tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
     }
@@ -813,6 +754,9 @@ const listConsultantAssignmentsRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List facility consultant assignments",
         tags: ["Facilities"],
@@ -840,14 +784,17 @@ const assignConsultantRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Assign consultant to facility",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
-        userId: t.String(),
-        verticalId: t.Optional(t.String()),
+        userId: t.Number({ minimum: 1 }),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -865,6 +812,9 @@ const unassignConsultantRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "End current consultant assignment for facility",
         tags: ["Facilities"],
@@ -901,6 +851,9 @@ const getFacilityCadastroRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Get facility Cadastro checklist (PF/PJ docs + billing email)",
         tags: ["Facilities"],
@@ -923,6 +876,9 @@ const updateFacilityBillingEmailRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Update facility administrative email",
         tags: ["Facilities"],
@@ -976,6 +932,10 @@ const approveFacilityCadastroRecordRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        recordId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Approve a submitted Cadastro document",
         tags: ["Facilities"],
@@ -1000,6 +960,10 @@ const rejectFacilityCadastroRecordRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        recordId: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Reject a submitted Cadastro document",
         tags: ["Facilities"],
@@ -1025,8 +989,8 @@ const listCadastroSubmissionsRoute = new Elysia()
           | "UNDER_REVIEW"
           | "APPROVED"
           | undefined,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
       });
     },
     {
@@ -1045,9 +1009,8 @@ const listCadastroSubmissionsRoute = new Elysia()
             t.Literal("APPROVED"),
           ])
         ),
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-      }),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),      }),
     }
   );
 
@@ -1064,6 +1027,9 @@ const listFacilityConformityRecordsRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List conformity records for facility",
         tags: ["Facilities"],
@@ -1087,13 +1053,16 @@ const createFacilityConformityRecordRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Create conformity record for facility",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
-        requirementId: t.String(),
+        requirementId: t.Number({ minimum: 1 }),
         status: t.Optional(t.Union([t.Literal("PENDING"), t.Literal("SUBMITTED")])),
       }),
     }
@@ -1112,8 +1081,8 @@ const listFacilityOrdersRoute = new Elysia()
       ]);
       return ordersUseCases.listOrders().execute({
         facilityId: params.id,
-        page: query.page ? Number(query.page) : 1,
-        limit: query.limit ? Number(query.limit) : 5,
+        page: query.page ?? 1,
+        limit: query.limit ?? 5,
         includeItemPreviews: true,
         verticalId: query.verticalId,
         actor: { userId, roleName: authContext.roleName },
@@ -1121,15 +1090,17 @@ const listFacilityOrdersRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List recent orders for a facility (REP: own sales only)",
         tags: ["Orders"],
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-        verticalId: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -1146,20 +1117,22 @@ const listFacilityVisitsRoute = new Elysia()
         facilityId: params.id,
         userId,
         scope,
-        page: query.page ? Number(query.page) : 1,
-        limit: query.limit ? Number(query.limit) : 20,
+        page: query.page ?? 1,
+        limit: query.limit ?? 20,
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "List visits for the authenticated user at a facility",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-      }),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),      }),
     }
   );
 
@@ -1179,6 +1152,9 @@ const createFacilityVisitRoute = new Elysia()
       });
     },
     {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       detail: {
         summary: "Create a visit for the authenticated user at a facility",
         tags: ["Clinics"],
@@ -1194,8 +1170,8 @@ export const facilitiesRoute = new Elysia()
   .use(cadastroSubmissionsRoute)
   .use(mapFacilitiesRoute)
   .use(listFacilitiesRoute)
-  // Before `/facilities/:id` so `services` is not captured as an id.
-  .use(listFacilityServicesRoute)
+  // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
+  .use(listClinicalFocusesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
   .use(updateFacilityRoute)
@@ -1215,11 +1191,6 @@ export const facilitiesRoute = new Elysia()
   .use(getFacilityProfessionalContextRoute)
   .use(updateFacilityProfessionalRoleRoute)
   .use(endDoctorAssociationRoute)
-  .use(getRegistryFacilityRoute)
-  .use(getRegistryProfessionalsRoute)
-  .use(getRegistryRepresentativesRoute)
-  .use(confirmRegistryProfessionalRoute)
-  .use(confirmRegistryRepresentativeRoute)
   .use(listConsultantAssignmentsRoute)
   .use(assignConsultantRoute)
   .use(unassignConsultantRoute)

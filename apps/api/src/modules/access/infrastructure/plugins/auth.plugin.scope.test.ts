@@ -28,12 +28,12 @@ describe("Auth Plugin Scope", () => {
   let mockRedis: Redis;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
     passwordHash: "$argon2id$test",
-    roleId: "role-123",
+    roleId: 1,
     firstName: "Test",
     lastName: "User",
     avatarUrl: null,
@@ -50,7 +50,7 @@ describe("Auth Plugin Scope", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     role: {
-      id: "role-123",
+      id: 1,
       name: "REP",
       description: null,
       priority: 100,
@@ -60,8 +60,8 @@ describe("Auth Plugin Scope", () => {
   };
 
   const mockSession = {
-    id: "session-123",
-    userId: "user-123",
+    id: 1,
+    userId: 123,
     refreshTokenHash: "hashed-token",
     ipAddress: "192.168.1.1",
     userAgent: "Mozilla/5.0",
@@ -94,7 +94,7 @@ describe("Auth Plugin Scope", () => {
       findUserAuthStatus: mock(async () => ({
         status: "ACTIVE",
         tokenVersion: 1,
-        roleId: "role-123",
+        roleId: 1,
         roleName: "REP",
       })),
     } as unknown as UserRepository;
@@ -132,8 +132,8 @@ describe("Auth Plugin Scope", () => {
 
   async function signToken(role: Role = "REP") {
     return tokenService.signAccessToken({
-      sub: "user-123",
-      sid: "session-123",
+      sub: "123",
+      sid: "1",
       role,
       tokenVersion: 1,
       iat: Math.floor(Date.now() / 1000),
@@ -168,7 +168,7 @@ describe("Auth Plugin Scope", () => {
       })
     );
 
-    expect(mockScopeService.resolve).toHaveBeenCalledWith("user-123", "REP");
+    expect(mockScopeService.resolve).toHaveBeenCalledWith(123, "REP");
   });
 
   it("returns isOperationallyActive false for USER without territories", async () => {
@@ -197,7 +197,7 @@ describe("Auth Plugin Scope", () => {
 
     const body = (await response.json()) as {
       isOperationallyActive: boolean;
-      territoryIds: string[];
+      territoryIds: number[];
     };
     expect(body.isOperationallyActive).toBe(false);
     expect(body.territoryIds).toEqual([]);
@@ -208,11 +208,11 @@ describe("Auth Plugin Scope", () => {
       Promise.resolve(
         withTerritoryScopeAliases({
           isGlobal: false,
-          assignedTerritoryIds: ["territory-a"],
-          effectiveTerritoryIds: ["territory-a"],
-          analyticsEffectiveTerritoryIds: ["territory-a"],
-          facilityIds: ["clinic-for-territory-a"],
-          analyticsFacilityIds: ["clinic-for-territory-a"],
+          assignedTerritoryIds: [1],
+          effectiveTerritoryIds: [1],
+          analyticsEffectiveTerritoryIds: [1],
+          facilityIds: [1],
+          analyticsFacilityIds: [1],
           managedUserIds: [],
           isOperationallyActive: true,
         })
@@ -229,10 +229,10 @@ describe("Auth Plugin Scope", () => {
 
     const body = (await response.json()) as {
       isOperationallyActive: boolean;
-      territoryIds: string[];
+      territoryIds: number[];
     };
     expect(body.isOperationallyActive).toBe(true);
-    expect(body.territoryIds).toEqual(["territory-a"]);
+    expect(body.territoryIds).toEqual([1]);
   });
 
   it("returns managedUserIds for MANAGER scope", async () => {
@@ -240,7 +240,7 @@ describe("Auth Plugin Scope", () => {
       ...mockUser,
       role: {
         ...mockUser.role,
-        id: "role-manager",
+        id: 2,
         name: "MANAGER",
       },
     })) as any;
@@ -249,13 +249,13 @@ describe("Auth Plugin Scope", () => {
       Promise.resolve(
         withTerritoryScopeAliases({
           isGlobal: false,
-          assignedTerritoryIds: ["territory-a"],
-          effectiveTerritoryIds: ["territory-a"],
-          analyticsEffectiveTerritoryIds: ["patch-1"],
+          assignedTerritoryIds: [1],
+          effectiveTerritoryIds: [1],
+          analyticsEffectiveTerritoryIds: [60],
           facilityIds: [],
-          analyticsFacilityIds: ["clinic-patch-1"],
-          managedUserIds: ["field-user-1", "field-user-2"],
-          reportAssignedTerritoryIds: ["patch-1"],
+          analyticsFacilityIds: [2],
+          managedUserIds: [2, 3],
+          reportAssignedTerritoryIds: [60],
           isOperationallyActive: true,
         })
       )
@@ -269,8 +269,8 @@ describe("Auth Plugin Scope", () => {
       })
     );
 
-    expect(mockScopeService.resolve).toHaveBeenCalledWith("user-123", "MANAGER");
-    const body = (await response.json()) as { managedUserIds: string[] };
-    expect(body.managedUserIds).toEqual(["field-user-1", "field-user-2"]);
+    expect(mockScopeService.resolve).toHaveBeenCalledWith(123, "MANAGER");
+    const body = (await response.json()) as { managedUserIds: number[] };
+    expect(body.managedUserIds).toEqual([2, 3]);
   });
 });

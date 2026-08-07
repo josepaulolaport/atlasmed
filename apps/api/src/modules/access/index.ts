@@ -13,6 +13,7 @@ import { listUsersRoute } from "./infrastructure/routes/list-users.route";
 import { userManagementRoute } from "./infrastructure/routes/user-management.route";
 import { userRoute } from "./infrastructure/routes/user.route";
 import { requestPasswordResetRoute } from "./infrastructure/routes/request-password-reset.route";
+import { verifyPasswordResetRoute } from "./infrastructure/routes/verify-password-reset.route";
 import { resetPasswordRoute } from "./infrastructure/routes/reset-password.route";
 import { verificationRoute } from "./infrastructure/routes/verification.route";
 import { rolesRoute } from "./infrastructure/routes/roles.route";
@@ -43,6 +44,7 @@ export const access = new Elysia({
   .use(changePasswordRoute)
   .use(capabilitiesRoute)
   .use(requestPasswordResetRoute)
+  .use(verifyPasswordResetRoute)
   .use(resetPasswordRoute)
   .use(verificationRoute)
   .use(rolesRoute)

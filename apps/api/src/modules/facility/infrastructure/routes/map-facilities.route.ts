@@ -8,7 +8,7 @@ export const mapFacilitiesRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/map/facilities/points",
-    async ({ query, getScope, getUser }: any) => {
+    async ({ query, getScope, getUser }) => {
       const scope = await getScope();
       const actor = await getUser();
       return facilityUseCases.listMapFacilityPoints().execute({
@@ -25,7 +25,7 @@ export const mapFacilitiesRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );

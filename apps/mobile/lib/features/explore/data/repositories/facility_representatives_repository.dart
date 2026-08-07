@@ -42,7 +42,7 @@ class FacilityRepresentativesRepository
          name: 'FacilityRepresentativesRepository',
        );
 
-  final String facilityId;
+  final int facilityId;
   final int page;
   final int limit;
   final String? search;
@@ -106,7 +106,7 @@ class FacilityRepresentativesRepository
   }
 
   Future<AdministrativeProfessional> updateRepresentative({
-    required String representativeId,
+    required int representativeId,
     String? representativeName,
     String? roleTitle,
     String? email,

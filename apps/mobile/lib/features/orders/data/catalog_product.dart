@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 class CatalogProduct {
   const CatalogProduct({
     required this.id,
@@ -17,7 +18,7 @@ class CatalogProduct {
     required this.isActive,
   });
 
-  final String id;
+  final int id;
   final String code;
   final String name;
   final String? description;
@@ -56,7 +57,7 @@ class CatalogProduct {
         value is String && value.isNotEmpty ? value : null;
 
     return CatalogProduct(
-      id: json['id'] as String,
+      id: readCrmId(json['id'], 'id'),
       code: json['code'] as String,
       name: json['name'] as String,
       description: readOptionalString(json['description']),

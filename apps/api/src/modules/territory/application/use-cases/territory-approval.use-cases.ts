@@ -4,7 +4,6 @@ import type { TerritoryApprovalType } from "@atlasmed/database";
 import type { TerritoryApprovalRepository } from "../interfaces/territory-approval.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import { TerritoryCrudUseCases } from "./territory-crud.use-cases";
-import type { ClinicMembershipWriter } from "../services/territory-membership.service";
 import type { IAuditLog } from "../../../access/application/interfaces/audit-log.interface";
 import {
   OperationNotAllowedError,
@@ -17,9 +16,8 @@ interface Dependencies {
   approvalRepository: TerritoryApprovalRepository;
   territoryRepository: TerritoryRepository;
   territoryCrud: TerritoryCrudUseCases;
-  clinicWriter: ClinicMembershipWriter;
-  invalidateScopeForTerritories?: (territoryIds: string[]) => Promise<void>;
-  enqueueMembershipRecompute?: (territoryId?: string) => Promise<void>;
+  invalidateScopeForTerritories?: (territoryIds: number[]) => Promise<void>;
+  enqueueMembershipRecompute?: (territoryId?: number) => Promise<void>;
   auditLog?: IAuditLog;
 }
 
@@ -27,14 +25,14 @@ export class TerritoryApprovalUseCases {
   constructor(private readonly deps: Dependencies) {}
 
   async submitRequest(input: {
-    requesterId: string;
+    requesterId: number;
     requesterRole: Role;
     scope: ScopeContext;
     type: TerritoryApprovalType;
     entityPayload: Record<string, unknown>;
-    targetTerritoryId?: string;
-    facilityId?: string;
-    toTerritoryId?: string;
+    targetTerritoryId?: number;
+    facilityId?: number;
+    toTerritoryId?: number;
     reason?: string;
   }) {
     if (input.requesterRole !== Role.MANAGER) {
@@ -65,7 +63,7 @@ export class TerritoryApprovalUseCases {
     if (pendingFromOthers.length > 0) {
       throw new ResourceConflictError(
         "TerritoryApprovalRequest",
-        pendingFromOthers[0]!.id
+        String(pendingFromOthers[0]!.id)
       );
     }
 
@@ -103,7 +101,7 @@ export class TerritoryApprovalUseCases {
     });
   }
 
-  async approveRequest(input: { requestId: string; reviewerId: string; note?: string }) {
+  async approveRequest(input: { requestId: number; reviewerId: number; note?: string }) {
     const request = await this.deps.approvalRepository.findById(input.requestId);
     if (!request) {
       throw new ResourceNotFoundError("TerritoryApprovalRequest", input.requestId);
@@ -128,14 +126,14 @@ export class TerritoryApprovalUseCases {
       eventType: "DATA_ACCESS",
       action: "approve_territory_request",
       resource: "territory_approval",
-      resourceId: request.id,
+      resourceId: String(request.id),
       details: { type: request.type },
     });
 
     return resolved;
   }
 
-  async rejectRequest(input: { requestId: string; reviewerId: string; note?: string }) {
+  async rejectRequest(input: { requestId: number; reviewerId: number; note?: string }) {
     const request = await this.deps.approvalRepository.findById(input.requestId);
     if (!request) {
       throw new ResourceNotFoundError("TerritoryApprovalRequest", input.requestId);
@@ -157,9 +155,9 @@ export class TerritoryApprovalUseCases {
   private async applyApprovedRequest(request: {
     type: TerritoryApprovalType;
     entityPayload: Record<string, unknown>;
-    targetTerritoryId: string | null;
-    facilityId: string | null;
-    toTerritoryId: string | null;
+    targetTerritoryId: number | null;
+    facilityId: number | null;
+    toTerritoryId: number | null;
   }): Promise<void> {
     switch (request.type) {
       case "deactivate_territory":
@@ -171,31 +169,6 @@ export class TerritoryApprovalUseCases {
         }
         await this.deps.territoryCrud.deactivateTerritory(request.targetTerritoryId);
         await this.deps.invalidateScopeForTerritories?.([request.targetTerritoryId]);
-        break;
-      case "clinic_territory_change":
-        if (!request.facilityId || !request.toTerritoryId) {
-          throw new OperationNotAllowedError(
-            "approve_request",
-            "Missing clinic or target territory for clinic move request"
-          );
-        }
-        const target = await this.deps.territoryRepository.findById(request.toTerritoryId);
-        if (!target?.isActive) {
-          throw new OperationNotAllowedError(
-            "approve_request",
-            "Target territory must be active"
-          );
-        }
-        await this.deps.clinicWriter.setProfileTerritory(
-          request.facilityId,
-          target.verticalId,
-          request.toTerritoryId,
-        );
-        await this.deps.clinicWriter.updateTerritoryMembership(request.facilityId, {
-          territoryAssignmentStatus: "assigned",
-          territoryAssignmentSource: "manual",
-        });
-        await this.deps.invalidateScopeForTerritories?.([request.toTerritoryId]);
         break;
       default:
         throw new OperationNotAllowedError("approve_request", "Unknown approval type");

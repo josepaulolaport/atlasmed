@@ -26,7 +26,7 @@ export * from "./schemas/user-assignment.schema";
 export * from "./schemas/user-permission.schema";
 export * from "./schemas/facility.schema";
 export * from "./schemas/professional.schema";
-export * from "./schemas/registry.schema";
+export * from "./schemas/facility-professionals.schema";
 export * from "./schemas/territory.schema";
 
 // Re-export database enums as single source of truth
@@ -60,6 +60,10 @@ export {
   isValidGrantResource,
   isValidGrantAction,
 } from "./permissions/route.permissions";
+export {
+  canOnResource,
+  toGrantResourceId,
+} from "./permissions/casl-scoped.helpers";
 export {
   buildCaslConditionsFromGrant,
   validateGrantConditions,

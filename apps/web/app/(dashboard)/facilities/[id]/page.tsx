@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { facilitiesApi } from "@/lib/api/facilities";
 import { facilityProfessionalsApi } from "@/lib/api/facility-professionals";
 import { professionalsApi } from "@/lib/api/professionals";
-import { registryApi } from "@/lib/api/registry";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { useTerritoryLabels } from "@/components/territory/territory-picker";
 import type {
@@ -14,7 +13,6 @@ import type {
   FacilityProfessionalListItem,
   Professional,
   FacilityProfessionalView,
-  RegistrySuggestion,
 } from "@/types/facility";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,14 +38,11 @@ import { cn } from "@/lib/utils";
 type TabKey =
   | "overview"
   | "professionals"
-  | "registry"
   | "territory";
 
 const VIEWS: { value: FacilityProfessionalView; label: string }[] = [
   { value: "all", label: "Todos ativos" },
-  { value: "source", label: "Origem" },
   { value: "confirmed", label: "Confirmado" },
-  { value: "pending", label: "Confirmação pendente" },
 ];
 
 export default function FacilityDetailPage() {
@@ -65,8 +60,6 @@ export default function FacilityDetailPage() {
   const [associateProfessionalId, setAssociateProfessionalId] = useState("");
   const [loadingProfessionals, setLoadingProfessionals] = useState(false);
 
-  const [suggestions, setSuggestions] = useState<RegistrySuggestion[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const { getLabel: getTerritoryLabel } = useTerritoryLabels();
 
   const loadFacility = useCallback(async () => {
@@ -101,26 +94,6 @@ export default function FacilityDetailPage() {
     }
   }, [facilityId, view, toast]);
 
-  const loadSuggestions = useCallback(async () => {
-    setLoadingSuggestions(true);
-    try {
-      const response = await registryApi.getSuggestions({
-        status: "PENDING",
-        limit: 100,
-      });
-      setSuggestions(
-        response.data.filter((s) => s.facilityId === facilityId)
-      );
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao carregar sugestões"),
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  }, [facilityId, toast]);
 
   useEffect(() => {
     void (async () => {
@@ -134,29 +107,12 @@ export default function FacilityDetailPage() {
     void loadProfessionals();
   }, [loadProfessionals]);
 
-  useEffect(() => {
-    void loadSuggestions();
-  }, [loadSuggestions]);
 
   useEffect(() => {
     void professionalsApi.getProfessionals({ limit: 100 }).then((response) => {
       setAllProfessionals(response.data);
     });
   }, []);
-
-  const handleConfirm = async (professionalId: string) => {
-    try {
-      await facilityProfessionalsApi.confirmProfessional(facilityId, professionalId);
-      toast({ title: "Confirmado", description: "Profissional confirmado na unidade" });
-      await loadProfessionals();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao confirmar profissional"),
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleAssociate = async () => {
     if (!associateProfessionalId) return;
@@ -189,33 +145,6 @@ export default function FacilityDetailPage() {
     }
   };
 
-  const handleApproveSuggestion = async (id: string) => {
-    try {
-      await registryApi.approveSuggestion(id);
-      toast({ title: "Aprovado", description: "Sugestão de cadastro aplicada" });
-      await Promise.all([loadSuggestions(), loadProfessionals(), loadFacility()]);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao aprovar sugestão"),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRejectSuggestion = async (id: string) => {
-    try {
-      await registryApi.rejectSuggestion(id);
-      toast({ title: "Descartado", description: "Sugestão rejeitada" });
-      await loadSuggestions();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao rejeitar sugestão"),
-        variant: "destructive",
-      });
-    }
-  };
 
   const tabs = useMemo<TabItem[]>(
     () => [
@@ -226,15 +155,9 @@ export default function FacilityDetailPage() {
         badge: professionals.length ? String(professionals.length) : undefined,
         badgeVariant: "muted",
       },
-      {
-        value: "registry",
-        label: "Cadastro",
-        badge: suggestions.length ? `${suggestions.length} atualizações` : undefined,
-        badgeVariant: "info",
-      },
       { value: "territory", label: "Território" },
     ],
-    [professionals.length, suggestions.length]
+    [professionals.length]
   );
 
   if (loading) {
@@ -252,7 +175,6 @@ export default function FacilityDetailPage() {
   }
 
   const territoryStatus = facility.territoryAssignmentStatus;
-  const pendingSuggestionCount = suggestions.length;
 
   return (
     <>
@@ -296,19 +218,6 @@ export default function FacilityDetailPage() {
                 Conformidade:{" "}
                 {territoryStatus === "assigned" ? "Validado" : "Revisão"}
               </Badge>
-              {pendingSuggestionCount > 0 && (
-                <Badge variant="warning">
-                  <iconify-icon
-                    icon="solar:inbox-in-linear"
-                    stroke-width="1.5"
-                    className="mr-1.5"
-                  />
-                  {pendingSuggestionCount}{" "}
-                  {pendingSuggestionCount === 1
-                    ? "Sugestão Pendente"
-                    : "Sugestões Pendentes"}
-                </Badge>
-              )}
             </div>
           </div>
 
@@ -351,20 +260,11 @@ export default function FacilityDetailPage() {
           associateProfessionalId={associateProfessionalId}
           setAssociateProfessionalId={setAssociateProfessionalId}
           onAssociate={handleAssociate}
-          onConfirm={handleConfirm}
           onEnd={handleEndAssociation}
           loading={loadingProfessionals}
         />
       )}
 
-      {activeTab === "registry" && (
-        <RegistryTab
-          suggestions={suggestions}
-          loading={loadingSuggestions}
-          onApprove={handleApproveSuggestion}
-          onReject={handleRejectSuggestion}
-        />
-      )}
 
       {activeTab === "territory" && <TerritoryTab facility={facility} />}
     </>
@@ -434,8 +334,6 @@ function OverviewTab({ facility }: { facility: Facility }) {
                     variant={
                       facility.territoryAssignmentStatus === "assigned"
                         ? "success"
-                        : facility.territoryAssignmentStatus === "ambiguous"
-                        ? "warning"
                         : "secondary"
                     }
                   >
@@ -462,10 +360,10 @@ interface ProfessionalsTabProps {
   associateProfessionalId: string;
   setAssociateProfessionalId: (id: string) => void;
   onAssociate: () => void;
-  onConfirm: (id: string) => void;
   onEnd: (id: string) => void;
   loading: boolean;
 }
+
 
 function ProfessionalsTab({
   facilityId,
@@ -476,7 +374,6 @@ function ProfessionalsTab({
   associateProfessionalId,
   setAssociateProfessionalId,
   onAssociate,
-  onConfirm,
   onEnd,
   loading,
 }: ProfessionalsTabProps) {
@@ -553,7 +450,6 @@ function ProfessionalsTab({
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Especialidade</TableHead>
-                <TableHead>Origem</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -562,7 +458,7 @@ function ProfessionalsTab({
               {professionals.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={4}
                     className="py-10 text-center text-sm text-zinc-500"
                   >
                     Nenhum profissional nesta visualização
@@ -581,31 +477,13 @@ function ProfessionalsTab({
                     </TableCell>
                     <TableCell>{row.professional.specialty || "—"}</TableCell>
                     <TableCell>
-                      {row.association.sourceActive ? (
-                        <Badge variant="secondary">Origem</Badge>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>
                       {row.association.confirmedAt ? (
                         <Badge variant="success">Confirmado</Badge>
-                      ) : row.association.pendingConfirmation ? (
-                        <Badge variant="warning">Pendente</Badge>
                       ) : (
                         "—"
                       )}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                      {row.association.pendingConfirmation && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onConfirm(row.professional.id)}
-                        >
-                          Confirmar
-                        </Button>
-                      )}
                       <Button
                         size="sm"
                         variant="ghost"
@@ -625,126 +503,6 @@ function ProfessionalsTab({
   );
 }
 
-interface RegistryTabProps {
-  suggestions: RegistrySuggestion[];
-  loading: boolean;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-}
-
-function RegistryTab({
-  suggestions,
-  loading,
-  onApprove,
-  onReject,
-}: RegistryTabProps) {
-  return (
-    <div className="p-6 max-w-5xl mx-auto w-full">
-      <div className="mb-6 p-4 rounded-lg bg-zinc-50 border border-zinc-200 flex items-start gap-3">
-        <iconify-icon
-          icon="solar:info-circle-linear"
-          stroke-width="1.5"
-          className="text-zinc-400 text-lg mt-0.5"
-        />
-        <div>
-          <h4 className="text-sm font-medium text-zinc-900">Revisão de cadastro</h4>
-          <p className="text-sm text-zinc-500 mt-1">
-            Os dados do CNES são importados e comparados com as informações do
-            seu CRM. Aprove ou rejeite as alterações sugeridas abaixo. Suas
-            edições manuais estão sempre protegidas e nunca são sobrescritas
-            silenciosamente.
-          </p>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="py-10 text-center text-sm text-zinc-500">
-          Carregando sugestões…
-        </div>
-      ) : suggestions.length === 0 ? (
-        <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
-          <iconify-icon
-            icon="solar:check-circle-linear"
-            stroke-width="1.5"
-            className="text-emerald-500 text-3xl"
-          />
-          <h4 className="mt-3 text-sm font-medium text-zinc-900">
-            Nenhuma sugestão pendente
-          </h4>
-          <p className="mt-1 text-sm text-zinc-500">
-            Esta unidade está sincronizada com o cadastro.
-          </p>
-        </div>
-      ) : (
-        suggestions.map((s) => (
-          <SuggestionCard
-            key={s.id}
-            suggestion={s}
-            onApprove={() => onApprove(s.id)}
-            onReject={() => onReject(s.id)}
-          />
-        ))
-      )}
-    </div>
-  );
-}
-
-function SuggestionCard({
-  suggestion,
-  onApprove,
-  onReject,
-}: {
-  suggestion: RegistrySuggestion;
-  onApprove: () => void;
-  onReject: () => void;
-}) {
-  const typeLabels: Record<RegistrySuggestion["type"], string> = {
-    FACILITY_REGISTRY_DEACTIVATED: "Desativação de unidade",
-    FACILITY_REGISTRY_REACTIVATED: "Reativação de unidade",
-    DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Remoção de profissional",
-  };
-  const dotColor: Record<RegistrySuggestion["type"], string> = {
-    FACILITY_REGISTRY_DEACTIVATED: "bg-amber-500",
-    FACILITY_REGISTRY_REACTIVATED: "bg-emerald-500",
-    DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "bg-blue-500",
-  };
-
-  return (
-    <div className="border border-zinc-200 rounded-xl overflow-hidden mb-6 bg-white shadow-sm">
-      <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={cn("w-2 h-2 rounded-full", dotColor[suggestion.type])} />
-          <h3 className="text-sm font-medium text-zinc-900">
-            {typeLabels[suggestion.type]}
-          </h3>
-          <span className="text-xs text-zinc-400 ml-2">
-            Execução #{suggestion.ingestionRunId.slice(0, 8)} •{" "}
-            {new Date(suggestion.suggestedAt).toLocaleString("pt-BR")}
-          </span>
-        </div>
-        <Badge variant="secondary">Pendente</Badge>
-      </div>
-
-      <div className="p-5">
-        <p className="text-sm text-zinc-700">
-          {suggestion.reason || "Divergência de cadastro detectada."}
-        </p>
-        {suggestion.payload && Object.keys(suggestion.payload).length > 0 && (
-          <pre className="mt-3 rounded-md bg-zinc-50 border border-zinc-200 p-3 text-xs text-zinc-600 overflow-auto">
-            {JSON.stringify(suggestion.payload, null, 2)}
-          </pre>
-        )}
-      </div>
-
-      <div className="px-5 py-4 border-t border-zinc-200 bg-white flex items-center justify-end gap-3">
-        <Button variant="ghost" onClick={onReject}>
-          Descartar
-        </Button>
-        <Button onClick={onApprove}>Aplicar sugestão</Button>
-      </div>
-    </div>
-  );
-}
 
 function TerritoryTab({ facility }: { facility: Facility }) {
   const { getLabel } = useTerritoryLabels();

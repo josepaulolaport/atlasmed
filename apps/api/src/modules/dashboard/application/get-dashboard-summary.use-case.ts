@@ -10,7 +10,7 @@ import type {
 
 export type DashboardSummary = {
   /** Narrowing filter when set; `null` = union of all assigned verticals. */
-  verticalId: string | null;
+  verticalId: number | null;
   purchaseStatus: PurchaseStatusBuckets & {
     /** (active + inactive) / total * 100 */
     coveragePercent: number;
@@ -29,12 +29,12 @@ export class GetDashboardSummaryUseCase {
   constructor(private readonly repo: DrizzleDashboardRepository) {}
 
   async execute(input: {
-    userId: string;
+    userId: number;
     role: string;
     scope: ScopeContext;
-    verticalId?: string | null;
+    verticalId?: number | null;
   }): Promise<DashboardSummary> {
-    const filterVerticalId = input.verticalId?.trim() || null;
+    const filterVerticalId = input.verticalId ?? null;
     const resolved = resolveVerticalIds({
       role: input.role,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
@@ -46,7 +46,7 @@ export class GetDashboardSummaryUseCase {
     }
 
     const isAdmin = input.role === Role.ADMIN;
-    const facilityIds: string[] | null = isAdmin
+    const facilityIds: number[] | null = isAdmin
       ? null
       : (input.scope.facilityIds ?? []);
 

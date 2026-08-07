@@ -22,7 +22,7 @@ const ensureDraftSubmissionRoute = new Elysia()
         facilityId: params.id,
         userId,
         scope,
-        verticalId: body?.verticalId,
+        verticalId: body?.verticalId ?? undefined,
       });
     },
     {
@@ -31,9 +31,12 @@ const ensureDraftSubmissionRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       body: t.Optional(
         t.Object({
-          verticalId: t.Optional(t.String({ minLength: 1 })),
+          verticalId: t.Optional(t.Number({ minimum: 1 })),
         })
       ),
     }
@@ -59,8 +62,12 @@ const createSubmissionDocumentRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        submissionId: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
-        requirementId: t.String({ minLength: 1 }),
+        requirementId: t.Number({ minimum: 1 }),
       }),
     }
   );
@@ -90,6 +97,10 @@ const initiateFileUploadRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        documentId: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
         filename: t.String({ minLength: 1, maxLength: 512 }),
         contentType: t.String({ minLength: 3, maxLength: 128 }),
@@ -121,6 +132,10 @@ const signUploadPartsRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        uploadSessionId: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
         partNumbers: t.Array(t.Number({ minimum: 1 }), { minItems: 1 }),
       }),
@@ -137,7 +152,7 @@ const completeFileUploadRoute = new Elysia()
       return facilityUseCases.completeCadastroFileUpload().execute({
         facilityId: params.id,
         fileId: body.fileId,
-        uploadSessionId: body.uploadSessionId,
+        uploadSessionId: body.uploadSessionId ?? null,
         parts: body.parts,
         checksum: body.checksum,
         scope,
@@ -149,9 +164,12 @@ const completeFileUploadRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
-        fileId: t.String({ minLength: 1 }),
-        uploadSessionId: t.Optional(t.Nullable(t.String())),
+        fileId: t.Number({ minimum: 1 }),
+        uploadSessionId: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
         checksum: t.Optional(t.String({ minLength: 16, maxLength: 128 })),
         parts: t.Optional(
           t.Array(
@@ -186,10 +204,14 @@ const reorderDocumentFilesRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        documentId: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
         ordered: t.Array(
           t.Object({
-            fileAssetId: t.String(),
+            fileAssetId: t.Number({ minimum: 1 }),
             position: t.Number({ minimum: 1 }),
             role: documentFileRole,
           }),
@@ -219,6 +241,10 @@ const getFileSignedUrlRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        fileAssetId: t.Number({ minimum: 1 }),
+      }),
       query: t.Object({
         variant: t.Optional(
           t.Union([
@@ -251,6 +277,10 @@ const submitPackageRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        submissionId: t.Number({ minimum: 1 }),
+      }),
     }
   );
 
@@ -273,6 +303,10 @@ const deleteDraftSubmissionRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        submissionId: t.Number({ minimum: 1 }),
+      }),
     }
   );
 
@@ -300,6 +334,10 @@ const reviewDocumentRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        documentId: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
         decision: t.Union([
           t.Literal("APPROVED"),
@@ -308,7 +346,7 @@ const reviewDocumentRoute = new Elysia()
         ]),
         comment: t.Optional(t.String({ maxLength: 2000 })),
         reasonCode: t.Optional(t.String({ maxLength: 64 })),
-        flaggedFileAssetIds: t.Optional(t.Array(t.String())),
+        flaggedFileAssetIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
       }),
     }
   );
@@ -323,8 +361,8 @@ const listPackageSubmissionsRoute = new Elysia()
         status: query.status
           ? [query.status as "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED"]
           : undefined,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
       });
     },
     {
@@ -342,8 +380,8 @@ const listPackageSubmissionsRoute = new Elysia()
             t.Literal("CHANGES_REQUESTED"),
           ])
         ),
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
       }),
     }
   );
@@ -367,6 +405,10 @@ const listRequirementSubmissionsRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        requirementId: t.Number({ minimum: 1 }),
+      }),
     }
   );
 
@@ -391,9 +433,13 @@ const submitRequirementRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        requirementId: t.Number({ minimum: 1 }),
+      }),
       body: t.Optional(
         t.Object({
-          documentId: t.Optional(t.String({ minLength: 1 })),
+          documentId: t.Optional(t.Number({ minimum: 1 })),
         })
       ),
     }

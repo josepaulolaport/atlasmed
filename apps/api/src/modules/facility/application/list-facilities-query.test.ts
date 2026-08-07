@@ -9,8 +9,8 @@ describe("parseListFacilitiesQuery", () => {
   it("requires both coordinates, bounds them, and parses comma-separated product IDs", () => {
     expect(() => parseListFacilitiesQuery({ latitude: "-23.55" })).toThrow();
     expect(() => parseListFacilitiesQuery({ latitude: "91", longitude: "0" })).toThrow();
-    expect(parseListFacilitiesQuery({ latitude: "-23.55", longitude: "-46.63", radiusKm: "5", productIds: "one,two" }))
-      .toMatchObject({ latitude: -23.55, longitude: -46.63, radiusKm: 5, productIds: ["one", "two"] });
+    expect(parseListFacilitiesQuery({ latitude: "-23.55", longitude: "-46.63", radiusKm: "5", productIds: "1,2" }))
+      .toMatchObject({ latitude: -23.55, longitude: -46.63, radiusKm: 5, productIds: [1, 2] });
   });
 
   it("parses purchase filters and applies context-sensitive sort defaults", () => {

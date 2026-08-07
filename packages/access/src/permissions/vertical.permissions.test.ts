@@ -7,8 +7,8 @@ describe("canAccessVertical", () => {
     expect(
       canAccessVertical({
         role: Role.ADMIN,
-        assignedVerticalIds: ["v1", "v2"],
-        verticalId: "v2",
+        assignedVerticalIds: [1, 2],
+        verticalId: 2,
       })
     ).toBe(true);
   });
@@ -18,7 +18,7 @@ describe("canAccessVertical", () => {
       canAccessVertical({
         role: Role.ADMIN,
         assignedVerticalIds: [],
-        verticalId: "v1",
+        verticalId: 1,
       })
     ).toBe(false);
   });
@@ -27,8 +27,8 @@ describe("canAccessVertical", () => {
     expect(
       canAccessVertical({
         role: Role.ADMIN,
-        assignedVerticalIds: ["v1", "v2"],
-        verticalId: "bogus",
+        assignedVerticalIds: [1, 2],
+        verticalId: 99,
       })
     ).toBe(false);
   });
@@ -37,8 +37,8 @@ describe("canAccessVertical", () => {
     expect(
       canAccessVertical({
         role: Role.REP,
-        assignedVerticalIds: ["v1"],
-        verticalId: "v2",
+        assignedVerticalIds: [1],
+        verticalId: 2,
       })
     ).toBe(false);
   });
@@ -49,27 +49,27 @@ describe("resolveAccessibleVerticalIds", () => {
     expect(
       resolveAccessibleVerticalIds({
         role: Role.OPS,
-        assignedVerticalIds: ["v1", "v2"],
+        assignedVerticalIds: [1, 2],
       })
-    ).toEqual({ ok: true, verticalIds: ["v1", "v2"] });
+    ).toEqual({ ok: true, verticalIds: [1, 2] });
   });
 
   it("narrows to filter when allowed", () => {
     expect(
       resolveAccessibleVerticalIds({
         role: Role.MANAGER,
-        assignedVerticalIds: ["v1", "v2"],
-        filterVerticalId: "v1",
+        assignedVerticalIds: [1, 2],
+        filterVerticalId: 1,
       })
-    ).toEqual({ ok: true, verticalIds: ["v1"] });
+    ).toEqual({ ok: true, verticalIds: [1] });
   });
 
   it("forbids filter outside assignments", () => {
     expect(
       resolveAccessibleVerticalIds({
         role: Role.REP,
-        assignedVerticalIds: ["v1"],
-        filterVerticalId: "v2",
+        assignedVerticalIds: [1],
+        filterVerticalId: 2,
       })
     ).toEqual({ ok: false, reason: "forbidden" });
   });

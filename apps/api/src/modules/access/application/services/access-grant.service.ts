@@ -4,12 +4,12 @@ import type { AccessGrantCacheService } from "../../infrastructure/cache/access-
 import type { IAuditLog } from "../interfaces/audit-log.interface";
 
 export interface GrantPermissionParams {
-  userId: string;
+  userId: number;
   resource: string;
   resourceId?: string;
   action: string;
   conditions?: Record<string, unknown>;
-  grantedBy: string;
+  grantedBy: number;
   expiresAt?: Date;
 }
 
@@ -22,7 +22,7 @@ export class AccessGrantService {
     }
   ) {}
 
-  async getActiveGrants(userId: string): Promise<AccessGrantRecord[]> {
+  async getActiveGrants(userId: number): Promise<AccessGrantRecord[]> {
     const cached = await this.deps.accessGrantCache.get(userId);
 
     if (cached) {
@@ -57,11 +57,11 @@ export class AccessGrantService {
   }
 
   async revokePermission(params: {
-    userId: string;
+    userId: number;
     resource: string;
     resourceId?: string;
     action: string;
-    revokedBy: string;
+    revokedBy: number;
   }): Promise<void> {
     await this.deps.accessGrantRepository.deleteMany({
       userId: params.userId,

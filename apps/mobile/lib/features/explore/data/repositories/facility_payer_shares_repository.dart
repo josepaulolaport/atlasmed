@@ -26,7 +26,7 @@ class FacilityPayerSharesRepository
         name: 'FacilityPayerSharesRepository',
       );
 
-  final String facilityId;
+  final int facilityId;
   final RepositoryHttpClient? _client;
 
   @override

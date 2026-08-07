@@ -24,7 +24,6 @@ export function serializeFacilityRepresentative(
     isBiller: row.isBiller,
     isSecretary: row.isSecretary,
     relationshipLevel: relationshipLevel ?? undefined,
-    sourceProvider: row.sourceProvider,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

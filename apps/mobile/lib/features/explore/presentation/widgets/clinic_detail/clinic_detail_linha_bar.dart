@@ -19,8 +19,8 @@ class ClinicDetailLinhaBar extends StatelessWidget {
   });
 
   final List<BusinessVertical> options;
-  final String selectedVerticalId;
-  final ValueChanged<String> onChanged;
+  final int selectedVerticalId;
+  final ValueChanged<int> onChanged;
 
   /// Slight shadow when the bar is pinned to the top while scrolling.
   final bool elevated;
@@ -64,8 +64,8 @@ class ClinicDetailLinhaHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   final List<BusinessVertical> options;
-  final String selectedVerticalId;
-  final ValueChanged<String> onChanged;
+  final int selectedVerticalId;
+  final ValueChanged<int> onChanged;
 
   @override
   double get minExtent => options.length < 2 ? 0 : kClinicDetailLinhaBarHeight;

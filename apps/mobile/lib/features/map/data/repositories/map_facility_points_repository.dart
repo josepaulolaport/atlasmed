@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
@@ -22,9 +23,9 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
         name: 'MapFacilityPointsRepository',
       );
 
-  final String? verticalId;
+  final int? verticalId;
 
-  static Uri _buildEndpoint(String baseUrl, String? verticalId) {
+  static Uri _buildEndpoint(String baseUrl, int? verticalId) {
     final base = Uri.parse(baseUrl);
     final basePath = base.path.endsWith('/')
         ? base.path.substring(0, base.path.length - 1)
@@ -32,8 +33,8 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     return base.replace(
       path: '$basePath/api/v1/map/facilities/points',
       queryParameters: {
-        if (verticalId != null && verticalId.trim().isNotEmpty)
-          'verticalId': verticalId.trim(),
+        if (verticalId != null && verticalId > 0)
+          'verticalId': verticalId.toString(),
       },
     );
   }
@@ -64,7 +65,7 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
       if (coords is! List || coords.length < 2) continue;
       final lng = (coords[0] as num?)?.toDouble();
       final lat = (coords[1] as num?)?.toDouble();
-      final id = properties['facilityId']?.toString();
+      final id = readCrmIdLoose(properties['facilityId']);
       final name = properties['name']?.toString();
       if (lng == null || lat == null || id == null || name == null) continue;
       final rawBucket = properties['purchaseBucket']?.toString();
@@ -88,7 +89,7 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
 }
 
 Future<List<NearbyEstablishment>> fetchMapFacilityPoints({
-  String? verticalId,
+  int? verticalId,
 }) async {
   final repo = MapFacilityPointsRepository(verticalId: verticalId);
   try {

@@ -16,7 +16,7 @@ import {
   DeleteFacilityUseCase,
   GetFacilityUseCase,
   ListFacilitiesUseCase,
-  ListFacilityServicesUseCase,
+  ListClinicalFocusesUseCase,
   UpdateFacilityUseCase,
 } from "./application/use-cases/facility.use-cases";
 import { ListMapFacilityPointsUseCase } from "./application/use-cases/list-map-facility-points.use-case";
@@ -30,11 +30,9 @@ import {
 } from "./application/use-cases/facility-professional.use-cases";
 import {
   AssignFacilityConsultantUseCase,
-  ConfirmRegistryProfessionalUseCase,
-  ConfirmRegistryRepresentativeUseCase,
   ListFacilityConsultantAssignmentsUseCase,
   UnassignFacilityConsultantUseCase,
-} from "./application/use-cases/facility-registry.use-cases";
+} from "./application/use-cases/facility-consultant.use-cases";
 import {
   CreateFacilityConformityRecordUseCase,
   ListConformityRequirementsUseCase,
@@ -91,10 +89,7 @@ import { FacilityGeocodingService } from "./application/services/facility-geocod
 import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
 import { searchService } from "../../infrastructure/search/search.service";
-import { DrizzleRegistryReadRepository } from "../registry-ingestion/infrastructure/repositories/drizzle/drizzle-registry-read.repository";
 import { professionalRepositories } from "../professional/composition";
-
-const registryReadRepository = new DrizzleRegistryReadRepository();
 
 export const facilityRepositories = {
   facility: new DrizzleFacilityRepository(),
@@ -147,7 +142,7 @@ export const facilityGeocodingService = new FacilityGeocodingService({
   geocodingPort,
 });
 
-async function handleFacilityLocationChanged(facilityId: string): Promise<void> {
+async function handleFacilityLocationChanged(facilityId: number): Promise<void> {
   await facilityGeocodingService.ensureCoordinatesPersisted(facilityId);
   await territoryMembershipService.assignFacilityById(facilityId);
 }
@@ -170,8 +165,8 @@ export const facilityUseCases = {
     new ListMapFacilityPointsUseCase({
       facilityRepository: facilityRepositories.facility,
     }),
-  listFacilityServices: () =>
-    new ListFacilityServicesUseCase(facilityMembershipDeps),
+  listClinicalFocuses: () =>
+    new ListClinicalFocusesUseCase(facilityMembershipDeps),
   getFacility: () => new GetFacilityUseCase(facilityMembershipDeps),
   createFacility: () => new CreateFacilityUseCase(facilityMembershipDeps),
   updateFacility: () => new UpdateFacilityUseCase(facilityMembershipDeps),
@@ -206,18 +201,6 @@ export const facilityUseCases = {
       facilityProfessionalRepository: facilityRepositories.association,
       userProfessionalRelationshipRepository:
         professionalRepositories.userProfessionalRelationship,
-    }),
-  confirmRegistryProfessional: () =>
-    new ConfirmRegistryProfessionalUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      facilityRepository: facilityRepositories.facility,
-      registryReadRepository,
-    }),
-  confirmRegistryRepresentative: () =>
-    new ConfirmRegistryRepresentativeUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      facilityRepository: facilityRepositories.facility,
-      registryReadRepository,
     }),
   listFacilityRepresentatives: () =>
     new ListFacilityRepresentativesUseCase({

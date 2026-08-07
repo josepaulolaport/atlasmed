@@ -2,7 +2,6 @@ import { Elysia, t } from "elysia";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { catalogUseCases } from "../../composition";
-
 const sortByQuery = t.Optional(
   t.Union([t.Literal("icms17"), t.Literal("icms18"), t.Literal("icms20")])
 );
@@ -29,7 +28,7 @@ const getPriceIndexRoute = new Elysia()
       },
       query: t.Object({
         sortBy: sortByQuery,
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -55,9 +54,10 @@ const getProductComparisonRoute = new Elysia()
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       query: t.Object({
         sortBy: sortByQuery,
-        verticalId: t.Optional(t.String()),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -68,13 +68,16 @@ const listUnlinkedCompetitorProductsRoute = new Elysia()
   .get(
     "/products/:id/competitors/unlinked",
     async ({ params }) =>
-      catalogUseCases.listUnlinkedCompetitorProducts().execute({ productId: params.id }),
+      catalogUseCases.listUnlinkedCompetitorProducts().execute({
+        productId: params.id,
+      }),
     {
       detail: {
         summary: "List competitor products not yet linked to this product",
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -95,8 +98,9 @@ const linkCompetitorProductRoute = new Elysia()
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
-        competitorProductId: t.String(),
+        competitorProductId: t.Number({ minimum: 1 }),
         notes: t.Optional(t.Nullable(t.String())),
       }),
     }
@@ -118,6 +122,10 @@ const unlinkCompetitorProductRoute = new Elysia()
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        competitorProductId: t.Number({ minimum: 1 }),
+      }),
     }
   );
 

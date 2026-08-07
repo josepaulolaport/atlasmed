@@ -19,8 +19,6 @@ export function applyRoleAbilities(
       can("manage", "PROFESSIONAL");
       can("manage", "TERRITORY");
       can("manage", "INVITATION");
-      can("manage", "REGISTRY_INGESTION");
-      can("manage", "REGISTRY_SUGGESTION");
       can("manage", "SEARCH_SYNC");
       can("manage", "CATALOG");
       can("manage", "VISIT");
@@ -48,9 +46,6 @@ export function applyRoleAbilities(
       can("read", "TERRITORY");
       can("create", "TERRITORY");
       can("update", "TERRITORY");
-      can("read", "REGISTRY_SUGGESTION");
-      can("update", "REGISTRY_SUGGESTION");
-      can("read", "REGISTRY_INGESTION");
       can("read", "CATALOG");
       can("create", "FIELD_SUGGESTION");
       can("read", "FIELD_SUGGESTION");

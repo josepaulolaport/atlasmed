@@ -2,7 +2,7 @@ import type { ScopeContext } from "@atlasmed/access";
 import type { ProfessionalProfile } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import { RELATIONSHIP_LEVEL_MAX } from "@atlasmed/database";
-import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
+import { normalizeSearchFilterValue } from "../../../../shared/normalize-search-filter";
 import { buildMeiliFilter, eqFilter, inFilter } from "../../../../infrastructure/search/meili-filter";
 import {
   ForbiddenError,
@@ -19,7 +19,7 @@ type SearchService = {
   ): Promise<{ hits: T[]; estimatedTotalHits?: number }>;
 };
 
-function orderSearchResultsById<T extends { id: string }>(records: T[], ids: string[]): T[] {
+function orderSearchResultsById<T extends { id: number }>(records: T[], ids: number[]): T[] {
   const recordsById = new Map(records.map((record) => [record.id, record]));
   return ids.flatMap((id) => {
     const record = recordsById.get(id);
@@ -44,9 +44,9 @@ function formatDate(value: Date | null): string | undefined {
 }
 
 function facilitiesInScope(
-  facilities: Array<{ id: string; name: string }>,
+  facilities: Array<{ id: number; name: string }>,
   scope: ScopeContext
-): Array<{ id: string; name: string }> {
+): Array<{ id: number; name: string }> {
   if (scope.isGlobal) {
     return facilities;
   }
@@ -86,7 +86,6 @@ async function serializeProfessionalProfile(
     favoriteSport: professional.favoriteSport ?? undefined,
     languages: professional.languages ?? undefined,
     hobbies: professional.hobbies ?? undefined,
-    notes: professional.notes ?? undefined,
     facilityIds: facilities.map((facility) => facility.id),
     facilities,
     createdAt: professional.createdAt.toISOString(),
@@ -117,7 +116,7 @@ function serializeProfessionalSummary(
   };
 }
 
-function assertFacilityIdsInScope(scope: ScopeContext, facilityIds: string[]): void {
+function assertFacilityIdsInScope(scope: ScopeContext, facilityIds: number[]): void {
   if (scope.isGlobal) {
     return;
   }
@@ -127,7 +126,7 @@ function assertFacilityIdsInScope(scope: ScopeContext, facilityIds: string[]): v
   }
 }
 
-function assertProfessionalAccessible(scope: ScopeContext, facilityIds: string[]): void {
+function assertProfessionalAccessible(scope: ScopeContext, facilityIds: number[]): void {
   if (scope.isGlobal) {
     return;
   }
@@ -152,7 +151,7 @@ function serializeProfessionalNote(note: ProfessionalNoteRecord) {
 
 async function getAccessibleProfessional(
   repository: ProfessionalRepository,
-  professionalId: string,
+  professionalId: number,
   scope: ScopeContext
 ): Promise<ProfessionalRecord> {
   const professional = await repository.findById(professionalId);
@@ -198,8 +197,7 @@ function buildCreateInput(input: {
   favoriteSport?: string;
   languages?: string;
   hobbies?: string;
-  notes?: string;
-  facilityIds?: string[];
+  facilityIds?: number[];
 }): ProfessionalCreateInput {
   return {
     firstName: input.firstName,
@@ -221,7 +219,6 @@ function buildCreateInput(input: {
     favoriteSport: input.favoriteSport ?? null,
     languages: input.languages ?? null,
     hobbies: input.hobbies ?? null,
-    notes: input.notes ?? null,
     facilityIds: input.facilityIds ?? [],
   };
 }
@@ -247,7 +244,6 @@ function buildUpdateInput(input: {
   favoriteSport?: string | null;
   languages?: string | null;
   hobbies?: string | null;
-  notes?: string | null;
 }): ProfessionalUpdateInput {
   return {
     firstName: input.firstName,
@@ -272,8 +268,6 @@ function buildUpdateInput(input: {
     favoriteSport: input.favoriteSport,
     languages: input.languages,
     hobbies: input.hobbies,
-    notes: input.notes,
-    manuallyEditedAt: new Date(),
   };
 }
 
@@ -306,14 +300,14 @@ export class ListProfessionalsUseCase {
     page?: number;
     limit?: number;
     search?: string;
-    facilityId?: string;
+    facilityId?: number;
     specialty?: string;
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
     sort?: string;
     order?: "asc" | "desc";
-    userId?: string;
+    userId?: number;
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
@@ -351,7 +345,7 @@ export class ListProfessionalsUseCase {
               input.userId,
               professionals.map((professional) => professional.id)
             )
-          : new Map<string, number>();
+          : new Map<number, number>();
 
       return {
         data: professionals.map((professional) =>
@@ -369,7 +363,7 @@ export class ListProfessionalsUseCase {
       throw new ServiceUnavailableError("Search");
     }
 
-    let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
+    let result: { hits: Array<{ id: number }>; estimatedTotalHits?: number };
     try {
       const canonicalFilters = [
         input.specialty
@@ -381,10 +375,10 @@ export class ListProfessionalsUseCase {
         ? undefined
         : input.scope.facilityIds.length > 0
           ? inFilter("activeFacilityIds", input.scope.facilityIds)
-          : eqFilter("activeFacilityIds", "__none__");
+          : eqFilter("activeFacilityIds", -1);
       const filter = buildMeiliFilter([...canonicalFilters, scopeFilter])
         ?? buildMeiliFilter(canonicalFilters);
-      result = await searchService.search<{ id: string }>("professionals", search, {
+      result = await searchService.search<{ id: number }>("professionals", search, {
         limit,
         offset: (page - 1) * limit,
         ...(filter ? { filter } : {}),
@@ -415,7 +409,7 @@ export class ListProfessionalsUseCase {
             input.userId,
             professionals.map((professional) => professional.id)
           )
-        : new Map<string, number>();
+        : new Map<number, number>();
 
     return {
       data: professionals.map((professional) =>
@@ -432,7 +426,7 @@ export class ListProfessionalsUseCase {
 export class GetProfessionalUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { professionalId: string; scope: ScopeContext }) {
+  async execute(input: { professionalId: number; scope: ScopeContext }) {
     const professional = await this.deps.doctorRepository.findById(input.professionalId);
 
     if (!professional) {
@@ -452,7 +446,7 @@ export class GetProfessionalUseCase {
 export class ListProfessionalNotesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { professionalId: string; userId: string; scope: ScopeContext }) {
+  async execute(input: { professionalId: number; userId: number; scope: ScopeContext }) {
     await getAccessibleProfessional(
       this.deps.doctorRepository,
       input.professionalId,
@@ -472,8 +466,8 @@ export class CreateProfessionalNoteUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    professionalId: string;
-    userId: string;
+    professionalId: number;
+    userId: number;
     note: string;
     scope: ScopeContext;
   }) {
@@ -530,9 +524,9 @@ export class UpdateDoctorUseCase {
 
   async execute(
     input: {
-      professionalId: string;
+      professionalId: number;
       scope: ScopeContext;
-      facilityIds?: string[];
+      facilityIds?: number[];
     } & Parameters<typeof buildUpdateInput>[0]
   ) {
     const existing = await this.deps.doctorRepository.findById(input.professionalId);
@@ -569,7 +563,7 @@ export class UpdateDoctorUseCase {
 export class DeleteDoctorUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { professionalId: string; scope: ScopeContext }) {
+  async execute(input: { professionalId: number; scope: ScopeContext }) {
     const existing = await this.deps.doctorRepository.findById(input.professionalId);
 
     if (!existing) {

@@ -30,8 +30,8 @@ export const territoriesRoute = new Elysia()
       query: t.Object({
         format: t.Optional(t.Union([t.Literal("tree"), t.Literal("flat")])),
         type: t.Optional(t.String({ description: "Filter by territory type slug (e.g. manager_zone, patch)" })),
-        managerTerritoryId: t.Optional(t.String({ description: "Filter patches by manager zone territory ID" })),
-        verticalId: t.Optional(t.String({ description: "Filter territories by business vertical" })),
+        managerTerritoryId: t.Optional(t.Number({ minimum: 1, description: "Filter patches by manager zone territory ID" })),
+        verticalId: t.Optional(t.Number({ minimum: 1, description: "Filter territories by business vertical" })),
       }),
     }
   )
@@ -40,9 +40,15 @@ export const territoriesRoute = new Elysia()
     return territoryUseCases.listTerritoryTypes().listTypes();
   })
   .use(requirePermission("read", "TERRITORY"))
-  .get("/territory-types/:id", async ({ params }) => {
-    return territoryUseCases.getTerritoryType().getType(params.id);
-  })
+  .get(
+    "/territory-types/:id",
+    async ({ params }) => {
+      return territoryUseCases.getTerritoryType().getType(params.id);
+    },
+    {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    }
+  )
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territory-types",
@@ -59,9 +65,6 @@ export const territoriesRoute = new Elysia()
         name: t.String(),
         description: t.Optional(t.String()),
         canHaveBoundary: t.Optional(t.Boolean()),
-        assignsClinics: t.Optional(t.Boolean()),
-        assignableToUsers: t.Optional(t.Boolean()),
-        assignableToManagers: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
         sortOrder: t.Optional(t.Number()),
       }),
@@ -78,13 +81,11 @@ export const territoriesRoute = new Elysia()
       return territoryUseCases.updateTerritoryType().updateType(params.id, body);
     },
     {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         name: t.Optional(t.String()),
         description: t.Optional(t.Union([t.String(), t.Null()])),
         canHaveBoundary: t.Optional(t.Boolean()),
-        assignsClinics: t.Optional(t.Boolean()),
-        assignableToUsers: t.Optional(t.Boolean()),
-        assignableToManagers: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
         sortOrder: t.Optional(t.Number()),
         isActive: t.Optional(t.Boolean()),
@@ -92,15 +93,21 @@ export const territoriesRoute = new Elysia()
     }
   )
   .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id", async ({ params, getScope }) => {
-    const scope = await getScope();
-    const territory = await territoryUseCases.getTerritory().getTerritory(params.id);
-    if (!territory) {
-      throw new ResourceNotFoundError("Territory", params.id);
+  .get(
+    "/territories/:id",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      const territory = await territoryUseCases.getTerritory().getTerritory(params.id);
+      if (!territory) {
+        throw new ResourceNotFoundError("Territory", params.id);
+      }
+      assertManagerReadableTerritory(scope, params.id);
+      return territory;
+    },
+    {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
-    assertManagerReadableTerritory(scope, params.id);
-    return territory;
-  })
+  )
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territories",
@@ -108,11 +115,19 @@ export const territoriesRoute = new Elysia()
       const user = await getUser();
       const role = user.role.name as Role;
       if (isAdminRole(role)) {
-        return territoryUseCases.createTerritory().createTerritory(body);
+        return territoryUseCases.createTerritory().createTerritory({
+          ...body,
+          verticalId: body.verticalId,
+          territoryTypeId: body.territoryTypeId,
+        });
       }
       // Spec 0006: managers may create rep patches only (not manager zones).
       if (isManagerRole(role) && body.typeSlug === "patch") {
-        return territoryUseCases.createTerritory().createTerritory(body);
+        return territoryUseCases.createTerritory().createTerritory({
+          ...body,
+          verticalId: body.verticalId,
+          territoryTypeId: body.territoryTypeId,
+        });
       }
       throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
     },
@@ -120,8 +135,8 @@ export const territoriesRoute = new Elysia()
       body: t.Object({
         name: t.String(),
         slug: t.String(),
-        verticalId: t.String(),
-        territoryTypeId: t.Optional(t.String()),
+        verticalId: t.Number({ minimum: 1 }),
+        territoryTypeId: t.Optional(t.Number({ minimum: 1 })),
         typeSlug: t.Optional(t.String()),
         boundary: t.Optional(
           t.Object({
@@ -157,6 +172,7 @@ export const territoriesRoute = new Elysia()
       throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
     },
     {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         name: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
@@ -165,25 +181,37 @@ export const territoriesRoute = new Elysia()
     }
   )
   .use(requirePermission("delete", "TERRITORY"))
-  .delete("/territories/:id", async ({ params, getUser }) => {
-    const user = await getUser();
-    if (!isAdminRole(user.role.name as Role)) {
-      throw new InsufficientPermissionsError(["territory:delete"], [`role:${user.role.name}`]);
+  .delete(
+    "/territories/:id",
+    async ({ params, getUser }) => {
+      const user = await getUser();
+      if (!isAdminRole(user.role.name as Role)) {
+        throw new InsufficientPermissionsError(["territory:delete"], [`role:${user.role.name}`]);
+      }
+      return territoryUseCases.deleteTerritory().deleteTerritory(params.id);
+    },
+    {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
-    return territoryUseCases.deleteTerritory().deleteTerritory(params.id);
-  })
+  )
   .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id/boundary", async ({ params, getScope }) => {
-    const scope = await getScope();
-    const boundary = await territoryUseCases.getBoundary().getBoundary({
-      territoryId: params.id,
-      scope,
-    });
-    if (!boundary) {
-      return new Response(null, { status: 204 });
+  .get(
+    "/territories/:id/boundary",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      const boundary = await territoryUseCases.getBoundary().getBoundary({
+        territoryId: params.id,
+        scope,
+      });
+      if (!boundary) {
+        return new Response(null, { status: 204 });
+      }
+      return boundary;
+    },
+    {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
-    return boundary;
-  })
+  )
   .use(requirePermission("update", "TERRITORY"))
   .post(
     "/territories/:id/boundary/impact",
@@ -199,6 +227,7 @@ export const territoriesRoute = new Elysia()
       });
     },
     {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
         coordinates: t.Any(),
@@ -219,14 +248,15 @@ export const territoriesRoute = new Elysia()
         territoryId: params.id,
         scope,
         geoJson,
-        acceptedFacilityIds,
+        acceptedFacilityIds: acceptedFacilityIds,
       });
     },
     {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
         coordinates: t.Any(),
-        acceptedFacilityIds: t.Optional(t.Array(t.String())),
+        acceptedFacilityIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
       }),
       detail: {
         summary: "Save territory boundary (requires acceptedFacilityIds when impact non-empty)",
@@ -235,13 +265,19 @@ export const territoriesRoute = new Elysia()
       },
     }
   )
-  .delete("/territories/:id/boundary", async ({ params, getScope }) => {
-    const scope = await getScope();
-    return territoryUseCases.deleteBoundary().deleteBoundary({
-      territoryId: params.id,
-      scope,
-    });
-  })
+  .delete(
+    "/territories/:id/boundary",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      return territoryUseCases.deleteBoundary().deleteBoundary({
+        territoryId: params.id,
+        scope,
+      });
+    },
+    {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    }
+  )
   .use(requirePermission("manage", "TERRITORY"))
   .post("/territories/recompute-membership", async ({ getUser }) => {
     const user = await getUser();
@@ -257,16 +293,16 @@ export const territoriesRoute = new Elysia()
       const scope = await getScope();
       return territoryUseCases.listUnassignedFacilities().listUnassignedFacilities({
         scope,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         managerZoneId: query.managerZoneId,
       });
     },
     {
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-        managerZoneId: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
+        managerZoneId: t.Optional(t.Number({ minimum: 1 })),
       }),
       detail: {
         summary: "List clinics in manager zones without a primary consultant",
@@ -290,19 +326,13 @@ export const territoriesRoute = new Elysia()
       });
     },
     {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
-        territoryId: t.String(),
+        territoryId: t.Number({ minimum: 1 }),
         reason: t.Optional(t.String()),
       }),
     }
   )
-  .post("/facilities/:id/territory/unlock-geo", async ({ params, getUser }) => {
-    const user = await getUser();
-    if (!isAdminRole(user.role.name as Role)) {
-      throw new InsufficientPermissionsError(["clinic:update"], [`role:${user.role.name}`]);
-    }
-    return territoryUseCases.unlockClinicGeo().unlockClinicGeo({ facilityId: params.id });
-  })
   .use(requirePermission("update", "TERRITORY"))
   .post(
     "/territories/approval-requests",
@@ -323,14 +353,11 @@ export const territoriesRoute = new Elysia()
     },
     {
       body: t.Object({
-        type: t.Union([
-          t.Literal("deactivate_territory"),
-          t.Literal("clinic_territory_change"),
-        ]),
+        type: t.Literal("deactivate_territory"),
         entityPayload: t.Optional(t.Record(t.String(), t.Any())),
-        targetTerritoryId: t.Optional(t.String()),
-        facilityId: t.Optional(t.String()),
-        toTerritoryId: t.Optional(t.String()),
+        targetTerritoryId: t.Optional(t.Number({ minimum: 1 })),
+        facilityId: t.Optional(t.Number({ minimum: 1 })),
+        toTerritoryId: t.Optional(t.Number({ minimum: 1 })),
         reason: t.Optional(t.String()),
       }),
     }
@@ -345,15 +372,15 @@ export const territoriesRoute = new Elysia()
       }
       return territoryUseCases.listApprovalRequests().listRequests({
         status: query.status as "pending" | undefined,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
       });
     },
     {
       query: t.Object({
         status: t.Optional(t.String()),
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   )
@@ -371,6 +398,7 @@ export const territoriesRoute = new Elysia()
       });
     },
     {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({ note: t.Optional(t.String()) }),
     }
   )
@@ -388,6 +416,7 @@ export const territoriesRoute = new Elysia()
       });
     },
     {
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({ note: t.Optional(t.String()) }),
     }
   );

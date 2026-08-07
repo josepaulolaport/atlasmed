@@ -22,7 +22,7 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
 
   final List<AdministrativeProfessional> professionals;
   final String facilityName;
-  final String? facilityId;
+  final int? facilityId;
 
   /// When true, [onLoadMore] is called as the user reaches the loaded cards.
   final bool hasMore;
@@ -71,7 +71,7 @@ class _ProfessionalCard extends StatelessWidget {
 
   final AdministrativeProfessional professional;
   final String facilityName;
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   Widget build(BuildContext context) {

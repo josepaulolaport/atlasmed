@@ -1,4 +1,4 @@
-import { generateRandomToken } from "../../../../shared/utils/generate-random-token";
+import { generatePasswordResetCode } from "../../../../shared/utils/generate-password-reset-code";
 import { hashToken } from "../../../../shared/utils/hash-token";
 import {
   ResetTokenExpiredError,
@@ -13,7 +13,7 @@ interface Dependencies {
 }
 
 interface CreatePasswordResetParams {
-  userId: string;
+  userId: number;
 }
 
 export class PasswordResetService {
@@ -22,7 +22,7 @@ export class PasswordResetService {
   async createPasswordReset(params: CreatePasswordResetParams) {
     await this.deps.passwordResetRepository.invalidateUnusedForUser(params.userId);
 
-    const token = generateRandomToken();
+    const token = generatePasswordResetCode();
     const tokenHash = hashToken(token);
 
     const passwordReset = await this.deps.passwordResetRepository.create({

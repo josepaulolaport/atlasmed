@@ -5,18 +5,17 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  integer,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import { users } from "./users";
 
 /** Commercial business vertical (e.g. Ortopédica, Estética). Not a medical specialty. */
 export const businessVerticals = pgTable(
   "business_verticals",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     /** Stable integration key, e.g. ORTOPEDIA. */
     code: text("code").notNull().unique(),
     name: text("name").notNull(),
@@ -31,16 +30,12 @@ export const businessVerticals = pgTable(
 export const userVerticalAssignments = pgTable(
   "user_vertical_assignments",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "cascade" }),
-    assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
+    assignedByUserId: bigint("assigned_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),

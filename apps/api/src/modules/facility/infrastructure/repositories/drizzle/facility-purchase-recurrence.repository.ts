@@ -15,15 +15,14 @@ import type {
   ManualPurchaseConfiguration,
 } from "../../../application/interfaces/facility-purchase-recurrence.repository.interface";
 import type { FacilityRecord } from "../../../application/interfaces/facility.repository.interface";
-import { pickFacilityFunnelRollup } from "../../../application/utils/facility-purchase-funnel-rollup.utils";
 import { mapFacility } from "./drizzle-facility.repository";
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 async function loadPurchaseDates(
   tx: Tx,
-  facilityId: string,
-  verticalId: string,
+  facilityId: number,
+  verticalId: number,
 ): Promise<string[]> {
   return tx
     .select({
@@ -44,55 +43,6 @@ async function loadPurchaseDates(
     .orderBy(sql`(${orders.orderedAt} at time zone 'UTC')::date desc`)
     .limit(13)
     .then((rows) => rows.map((row) => String(row.date)));
-}
-
-async function applyFacilityRollup(
-  tx: Tx,
-  facilityId: string,
-): Promise<void> {
-  const profiles = await tx
-    .select({
-      purchaseFunnelStage: facilityVerticalProfiles.purchaseFunnelStage,
-      observedPurchaseIntervalDays:
-        facilityVerticalProfiles.observedPurchaseIntervalDays,
-      purchaseIntervalDays: facilityVerticalProfiles.purchaseIntervalDays,
-      purchaseIntervalSource: facilityVerticalProfiles.purchaseIntervalSource,
-      manualPurchaseProfile: facilityVerticalProfiles.manualPurchaseProfile,
-      manualPurchaseIntervalDays:
-        facilityVerticalProfiles.manualPurchaseIntervalDays,
-      lastValidPurchaseDate: facilityVerticalProfiles.lastValidPurchaseDate,
-      purchaseRecurrenceSampleSize:
-        facilityVerticalProfiles.purchaseRecurrenceSampleSize,
-      nextPurchaseFunnelTransitionDate:
-        facilityVerticalProfiles.nextPurchaseFunnelTransitionDate,
-    })
-    .from(facilityVerticalProfiles)
-    .where(
-      and(
-        eq(facilityVerticalProfiles.facilityId, facilityId),
-        eq(facilityVerticalProfiles.isActive, true),
-      ),
-    );
-
-  const rollup = pickFacilityFunnelRollup(profiles);
-  if (!rollup) return;
-
-  await tx
-    .update(facilities)
-    .set({
-      observedPurchaseIntervalDays: rollup.observedPurchaseIntervalDays,
-      purchaseIntervalDays: rollup.purchaseIntervalDays,
-      purchaseIntervalSource: rollup.purchaseIntervalSource,
-      manualPurchaseProfile: rollup.manualPurchaseProfile,
-      manualPurchaseIntervalDays: rollup.manualPurchaseIntervalDays,
-      lastValidPurchaseDate: rollup.lastValidPurchaseDate,
-      purchaseRecurrenceSampleSize: rollup.purchaseRecurrenceSampleSize,
-      purchaseFunnelStage: rollup.purchaseFunnelStage,
-      nextPurchaseFunnelTransitionDate: rollup.nextPurchaseFunnelTransitionDate,
-      purchaseRecurrenceCalculatedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(facilities.id, facilityId));
 }
 
 function snapshotSet(snapshot: PurchaseRecurrenceSnapshot, configuration: ManualPurchaseConfiguration) {
@@ -117,8 +67,8 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
   constructor(private readonly database: Database = db) {}
 
   async withLockedProfile<T>(
-    facilityId: string,
-    verticalId: string,
+    facilityId: number,
+    verticalId: number,
     callback: Parameters<FacilityPurchaseRecurrenceRepository["withLockedProfile"]>[2],
     fields: Parameters<FacilityPurchaseRecurrenceRepository["withLockedProfile"]>[3] = {},
   ): Promise<{ result: T; facility: FacilityRecord } | null> {
@@ -133,7 +83,7 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
       if (!facilityAlive[0]) return null;
 
       const lockedRows = await tx.execute(sql<{
-        id: string;
+        id: number;
         manual_purchase_profile: ManualPurchaseConfiguration["manualProfile"];
         manual_purchase_interval_days: number | null;
       }>`select id, manual_purchase_profile, manual_purchase_interval_days
@@ -144,7 +94,7 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
           for update`);
       const locked = lockedRows[0] as
         | {
-            id: string;
+            id: number;
             manual_purchase_profile: ManualPurchaseConfiguration["manualProfile"];
             manual_purchase_interval_days: number | null;
           }
@@ -166,20 +116,15 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
         .set(snapshotSet(desired.snapshot, desired.configuration))
         .where(eq(facilityVerticalProfiles.id, locked.id));
 
-      if (fields.name !== undefined || fields.manuallyEditedAt !== undefined) {
+      if (fields.name !== undefined) {
         await tx
           .update(facilities)
           .set({
-            ...(fields.name !== undefined ? { displayName: fields.name } : {}),
-            ...(fields.manuallyEditedAt !== undefined
-              ? { manuallyEditedAt: fields.manuallyEditedAt }
-              : {}),
+            displayName: fields.name,
             updatedAt: new Date(),
           })
           .where(eq(facilities.id, facilityId));
       }
-
-      await applyFacilityRollup(tx, facilityId);
 
       const [updated] = await tx
         .select()
@@ -192,7 +137,7 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
   }
 
   async recalculateAllProfiles(
-    facilityId: string,
+    facilityId: number,
     today: string,
   ): Promise<{ changed: boolean } | null> {
     return this.database.transaction(async (tx) => {
@@ -275,8 +220,7 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
           .where(eq(facilityVerticalProfiles.id, profile.id));
       }
 
-      if (changed || profiles.some((p) => p.purchaseRecurrenceCalculatedAt == null)) {
-        await applyFacilityRollup(tx, facilityId);
+      if (profiles.some((p) => p.purchaseRecurrenceCalculatedAt == null)) {
         changed = true;
       }
 

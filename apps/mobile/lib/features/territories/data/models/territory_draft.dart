@@ -14,11 +14,11 @@ const _unset = _Unset();
 class TerritoryDraft {
   final String name;
   final TerritoryKind kind;
-  final String verticalId;
+  final int verticalId;
 
   /// Required when [kind] is [TerritoryKind.repPatch] — the manager zone
   /// this patch belongs to. Always `null` for a manager zone itself.
-  final String? managerTerritoryId;
+  final int? managerTerritoryId;
 
   const TerritoryDraft({
     required this.name,
@@ -30,7 +30,7 @@ class TerritoryDraft {
   TerritoryDraft copyWith({
     String? name,
     TerritoryKind? kind,
-    String? verticalId,
+    int? verticalId,
     Object? managerTerritoryId = _unset,
   }) {
     return TerritoryDraft(
@@ -39,7 +39,7 @@ class TerritoryDraft {
       verticalId: verticalId ?? this.verticalId,
       managerTerritoryId: identical(managerTerritoryId, _unset)
           ? this.managerTerritoryId
-          : managerTerritoryId as String?,
+          : managerTerritoryId as int?,
     );
   }
 }

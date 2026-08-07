@@ -35,8 +35,8 @@ export const auditMiddleware = new Elysia({ name: "audit-middleware" }).onAfterH
     const getAuthContext =
       "getAuthContext" in ctx
         ? (ctx.getAuthContext as () => Promise<{
-            userId: string;
-            sessionId: string;
+            userId: number;
+            sessionId: number;
           }>)
         : null;
 

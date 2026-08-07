@@ -1,38 +1,37 @@
 export interface FacilityHealthcareProviderShareRecord {
-  id: string;
-  facilityId: string;
-  healthcareProviderId: string;
+  id: number;
+  facilityId: number;
+  healthcareProviderId: number;
   sharePercent: number;
   isPackage: boolean;
-  source: "MANUAL" | "REGISTRY" | "IMPORT";
   createdAt: Date;
   updatedAt: Date;
   healthcareProvider: {
-    id: string;
+    id: number;
     name: string;
     type: string;
   };
 }
 
 export interface FacilityHealthcareProviderShareRepository {
-  findByFacility(facilityId: string): Promise<FacilityHealthcareProviderShareRecord[]>;
+  findByFacility(facilityId: number): Promise<FacilityHealthcareProviderShareRecord[]>;
 
   create(data: {
-    facilityId: string;
-    healthcareProviderId: string;
+    facilityId: number;
+    healthcareProviderId: number;
     sharePercent: number;
     isPackage?: boolean;
   }): Promise<FacilityHealthcareProviderShareRecord>;
 
   /** Atomically replace all shares for a facility (empty clears the mix). */
   replaceByFacility(
-    facilityId: string,
+    facilityId: number,
     shares: Array<{
-      healthcareProviderId: string;
+      healthcareProviderId: number;
       sharePercent: number;
       isPackage?: boolean;
     }>
   ): Promise<FacilityHealthcareProviderShareRecord[]>;
 
-  sumSharePercentForFacility(facilityId: string): Promise<number>;
+  sumSharePercentForFacility(facilityId: number): Promise<number>;
 }

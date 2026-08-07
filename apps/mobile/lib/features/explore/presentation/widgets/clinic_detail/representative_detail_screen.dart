@@ -20,7 +20,7 @@ class RepresentativeDetailScreen extends ConsumerStatefulWidget {
 
   final AdministrativeProfessional professional;
   final String facilityName;
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   ConsumerState<RepresentativeDetailScreen> createState() =>
@@ -34,8 +34,7 @@ class _RepresentativeDetailScreenState
 
   bool get _useApi {
     final id = widget.facilityId;
-    if (id == null || id.isEmpty) return false;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
+    return id != null && id > 0;
   }
 
   @override

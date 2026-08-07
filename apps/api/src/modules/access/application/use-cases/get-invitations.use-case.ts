@@ -13,7 +13,7 @@ interface GetInvitationsInput {
   status?: string;
   page?: number;
   limit?: number;
-  actorId: string;
+  actorId: number;
   actorRole: Role;
   scope: ScopeContext;
 }
@@ -43,7 +43,7 @@ export class GetInvitationsUseCase {
       status?: string;
       page: number;
       limit: number;
-      invitedByUserId?: string;
+      invitedByUserId?: number;
     } = {
       status: input.status,
       page,
@@ -93,7 +93,7 @@ export class GetInvitationsUseCase {
             const t = territoryById.get(id);
             return {
               id,
-              name: t?.name ?? id,
+              name: t?.name ?? String(id),
               verticalId: row.verticalId,
               verticalName: verticalNameById.get(row.verticalId),
             };

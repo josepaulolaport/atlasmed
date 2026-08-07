@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
+import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterListPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
@@ -32,7 +32,7 @@ class AdministrativeProfessionalsListScreen extends ConsumerStatefulWidget {
   final String facilityName;
 
   /// When set, load a larger page after first frame.
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   ConsumerState<AdministrativeProfessionalsListScreen> createState() =>
@@ -58,25 +58,21 @@ class _AdministrativeProfessionalsListScreenState
 
   Future<void> _hydrateFullList({bool force = false}) async {
     final facilityId = widget.facilityId;
-    if (facilityId == null || facilityId.isEmpty) return;
+    if (facilityId == null || (facilityId <= 0)) return;
 
-    List<AdministrativeProfessional> next;
-    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-      next = const [];
-    } else {
-      final repo = FacilityRepresentativesRepository(
-        facilityId,
-        page: 1,
-        limit: facilityRosterListPageSize,
-      );
-      try {
-        final page = await repo.loadPage();
-        next = page.items;
-      } catch (_) {
-        return;
-      } finally {
-        repo.dispose();
-      }
+    final repo = FacilityRepresentativesRepository(
+      facilityId,
+      page: 1,
+      limit: facilityRosterListPageSize,
+    );
+    final List<AdministrativeProfessional> next;
+    try {
+      final page = await repo.loadPage();
+      next = page.items;
+    } catch (_) {
+      return;
+    } finally {
+      repo.dispose();
     }
 
     if (!mounted) return;
@@ -96,7 +92,7 @@ class _AdministrativeProfessionalsListScreenState
       ];
     });
     final facilityId = widget.facilityId;
-    if (facilityId != null && facilityId.isNotEmpty) {
+    if (facilityId != null && (facilityId > 0)) {
       await ref
           .read(facilityAdministratorsRosterProvider(facilityId).notifier)
           .retry();
@@ -261,7 +257,7 @@ class _AdministrativeProfessionalsListScreenState
                           ];
                         });
                         final facilityId = widget.facilityId;
-                        if (facilityId != null && facilityId.isNotEmpty) {
+                        if (facilityId != null && (facilityId > 0)) {
                           await ref
                               .read(
                                 facilityAdministratorsRosterProvider(

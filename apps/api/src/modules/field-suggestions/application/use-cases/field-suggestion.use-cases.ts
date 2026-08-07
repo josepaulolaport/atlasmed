@@ -15,7 +15,7 @@ import type { FieldSuggestionRepository } from "../interfaces/field-suggestion.r
 import { serializeFieldSuggestion } from "../mappers/field-suggestion.mapper";
 import type { FieldSuggestionApplyService } from "../services/field-suggestion-apply.service";
 
-function resolveFacilityScope(scope: ScopeContext): string[] | undefined {
+function resolveFacilityScope(scope: ScopeContext): number[] | undefined {
   if (scope.isGlobal) {
     return undefined;
   }
@@ -33,8 +33,8 @@ export class CreateFacilityFieldSuggestionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    userId: string;
+    facilityId: number;
+    userId: number;
     scope: ScopeContext;
     kind: "FIELD_CHANGE" | "DEACTIVATION";
     fieldKey?: string;
@@ -49,10 +49,8 @@ export class CreateFacilityFieldSuggestionUseCase {
     }
 
     if (input.kind === "DEACTIVATION") {
-      const id = crypto.randomUUID();
       const { suggestion, supersededIds } =
         await this.deps.fieldSuggestionRepository.createWithSupersede({
-          id,
           kind: "DEACTIVATION",
           facilityId: input.facilityId,
           fieldKey: null,
@@ -67,7 +65,7 @@ export class CreateFacilityFieldSuggestionUseCase {
         eventType: "FIELD_SUGGESTION.CREATED",
         action: "field_suggestion_created",
         resource: "field_suggestion",
-        resourceId: suggestion.id,
+        resourceId: String(suggestion.id),
         details: { kind: "DEACTIVATION", facilityId: input.facilityId, supersededIds },
       });
 
@@ -77,7 +75,7 @@ export class CreateFacilityFieldSuggestionUseCase {
           eventType: "FIELD_SUGGESTION.SUPERSEDED",
           action: "field_suggestion_superseded",
           resource: "field_suggestion",
-          resourceId: supersededId,
+          resourceId: String(supersededId),
           details: { supersededBy: suggestion.id },
         });
       }
@@ -97,11 +95,9 @@ export class CreateFacilityFieldSuggestionUseCase {
       input.proposedValue
     );
     const currentValue = snapshotCurrentValue(facility, fieldKey);
-    const id = crypto.randomUUID();
 
     const { suggestion, supersededIds } =
       await this.deps.fieldSuggestionRepository.createWithSupersede({
-        id,
         kind: "FIELD_CHANGE",
         facilityId: input.facilityId,
         fieldKey,
@@ -116,7 +112,7 @@ export class CreateFacilityFieldSuggestionUseCase {
       eventType: "FIELD_SUGGESTION.CREATED",
       action: "field_suggestion_created",
       resource: "field_suggestion",
-      resourceId: suggestion.id,
+      resourceId: String(suggestion.id),
       details: { kind: "FIELD_CHANGE", fieldKey, facilityId: input.facilityId, supersededIds },
     });
 
@@ -126,7 +122,7 @@ export class CreateFacilityFieldSuggestionUseCase {
         eventType: "FIELD_SUGGESTION.SUPERSEDED",
         action: "field_suggestion_superseded",
         resource: "field_suggestion",
-        resourceId: supersededId,
+        resourceId: String(supersededId),
         details: { supersededBy: suggestion.id },
       });
     }
@@ -143,10 +139,10 @@ export class ListFieldSuggestionsUseCase {
     page?: number;
     limit?: number;
     status?: FieldSuggestionStatus;
-    facilityId?: string;
-    submittedByUserId?: string;
+    facilityId?: number;
+    submittedByUserId?: number;
     mineOnly?: boolean;
-    userId: string;
+    userId: number;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
@@ -183,7 +179,7 @@ export class ListFieldSuggestionsUseCase {
 export class GetFieldSuggestionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { suggestionId: string; scope: ScopeContext }) {
+  async execute(input: { suggestionId: number; scope: ScopeContext }) {
     const suggestion = await this.deps.fieldSuggestionRepository.findById(
       input.suggestionId
     );
@@ -200,8 +196,8 @@ export class ApproveFieldSuggestionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    suggestionId: string;
-    userId: string;
+    suggestionId: number;
+    userId: number;
     scope: ScopeContext;
     resolutionNote?: string;
   }) {
@@ -255,7 +251,7 @@ export class ApproveFieldSuggestionUseCase {
       eventType: "FIELD_SUGGESTION.APPROVED",
       action: "field_suggestion_approved",
       resource: "field_suggestion",
-      resourceId: resolved.id,
+      resourceId: String(resolved.id),
       details: {
         facilityId: resolved.facilityId,
         kind: resolved.kind,
@@ -272,8 +268,8 @@ export class RejectFieldSuggestionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    suggestionId: string;
-    userId: string;
+    suggestionId: number;
+    userId: number;
     scope: ScopeContext;
     resolutionNote?: string;
   }) {
@@ -308,7 +304,7 @@ export class RejectFieldSuggestionUseCase {
       eventType: "FIELD_SUGGESTION.REJECTED",
       action: "field_suggestion_rejected",
       resource: "field_suggestion",
-      resourceId: resolved.id,
+      resourceId: String(resolved.id),
       details: { facilityId: resolved.facilityId, kind: resolved.kind },
     });
 

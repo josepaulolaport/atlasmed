@@ -80,7 +80,6 @@ export default function UnassignedFacilitiesPage() {
   const [overrideTerritoryId, setOverrideTerritoryId] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [saving, setSaving] = useState(false);
-  const [unlockingId, setUnlockingId] = useState<string | null>(null);
 
   const canRead = user ? canReadTerritories(user.role.name) : false;
   const userIsAdmin = user ? isAdmin(user.role.name) : false;
@@ -160,40 +159,6 @@ export default function UnassignedFacilitiesPage() {
     }
   };
 
-  const handleUnlock = async (facilityId: string) => {
-    setUnlockingId(facilityId);
-    try {
-      await territoriesApi.unlockClinicGeo(facilityId);
-      toast({
-        title: "Sucesso",
-        description: "Bloqueio geográfico da unidade removido",
-        variant: "success",
-      });
-      dispatch({ type: "FETCH_START" });
-      try {
-        const refreshResponse = await territoriesApi.listUnassignedFacilities({
-          page: state.page,
-          limit: 20,
-        });
-        dispatch({
-          type: "FETCH_SUCCESS",
-          facilities: refreshResponse.data,
-          totalPages: refreshResponse.pagination.totalPages,
-        });
-      } catch {
-        dispatch({ type: "FETCH_ERROR" });
-      }
-    } catch (err) {
-      toast({
-        title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao remover bloqueio geográfico"),
-        variant: "destructive",
-      });
-    } finally {
-      setUnlockingId(null);
-    }
-  };
-
   if (!user || !canRead) {
     return null;
   }
@@ -256,39 +221,23 @@ export default function UnassignedFacilitiesPage() {
                             : "—"}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              facility.territoryAssignmentStatus === "ambiguous"
-                                ? "secondary"
-                                : "destructive"
-                            }
-                          >
+                          <Badge variant="destructive">
                             {facility.territoryAssignmentStatus}
                           </Badge>
                         </TableCell>
                         {userIsAdmin && (
                           <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setOverrideFacility(facility);
-                                  setOverrideTerritoryId("");
-                                  setOverrideReason("");
-                                }}
-                              >
-                                Substituir
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleUnlock(facility.id)}
-                                disabled={unlockingId === facility.id}
-                              >
-                                {unlockingId === facility.id ? "..." : "Desbloquear geo"}
-                              </Button>
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setOverrideFacility(facility);
+                                setOverrideTerritoryId("");
+                                setOverrideReason("");
+                              }}
+                            >
+                              Substituir
+                            </Button>
                           </TableCell>
                         )}
                       </TableRow>

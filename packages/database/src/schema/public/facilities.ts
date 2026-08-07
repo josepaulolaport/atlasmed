@@ -9,10 +9,9 @@ import {
   date,
   index,
   uniqueIndex,
-  check,
+  check
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import { geometryPoint } from "../../types/geometry";
 import {
   conformityStatusEnum,
@@ -23,46 +22,42 @@ import {
   purchaseFunnelStageEnum,
   contactTypeEnum,
   healthcareProviderTypeEnum,
-  healthcareProviderShareSourceEnum,
   conformityRecordStatusEnum,
-  territoryAssignmentStatusEnum,
-  territoryAssignmentSourceEnum,
-  facilityTaxIdTypeEnum,
+  facilityLegalDocumentTypeEnum,
 } from "./enums";
 import { territories } from "./territories";
 import { businessVerticals } from "./business-verticals";
 import { users } from "./users";
 import {
-  services,
   occupations,
   facilityTypes,
   unitTypes,
   deactivationReasons,
 } from "./cnes-lookups";
+import { clinicalFocuses } from "./clinical-focuses";
+import { municipalities, states } from "./admin-geography";
 
 export const facilities = pgTable(
   "facilities",
   {
     // --- Identity ---
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     displayName: text("name").notNull(),
     legalName: text("legal_name"),
     tradeName: text("trade_name"),
 
     // --- Registry provenance ---
     cnesCode: text("cnes_code"),
-    /** CNES internal CO_UNIDADE (13 chars) — join key for relationship files. */
-    cnesUnitId: text("cnes_unit_id"),
     /** CNES type code → facility_types (FK deferred until lookups are seeded). */
     facilityTypeCode: text("facility_type_code"),
-    isActiveInRegistry: boolean("is_active_in_registry").notNull().default(true),
     /** CNES deactivation code → deactivation_reasons (FK deferred until lookups are seeded). */
     registryDeactivationCode: text("registry_deactivation_code"),
 
-    // --- Tax identifiers ---
-    taxIdType: facilityTaxIdTypeEnum("tax_id_type").notNull().default("PJ"),
-    cnpj: text("cnpj"),
-    cpf: text("cpf"),
+    // --- Legal document (digits only; type CNPJ=14 / CPF=11) ---
+    legalDocumentType: facilityLegalDocumentTypeEnum("legal_document_type")
+      .notNull()
+      .default("CNPJ"),
+    legalDocument: text("legal_document"),
 
     // --- Address ---
     country: text("country"),
@@ -73,12 +68,19 @@ export const facilities = pgTable(
     streetNumber: text("street_number"),
     addressComplement: text("address_complement"),
     postalCode: text("postal_code"),
+    /** Admin geography FK → states.id; city/state text kept for display. */
+    stateId: integer("state_id")
+      .notNull()
+      .references(() => states.id, { onDelete: "restrict" }),
+    /** Admin geography FK → municipalities.id; must belong to `stateId`. */
+    municipalityId: integer("municipality_id")
+      .notNull()
+      .references(() => municipalities.id, { onDelete: "restrict" }),
     location: geometryPoint("location"),
 
     // --- Contact ---
     phoneNumber: text("phone_number"),
     whatsappNumber: text("whatsapp_number"),
-    faxNumber: text("fax_number"),
     email: text("email"),
     websiteUrl: text("website_url"),
     /** Administrative email (Cadastro required field). */
@@ -92,113 +94,41 @@ export const facilities = pgTable(
 
     // --- Classification ---
     conformityStatus: conformityStatusEnum("conformity_status").notNull().default("INCOMPLETE"),
-    observedPurchaseIntervalDays: integer("observed_purchase_interval_days"),
-    purchaseIntervalDays: integer("purchase_interval_days").notNull().default(30),
-    purchaseIntervalSource: purchaseIntervalSourceEnum("purchase_interval_source")
-      .notNull()
-      .default("DEFAULT"),
-    manualPurchaseProfile: purchaseProfileEnum("manual_purchase_profile"),
-    manualPurchaseIntervalDays: integer("manual_purchase_interval_days"),
-    lastValidPurchaseDate: date("last_valid_purchase_date"),
-    purchaseRecurrenceSampleSize: smallint("purchase_recurrence_sample_size").notNull().default(0),
-    purchaseFunnelStage: purchaseFunnelStageEnum("purchase_funnel_stage")
-      .notNull()
-      .default("NEVER_PURCHASED"),
-    nextPurchaseFunnelTransitionDate: date("next_purchase_funnel_transition_date"),
-    purchaseRecurrenceCalculatedAt: timestamp("purchase_recurrence_calculated_at", { withTimezone: true }),
     imageUrl: text("image_url"),
     /** BlurHash for the facility header image. */
     imageBlurhash: text("image_blurhash"),
-    /** Legacy free-text unit type (Excel); keep alongside CNES codes in v1. */
-    unitType: text("unit_type"),
-    /** Legacy free-text unit subtype (Excel); keep alongside CNES codes in v1. */
-    unitSubtype: text("unit_subtype"),
     /** CNES TP_UNIDADE → unit_types (FK deferred until lookups are seeded). */
     unitTypeCode: text("unit_type_code"),
     /** CNES subtype code from rlEstabSubTipo; scoped by unit_type_code (FK deferred). */
     unitSubtypeCode: text("unit_subtype_code"),
 
-    // --- Territory (membership lives on facility_vertical_profiles.territory_id) ---
-    territoryAssignmentStatus: territoryAssignmentStatusEnum("territory_assignment_status").notNull().default("unassigned"),
-    territoryAssignmentSource: territoryAssignmentSourceEnum("territory_assignment_source").notNull().default("geo"),
-
-    // --- Source tracking ---
-    sourceProvider: text("source_provider"),
-    externalSourceId: text("external_source_id"),
-    sourceContentHash: text("source_content_hash"),
-    sourceFirstSeenAt: timestamp("source_first_seen_at"),
-    sourceLastSeenAt: timestamp("source_last_seen_at"),
-    sourcePresent: boolean("source_present").notNull().default(false),
-    sourceTracked: boolean("source_tracked").notNull().default(false),
-
     // --- Lifecycle ---
-    manuallyEditedAt: timestamp("manually_edited_at"),
     deactivatedAt: timestamp("deactivated_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("facilities_source_provider_external_source_id_uidx").on(t.sourceProvider, t.externalSourceId),
-    uniqueIndex("facilities_source_provider_cnes_code_uidx").on(t.sourceProvider, t.cnesCode),
+    uniqueIndex("facilities_cnes_code_uidx")
+      .on(t.cnesCode)
+      .where(sql`${t.cnesCode} IS NOT NULL AND ${t.deactivatedAt} IS NULL`),
     index("facilities_deactivated_at_idx").on(t.deactivatedAt),
     index("facilities_name_idx").on(t.displayName),
-    index("facilities_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),
-    index("facilities_territory_assignment_status_idx").on(t.territoryAssignmentStatus),
     index("facilities_conformity_status_idx").on(t.conformityStatus),
-    index("facilities_cnes_unit_id_idx")
-      .on(t.cnesUnitId)
-      .where(sql`${t.cnesUnitId} IS NOT NULL`),
+    index("facilities_state_id_idx").on(t.stateId),
+    index("facilities_municipality_id_idx").on(t.municipalityId),
     index("facilities_facility_type_code_idx")
       .on(t.facilityTypeCode)
       .where(sql`${t.facilityTypeCode} IS NOT NULL`),
     index("facilities_unit_type_code_idx")
       .on(t.unitTypeCode)
       .where(sql`${t.unitTypeCode} IS NOT NULL`),
-    index("facilities_active_purchase_funnel_stage_name_id_idx")
-      .on(t.purchaseFunnelStage, t.displayName, t.id)
-      .where(sql`${t.deactivatedAt} is null`),
-    index("facilities_active_purchase_interval_days_name_id_idx")
-      .on(t.purchaseIntervalDays, t.displayName, t.id)
-      .where(sql`${t.deactivatedAt} is null`),
-    index("facilities_active_manual_purchase_profile_name_id_idx")
-      .on(t.manualPurchaseProfile, t.displayName, t.id)
-      .where(sql`${t.deactivatedAt} is null`),
-    index("facilities_active_next_purchase_funnel_transition_date_idx")
-      .on(t.nextPurchaseFunnelTransitionDate, t.id)
-      .where(sql`${t.deactivatedAt} is null and ${t.nextPurchaseFunnelTransitionDate} is not null`),
-    check(
-      "facilities_observed_purchase_interval_days_check",
-      sql`${t.observedPurchaseIntervalDays} is null or ${t.observedPurchaseIntervalDays} between 1 and 3650`
-    ),
-    check(
-      "facilities_purchase_interval_days_check",
-      sql`${t.purchaseIntervalDays} between 1 and 3650`
-    ),
-    check(
-      "facilities_manual_purchase_interval_days_check",
-      sql`${t.manualPurchaseIntervalDays} is null or ${t.manualPurchaseIntervalDays} between 1 and 3650`
-    ),
-    check(
-      "facilities_manual_purchase_profile_days_check",
-      sql`(${t.manualPurchaseProfile} = 'CUSTOM' and ${t.manualPurchaseIntervalDays} is not null)
-        or (${t.manualPurchaseProfile} is distinct from 'CUSTOM' and ${t.manualPurchaseIntervalDays} is null)`
-    ),
-    check(
-      "facilities_purchase_recurrence_sample_size_check",
-      sql`${t.purchaseRecurrenceSampleSize} between 0 and 12`
-    ),
-    check(
-      "facilities_purchase_interval_source_check",
-      sql`(${t.purchaseIntervalSource} = 'MANUAL' and ${t.manualPurchaseProfile} is not null)
-        or (${t.purchaseIntervalSource} <> 'MANUAL' and ${t.manualPurchaseProfile} is null)`
-    ),
   ]
 );
 
 export const professionals = pgTable(
   "professionals",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     fullName: text("full_name"),
@@ -216,7 +146,6 @@ export const professionals = pgTable(
     /** Free-text languages spoken, e.g. "Português, Inglês". */
     languages: text("languages"),
     hobbies: text("hobbies"),
-    notes: text("notes"),
     primarySpecialtyLabel: text("primary_specialty_label"),
     /** Canonical CNES CBO for this person (FK deferred until occupations are seeded). */
     primaryOccupationCode: text("primary_occupation_code"),
@@ -225,26 +154,16 @@ export const professionals = pgTable(
     crmCouncil: text("crm_council"),
     crmNumber: text("crm_number"),
     crmState: text("crm_state"),
-    sourceProvider: text("source_provider"),
-    externalSourceId: text("external_source_id"),
-    sourceContentHash: text("source_content_hash"),
-    sourceFirstSeenAt: timestamp("source_first_seen_at"),
-    sourceLastSeenAt: timestamp("source_last_seen_at"),
-    sourcePresent: boolean("source_present").notNull().default(false),
-    sourceTracked: boolean("source_tracked").notNull().default(false),
-    manuallyEditedAt: timestamp("manually_edited_at"),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("professionals_source_provider_external_source_id_uidx").on(t.sourceProvider, t.externalSourceId),
-    uniqueIndex("professionals_source_provider_cnes_professional_id_uidx")
-      .on(t.sourceProvider, t.cnesProfessionalId)
-      .where(sql`${t.cnesProfessionalId} IS NOT NULL`),
+    uniqueIndex("professionals_cnes_professional_id_uidx")
+      .on(t.cnesProfessionalId)
+      .where(sql`${t.cnesProfessionalId} IS NOT NULL AND ${t.deletedAt} IS NULL`),
     index("professionals_deleted_at_idx").on(t.deletedAt),
     index("professionals_last_name_first_name_idx").on(t.lastName, t.firstName),
-    index("professionals_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),
     index("professionals_tax_id_idx").on(t.taxId),
     index("professionals_primary_occupation_code_idx")
       .on(t.primaryOccupationCode)
@@ -258,13 +177,11 @@ export const professionals = pgTable(
 export const professionalNotes = pgTable(
   "professional_notes",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    professionalId: text("professional_id")
-      .notNull()
-      .references(() => professionals.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
+    professionalId: bigint("professional_id", { mode: "number" })
+      .notNull().references(() => professionals.id, { onDelete: "cascade" }),
     note: text("note").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -286,13 +203,11 @@ export const professionalNotes = pgTable(
 export const facilityNotes = pgTable(
   "facility_notes",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
     note: text("note").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -311,15 +226,14 @@ export const facilityNotes = pgTable(
 export const facilityPhotos = pgTable(
   "facility_photos",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
     storageKey: text("storage_key").notNull(),
     url: text("url").notNull(),
     blurhash: text("blurhash"),
     contentType: text("content_type").notNull(),
-    uploadedByUserId: text("uploaded_by_user_id").references(() => users.id, {
+    uploadedByUserId: bigint("uploaded_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -342,13 +256,11 @@ export const facilityPhotos = pgTable(
 export const userProfessionalRelationships = pgTable(
   "user_professional_relationships",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    professionalId: text("professional_id")
-      .notNull()
-      .references(() => professionals.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
+    professionalId: bigint("professional_id", { mode: "number" })
+      .notNull().references(() => professionals.id, { onDelete: "cascade" }),
     relationshipLevel: smallint("relationship_level").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -366,29 +278,24 @@ export const userProfessionalRelationships = pgTable(
 export const facilityProfessionals = pgTable(
   "facility_professionals",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    professionalId: text("professional_id").notNull().references(() => professionals.id, { onDelete: "cascade" }),
-    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    professionalId: bigint("professional_id", { mode: "number" }).notNull().references(() => professionals.id, { onDelete: "cascade" }),
+    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
     /** App-level role (LEGACY / MED / …) — not CNES CBO. */
     occupationCode: text("occupation_code").notNull().default("LEGACY"),
     specialtyLabel: text("specialty_label"),
     employmentTypeCode: text("employment_type_code"),
-    /** CNES CBO from rlEstabEquipeProf.CO_CBO (FK deferred until occupations are seeded). */
-    sourceOccupationCode: text("source_occupation_code"),
     isPrescriber: boolean("is_prescriber").notNull().default(false),
     isBuyer: boolean("is_buyer").notNull().default(false),
     isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
     isPartner: boolean("is_partner").notNull().default(false),
     notes: text("notes"),
-    sourceActive: boolean("source_active").notNull().default(false),
-    sourceFirstSeenAt: timestamp("source_first_seen_at"),
-    sourceLastSeenAt: timestamp("source_last_seen_at"),
     confirmedAt: timestamp("confirmed_at"),
-    confirmedByUserId: text("confirmed_by_user_id").references(() => users.id, {
+    confirmedByUserId: bigint("confirmed_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     endedAt: timestamp("ended_at"),
-    endedByUserId: text("ended_by_user_id").references(() => users.id, {
+    endedByUserId: bigint("ended_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     endReason: text("end_reason"),
@@ -403,27 +310,19 @@ export const facilityProfessionals = pgTable(
     ),
     index("facility_professionals_professional_id_idx").on(t.professionalId),
     index("facility_professionals_facility_id_idx").on(t.facilityId),
-    index("facility_professionals_facility_id_source_active_ended_at_idx").on(
-      t.facilityId,
-      t.sourceActive,
-      t.endedAt
-    ),
     index("facility_professionals_facility_id_confirmed_at_ended_at_idx").on(
       t.facilityId,
       t.confirmedAt,
       t.endedAt
     ),
-    index("facility_professionals_source_occupation_code_idx")
-      .on(t.sourceOccupationCode)
-      .where(sql`${t.sourceOccupationCode} IS NOT NULL`),
   ]
 );
 
 export const facilityRepresentatives = pgTable(
   "facility_representatives",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
     representativeName: text("representative_name").notNull(),
     roleTitle: text("role_title"),
     email: text("email"),
@@ -438,29 +337,17 @@ export const facilityRepresentatives = pgTable(
     isBuyer: boolean("is_buyer").notNull().default(false),
     isBiller: boolean("is_biller").notNull().default(false),
     isSecretary: boolean("is_secretary").notNull().default(false),
-    sourceProvider: text("source_provider"),
-    externalSourceKey: text("external_source_key"),
-    sourceActive: boolean("source_active").notNull().default(false),
     confirmedAt: timestamp("confirmed_at"),
-    confirmedByUserId: text("confirmed_by_user_id").references(() => users.id, {
+    confirmedByUserId: bigint("confirmed_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     endedAt: timestamp("ended_at"),
-    manuallyEditedAt: timestamp("manually_edited_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("facility_representatives_facility_id_external_source_key_uidx").on(
-      t.facilityId,
-      t.externalSourceKey
-    ),
     index("facility_representatives_facility_id_idx").on(t.facilityId),
-    index("facility_representatives_facility_id_source_active_ended_at_idx").on(
-      t.facilityId,
-      t.sourceActive,
-      t.endedAt
-    ),
+    index("facility_representatives_facility_id_ended_at_idx").on(t.facilityId, t.endedAt),
   ]
 );
 
@@ -471,13 +358,11 @@ export const facilityRepresentatives = pgTable(
 export const userRepresentativeRelationships = pgTable(
   "user_representative_relationships",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    representativeId: text("representative_id")
-      .notNull()
-      .references(() => facilityRepresentatives.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
+    representativeId: bigint("representative_id", { mode: "number" })
+      .notNull().references(() => facilityRepresentatives.id, { onDelete: "cascade" }),
     relationshipLevel: smallint("relationship_level").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -495,17 +380,15 @@ export const userRepresentativeRelationships = pgTable(
 export const facilityConsultantAssignments = pgTable(
   "facility_consultant_assignments",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     endedAt: timestamp("ended_at"),
-    assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
+    assignedByUserId: bigint("assigned_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     endReason: text("end_reason"),
@@ -526,35 +409,36 @@ export const facilityConsultantAssignments = pgTable(
 /**
  * Vertical-specific commercial + purchase-funnel profile for a facility.
  * Funnel/recurrence is computed from orders of this verticalId only.
- * Facility-level funnel columns remain a Meili/legacy rollup.
  */
 export const facilityVerticalProfiles = pgTable(
   "facility_vertical_profiles",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
     /**
      * Spec 0006: per-vertical geo membership = containing manager zone (not rep patch).
      * Null = unassigned/ambiguous for this vertical.
      */
-    managerZoneId: text("manager_zone_id").references(() => territories.id, {
+    managerZoneId: bigint("manager_zone_id", { mode: "number" }).references(() => territories.id, {
       onDelete: "set null",
     }),
     isActive: boolean("is_active").notNull().default(true),
-    commercialStatus: commercialStatusEnum("commercial_status"),
-    purchaseStatus: purchaseStatusEnum("purchase_status"),
-    observedPurchaseIntervalDays: integer("observed_purchase_interval_days"),
-    purchaseIntervalDays: integer("purchase_interval_days").notNull().default(30),
+    commercialStatus: commercialStatusEnum("commercial_status")
+      .notNull()
+      .default("UNREGISTERED"),
+    purchaseStatus: purchaseStatusEnum("purchase_status")
+      .notNull()
+      .default("NON_BUYER"),
+    observedPurchaseIntervalDays: bigint("observed_purchase_interval_days", { mode: "number" }),
+    purchaseIntervalDays: bigint("purchase_interval_days", { mode: "number" }).notNull().default(30),
     purchaseIntervalSource: purchaseIntervalSourceEnum("purchase_interval_source")
       .notNull()
       .default("DEFAULT"),
     manualPurchaseProfile: purchaseProfileEnum("manual_purchase_profile"),
-    manualPurchaseIntervalDays: integer("manual_purchase_interval_days"),
+    manualPurchaseIntervalDays: bigint("manual_purchase_interval_days", { mode: "number" }),
     lastValidPurchaseDate: date("last_valid_purchase_date"),
     purchaseRecurrenceSampleSize: smallint("purchase_recurrence_sample_size")
       .notNull()
@@ -619,7 +503,7 @@ export const facilityVerticalProfiles = pgTable(
 export const healthcareProviders = pgTable(
   "healthcare_providers",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     name: text("name").notNull(),
     type: healthcareProviderTypeEnum("type").notNull(),
     isActive: boolean("is_active").notNull().default(true),
@@ -632,16 +516,12 @@ export const healthcareProviders = pgTable(
 export const facilityHealthcareProviderShares = pgTable(
   "facility_healthcare_provider_shares",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    healthcareProviderId: text("healthcare_provider_id").notNull().references(() => healthcareProviders.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    healthcareProviderId: bigint("healthcare_provider_id", { mode: "number" }).notNull().references(() => healthcareProviders.id, { onDelete: "restrict" }),
     sharePercent: text("share_percent").notNull(),
     /** Whether this facility treats the provider share as a package (pacote). */
     isPackage: boolean("is_package").notNull().default(false),
-    source: healthcareProviderShareSourceEnum("source").notNull().default("MANUAL"),
-    sourceFirstSeenAt: timestamp("source_first_seen_at"),
-    sourceLastSeenAt: timestamp("source_last_seen_at"),
-    manuallyEditedAt: timestamp("manually_edited_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -658,22 +538,24 @@ export const facilityHealthcareProviderShares = pgTable(
 export const conformityRequirements = pgTable(
   "conformity_requirements",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
     description: text("description"),
-    verticalId: text("vertical_id").references(() => businessVerticals.id, {
+    verticalId: bigint("vertical_id", { mode: "number" }).references(() => businessVerticals.id, {
       onDelete: "set null",
     }),
-    /** When set, requirement applies only to facilities with this tax id type. */
-    appliesToTaxIdType: facilityTaxIdTypeEnum("applies_to_tax_id_type"),
+    /** When set, requirement applies only to facilities with this legal document type. */
+    appliesToLegalDocumentType: facilityLegalDocumentTypeEnum(
+      "applies_to_legal_document_type"
+    ),
     isActive: boolean("is_active").notNull().default(true),
     /** Per-document-type upload limits (cadastro multi-file). */
     allowedMimeTypes: text("allowed_mime_types")
       .array()
       .notNull()
       .default(["image/jpeg", "image/png", "application/pdf"]),
-    maxFiles: integer("max_files").notNull().default(10),
+    maxFiles: bigint("max_files", { mode: "number" }).notNull().default(10),
     maxFileSizeBytes: bigint("max_file_size_bytes", { mode: "number" })
       .notNull()
       .default(52_428_800),
@@ -687,21 +569,23 @@ export const conformityRequirements = pgTable(
   (t) => [
     index("conformity_requirements_vertical_id_idx").on(t.verticalId),
     index("conformity_requirements_is_active_idx").on(t.isActive),
-    index("conformity_requirements_applies_to_tax_id_type_idx").on(t.appliesToTaxIdType),
+    index("conformity_requirements_applies_to_legal_document_type_idx").on(
+      t.appliesToLegalDocumentType
+    ),
   ]
 );
 
 export const conformityRecords = pgTable(
   "conformity_records",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    requirementId: text("requirement_id").notNull().references(() => conformityRequirements.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    requirementId: bigint("requirement_id", { mode: "number" }).notNull().references(() => conformityRequirements.id, { onDelete: "restrict" }),
     status: conformityRecordStatusEnum("status").notNull().default("PENDING"),
     submittedAt: timestamp("submitted_at"),
     validatedAt: timestamp("validated_at"),
     expiresAt: timestamp("expires_at"),
-    validatedByUserId: text("validated_by_user_id").references(() => users.id, {
+    validatedByUserId: bigint("validated_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     storageKey: text("storage_key"),
@@ -721,33 +605,27 @@ export const conformityRecords = pgTable(
   ]
 );
 
-/**
- * Healthcare services offered by a facility, sourced from CNES rlEstabServClass.
- * Synced from registry.facility_services during ingestion reconciliation.
- */
-export const facilityServices = pgTable(
-  "facility_services",
+/** Join: facility ↔ clinical focus (catalog in clinical_focuses). */
+export const facilityClinicalFocuses = pgTable(
+  "facility_clinical_focuses",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    /** → services.service_code (FK deferred until lookups are seeded). */
-    serviceCode: text("service_code").notNull(),
-    /** → service_classifications (FK deferred until lookups are seeded). */
-    classificationCode: text("classification_code").notNull(),
-    sourceProvider: text("source_provider").notNull().default("cnes"),
-    sourceFirstSeenAt: timestamp("source_first_seen_at"),
-    sourceLastSeenAt: timestamp("source_last_seen_at"),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    clinicalFocusId: bigint("clinical_focus_id", { mode: "number" })
+      .notNull()
+      .references(() => clinicalFocuses.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("facility_services_facility_id_service_code_classification_code_uidx").on(
+    uniqueIndex("facility_clinical_focuses_facility_id_clinical_focus_id_uidx").on(
       t.facilityId,
-      t.serviceCode,
-      t.classificationCode
+      t.clinicalFocusId
     ),
-    index("facility_services_facility_id_idx").on(t.facilityId),
-    index("facility_services_service_code_idx").on(t.serviceCode),
+    index("facility_clinical_focuses_facility_id_idx").on(t.facilityId),
+    index("facility_clinical_focuses_clinical_focus_id_idx").on(t.clinicalFocusId),
   ]
 );
 
@@ -772,7 +650,7 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   consultantAssignments: many(facilityConsultantAssignments),
   healthcareProviderShares: many(facilityHealthcareProviderShares),
   conformityRecords: many(conformityRecords),
-  facilityServices: many(facilityServices),
+  clinicalFocusLinks: many(facilityClinicalFocuses),
   notes: many(facilityNotes),
   photos: many(facilityPhotos),
 }));
@@ -806,13 +684,19 @@ export const facilityPhotosRelations = relations(facilityPhotos, ({ one }) => ({
   }),
 }));
 
-export const facilityServicesRelations = relations(facilityServices, ({ one }) => ({
-  facility: one(facilities, { fields: [facilityServices.facilityId], references: [facilities.id] }),
-  service: one(services, {
-    fields: [facilityServices.serviceCode],
-    references: [services.serviceCode],
-  }),
-}));
+export const facilityClinicalFocusesRelations = relations(
+  facilityClinicalFocuses,
+  ({ one }) => ({
+    facility: one(facilities, {
+      fields: [facilityClinicalFocuses.facilityId],
+      references: [facilities.id],
+    }),
+    clinicalFocus: one(clinicalFocuses, {
+      fields: [facilityClinicalFocuses.clinicalFocusId],
+      references: [clinicalFocuses.id],
+    }),
+  })
+);
 
 export const professionalsRelations = relations(professionals, ({ one, many }) => ({
   primaryOccupation: one(occupations, {
@@ -857,10 +741,6 @@ export const userProfessionalRelationshipsRelations = relations(
 export const facilityProfessionalsRelations = relations(facilityProfessionals, ({ one }) => ({
   professional: one(professionals, { fields: [facilityProfessionals.professionalId], references: [professionals.id] }),
   facility: one(facilities, { fields: [facilityProfessionals.facilityId], references: [facilities.id] }),
-  sourceOccupation: one(occupations, {
-    fields: [facilityProfessionals.sourceOccupationCode],
-    references: [occupations.occupationCode],
-  }),
   confirmedBy: one(users, {
     fields: [facilityProfessionals.confirmedByUserId],
     references: [users.id],

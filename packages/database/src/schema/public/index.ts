@@ -4,6 +4,8 @@ export * from "./users";
 export * from "./territories";
 export * from "./invitation-assignments";
 export * from "./cnes-lookups";
+export * from "./clinical-focuses";
+export * from "./admin-geography";
 export * from "./facilities";
 export * from "./cadastro-submissions";
 export * from "./field-suggestions";

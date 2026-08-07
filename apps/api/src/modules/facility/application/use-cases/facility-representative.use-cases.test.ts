@@ -31,8 +31,8 @@ function representative(
   overrides: Partial<FacilityRepresentativeRecord> = {}
 ): FacilityRepresentativeRecord {
   return {
-    id: "rep-1",
-    facilityId: "facility-1",
+    id: 1,
+    facilityId: 1,
     representativeName: "Maria Souza",
     roleTitle: "Compradora",
     email: "maria@example.com",
@@ -45,11 +45,8 @@ function representative(
     isBuyer: true,
     isBiller: false,
     isSecretary: false,
-    sourceProvider: null,
-    externalSourceKey: null,
-    sourceActive: true,
     confirmedAt: now,
-    confirmedByUserId: "user-1",
+    confirmedByUserId: 1,
     endedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -61,7 +58,6 @@ function stubRepo(
   overrides: Partial<FacilityRepresentativeRepository> = {}
 ): FacilityRepresentativeRepository {
   return {
-    findByFacilityAndExternalKey: async () => null,
     findByIdForFacility: async () => representative(),
     findActiveByFacility: async () => ({
       items: [representative()],
@@ -70,25 +66,22 @@ function stubRepo(
       limit: 20,
       totalPages: 1,
     }),
-    upsertFromRegistry: async () => representative(),
-    confirm: async () => representative(),
     createManual: async () => representative(),
     updateManual: async () => representative(),
-    endSourceRepresentative: async () => null,
     ...overrides,
   };
 }
 
 function stubRelRepo(
-  levels: Map<string, number> = new Map()
+  levels: Map<number, number> = new Map()
 ): UserRepresentativeRelationshipRepository {
   return {
     findByUserAndRepresentative: async (_userId, representativeId) => {
       const level = levels.get(representativeId);
       if (level === undefined) return null;
       return {
-        id: "urr-1",
-        userId: "user-1",
+        id: 1,
+        userId: 1,
         representativeId,
         relationshipLevel: level,
         createdAt: now,
@@ -99,7 +92,7 @@ function stubRelRepo(
     upsert: async ({ userId, representativeId, relationshipLevel }) => {
       levels.set(representativeId, relationshipLevel);
       return {
-        id: "urr-1",
+        id: 1,
         userId,
         representativeId,
         relationshipLevel,
@@ -115,20 +108,20 @@ function stubRelRepo(
 
 describe("ListFacilityRepresentativesUseCase", () => {
   it("serializes active representatives with roles and relationship", async () => {
-    const levels = new Map([["rep-1", 6]]);
+    const levels = new Map([[1, 6]]);
     const result = await new ListFacilityRepresentativesUseCase({
       facilityRepresentativeRepository: stubRepo(),
       userRepresentativeRelationshipRepository: stubRelRepo(levels),
     }).execute({
-      facilityId: "facility-1",
+      facilityId: 1,
       scope: globalScope,
-      userId: "user-1",
+      userId: 1,
     });
 
     expect(result.data).toEqual([
       {
-        id: "rep-1",
-        facilityId: "facility-1",
+        id: 1,
+        facilityId: 1,
         representativeName: "Maria Souza",
         roleTitle: "Compradora",
         email: "maria@example.com",
@@ -142,7 +135,6 @@ describe("ListFacilityRepresentativesUseCase", () => {
         isBiller: false,
         isSecretary: false,
         relationshipLevel: 6,
-        sourceProvider: null,
         confirmedAt: now.toISOString(),
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -168,14 +160,14 @@ describe("ListFacilityRepresentativesUseCase", () => {
 
     await expect(
       useCase.execute({
-        facilityId: "facility-out",
+        facilityId: 999,
         scope: {
           ...globalScope,
           isGlobal: false,
-          facilityIds: ["facility-1"],
-          clinicIds: ["facility-1"],
+          facilityIds: [1],
+          clinicIds: [1],
         },
-        userId: "user-1",
+        userId: 1,
       })
     ).rejects.toMatchObject({ statusCode: 403 });
   });
@@ -190,9 +182,9 @@ describe("CreateFacilityRepresentativeUseCase", () => {
       facilityRepresentativeRepository: stubRepo({ createManual }),
       userRepresentativeRelationshipRepository: stubRelRepo(),
     }).execute({
-      facilityId: "facility-1",
+      facilityId: 1,
       scope: globalScope,
-      userId: "user-1",
+      userId: 1,
       representativeName: "Ana",
       isDecisionMaker: true,
       isSecretary: true,
@@ -209,37 +201,37 @@ describe("CreateFacilityRepresentativeUseCase", () => {
 
 describe("UpdateFacilityRepresentativeUseCase", () => {
   it("upserts relationship level for the authenticated user", async () => {
-    const levels = new Map<string, number>();
+    const levels = new Map<number, number>();
     const result = await new UpdateFacilityRepresentativeUseCase({
       facilityRepresentativeRepository: stubRepo(),
       userRepresentativeRelationshipRepository: stubRelRepo(levels),
     }).execute({
-      facilityId: "facility-1",
-      representativeId: "rep-1",
+      facilityId: 1,
+      representativeId: 1,
       scope: globalScope,
-      userId: "user-1",
+      userId: 1,
       relationshipLevel: 8,
       isBiller: true,
     });
 
     expect(result.relationshipLevel).toBe(8);
-    expect(levels.get("rep-1")).toBe(8);
+    expect(levels.get(1)).toBe(8);
   });
 
   it("clears relationship when null", async () => {
-    const levels = new Map([["rep-1", 4]]);
+    const levels = new Map([[1, 4]]);
     const result = await new UpdateFacilityRepresentativeUseCase({
       facilityRepresentativeRepository: stubRepo(),
       userRepresentativeRelationshipRepository: stubRelRepo(levels),
     }).execute({
-      facilityId: "facility-1",
-      representativeId: "rep-1",
+      facilityId: 1,
+      representativeId: 1,
       scope: globalScope,
-      userId: "user-1",
+      userId: 1,
       relationshipLevel: null,
     });
 
     expect(result.relationshipLevel).toBeUndefined();
-    expect(levels.has("rep-1")).toBe(false);
+    expect(levels.has(1)).toBe(false);
   });
 });

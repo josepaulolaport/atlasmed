@@ -24,12 +24,12 @@ import type { FacilityHealthcareProviderShareRepository } from "../interfaces/fa
 import type { FacilityVerticalAccessRepository } from "../interfaces/facility-vertical-access.repository.interface";
 import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 
-function scopeWithVerticals(verticalIds: string[]): ScopeContext {
+function scopeWithVerticals(verticalIds: number[]): ScopeContext {
   return { ...createGlobalScopeContext(), assignedVerticalIds: verticalIds };
 }
 
 const product: ProductRecord = {
-  id: "product-1",
+  id: 1,
   code: "ATL-001",
   name: "AtlasGel",
   description: "Gel ortopédico",
@@ -38,7 +38,7 @@ const product: ProductRecord = {
   productClassification: "Tópico",
   brand: "Atlas",
   unit: "240g",
-  verticalIds: ["vertical-1"],
+  verticalIds: [1],
   pictureUrl: "https://cdn.example.com/atlas-gel.png",
   simproCode: "SIM-1",
   brasindiceCode: "BRA-1",
@@ -67,7 +67,7 @@ function repository(overrides: Partial<ProductRepository> = {}): ProductReposito
 }
 
 const competitor: CompetitorProductRecord = {
-  id: "competitor-1",
+  id: 101,
   code: "COMP-001",
   name: "SingJoint 24mg/2ml",
   manufacturer: "Hangzhou",
@@ -109,7 +109,7 @@ function productEquivalenceRepository(
 }
 
 describe("catalog product use cases", () => {
-  const scope = scopeWithVerticals(["vertical-1"]);
+  const scope = scopeWithVerticals([1]);
 
   it("passes resolved verticalIds with search and pagination to the product repository", async () => {
     const productRepository = repository();
@@ -125,13 +125,13 @@ describe("catalog product use cases", () => {
       page: 2,
       limit: 10,
       search: "atlas",
-      verticalIds: ["vertical-1"],
+      verticalIds: [1],
       isActive: undefined,
     });
     expect(result).toEqual({
       data: [
         expect.objectContaining({
-          id: "product-1",
+          id: 1,
           code: "ATL-001",
           description: "Gel ortopédico",
           commercialCode: "AG-240",
@@ -165,13 +165,13 @@ describe("catalog product use cases", () => {
 
   it("returns a serialized product detail when product intersects caller verticals", async () => {
     const result = await new GetProductUseCase({ productRepository: repository() }).execute({
-      productId: "product-1",
+      productId: 1,
       scope,
       role: "REP",
     });
 
     expect(result).toEqual(expect.objectContaining({
-      id: "product-1",
+      id: 1,
       name: "AtlasGel",
       brand: "Atlas",
       productClassification: "Tópico",
@@ -194,7 +194,7 @@ describe("competitor product use cases", () => {
       isActive: undefined,
     });
     expect(result).toEqual({
-      data: [expect.objectContaining({ id: "competitor-1", name: "SingJoint 24mg/2ml" })],
+      data: [expect.objectContaining({ id: 101, name: "SingJoint 24mg/2ml" })],
       pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
     });
   });
@@ -202,10 +202,10 @@ describe("competitor product use cases", () => {
   it("returns a serialized competitor product detail", async () => {
     const result = await new GetCompetitorProductUseCase({
       competitorProductRepository: competitorProductRepository(),
-    }).execute({ competitorProductId: "competitor-1" });
+    }).execute({ competitorProductId: 101 });
 
     expect(result).toEqual(
-      expect.objectContaining({ id: "competitor-1", manufacturer: "Hangzhou", brand: "Synvisc" })
+      expect.objectContaining({ id: 101, manufacturer: "Hangzhou", brand: "Synvisc" })
     );
   });
 
@@ -217,7 +217,7 @@ describe("competitor product use cases", () => {
     await expect(
       new GetCompetitorProductUseCase({
         competitorProductRepository: competitorProductRepo,
-      }).execute({ competitorProductId: "missing" })
+      }).execute({ competitorProductId: 99999 })
     ).rejects.toThrow(ResourceNotFoundError);
   });
 
@@ -242,9 +242,9 @@ describe("competitor product use cases", () => {
     const competitorProductRepo = competitorProductRepository();
     await new UpdateCompetitorProductUseCase({
       competitorProductRepository: competitorProductRepo,
-    }).execute({ competitorProductId: "competitor-1", price20: 80 });
+    }).execute({ competitorProductId: 101, price20: 80 });
 
-    expect(competitorProductRepo.update).toHaveBeenCalledWith("competitor-1", { price20: 80 });
+    expect(competitorProductRepo.update).toHaveBeenCalledWith(101, { price20: 80 });
   });
 });
 
@@ -252,7 +252,7 @@ describe("product comparison and price index use cases", () => {
   it("builds a comparison group with the AtlasMed product first, sorted by price", async () => {
     const higherPricedCompetitor: CompetitorProductRecord = {
       ...competitor,
-      id: "competitor-2",
+      id: 102,
       name: "Pricier competitor",
       price20: 999,
     };
@@ -264,14 +264,14 @@ describe("product comparison and price index use cases", () => {
       productRepository: repository(),
       productEquivalenceRepository: productEquivalenceRepo,
     }).execute({
-      productId: "product-1",
-      scope: scopeWithVerticals(["vertical-1"]),
+      productId: 1,
+      scope: scopeWithVerticals([1]),
       role: "REP",
     });
 
-    expect(result.productId).toBe("product-1");
-    expect(result.rows[0]).toEqual(expect.objectContaining({ id: "competitor-2", isOwn: false }));
-    expect(result.rows.map((row) => row.id)).toContain("product-1");
+    expect(result.productId).toBe(1);
+    expect(result.rows[0]).toEqual(expect.objectContaining({ id: 102, isOwn: false }));
+    expect(result.rows.map((row) => row.id)).toContain(1);
   });
 
   it("throws ResourceNotFoundError when the product doesn't exist", async () => {
@@ -280,8 +280,8 @@ describe("product comparison and price index use cases", () => {
         productRepository: repository({ findById: mock(() => Promise.resolve(null)) }),
         productEquivalenceRepository: productEquivalenceRepository(),
       }).execute({
-        productId: "missing",
-        scope: scopeWithVerticals(["vertical-1"]),
+        productId: 99999,
+        scope: scopeWithVerticals([1]),
         role: "REP",
       })
     ).rejects.toThrow(ResourceNotFoundError);
@@ -291,9 +291,9 @@ describe("product comparison and price index use cases", () => {
     const result = await new ListUnlinkedCompetitorProductsUseCase({
       productRepository: repository(),
       productEquivalenceRepository: productEquivalenceRepository(),
-    }).execute({ productId: "product-1" });
+    }).execute({ productId: 1 });
 
-    expect(result.data).toEqual([expect.objectContaining({ id: "competitor-1" })]);
+    expect(result.data).toEqual([expect.objectContaining({ id: 101 })]);
   });
 
   it("links a competitor product to a product", async () => {
@@ -302,9 +302,9 @@ describe("product comparison and price index use cases", () => {
       productRepository: repository(),
       competitorProductRepository: competitorProductRepository(),
       productEquivalenceRepository: productEquivalenceRepo,
-    }).execute({ productId: "product-1", competitorProductId: "competitor-1" });
+    }).execute({ productId: 1, competitorProductId: 101 });
 
-    expect(productEquivalenceRepo.link).toHaveBeenCalledWith("product-1", "competitor-1", undefined);
+    expect(productEquivalenceRepo.link).toHaveBeenCalledWith(1, 101, undefined);
   });
 
   it("rejects linking a competitor product that is already linked", async () => {
@@ -317,7 +317,7 @@ describe("product comparison and price index use cases", () => {
         productRepository: repository(),
         competitorProductRepository: competitorProductRepository(),
         productEquivalenceRepository: productEquivalenceRepo,
-      }).execute({ productId: "product-1", competitorProductId: "competitor-1" })
+      }).execute({ productId: 1, competitorProductId: 101 })
     ).rejects.toThrow(ValidationError);
   });
 
@@ -329,7 +329,7 @@ describe("product comparison and price index use cases", () => {
     await expect(
       new UnlinkCompetitorProductUseCase({
         productEquivalenceRepository: productEquivalenceRepo,
-      }).execute({ productId: "product-1", competitorProductId: "competitor-1" })
+      }).execute({ productId: 1, competitorProductId: 101 })
     ).rejects.toThrow(ResourceNotFoundError);
   });
 
@@ -339,11 +339,11 @@ describe("product comparison and price index use cases", () => {
       productRepository,
       competitorProductRepository: competitorProductRepository(),
     }).execute({
-      scope: scopeWithVerticals(["vertical-1"]),
+      scope: scopeWithVerticals([1]),
       role: "REP",
     });
 
-    expect(productRepository.findAllActive).toHaveBeenCalledWith({ verticalIds: ["vertical-1"] });
+    expect(productRepository.findAllActive).toHaveBeenCalledWith({ verticalIds: [1] });
     expect(result.data).toHaveLength(2);
     expect(result.data.some((row) => row.isOwn)).toBe(true);
     expect(result.data.some((row) => !row.isOwn)).toBe(true);
@@ -351,8 +351,8 @@ describe("product comparison and price index use cases", () => {
 });
 
 describe("facility healthcare provider shares", () => {
-  const facilityId = "facility-1";
-  const ortopediaId = "vertical-ortopedia";
+  const facilityId = 1;
+  const ortopediaId = 10;
 
   function shareRepository(
     overrides: Partial<FacilityHealthcareProviderShareRepository> = {}
@@ -364,20 +364,19 @@ describe("facility healthcare provider shares", () => {
       }),
       replaceByFacility: mock(
         async (
-          _facilityId: string,
+          _facilityId: number,
           shares: Array<{
-            healthcareProviderId: string;
+            healthcareProviderId: number;
             sharePercent: number;
             isPackage?: boolean;
           }>
         ) =>
           shares.map((share, index) => ({
-            id: `share-${index}`,
+            id: index + 1,
             facilityId,
             healthcareProviderId: share.healthcareProviderId,
             sharePercent: share.sharePercent,
             isPackage: share.isPackage ?? false,
-            source: "MANUAL" as const,
             createdAt: new Date("2024-01-01"),
             updatedAt: new Date("2024-01-01"),
             healthcareProvider: {
@@ -415,8 +414,8 @@ describe("facility healthcare provider shares", () => {
       facilityId,
       scope: ortopediaScope(),
       shares: [
-        { healthcareProviderId: "hp-1", sharePercent: 60, isPackage: true },
-        { healthcareProviderId: "hp-2", sharePercent: 40 },
+        { healthcareProviderId: 1, sharePercent: 60, isPackage: true },
+        { healthcareProviderId: 2, sharePercent: 40 },
       ],
     });
 
@@ -424,8 +423,8 @@ describe("facility healthcare provider shares", () => {
     expect(result.data[0]?.isPackage).toBe(true);
     expect(result.data[1]?.isPackage).toBe(false);
     expect(repo.replaceByFacility).toHaveBeenCalledWith(facilityId, [
-      { healthcareProviderId: "hp-1", sharePercent: 60, isPackage: true },
-      { healthcareProviderId: "hp-2", sharePercent: 40, isPackage: false },
+      { healthcareProviderId: 1, sharePercent: 60, isPackage: true },
+      { healthcareProviderId: 2, sharePercent: 40, isPackage: false },
     ]);
   });
 
@@ -452,7 +451,7 @@ describe("facility healthcare provider shares", () => {
       }).execute({
         facilityId,
         scope: ortopediaScope(),
-        shares: [{ healthcareProviderId: "hp-1", sharePercent: 70 }],
+        shares: [{ healthcareProviderId: 1, sharePercent: 70 }],
       })
     ).rejects.toThrow(ValidationError);
   });
@@ -464,7 +463,7 @@ describe("facility healthcare provider shares", () => {
         facilityVerticalAccess: verticalAccess(),
       }).execute({
         facilityId,
-        scope: scopeWithVerticals(["vertical-derm"]),
+        scope: scopeWithVerticals([20]),
         shares: [],
       })
     ).rejects.toThrow(ForbiddenError);

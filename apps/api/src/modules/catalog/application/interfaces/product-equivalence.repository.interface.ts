@@ -2,15 +2,15 @@ import type { CompetitorProductRecord } from "./competitor-product.repository.in
 
 export interface ProductEquivalenceRepository {
   /** Competitor products currently linked to `productId` (via `product_equivalences`). */
-  findLinkedByProduct(productId: string): Promise<CompetitorProductRecord[]>;
+  findLinkedByProduct(productId: number): Promise<CompetitorProductRecord[]>;
 
   /** Competitor products not yet linked to `productId` — backs the "add existing" picker. */
-  findUnlinkedByProduct(productId: string): Promise<CompetitorProductRecord[]>;
+  findUnlinkedByProduct(productId: number): Promise<CompetitorProductRecord[]>;
 
-  exists(productId: string, competitorProductId: string): Promise<boolean>;
+  exists(productId: number, competitorProductId: number): Promise<boolean>;
 
-  link(productId: string, competitorProductId: string, notes?: string | null): Promise<void>;
+  link(productId: number, competitorProductId: number, notes?: string | null): Promise<void>;
 
   /** Deletes the equivalence row. Returns `false` if no such link existed. */
-  unlink(productId: string, competitorProductId: string): Promise<boolean>;
+  unlink(productId: number, competitorProductId: number): Promise<boolean>;
 }

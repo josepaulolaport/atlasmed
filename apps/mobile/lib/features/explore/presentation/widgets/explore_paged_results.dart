@@ -43,7 +43,7 @@ class ClinicsPagedResults extends ConsumerWidget {
 
   final ClinicsQuery query;
   final double bottomInset;
-  final String? preferredVerticalId;
+  final int? preferredVerticalId;
   final Future<void> Function()? onRefresh;
 
   @override
@@ -183,7 +183,7 @@ class _ClinicPagedRow extends ConsumerWidget {
 
   final ClinicsQuery query;
   final int index;
-  final String? preferredVerticalId;
+  final int? preferredVerticalId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -208,13 +208,17 @@ class _ClinicPagedRow extends ConsumerWidget {
         return ClinicRow(
           clinic: clinic,
           onTap: () {
-            seedClinicDetailShellFromDto(ref, dto);
+            seedClinicDetailShellFromDto(
+              ref,
+              dto,
+              verticalId: preferredVerticalId,
+            );
             final verticalId = preferredVerticalId;
-            if (verticalId != null && verticalId.isNotEmpty) {
+            if (verticalId != null && (verticalId > 0)) {
               context.push(
                 Uri(
                   path: '/explore/clinic/${clinic.id}',
-                  queryParameters: {'verticalId': verticalId},
+                  queryParameters: {'verticalId': verticalId.toString()},
                 ).toString(),
               );
               return;

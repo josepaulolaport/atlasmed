@@ -4,15 +4,13 @@ import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.d
 /// Port for the invite-flow data source. Method signatures mirror the real
 /// endpoints (`POST /access/invite`, `GET /access/invitations`,
 /// `GET /access/invitations/:id`, `PATCH /access/invites/:id`,
-/// `DELETE /access/invites/:id`, `POST /access/invites/:id/resend`) so a
-/// future HTTP-backed implementation is a drop-in replacement for
-/// [MockInvitationsRepository].
+/// `DELETE /access/invites/:id`, `POST /access/invites/:id/resend`).
 abstract interface class InvitationsRepository {
   /// `GET /access/invitations`
   Future<List<UserInvitation>> getInvitations();
 
   /// `GET /access/invitations/:id`
-  Future<UserInvitation> getInvitation(String id);
+  Future<UserInvitation> getInvitation(int id);
 
   /// `POST /access/invite`
   ///
@@ -25,25 +23,25 @@ abstract interface class InvitationsRepository {
     required String lastName,
     required DateTime birthDate,
     required String phoneNumber,
-    required String roleId,
+    required int roleId,
     List<InviteVerticalAssignment> verticalAssignments = const [],
   });
 
   /// `PATCH /access/invites/:id` — only valid while status is pending.
   Future<UserInvitation> updateInvitation({
-    required String id,
+    required int id,
     required String email,
     required String firstName,
     required String lastName,
     required DateTime birthDate,
     required String phoneNumber,
-    required String roleId,
+    required int roleId,
     List<InviteVerticalAssignment> verticalAssignments = const [],
   });
 
   /// `POST /access/invites/:id/resend`
-  Future<void> resendInvitation(String id);
+  Future<void> resendInvitation(int id);
 
   /// `DELETE /access/invites/:id`
-  Future<void> revokeInvitation(String id);
+  Future<void> revokeInvitation(int id);
 }

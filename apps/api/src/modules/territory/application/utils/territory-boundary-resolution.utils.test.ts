@@ -6,15 +6,15 @@ describe("serializeBoundaryResolution", () => {
     expect(
       serializeBoundaryResolution({
         mode: "rep_patch",
-        managerTerritoryId: "zone-1",
-        managerZoneCandidates: [{ id: "zone-1", code: "ZONE-1", name: "Zone 1" }],
+        managerTerritoryId: 1,
+        managerZoneCandidates: [{ id: 1, code: "ZONE-1", name: "Zone 1" }],
         clinicRecomputeEnqueued: true,
       })
     ).toEqual({
       success: true,
       mode: "rep_patch",
-      managerTerritoryId: "zone-1",
-      managerZoneCandidates: [{ id: "zone-1", code: "ZONE-1", name: "Zone 1" }],
+      managerTerritoryId: 1,
+      managerZoneCandidates: [{ id: 1, code: "ZONE-1", name: "Zone 1" }],
       clinicRecomputeEnqueued: true,
     });
   });

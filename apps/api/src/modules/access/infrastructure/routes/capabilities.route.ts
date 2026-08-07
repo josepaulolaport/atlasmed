@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { tryParseCrmId } from "../../../../shared/utils/parse-crm-id";
 import { accessUseCases, auth } from "../../composition";
 
 export const capabilitiesRoute = new Elysia({
@@ -9,7 +10,7 @@ export const capabilitiesRoute = new Elysia({
   .use(auth)
   .get(
     "/me/capabilities",
-    async ({ getUserId }: any) => {
+    async ({ getUserId }) => {
       const userId = await getUserId();
       const result = await accessUseCases.getCapabilities().execute({ userId });
 
@@ -18,7 +19,7 @@ export const capabilitiesRoute = new Elysia({
         grants: result.grants.map((grant) => ({
           id: grant.id,
           resource: grant.resource,
-          resourceId: grant.resourceId ?? undefined,
+          resourceId: tryParseCrmId(grant.resourceId),
           action: grant.action,
           conditions: grant.conditions,
           expiresAt: grant.expiresAt?.toISOString(),
@@ -37,9 +38,9 @@ export const capabilitiesRoute = new Elysia({
           role: t.String(),
           grants: t.Array(
             t.Object({
-              id: t.String(),
+              id: t.Number(),
               resource: t.String(),
-              resourceId: t.Optional(t.String()),
+              resourceId: t.Optional(t.Number({ minimum: 1 })),
               action: t.String(),
               conditions: t.Optional(t.Record(t.String(), t.Any())),
               expiresAt: t.Optional(t.String()),

@@ -3,7 +3,7 @@ import 'payment_method.dart';
 
 // ── Order list item ──────────────────────────────────────────
 class OrderListItem {
-  final String id;
+  final int id;
   final String clinic;
   final String doctor;
   final String date;
@@ -39,7 +39,7 @@ class TimelineStep {
 
 // ── Order detail item ────────────────────────────────────────
 class OrderDetailItem {
-  final String productId;
+  final int productId;
   final int qty;
   final String? name;
   final double? unitPrice;
@@ -54,7 +54,7 @@ class OrderDetailItem {
 
 // ── Order detail ─────────────────────────────────────────────
 class OrderDetail {
-  final String id;
+  final int id;
   final String placedAt;
   final String clinic;
   final String clinicAddress;

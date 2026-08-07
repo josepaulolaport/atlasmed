@@ -15,7 +15,7 @@ import {
   isBillingEmailComplete,
 } from "../services/facility-cadastro-completion.service";
 import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
-import { resolveFacilityTaxIdType } from "../utils/facility-tax-id.utils";
+import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 import { storageService } from "../../../../infrastructure/storage/storage.service";
 
 const MAX_DOC_BYTES = 10 * 1024 * 1024;
@@ -136,9 +136,9 @@ function mapRecordStatusToUi(
 }
 
 function serializeRecord(record: {
-  id: string;
-  facilityId: string;
-  requirementId: string;
+  id: number;
+  facilityId: number;
+  requirementId: number;
   status: string;
   submittedAt: Date | null;
   validatedAt: Date | null;
@@ -148,13 +148,13 @@ function serializeRecord(record: {
   fileName: string | null;
   reviewerNote: string | null;
   requirement: {
-    id: string;
+    id: number;
     slug: string;
     name: string;
     description: string | null;
-    appliesToTaxIdType: "PF" | "PJ" | null;
+    appliesToLegalDocumentType: "CNPJ" | "CPF" | null;
   };
-  facility?: { id: string; name: string; taxIdType: "PF" | "PJ" | null };
+  facility?: { id: number; name: string; legalDocumentType: "CNPJ" | "CPF" | null };
 }) {
   return {
     id: record.id,
@@ -165,7 +165,7 @@ function serializeRecord(record: {
       slug: record.requirement.slug,
       name: record.requirement.name,
       description: record.requirement.description ?? undefined,
-      appliesToTaxIdType: record.requirement.appliesToTaxIdType ?? undefined,
+      appliesToLegalDocumentType: record.requirement.appliesToLegalDocumentType ?? undefined,
     },
     status: record.status,
     uiStatus: mapRecordStatusToUi(record.status),
@@ -179,7 +179,7 @@ function serializeRecord(record: {
       ? {
           id: record.facility.id,
           name: record.facility.name,
-          taxIdType: record.facility.taxIdType ?? undefined,
+          legalDocumentType: record.facility.legalDocumentType ?? undefined,
         }
       : undefined,
   };
@@ -188,7 +188,7 @@ function serializeRecord(record: {
 export class GetFacilityCadastroChecklistUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -196,11 +196,11 @@ export class GetFacilityCadastroChecklistUseCase {
       throw new ResourceNotFoundError("Facility", input.facilityId);
     }
 
-    const taxIdType = resolveFacilityTaxIdType(facility);
+    const legalDocumentType = resolveFacilityLegalDocumentType(facility);
 
     const requirements = sortRequirementsByCatalogOrder(
       await this.deps.conformityRepository.findActiveRequirements({
-        taxIdType,
+        legalDocumentType,
       })
     );
     const records = await this.deps.conformityRepository.findRecordsByFacility(
@@ -252,7 +252,7 @@ export class GetFacilityCadastroChecklistUseCase {
           slug: requirement.slug,
           name: requirement.name,
           description: requirement.description ?? undefined,
-          appliesToTaxIdType: requirement.appliesToTaxIdType ?? undefined,
+          appliesToLegalDocumentType: requirement.appliesToLegalDocumentType ?? undefined,
           kind: "file" as const,
           required: true,
           uiStatus,
@@ -323,7 +323,7 @@ export class GetFacilityCadastroChecklistUseCase {
 
     return {
       facilityId: facility.id,
-      taxIdType,
+      legalDocumentType,
       billingEmail,
       commercialStatus: facility.commercialStatus ?? undefined,
       conformityStatus: facility.conformityStatus,
@@ -347,10 +347,10 @@ export class UpdateFacilityBillingEmailUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
+    facilityId: number;
     scope: ScopeContext;
     email: string;
-    verticalId?: string;
+    verticalId?: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -394,8 +394,8 @@ export class SubmitFacilityCadastroDocumentUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     scope: ScopeContext;
     file: File;
   }) {
@@ -414,9 +414,9 @@ export class SubmitFacilityCadastroDocumentUseCase {
     }
 
     if (
-      requirement.appliesToTaxIdType != null &&
-      facility.taxIdType != null &&
-      requirement.appliesToTaxIdType !== facility.taxIdType
+      requirement.appliesToLegalDocumentType != null &&
+      facility.legalDocumentType != null &&
+      requirement.appliesToLegalDocumentType !== facility.legalDocumentType
     ) {
       throw new ForbiddenError();
     }
@@ -517,9 +517,9 @@ export class ApproveFacilityCadastroRecordUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    recordId: string;
-    userId: string;
+    facilityId: number;
+    recordId: number;
+    userId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -562,9 +562,9 @@ export class RejectFacilityCadastroRecordUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    recordId: string;
-    userId: string;
+    facilityId: number;
+    recordId: number;
+    userId: number;
     scope: ScopeContext;
     reviewerNote: string;
   }) {
@@ -713,8 +713,8 @@ export class ListCadastroSubmissionsUseCase {
                   slug: document.requirement.slug,
                   name: document.requirement.name,
                   description: document.requirement.description ?? undefined,
-                  appliesToTaxIdType:
-                    document.requirement.appliesToTaxIdType ?? undefined,
+                  appliesToLegalDocumentType:
+                    document.requirement.appliesToLegalDocumentType ?? undefined,
                 }
               : {
                   id: document.requirementId,
@@ -741,7 +741,7 @@ export class ListCadastroSubmissionsUseCase {
             reviewerNote: document.reviewComment ?? undefined,
             facility: facility
               ? (() => {
-                  const taxIdType = resolveFacilityTaxIdType(facility);
+                  const legalDocumentType = resolveFacilityLegalDocumentType(facility);
                   const address = [
                     facility.streetAddress,
                     facility.streetNumber,
@@ -756,8 +756,8 @@ export class ListCadastroSubmissionsUseCase {
                   return {
                     id: facility.id,
                     name: facility.name,
-                    taxIdType,
-                    taxId: taxIdType === "PF" ? facility.cpf : facility.cnpj,
+                    legalDocumentType,
+                    taxId: facility.legalDocument,
                     phone: facility.phone ?? undefined,
                     email:
                       facility.email ?? facility.billingEmail ?? undefined,

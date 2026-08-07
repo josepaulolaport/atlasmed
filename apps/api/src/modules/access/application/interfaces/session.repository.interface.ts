@@ -1,6 +1,6 @@
 export interface SessionRecord {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   refreshTokenHash: string;
   previousRefreshTokenHash: string | null;
   expiresAt: Date;
@@ -20,22 +20,20 @@ export interface SessionRecord {
 
 export interface SessionWithUserRecord extends SessionRecord {
   user: {
-    id: string;
+    id: number;
     email: string | null;
     username: string;
     status: string;
     tokenVersion: number;
     role: {
-      id: string;
+      id: number;
       name: string;
     };
   };
 }
 
 export interface CreateSessionParams {
-  id: string;
-
-  userId: string;
+  userId: number;
 
   refreshTokenHash: string;
 
@@ -57,7 +55,7 @@ export interface CreateSessionParams {
 }
 
 export interface RotateRefreshTokenParams {
-  sessionId: string;
+  sessionId: number;
   expectedRefreshTokenHash: string;
   newRefreshTokenHash: string;
   newExpiresAt: Date;
@@ -77,18 +75,18 @@ export interface CreateLoginSessionParams extends CreateSessionParams {
 
 export interface CreateLoginSessionResult {
   session: SessionRecord;
-  revokedSessionIds: string[];
+  revokedSessionIds: number[];
 }
 
 export interface SessionStatus {
-  userId: string;
+  userId: number;
   revokedAt: Date | null;
   expiresAt: Date;
 }
 
 export interface PreviousRefreshTokenSession {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   updatedAt: Date;
 }
 
@@ -98,8 +96,8 @@ export interface RotateRefreshTokenResult {
 
 export type RotateRefreshTokenTransactionResult =
   | { status: "rotated"; session: SessionWithUserRecord }
-  | { status: "reuse_detected"; userId: string; sessionId: string }
-  | { status: "already_rotated"; userId: string; sessionId: string };
+  | { status: "reuse_detected"; userId: number; sessionId: number }
+  | { status: "already_rotated"; userId: number; sessionId: number };
 
 export interface SessionRepository {
   create(params: CreateSessionParams): Promise<SessionRecord>;
@@ -110,31 +108,31 @@ export interface SessionRepository {
     tokenHash: string
   ): Promise<PreviousRefreshTokenSession | null>;
 
-  findById(sessionId: string): Promise<SessionWithUserRecord | null>;
+  findById(sessionId: number): Promise<SessionWithUserRecord | null>;
 
-  findSessionStatus(sessionId: string): Promise<SessionStatus | null>;
+  findSessionStatus(sessionId: number): Promise<SessionStatus | null>;
 
-  findByUserId(userId: string): Promise<SessionRecord[]>;
+  findByUserId(userId: number): Promise<SessionRecord[]>;
 
-  revoke(sessionId: string): Promise<void>;
+  revoke(sessionId: number): Promise<void>;
 
-  revokeForSecurityViolation(sessionId: string): Promise<void>;
+  revokeForSecurityViolation(sessionId: number): Promise<void>;
 
-  revokeAllByUserId(userId: string, excludeSessionId?: string): Promise<void>;
+  revokeAllByUserId(userId: number, excludeSessionId?: number): Promise<void>;
 
   revokeActiveByUserAndDeviceFingerprint(
-    userId: string,
+    userId: number,
     deviceFingerprint: string,
     options?: {
       reason?: string;
-      excludeSessionId?: string;
+      excludeSessionId?: number;
     }
-  ): Promise<string[]>;
+  ): Promise<number[]>;
 
   revokeAllActiveForDevice(
-    userId: string,
+    userId: number,
     targetSession: {
-      id: string;
+      id: number;
       deviceFingerprint?: string | null;
       userAgent?: string | null;
       deviceType?: string | null;
@@ -142,9 +140,9 @@ export interface SessionRepository {
     options?: {
       reason?: string;
     }
-  ): Promise<string[]>;
+  ): Promise<number[]>;
 
-  updateLastSeen(sessionId: string): Promise<void>;
+  updateLastSeen(sessionId: number): Promise<void>;
 
   rotateRefreshTokenTransaction(
     params: RotateRefreshTokenParams
@@ -155,9 +153,9 @@ export interface SessionRepository {
   ): Promise<CreateLoginSessionResult>;
 
   revokeAllExceptDevice(
-    userId: string,
+    userId: number,
     currentSession: {
-      id: string;
+      id: number;
       deviceFingerprint?: string | null;
       userAgent?: string | null;
       deviceType?: string | null;
@@ -165,5 +163,5 @@ export interface SessionRepository {
     options?: {
       reason?: string;
     }
-  ): Promise<string[]>;
+  ): Promise<number[]>;
 }

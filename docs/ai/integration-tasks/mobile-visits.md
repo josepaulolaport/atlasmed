@@ -5,15 +5,14 @@ Use when a task changes the visit-logging flow, geofence, visit forms, visit his
 ## Load
 
 **Always:**
-- `AGENTS.md`
-- `apps/mobile/AGENTS.md`
+- `AGENTS.md` (§ `apps/mobile`)
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
 | Backend sync needed | `docs/ai/integration-tasks/api-mobile.md` |
-| authorization / security | `packages/access/AGENTS.md` |
+| authorization / security | `AGENTS.md` § `packages/access`, `docs/architecture/features/access-auth.md` |
 | Map/route behavior | `docs/specs/0003-territory-management/requirements.md` |
 | Product feature definition | TODO `docs/product/visits.md` |
 | testing (api-side) | `apps/api/TESTING.md` |
@@ -36,5 +35,5 @@ Use when a task changes the visit-logging flow, geofence, visit forms, visit his
 
 ## Docs to update after
 
-- `apps/mobile/AGENTS.md` — if a visit pattern shifted.
+- Root `AGENTS.md` § `apps/mobile` — if a visit pattern shifted.
 - TODO `docs/product/visits.md` — if visit business rules changed.

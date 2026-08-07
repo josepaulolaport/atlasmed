@@ -8,16 +8,16 @@ const geoJsonBoundarySchema = z.object({
 /** Draft rep patch created at invite time (empty UTA until accept). */
 export const inviteNewPatchSchema = z.object({
   name: z.string().min(1).max(200),
-  managerZoneId: z.string().min(1),
+  managerZoneId: z.number().int().positive(),
   slug: z.string().min(1).max(120).optional(),
   boundary: geoJsonBoundarySchema,
 });
 
 const verticalAssignmentSchema = z
   .object({
-    verticalId: z.string().min(1),
+    verticalId: z.number().int().positive(),
     /** MANAGER: manager zone ids. REP: empty patch ids (after newPatch resolve). */
-    territoryIds: z.array(z.string().min(1)).default([]),
+    territoryIds: z.array(z.number().int().positive()).default([]),
     /** REP only — create empty patch under zone, then stage its id. */
     newPatch: inviteNewPatchSchema.optional(),
   })
@@ -42,7 +42,7 @@ export const inviteUserSchema = z
   .object({
     email: z.string().email().optional(),
     phoneNumber: z.string().optional(),
-    roleId: z.string(),
+    roleId: z.number().int().positive(),
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
     birthDate: z

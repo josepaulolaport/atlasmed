@@ -14,7 +14,7 @@ class ClinicOrdersSection extends StatefulWidget {
   });
 
   final List<FacilityOrderSummary> orders;
-  final String facilityId;
+  final int facilityId;
 
   @override
   State<ClinicOrdersSection> createState() => _ClinicOrdersSectionState();
@@ -62,7 +62,7 @@ class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.order, required this.facilityId});
 
   final FacilityOrderSummary order;
-  final String facilityId;
+  final int facilityId;
 
   @override
   Widget build(BuildContext context) {

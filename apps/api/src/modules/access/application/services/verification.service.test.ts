@@ -38,29 +38,29 @@ describe("VerificationService", () => {
   describe("verifyEmail", () => {
     it("should call repositories instead of prisma", async () => {
       verificationTokenRepository.findValidToken = mock(() =>
-        Promise.resolve({ id: "token-123", newValue: null })
+        Promise.resolve({ id: 1, newValue: null })
       );
       userRepository.findEmailVerificationState = mock(() =>
         Promise.resolve({ email: "user@example.com", emailVerified: true })
       );
 
-      await service.verifyEmail({ userId: "user-123", token: "known-token" });
+      await service.verifyEmail({ userId: 123, token: "known-token" });
 
       expect(verificationTokenRepository.findValidToken).toHaveBeenCalledWith({
         tokenHash: hashToken("known-token"),
-        userId: "user-123",
+        userId: 123,
         type: "EMAIL_VERIFICATION",
       });
-      expect(verificationTokenRepository.markVerified).toHaveBeenCalledWith("token-123");
-      expect(userRepository.markEmailVerified).toHaveBeenCalledWith("user-123");
-      expect(userRepository.findEmailVerificationState).toHaveBeenCalledWith("user-123");
+      expect(verificationTokenRepository.markVerified).toHaveBeenCalledWith(1);
+      expect(userRepository.markEmailVerified).toHaveBeenCalledWith(123);
+      expect(userRepository.findEmailVerificationState).toHaveBeenCalledWith(123);
     });
 
     it("should throw TokenInvalidError for invalid token", async () => {
       verificationTokenRepository.findValidToken = mock(() => Promise.resolve(null));
 
       await expect(
-        service.verifyEmail({ userId: "user-123", token: "bad-token" })
+        service.verifyEmail({ userId: 123, token: "bad-token" })
       ).rejects.toThrow(TokenInvalidError);
 
       expect(userRepository.markEmailVerified).not.toHaveBeenCalled();

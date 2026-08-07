@@ -71,7 +71,7 @@ function mapDocument(
           slug: requirement.slug,
           name: requirement.name,
           description: requirement.description,
-          appliesToTaxIdType: requirement.appliesToTaxIdType,
+          appliesToLegalDocumentType: requirement.appliesToLegalDocumentType,
           allowedMimeTypes: requirement.allowedMimeTypes ?? [],
           maxFiles: requirement.maxFiles,
           maxFileSizeBytes: requirement.maxFileSizeBytes,
@@ -142,7 +142,7 @@ function mapUploadSession(
 export class DrizzleCadastroSubmissionRepository
   implements CadastroSubmissionRepository
 {
-  async findDraftByFacility(facilityId: string) {
+  async findDraftByFacility(facilityId: number) {
     const [row] = await db
       .select()
       .from(cadastroSubmissions)
@@ -156,7 +156,7 @@ export class DrizzleCadastroSubmissionRepository
     return row ? mapSubmission(row) : null;
   }
 
-  async findById(id: string) {
+  async findById(id: number) {
     const [row] = await db
       .select()
       .from(cadastroSubmissions)
@@ -165,7 +165,7 @@ export class DrizzleCadastroSubmissionRepository
     return row ? mapSubmission(row) : null;
   }
 
-  async findLatestByFacility(facilityId: string) {
+  async findLatestByFacility(facilityId: number) {
     const [row] = await db
       .select()
       .from(cadastroSubmissions)
@@ -176,9 +176,9 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async createSubmission(input: {
-    facilityId: string;
-    verticalId: string;
-    submittedByUserId?: string | null;
+    facilityId: number;
+    verticalId: number;
+    submittedByUserId?: number | null;
     version: number;
   }) {
     const [row] = await db
@@ -195,10 +195,10 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async updateSubmissionStatus(input: {
-    id: string;
+    id: number;
     status: CadastroSubmissionRecord["status"];
     submittedAt?: Date | null;
-    submittedByUserId?: string | null;
+    submittedByUserId?: number | null;
   }) {
     const [row] = await db
       .update(cadastroSubmissions)
@@ -217,7 +217,7 @@ export class DrizzleCadastroSubmissionRepository
     return mapSubmission(row!);
   }
 
-  async deleteSubmission(id: string) {
+  async deleteSubmission(id: number) {
     await db.delete(cadastroSubmissions).where(eq(cadastroSubmissions.id, id));
   }
 
@@ -247,7 +247,7 @@ export class DrizzleCadastroSubmissionRepository
     };
   }
 
-  async findDocumentById(id: string) {
+  async findDocumentById(id: number) {
     const [row] = await db
       .select({
         document: submissionDocuments,
@@ -263,7 +263,7 @@ export class DrizzleCadastroSubmissionRepository
     return row ? mapDocument(row.document, row.requirement) : null;
   }
 
-  async findDocumentsBySubmission(submissionId: string) {
+  async findDocumentsBySubmission(submissionId: number) {
     const rows = await db
       .select({
         document: submissionDocuments,
@@ -279,8 +279,8 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async findDocumentBySubmissionAndRequirement(
-    submissionId: string,
-    requirementId: string
+    submissionId: number,
+    requirementId: number
   ) {
     const [row] = await db
       .select({
@@ -359,8 +359,8 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async listDocumentsForFacilityRequirement(input: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     excludeDraft?: boolean;
   }) {
     const conditions = [
@@ -408,8 +408,8 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async createDocument(input: {
-    submissionId: string;
-    requirementId: string;
+    submissionId: number;
+    requirementId: number;
     title: string;
   }) {
     const [row] = await db
@@ -425,7 +425,7 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async updateDocumentStatus(input: {
-    id: string;
+    id: number;
     status: SubmissionDocumentRecord["status"];
     reviewComment?: string | null;
     version?: number;
@@ -445,8 +445,8 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async createFileAsset(input: {
-    id?: string;
-    facilityId: string;
+    id?: number;
+    facilityId: number;
     bucket: string;
     objectKey: string;
     originalFilename: string;
@@ -472,7 +472,7 @@ export class DrizzleCadastroSubmissionRepository
     return mapFileAsset(row!);
   }
 
-  async findFileAssetById(id: string) {
+  async findFileAssetById(id: number) {
     const [row] = await db
       .select()
       .from(fileAssets)
@@ -481,12 +481,12 @@ export class DrizzleCadastroSubmissionRepository
     return row ? mapFileAsset(row) : null;
   }
 
-  async deleteFileAsset(id: string) {
+  async deleteFileAsset(id: number) {
     await db.delete(fileAssets).where(eq(fileAssets.id, id));
   }
 
   async updateFileAsset(input: {
-    id: string;
+    id: number;
     status?: FileAssetRecord["status"];
     sha256?: string | null;
     detectedMimeType?: string | null;
@@ -509,7 +509,7 @@ export class DrizzleCadastroSubmissionRepository
     return mapFileAsset(row!);
   }
 
-  async listDocumentFiles(documentId: string) {
+  async listDocumentFiles(documentId: number) {
     const rows = await db
       .select({
         link: documentFiles,
@@ -522,7 +522,7 @@ export class DrizzleCadastroSubmissionRepository
     return rows.map((r) => mapDocumentFile(r.link, r.asset));
   }
 
-  async findDocumentFileByFileAssetId(fileAssetId: string) {
+  async findDocumentFileByFileAssetId(fileAssetId: number) {
     const [row] = await db
       .select({
         link: documentFiles,
@@ -536,8 +536,8 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async createDocumentFile(input: {
-    submissionDocumentId: string;
-    fileAssetId: string;
+    submissionDocumentId: number;
+    fileAssetId: number;
     position: number;
     role: DocumentFileRecord["role"];
   }) {
@@ -549,7 +549,7 @@ export class DrizzleCadastroSubmissionRepository
     return mapDocumentFile(row!, asset ?? undefined);
   }
 
-  async deleteDocumentFileByFileAssetId(fileAssetId: string) {
+  async deleteDocumentFileByFileAssetId(fileAssetId: number) {
     await db
       .delete(documentFiles)
       .where(eq(documentFiles.fileAssetId, fileAssetId));
@@ -557,9 +557,9 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async reorderDocumentFiles(input: {
-    submissionDocumentId: string;
+    submissionDocumentId: number;
     ordered: Array<{
-      fileAssetId: string;
+      fileAssetId: number;
       position: number;
       role: DocumentFileRecord["role"];
     }>;
@@ -590,7 +590,7 @@ export class DrizzleCadastroSubmissionRepository
     return this.listDocumentFiles(input.submissionDocumentId);
   }
 
-  async sumDocumentFileSizes(documentId: string) {
+  async sumDocumentFileSizes(documentId: number) {
     const [row] = await db
       .select({
         value: sql<number>`coalesce(sum(${fileAssets.sizeBytes}), 0)`,
@@ -601,7 +601,7 @@ export class DrizzleCadastroSubmissionRepository
     return Number(row?.value ?? 0);
   }
 
-  async countDocumentFiles(documentId: string) {
+  async countDocumentFiles(documentId: number) {
     const [row] = await db
       .select({ value: count() })
       .from(documentFiles)
@@ -609,7 +609,7 @@ export class DrizzleCadastroSubmissionRepository
     return Number(row?.value ?? 0);
   }
 
-  async nextDocumentFilePosition(documentId: string) {
+  async nextDocumentFilePosition(documentId: number) {
     const [row] = await db
       .select({
         value: sql<number>`coalesce(max(${documentFiles.position}), 0)`,
@@ -620,7 +620,7 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async createUploadSession(input: {
-    fileAssetId: string;
+    fileAssetId: number;
     storageUploadId: string;
     partSize: number;
     expiresAt: Date;
@@ -638,7 +638,7 @@ export class DrizzleCadastroSubmissionRepository
     return mapUploadSession(row!);
   }
 
-  async findUploadSessionById(id: string) {
+  async findUploadSessionById(id: number) {
     const [row] = await db
       .select()
       .from(uploadSessions)
@@ -648,7 +648,7 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async updateUploadSession(input: {
-    id: string;
+    id: number;
     status: UploadSessionRecord["status"];
     completedAt?: Date | null;
   }) {
@@ -666,7 +666,7 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async upsertUploadPart(input: {
-    uploadSessionId: string;
+    uploadSessionId: number;
     partNumber: number;
     etag: string;
     sizeBytes?: number;
@@ -691,13 +691,13 @@ export class DrizzleCadastroSubmissionRepository
   }
 
   async createReviewDecision(input: {
-    submissionDocumentId: string;
-    reviewerId: string;
+    submissionDocumentId: number;
+    reviewerId: number;
     decision: "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
     reasonCode?: string | null;
     comment?: string | null;
     documentVersion: number;
-    flaggedFileAssetIds?: string[];
+    flaggedFileAssetIds?: number[];
   }) {
     await db.insert(reviewDecisions).values({
       submissionDocumentId: input.submissionDocumentId,
@@ -706,12 +706,12 @@ export class DrizzleCadastroSubmissionRepository
       reasonCode: input.reasonCode ?? null,
       comment: input.comment ?? null,
       documentVersion: input.documentVersion,
-      flaggedFileAssetIds: input.flaggedFileAssetIds ?? [],
+      flaggedFileAssetIds: (input.flaggedFileAssetIds ?? []).map(String),
     });
   }
 
   async createProcessingEvent(input: {
-    fileAssetId: string;
+    fileAssetId: number;
     processingStep: string;
     status: "STARTED" | "SUCCEEDED" | "FAILED";
     errorCode?: string | null;

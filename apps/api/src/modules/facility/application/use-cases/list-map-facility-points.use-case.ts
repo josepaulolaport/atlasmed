@@ -12,7 +12,7 @@ export type MapFacilityPointsGeoJson = {
     type: "Feature";
     geometry: { type: "Point"; coordinates: [number, number] };
     properties: {
-      facilityId: string;
+      facilityId: number;
       name: string;
       purchaseBucket: "active" | "inactive" | "neverBought";
     };
@@ -26,7 +26,7 @@ export class ListMapFacilityPointsUseCase {
   async execute(input: {
     scope: ScopeContext;
     role: string;
-    verticalId?: string;
+    verticalId?: number;
   }): Promise<MapFacilityPointsGeoJson> {
     const listScope = buildFacilityListScope({
       scope: input.scope,

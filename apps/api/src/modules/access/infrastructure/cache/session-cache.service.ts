@@ -28,7 +28,7 @@ export class SessionCacheService implements ISessionCache {
     this.redis = redisClient;
   }
 
-  private getSessionKey(sessionId: string): string {
+  private getSessionKey(sessionId: number): string {
     return `${this.sessionKeyPrefix}${sessionId}`;
   }
 
@@ -36,15 +36,15 @@ export class SessionCacheService implements ISessionCache {
     return `${this.tokenKeyPrefix}${tokenHash}`;
   }
 
-  private getUserSessionsKey(userId: string): string {
+  private getUserSessionsKey(userId: number): string {
     return `${this.userSessionsKeyPrefix}${userId}`;
   }
 
-  private getRevokedKey(sessionId: string): string {
+  private getRevokedKey(sessionId: number): string {
     return `${this.revokedKeyPrefix}${sessionId}`;
   }
 
-  private getValidatedKey(sessionId: string): string {
+  private getValidatedKey(sessionId: number): string {
     return `${this.validatedKeyPrefix}${sessionId}`;
   }
 
@@ -65,7 +65,7 @@ export class SessionCacheService implements ISessionCache {
   }
 
   private async markRevoked(
-    sessionId: string,
+    sessionId: number,
     expiresAt?: string
   ): Promise<void> {
     await withRedisRetry(
@@ -83,7 +83,7 @@ export class SessionCacheService implements ISessionCache {
     );
   }
 
-  private async clearValidated(sessionId: string): Promise<void> {
+  private async clearValidated(sessionId: number): Promise<void> {
     await withRedisRetry(() => this.redis.del(this.getValidatedKey(sessionId)), {
       attempts: REDIS_CACHE_RETRY_ATTEMPTS,
       delayMs: REDIS_CACHE_RETRY_DELAY_MS,
@@ -91,7 +91,7 @@ export class SessionCacheService implements ISessionCache {
     });
   }
 
-  async getById(sessionId: string): Promise<CachedSession | null> {
+  async getById(sessionId: number): Promise<CachedSession | null> {
     try {
       const data = await this.redis.get(this.getSessionKey(sessionId));
 
@@ -131,7 +131,7 @@ export class SessionCacheService implements ISessionCache {
         return null;
       }
 
-      return await this.getById(sessionId);
+      return await this.getById(Number(sessionId));
     } catch (error) {
       logger.error("Failed to get session by token hash from cache", error);
       return null;
@@ -165,7 +165,7 @@ export class SessionCacheService implements ISessionCache {
     }
   }
 
-  async invalidate(sessionId: string): Promise<void> {
+  async invalidate(sessionId: number): Promise<void> {
     const session = await this.getById(sessionId);
 
     await this.markRevoked(sessionId, session?.expiresAt);
@@ -193,8 +193,8 @@ export class SessionCacheService implements ISessionCache {
   }
 
   async invalidateByUserId(
-    userId: string,
-    excludeSessionId?: string
+    userId: number,
+    excludeSessionId?: number
   ): Promise<void> {
     const userSessionsKey = this.getUserSessionsKey(userId);
     const sessionIds = await this.redis.smembers(userSessionsKey).catch((error) => {
@@ -207,7 +207,7 @@ export class SessionCacheService implements ISessionCache {
     }
 
     const idsToInvalidate = excludeSessionId
-      ? sessionIds.filter((id) => id !== excludeSessionId)
+      ? sessionIds.filter((id) => Number(id) !== excludeSessionId)
       : sessionIds;
 
     if (idsToInvalidate.length === 0) {
@@ -215,7 +215,7 @@ export class SessionCacheService implements ISessionCache {
     }
 
     for (const sessionId of idsToInvalidate) {
-      await this.invalidate(sessionId);
+      await this.invalidate(Number(sessionId));
     }
   }
 
@@ -261,7 +261,7 @@ export class SessionCacheService implements ISessionCache {
     }
   }
 
-  async updateLastSeen(sessionId: string): Promise<void> {
+  async updateLastSeen(sessionId: number): Promise<void> {
     try {
       const session = await this.getById(sessionId);
 
@@ -277,7 +277,7 @@ export class SessionCacheService implements ISessionCache {
   }
 
   /** Fail-closed: Redis errors assume revoked so caller revalidates from DB or rejects. */
-  async isMarkedRevoked(sessionId: string): Promise<boolean> {
+  async isMarkedRevoked(sessionId: number): Promise<boolean> {
     try {
       const result = await this.redis.exists(this.getRevokedKey(sessionId));
       return result === 1;
@@ -292,7 +292,7 @@ export class SessionCacheService implements ISessionCache {
    * actually still healthy (self-heals stale/false-positive markers left
    * behind by a transient error instead of letting them persist forever).
    */
-  async clearRevoked(sessionId: string): Promise<void> {
+  async clearRevoked(sessionId: number): Promise<void> {
     await withRedisRetry(() => this.redis.del(this.getRevokedKey(sessionId)), {
       attempts: REDIS_CACHE_RETRY_ATTEMPTS,
       delayMs: REDIS_CACHE_RETRY_DELAY_MS,
@@ -301,7 +301,7 @@ export class SessionCacheService implements ISessionCache {
   }
 
   /** Fail-open to false forces DB revalidation when Redis is unavailable. */
-  async isRecentlyValidated(sessionId: string): Promise<boolean> {
+  async isRecentlyValidated(sessionId: number): Promise<boolean> {
     try {
       const result = await this.redis.exists(this.getValidatedKey(sessionId));
       return result === 1;
@@ -311,7 +311,7 @@ export class SessionCacheService implements ISessionCache {
     }
   }
 
-  async markValidated(sessionId: string): Promise<void> {
+  async markValidated(sessionId: number): Promise<void> {
     try {
       await this.redis.setex(
         this.getValidatedKey(sessionId),

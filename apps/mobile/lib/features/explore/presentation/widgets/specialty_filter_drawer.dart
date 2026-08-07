@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_services_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinical_focuses_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_specialties_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_services_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinical_focuses_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/specialties_providers.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
@@ -16,7 +16,7 @@ class SpecialtyOption {
 }
 
 /// Standalone specialty picker — search + multi-select list.
-/// Clinic: CNES service codes. Doctor: specialty name strings.
+/// Clinic: clinical focus ids. Doctor: specialty name strings.
 class SpecialtyFilterDrawer extends ConsumerStatefulWidget {
   const SpecialtyFilterDrawer({
     super.key,
@@ -273,10 +273,10 @@ class _ClinicSpecialtyList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.watch(facilityServicesRepositoryProvider);
+    final repo = ref.watch(clinicalFocusesRepositoryProvider);
     return RepositoryBuilder<
-      FacilityServicesRepository,
-      List<FacilityServiceOption>
+      ClinicalFocusesRepository,
+      List<ClinicalFocusOption>
     >(
       repository: repo,
       builder: (context, snapshot, _) {
@@ -289,25 +289,19 @@ class _ClinicSpecialtyList extends ConsumerWidget {
           );
         }
 
-        final byCode = {for (final o in snapshot) o.serviceCode: o};
-        final codes = <String>{...byCode.keys, ...selected}.toList();
-        codes.sort((a, b) {
+        final byId = {for (final o in snapshot) o.id.toString(): o};
+        final ids = <String>{...byId.keys, ...selected}.toList();
+        ids.sort((a, b) {
           final rank =
-              FacilityServiceLabels.priorityRank(
-                serviceCode: a,
-                serviceName: byCode[a]?.serviceName ?? a,
-              ) -
-              FacilityServiceLabels.priorityRank(
-                serviceCode: b,
-                serviceName: byCode[b]?.serviceName ?? b,
-              );
+              ClinicalFocusLabels.priorityRank(byId[a]?.name ?? a) -
+              ClinicalFocusLabels.priorityRank(byId[b]?.name ?? b);
           if (rank != 0) return rank;
-          return (byCode[a]?.label ?? a).compareTo(byCode[b]?.label ?? b);
+          return (byId[a]?.label ?? a).compareTo(byId[b]?.label ?? b);
         });
 
         final options = [
-          for (final code in codes)
-            SpecialtyOption(value: code, label: byCode[code]?.label ?? code),
+          for (final id in ids)
+            SpecialtyOption(value: id, label: byId[id]?.label ?? id),
         ];
 
         return _OptionsList(
@@ -356,7 +350,7 @@ class _DoctorSpecialtyList extends ConsumerWidget {
           for (final value in values)
             SpecialtyOption(
               value: value,
-              label: FacilityServiceLabels.formatName(value),
+              label: ClinicalFocusLabels.formatName(value),
             ),
         ];
 
