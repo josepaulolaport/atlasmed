@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -50,9 +49,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
     final role = json['role'] as Map<String, dynamic>?;
     final roleName =
         (json['roleName'] as String?) ?? (role?['name'] as String?) ?? 'REP';
-    final roleId =
-        readCrmIdOrNull(json['roleId'], 'roleId') ??
-        readCrmIdOrNull(role?['id'], 'role.id');
+    final roleId = (json['roleId'] as String?) ?? role?['id'] as String?;
     final invitedBy = json['invitedBy'] as Map<String, dynamic>?;
     final composedInviter = [
       invitedBy?['firstName'],
@@ -105,7 +102,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
     if (draft != null) {
       return {
         'verticalId': s.verticalId,
-        'territoryIds': <int>[],
+        'territoryIds': <String>[],
         'newPatch': draft.toJson(),
       };
     }
@@ -123,7 +120,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
   }
 
   @override
-  Future<UserInvitation> getInvitation(int id) async {
+  Future<UserInvitation> getInvitation(String id) async {
     final response = await _get(_uri('/invitations/$id'));
     _throwIfError(response);
     return _parseInvitation(jsonDecode(response.body) as Map<String, dynamic>);
@@ -136,7 +133,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
     required String lastName,
     required DateTime birthDate,
     required String phoneNumber,
-    required int roleId,
+    required String roleId,
     List<InviteVerticalAssignment> verticalAssignments = const [],
   }) async {
     final response = await _send(
@@ -156,19 +153,38 @@ class HttpInvitationsRepository implements InvitationsRepository {
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final invite = decoded['invite'] as Map<String, dynamic>?;
-    final inviteId = readCrmId(invite?['id'], 'invite.id');
-    return getInvitation(inviteId);
+    final inviteId = invite?['id'] as String?;
+    if (inviteId != null) {
+      return getInvitation(inviteId);
+    }
+    // Fallback if create response is minimal.
+    return UserInvitation(
+      id: inviteId ?? 'unknown',
+      email: email,
+      roleName: '',
+      roleId: roleId,
+      status: InvitationStatus.pending,
+      invitedByName: '—',
+      firstName: firstName,
+      lastName: lastName,
+      birthDate: birthDate,
+      phoneNumber: phoneNumber.isEmpty ? null : phoneNumber,
+      verticalAssignments: verticalAssignments,
+      createdAt: DateTime.now(),
+      expiresAt: DateTime.now().add(const Duration(days: 7)),
+      resendCount: 0,
+    );
   }
 
   @override
   Future<UserInvitation> updateInvitation({
-    required int id,
+    required String id,
     required String email,
     required String firstName,
     required String lastName,
     required DateTime birthDate,
     required String phoneNumber,
-    required int roleId,
+    required String roleId,
     List<InviteVerticalAssignment> verticalAssignments = const [],
   }) async {
     final response = await _send(
@@ -189,7 +205,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
   }
 
   @override
-  Future<void> resendInvitation(int id) async {
+  Future<void> resendInvitation(String id) async {
     final response = await _send(
       _uri('/invites/$id/resend'),
       method: RepositoryHttpMethod.post,
@@ -199,7 +215,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
   }
 
   @override
-  Future<void> revokeInvitation(int id) async {
+  Future<void> revokeInvitation(String id) async {
     final response = await _send(
       _uri('/invites/$id'),
       method: RepositoryHttpMethod.delete,

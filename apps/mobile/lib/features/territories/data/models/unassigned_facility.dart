@@ -1,10 +1,9 @@
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 class UnassignedFacility {
-  final int id;
+  final String id;
   final String displayName;
   final double? lat;
   final double? lng;
-  final int managerZoneId;
+  final String managerZoneId;
   final String? managerZoneName;
 
   const UnassignedFacility({
@@ -18,17 +17,17 @@ class UnassignedFacility {
 
   factory UnassignedFacility.fromJson(Map<String, dynamic> json) {
     return UnassignedFacility(
-      id: readCrmId(json['id'], 'id'),
+      id: json['id'] as String,
       displayName:
           (json['displayName'] as String?) ??
           (json['name'] as String?) ??
-          readCrmId(json['id'], 'id').toString(),
+          json['id'] as String,
       lat: (json['lat'] as num?)?.toDouble(),
       lng: (json['lng'] as num?)?.toDouble(),
       managerZoneId:
-          readCrmIdOrNull(json['managerZoneId'], 'managerZoneId') ??
-          readCrmIdOrNull(json['territoryId'], 'territoryId') ??
-          0,
+          (json['managerZoneId'] as String?) ??
+          (json['territoryId'] as String?) ??
+          '',
       managerZoneName: json['managerZoneName'] as String?,
     );
   }

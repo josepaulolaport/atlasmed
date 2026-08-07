@@ -11,17 +11,19 @@ describe("AcceptInviteUseCase", () => {
   let mockInviteRepository: InviteRepository;
 
   const mockInvite = {
-    id: 123,
+    id: "invite-123",
     email: "newuser@example.com",
     phoneNumber: null,
     tokenHash: "hashed-token",
-    roleId: 1,
-    invitedByUserId: 456,
+    roleId: "role-123",
+    invitedByUserId: "admin-456",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     status: "PENDING",
     firstName: "Test",
     lastName: "User",
     birthDate: new Date("1990-05-12T00:00:00.000Z"),
+    managerTerritoryId: null,
+    repTerritoryId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     acceptedAt: null,
@@ -30,7 +32,7 @@ describe("AcceptInviteUseCase", () => {
     resendCount: 0,
     lastResendAt: null,
     role: {
-      id: 1,
+      id: "role-123",
       name: "USER",
       description: null,
       createdAt: new Date(),
@@ -39,12 +41,12 @@ describe("AcceptInviteUseCase", () => {
   };
 
   const mockUser = {
-    id: 123,
+    id: "user-123",
     email: "newuser@example.com",
     username: "newusername",
     phoneNumber: null,
     passwordHash: "$argon2id$test",
-    roleId: 1,
+    roleId: "role-123",
     firstName: "Test",
     lastName: "User",
     status: "ACTIVE",
@@ -88,7 +90,7 @@ describe("AcceptInviteUseCase", () => {
       const result = await acceptInviteUseCase.execute(baseParams);
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(123);
+      expect(result.id).toBe("user-123");
     });
 
     it("should call acceptInviteTransaction with hashed password and birthDate", async () => {

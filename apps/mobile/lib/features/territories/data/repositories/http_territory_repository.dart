@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -72,13 +71,13 @@ class HttpTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
-    int? verticalId,
+    String? verticalId,
   }) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': territoryTypeSlug,
         'format': 'flat',
-        if (verticalId != null) 'verticalId': verticalId.toString(),
+        'verticalId': ?verticalId,
       }),
     );
     _throwIfError(response);
@@ -91,7 +90,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<Territory?> getTerritoryById(int id) async {
+  Future<Territory?> getTerritoryById(String id) async {
     final response = await _get(_territoryUri('/territories/$id'));
     if (response.statusCode == 404) return null;
     _throwIfError(response);
@@ -99,7 +98,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   Future<Territory?> _hydrateTerritory(Map<String, dynamic> row) async {
-    final id = readCrmId(row['id'], 'id');
+    final id = row['id'] as String;
     final results = await Future.wait([
       _get(_territoryUri('/territories/$id/boundary')),
       (row['assignedUserCount'] as num? ?? 0) > 0
@@ -117,15 +116,13 @@ class HttpTerritoryRepository implements TerritoryRepository {
     );
     if (boundary == null) return null;
 
-    int? assignedUserId;
+    String? assignedUserId;
     final assignmentsResponse = results[1];
     if (assignmentsResponse != null && assignmentsResponse.statusCode == 200) {
       final entries = jsonDecode(assignmentsResponse.body) as List<dynamic>;
       if (entries.isNotEmpty) {
-        assignedUserId = readCrmIdOrNull(
-          (entries.first as Map<String, dynamic>)['userId'],
-          'userId',
-        );
+        assignedUserId =
+            (entries.first as Map<String, dynamic>)['userId'] as String?;
       }
     }
 
@@ -141,7 +138,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<BoundaryImpactPreview> previewBoundaryImpact(
-    int id,
+    String id,
     TerritoryGeometry geometry,
   ) async {
     final response = await _send(
@@ -156,9 +153,9 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<void> updateTerritoryGeometry(
-    int id,
+    String id,
     TerritoryGeometry geometry, {
-    List<int>? acceptedFacilityIds,
+    List<String>? acceptedFacilityIds,
   }) async {
     final body = <String, dynamic>{
       ...Map<String, dynamic>.from(geometry.toGeoJson()),
@@ -192,7 +189,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<void> deleteTerritory(int id) async {
+  Future<void> deleteTerritory(String id) async {
     final response = await _send(
       _territoryUri('/territories/$id'),
       RepositoryHttpMethod.delete,
@@ -201,7 +198,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<void> assignUser(int territoryId, int? userId) async {
+  Future<void> assignUser(String territoryId, String? userId) async {
     final assignmentsResponse = await _get(
       _accessUri('/territories/$territoryId/assignments'),
     );
@@ -210,10 +207,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
         jsonDecode(assignmentsResponse.body) as List<dynamic>;
 
     for (final entry in currentEntries) {
-      final currentUserId = readCrmId(
-        (entry as Map<String, dynamic>)['userId'],
-        'userId',
-      );
+      final currentUserId = (entry as Map<String, dynamic>)['userId'] as String;
       if (currentUserId == userId) continue;
       final revokeResponse = await _send(
         _accessUri('/users/$currentUserId/territories/$territoryId'),
@@ -237,10 +231,10 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<void> updateTerritoryInfo(
-    int territoryId, {
+    String territoryId, {
     required String name,
     required bool isActive,
-    int? managerTerritoryId,
+    String? managerTerritoryId,
   }) async {
     final response = await _send(
       _territoryUri('/territories/$territoryId'),
@@ -252,13 +246,13 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<List<AssignableManager>> getAssignableManagers({
-    int? verticalId,
+    String? verticalId,
   }) async {
     final zonesResponse = await _get(
       _territoryUri('/territories', {
         'type': 'manager_zone',
         'format': 'flat',
-        if (verticalId != null) 'verticalId': verticalId.toString(),
+        'verticalId': ?verticalId,
       }),
     );
     _throwIfError(zonesResponse);
@@ -272,7 +266,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<List<UnassignedFacility>> listUnassignedFacilities({
-    int? managerZoneId,
+    String? managerZoneId,
     int page = 1,
     int limit = 50,
   }) async {
@@ -280,7 +274,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
       _territoryUri('/territories/unassigned-facilities', {
         'page': '$page',
         'limit': '$limit',
-        if (managerZoneId != null) 'managerZoneId': managerZoneId.toString(),
+        'managerZoneId': ?managerZoneId,
       }),
     );
     _throwIfError(response);
@@ -294,7 +288,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
     Map<String, dynamic> zone,
   ) async {
     if ((zone['assignedUserCount'] as num? ?? 0) <= 0) return null;
-    final zoneId = readCrmId(zone['id'], 'id');
+    final zoneId = zone['id'] as String;
     final response = await _get(_accessUri('/territories/$zoneId/assignments'));
     if (response.statusCode != 200) return null;
     final entries = jsonDecode(response.body) as List<dynamic>;
@@ -311,7 +305,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
     return AssignableManager(
       manager: AppUser(
-        id: readCrmId(entry['userId'], 'userId'),
+        id: entry['userId'] as String,
         name: combinedName.isNotEmpty
             ? combinedName
             : (username?.isNotEmpty ?? false)

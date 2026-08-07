@@ -8,8 +8,8 @@ class RepManagerZonePickerScreen {
 
   static Future<TerritoryOption?> pick(
     BuildContext context, {
-    required int verticalId,
-    int? initiallySelectedId,
+    required String verticalId,
+    String? initiallySelectedId,
   }) {
     return TerritoryPickerScreen.pickRepParentZone(
       context,

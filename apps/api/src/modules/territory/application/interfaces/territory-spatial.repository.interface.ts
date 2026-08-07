@@ -1,17 +1,17 @@
 export interface SiblingOverlapConflict {
-  id: number;
+  id: string;
   code: string;
   overlapRatio: number;
 }
 
 export interface OverlappingTerritory {
-  id: number;
+  id: string;
   code: string;
 }
 
 export interface ClinicAssignmentTerritoryMatch {
-  id: number;
-  verticalId: number;
+  id: string;
+  verticalId: string;
 }
 
 export interface TerritoryBoundingBox {
@@ -27,41 +27,41 @@ export interface GeoJsonGeometry {
 }
 
 export interface ManagerZoneCandidate {
-  id: number;
+  id: string;
   code: string;
   name: string;
 }
 
 export interface TerritorySpatialRepository {
-  getBoundaryAsGeoJson(territoryId: number): Promise<GeoJsonGeometry | null>;
+  getBoundaryAsGeoJson(territoryId: string): Promise<GeoJsonGeometry | null>;
 
   saveBoundary(
-    territoryId: number,
+    territoryId: string,
     geoJson: GeoJsonGeometry,
     options?: { repairInvalid?: boolean }
   ): Promise<void>;
 
-  deleteBoundary(territoryId: number): Promise<void>;
+  deleteBoundary(territoryId: string): Promise<void>;
 
-  hasBoundary(territoryId: number): Promise<boolean>;
+  hasBoundary(territoryId: string): Promise<boolean>;
 
-  getBoundaryBoundingBox(territoryId: number): Promise<TerritoryBoundingBox | null>;
+  getBoundaryBoundingBox(territoryId: string): Promise<TerritoryBoundingBox | null>;
 
   findOverlappingClinicAssignmentTerritories(
-    territoryId: number,
+    territoryId: string,
     geoJson: GeoJsonGeometry
   ): Promise<OverlappingTerritory[]>;
 
   findContainingClinicAssignmentTerritoryIds(
     lng: number,
     lat: number,
-    options?: { excludeTerritoryId?: number }
+    options?: { excludeTerritoryId?: string }
   ): Promise<ClinicAssignmentTerritoryMatch[]>;
 
   /** Spec 0006: true if user has an active rep patch covering the facility point. */
   userHasRepPatchCoveringFacility(
-    userId: number,
-    facilityId: number
+    userId: string,
+    facilityId: string
   ): Promise<boolean>;
 
   /**
@@ -69,31 +69,33 @@ export interface TerritorySpatialRepository {
    * under the proposed geometry (manager zone leave, or rep loses all patch cover).
    */
   findAssignedClinicsImpactedByBoundary(input: {
-    territoryId: number;
+    territoryId: string;
     mode: "manager_zone" | "rep_patch";
     geoJson: GeoJsonGeometry;
   }): Promise<
     Array<{
-      facilityId: number;
+      facilityId: string;
       facilityName: string;
-      consultantUserId: number;
+      consultantUserId: string;
       consultantName: string;
     }>
   >;
 
   findOverlappingSiblingTerritories(input: {
-    territoryId: number;
-    territoryTypeId: number;
+    territoryId: string;
+    territoryTypeId: string;
     geoJson: GeoJsonGeometry;
   }): Promise<SiblingOverlapConflict[]>;
 
   findContainingManagerZones(input: {
     geoJson: GeoJsonGeometry;
-    verticalId?: number;
+    verticalId?: string;
   }): Promise<ManagerZoneCandidate[]>;
 
   findRepPatchesOutsideManagerZone(input: {
-    managerZoneId: number;
+    managerZoneId: string;
     managerZoneGeoJson: GeoJsonGeometry;
-  }): Promise<Array<{ id: number; code: string }>>;
+  }): Promise<Array<{ id: string; code: string }>>;
+
+  updateBoundaryMetadata(territoryId: string): Promise<void>;
 }

@@ -2,7 +2,6 @@ import type { ScopeContext } from "@atlasmed/access";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryMembershipService } from "../services/territory-membership.service";
 import type { ClinicMembershipWriter } from "../services/territory-membership.service";
-import { isRepPatchType } from "../constants/territory-roles.constants";
 import {
   OperationNotAllowedError,
   ResourceNotFoundError,
@@ -28,13 +27,13 @@ export class TerritoryMembershipUseCases {
     scope: ScopeContext;
     page?: number;
     limit?: number;
-    managerZoneId?: number;
+    managerZoneId?: string;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
 
     const oversightZoneIds = input.scope.oversightZoneIds ?? [];
-    let managerZoneIds: number[] | undefined;
+    let managerZoneIds: string[] | undefined;
     let global = false;
 
     if (input.scope.isGlobal) {
@@ -89,8 +88,8 @@ export class TerritoryMembershipUseCases {
   }
 
   async adminOverrideClinicTerritory(input: {
-    facilityId: number;
-    territoryId: number;
+    facilityId: string;
+    territoryId: string;
     reason?: string;
   }) {
     const territory = await this.deps.territoryRepository.findById(input.territoryId);
@@ -99,10 +98,10 @@ export class TerritoryMembershipUseCases {
     }
 
     const type = territory.territoryType;
-    if (!type || !isRepPatchType(type)) {
+    if (!type?.assignsClinics) {
       throw new OperationNotAllowedError(
         "override_clinic_territory",
-        "Clinics can only be assigned to patch territories"
+        "Clinics can only be assigned to territory types that allow clinic assignment"
       );
     }
 
@@ -111,6 +110,32 @@ export class TerritoryMembershipUseCases {
       territory.verticalId,
       input.territoryId,
     );
+    await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
+      territoryAssignmentStatus: "assigned",
+      territoryAssignmentSource: "manual",
+    });
+
+    return { success: true };
+  }
+
+  async unlockClinicGeo(input: { facilityId: string }) {
+    const clinics = await this.deps.clinicWriter.findClinicsForMembership({
+      facilityIds: [input.facilityId],
+    });
+    const clinic = clinics[0];
+    if (!clinic) {
+      throw new ResourceNotFoundError("Clinic", input.facilityId);
+    }
+
+    await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
+      territoryAssignmentStatus: clinic.territoryAssignmentStatus ?? "unassigned",
+      territoryAssignmentSource: "geo",
+    });
+
+    await this.deps.membershipService.assignClinicByGeo({
+      ...clinic,
+      territoryAssignmentSource: "geo",
+    });
 
     return { success: true };
   }

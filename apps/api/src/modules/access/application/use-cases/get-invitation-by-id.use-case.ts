@@ -22,7 +22,7 @@ interface Dependencies {
 export class GetInvitationByIdUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(params: { inviteId: number; actorRole: Role }) {
+  async execute(params: { inviteId: string; actorRole: Role }) {
     if (params.actorRole === Role.REP) {
       throw new InsufficientPermissionsError(
         ["invitation:read"],
@@ -59,7 +59,7 @@ export class GetInvitationByIdUseCase {
               : null;
             return {
               id,
-              name: t?.name ?? String(id),
+              name: t?.name ?? id,
               verticalId: row.verticalId,
               verticalName: verticalNameById.get(row.verticalId),
               ...(boundary ? { boundary } : {}),
@@ -89,12 +89,12 @@ export class GetInvitationByIdUseCase {
 
   private async resolveManagerNameForTerritories(
     territories: Array<{
-      id: number;
-      managerTerritoryId: number | null;
+      id: string;
+      managerTerritoryId: string | null;
       territoryType?: { slug: string } | null;
     } | undefined>,
   ): Promise<string | undefined> {
-    const zoneIds = new Set<number>();
+    const zoneIds = new Set<string>();
     for (const t of territories) {
       if (!t) continue;
       if (t.territoryType?.slug === MANAGER_ZONE_TYPE_SLUG) {

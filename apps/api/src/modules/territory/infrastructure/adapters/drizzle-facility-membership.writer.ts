@@ -13,8 +13,8 @@ import type {
 
 export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
   async updateProfileTerritoryMemberships(
-    facilityId: number,
-    memberships: Array<{ verticalId: number; territoryId: number | null }>
+    facilityId: string,
+    memberships: Array<{ verticalId: string; territoryId: string | null }>
   ): Promise<void> {
     await db.transaction(async (tx) => {
       await tx
@@ -48,10 +48,27 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
     });
   }
 
+  async updateTerritoryMembership(
+    facilityId: string,
+    data: {
+      territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
+      territoryAssignmentSource: "geo" | "manual";
+    }
+  ): Promise<void> {
+    await db
+      .update(facilities)
+      .set({
+        territoryAssignmentStatus: data.territoryAssignmentStatus,
+        territoryAssignmentSource: data.territoryAssignmentSource,
+        updatedAt: new Date(),
+      })
+      .where(eq(facilities.id, facilityId));
+  }
+
   async setProfileTerritory(
-    facilityId: number,
-    verticalId: number,
-    territoryId: number | null,
+    facilityId: string,
+    verticalId: string,
+    territoryId: string | null,
   ): Promise<void> {
     await db
       .update(facilityVerticalProfiles)
@@ -69,8 +86,8 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
   }
 
   async findClinicsForMembership(params?: {
-    facilityIds?: number[];
-    territoryIds?: number[];
+    facilityIds?: string[];
+    territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]> {
     const conditions = [isNull(facilities.deactivatedAt)];
@@ -102,7 +119,7 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
         id: facilities.id,
         lat: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         lng: sql<number | null>`ST_X(${facilities.location}::geometry)`,
-        territoryId: sql<number | null>`(
+        territoryId: sql<string | null>`(
           SELECT ${facilityVerticalProfiles.managerZoneId}
           FROM ${facilityVerticalProfiles}
           WHERE ${facilityVerticalProfiles.facilityId} = ${facilities.id}
@@ -111,6 +128,8 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
           ORDER BY ${facilityVerticalProfiles.updatedAt} DESC
           LIMIT 1
         )`,
+        territoryAssignmentSource: facilities.territoryAssignmentSource,
+        territoryAssignmentStatus: facilities.territoryAssignmentStatus,
       })
       .from(facilities)
       .where(and(...conditions));
@@ -119,15 +138,15 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
   }
 
   async findClinicsWithoutConsultant(params: {
-    managerZoneIds?: number[];
+    managerZoneIds?: string[];
     global: boolean;
   }): Promise<
     Array<{
-      id: number;
+      id: string;
       displayName: string;
       lat: number | null;
       lng: number | null;
-      managerZoneId: number;
+      managerZoneId: string;
       managerZoneName: string | null;
     }>
   > {
@@ -174,13 +193,13 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
         ),
       );
 
-    const seen = new Set<number>();
+    const seen = new Set<string>();
     const unique: Array<{
-      id: number;
+      id: string;
       displayName: string;
       lat: number | null;
       lng: number | null;
-      managerZoneId: number;
+      managerZoneId: string;
       managerZoneName: string | null;
     }> = [];
 

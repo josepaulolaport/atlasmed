@@ -14,8 +14,6 @@ import {
 } from "../../../../shared/errors";
 import {
   MANAGER_ZONE_TYPE_SLUG,
-  isManagerZoneType,
-  isRepPatchType,
 } from "../../../territory/application/constants/territory-roles.constants";
 
 interface Dependencies {
@@ -24,16 +22,18 @@ interface Dependencies {
 }
 
 export interface ValidateInvitationTerritoriesParams {
-  roleId: number;
+  roleId: string;
   roleName: string;
   /** When set, MANAGER inviter may only stage patches under own oversight zones. */
-  inviterUserId?: number;
+  inviterUserId?: string;
   inviterRoleName?: string;
   /** Exclude this invite when checking pending territory staging (updates). */
-  excludeInvitationId?: number;
+  excludeInvitationId?: string;
+  managerTerritoryId?: string;
+  repTerritoryId?: string;
   verticalAssignments?: Array<{
-    verticalId: number;
-    territoryIds: number[];
+    verticalId: string;
+    territoryIds: string[];
   }>;
 }
 
@@ -43,18 +43,63 @@ export class InvitationTerritoryValidatorService {
   async validateInvitationTerritories(
     params: ValidateInvitationTerritoriesParams
   ): Promise<void> {
-    const verticalAssignments = params.verticalAssignments ?? [];
-    if (verticalAssignments.length === 0) {
+    const {
+      roleName,
+      managerTerritoryId,
+      repTerritoryId,
+      verticalAssignments = [],
+    } = params;
+
+    if (verticalAssignments.length > 0) {
+      await this.validateVerticalAssignments(params, verticalAssignments);
       return;
     }
-    await this.validateVerticalAssignments(params, verticalAssignments);
+
+    switch (roleName) {
+      case Role.MANAGER:
+        if (managerTerritoryId) {
+          await this.validateManagerZone({
+            territoryId: managerTerritoryId,
+            field: "managerTerritoryId",
+            excludeInvitationId: params.excludeInvitationId,
+          });
+        }
+        break;
+
+      case Role.REP:
+        if (repTerritoryId) {
+          await this.validateEmptyRepPatch({
+            territoryId: repTerritoryId,
+            field: "repTerritoryId",
+            excludeInvitationId: params.excludeInvitationId,
+            inviterUserId: params.inviterUserId,
+            inviterRoleName: params.inviterRoleName,
+          });
+        }
+        break;
+
+      case Role.ADMIN:
+      case Role.OPS:
+        if (managerTerritoryId || repTerritoryId) {
+          throw new ValidationError([
+            {
+              field: "role",
+              message: `${roleName} role does not support territory assignments`,
+            },
+          ]);
+        }
+        break;
+
+      default:
+        break;
+    }
   }
 
   private async validateVerticalAssignments(
     params: ValidateInvitationTerritoriesParams,
     verticalAssignments: Array<{
-      verticalId: number;
-      territoryIds: number[];
+      verticalId: string;
+      territoryIds: string[];
     }>,
   ): Promise<void> {
     const { roleName } = params;
@@ -120,10 +165,10 @@ export class InvitationTerritoryValidatorService {
   }
 
   private async validateManagerZone(params: {
-    territoryId: number;
-    verticalId?: number;
+    territoryId: string;
+    verticalId?: string;
     field: string;
-    excludeInvitationId?: number;
+    excludeInvitationId?: string;
   }): Promise<void> {
     if (!this.deps.territoryRepository) {
       return;
@@ -166,7 +211,7 @@ export class InvitationTerritoryValidatorService {
       ]);
     }
 
-    if (!isManagerZoneType(type)) {
+    if (!type.assignableToManagers || type.slug !== MANAGER_ZONE_TYPE_SLUG) {
       throw new ValidationError([
         {
           field: params.field,
@@ -184,11 +229,11 @@ export class InvitationTerritoryValidatorService {
   }
 
   private async validateEmptyRepPatch(params: {
-    territoryId: number;
-    verticalId?: number;
+    territoryId: string;
+    verticalId?: string;
     field: string;
-    excludeInvitationId?: number;
-    inviterUserId?: number;
+    excludeInvitationId?: string;
+    inviterUserId?: string;
     inviterRoleName?: string;
   }): Promise<void> {
     if (!this.deps.territoryRepository) {
@@ -232,11 +277,11 @@ export class InvitationTerritoryValidatorService {
       ]);
     }
 
-    if (!isRepPatchType(repType)) {
+    if (!repType.assignableToUsers || !repType.assignsClinics) {
       throw new ValidationError([
         {
           field: params.field,
-          message: "Territory must be a rep patch",
+          message: "Territory must be a rep patch that assigns clinics",
         },
       ]);
     }
@@ -288,7 +333,7 @@ export class InvitationTerritoryValidatorService {
   }
 
   private async assertTerritoryUnassigned(
-    territoryId: number,
+    territoryId: string,
     field: string,
   ): Promise<void> {
     if (!this.deps.territoryRepository) return;
@@ -306,9 +351,9 @@ export class InvitationTerritoryValidatorService {
   }
 
   private async assertNotStagedOnPendingInvite(
-    territoryId: number,
+    territoryId: string,
     field: string,
-    excludeInvitationId?: number,
+    excludeInvitationId?: string,
   ): Promise<void> {
     const rows = await db
       .select({

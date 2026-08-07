@@ -19,7 +19,7 @@ class FacilityConsultantAssignmentsRepository {
   FacilityConsultantAssignmentsRepository(this.facilityId, {String? baseUrl})
     : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
-  final int facilityId;
+  final String facilityId;
   final String _baseUrl;
   final RepositoryHttpClient _client = createPlatformHttpClient(
     tokenBuilder: SessionEnvironment.instance.tokenBuilder,
@@ -29,7 +29,7 @@ class FacilityConsultantAssignmentsRepository {
     '$_baseUrl/api/v1/facilities/$facilityId/consultant-assignments',
   );
 
-  Future<void> assign({required int userId, int? verticalId}) async {
+  Future<void> assign({required String userId, String? verticalId}) async {
     final response = await _client.call(
       request: RepositoryHttpRequest(
         url: _endpoint,

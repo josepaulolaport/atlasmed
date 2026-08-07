@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -900,7 +899,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   static Map<String, Object?> _pinFeature(
     NearbyEstablishment e, {
-    int? selectedId,
+    required String? selectedId,
   }) {
     return {
       'type': 'Feature',
@@ -1060,7 +1059,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (raw == null) continue;
       final props = raw['properties'];
       if (props is! Map) continue;
-      final id = readCrmIdLoose(props['facilityId']);
+      final id = props['facilityId']?.toString();
       if (id == null) continue;
       final e = byId[id];
       if (e != null) out.add(e);
@@ -1171,7 +1170,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final byId = {for (final e in _visibleClinics) e.id: e};
 
     NearbyEstablishment? fromFeature() {
-      final id = readCrmIdLoose(feature.properties['facilityId']);
+      final id = feature.properties['facilityId']?.toString();
       if (id != null && byId.containsKey(id)) return byId[id];
       final point = _pointFromGeometry(feature.geometry);
       if (point == null) return null;
@@ -1201,8 +1200,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         if (raw == null) continue;
         final props = raw['properties'];
         final id = props is Map
-            ? readCrmIdLoose(props['facilityId'])
-            : readCrmIdLoose(raw['facilityId']);
+            ? props['facilityId']?.toString()
+            : raw['facilityId']?.toString();
         final e = id == null ? null : byId[id];
         if (e == null) continue;
         final screen = await map.pixelForCoordinate(
@@ -1365,7 +1364,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       unawaited(_dismissCallout());
       return;
     }
-    final id = readCrmIdLoose(annotation.customData?['facilityId']);
+    final id = annotation.customData?['facilityId']?.toString();
     if (id != null) _openEstablishment(id);
   }
 
@@ -1498,7 +1497,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  void _openEstablishment(int id) {
+  void _openEstablishment(String id) {
     for (final clinic in _clinics) {
       if (clinic.id == id) {
         seedClinicDetailShellFromNearby(ref, clinic);
@@ -1510,11 +1509,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final verticalId = ref
         .read(effectiveFacilityVerticalIdProvider)
         .valueOrNull;
-    if (verticalId != null && (verticalId > 0)) {
+    if (verticalId != null && verticalId.isNotEmpty) {
       context.push(
         Uri(
           path: '/explore/clinic/$id',
-          queryParameters: {'verticalId': verticalId.toString()},
+          queryParameters: {'verticalId': verticalId},
         ).toString(),
       );
       return;

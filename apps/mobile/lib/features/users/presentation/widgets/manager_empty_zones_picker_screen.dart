@@ -8,8 +8,8 @@ class ManagerEmptyZonesPickerScreen {
 
   static Future<List<TerritoryOption>?> pick(
     BuildContext context, {
-    required int verticalId,
-    Set<int> initiallySelectedIds = const {},
+    required String verticalId,
+    Set<String> initiallySelectedIds = const {},
   }) {
     return TerritoryPickerScreen.pickManagerEmptyZones(
       context,

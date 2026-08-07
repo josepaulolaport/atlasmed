@@ -11,7 +11,7 @@ import { InsufficientPermissionsError } from "../../../../shared/errors";
 
 describe("GetInvitationsUseCase", () => {
   const mockInvite = {
-    id: 1,
+    id: "invite-1",
     email: "new@example.com",
     phoneNumber: null,
     status: "PENDING",
@@ -19,15 +19,17 @@ describe("GetInvitationsUseCase", () => {
     createdAt: new Date("2025-01-01"),
     acceptedAt: null,
     revokedAt: null,
-    invitedByUserId: 1,
-    role: { id: 1, name: "USER" },
+    invitedByUserId: "manager-1",
+    role: { id: "role-1", name: "USER" },
     firstName: "New",
     lastName: "User",
+    managerTerritoryId: null,
+    repTerritoryId: null,
     acceptedByUserId: null,
     resendCount: 0,
     lastResendAt: null,
     updatedAt: new Date("2025-01-01"),
-    roleId: 1,
+    roleId: "role-1",
   };
 
   const territoryRepository = {
@@ -46,7 +48,7 @@ describe("GetInvitationsUseCase", () => {
 
     await expect(
       useCase.execute({
-        actorId: 1,
+        actorId: "user-1",
         actorRole: Role.REP,
         scope: createGlobalScopeContext(),
       })
@@ -61,7 +63,7 @@ describe("GetInvitationsUseCase", () => {
     const userRepository = createMockUserRepository({
       findById: mock(() =>
         Promise.resolve({
-          id: 1,
+          id: "manager-1",
           username: "mgr",
           email: "mgr@example.com",
           firstName: "M",
@@ -76,7 +78,7 @@ describe("GetInvitationsUseCase", () => {
       userRepository,
     });
     await useCase.execute({
-      actorId: 1,
+      actorId: "admin-1",
       actorRole: Role.ADMIN,
       scope: createGlobalScopeContext(),
     });
@@ -98,11 +100,11 @@ describe("GetInvitationsUseCase", () => {
     });
 
     await useCase.execute({
-      actorId: 1,
+      actorId: "manager-1",
       actorRole: Role.MANAGER,
       scope: scopedManagerContext({
-        territoryIds: [1],
-        managedUserIds: [2],
+        territoryIds: ["t-1"],
+        managedUserIds: ["u-1"],
       }),
     });
 
@@ -110,7 +112,7 @@ describe("GetInvitationsUseCase", () => {
       status: undefined,
       page: 1,
       limit: 20,
-      invitedByUserId: 1,
+      invitedByUserId: "manager-1",
     });
   });
 });

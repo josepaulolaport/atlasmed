@@ -3,7 +3,6 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:equatable/equatable.dart';
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 /// A single territory assignment row — used by map cards and legacy list UIs.
 ///
@@ -20,10 +19,10 @@ class TerritoryAssignment extends Equatable {
     this.boundary,
   });
 
-  final int territoryId;
+  final String territoryId;
   final String territoryName;
   final DateTime assignedAt;
-  final int? verticalId;
+  final String? verticalId;
   final String? verticalName;
   final MapCoordinate? centroid;
   final TerritoryGeometry? boundary;
@@ -45,10 +44,10 @@ class TerritoryAssignment extends Equatable {
 
   factory TerritoryAssignment.fromJson(Map<String, dynamic> json) =>
       TerritoryAssignment(
-        territoryId: readCrmId(json['territoryId'], 'territoryId'),
+        territoryId: json['territoryId'] as String,
         territoryName: (json['territoryName'] as String?) ?? '—',
         assignedAt: DateTime.parse(json['assignedAt'] as String),
-        verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
+        verticalId: json['verticalId'] as String?,
         verticalName: json['verticalName'] as String?,
         centroid: json['centroid'] == null
             ? null
@@ -83,13 +82,13 @@ class VerticalAssignment extends Equatable {
     required this.assignedAt,
   });
 
-  final int verticalId;
+  final String verticalId;
   final String verticalName;
   final DateTime assignedAt;
 
   factory VerticalAssignment.fromJson(Map<String, dynamic> json) =>
       VerticalAssignment(
-        verticalId: readCrmId(json['verticalId'], 'verticalId'),
+        verticalId: json['verticalId'] as String,
         verticalName: (json['verticalName'] as String?) ?? '—',
         assignedAt: DateTime.parse(json['assignedAt'] as String),
       );
@@ -107,7 +106,7 @@ class UserAssignments extends Equatable {
     required this.isOperationallyActive,
   });
 
-  final int userId;
+  final String userId;
 
   /// Per-sector manager + territory picks (invite-compatible).
   final List<InviteVerticalAssignment> verticalAssignments;
@@ -117,7 +116,7 @@ class UserAssignments extends Equatable {
 
   /// Distinct managers across verticals (territory-derived; multi-manager OK).
   List<AssignmentManagerRef> get managers {
-    final byId = <int, AssignmentManagerRef>{};
+    final byId = <String, AssignmentManagerRef>{};
     for (final assignment in verticalAssignments) {
       for (final manager in assignment.managers) {
         byId[manager.id] = manager;
@@ -184,17 +183,17 @@ class UserAssignments extends Equatable {
         if (managers.isEmpty &&
             managerDisplayName != null &&
             managerDisplayName.isNotEmpty) {
-          final managerId = readCrmIdOrNull(map['managerId'], 'managerId');
-          if (managerId != null) {
-            managers.add(
-              AssignmentManagerRef(id: managerId, name: managerDisplayName),
-            );
-          }
+          managers.add(
+            AssignmentManagerRef(
+              id: map['managerId'] as String? ?? 'unknown',
+              name: managerDisplayName,
+            ),
+          );
         }
         return InviteVerticalAssignment(
-          verticalId: readCrmId(map['verticalId'], 'verticalId'),
+          verticalId: map['verticalId'] as String,
           verticalName: map['verticalName'] as String? ?? '—',
-          managerZoneId: readCrmIdOrNull(map['managerZoneId'], 'managerZoneId'),
+          managerZoneId: map['managerZoneId'] as String?,
           managerZoneName: map['managerZoneName'] as String?,
           managerDisplayName: managerDisplayName,
           managers: managers,
@@ -204,7 +203,7 @@ class UserAssignments extends Equatable {
         );
       }).toList();
       return UserAssignments(
-        userId: readCrmId(json['userId'], 'userId'),
+        userId: json['userId'] as String,
         verticalAssignments: verticalAssignments,
         isOperationallyActive:
             json['isOperationallyActive'] as bool? ??
@@ -226,14 +225,16 @@ class UserAssignments extends Equatable {
             .toList() ??
         const <VerticalAssignment>[];
     final managerName = json['managerName'] as String?;
-    final managerId = readCrmIdOrNull(json['managerId'], 'managerId');
-    final managers = managerName != null &&
-            managerName.isNotEmpty &&
-            managerId != null
-        ? [AssignmentManagerRef(id: managerId, name: managerName)]
+    final managers = managerName != null && managerName.isNotEmpty
+        ? [
+            AssignmentManagerRef(
+              id: json['managerId'] as String? ?? 'unknown',
+              name: managerName,
+            ),
+          ]
         : const <AssignmentManagerRef>[];
 
-    final bySector = <int, InviteVerticalAssignment>{};
+    final bySector = <String, InviteVerticalAssignment>{};
     for (final sector in sectors) {
       bySector[sector.verticalId] = InviteVerticalAssignment(
         verticalId: sector.verticalId,
@@ -243,8 +244,7 @@ class UserAssignments extends Equatable {
       );
     }
     for (final territory in territories) {
-      final verticalId = territory.verticalId;
-      if (verticalId == null) continue;
+      final verticalId = territory.verticalId ?? 'sector-unknown';
       final existing = bySector[verticalId];
       final option = TerritoryOption(
         id: territory.territoryId,
@@ -270,7 +270,7 @@ class UserAssignments extends Equatable {
     }
 
     return UserAssignments(
-      userId: readCrmId(json['userId'], 'userId'),
+      userId: json['userId'] as String,
       verticalAssignments: bySector.values.toList(growable: false),
       isOperationallyActive: json['isOperationallyActive'] as bool? ?? false,
     );

@@ -27,7 +27,7 @@ class BoundaryImpactSheet extends StatefulWidget {
 }
 
 class _BoundaryImpactSheetState extends State<BoundaryImpactSheet> {
-  late final Set<int> _accepted;
+  late final Set<String> _accepted;
 
   @override
   void initState() {
@@ -115,7 +115,7 @@ class _BoundaryImpactSheetState extends State<BoundaryImpactSheet> {
                   title: Text(
                     clinic.facilityName.isNotEmpty
                         ? clinic.facilityName
-                        : clinic.facilityId.toString(),
+                        : clinic.facilityId,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,

@@ -1,4 +1,3 @@
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 class DashboardPurchaseStatus {
   const DashboardPurchaseStatus({
     required this.active,
@@ -32,14 +31,14 @@ class DashboardTerritoryFeature {
     this.boundary,
   });
 
-  final int id;
+  final String id;
   final String name;
   final Map<String, dynamic>? boundary;
 
   factory DashboardTerritoryFeature.fromJson(Map<String, dynamic> json) {
     final raw = json['boundary'];
     return DashboardTerritoryFeature(
-      id: readCrmId(json['id'], 'id'),
+      id: json['id'] as String,
       name: json['name'] as String,
       boundary: raw is Map<String, dynamic> ? raw : null,
     );
@@ -106,13 +105,13 @@ class DashboardSummary {
   });
 
   /// Explicit filter when set; `null` = token-scoped union.
-  final int? verticalId;
+  final String? verticalId;
   final DashboardPurchaseStatus purchaseStatus;
   final DashboardTerritorySummary territory;
 
   factory DashboardSummary.fromJson(Map<String, dynamic> json) {
     return DashboardSummary(
-      verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
+      verticalId: json['verticalId'] as String?,
       purchaseStatus: DashboardPurchaseStatus.fromJson(
         json['purchaseStatus'] as Map<String, dynamic>,
       ),

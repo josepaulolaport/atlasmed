@@ -28,7 +28,7 @@ import 'package:go_router/go_router.dart';
 class InviteUserScreen extends ConsumerStatefulWidget {
   const InviteUserScreen({super.key, this.invitationId});
 
-  final int? invitationId;
+  final String? invitationId;
 
   @override
   ConsumerState<InviteUserScreen> createState() => _InviteUserScreenState();
@@ -44,7 +44,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
 
   UserRole? _selectedRole;
   UserInvitation? _invitation;
-  final Map<int, InviteVerticalAssignment> _verticalAssignments = {};
+  final Map<String, InviteVerticalAssignment> _verticalAssignments = {};
 
   int _stepIndex = 0;
   bool _submitting = false;

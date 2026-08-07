@@ -27,11 +27,11 @@ class InviteZonesStep extends StatelessWidget {
   final UserRole role;
   final String title;
   final String description;
-  final Map<int, InviteVerticalAssignment> verticalAssignments;
+  final Map<String, InviteVerticalAssignment> verticalAssignments;
   final void Function(InviteVerticalAssignment assignment) onPickZone;
   final void Function(InviteVerticalAssignment assignment) onClearZone;
   final void Function(InviteVerticalAssignment assignment) onPickEmptyZones;
-  final void Function(InviteVerticalAssignment assignment, int territoryId)
+  final void Function(InviteVerticalAssignment assignment, String territoryId)
   onRemoveTerritory;
 
   bool get _isRep => role.name == UserRoleName.rep;
@@ -230,7 +230,7 @@ class _ManagerZonesCard extends StatelessWidget {
 
   final InviteVerticalAssignment assignment;
   final VoidCallback onPickEmptyZones;
-  final void Function(int territoryId) onRemoveTerritory;
+  final void Function(String territoryId) onRemoveTerritory;
 
   static const _previewHeight = 176.0;
 

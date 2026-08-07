@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:equatable/equatable.dart';
 
@@ -13,7 +12,7 @@ class AssignmentManager extends Equatable {
     this.lastName,
   });
 
-  final int id;
+  final String id;
   final String name;
   final String? username;
   final String? email;
@@ -28,7 +27,7 @@ class AssignmentManager extends Equatable {
         .join(' ');
     if (composed.isNotEmpty) return composed;
     if (name.trim().isNotEmpty) return name;
-    return username ?? id.toString();
+    return username ?? id;
   }
 
   factory AssignmentManager.fromJson(Map<String, dynamic> json) {
@@ -41,12 +40,12 @@ class AssignmentManager extends Equatable {
         .where((s) => s.isNotEmpty)
         .join(' ');
     return AssignmentManager(
-      id: readCrmId(json['id'], 'id'),
+      id: json['id'] as String,
       name: (json['name'] as String?)?.trim().isNotEmpty == true
           ? json['name'] as String
           : (composed.isNotEmpty
                 ? composed
-                : (username ?? readCrmId(json['id'], 'id').toString())),
+                : (username ?? json['id'] as String)),
       username: username,
       email: json['email'] as String?,
       firstName: firstName,
@@ -67,17 +66,17 @@ class UserTerritoryAssignment extends Equatable {
     this.boundary,
   });
 
-  final int territoryId;
+  final String territoryId;
   final String territoryName;
-  final int? managerZoneId;
+  final String? managerZoneId;
   final String? managerZoneName;
   final Map<String, dynamic>? boundary;
 
   factory UserTerritoryAssignment.fromJson(Map<String, dynamic> json) {
     return UserTerritoryAssignment(
-      territoryId: readCrmIdOrNull(json['id'], 'id') ?? readCrmId(json['territoryId'], 'territoryId'),
+      territoryId: json['id'] as String? ?? json['territoryId'] as String,
       territoryName: (json['name'] as String?) ?? '—',
-      managerZoneId: readCrmIdOrNull(json['managerZoneId'], 'managerZoneId'),
+      managerZoneId: json['managerZoneId'] as String?,
       managerZoneName: json['managerZoneName'] as String?,
       boundary: json['boundary'] as Map<String, dynamic>?,
     );
@@ -104,14 +103,14 @@ class UserVerticalAssignment extends Equatable {
     this.assignedAt,
   });
 
-  final int verticalId;
+  final String verticalId;
   final String verticalName;
 
   /// Territory-derived managers for this vertical (may be multiple).
   final List<AssignmentManager> managers;
 
   @Deprecated('Use managers')
-  final int? managerId;
+  final String? managerId;
   final String? managerName;
   final List<UserTerritoryAssignment> territories;
   final DateTime? assignedAt;
@@ -129,18 +128,22 @@ class UserVerticalAssignment extends Equatable {
 
     // Compat: single managerName / managerId from older payloads.
     if (managers.isEmpty && json['managerName'] is String) {
-      final id = readCrmIdOrNull(json['managerId'], 'managerId');
-      final name = json['managerName'] as String;
-      if (id != null && name.isNotEmpty) {
-        managers.add(AssignmentManager(id: id, name: name));
+      final id = json['managerId'] as String?;
+      if (id != null || (json['managerName'] as String).isNotEmpty) {
+        managers.add(
+          AssignmentManager(
+            id: id ?? 'unknown',
+            name: json['managerName'] as String,
+          ),
+        );
       }
     }
 
     return UserVerticalAssignment(
-      verticalId: readCrmId(json['verticalId'], 'verticalId'),
+      verticalId: json['verticalId'] as String,
       verticalName: (json['verticalName'] as String?) ?? '—',
       managers: managers,
-      managerId: readCrmIdOrNull(json['managerId'], 'managerId'),
+      managerId: json['managerId'] as String?,
       managerName:
           json['managerName'] as String? ??
           (managers.isEmpty
@@ -178,7 +181,7 @@ class UserAssignments extends Equatable {
     required this.isOperationallyActive,
   });
 
-  final int userId;
+  final String userId;
   final List<UserVerticalAssignment> verticals;
   final bool isOperationallyActive;
 
@@ -188,7 +191,7 @@ class UserAssignments extends Equatable {
 
   /// Distinct managers across all verticals (multi-manager REPs).
   List<AssignmentManager> get managers {
-    final byId = <int, AssignmentManager>{};
+    final byId = <String, AssignmentManager>{};
     for (final vertical in verticals) {
       for (final manager in vertical.managers) {
         byId[manager.id] = manager;
@@ -201,7 +204,7 @@ class UserAssignments extends Equatable {
     final verticalRaw = json['verticalAssignments'] as List<dynamic>?;
     if (verticalRaw != null) {
       return UserAssignments(
-        userId: readCrmId(json['userId'], 'userId'),
+        userId: json['userId'] as String,
         verticals: verticalRaw
             .map(
               (item) =>
@@ -213,7 +216,7 @@ class UserAssignments extends Equatable {
     }
 
     return UserAssignments(
-      userId: readCrmId(json['userId'], 'userId'),
+      userId: json['userId'] as String,
       verticals: (json['verticals'] as List<dynamic>? ?? const [])
           .map(
             (item) =>

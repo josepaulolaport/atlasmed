@@ -18,7 +18,7 @@ export const inviteUserRoute = new Elysia({
   .use(auth)
   .use(requirePermission("create", "INVITATION"))
   .use(inviteRateLimit)
-  .post("/invite", async ({ body, getUser, request, status }) => {
+  .post("/invite", async ({ body, getUser, request, status }: any) => {
     const user = await getUser();
 
     let parsed: ReturnType<typeof inviteUserSchema.parse>;
@@ -126,10 +126,7 @@ export const inviteUserRoute = new Elysia({
     body: t.Object({
       email: t.Optional(t.String({ format: "email", description: "User email address" })),
       phoneNumber: t.Optional(t.String({ description: "User phone number" })),
-      roleId: t.Number({
-        minimum: 1,
-        description: "Role ID to assign to the invited user",
-      }),
+      roleId: t.String({ description: "Role ID to assign to the invited user" }),
       firstName: t.String({ minLength: 1, description: "First name of the invited user" }),
       lastName: t.String({ minLength: 1, description: "Last name of the invited user" }),
       birthDate: t.String({
@@ -137,11 +134,11 @@ export const inviteUserRoute = new Elysia({
         description: "Invitee birth date (YYYY-MM-DD) — confirmed at registration",
       }),
       verticalAssignments: t.Optional(t.Array(t.Object({
-        verticalId: t.Number({ minimum: 1 }),
-        territoryIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
+        verticalId: t.String(),
+        territoryIds: t.Optional(t.Array(t.String())),
         newPatch: t.Optional(t.Object({
           name: t.String({ minLength: 1 }),
-          managerZoneId: t.Number({ minimum: 1 }),
+          managerZoneId: t.String(),
           slug: t.Optional(t.String()),
           boundary: t.Object({
             type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
@@ -153,7 +150,7 @@ export const inviteUserRoute = new Elysia({
     response: {
       200: t.Object({
         invite: t.Object({
-          id: t.Number({ minimum: 1 }),
+          id: t.String(),
           email: t.Optional(t.String()),
           phoneNumber: t.Optional(t.String()),
           status: t.String(),
@@ -162,16 +159,7 @@ export const inviteUserRoute = new Elysia({
         message: t.String({ description: "Confirmation that the invitation was sent" }),
       }),
       400: t.Object({
-        code: t.Optional(t.String()),
         error: t.String({ description: "Validation error or user already exists" }),
-      }),
-      409: t.Object({
-        code: t.String(),
-        error: t.String({ description: "User already exists" }),
-      }),
-      502: t.Object({
-        code: t.String(),
-        error: t.String({ description: "Invitation delivery failed" }),
       }),
       401: t.Object({
         error: t.String({ description: "Unauthorized" }),

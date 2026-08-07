@@ -14,21 +14,21 @@ abstract interface class TerritoryRepository {
 
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
-    int? verticalId,
+    String? verticalId,
   });
 
-  Future<Territory?> getTerritoryById(int id);
+  Future<Territory?> getTerritoryById(String id);
 
   /// Spec 0006: clinics that need deassign accept before geometry save.
   Future<BoundaryImpactPreview> previewBoundaryImpact(
-    int id,
+    String id,
     TerritoryGeometry geometry,
   );
 
   Future<void> updateTerritoryGeometry(
-    int id,
+    String id,
     TerritoryGeometry geometry, {
-    List<int>? acceptedFacilityIds,
+    List<String>? acceptedFacilityIds,
   });
 
   Future<Territory> createTerritory(
@@ -37,22 +37,22 @@ abstract interface class TerritoryRepository {
     MapCoordinate centroid,
   );
 
-  Future<void> deleteTerritory(int id);
+  Future<void> deleteTerritory(String id);
 
-  Future<void> assignUser(int territoryId, int? userId);
+  Future<void> assignUser(String territoryId, String? userId);
 
   Future<void> updateTerritoryInfo(
-    int territoryId, {
+    String territoryId, {
     required String name,
     required bool isActive,
-    int? managerTerritoryId,
+    String? managerTerritoryId,
   });
 
-  Future<List<AssignableManager>> getAssignableManagers({int? verticalId});
+  Future<List<AssignableManager>> getAssignableManagers({String? verticalId});
 
   /// Spec 0006: clinics in manager zones without a primary consultant.
   Future<List<UnassignedFacility>> listUnassignedFacilities({
-    int? managerZoneId,
+    String? managerZoneId,
     int page = 1,
     int limit = 50,
   });

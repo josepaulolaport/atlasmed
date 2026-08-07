@@ -16,7 +16,7 @@ export * from "./metrics-mocks";
 export function createMockRole(overrides?: Partial<Role>): Role {
   const name = overrides?.name ?? "USER";
   return {
-    id: 1,
+    id: "role-123",
     name,
     description: null,
     priority: ROLE_PRIORITY_BY_NAME[name as keyof typeof ROLE_PRIORITY_BY_NAME] ?? 0,
@@ -28,12 +28,12 @@ export function createMockRole(overrides?: Partial<Role>): Role {
 
 export function createMockUser(overrides?: Partial<User>): User {
   return {
-    id: 123,
+    id: "user-123",
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
     passwordHash: "$argon2id$v=19$m=19456,t=2,p=1$test",
-    roleId: 1,
+    roleId: "role-123",
     firstName: "Test",
     lastName: "User",
     birthDate: null,
@@ -74,8 +74,8 @@ export function createMockUserWithRole(overrides?: {
 
 export function createMockSession(overrides?: Partial<Session>): Session {
   return {
-    id: 1,
-    userId: 123,
+    id: "session-123",
+    userId: "user-123",
     refreshTokenHash: "hashed-token-123",
     ipAddress: "192.168.1.1",
     userAgent: "Mozilla/5.0",
@@ -104,17 +104,19 @@ export function createMockSession(overrides?: Partial<Session>): Session {
 
 export function createMockInvitation(overrides?: Partial<Invitation>): Invitation {
   return {
-    id: 123,
+    id: "invite-123",
     email: "newuser@example.com",
     phoneNumber: null,
     tokenHash: "hashed-token-123",
-    roleId: 1,
-    invitedByUserId: 456,
+    roleId: "role-123",
+    invitedByUserId: "admin-456",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     status: "PENDING",
     firstName: null,
     lastName: null,
     birthDate: null,
+    managerTerritoryId: null,
+    repTerritoryId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     acceptedAt: null,

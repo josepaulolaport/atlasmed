@@ -146,7 +146,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   /// when no zone is selected yet.
   Future<Territory?> _loadFenceZone(
     TerritoryKind kind,
-    int? managerTerritoryId,
+    String? managerTerritoryId,
   ) async {
     if (kind != TerritoryKind.repPatch || managerTerritoryId == null) {
       return null;
@@ -509,7 +509,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
           original.id,
           geometry,
         );
-        List<int>? acceptedFacilityIds;
+        List<String>? acceptedFacilityIds;
         if (impact.clinics.isNotEmpty) {
           final accepted = await confirmImpact?.call(impact.clinics) ?? false;
           if (!accepted) {

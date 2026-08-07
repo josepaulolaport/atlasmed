@@ -36,12 +36,12 @@ describe("InviteUserUseCase", () => {
   let mockRoleRepository: RoleRepository;
 
   const mockInvite = {
-    id: 123,
+    id: "invite-123",
     email: "newuser@example.com",
     phoneNumber: null,
     tokenHash: "hashed-token",
-    roleId: 1,
-    invitedByUserId: 456,
+    roleId: "role-123",
+    invitedByUserId: "admin-456",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     status: "PENDING",
     createdAt: new Date(),
@@ -50,12 +50,14 @@ describe("InviteUserUseCase", () => {
     firstName: "Test",
     lastName: "User",
     birthDate: new Date("1990-05-12T00:00:00.000Z"),
+    managerTerritoryId: null,
+    repTerritoryId: null,
     acceptedByUserId: null,
     resendCount: 0,
     lastResendAt: null,
     updatedAt: new Date(),
     role: {
-      id: 1,
+      id: "role-123",
       name: "USER",
       description: null,
       createdAt: new Date(),
@@ -71,15 +73,15 @@ describe("InviteUserUseCase", () => {
     mockUserRepository = createMockUserRepository({
       findById: mock(async () =>
         createMockUserWithRole({
-          user: { id: 456 },
-          role: { id: 1, name: "ADMIN" },
+          user: { id: "admin-456" },
+          role: { id: "role-admin", name: "ADMIN" },
         })
       ),
     });
 
     mockRoleRepository = createMockRoleRepository({
       findById: mock(async () => ({
-        id: 1,
+        id: "role-123",
         name: "ADMIN",
         priority: ROLE_PRIORITY_BY_NAME.ADMIN,
       })),
@@ -100,8 +102,8 @@ describe("InviteUserUseCase", () => {
     it("should create invite with email", async () => {
       const params = {
         email: "newuser@example.com",
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -112,19 +114,19 @@ describe("InviteUserUseCase", () => {
       expect(result).toHaveProperty("invite");
       expect(result).toHaveProperty("token");
       expect(mockLogInviteUser).toHaveBeenCalledWith({
-        invitedByUserId: 456,
-        inviteId: 123,
+        invitedByUserId: "admin-456",
+        inviteId: "invite-123",
         email: "newuser@example.com",
         phoneNumber: undefined,
-        roleId: 1,
+        roleId: "role-123",
       });
     });
 
     it("should create invite with phone number", async () => {
       const params = {
         phoneNumber: "+1234567890",
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -139,8 +141,8 @@ describe("InviteUserUseCase", () => {
     it("should generate invite token", async () => {
       const result = await inviteUserUseCase.execute({
         email: "newuser@example.com",
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -153,8 +155,8 @@ describe("InviteUserUseCase", () => {
     it("should return invite object", async () => {
       const result = await inviteUserUseCase.execute({
         email: "newuser@example.com",
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -164,12 +166,12 @@ describe("InviteUserUseCase", () => {
     });
 
     it("should link invite to role", async () => {
-      const roleId = 2;
+      const roleId = "role-789";
 
       await inviteUserUseCase.execute({
         email: "newuser@example.com",
         roleId,
-        invitedByUserId: 456,
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -179,11 +181,11 @@ describe("InviteUserUseCase", () => {
     });
 
     it("should link invite to inviter", async () => {
-      const invitedByUserId = 3;
+      const invitedByUserId = "admin-999";
 
       await inviteUserUseCase.execute({
         email: "newuser@example.com",
-        roleId: 1,
+        roleId: "role-123",
         invitedByUserId,
         birthDate: "1990-05-12",
         firstName: "Test",
@@ -198,8 +200,8 @@ describe("InviteUserUseCase", () => {
     it("should throw error when neither email nor phoneNumber provided", async () => {
       await expect(
         inviteUserUseCase.execute({
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -213,8 +215,8 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           email: "user@example.com",
-          roleId: 999,
-          invitedByUserId: 456,
+          roleId: "invalid-role-id",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -228,15 +230,15 @@ describe("InviteUserUseCase", () => {
       try {
         await inviteUserUseCase.execute({
           email: "user@example.com",
-          roleId: 999,
-          invitedByUserId: 456,
+          roleId: "invalid-role-id",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
         });
       } catch {}
 
-      expect(mockRoleRepository.findById).toHaveBeenCalledWith(999);
+      expect(mockRoleRepository.findById).toHaveBeenCalledWith("invalid-role-id");
       expect(mockUserRepository.findById).not.toHaveBeenCalled();
       expect(mockUserRepository.findByIdentifier).not.toHaveBeenCalled();
     });
@@ -246,8 +248,8 @@ describe("InviteUserUseCase", () => {
         inviteUserUseCase.execute({
           email: "user@example.com",
           phoneNumber: "+1234567890",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -259,14 +261,14 @@ describe("InviteUserUseCase", () => {
   describe("existing user check", () => {
     it("should throw error when user already exists with email", async () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
-        id: 2,
+        id: "existing-user",
       })) as any;
 
       await expect(
         inviteUserUseCase.execute({
           email: "existing@example.com",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -276,14 +278,14 @@ describe("InviteUserUseCase", () => {
 
     it("should throw error when user already exists with phone number", async () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
-        id: 2,
+        id: "existing-user",
       })) as any;
 
       await expect(
         inviteUserUseCase.execute({
           phoneNumber: "+1234567890",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -296,8 +298,8 @@ describe("InviteUserUseCase", () => {
 
       await inviteUserUseCase.execute({
         email,
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -313,8 +315,8 @@ describe("InviteUserUseCase", () => {
 
       await inviteUserUseCase.execute({
         phoneNumber,
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -327,14 +329,14 @@ describe("InviteUserUseCase", () => {
 
     it("should not create invite when user already exists", async () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
-        id: 2,
+        id: "existing-user",
       })) as any;
 
       try {
         await inviteUserUseCase.execute({
           email: "existing@example.com",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -352,8 +354,8 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           email: "newuser@example.com",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -367,8 +369,8 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           phoneNumber: "+1234567890",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -381,8 +383,8 @@ describe("InviteUserUseCase", () => {
 
       await inviteUserUseCase.execute({
         email,
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -399,8 +401,8 @@ describe("InviteUserUseCase", () => {
 
       await inviteUserUseCase.execute({
         phoneNumber,
-        roleId: 1,
-        invitedByUserId: 456,
+        roleId: "role-123",
+        invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -418,8 +420,8 @@ describe("InviteUserUseCase", () => {
       try {
         await inviteUserUseCase.execute({
           email: "newuser@example.com",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -433,8 +435,8 @@ describe("InviteUserUseCase", () => {
   describe("role assignment ceiling", () => {
     const inviteParams = {
       email: "newuser@example.com",
-      roleId: 2,
-      invitedByUserId: 3,
+      roleId: "role-target",
+      invitedByUserId: "manager-123",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -443,7 +445,7 @@ describe("InviteUserUseCase", () => {
     function setupInviter(roleName: keyof typeof ROLE_PRIORITY_BY_NAME) {
       mockUserRepository.findById = mock(async () =>
         createMockUserWithRole({
-          user: { id: 3 },
+          user: { id: "manager-123" },
           role: {
             name: roleName,
             priority: ROLE_PRIORITY_BY_NAME[roleName],
@@ -454,7 +456,7 @@ describe("InviteUserUseCase", () => {
 
     function setupTargetRole(roleName: keyof typeof ROLE_PRIORITY_BY_NAME) {
       mockRoleRepository.findById = mock(async () => ({
-        id: 2,
+        id: "role-target",
         name: roleName,
         priority: ROLE_PRIORITY_BY_NAME[roleName],
       }));
@@ -469,8 +471,8 @@ describe("InviteUserUseCase", () => {
           ...inviteParams,
           verticalAssignments: [
             {
-              verticalId: 1,
-              territoryIds: [1],
+              verticalId: "vertical-1",
+              territoryIds: ["territory-rep-1"],
             },
           ],
         })
@@ -502,7 +504,7 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           ...inviteParams,
-          invitedByUserId: 456,
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -531,8 +533,8 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           email: "user@example.com",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -548,8 +550,8 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           email: "user@example.com",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",
@@ -565,8 +567,8 @@ describe("InviteUserUseCase", () => {
       await expect(
         inviteUserUseCase.execute({
           email: "user@example.com",
-          roleId: 1,
-          invitedByUserId: 456,
+          roleId: "role-123",
+          invitedByUserId: "admin-456",
         birthDate: "1990-05-12",
         firstName: "Test",
         lastName: "User",

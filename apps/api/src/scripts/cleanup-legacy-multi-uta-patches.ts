@@ -67,12 +67,11 @@ async function run(apply: boolean) {
     return;
   }
 
-  const byPatch = new Map<number, ConflictRow[]>();
+  const byPatch = new Map<string, ConflictRow[]>();
   for (const row of conflicts) {
-    const patchId = Number(row.territory_id);
-    const list = byPatch.get(patchId) ?? [];
+    const list = byPatch.get(row.territory_id) ?? [];
     list.push(row);
-    byPatch.set(patchId, list);
+    byPatch.set(row.territory_id, list);
   }
 
   console.log(`Found ${byPatch.size} patch(es) with multiple UTAs.`);
@@ -120,6 +119,11 @@ async function run(apply: boolean) {
         UPDATE territories
         SET
           boundary = (SELECT boundary FROM territories WHERE id = ${patchId}),
+          boundary_min_lng = (SELECT boundary_min_lng FROM territories WHERE id = ${patchId}),
+          boundary_min_lat = (SELECT boundary_min_lat FROM territories WHERE id = ${patchId}),
+          boundary_max_lng = (SELECT boundary_max_lng FROM territories WHERE id = ${patchId}),
+          boundary_max_lat = (SELECT boundary_max_lat FROM territories WHERE id = ${patchId}),
+          boundary_area_sq_km = (SELECT boundary_area_sq_km FROM territories WHERE id = ${patchId}),
           updated_at = now()
         WHERE id = ${createdTerritory.id}
       `);
@@ -130,7 +134,7 @@ async function run(apply: boolean) {
         .where(
           and(
             eq(userTerritoryAssignments.territoryId, patchId),
-            eq(userTerritoryAssignments.userId, Number(extra.user_id)),
+            eq(userTerritoryAssignments.userId, extra.user_id),
           ),
         );
 

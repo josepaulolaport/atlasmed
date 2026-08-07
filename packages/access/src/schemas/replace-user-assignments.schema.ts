@@ -4,8 +4,8 @@ export const replaceUserAssignmentsSchema = z.object({
   verticalAssignments: z
     .array(
       z.object({
-        verticalId: z.number().int().positive(),
-        territoryIds: z.array(z.number().int().positive()).default([]),
+        verticalId: z.string().min(1),
+        territoryIds: z.array(z.string().min(1)).default([]),
       }),
     )
     .default([]),

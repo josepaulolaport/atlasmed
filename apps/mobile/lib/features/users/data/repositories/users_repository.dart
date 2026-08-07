@@ -11,8 +11,8 @@ import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
 /// Port for the admin user-management data source.
 ///
 /// Method signatures mirror the real `/api/v1/access` endpoints (see
-/// `apps/api/src/modules/access`) so HTTP-backed implementations can swap in
-/// without changing call sites.
+/// `apps/api/src/modules/access`) so a future HTTP-backed implementation is
+/// a drop-in replacement for [MockUsersRepository].
 abstract interface class UsersRepository {
   /// `GET /access/users?page=&limit=&search=&role=&status=&sortBy=&sortDir=`
   Future<UsersPage> getUsers({
@@ -26,11 +26,11 @@ abstract interface class UsersRepository {
   });
 
   /// `GET /access/users/:id`
-  Future<User?> getUserById(int id);
+  Future<User?> getUserById(String id);
 
   /// `PATCH /access/users/:id` — profile fields (name, email, phone, …).
   Future<User> updateUserProfile({
-    required int userId,
+    required String userId,
     required String firstName,
     required String lastName,
     required String email,
@@ -39,64 +39,66 @@ abstract interface class UsersRepository {
     DateTime? birthDate,
   });
 
-  /// `GET /access/users/:id/assignments` (admin-scoped).
-  Future<UserAssignments> getUserAssignments(int userId);
+  /// `GET /access/users/:id/assignments` (admin-scoped — not yet mounted
+  /// on the real API today, only the self-service `GET /user/assignments`
+  /// is; the mock behaves as if the admin route already existed).
+  Future<UserAssignments> getUserAssignments(String userId);
 
   /// Replace the full per-sector assignment set (invite-shaped payload).
   Future<void> replaceVerticalAssignments(
-    int userId,
+    String userId,
     List<InviteVerticalAssignment> verticalAssignments,
   );
 
   /// `GET /access/users/:id/capabilities` (grants slice only — role is
   /// already on [User.role]).
-  Future<List<PermissionGrant>> getUserPermissions(int userId);
+  Future<List<PermissionGrant>> getUserPermissions(String userId);
 
   /// `POST /access/users/:id/activate`
-  Future<void> activateUser(int userId);
+  Future<void> activateUser(String userId);
 
   /// `POST /access/users/:id/deactivate`
-  Future<void> deactivateUser(int userId);
+  Future<void> deactivateUser(String userId);
 
   /// `POST /access/users/:id/suspend`
-  Future<void> suspendUser(int userId, {String? reason});
+  Future<void> suspendUser(String userId, {String? reason});
 
   /// `POST /access/users/:id/unsuspend`
-  Future<void> unsuspendUser(int userId);
+  Future<void> unsuspendUser(String userId);
 
   /// `PATCH /access/users/:id/role`
-  Future<void> changeUserRole(int userId, int roleId);
+  Future<void> changeUserRole(String userId, String roleId);
 
   /// `PATCH /access/users/:id/manager`
-  Future<void> assignManager(int userId, int? managerId);
+  Future<void> assignManager(String userId, String? managerId);
 
   /// `POST /access/users/:id/territories`
-  Future<void> assignTerritory(int userId, int territoryId);
+  Future<void> assignTerritory(String userId, String territoryId);
 
   /// `DELETE /access/users/:id/territories/:territoryId`
-  Future<void> revokeTerritory(int userId, int territoryId);
+  Future<void> revokeTerritory(String userId, String territoryId);
 
   /// `POST /access/users/:id/verticals`
-  Future<void> assignVertical(int userId, int verticalId);
+  Future<void> assignVertical(String userId, String verticalId);
 
   /// `DELETE /access/users/:id/verticals/:verticalId`
-  Future<void> revokeVertical(int userId, int verticalId);
+  Future<void> revokeVertical(String userId, String verticalId);
 
   /// `POST /access/users/:id/permissions`
   Future<void> grantPermission(
-    int userId, {
+    String userId, {
     required String resource,
     required String action,
-    int? resourceId,
+    String? resourceId,
     DateTime? expiresAt,
   });
 
   /// `DELETE /access/users/:id/permissions` — body uses resource/action/resourceId.
   Future<void> revokePermission(
-    int userId, {
+    String userId, {
     required String resource,
     required String action,
-    int? resourceId,
+    String? resourceId,
   });
 
   /// `GET /access/roles`
@@ -106,25 +108,25 @@ abstract interface class UsersRepository {
   Future<List<VerticalOption>> getVerticals();
 
   /// `GET /access/users?role=MANAGER&verticalId=` — managers for a sector.
-  Future<List<ManagerOption>> getManagerOptions({int? verticalId});
+  Future<List<ManagerOption>> getManagerOptions({String? verticalId});
 
   /// `GET /territories?type=manager_zone&verticalId=` — manager zones.
-  Future<List<TerritoryOption>> getTerritoryOptions({int? verticalId});
+  Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId});
 
   /// `GET /access/territories/:id/assignments` — first assignee display name.
-  Future<String?> getTerritoryAssigneeName(int territoryId);
+  Future<String?> getTerritoryAssigneeName(String territoryId);
 
   /// `GET /territories?type=patch&managerTerritoryId=&verticalId=` — patches
   /// under a manager zone (includes [TerritoryOption.isOccupied]).
   Future<List<TerritoryOption>> getPatchesForZone({
-    required int managerZoneId,
-    int? verticalId,
+    required String managerZoneId,
+    String? verticalId,
   });
 
   /// Legacy: patches under a manager user via assignable-territories.
   /// Prefer [getPatchesForZone] for territory-derived invite flow.
   Future<ManagerTerritoryScope> getTerritoriesForManager(
-    int managerId, {
-    int? verticalId,
+    String managerId, {
+    String? verticalId,
   });
 }

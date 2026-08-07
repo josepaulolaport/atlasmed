@@ -16,17 +16,17 @@ class InvitePatchNameForm extends StatefulWidget {
   });
 
   final String? initialName;
-  final int verticalId;
+  final String verticalId;
   final String verticalName;
-  final int managerTerritoryId;
+  final String managerTerritoryId;
   final String managerTerritoryName;
 
   static Future<TerritoryDraft?> show(
     BuildContext context, {
     String? initialName,
-    required int verticalId,
+    required String verticalId,
     required String verticalName,
-    required int managerTerritoryId,
+    required String managerTerritoryId,
     required String managerTerritoryName,
   }) {
     return Navigator.of(context).push<TerritoryDraft>(

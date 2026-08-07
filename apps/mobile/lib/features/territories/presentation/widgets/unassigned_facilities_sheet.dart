@@ -9,9 +9,9 @@ import 'package:go_router/go_router.dart';
 class UnassignedFacilitiesSheet extends ConsumerStatefulWidget {
   const UnassignedFacilitiesSheet({super.key, this.managerZoneId});
 
-  final int? managerZoneId;
+  final String? managerZoneId;
 
-  static Future<void> show(BuildContext context, {int? managerZoneId}) {
+  static Future<void> show(BuildContext context, {String? managerZoneId}) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

@@ -3,52 +3,52 @@ import type { Role } from "../enums/role.enum";
 export interface ScopeContext {
   isGlobal: boolean;
   /** Direct territory assignments for this user (not expanded). */
-  assignedTerritoryIds: number[];
+  assignedTerritoryIds: string[];
   /**
    * Business verticals this user may operate in.
    * ADMIN: typically all active vertical ids (or empty meaning “all”).
    * OPS/MANAGER/REP: from user_vertical_assignments.
    */
-  assignedVerticalIds?: number[];
+  assignedVerticalIds?: string[];
   /**
    * Optional request filter narrowing assignedVerticalIds to one vertical.
    * Set by VerticalAccess resolution from query/body `verticalId`.
    */
-  activeVerticalId?: number | null;
+  activeVerticalId?: string | null;
   /**
    * Oversight territories (expanded): manager's own assignments, or all assignments for USER.
    * Used for facility/professional list visibility and territory read scope.
    */
-  effectiveTerritoryIds: number[];
+  effectiveTerritoryIds: string[];
   /**
    * Analytics territories (expanded): for managers, direct reports' assignments only;
    * for USER, same as effectiveTerritoryIds.
    */
-  analyticsEffectiveTerritoryIds: number[];
+  analyticsEffectiveTerritoryIds: string[];
   /** @deprecated Use effectiveTerritoryIds */
-  territoryIds: number[];
+  territoryIds: string[];
   /** Facilities visible for operational list/detail (oversight). */
-  facilityIds: number[];
+  facilityIds: string[];
   /** Facilities included in manager analytics roll-ups (rep-controlled territories). */
-  analyticsFacilityIds: number[];
+  analyticsFacilityIds: string[];
   /** @deprecated Use facilityIds */
-  clinicIds: number[];
+  clinicIds: string[];
   /** @deprecated Use analyticsFacilityIds */
-  analyticsClinicIds: number[];
-  managedUserIds: number[];
+  analyticsClinicIds: string[];
+  managedUserIds: string[];
   /** Manager only: unexpanded territory IDs assigned to direct reports. */
-  reportAssignedTerritoryIds?: number[];
+  reportAssignedTerritoryIds?: string[];
   /**
    * Spec 0006: manager oversight manager-zone ids for clinic geo filter.
    * Prefer SQL `manager_zone_id IN oversightZoneIds` over giant facilityIds lists.
    */
-  oversightZoneIds?: number[];
+  oversightZoneIds?: string[];
   isOperationallyActive: boolean;
-  grantIds?: number[];
+  grantIds?: string[];
 }
 
 export interface ScopeActor {
-  userId: number;
+  userId: string;
   role: Role;
 }
 
@@ -61,11 +61,11 @@ export function withTerritoryScopeAliases(
     | "clinicIds"
     | "analyticsClinicIds"
   > & {
-    territoryIds?: number[];
-    analyticsEffectiveTerritoryIds?: number[];
-    analyticsFacilityIds?: number[];
-    clinicIds?: number[];
-    analyticsClinicIds?: number[];
+    territoryIds?: string[];
+    analyticsEffectiveTerritoryIds?: string[];
+    analyticsFacilityIds?: string[];
+    clinicIds?: string[];
+    analyticsClinicIds?: string[];
   }
 ): ScopeContext {
   const effectiveTerritoryIds = scope.effectiveTerritoryIds;

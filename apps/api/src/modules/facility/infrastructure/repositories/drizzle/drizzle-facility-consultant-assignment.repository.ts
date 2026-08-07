@@ -27,7 +27,7 @@ function mapAssignment(row: AssignmentRow): FacilityConsultantAssignmentRecord {
 export class DrizzleFacilityConsultantAssignmentRepository
   implements FacilityConsultantAssignmentRepository
 {
-  async findByFacility(facilityId: number): Promise<FacilityConsultantAssignmentRecord[]> {
+  async findByFacility(facilityId: string): Promise<FacilityConsultantAssignmentRecord[]> {
     const rows = await db
       .select()
       .from(facilityConsultantAssignments)
@@ -38,7 +38,7 @@ export class DrizzleFacilityConsultantAssignmentRepository
   }
 
   async findCurrentByFacility(
-    facilityId: number
+    facilityId: string
   ): Promise<FacilityConsultantAssignmentRecord | null> {
     const [assignment] = await db
       .select()
@@ -56,9 +56,9 @@ export class DrizzleFacilityConsultantAssignmentRepository
   }
 
   async findActiveFacilityIdsByUserId(
-    userId: number,
-    verticalIds?: number[],
-  ): Promise<number[]> {
+    userId: string,
+    verticalIds?: string[],
+  ): Promise<string[]> {
     const conditions = [
       eq(facilityConsultantAssignments.userId, userId),
       isNull(facilityConsultantAssignments.endedAt),
@@ -76,10 +76,10 @@ export class DrizzleFacilityConsultantAssignmentRepository
   }
 
   async assign(params: {
-    facilityId: number;
-    userId: number;
-    verticalId: number;
-    assignedByUserId: number;
+    facilityId: string;
+    userId: string;
+    verticalId: string;
+    assignedByUserId: string;
   }): Promise<FacilityConsultantAssignmentRecord> {
     const current = await this.findCurrentByFacility(params.facilityId);
 
@@ -104,7 +104,7 @@ export class DrizzleFacilityConsultantAssignmentRepository
   }
 
   async endActiveForFacilities(params: {
-    facilityIds: number[];
+    facilityIds: string[];
     endReason: string;
   }): Promise<number> {
     if (params.facilityIds.length === 0) return 0;

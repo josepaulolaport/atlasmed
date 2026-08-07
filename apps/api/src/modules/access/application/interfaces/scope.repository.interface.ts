@@ -1,56 +1,56 @@
 export interface ScopeRepository {
-  findTerritoryIdsByUserId(userId: number): Promise<number[]>;
+  findTerritoryIdsByUserId(userId: string): Promise<string[]>;
 
-  findTerritoryIdsByUserIds(userIds: number[]): Promise<number[]>;
+  findTerritoryIdsByUserIds(userIds: string[]): Promise<string[]>;
 
-  findManagedUserIds(managerId: number): Promise<number[]>;
+  findManagedUserIds(managerId: string): Promise<string[]>;
 
   assignTerritory(params: {
-    userId: number;
-    territoryId: number;
-    assignedBy: number;
+    userId: string;
+    territoryId: string;
+    assignedBy: string;
   }): Promise<void>;
 
   revokeTerritory(params: {
-    userId: number;
-    territoryId: number;
+    userId: string;
+    territoryId: string;
   }): Promise<void>;
 
-  findTerritoryAssignmentsByUserId(userId: number): Promise<
+  findTerritoryAssignmentsByUserId(userId: string): Promise<
     Array<{
-      territoryId: number;
+      territoryId: string;
       assignedAt: Date;
     }>
   >;
 
-  findUserIdsByTerritoryId(territoryId: number): Promise<
+  findUserIdsByTerritoryId(territoryId: string): Promise<
     Array<{
-      userId: number;
+      userId: string;
       assignedAt: Date;
     }>
   >;
 
-  findManagerIdByUserId(userId: number): Promise<number | null>;
+  findManagerIdByUserId(userId: string): Promise<string | null>;
 
   /** Returns business vertical IDs assigned to the user. */
-  findVerticalIdsByUserId(userId: number): Promise<number[]>;
+  findVerticalIdsByUserId(userId: string): Promise<string[]>;
 
   assignVertical(params: {
-    userId: number;
-    verticalId: number;
-    assignedByUserId: number;
-    managerId?: number | null;
+    userId: string;
+    verticalId: string;
+    assignedByUserId: string;
+    managerId?: string | null;
   }): Promise<void>;
 
   revokeVertical(params: {
-    userId: number;
-    verticalId: number;
+    userId: string;
+    verticalId: string;
   }): Promise<void>;
 
-  findVerticalAssignmentsByUserId(userId: number): Promise<
+  findVerticalAssignmentsByUserId(userId: string): Promise<
     Array<{
-      verticalId: number;
-      managerId: number | null;
+      verticalId: string;
+      managerId: string | null;
       assignedAt: Date;
     }>
   >;
@@ -60,21 +60,21 @@ export interface ScopeRepository {
    * Clears existing rows then inserts the provided set.
    */
   replaceAssignments(params: {
-    userId: number;
-    assignedByUserId: number;
+    userId: string;
+    assignedByUserId: string;
     verticalAssignments: Array<{
-      verticalId: number;
-      territoryIds: number[];
+      verticalId: string;
+      territoryIds: string[];
     }>;
   }): Promise<void>;
 
-  listActiveVerticals(): Promise<Array<{ id: number; code: string; name: string }>>;
+  listActiveVerticals(): Promise<Array<{ id: string; code: string; name: string }>>;
 }
 
 export interface TerritoryScopePort {
-  getFacilityIdsForTerritories(territoryIds: number[]): Promise<number[]>;
+  getFacilityIdsForTerritories(territoryIds: string[]): Promise<string[]>;
   /** Active profiled facilities for the given verticals (OPS scope). */
-  getFacilityIdsForVerticals(verticalIds: number[]): Promise<number[]>;
+  getFacilityIdsForVerticals(verticalIds: string[]): Promise<string[]>;
 }
 
 /**
@@ -83,14 +83,14 @@ export interface TerritoryScopePort {
  */
 export interface FacilityAssociationPort {
   getAssociatedFacilityIds(
-    userId: number,
-    verticalIds?: number[],
-  ): Promise<number[]>;
+    userId: string,
+    verticalIds?: string[],
+  ): Promise<string[]>;
 }
 
 export interface TerritoryHierarchyPort {
   resolveEffectiveTerritoryIds(
-    assignedTerritoryIds: number[],
+    assignedTerritoryIds: string[],
     activeOnly?: boolean
-  ): Promise<number[]>;
+  ): Promise<string[]>;
 }

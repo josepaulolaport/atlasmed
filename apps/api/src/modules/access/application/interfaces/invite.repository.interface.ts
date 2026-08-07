@@ -1,21 +1,23 @@
 export interface InviteRecord {
-  id: number;
+  id: string;
   email: string | null;
   phoneNumber: string | null;
   status: string;
-  roleId: number;
+  roleId: string;
   role: {
-    id: number;
+    id: string;
     name: string;
     priority?: number | null;
   };
-  invitedByUserId: number;
+  invitedByUserId: string;
   firstName: string | null;
   lastName: string | null;
   birthDate: Date | null;
+  managerTerritoryId: string | null;
+  repTerritoryId: string | null;
   expiresAt: Date;
   acceptedAt: Date | null;
-  acceptedByUserId: number | null;
+  acceptedByUserId: string | null;
   revokedAt: Date | null;
   resendCount: number;
   lastResendAt: Date | null;
@@ -24,20 +26,22 @@ export interface InviteRecord {
 }
 
 export interface InviteVerticalAssignmentParams {
-  verticalId: number;
-  territoryIds: number[];
+  verticalId: string;
+  territoryIds: string[];
 }
 
 export interface CreateInviteParams {
   email?: string | undefined;
   phoneNumber?: string | undefined;
   tokenHash: string;
-  roleId: number;
-  invitedByUserId: number;
+  roleId: string;
+  invitedByUserId: string;
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
-  /** Multi-vertical staging via invitation_*_assignments. */
+  managerTerritoryId?: string | undefined;
+  repTerritoryId?: string | undefined;
+  /** Multi-vertical staging; empty keeps legacy single-territory columns only. */
   verticalAssignments?: InviteVerticalAssignmentParams[];
   expiresAt: Date;
 }
@@ -55,14 +59,14 @@ export interface AcceptInviteTransactionParams {
 
 export interface AcceptInviteTransactionResult {
   user: {
-    id: number;
+    id: string;
     email: string | null;
     username: string;
     firstName: string | null;
     lastName: string | null;
     status: string;
-    roleId: number;
-    role: { id: number; name: string };
+    roleId: string;
+    role: { id: string; name: string };
     createdAt: Date;
     updatedAt: Date;
   };
@@ -70,19 +74,21 @@ export interface AcceptInviteTransactionResult {
 }
 
 export interface InviteStagedVerticalAssignment {
-  invitationId: number;
-  verticalId: number;
-  territoryIds: number[];
+  invitationId: string;
+  verticalId: string;
+  territoryIds: string[];
 }
 
 export interface UpdatePendingInviteParams {
-  inviteId: number;
+  inviteId: string;
   email?: string | undefined;
   phoneNumber?: string | null | undefined;
-  roleId?: number | undefined;
+  roleId?: string | undefined;
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
+  managerTerritoryId?: string | null | undefined;
+  repTerritoryId?: string | null | undefined;
   verticalAssignments?: InviteVerticalAssignmentParams[];
 }
 
@@ -91,7 +97,7 @@ export interface InviteRepository {
 
   findValidByTokenHash(tokenHash: string): Promise<InviteRecord | null>;
 
-  findById(inviteId: number): Promise<InviteRecord | null>;
+  findById(inviteId: string): Promise<InviteRecord | null>;
 
   findByEmailOrPhone(email?: string | undefined, phoneNumber?: string | undefined): Promise<InviteRecord | null>;
 
@@ -99,21 +105,21 @@ export interface InviteRepository {
     status?: string;
     page?: number;
     limit?: number;
-    invitedByUserId?: number;
+    invitedByUserId?: string;
   }): Promise<{ invitations: InviteRecord[]; total: number }>;
 
   findStagedVerticalAssignments(
-    invitationIds: number[],
+    invitationIds: string[],
   ): Promise<InviteStagedVerticalAssignment[]>;
 
   updatePending(params: UpdatePendingInviteParams): Promise<InviteRecord>;
 
-  markAccepted(inviteId: number, userId: number): Promise<void>;
+  markAccepted(inviteId: string, userId: string): Promise<void>;
 
-  revoke(inviteId: number): Promise<void>;
+  revoke(inviteId: string): Promise<void>;
 
   regenerateToken(
-    inviteId: number,
+    inviteId: string,
     params: { tokenHash: string; expiresAt: Date }
   ): Promise<InviteRecord>;
 

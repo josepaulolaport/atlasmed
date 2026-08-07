@@ -1488,7 +1488,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
     final draftMeta = state.draft!;
     final zoneId = draftMeta.managerTerritoryId;
-    if (zoneId == null || zoneId <= 0) {
+    if (zoneId == null || zoneId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecione a zona do gerente.')),
       );
