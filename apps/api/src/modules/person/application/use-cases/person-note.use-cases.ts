@@ -59,3 +59,47 @@ export class CreatePersonNoteUseCase {
     );
   }
 }
+
+/** Caller-owned hard update — 404 if note missing or owned by another user. */
+export class UpdatePersonNoteUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: {
+    personId: number;
+    noteId: number;
+    userId: number;
+    note: string;
+  }) {
+    await assertActivePerson(this.deps.personNoteRepository, input.personId);
+
+    const updated = await this.deps.personNoteRepository.updateOwned({
+      noteId: input.noteId,
+      personId: input.personId,
+      userId: input.userId,
+      note: input.note,
+    });
+    if (!updated) {
+      throw new ResourceNotFoundError("PersonNote", input.noteId);
+    }
+    return serializePersonNote(updated);
+  }
+}
+
+/** Caller-owned hard delete — 404 if note missing or owned by another user. */
+export class DeletePersonNoteUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: { personId: number; noteId: number; userId: number }) {
+    await assertActivePerson(this.deps.personNoteRepository, input.personId);
+
+    const deleted = await this.deps.personNoteRepository.deleteOwned({
+      noteId: input.noteId,
+      personId: input.personId,
+      userId: input.userId,
+    });
+    if (!deleted) {
+      throw new ResourceNotFoundError("PersonNote", input.noteId);
+    }
+    return { id: input.noteId, deleted: true as const };
+  }
+}

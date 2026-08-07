@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_consta
     show facilityRosterListPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
@@ -340,7 +341,78 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         await _editRoles(doctor);
       case DoctorClinicAction.viewProfile:
         _openProfile(doctor);
+      case DoctorClinicAction.endAffiliation:
+        await _endAffiliation(doctor);
     }
+  }
+
+  Future<void> _endAffiliation(ProfessionalRoster doctor) async {
+    final facilityId = widget.facilityId;
+    if (facilityId == null || facilityId <= 0) return;
+    if (doctor.personFacilityId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível encerrar — vínculo sem identificador'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Encerrar vínculo?'),
+        content: Text(
+          '${doctor.name} deixará de aparecer como médico desta clínica. '
+          'O cadastro da pessoa permanece.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
+            child: const Text('Encerrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final repo = FacilityAssociateRepository(facilityId);
+    try {
+      await repo.endDoctorAffiliation(doctor);
+    } on FacilityAssociateException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Falha ao encerrar vínculo'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    } finally {
+      repo.dispose();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _doctors = [for (final d in _doctors) if (d.id != doctor.id) d];
+    });
+    ref
+        .read(facilityDoctorsRosterProvider(facilityId).notifier)
+        .removeWhere((d) => d.id == doctor.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${doctor.name} desvinculado da clínica'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _openProfile(ProfessionalRoster doctor) {

@@ -65,4 +65,41 @@ void main() {
       expect(client.requests.first.body, {'note': 'Retornar amanhã'});
     },
   );
+
+  test('updateNote PATCHes note path', () async {
+    final client = FakeClient([
+      const RepositoryHttpResponse(
+        statusCode: 200,
+        headers: {},
+        body:
+            '{"id":1,"note":"Editada","createdAt":"2026-01-01T10:00:00.000Z","updatedAt":"2026-01-02T10:00:00.000Z"}',
+      ),
+      const RepositoryHttpResponse(statusCode: 200, headers: {}, body: '[]'),
+    ]);
+    final repository = ProfessionalNotesRepository(1, client: client);
+
+    final note = await repository.updateNote(1, 'Editada');
+
+    expect(note.note, 'Editada');
+    expect(client.requests.first.method, RepositoryHttpMethod.patch);
+    expect(client.requests.first.url.path, '/api/v1/persons/1/notes/1');
+    expect(client.requests.first.body, {'note': 'Editada'});
+  });
+
+  test('deleteNote DELETEs note path', () async {
+    final client = FakeClient([
+      const RepositoryHttpResponse(
+        statusCode: 200,
+        headers: {},
+        body: '{"id":1,"deleted":true}',
+      ),
+      const RepositoryHttpResponse(statusCode: 200, headers: {}, body: '[]'),
+    ]);
+    final repository = ProfessionalNotesRepository(1, client: client);
+
+    await repository.deleteNote(1);
+
+    expect(client.requests.first.method, RepositoryHttpMethod.delete);
+    expect(client.requests.first.url.path, '/api/v1/persons/1/notes/1');
+  });
 }

@@ -61,4 +61,48 @@ class ProfessionalNotesRepository extends Repository<List<ProfessionalNote>>
     await refresh();
     return created;
   }
+
+  /// `PATCH /persons/:id/notes/:noteId`
+  Future<ProfessionalNote> updateNote(int noteId, String note) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'note': note},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw const ProfessionalNotesException();
+      }
+    }
+
+    final updated = ProfessionalNote.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+    await refresh();
+    return updated;
+  }
+
+  /// `DELETE /persons/:id/notes/:noteId`
+  Future<void> deleteNote(int noteId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.delete,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw const ProfessionalNotesException();
+      }
+    }
+
+    await refresh();
+  }
 }

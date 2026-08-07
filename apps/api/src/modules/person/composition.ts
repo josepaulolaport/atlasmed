@@ -9,7 +9,9 @@ import { ListHealthcareProfessionalsUseCase } from "./application/use-cases/list
 import { ListPersonFacilityRolesUseCase } from "./application/use-cases/list-person-facility-roles.use-case";
 import {
   CreatePersonNoteUseCase,
+  DeletePersonNoteUseCase,
   ListPersonNotesUseCase,
+  UpdatePersonNoteUseCase,
 } from "./application/use-cases/person-note.use-cases";
 import {
   GetPersonUseCase,
@@ -17,6 +19,7 @@ import {
   PatchPersonUseCase,
 } from "./application/use-cases/person.use-cases";
 import {
+  EndPersonFacilityAffiliationUseCase,
   GetPersonFacilityProjectionUseCase,
   ListPersonFacilityProjectionsUseCase,
   PatchPersonFacilityProjectionUseCase,
@@ -51,6 +54,8 @@ export const personUseCases = {
       repository: projectionRepository,
       roleCatalogRepository,
     }),
+  endFacilityAffiliation: () =>
+    new EndPersonFacilityAffiliationUseCase({ repository: projectionRepository }),
   listPersonFacilityRoles: () =>
     new ListPersonFacilityRolesUseCase({ roleCatalogRepository }),
 
@@ -61,6 +66,10 @@ export const personUseCases = {
     new ListPersonNotesUseCase({ personNoteRepository }),
   createPersonNote: () =>
     new CreatePersonNoteUseCase({ personNoteRepository }),
+  updatePersonNote: () =>
+    new UpdatePersonNoteUseCase({ personNoteRepository }),
+  deletePersonNote: () =>
+    new DeletePersonNoteUseCase({ personNoteRepository }),
 
   getPersonRelationship: () =>
     new GetUserPersonRelationshipUseCase({ userPersonRelationshipRepository }),

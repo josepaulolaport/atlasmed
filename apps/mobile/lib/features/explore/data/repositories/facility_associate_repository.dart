@@ -99,9 +99,8 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     bool isBuyer = false,
     bool isDecisionMaker = false,
   }) async {
-    // CRM / specialty are not on the projection create body.
-    // `roleTitle` is the only affiliation label we can persist on create;
-    // role codes go to PUT …/roles after affiliation exists.
+    // Specialty → roleTitle (affiliation label). CRM → crmNumber/crmState
+    // (primary person_professional_registrations). Roles → PUT …/roles after.
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(_healthcarePath),
@@ -113,6 +112,8 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
           if (phone != null && phone.isNotEmpty) 'mobilePhone': phone,
           if (email != null && email.isNotEmpty) 'email': email,
           if (specialty != null && specialty.isNotEmpty) 'roleTitle': specialty,
+          if (crmNumber != null && crmNumber.isNotEmpty) 'crmNumber': crmNumber,
+          if (crmState != null && crmState.isNotEmpty) 'crmState': crmState,
         },
       ),
     );
@@ -208,6 +209,32 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
     return FacilityProfessionalItemDTO.fromMap(map);
+  }
+
+  /// `DELETE …/healthcare-professionals/:personFacilityId` — soft-end affiliation.
+  Future<void> endDoctorAffiliation(ProfessionalRoster doctor) async {
+    final personFacilityId = doctor.personFacilityId;
+    if (personFacilityId == null) {
+      throw const FacilityAssociateException(
+        'personFacilityId é obrigatório para encerrar vínculo',
+      );
+    }
+
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/$personFacilityId'),
+        method: RepositoryHttpMethod.delete,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao encerrar vínculo (${response.statusCode})',
+        );
+      }
+    }
   }
 
   String get _relationshipPath =>

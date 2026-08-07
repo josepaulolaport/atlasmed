@@ -7,6 +7,7 @@ import type {
 } from "../interfaces/person-facility-projection.repository.interface";
 import { CLASSIFICATION } from "../interfaces/person-facility-projection.repository.interface";
 import {
+  EndPersonFacilityAffiliationUseCase,
   PatchPersonFacilityProjectionUseCase,
   ReplacePersonFacilityRolesUseCase,
   UpsertPersonFacilityProjectionUseCase,
@@ -56,13 +57,22 @@ function fakeRepo(state: {
   affiliation?: { id: number; facilityId: number; personId: number } | null;
   person?: { id: number; deletedAt: Date | null } | null;
   row?: PersonFacilityProjectionRecord | null;
+  crmConflict?: boolean;
 }): PersonFacilityProjectionRepository & {
   adds: Array<{ personFacilityId: number; classificationCode: string }>;
   createdAffiliations: number;
   replacedRoles: Array<{ personFacilityId: number; roleCodes: string[] }>;
+  ended: Array<{ personFacilityId: number; endedByUserId: number }>;
+  crmUpserts: Array<{ personId: number; registrationNumber: string; stateCode: string }>;
 } {
   const adds: Array<{ personFacilityId: number; classificationCode: string }> = [];
   const replacedRoles: Array<{ personFacilityId: number; roleCodes: string[] }> = [];
+  const ended: Array<{ personFacilityId: number; endedByUserId: number }> = [];
+  const crmUpserts: Array<{
+    personId: number;
+    registrationNumber: string;
+    stateCode: string;
+  }> = [];
   let createdAffiliations = 0;
   let nextPfId = 100;
   let current = state.row ?? null;
@@ -70,6 +80,8 @@ function fakeRepo(state: {
   return {
     adds,
     replacedRoles,
+    ended,
+    crmUpserts,
     get createdAffiliations() {
       return createdAffiliations;
     },
@@ -90,6 +102,11 @@ function fakeRepo(state: {
       return { id: 99 };
     },
     async ensureHealthcareProfile() {},
+    async upsertPrimaryCrmRegistration(input) {
+      if (state.crmConflict) return { kind: "conflict" as const };
+      crmUpserts.push(input);
+      return { kind: "upserted" as const, id: 1 };
+    },
     async createAffiliation(input) {
       createdAffiliations += 1;
       const id = nextPfId++;
@@ -118,6 +135,21 @@ function fakeRepo(state: {
     },
     async updatePerson() {},
     async updateAffiliation() {},
+    async endAffiliation(input) {
+      if (
+        !current ||
+        current.personFacilityId !== input.personFacilityId ||
+        current.endedAt
+      ) {
+        return null;
+      }
+      ended.push({
+        personFacilityId: input.personFacilityId,
+        endedByUserId: input.endedByUserId,
+      });
+      current = { ...current, endedAt: input.endedAt };
+      return { endedAt: input.endedAt };
+    },
     async replaceRoleAssignments(input) {
       replacedRoles.push(input);
       if (current && current.personFacilityId === input.personFacilityId) {
@@ -172,6 +204,66 @@ describe("UpsertPersonFacilityProjectionUseCase", () => {
     expect(result.personFacilityId).toBe(100);
     expect(repo.adds[0]?.classificationCode).toBe(CLASSIFICATION.HEALTHCARE_PROFESSIONAL);
   });
+
+  it("upserts primary CRM registration on healthcare create", async () => {
+    const repo = fakeRepo({
+      affiliation: null,
+      person: { id: 5, deletedAt: null },
+      row: null,
+    });
+    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
+    await uc.execute({
+      facilityId: 1,
+      personId: 5,
+      classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+      scope: createGlobalScopeContext(),
+      crmNumber: "74127",
+      crmState: "sp",
+    });
+
+    expect(repo.crmUpserts).toEqual([
+      { personId: 5, registrationNumber: "74127", stateCode: "SP" },
+    ]);
+  });
+
+  it("rejects CRM when only one of number/state is provided", async () => {
+    const repo = fakeRepo({
+      affiliation: null,
+      person: { id: 5, deletedAt: null },
+      row: null,
+    });
+    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personId: 5,
+        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+        scope: createGlobalScopeContext(),
+        crmNumber: "74127",
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(repo.crmUpserts).toEqual([]);
+  });
+
+  it("rejects CRM that conflicts with another person", async () => {
+    const repo = fakeRepo({
+      affiliation: null,
+      person: { id: 5, deletedAt: null },
+      row: null,
+      crmConflict: true,
+    });
+    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personId: 5,
+        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+        scope: createGlobalScopeContext(),
+        crmNumber: "74127",
+        crmState: "SP",
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
 });
 
 describe("PatchPersonFacilityProjectionUseCase", () => {
@@ -192,6 +284,90 @@ describe("PatchPersonFacilityProjectionUseCase", () => {
         firstName: "X",
       })
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+});
+
+describe("EndPersonFacilityAffiliationUseCase", () => {
+  it("ends active affiliation with actor user id", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
+      }),
+    });
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    const result = await uc.execute({
+      facilityId: 1,
+      personFacilityId: 10,
+      classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+      scope: createGlobalScopeContext(),
+      endedByUserId: 42,
+    });
+
+    expect(repo.ended).toEqual([{ personFacilityId: 10, endedByUserId: 42 }]);
+    expect(result.personFacilityId).toBe(10);
+    expect(result.endedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("404s when affiliation already ended", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        endedAt: new Date("2026-01-01T00:00:00.000Z"),
+        classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
+      }),
+    });
+    // findActiveById returns row even with endedAt set in fake; use-case checks endedAt
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personFacilityId: 10,
+        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+        scope: createGlobalScopeContext(),
+        endedByUserId: 1,
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+    expect(repo.ended).toEqual([]);
+  });
+
+  it("404s when guarded UPDATE matches zero rows (race)", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
+      }),
+    });
+    // Concurrent end: find still active, guarded UPDATE matches 0 rows.
+    repo.endAffiliation = async () => null;
+
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personFacilityId: 10,
+        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+        scope: createGlobalScopeContext(),
+        endedByUserId: 1,
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+
+  it("404s when personFacilityId belongs to another facility", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        facilityId: 2,
+        classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
+      }),
+    });
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personFacilityId: 10,
+        classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+        scope: createGlobalScopeContext(),
+        endedByUserId: 1,
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+    expect(repo.ended).toEqual([]);
   });
 });
 

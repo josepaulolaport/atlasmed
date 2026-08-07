@@ -13,6 +13,8 @@ export interface PersonsHttpUseCases {
   patchPerson(): Executable;
   listPersonNotes(): Executable;
   createPersonNote(): Executable;
+  updatePersonNote(): Executable;
+  deletePersonNote(): Executable;
   getPersonRelationship(): Executable;
   upsertPersonRelationship(): Executable;
 }
@@ -48,6 +50,11 @@ const relationshipSchema = z.object({
 
 const personIdParams = t.Object({
   personId: t.Number({ minimum: 1 }),
+});
+
+const personNoteParams = t.Object({
+  personId: t.Number({ minimum: 1 }),
+  noteId: t.Number({ minimum: 1 }),
 });
 
 const nullableString = t.Union([t.String(), t.Null()]);
@@ -192,6 +199,59 @@ const createPersonNoteRoute = (useCases: PersonsHttpUseCases, authPlugin: any = 
       }
     );
 
+const updatePersonNoteRoute = (useCases: PersonsHttpUseCases, authPlugin: any = auth) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .patch(
+      "/persons/:personId/notes/:noteId",
+      async ({ params, body, getUserId }) => {
+        const parsed = parseSchema(personNoteSchema, body);
+        const userId = await getUserId();
+        return useCases.updatePersonNote().execute({
+          personId: params.personId,
+          noteId: params.noteId,
+          userId,
+          note: parsed.note,
+        });
+      },
+      {
+        params: personNoteParams,
+        body: t.Object({
+          note: t.String({ minLength: 1, maxLength: MAX_PERSON_NOTE_LENGTH }),
+        }),
+        detail: {
+          summary: "Update my private note for a person",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+      }
+    );
+
+const deletePersonNoteRoute = (useCases: PersonsHttpUseCases, authPlugin: any = auth) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .delete(
+      "/persons/:personId/notes/:noteId",
+      async ({ params, getUserId }) => {
+        const userId = await getUserId();
+        return useCases.deletePersonNote().execute({
+          personId: params.personId,
+          noteId: params.noteId,
+          userId,
+        });
+      },
+      {
+        params: personNoteParams,
+        detail: {
+          summary: "Delete my private note for a person",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+      }
+    );
+
 const getPersonRelationshipRoute = (
   useCases: PersonsHttpUseCases,
   authPlugin: any = auth
@@ -292,6 +352,8 @@ export function createPersonsRoutes(
     .use(patchPersonRoute(useCases, authPlugin))
     .use(listPersonNotesRoute(useCases, authPlugin))
     .use(createPersonNoteRoute(useCases, authPlugin))
+    .use(updatePersonNoteRoute(useCases, authPlugin))
+    .use(deletePersonNoteRoute(useCases, authPlugin))
     .use(getPersonRelationshipRoute(useCases, authPlugin))
     .use(patchPersonRelationshipRoute(useCases, authPlugin))
     .use(putPersonRelationshipRoute(useCases, authPlugin));

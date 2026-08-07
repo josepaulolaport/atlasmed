@@ -16,6 +16,7 @@ export interface PersonProjectionsHttpUseCases {
   upsertFacilityProjection(): Executable;
   patchFacilityProjection(): Executable;
   replaceFacilityProjectionRoles(): Executable;
+  endFacilityAffiliation(): Executable;
 }
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -48,6 +49,8 @@ const identityBody = {
   landlinePhone: t.Optional(t.Union([t.String(), t.Null()])),
   roleTitle: t.Optional(t.Union([t.String(), t.Null()])),
   notes: t.Optional(t.Union([t.String(), t.Null()])),
+  crmNumber: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
+  crmState: t.Optional(t.Union([t.String({ minLength: 2, maxLength: 2 }), t.Null()])),
 };
 
 const patchBody = {
@@ -220,6 +223,36 @@ const putHealthcareRolesRoute = (
       }
     );
 
+const deleteHealthcareRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .delete(
+      "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
+      async ({ params, getScope, getUser }) => {
+        const [scope, user] = await Promise.all([getScope(), getUser()]);
+        return useCases.endFacilityAffiliation().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+          scope,
+          endedByUserId: user.id,
+        });
+      },
+      {
+        detail: {
+          summary: "End healthcare professional affiliation at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+      }
+    );
+
 const listAdminRoute = (
   useCases: PersonProjectionsHttpUseCases,
   authPlugin: any = auth
@@ -372,6 +405,36 @@ const putAdminRolesRoute = (
       }
     );
 
+const deleteAdminRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .delete(
+      "/facilities/:facilityId/administrative-contacts/:personFacilityId",
+      async ({ params, getScope, getUser }) => {
+        const [scope, user] = await Promise.all([getScope(), getUser()]);
+        return useCases.endFacilityAffiliation().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+          scope,
+          endedByUserId: user.id,
+        });
+      },
+      {
+        detail: {
+          summary: "End administrative contact affiliation at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+      }
+    );
+
 export function createPersonProjectionsRoutes(
   useCases: PersonProjectionsHttpUseCases = personUseCases,
   authPlugin: any = auth
@@ -382,11 +445,13 @@ export function createPersonProjectionsRoutes(
     .use(getHealthcareRoute(useCases, authPlugin))
     .use(patchHealthcareRoute(useCases, authPlugin))
     .use(putHealthcareRolesRoute(useCases, authPlugin))
+    .use(deleteHealthcareRoute(useCases, authPlugin))
     .use(listAdminRoute(useCases, authPlugin))
     .use(createAdminRoute(useCases, authPlugin))
     .use(getAdminRoute(useCases, authPlugin))
     .use(patchAdminRoute(useCases, authPlugin))
-    .use(putAdminRolesRoute(useCases, authPlugin));
+    .use(putAdminRolesRoute(useCases, authPlugin))
+    .use(deleteAdminRoute(useCases, authPlugin));
 }
 
 export const personProjectionsRoute = createPersonProjectionsRoutes();

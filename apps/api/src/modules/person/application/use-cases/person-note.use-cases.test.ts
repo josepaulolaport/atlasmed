@@ -6,7 +6,9 @@ import type {
 } from "../interfaces/person-note.repository.interface";
 import {
   CreatePersonNoteUseCase,
+  DeletePersonNoteUseCase,
   ListPersonNotesUseCase,
+  UpdatePersonNoteUseCase,
 } from "./person-note.use-cases";
 
 function createRepository(options?: {
@@ -20,6 +22,14 @@ function createRepository(options?: {
       note: "Nota de outra pessoa",
       createdAt: new Date("2026-01-01T10:00:00.000Z"),
       updatedAt: new Date("2026-01-01T10:00:00.000Z"),
+    },
+    {
+      id: 3,
+      personId: 1,
+      userId: 1,
+      note: "Minha nota",
+      createdAt: new Date("2026-01-01T11:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T11:00:00.000Z"),
     },
   ];
 
@@ -43,6 +53,33 @@ function createRepository(options?: {
       notes.push(note);
       return note;
     },
+    updateOwned: async (input) => {
+      const idx = notes.findIndex(
+        (n) =>
+          n.id === input.noteId &&
+          n.personId === input.personId &&
+          n.userId === input.userId
+      );
+      if (idx < 0) return null;
+      const updated: PersonNoteRecord = {
+        ...notes[idx]!,
+        note: input.note,
+        updatedAt: new Date("2026-01-03T10:00:00.000Z"),
+      };
+      notes[idx] = updated;
+      return updated;
+    },
+    deleteOwned: async (input) => {
+      const idx = notes.findIndex(
+        (n) =>
+          n.id === input.noteId &&
+          n.personId === input.personId &&
+          n.userId === input.userId
+      );
+      if (idx < 0) return false;
+      notes.splice(idx, 1);
+      return true;
+    },
   };
 }
 
@@ -53,7 +90,14 @@ describe("person notes use cases", () => {
       personNoteRepository: repository,
     }).execute({ personId: 1, userId: 1 });
 
-    expect(result).toEqual([]);
+    expect(result).toEqual([
+      {
+        id: 3,
+        note: "Minha nota",
+        createdAt: "2026-01-01T11:00:00.000Z",
+        updatedAt: "2026-01-01T11:00:00.000Z",
+      },
+    ]);
   });
 
   it("creates a note for the authenticated user and returns its DTO", async () => {
@@ -86,5 +130,58 @@ describe("person notes use cases", () => {
         note: "x",
       })
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+
+  it("updates caller-owned note", async () => {
+    const repository = createRepository();
+    const result = await new UpdatePersonNoteUseCase({
+      personNoteRepository: repository,
+    }).execute({
+      personId: 1,
+      noteId: 3,
+      userId: 1,
+      note: "Nota editada",
+    });
+
+    expect(result).toEqual({
+      id: 3,
+      note: "Nota editada",
+      createdAt: "2026-01-01T11:00:00.000Z",
+      updatedAt: "2026-01-03T10:00:00.000Z",
+    });
+  });
+
+  it("404s update for another user's note", async () => {
+    const repository = createRepository();
+    await expect(
+      new UpdatePersonNoteUseCase({
+        personNoteRepository: repository,
+      }).execute({
+        personId: 1,
+        noteId: 1,
+        userId: 1,
+        note: "hack",
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+
+  it("deletes caller-owned note", async () => {
+    const repository = createRepository();
+    const result = await new DeletePersonNoteUseCase({
+      personNoteRepository: repository,
+    }).execute({ personId: 1, noteId: 3, userId: 1 });
+
+    expect(result).toEqual({ id: 3, deleted: true });
+    expect(repository.notes.find((n) => n.id === 3)).toBeUndefined();
+  });
+
+  it("404s delete for another user's note", async () => {
+    const repository = createRepository();
+    await expect(
+      new DeletePersonNoteUseCase({
+        personNoteRepository: repository,
+      }).execute({ personId: 1, noteId: 1, userId: 1 })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+    expect(repository.notes.find((n) => n.id === 1)).toBeDefined();
   });
 });

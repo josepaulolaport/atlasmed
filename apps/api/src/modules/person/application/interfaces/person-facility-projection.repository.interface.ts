@@ -75,6 +75,17 @@ export interface PersonFacilityProjectionRepository {
     notes?: string | null;
   }): Promise<{ id: number }>;
 
+  /**
+   * Upsert primary CRM registration for a healthcare person.
+   * Requires council seed (`CRM`). `conflict` when (council, state, number)
+   * already belongs to another person (Q19).
+   */
+  upsertPrimaryCrmRegistration(input: {
+    personId: number;
+    registrationNumber: string;
+    stateCode: string;
+  }): Promise<{ kind: "upserted"; id: number } | { kind: "conflict" }>;
+
   /** Idempotent — ON CONFLICT DO NOTHING on PK. */
   addClassification(input: {
     personFacilityId: number;
@@ -84,6 +95,17 @@ export interface PersonFacilityProjectionRepository {
   updatePerson(personId: number, input: UpdatePersonInput): Promise<void>;
 
   updateAffiliation(personFacilityId: number, input: UpdateAffiliationInput): Promise<void>;
+
+  /**
+   * Soft-end active affiliation: sets `ended_at` + `ended_by_user_id` together (Q22 CHECK).
+   * Returns persisted `endedAt` when a row was updated; `null` when already ended / missing
+   * (guarded `WHERE ended_at IS NULL`).
+   */
+  endAffiliation(input: {
+    personFacilityId: number;
+    endedByUserId: number;
+    endedAt: Date;
+  }): Promise<{ endedAt: Date } | null>;
 
   /** Atomic replace-set: delete all assignments for the affiliation, then insert `roleCodes`. */
   replaceRoleAssignments(input: {

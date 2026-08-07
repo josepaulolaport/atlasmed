@@ -117,7 +117,34 @@ export type UpsertPersonFacilityProjectionInput = {
   landlinePhone?: string | null;
   roleTitle?: string | null;
   notes?: string | null;
+  /** Primary CRM registration (healthcare only). Both or neither. */
+  crmNumber?: string | null;
+  crmState?: string | null;
 };
+
+function normalizeCrmRegistration(input: {
+  crmNumber?: string | null;
+  crmState?: string | null;
+}): { registrationNumber: string; stateCode: string } | null {
+  const numberRaw = input.crmNumber?.trim() ?? "";
+  const stateRaw = input.crmState?.trim() ?? "";
+  if (!numberRaw && !stateRaw) return null;
+  if (!numberRaw || !stateRaw) {
+    throw new ValidationError([
+      {
+        field: !numberRaw ? "crmNumber" : "crmState",
+        message: "crmNumber and crmState must be provided together",
+      },
+    ]);
+  }
+  const stateCode = stateRaw.toUpperCase();
+  if (!/^[A-Z]{2}$/.test(stateCode)) {
+    throw new ValidationError([
+      { field: "crmState", message: "crmState must be a 2-letter UF code" },
+    ]);
+  }
+  return { registrationNumber: numberRaw, stateCode };
+}
 
 export class UpsertPersonFacilityProjectionUseCase {
   constructor(private readonly deps: Dependencies) {}
@@ -156,6 +183,19 @@ export class UpsertPersonFacilityProjectionUseCase {
       await this.deps.repository.ensureHealthcareProfile(personId);
     }
 
+    const crm = normalizeCrmRegistration({
+      crmNumber: input.crmNumber,
+      crmState: input.crmState,
+    });
+    if (crm && input.classificationCode !== CLASSIFICATION.HEALTHCARE_PROFESSIONAL) {
+      throw new ValidationError([
+        {
+          field: "crmNumber",
+          message: "CRM registration is only valid for healthcare professionals",
+        },
+      ]);
+    }
+
     const active = await this.deps.repository.findActiveAffiliation({
       facilityId: input.facilityId,
       personId,
@@ -184,6 +224,22 @@ export class UpsertPersonFacilityProjectionUseCase {
       personFacilityId,
       classificationCode: input.classificationCode,
     });
+
+    if (crm) {
+      const result = await this.deps.repository.upsertPrimaryCrmRegistration({
+        personId,
+        registrationNumber: crm.registrationNumber,
+        stateCode: crm.stateCode,
+      });
+      if (result.kind === "conflict") {
+        throw new ValidationError([
+          {
+            field: "crmNumber",
+            message: "CRM registration already belongs to another person",
+          },
+        ]);
+      }
+    }
 
     const row = await this.deps.repository.findActiveById(personFacilityId);
     if (!row) {
@@ -287,6 +343,50 @@ async function assertRoleCodesInCatalog(
       message: `Unknown or inactive role code "${code}"`,
     }))
   );
+}
+
+export type EndPersonFacilityAffiliationInput = {
+  facilityId: number;
+  personFacilityId: number;
+  classificationCode: ClassificationCode;
+  scope: ScopeContext;
+  endedByUserId: number;
+};
+
+export class EndPersonFacilityAffiliationUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: EndPersonFacilityAffiliationInput): Promise<{
+    personFacilityId: number;
+    endedAt: string;
+  }> {
+    assertFacilityScoped(input.scope, input.facilityId);
+
+    const row = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!row || row.endedAt) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (row.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (!row.classificationCodes.includes(input.classificationCode)) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+
+    const ended = await this.deps.repository.endAffiliation({
+      personFacilityId: input.personFacilityId,
+      endedByUserId: input.endedByUserId,
+      endedAt: new Date(),
+    });
+    if (!ended) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+
+    return {
+      personFacilityId: input.personFacilityId,
+      endedAt: ended.endedAt.toISOString(),
+    };
+  }
 }
 
 export class ReplacePersonFacilityRolesUseCase {

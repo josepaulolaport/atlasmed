@@ -73,6 +73,8 @@ function personUseCases(
     patchPerson: () => mutated,
     listPersonNotes: () => emptyNotes,
     createPersonNote: () => mutated,
+    updatePersonNote: () => mutated,
+    deletePersonNote: () => mutated,
     getPersonRelationship: () => relationship,
     upsertPersonRelationship: () => mutated,
     ...overrides,
@@ -282,6 +284,64 @@ describe("Person HTTP routes", () => {
         { code: "BUYER", name: "Comprador" },
         { code: "PRESCRIBER", name: "Prescritor" },
       ],
+    });
+  });
+
+  it("PATCH person note calls update use-case with actor user id", async () => {
+    const update = mock(async () => ({
+      id: 3,
+      note: "editada",
+      createdAt: "2026-01-01T11:00:00.000Z",
+      updatedAt: "2026-01-03T10:00:00.000Z",
+    }));
+    const application = createHttpIntegrationApp(
+      createPersonsRoutes(
+        personUseCases({ updatePersonNote: () => ({ execute: update }) }),
+        actorPlugin()
+      )
+    );
+
+    const response = await authRequest(
+      application,
+      "http://localhost/api/v1/persons/10/notes/3",
+      "token",
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ note: "editada" }),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    expect(update).toHaveBeenCalledWith({
+      personId: 10,
+      noteId: 3,
+      userId: 1,
+      note: "editada",
+    });
+  });
+
+  it("DELETE person note calls delete use-case with actor user id", async () => {
+    const del = mock(async () => ({ id: 3, deleted: true }));
+    const application = createHttpIntegrationApp(
+      createPersonsRoutes(
+        personUseCases({ deletePersonNote: () => ({ execute: del }) }),
+        actorPlugin()
+      )
+    );
+
+    const response = await authRequest(
+      application,
+      "http://localhost/api/v1/persons/10/notes/3",
+      "token",
+      { method: "DELETE" }
+    );
+
+    expect(response.status).toBe(200);
+    expect(del).toHaveBeenCalledWith({
+      personId: 10,
+      noteId: 3,
+      userId: 1,
     });
   });
 });

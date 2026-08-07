@@ -21,4 +21,19 @@ export interface PersonNoteRepository {
     userId: number;
     note: string;
   }): Promise<PersonNoteRecord>;
+
+  /** Caller-owned only. `null` when missing or not owned by `userId`. */
+  updateOwned(input: {
+    noteId: number;
+    personId: number;
+    userId: number;
+    note: string;
+  }): Promise<PersonNoteRecord | null>;
+
+  /** Hard delete, caller-owned only. `false` when missing or not owned. */
+  deleteOwned(input: {
+    noteId: number;
+    personId: number;
+    userId: number;
+  }): Promise<boolean>;
 }

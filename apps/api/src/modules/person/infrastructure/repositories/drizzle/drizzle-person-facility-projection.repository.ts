@@ -3,11 +3,13 @@ import {
   personFacilityClassificationAssignments,
   personFacilityRoleAssignments,
   personHealthcareProfiles,
+  personProfessionalRegistrations,
   persons,
 } from "@atlasmed/database";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
+import { isPostgresUniqueViolation } from "./postgres-unique-violation";
 import type {
   ClassificationCode,
   CreatePersonInput,
@@ -239,6 +241,107 @@ export class DrizzlePersonFacilityProjectionRepository
     return row;
   }
 
+  async upsertPrimaryCrmRegistration(input: {
+    personId: number;
+    registrationNumber: string;
+    stateCode: string;
+  }): Promise<{ kind: "upserted"; id: number } | { kind: "conflict" }> {
+    const registrationNumber = input.registrationNumber.trim();
+    const stateCode = input.stateCode.trim().toUpperCase();
+
+    try {
+      return await db.transaction(async (tx) => {
+        const [byKey] = await tx
+          .select({
+            id: personProfessionalRegistrations.id,
+            personId: personProfessionalRegistrations.personId,
+          })
+          .from(personProfessionalRegistrations)
+          .where(
+            and(
+              eq(personProfessionalRegistrations.councilCode, "CRM"),
+              eq(personProfessionalRegistrations.stateCode, stateCode),
+              eq(
+                personProfessionalRegistrations.registrationNumber,
+                registrationNumber
+              )
+            )
+          )
+          .limit(1);
+
+        if (byKey && byKey.personId !== input.personId) {
+          return { kind: "conflict" as const };
+        }
+
+        const [primary] = await tx
+          .select({ id: personProfessionalRegistrations.id })
+          .from(personProfessionalRegistrations)
+          .where(
+            and(
+              eq(personProfessionalRegistrations.personId, input.personId),
+              eq(personProfessionalRegistrations.isPrimary, true)
+            )
+          )
+          .limit(1);
+
+        if (byKey && primary && byKey.id !== primary.id) {
+          await tx
+            .update(personProfessionalRegistrations)
+            .set({ isPrimary: false })
+            .where(eq(personProfessionalRegistrations.id, primary.id));
+          await tx
+            .update(personProfessionalRegistrations)
+            .set({ isPrimary: true, isActive: true })
+            .where(eq(personProfessionalRegistrations.id, byKey.id));
+          return { kind: "upserted" as const, id: byKey.id };
+        }
+
+        if (primary) {
+          await tx
+            .update(personProfessionalRegistrations)
+            .set({
+              councilCode: "CRM",
+              stateCode,
+              registrationNumber,
+              isActive: true,
+            })
+            .where(eq(personProfessionalRegistrations.id, primary.id));
+          return { kind: "upserted" as const, id: primary.id };
+        }
+
+        if (byKey) {
+          await tx
+            .update(personProfessionalRegistrations)
+            .set({ isPrimary: true, isActive: true })
+            .where(eq(personProfessionalRegistrations.id, byKey.id));
+          return { kind: "upserted" as const, id: byKey.id };
+        }
+
+        const [created] = await tx
+          .insert(personProfessionalRegistrations)
+          .values({
+            personId: input.personId,
+            councilCode: "CRM",
+            stateCode,
+            registrationNumber,
+            isPrimary: true,
+            isActive: true,
+          })
+          .returning({ id: personProfessionalRegistrations.id });
+        if (!created) {
+          throw new DatabaseError("create person professional registration");
+        }
+        return { kind: "upserted" as const, id: created.id };
+      });
+    } catch (error) {
+      // Race: concurrent insert/update hits Q19 unique (council, state, number).
+      if (isPostgresUniqueViolation(error)) {
+        return { kind: "conflict" };
+      }
+      throw error;
+    }
+  }
+
   async addClassification(input: {
     personFacilityId: number;
     classificationCode: ClassificationCode;
@@ -277,6 +380,26 @@ export class DrizzlePersonFacilityProjectionRepository
       .update(personFacilities)
       .set(patch)
       .where(eq(personFacilities.id, personFacilityId));
+  }
+
+  async endAffiliation(input: {
+    personFacilityId: number;
+    endedByUserId: number;
+    endedAt: Date;
+  }): Promise<{ endedAt: Date } | null> {
+    const [row] = await db
+      .update(personFacilities)
+      .set({
+        endedAt: input.endedAt,
+        endedByUserId: input.endedByUserId,
+      })
+      .where(
+        and(eq(personFacilities.id, input.personFacilityId), isNull(personFacilities.endedAt))
+      )
+      .returning({ endedAt: personFacilities.endedAt });
+
+    if (!row?.endedAt) return null;
+    return { endedAt: row.endedAt };
   }
 
   async replaceRoleAssignments(input: {

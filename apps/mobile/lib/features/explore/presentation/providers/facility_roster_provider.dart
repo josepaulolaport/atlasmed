@@ -99,6 +99,16 @@ class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>> {
     );
   }
 
+  /// Locally drops items matching [test] (e.g. after ending an affiliation).
+  void removeWhere(bool Function(T item) test) {
+    final next = [for (final item in state.items) if (!test(item)) item];
+    if (next.length == state.items.length) return;
+    state = state.copyWith(
+      items: next,
+      total: state.total > 0 ? state.total - 1 : 0,
+    );
+  }
+
   Future<void> _fetch({required int page, required bool append}) async {
     _fetchInFlight = true;
     state = state.copyWith(

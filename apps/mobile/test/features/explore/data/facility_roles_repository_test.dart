@@ -135,16 +135,25 @@ void main() {
       firstName: 'João',
       lastName: 'Silva',
       roleCodes: ['PRESCRIBER', 'BUYER'],
+      crmNumber: '74127',
+      crmState: 'SP',
     );
 
     expect(client.requests, hasLength(2));
     expect(client.requests[0].method, RepositoryHttpMethod.post);
+    expect(client.requests[0].body, {
+      'firstName': 'João',
+      'lastName': 'Silva',
+      'crmNumber': '74127',
+      'crmState': 'SP',
+    });
     expect(client.requests[1].method, RepositoryHttpMethod.put);
     expect(client.requests[1].body, {
       'roleCodes': ['BUYER', 'PRESCRIBER'],
     });
     expect(doctor.isPrescriber, isTrue);
     expect(doctor.isBuyer, isTrue);
+    expect(doctor.crm, 'CRM/SP 74127');
   });
 
   test('admin create then PUT roles; update replaces roles', () async {
@@ -224,5 +233,69 @@ void main() {
       'roleCodes': ['SECRETARY'],
     });
     expect(updated.isSecretary, isTrue);
+  });
+
+  test('endDoctorAffiliation DELETEs affiliation and requires personFacilityId', () async {
+    final client = FakeClient([
+      RepositoryHttpResponse(
+        statusCode: 200,
+        headers: const {},
+        body: jsonEncode({
+          'personFacilityId': 10,
+          'endedAt': '2026-08-07T12:00:00.000Z',
+        }),
+      ),
+    ]);
+    final repo = FacilityAssociateRepository(1, client: client);
+
+    await repo.endDoctorAffiliation(
+      const ProfessionalRoster(
+        id: 20,
+        personFacilityId: 10,
+        name: 'João Silva',
+        initials: 'JS',
+        hue: 1,
+      ),
+    );
+
+    expect(client.requests.single.method, RepositoryHttpMethod.delete);
+    expect(
+      client.requests.single.url.path,
+      '/api/v1/facilities/1/healthcare-professionals/10',
+    );
+
+    expect(
+      () => repo.endDoctorAffiliation(
+        const ProfessionalRoster(
+          id: 20,
+          name: 'Sem afiliação',
+          initials: 'S',
+          hue: 1,
+        ),
+      ),
+      throwsA(isA<FacilityAssociateException>()),
+    );
+  });
+
+  test('endAffiliation DELETEs administrative contact path', () async {
+    final client = FakeClient([
+      RepositoryHttpResponse(
+        statusCode: 200,
+        headers: const {},
+        body: jsonEncode({
+          'personFacilityId': 11,
+          'endedAt': '2026-08-07T12:00:00.000Z',
+        }),
+      ),
+    ]);
+    final repo = FacilityRepresentativesRepository(1, client: client);
+
+    await repo.endAffiliation(11);
+
+    expect(client.requests.single.method, RepositoryHttpMethod.delete);
+    expect(
+      client.requests.single.url.path,
+      '/api/v1/facilities/1/administrative-contacts/11',
+    );
   });
 }

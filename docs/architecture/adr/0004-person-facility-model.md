@@ -203,7 +203,7 @@ Absent: primary occupation, free-text specialty, CRM triple.
 
 ### 5.5 `person_professional_registration_councils` — LOCKED
 
-Empty catalog (D10). **Q15 = A** minimal catalog pattern.
+Minimal seed: `CRM` (`0058_seed_crm_registration_council`). Full council catalog later (D10). **Q15 = A** minimal catalog pattern.
 
 | Column | Type | Null | Keys | Notes |
 |---|---|---|---|---|
@@ -413,10 +413,10 @@ Facility routes may mount projections but call person ports only.
 
 | Method | Path | Classification filter |
 |---|---|---|
-| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` | `HEALTHCARE_PROFESSIONAL` |
-| GET/PATCH | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` | |
+| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` | `HEALTHCARE_PROFESSIONAL`; POST optional `crmNumber`+`crmState` → primary CRM registration |
+| GET/PATCH/DELETE | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` | DELETE = soft-end (`ended_at` + `ended_by_user_id`); `update` PERSON |
 | GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` | `ADMINISTRATIVE_CONTACT` |
-| GET/PATCH | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` | |
+| GET/PATCH/DELETE | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` | DELETE = soft-end; same auth as healthcare |
 
 **Frozen role-assignment paths** (STEP 4 — 2026-08-07):
 
@@ -433,13 +433,14 @@ Projection DTOs include `roleCodes: string[]` (from `person_facility_role_assign
 | Method | Path | Notes |
 |---|---|---|
 | GET/POST | `/api/v1/persons/:personId/notes` | User-scoped; caller-owned rows only |
+| PATCH/DELETE | `/api/v1/persons/:personId/notes/:noteId` | Caller-owned hard update/delete; `update` PERSON |
 | GET | `/api/v1/persons/:personId/relationship` | `{ relationshipLevel: number \| null }` |
 | PUT/PATCH | `/api/v1/persons/:personId/relationship` | Body `{ relationshipLevel: 1..10 }`; returns `{ personId, relationshipLevel }` |
 | GET/PATCH | `/api/v1/persons/:personId` | Identity + profile; soft-deleted → 404; PATCH partial identity fields; response includes `cpf` + temporary `taxId` alias (**COMPAT(remove)** when mobile DTO field → `cpf`) + `facilityIds` + `hasHealthcareProfile` |
 | GET | `/api/v1/healthcare-professionals` | Global/Meili Explorar (D16 / Q31) |
 | GET | `/api/v1/healthcare-professionals/specialties` | Distinct active specialty names used by non-deleted persons (`{ data: string[] }`) |
 
-DTOs differ per projection (healthcare includes specialties/registrations/occupations; admin includes roles/role_title). Same underlying ids. End/delete affiliation, note update/delete, nested registration/occupation routes — define when wiring API.
+DTOs differ per projection (healthcare includes specialties/registrations/occupations; admin includes roles/role_title). Same underlying ids. Nested registration/occupation routes — define when wiring API. End affiliation + note update/delete frozen above.
 
 ### 6.3 CASL
 

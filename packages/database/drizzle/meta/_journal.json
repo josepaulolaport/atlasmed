@@ -407,6 +407,13 @@
       "when": 1786084838388,
       "tag": "0057_rename_product_potential_definitions",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1786114255767,
+      "tag": "0058_seed_crm_registration_council",
+      "breakpoints": true
     }
   ]
 }

@@ -346,7 +346,15 @@ class _DoctorDetailContent extends ConsumerWidget {
                         detail: detail,
                         notes: notes,
                         onAddNote: () =>
-                            _showAddNoteSheet(context, ref, repository),
+                            _showNoteSheet(context, ref, repository),
+                        onEditNote: (note) => _showNoteSheet(
+                          context,
+                          ref,
+                          repository,
+                          existing: note,
+                        ),
+                        onDeleteNote: (note) =>
+                            _confirmDeleteNote(context, repository, note),
                       );
                     },
                   ),
@@ -492,26 +500,81 @@ class _DoctorRelationshipCardState extends State<_DoctorRelationshipCard> {
   }
 }
 
-Future<void> _showAddNoteSheet(
+Future<void> _showNoteSheet(
   BuildContext context,
   WidgetRef ref,
-  ProfessionalNotesRepository repository,
-) async {
+  ProfessionalNotesRepository repository, {
+  ProfessionalNote? existing,
+}) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
-    builder: (_) => _AddDoctorNoteSheet(repository: repository, ref: ref),
+    builder: (_) => _AddDoctorNoteSheet(
+      repository: repository,
+      ref: ref,
+      existing: existing,
+    ),
   );
+}
+
+Future<void> _confirmDeleteNote(
+  BuildContext context,
+  ProfessionalNotesRepository repository,
+  ProfessionalNote note,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Excluir nota?'),
+      content: const Text('Esta ação não pode ser desfeita.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
+          child: const Text('Excluir'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+
+  try {
+    await repository.deleteNote(note.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nota excluída'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Não foi possível excluir a nota.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 }
 
 /// Owns its controllers so dismissing an empty sheet cannot race
 /// InheritedWidget teardown (`_dependents.isEmpty`).
 class _AddDoctorNoteSheet extends StatefulWidget {
-  const _AddDoctorNoteSheet({required this.repository, required this.ref});
+  const _AddDoctorNoteSheet({
+    required this.repository,
+    required this.ref,
+    this.existing,
+  });
 
   final ProfessionalNotesRepository repository;
   final WidgetRef ref;
+  final ProfessionalNote? existing;
 
   @override
   State<_AddDoctorNoteSheet> createState() => _AddDoctorNoteSheetState();
@@ -523,10 +586,12 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
   var _isSaving = false;
   String? _errorMessage;
 
+  bool get _isEdit => widget.existing != null;
+
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _controller = TextEditingController(text: widget.existing?.note ?? '');
   }
 
   @override
@@ -542,7 +607,13 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
       _errorMessage = null;
     });
     try {
-      await widget.repository.createNote(_controller.text.trim());
+      final text = _controller.text.trim();
+      final existing = widget.existing;
+      if (existing != null) {
+        await widget.repository.updateNote(existing.id, text);
+      } else {
+        await widget.repository.createNote(text);
+      }
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (!mounted) return;
@@ -568,9 +639,9 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Adicionar nota',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            Text(
+              _isEdit ? 'Editar nota' : 'Adicionar nota',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -1608,11 +1679,15 @@ class _DoctorNotes extends StatelessWidget {
   final Professional detail;
   final List<ProfessionalNote>? notes;
   final VoidCallback onAddNote;
+  final ValueChanged<ProfessionalNote> onEditNote;
+  final ValueChanged<ProfessionalNote> onDeleteNote;
 
   const _DoctorNotes({
     required this.detail,
     required this.notes,
     required this.onAddNote,
+    required this.onEditNote,
+    required this.onDeleteNote,
   });
 
   @override
@@ -1700,6 +1775,28 @@ class _DoctorNotes extends StatelessWidget {
                                   height: 1.45,
                                 ),
                               ),
+                            ),
+                            PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(
+                                Icons.more_vert_rounded,
+                                size: 18,
+                                color: AppColors.gray400,
+                              ),
+                              onSelected: (value) {
+                                if (value == 'edit') onEditNote(item);
+                                if (value == 'delete') onDeleteNote(item);
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Editar'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Excluir'),
+                                ),
+                              ],
                             ),
                           ],
                         ),

@@ -234,6 +234,25 @@ class FacilityRepresentativesRepository
     return _parseMutationApi(response, 'salvar papéis de');
   }
 
+  /// `DELETE …/administrative-contacts/:personFacilityId` — soft-end affiliation.
+  Future<void> endAffiliation(int personFacilityId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_contactsPath/$personFacilityId'),
+        method: RepositoryHttpMethod.delete,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityRepresentativesException(
+          'Falha ao encerrar vínculo (${response.statusCode})',
+        );
+      }
+    }
+  }
+
   FacilityRepresentativeApi _parseMutationApi(
     RepositoryHttpResponse response,
     String action,

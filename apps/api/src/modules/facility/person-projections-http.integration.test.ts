@@ -50,12 +50,19 @@ function projectionUseCases(
 ): PersonProjectionsHttpUseCases {
   const projection = { execute: mock(async () => projectionDto) };
   const list = { execute: mock(async () => ({ data: [projectionDto] })) };
+  const end = {
+    execute: mock(async () => ({
+      personFacilityId: 10,
+      endedAt: "2026-08-07T12:00:00.000Z",
+    })),
+  };
   return {
     listFacilityProjections: () => list,
     getFacilityProjection: () => projection,
     upsertFacilityProjection: () => projection,
     patchFacilityProjection: () => projection,
     replaceFacilityProjectionRoles: () => projection,
+    endFacilityAffiliation: () => end,
     ...overrides,
   };
 }
@@ -151,6 +158,76 @@ describe("Person projection HTTP routes", () => {
       expect.objectContaining({
         classificationCode: "ADMINISTRATIVE_CONTACT",
         roleCodes: ["BILLER"],
+      })
+    );
+  });
+
+  it("returns 401 without auth on DELETE healthcare affiliation", async () => {
+    const response = await authRequest(
+      app(undefined, "unauthenticated"),
+      "http://localhost/api/v1/facilities/1/healthcare-professionals/10",
+      null,
+      { method: "DELETE" }
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it("DELETE healthcare affiliation calls end use-case with actor user id", async () => {
+    const end = mock(async () => ({
+      personFacilityId: 10,
+      endedAt: "2026-08-07T12:00:00.000Z",
+    }));
+    const application = app(
+      projectionUseCases({
+        endFacilityAffiliation: () => ({ execute: end }),
+      })
+    );
+
+    const response = await authRequest(
+      application,
+      "http://localhost/api/v1/facilities/1/healthcare-professionals/10",
+      "token",
+      { method: "DELETE" }
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      personFacilityId: 10,
+      endedAt: "2026-08-07T12:00:00.000Z",
+    });
+    expect(end).toHaveBeenCalledWith(
+      expect.objectContaining({
+        facilityId: 1,
+        personFacilityId: 10,
+        classificationCode: "HEALTHCARE_PROFESSIONAL",
+        endedByUserId: 1,
+      })
+    );
+  });
+
+  it("DELETE administrative affiliation uses ADMINISTRATIVE_CONTACT classification", async () => {
+    const end = mock(async () => ({
+      personFacilityId: 10,
+      endedAt: "2026-08-07T12:00:00.000Z",
+    }));
+    const application = app(
+      projectionUseCases({
+        endFacilityAffiliation: () => ({ execute: end }),
+      })
+    );
+
+    const response = await authRequest(
+      application,
+      "http://localhost/api/v1/facilities/1/administrative-contacts/10",
+      "token",
+      { method: "DELETE" }
+    );
+
+    expect(response.status).toBe(200);
+    expect(end).toHaveBeenCalledWith(
+      expect.objectContaining({
+        classificationCode: "ADMINISTRATIVE_CONTACT",
+        endedByUserId: 1,
       })
     );
   });

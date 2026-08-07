@@ -52,4 +52,42 @@ export class DrizzlePersonNoteRepository implements PersonNoteRepository {
     const [note] = await db.insert(personNotes).values(input).returning();
     return mapNote(note!);
   }
+
+  async updateOwned(input: {
+    noteId: number;
+    personId: number;
+    userId: number;
+    note: string;
+  }): Promise<PersonNoteRecord | null> {
+    const [row] = await db
+      .update(personNotes)
+      .set({ note: input.note })
+      .where(
+        and(
+          eq(personNotes.id, input.noteId),
+          eq(personNotes.personId, input.personId),
+          eq(personNotes.userId, input.userId)
+        )
+      )
+      .returning();
+    return row ? mapNote(row) : null;
+  }
+
+  async deleteOwned(input: {
+    noteId: number;
+    personId: number;
+    userId: number;
+  }): Promise<boolean> {
+    const deleted = await db
+      .delete(personNotes)
+      .where(
+        and(
+          eq(personNotes.id, input.noteId),
+          eq(personNotes.personId, input.personId),
+          eq(personNotes.userId, input.userId)
+        )
+      )
+      .returning({ id: personNotes.id });
+    return deleted.length > 0;
+  }
 }

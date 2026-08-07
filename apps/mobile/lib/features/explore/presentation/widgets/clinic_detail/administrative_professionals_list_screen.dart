@@ -239,21 +239,43 @@ class _AdministrativeProfessionalsListScreenState
                     itemBuilder: (_, i) => _AdminProfessionalRow(
                       professional: filtered[i],
                       onTap: () async {
-                        final updated = await Navigator.of(context)
-                            .push<AdministrativeProfessional>(
-                              MaterialPageRoute(
-                                builder: (_) => RepresentativeDetailScreen(
-                                  professional: filtered[i],
-                                  facilityName: widget.facilityName,
-                                  facilityId: widget.facilityId,
-                                ),
-                              ),
-                            );
-                        if (updated == null || !mounted) return;
+                        final result = await Navigator.of(context).push<Object>(
+                          MaterialPageRoute(
+                            builder: (_) => RepresentativeDetailScreen(
+                              professional: filtered[i],
+                              facilityName: widget.facilityName,
+                              facilityId: widget.facilityId,
+                            ),
+                          ),
+                        );
+                        if (!mounted || result == null) return;
+
+                        // Detail pops int personFacilityId after soft-end.
+                        if (result is int) {
+                          setState(() {
+                            _professionals = [
+                              for (final p in _professionals)
+                                if (p.id != result) p,
+                            ];
+                          });
+                          final facilityId = widget.facilityId;
+                          if (facilityId != null && facilityId > 0) {
+                            ref
+                                .read(
+                                  facilityAdministratorsRosterProvider(
+                                    facilityId,
+                                  ).notifier,
+                                )
+                                .removeWhere((p) => p.id == result);
+                          }
+                          return;
+                        }
+
+                        if (result is! AdministrativeProfessional) return;
                         setState(() {
                           _professionals = [
                             for (final p in _professionals)
-                              if (p.id == updated.id) updated else p,
+                              if (p.id == result.id) result else p,
                           ];
                         });
                         final facilityId = widget.facilityId;
