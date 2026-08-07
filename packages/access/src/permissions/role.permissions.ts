@@ -42,6 +42,7 @@ export function applyRoleAbilities(
       can("read", "FACILITY");
       can("update", "FACILITY");
       can("read", "PERSON");
+      can("create", "PERSON");
       can("update", "PERSON");
       can("read", "TERRITORY");
       can("create", "TERRITORY");
@@ -68,6 +69,7 @@ export function applyRoleAbilities(
       can("read", "FACILITY");
       can("update", "FACILITY");
       can("read", "PERSON");
+      can("create", "PERSON");
       can("update", "PERSON");
       can("read", "CATALOG");
       // Mine list is facility-scoped (read FACILITY); ops queue requires read FIELD_SUGGESTION.

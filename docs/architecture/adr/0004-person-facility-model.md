@@ -407,15 +407,20 @@ Facility routes may mount projections but call person ports only.
 - Person identity + profile (`persons` by id)
 - User-scoped notes + relationship score on person
 
-**Provisional path sketch** (freeze in API implementation PR):
+**Frozen facility projection paths** (Q30 API PR — 2026-08-07):
 
-| Method | Path (provisional) | Classification filter |
+| Method | Path | Classification filter |
 |---|---|---|
 | GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` | `HEALTHCARE_PROFESSIONAL` |
 | GET/PATCH | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` | |
 | GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` | `ADMINISTRATIVE_CONTACT` |
 | GET/PATCH | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` | |
-| GET | `/api/v1/healthcare-professionals` | Global/Meili Explorar (D16) |
+
+**Still provisional** (defer until notes/relationship/Meili steps):
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/healthcare-professionals` | Global/Meili Explorar (D16 / Q31) |
 | GET/PATCH | `/api/v1/persons/:personId` | Identity + profile |
 | GET/POST | `/api/v1/persons/:personId/notes` | User-scoped |
 | PUT/PATCH | `/api/v1/persons/:personId/relationship` | User-scoped score |

@@ -106,6 +106,11 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope", "facilityIds"],
   },
 
+  "modules/person/application/use-cases/person-facility-projection.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope", "facility"],
+  },
+
   "modules/potential/application/use-cases/potential.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],

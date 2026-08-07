@@ -7,6 +7,7 @@ import { ResourceNotFoundError, ValidationError } from "../../../../shared/error
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
+import { personProjectionsRoute } from "./person-projections.route";
 
 const listFacilitiesRoute = new Elysia()
   .use(auth)
@@ -653,6 +654,7 @@ const createFacilityVisitRoute = new Elysia()
 export const facilitiesRoute = new Elysia()
   .use(cadastroSubmissionsRoute)
   .use(mapFacilitiesRoute)
+  .use(personProjectionsRoute)
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
   .use(listClinicalFocusesRoute)
