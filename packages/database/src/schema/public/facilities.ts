@@ -9,7 +9,8 @@ import {
   date,
   index,
   uniqueIndex,
-  check
+  check,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { geometryPoint } from "../../types/geometry";
@@ -60,21 +61,15 @@ export const facilities = pgTable(
 
     // --- Address ---
     country: text("country"),
-    state: text("state"),
-    city: text("city"),
     neighborhood: text("neighborhood"),
     streetAddress: text("street_address"),
     streetNumber: text("street_number"),
     addressComplement: text("address_complement"),
     postalCode: text("postal_code"),
-    /** Admin geography FK → states.id; city/state text kept for display. */
-    stateId: integer("state_id")
-      .notNull()
-      .references(() => states.id, { onDelete: "restrict" }),
-    /** Admin geography FK → municipalities.id; must belong to `stateId`. */
-    municipalityId: integer("municipality_id")
-      .notNull()
-      .references(() => municipalities.id, { onDelete: "restrict" }),
+    /** Admin geography FK → states.id; display name via JOIN. */
+    stateId: integer("state_id").notNull(),
+    /** Admin geography FK → municipalities.id; mun∈state via composite FK. */
+    municipalityId: integer("municipality_id").notNull(),
     location: geometryPoint("location"),
 
     // --- Contact ---
@@ -107,14 +102,36 @@ export const facilities = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
+    foreignKey({
+      name: "facilities_state_id_fk",
+      columns: [t.stateId],
+      foreignColumns: [states.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "facilities_municipality_id_fk",
+      columns: [t.municipalityId],
+      foreignColumns: [municipalities.id],
+    }).onDelete("restrict"),
+    /** Enforces municipality.state_id = facilities.state_id. */
+    foreignKey({
+      name: "facilities_municipality_state_fk",
+      columns: [t.municipalityId, t.stateId],
+      foreignColumns: [municipalities.id, municipalities.stateId],
+    }).onDelete("restrict"),
     uniqueIndex("facilities_cnes_code_uidx")
       .on(t.cnesCode)
       .where(sql`${t.cnesCode} IS NOT NULL AND ${t.deactivatedAt} IS NULL`),
+    uniqueIndex("facilities_active_legal_document_uidx")
+      .on(t.legalDocumentType, t.legalDocument)
+      .where(sql`${t.deactivatedAt} IS NULL AND ${t.legalDocument} IS NOT NULL`),
     index("facilities_deactivated_at_idx").on(t.deactivatedAt),
     index("facilities_name_idx").on(t.displayName),
     index("facilities_conformity_status_idx").on(t.conformityStatus),
     index("facilities_state_id_idx").on(t.stateId),
     index("facilities_municipality_id_idx").on(t.municipalityId),
+    index("facilities_location_gist_idx")
+      .using("gist", t.location)
+      .where(sql`${t.location} IS NOT NULL`),
     index("facilities_facility_type_code_idx")
       .on(t.facilityTypeCode)
       .where(sql`${t.facilityTypeCode} IS NOT NULL`),
@@ -421,9 +438,7 @@ export const facilityVerticalProfiles = pgTable(
      * Spec 0006: per-vertical geo membership = containing manager zone (not rep patch).
      * Null = unassigned/ambiguous for this vertical.
      */
-    managerZoneId: bigint("manager_zone_id", { mode: "number" }).references(() => territories.id, {
-      onDelete: "set null",
-    }),
+    managerZoneId: bigint("manager_zone_id", { mode: "number" }),
     isActive: boolean("is_active").notNull().default(true),
     commercialStatus: commercialStatusEnum("commercial_status")
       .notNull()
@@ -453,6 +468,11 @@ export const facilityVerticalProfiles = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
+    foreignKey({
+      name: "facility_vertical_profiles_manager_zone_vertical_fk",
+      columns: [t.managerZoneId, t.verticalId],
+      foreignColumns: [territories.id, territories.verticalId],
+    }).onDelete("set null"),
     uniqueIndex("facility_vertical_profiles_facility_id_vertical_id_uidx").on(
       t.facilityId,
       t.verticalId

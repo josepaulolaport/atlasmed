@@ -15,8 +15,6 @@ interface CreateInviteParams {
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
-  managerTerritoryId?: number | undefined;
-  repTerritoryId?: number | undefined;
   verticalAssignments?: Array<{
     verticalId: number;
     territoryIds: number[];
@@ -39,8 +37,6 @@ export class InviteService {
       firstName: params.firstName,
       lastName: params.lastName,
       birthDate: params.birthDate,
-      managerTerritoryId: params.managerTerritoryId,
-      repTerritoryId: params.repTerritoryId,
       verticalAssignments: params.verticalAssignments,
       expiresAt: new Date(
         Date.now() + environment.INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000,

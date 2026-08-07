@@ -11,7 +11,6 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { TerritoryBoundarySection } from "@/components/territory/territory-boundary-section";
 import { AssignUserToTerritoryDialog } from "@/components/territory/assign-user-to-territory-dialog";
-import { isApprovalRequest } from "@/components/territory/territory-utils";
 import type { Territory } from "@/types/territory";
 import { formatDateTime } from "@/lib/utils";
 
@@ -56,18 +55,10 @@ export function TerritoryDetailPanel({
 
     setSavingName(true);
     try {
-      const result = await territoriesApi.updateTerritory(territory.id, {
+      await territoriesApi.updateTerritory(territory.id, {
         name: editName.trim(),
       });
-      if (isApprovalRequest(result)) {
-        toast({
-          title: "Submitted for approval",
-          description: "Name change request is pending review.",
-          variant: "success",
-        });
-      } else {
-        toast({ title: "Success", description: "Territory updated", variant: "success" });
-      }
+      toast({ title: "Success", description: "Territory updated", variant: "success" });
       onRefresh();
     } catch (err) {
       toast({
@@ -85,21 +76,16 @@ export function TerritoryDetailPanel({
 
     setDeactivating(true);
     try {
-      if (isAdmin) {
-        await territoriesApi.deactivateTerritory(territory.id);
-        toast({ title: "Success", description: "Territory deactivated", variant: "success" });
-      } else {
-        const result = await territoriesApi.updateTerritory(territory.id, {
-          isActive: false,
+      if (!isAdmin) {
+        toast({
+          title: "Error",
+          description: "Apenas administradores podem desativar territórios.",
+          variant: "destructive",
         });
-        if (isApprovalRequest(result)) {
-          toast({
-            title: "Submitted for approval",
-            description: "Deactivation request is pending review.",
-            variant: "success",
-          });
-        }
+        return;
       }
+      await territoriesApi.deactivateTerritory(territory.id);
+      toast({ title: "Success", description: "Territory deactivated", variant: "success" });
       onRefresh();
     } catch (err) {
       toast({

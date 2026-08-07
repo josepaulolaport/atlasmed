@@ -330,6 +330,27 @@
       "when": 1786069065289,
       "tag": "0046_crm_bigint_identity_cutover",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1786073938190,
+      "tag": "0047_slice_a_facility_territory_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1786074495071,
+      "tag": "0048_drop_invite_legacy_territory_cols",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1786074729430,
+      "tag": "0049_drop_territory_approval_requests",
+      "breakpoints": true
     }
   ]
 }

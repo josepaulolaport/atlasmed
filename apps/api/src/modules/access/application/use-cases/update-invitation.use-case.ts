@@ -94,8 +94,6 @@ export class UpdateInvitationUseCase {
         inviterUserId: params.actorUserId,
         inviterRoleName: params.actorRole,
         excludeInvitationId: params.inviteId,
-        managerTerritoryId: assignments.managerTerritoryId,
-        repTerritoryId: assignments.repTerritoryId,
         verticalAssignments: assignments.verticalAssignments,
       });
     }
@@ -113,8 +111,6 @@ export class UpdateInvitationUseCase {
           : undefined,
       ...(assignments
         ? {
-            managerTerritoryId: assignments.managerTerritoryId ?? null,
-            repTerritoryId: assignments.repTerritoryId ?? null,
             verticalAssignments: assignments.verticalAssignments.map((v) => ({
               verticalId: v.verticalId,
               territoryIds: v.territoryIds,

@@ -115,8 +115,6 @@ export function createMockInvitation(overrides?: Partial<Invitation>): Invitatio
     firstName: null,
     lastName: null,
     birthDate: null,
-    managerTerritoryId: null,
-    repTerritoryId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     acceptedAt: null,

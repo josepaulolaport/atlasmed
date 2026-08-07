@@ -98,17 +98,6 @@ export const verificationTokenTypeEnum = pgEnum("verification_token_type", [
   "PHONE_CHANGE",
 ]);
 
-export const territoryApprovalTypeEnum = pgEnum("territory_approval_type", [
-  "deactivate_territory",
-]);
-
-export const territoryApprovalStatusEnum = pgEnum("territory_approval_status", [
-  "pending",
-  "approved",
-  "rejected",
-  "superseded",
-]);
-
 /**
  * Document kind for a facility's legal identifier.
  * CNPJ = company (14 digits). CPF = individual practitioner (11 digits).

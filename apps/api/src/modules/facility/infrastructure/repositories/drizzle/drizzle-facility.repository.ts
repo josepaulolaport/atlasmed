@@ -12,6 +12,7 @@ import {
   orders,
   orderItems,
   municipalities,
+  states,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc, desc, gte, lte, or, getTableColumns, type SQL } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
@@ -34,13 +35,24 @@ import type {
 import { normalizeLegalDocument } from "../../../application/utils/facility-tax-id.utils";
 type FacilityRow = typeof facilities.$inferSelect;
 
+/** Row shape after JOIN municipalities/states for display city + UF. */
 type FacilityRowWithCoords = FacilityRow & {
+  city: string | null;
+  state: string | null;
   lat: number | null;
   lng: number | null;
 };
 
 const locationLatSql = sql<number | null>`ST_Y(${facilities.location}::geometry)`;
 const locationLngSql = sql<number | null>`ST_X(${facilities.location}::geometry)`;
+
+const facilityGeoSelect = {
+  ...getTableColumns(facilities),
+  city: municipalities.name,
+  state: states.abbreviation,
+  lat: locationLatSql,
+  lng: locationLngSql,
+};
 
 function locationPointSql(lat: number, lng: number) {
   return sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)`;
@@ -76,6 +88,8 @@ export function mapFacility(
   options: {
     lat?: number | null;
     lng?: number | null;
+    city?: string | null;
+    state?: string | null;
     clinicalFocuses?: FacilityClinicalFocus[];
     consultantName?: string | null;
     consultantSince?: Date | null;
@@ -92,8 +106,8 @@ export function mapFacility(
     id: facility.id,
     name: facility.displayName,
     neighborhood: facility.neighborhood,
-    city: facility.city,
-    state: facility.state,
+    city: options.city !== undefined ? options.city : (withCoords.city ?? null),
+    state: options.state !== undefined ? options.state : (withCoords.state ?? null),
     streetAddress: facility.streetAddress,
     streetNumber: facility.streetNumber,
     addressComplement: facility.addressComplement,
@@ -449,7 +463,22 @@ export function buildFacilityListConditions(params: {
       ilike(facilities.displayName, pattern), ilike(facilities.legalName, pattern),
       ilike(facilities.tradeName, pattern), ilike(facilities.legalDocument, pattern),
       ilike(facilities.cnesCode, pattern),
-      ilike(facilities.city, pattern), ilike(facilities.state, pattern),
+      inArray(
+        facilities.municipalityId,
+        db
+          .select({ id: municipalities.id })
+          .from(municipalities)
+          .where(ilike(municipalities.name, pattern)),
+      ),
+      inArray(
+        facilities.stateId,
+        db
+          .select({ id: states.id })
+          .from(states)
+          .where(
+            or(ilike(states.abbreviation, pattern), ilike(states.name, pattern)),
+          ),
+      ),
     )!);
   }
   if (params.commercialStatus) {
@@ -665,12 +694,12 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     const [rows, countRows] = await Promise.all([
       db
         .select({
-          ...getTableColumns(facilities),
-          lat: locationLatSql,
-          lng: locationLngSql,
+          ...facilityGeoSelect,
           distanceKm: distanceKm ?? sql<number | null>`null`,
         })
         .from(facilities)
+        .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+        .innerJoin(states, eq(states.id, facilities.stateId))
         .where(where)
         .orderBy(
           ...(distanceKm && !isSpecificSort
@@ -810,12 +839,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
   async findById(id: number): Promise<FacilityRecord | null> {
     const [facility] = await db
-      .select({
-        ...getTableColumns(facilities),
-        lat: locationLatSql,
-        lng: locationLngSql,
-      })
+      .select(facilityGeoSelect)
       .from(facilities)
+      .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+      .innerJoin(states, eq(states.id, facilities.stateId))
       .where(and(eq(facilities.id, id), isNull(facilities.deactivatedAt)))
       .limit(1);
 
@@ -855,6 +882,8 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     name: string;
     stateId: number;
     municipalityId: number;
+    legalDocumentType: "CNPJ" | "CPF";
+    legalDocument?: string | null;
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord> {
@@ -884,16 +913,19 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         displayName: data.name,
         stateId: data.stateId,
         municipalityId: data.municipalityId,
+        legalDocumentType: data.legalDocumentType,
+        legalDocument: normalizeLegalDocument(data.legalDocument ?? null),
         ...(hasCoords
           ? { location: locationPointSql(data.lat!, data.lng!) }
           : {}),
       })
       .returning();
 
-    return mapFacility(facility!, {
-      lat: data.lat ?? null,
-      lng: data.lng ?? null,
-    });
+    const refreshed = await this.findById(facility!.id);
+    if (!refreshed) {
+      throw new ResourceNotFoundError("Clinic", facility!.id);
+    }
+    return refreshed;
   }
 
   async update(
@@ -1031,8 +1063,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     if (updates.addressComplement !== undefined) {
       setData.addressComplement = updates.addressComplement;
     }
-    if (updates.city !== undefined) setData.city = updates.city;
-    if (updates.state !== undefined) setData.state = updates.state;
+    // city/state text columns dropped — display via municipality/state JOIN only.
     if (updates.postalCode !== undefined) setData.postalCode = updates.postalCode;
     if (updates.country !== undefined) setData.country = updates.country;
 

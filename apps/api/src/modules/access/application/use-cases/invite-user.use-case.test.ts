@@ -50,8 +50,6 @@ describe("InviteUserUseCase", () => {
     firstName: "Test",
     lastName: "User",
     birthDate: new Date("1990-05-12T00:00:00.000Z"),
-    managerTerritoryId: null,
-    repTerritoryId: null,
     acceptedByUserId: null,
     resendCount: 0,
     lastResendAt: null,

@@ -43,15 +43,6 @@ export const updateTerritorySchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
-export const territoryApprovalRequestSchema = z.object({
-  type: z.enum(["deactivate_territory"]),
-  entityPayload: z.record(z.string(), z.unknown()).optional(),
-  targetTerritoryId: z.number().int().positive().optional(),
-  facilityId: z.number().int().positive().optional(),
-  toTerritoryId: z.number().int().positive().optional(),
-  reason: z.string().trim().max(500).optional(),
-});
-
 export const facilityTerritoryOverrideSchema = z.object({
   territoryId: z.number().int().positive(),
   reason: z.string().trim().max(500).optional(),
@@ -62,7 +53,6 @@ export type UpdateTerritoryTypeInput = z.infer<typeof updateTerritoryTypeSchema>
 export type CreateTerritoryInput = z.infer<typeof createTerritorySchema>;
 export type UpdateTerritoryInput = z.infer<typeof updateTerritorySchema>;
 export type TerritoryBoundaryInput = z.infer<typeof territoryBoundarySchema>;
-export type TerritoryApprovalRequestInput = z.infer<typeof territoryApprovalRequestSchema>;
 export type FacilityTerritoryOverrideInput = z.infer<typeof facilityTerritoryOverrideSchema>;
 /** @deprecated Use FacilityTerritoryOverrideInput */
 export type ClinicTerritoryOverrideInput = FacilityTerritoryOverrideInput;

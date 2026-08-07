@@ -78,42 +78,7 @@ export interface UpdateTerritoryRequest {
   reason?: string;
 }
 
-export interface TerritoryApprovalRequest {
-  id: string;
-  type: TerritoryApprovalType;
-  status: TerritoryApprovalStatus;
-  requesterId: string;
-  reviewerId?: string | null;
-  entityPayload: Record<string, unknown>;
-  targetTerritoryId?: string | null;
-  facilityId?: string | null;
-  toTerritoryId?: string | null;
-  reason?: string | null;
-  resolutionNote?: string | null;
-  supersededById?: string | null;
-  resolvedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type TerritoryApprovalType = "deactivate_territory";
-
-export type TerritoryApprovalStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "superseded";
-
 export type TerritoryAssignmentStatus = "assigned" | "unassigned";
-
-export interface SubmitApprovalRequest {
-  type: TerritoryApprovalType;
-  entityPayload?: Record<string, unknown>;
-  targetTerritoryId?: string;
-  facilityId?: string;
-  toTerritoryId?: string;
-  reason?: string;
-}
 
 export interface UnassignedFacility {
   id: string;

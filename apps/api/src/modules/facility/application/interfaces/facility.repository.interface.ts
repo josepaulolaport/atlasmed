@@ -217,6 +217,8 @@ export interface FacilityRepository {
     name: string;
     stateId: number;
     municipalityId: number;
+    legalDocumentType: "CNPJ" | "CPF";
+    legalDocument?: string | null;
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord>;

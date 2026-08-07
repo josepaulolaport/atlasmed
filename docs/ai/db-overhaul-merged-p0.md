@@ -7,7 +7,7 @@
 
 **Does not replace** those files. They remain sources of truth for their domains. This file is the **execution merge**: clash resolutions, slice order, absorbed items, open questions.
 
-Last updated: 2026-08-06 (M11 ID hard cut + M12 app scope db/api/mobile)
+Last updated: 2026-08-07 (Slice A `0047` facility/territory integrity + JOIN display)
 
 ---
 
@@ -258,3 +258,6 @@ Answer before or during Slice A–C. Do not invent answers here.
 | 2026-08-06 | **Rebased onto `origin/main`** (skip duplicate Spec 0006; keep calendar `0045`; drop old WIP migration chain 0046–0091 — regenerate next) |
 | 2026-08-06 | **Prep migration `0046_crm_bigint_identity_cutover`** generated (calendar FKs bigint in schema TS); SQL patched for M11 hard cut (drop FKs → truncate → `USING (0)` text→bigint → re-add FKs). Verified on empty `atlasmed_scratch`. API calendar/interactions/orders + mobile agenda entity ids → `number`/`int`. |
 | 2026-08-07 | Prep absorb: geo + `legal_document*` entangled in `0046` kept (no split). Full-DB wipe OK. `legal_document_type` NOT NULL **no default**. Wipe path: old WIP DBs cannot apply `0046` atop — reset schemas then migrate 0001→0046 (verified on `atlasmed_2_migtest`). |
+| 2026-08-07 | **Slice A `0047_slice_a_facility_territory_integrity`**: UNIQUE(id,vertical_id); composite territory FKs (hierarchy, FVP manager_zone, invite territories); approval `facility_id` RESTRICT + `superseded_by_id`; no-self CHECK; mun∈state composite FK; unique active legal doc; partial GiST; DROP `facilities.city`/`state`. API/workers display city/UF via JOIN. Create facility requires explicit `legalDocumentType`. |
+| 2026-08-07 | **`0048_drop_invite_legacy_territory_cols`**: DROP `invitations.manager_territory_id` / `rep_territory_id` (+ FKs/indexes). Accept path uses only `invitation_*_assignments`. Dual-write / legacy validator branch removed. |
+| 2026-08-07 | **`0049_drop_territory_approval_requests`**: not shipping manager approve — DROP table + enums; remove API/web approvals. Territory deactivate = admin-only. |

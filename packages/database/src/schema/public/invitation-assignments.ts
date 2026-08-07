@@ -6,6 +6,7 @@ import {
   uniqueIndex,
   integer,
   bigint,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { invitations } from "./users";
@@ -46,12 +47,16 @@ export const invitationTerritoryAssignments = pgTable(
       .notNull().references(() => invitations.id, { onDelete: "cascade" }),
     verticalId: bigint("vertical_id", { mode: "number" })
       .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
-    territoryId: bigint("territory_id", { mode: "number" })
-      .notNull().references(() => territories.id, { onDelete: "restrict" }),
+    territoryId: bigint("territory_id", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
+    foreignKey({
+      name: "invitation_territory_assignments_territory_vertical_fk",
+      columns: [t.territoryId, t.verticalId],
+      foreignColumns: [territories.id, territories.verticalId],
+    }).onDelete("restrict"),
     uniqueIndex(
       "invitation_territory_assignments_invitation_id_territory_id_uidx"
     ).on(t.invitationId, t.territoryId),

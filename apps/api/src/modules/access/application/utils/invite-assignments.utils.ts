@@ -1,9 +1,6 @@
 import type { InviteVerticalAssignmentInput } from "@atlasmed/access";
 
 export type NormalizedInviteAssignments = {
-  /** Legacy single-territory columns kept for older invite rows until migrate drop. */
-  managerTerritoryId?: number;
-  repTerritoryId?: number;
   verticalAssignments: Array<{
     verticalId: number;
     territoryIds: number[];
@@ -13,6 +10,7 @@ export type NormalizedInviteAssignments = {
 
 /**
  * Normalize invite vertical slices. Manager link is territory-derived — no managerId.
+ * Territory staging lives only in invitation_*_assignments tables.
  */
 export function normalizeInviteAssignments(input: {
   roleName: string;
@@ -26,20 +24,5 @@ export function normalizeInviteAssignments(input: {
     }))
     .filter((v) => v.verticalId);
 
-  if (verticals.length === 0) {
-    return { verticalAssignments: [] };
-  }
-
-  const first = verticals[0]!;
-  const firstTerritory = first.territoryIds[0];
-
-  return {
-    ...(input.roleName === "MANAGER" && firstTerritory
-      ? { managerTerritoryId: firstTerritory }
-      : {}),
-    ...(input.roleName === "REP" && firstTerritory
-      ? { repTerritoryId: firstTerritory }
-      : {}),
-    verticalAssignments: verticals,
-  };
+  return { verticalAssignments: verticals };
 }

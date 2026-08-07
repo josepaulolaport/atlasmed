@@ -96,6 +96,8 @@ const createFacilityRoute = new Elysia()
         name: t.String(),
         stateId: t.Integer({ minimum: 1 }),
         municipalityId: t.Integer({ minimum: 1 }),
+        legalDocumentType: t.Union([t.Literal("CNPJ"), t.Literal("CPF")]),
+        legalDocument: t.Optional(t.Union([t.String(), t.Null()])),
         lat: t.Optional(t.Number()),
         lng: t.Optional(t.Number()),
       }),

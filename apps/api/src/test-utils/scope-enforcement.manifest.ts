@@ -114,10 +114,6 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope", "assertProfessionalAccessible", "facilityIds"],
   },
 
-  "modules/territory/application/use-cases/territory-approval.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertManagerTerritoryApprovalRequest", "territory-scope-policy"],
-  },
   "modules/territory/application/use-cases/territory-boundary.use-cases.ts": {
     kind: "domain-policy",
     patterns: ["assertManagerReadableTerritory", "assertTerritorialJurisdiction"],

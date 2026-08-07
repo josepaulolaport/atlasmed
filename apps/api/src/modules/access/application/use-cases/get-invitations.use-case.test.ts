@@ -23,8 +23,6 @@ describe("GetInvitationsUseCase", () => {
     role: { id: 1, name: "USER" },
     firstName: "New",
     lastName: "User",
-    managerTerritoryId: null,
-    repTerritoryId: null,
     acceptedByUserId: null,
     resendCount: 0,
     lastResendAt: null,

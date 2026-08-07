@@ -1,5 +1,12 @@
 import { environment } from "@atlasmed/config";
-import { facilities, facilityVerticalProfiles, orders, type Database } from "@atlasmed/database";
+import {
+  facilities,
+  facilityVerticalProfiles,
+  municipalities,
+  orders,
+  states,
+  type Database,
+} from "@atlasmed/database";
 import { ApplicationFailure } from "@temporalio/activity";
 import {
   calculatePurchaseRecurrenceSnapshot,
@@ -271,12 +278,15 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         tradeName: facilities.tradeName,
         legalDocument: facilities.legalDocument,
         cnesCode: facilities.cnesCode,
-        city: facilities.city,
-        state: facilities.state,
+        city: municipalities.name,
+        state: states.abbreviation,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
-      }).from(facilities).where(eq(facilities.id, facilityId)).limit(1);
+      }).from(facilities)
+        .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+        .innerJoin(states, eq(states.id, facilities.stateId))
+        .where(eq(facilities.id, facilityId)).limit(1);
       return {
         facilityId,
         changed,

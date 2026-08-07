@@ -31,8 +31,6 @@ export interface ValidateInvitationTerritoriesParams {
   inviterRoleName?: string;
   /** Exclude this invite when checking pending territory staging (updates). */
   excludeInvitationId?: number;
-  managerTerritoryId?: number;
-  repTerritoryId?: number;
   verticalAssignments?: Array<{
     verticalId: number;
     territoryIds: number[];
@@ -45,56 +43,11 @@ export class InvitationTerritoryValidatorService {
   async validateInvitationTerritories(
     params: ValidateInvitationTerritoriesParams
   ): Promise<void> {
-    const {
-      roleName,
-      managerTerritoryId,
-      repTerritoryId,
-      verticalAssignments = [],
-    } = params;
-
-    if (verticalAssignments.length > 0) {
-      await this.validateVerticalAssignments(params, verticalAssignments);
+    const verticalAssignments = params.verticalAssignments ?? [];
+    if (verticalAssignments.length === 0) {
       return;
     }
-
-    switch (roleName) {
-      case Role.MANAGER:
-        if (managerTerritoryId) {
-          await this.validateManagerZone({
-            territoryId: managerTerritoryId,
-            field: "managerTerritoryId",
-            excludeInvitationId: params.excludeInvitationId,
-          });
-        }
-        break;
-
-      case Role.REP:
-        if (repTerritoryId) {
-          await this.validateEmptyRepPatch({
-            territoryId: repTerritoryId,
-            field: "repTerritoryId",
-            excludeInvitationId: params.excludeInvitationId,
-            inviterUserId: params.inviterUserId,
-            inviterRoleName: params.inviterRoleName,
-          });
-        }
-        break;
-
-      case Role.ADMIN:
-      case Role.OPS:
-        if (managerTerritoryId || repTerritoryId) {
-          throw new ValidationError([
-            {
-              field: "role",
-              message: `${roleName} role does not support territory assignments`,
-            },
-          ]);
-        }
-        break;
-
-      default:
-        break;
-    }
+    await this.validateVerticalAssignments(params, verticalAssignments);
   }
 
   private async validateVerticalAssignments(

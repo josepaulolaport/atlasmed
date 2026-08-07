@@ -3,18 +3,15 @@ import {
   text,
   boolean,
   timestamp,
-  integer,
-  json,
   index,
   uniqueIndex,
   bigint,
+  check,
+  foreignKey,
+  unique,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { geometryMultiPolygon } from "../../types/geometry";
-import {
-  territoryApprovalTypeEnum,
-  territoryApprovalStatusEnum,
-} from "./enums";
 import { users } from "./users";
 import { businessVerticals } from "./business-verticals";
 
@@ -55,10 +52,24 @@ export const territories = pgTable(
   (t) => [
     uniqueIndex("territories_vertical_id_slug_uidx").on(t.verticalId, t.slug),
     uniqueIndex("territories_vertical_id_code_uidx").on(t.verticalId, t.code),
+    /** Target for composite FKs that must match territory vertical. */
+    unique("territories_id_vertical_id_uidx").on(t.id, t.verticalId),
+    foreignKey({
+      name: "territories_manager_territory_vertical_fk",
+      columns: [t.managerTerritoryId, t.verticalId],
+      foreignColumns: [t.id, t.verticalId],
+    }).onDelete("restrict"),
+    check(
+      "territories_manager_territory_id_no_self_check",
+      sql`${t.managerTerritoryId} IS NULL OR ${t.managerTerritoryId} <> ${t.id}`,
+    ),
     index("territories_vertical_id_idx").on(t.verticalId),
     index("territories_manager_territory_id_idx").on(t.managerTerritoryId),
     index("territories_is_active_idx").on(t.isActive),
     index("territories_territory_type_id_idx").on(t.territoryTypeId),
+    index("territories_boundary_gist_idx")
+      .using("gist", t.boundary)
+      .where(sql`${t.boundary} IS NOT NULL`),
   ]
 );
 
@@ -76,34 +87,6 @@ export const userTerritoryAssignments = pgTable(
     uniqueIndex("user_territory_assignments_user_id_territory_id_uidx").on(t.userId, t.territoryId),
     index("user_territory_assignments_user_id_idx").on(t.userId),
     index("user_territory_assignments_territory_id_idx").on(t.territoryId),
-  ]
-);
-
-export const territoryApprovalRequests = pgTable(
-  "territory_approval_requests",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    type: territoryApprovalTypeEnum("type").notNull(),
-    status: territoryApprovalStatusEnum("status").notNull().default("pending"),
-    requesterId: bigint("requester_id", { mode: "number" })
-      .notNull().references(() => users.id, { onDelete: "restrict" }),
-    reviewerId: bigint("reviewer_id", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
-    entityPayload: json("entity_payload").notNull().default({}),
-    targetTerritoryId: bigint("target_territory_id", { mode: "number" }).references(() => territories.id, { onDelete: "set null" }),
-    facilityId: bigint("facility_id", { mode: "number" }),
-    toTerritoryId: bigint("to_territory_id", { mode: "number" }).references(() => territories.id, { onDelete: "set null" }),
-    reason: text("reason"),
-    resolutionNote: text("resolution_note"),
-    supersededById: bigint("superseded_by_id", { mode: "number" }),
-    resolvedAt: timestamp("resolved_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    index("territory_approval_requests_status_type_idx").on(t.status, t.type),
-    index("territory_approval_requests_requester_id_idx").on(t.requesterId),
-    index("territory_approval_requests_target_territory_id_status_idx").on(t.targetTerritoryId, t.status),
-    index("territory_approval_requests_facility_id_status_type_idx").on(t.facilityId, t.status, t.type),
   ]
 );
 
@@ -129,30 +112,9 @@ export const territoriesRelations = relations(territories, ({ one, many }) => ({
   }),
   repPatches: many(territories, { relationName: "ManagerZonePatches" }),
   userAssignments: many(userTerritoryAssignments),
-  approvalRequests: many(territoryApprovalRequests, { relationName: "ApprovalTargetTerritory" }),
-  facilityApprovalRequests: many(territoryApprovalRequests, { relationName: "ApprovalFacilityTerritory" }),
 }));
 
 export const userTerritoryAssignmentsRelations = relations(userTerritoryAssignments, ({ one }) => ({
   user: one(users, { fields: [userTerritoryAssignments.userId], references: [users.id] }),
   territory: one(territories, { fields: [userTerritoryAssignments.territoryId], references: [territories.id] }),
-}));
-
-export const territoryApprovalRequestsRelations = relations(territoryApprovalRequests, ({ one, many }) => ({
-  targetTerritory: one(territories, {
-    fields: [territoryApprovalRequests.targetTerritoryId],
-    references: [territories.id],
-    relationName: "ApprovalTargetTerritory",
-  }),
-  toTerritory: one(territories, {
-    fields: [territoryApprovalRequests.toTerritoryId],
-    references: [territories.id],
-    relationName: "ApprovalFacilityTerritory",
-  }),
-  supersededBy: one(territoryApprovalRequests, {
-    fields: [territoryApprovalRequests.supersededById],
-    references: [territoryApprovalRequests.id],
-    relationName: "ApprovalSupersession",
-  }),
-  supersedes: many(territoryApprovalRequests, { relationName: "ApprovalSupersession" }),
 }));

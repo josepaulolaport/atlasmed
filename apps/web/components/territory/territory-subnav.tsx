@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/territories", label: "Explorador" },
   { href: "/territories/types", label: "Tipos" },
-  { href: "/territories/approvals", label: "Aprovações" },
   { href: "/territories/unassigned-facilities", label: "Clínicas não atribuídas" },
 ];
 

@@ -47,8 +47,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           firstName: params.firstName ?? null,
           lastName: params.lastName ?? null,
           birthDate: params.birthDate ?? null,
-          managerTerritoryId: params.managerTerritoryId ?? null,
-          repTerritoryId: params.repTerritoryId ?? null,
           expiresAt: params.expiresAt,
         })
         .returning({ id: invitations.id });
@@ -145,8 +143,6 @@ export class DrizzleInviteRepository implements InviteRepository {
     firstName?: string | undefined;
     lastName?: string | undefined;
     birthDate?: Date | undefined;
-    managerTerritoryId?: number | null | undefined;
-    repTerritoryId?: number | null | undefined;
     verticalAssignments?: Array<{
       verticalId: number;
       territoryIds: number[];
@@ -160,12 +156,6 @@ export class DrizzleInviteRepository implements InviteRepository {
       if (params.firstName !== undefined) updates.firstName = params.firstName;
       if (params.lastName !== undefined) updates.lastName = params.lastName;
       if (params.birthDate !== undefined) updates.birthDate = params.birthDate;
-      if (params.managerTerritoryId !== undefined) {
-        updates.managerTerritoryId = params.managerTerritoryId;
-      }
-      if (params.repTerritoryId !== undefined) {
-        updates.repTerritoryId = params.repTerritoryId;
-      }
 
       await tx
         .update(invitations)
@@ -333,8 +323,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           firstName: invitations.firstName,
           lastName: invitations.lastName,
           birthDate: invitations.birthDate,
-          managerTerritoryId: invitations.managerTerritoryId,
-          repTerritoryId: invitations.repTerritoryId,
           invitedByUserId: invitations.invitedByUserId,
         })
         .from(invitations)
@@ -416,95 +404,53 @@ export class DrizzleInviteRepository implements InviteRepository {
         .from(invitationTerritoryAssignments)
         .where(eq(invitationTerritoryAssignments.invitationId, inviteLock.id));
 
-      if (stagedTerritories.length > 0 || stagedVerticals.length > 0) {
-        const seenTerritoryIds = new Set<number>();
-        for (const row of stagedTerritories) {
-          if (seenTerritoryIds.has(row.territoryId)) continue;
-          seenTerritoryIds.add(row.territoryId);
-          await tx.insert(userTerritoryAssignments).values({
-            userId: user.id,
-            territoryId: row.territoryId,
-            assignedBy: inviteLock.invitedByUserId,
-          });
-        }
+      const seenTerritoryIds = new Set<number>();
+      for (const row of stagedTerritories) {
+        if (seenTerritoryIds.has(row.territoryId)) continue;
+        seenTerritoryIds.add(row.territoryId);
+        await tx.insert(userTerritoryAssignments).values({
+          userId: user.id,
+          territoryId: row.territoryId,
+          assignedBy: inviteLock.invitedByUserId,
+        });
+      }
 
-        for (const vertical of stagedVerticals) {
+      for (const vertical of stagedVerticals) {
+        await tx
+          .insert(userVerticalAssignments)
+          .values({
+            userId: user.id,
+            verticalId: vertical.verticalId,
+            assignedByUserId: inviteLock.invitedByUserId,
+          })
+          .onConflictDoNothing();
+      }
+
+      // Territories without matching staged UVAs still imply a linha.
+      if (stagedTerritories.length > 0) {
+        const territoryIds = [
+          ...new Set(stagedTerritories.map((row) => row.territoryId)),
+        ];
+        const territoryVerticalRows = await tx
+          .select({
+            id: territories.id,
+            verticalId: territories.verticalId,
+          })
+          .from(territories)
+          .where(inArray(territories.id, territoryIds));
+        const stagedVerticalIds = new Set(
+          stagedVerticals.map((row) => row.verticalId),
+        );
+        for (const row of territoryVerticalRows) {
+          if (stagedVerticalIds.has(row.verticalId)) continue;
           await tx
             .insert(userVerticalAssignments)
             .values({
               userId: user.id,
-              verticalId: vertical.verticalId,
+              verticalId: row.verticalId,
               assignedByUserId: inviteLock.invitedByUserId,
             })
             .onConflictDoNothing();
-        }
-
-        // Territories without matching staged UVAs still imply a linha.
-        if (stagedTerritories.length > 0) {
-          const territoryIds = [
-            ...new Set(stagedTerritories.map((row) => row.territoryId)),
-          ];
-          const territoryVerticalRows =
-            territoryIds.length > 0
-              ? await tx
-                  .select({
-                    id: territories.id,
-                    verticalId: territories.verticalId,
-                  })
-                  .from(territories)
-                  .where(inArray(territories.id, territoryIds))
-              : [];
-          const stagedVerticalIds = new Set(
-            stagedVerticals.map((row) => row.verticalId),
-          );
-          for (const row of territoryVerticalRows) {
-            if (stagedVerticalIds.has(row.verticalId)) continue;
-            await tx
-              .insert(userVerticalAssignments)
-              .values({
-                userId: user.id,
-                verticalId: row.verticalId,
-                assignedByUserId: inviteLock.invitedByUserId,
-              })
-              .onConflictDoNothing();
-          }
-        }
-      } else {
-        const assignedTerritoryIds: number[] = [];
-
-        if (inviteLock.managerTerritoryId) {
-          await tx.insert(userTerritoryAssignments).values({
-            userId: user.id,
-            territoryId: inviteLock.managerTerritoryId,
-            assignedBy: inviteLock.invitedByUserId,
-          });
-          assignedTerritoryIds.push(inviteLock.managerTerritoryId);
-        }
-
-        if (inviteLock.repTerritoryId) {
-          await tx.insert(userTerritoryAssignments).values({
-            userId: user.id,
-            territoryId: inviteLock.repTerritoryId,
-            assignedBy: inviteLock.invitedByUserId,
-          });
-          assignedTerritoryIds.push(inviteLock.repTerritoryId);
-        }
-
-        if (assignedTerritoryIds.length > 0) {
-          const territoryVerticalRows = await tx
-            .select({ verticalId: territories.verticalId })
-            .from(territories)
-            .where(inArray(territories.id, assignedTerritoryIds));
-          for (const row of territoryVerticalRows) {
-            await tx
-              .insert(userVerticalAssignments)
-              .values({
-                userId: user.id,
-                verticalId: row.verticalId,
-                assignedByUserId: inviteLock.invitedByUserId,
-              })
-              .onConflictDoNothing();
-          }
         }
       }
 

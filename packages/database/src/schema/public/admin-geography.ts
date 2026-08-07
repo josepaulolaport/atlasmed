@@ -64,6 +64,8 @@ export const municipalities = pgTable(
     uniqueIndex("municipalities_cnes_code_uidx")
       .on(t.cnesCode)
       .where(sql`${t.cnesCode} IS NOT NULL`),
+    /** Enables facilities (municipality_id, state_id) → municipalities (id, state_id). */
+    uniqueIndex("municipalities_id_state_id_uidx").on(t.id, t.stateId),
     index("municipalities_state_id_idx").on(t.stateId),
     index("municipalities_name_idx").on(t.name),
   ]

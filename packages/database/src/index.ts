@@ -11,8 +11,6 @@ import {
 import {
   userStatusEnum,
   invitationStatusEnum,
-  territoryApprovalTypeEnum,
-  territoryApprovalStatusEnum,
   RELATIONSHIP_LEVEL_MIN,
   RELATIONSHIP_LEVEL_MAX,
   conformityStatusEnum,
@@ -41,8 +39,6 @@ import {
 export type AuditEventSeverity = (typeof auditEventSeverityEnum.enumValues)[number];
 export type UserStatus = (typeof userStatusEnum.enumValues)[number];
 export type InvitationStatus = (typeof invitationStatusEnum.enumValues)[number];
-export type TerritoryApprovalType = (typeof territoryApprovalTypeEnum.enumValues)[number];
-export type TerritoryApprovalStatus = (typeof territoryApprovalStatusEnum.enumValues)[number];
 /** Integer 1–10 relationship strength between a user and a CRM professional. */
 export type RelationshipLevel = number;
 export { RELATIONSHIP_LEVEL_MIN, RELATIONSHIP_LEVEL_MAX };

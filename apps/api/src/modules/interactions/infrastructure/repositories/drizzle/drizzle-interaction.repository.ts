@@ -4,7 +4,9 @@ import {
   facilities,
   interactionEvents,
   interactions,
+  municipalities,
   orders,
+  states,
   users,
   visits,
   type AnyDatabase,
@@ -56,10 +58,19 @@ export class DrizzleInteractionRepository implements InteractionRepository {
 
   async findById(id: number): Promise<InteractionDetailRecord | null> {
     const [row] = await this.database
-      .select({ interaction: interactions, calendar, facility: facilities, agent: users })
+      .select({
+        interaction: interactions,
+        calendar,
+        facility: facilities,
+        facilityCity: municipalities.name,
+        facilityState: states.abbreviation,
+        agent: users,
+      })
       .from(interactions)
       .innerJoin(calendar, eq(calendar.id, interactions.calendarId))
       .innerJoin(facilities, eq(facilities.id, interactions.facilityId))
+      .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+      .innerJoin(states, eq(states.id, facilities.stateId))
       .innerJoin(users, eq(users.id, interactions.agentUserId))
       .where(eq(interactions.id, id))
       .limit(1);
@@ -73,7 +84,15 @@ export class DrizzleInteractionRepository implements InteractionRepository {
       this.database.select({ id: orders.id, status: orders.status, type: orders.type, orderedAt: orders.orderedAt })
         .from(orders).where(eq(orders.interactionId, id)).orderBy(asc(orders.orderedAt)),
     ]);
-    return this.mapDetail(row.interaction, row.calendar, row.facility, row.agent, override[0] ?? null, orderRows);
+    return this.mapDetail(
+      row.interaction,
+      row.calendar,
+      row.facility,
+      { city: row.facilityCity, state: row.facilityState },
+      row.agent,
+      override[0] ?? null,
+      orderRows,
+    );
   }
 
   async findCommandResult(input: { id: number; command: "start" | "complete"; idempotencyKey: string }) {
@@ -215,6 +234,7 @@ export class DrizzleInteractionRepository implements InteractionRepository {
     row: InteractionRow,
     event: CalendarRow,
     facility: typeof facilities.$inferSelect,
+    facilityGeo: { city: string | null; state: string | null },
     agent: typeof users.$inferSelect,
     override: typeof calendarOccurrenceOverrides.$inferSelect | null,
     linkedOrders: Array<{ id: number; status: string; type: string; orderedAt: Date }>,
@@ -226,7 +246,12 @@ export class DrizzleInteractionRepository implements InteractionRepository {
         recurrence: event.recurrence, recurrenceUntil: event.recurrenceUntil, recurrenceCount: event.recurrenceCount,
         status: event.status, version: event.version },
       occurrenceOverride: override ? { startsAt: override.startsAt, endsAt: override.endsAt, status: override.status, version: override.version } : null,
-      facility: { id: facility.id, displayName: facility.displayName, city: facility.city, state: facility.state },
+      facility: {
+        id: facility.id,
+        displayName: facility.displayName,
+        city: facilityGeo.city,
+        state: facilityGeo.state,
+      },
       agent: { id: agent.id, firstName: agent.firstName, lastName: agent.lastName },
       linkedOrders,
     };

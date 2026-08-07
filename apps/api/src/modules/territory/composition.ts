@@ -1,7 +1,6 @@
 import { DrizzleTerritoryRepository } from "./infrastructure/repositories/drizzle/drizzle-territory.repository";
 import { DrizzleTerritoryTypeRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-type.repository";
 import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
-import { DrizzleTerritoryApprovalRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-approval.repository";
 import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
 import { DrizzleFacilityConsultantAssignmentRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
@@ -12,7 +11,6 @@ import { TerritoryCrudUseCases } from "./application/use-cases/territory-crud.us
 import { TerritoryTypeUseCases } from "./application/use-cases/territory-type.use-cases";
 import { TerritoryBoundaryUseCases } from "./application/use-cases/territory-boundary.use-cases";
 import { TerritoryMembershipUseCases } from "./application/use-cases/territory-membership.use-cases";
-import { TerritoryApprovalUseCases } from "./application/use-cases/territory-approval.use-cases";
 import { territoryMembershipQueue } from "../../infrastructure/jobs/territory-membership.queue";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 import { auditLogAdapter } from "../access/infrastructure/adapters/audit-log.adapter";
@@ -22,7 +20,6 @@ export const territoryRepositories = {
   territory: new DrizzleTerritoryRepository(),
   territoryType: new DrizzleTerritoryTypeRepository(),
   spatial: new DrizzleTerritorySpatialRepository(),
-  approval: new DrizzleTerritoryApprovalRepository(),
 };
 
 export const facilityMembershipWriter = new DrizzleClinicMembershipWriter();
@@ -165,35 +162,5 @@ export const territoryUseCases = {
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
-    }),
-  submitApproval: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
-      invalidateScopeForTerritories,
-      enqueueMembershipRecompute,
-      auditLog: auditLogAdapter,
-    }),
-  listApprovalRequests: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
-    }),
-  approveRequest: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
-      invalidateScopeForTerritories,
-      enqueueMembershipRecompute,
-      auditLog: auditLogAdapter,
-    }),
-  rejectRequest: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
     }),
 };

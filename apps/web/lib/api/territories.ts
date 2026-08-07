@@ -7,9 +7,7 @@ import type {
   CreateTerritoryTypeRequest,
   GeoJsonPolygon,
   RecomputeMembershipResponse,
-  SubmitApprovalRequest,
   Territory,
-  TerritoryApprovalRequest,
   TerritoryType,
   UpdateTerritoryTypeRequest,
   SaveBoundaryResponse,
@@ -83,8 +81,8 @@ export const territoriesApi = {
 
   createTerritory: async (
     data: CreateTerritoryRequest
-  ): Promise<CreateTerritoryResult | TerritoryApprovalRequest> => {
-    const response = await apiClient.post<CreateTerritoryResult | TerritoryApprovalRequest>(
+  ): Promise<CreateTerritoryResult> => {
+    const response = await apiClient.post<CreateTerritoryResult>(
       "/territory/territories",
       data
     );
@@ -94,8 +92,8 @@ export const territoriesApi = {
   updateTerritory: async (
     id: string,
     data: UpdateTerritoryRequest
-  ): Promise<Territory | TerritoryApprovalRequest> => {
-    const response = await apiClient.patch<Territory | TerritoryApprovalRequest>(
+  ): Promise<Territory> => {
+    const response = await apiClient.patch<Territory>(
       `/territory/territories/${id}`,
       data
     );
@@ -161,50 +159,6 @@ export const territoriesApi = {
     const response = await apiClient.patch<{ success: boolean }>(
       `/territory/facilities/${facilityId}/territory`,
       data
-    );
-    return response.data;
-  },
-
-  listApprovalRequests: async (params?: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ items: TerritoryApprovalRequest[]; total: number }> => {
-    const response = await apiClient.get<{
-      items: TerritoryApprovalRequest[];
-      total: number;
-    }>("/territory/territories/approval-requests", { params });
-    return response.data;
-  },
-
-  submitApprovalRequest: async (
-    data: SubmitApprovalRequest
-  ): Promise<TerritoryApprovalRequest> => {
-    const response = await apiClient.post<TerritoryApprovalRequest>(
-      "/territory/territories/approval-requests",
-      data
-    );
-    return response.data;
-  },
-
-  approveRequest: async (
-    id: string,
-    note?: string
-  ): Promise<TerritoryApprovalRequest> => {
-    const response = await apiClient.post<TerritoryApprovalRequest>(
-      `/territory/territories/approval-requests/${id}/approve`,
-      { note }
-    );
-    return response.data;
-  },
-
-  rejectRequest: async (
-    id: string,
-    note?: string
-  ): Promise<TerritoryApprovalRequest> => {
-    const response = await apiClient.post<TerritoryApprovalRequest>(
-      `/territory/territories/approval-requests/${id}/reject`,
-      { note }
     );
     return response.data;
   },

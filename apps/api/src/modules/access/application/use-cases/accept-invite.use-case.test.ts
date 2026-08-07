@@ -22,8 +22,6 @@ describe("AcceptInviteUseCase", () => {
     firstName: "Test",
     lastName: "User",
     birthDate: new Date("1990-05-12T00:00:00.000Z"),
-    managerTerritoryId: null,
-    repTerritoryId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     acceptedAt: null,

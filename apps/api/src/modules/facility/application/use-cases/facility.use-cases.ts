@@ -293,6 +293,8 @@ export class CreateFacilityUseCase {
     name: string;
     stateId: number;
     municipalityId: number;
+    legalDocumentType: "CNPJ" | "CPF";
+    legalDocument?: string | null;
     lat?: number;
     lng?: number;
   }) {
@@ -307,6 +309,8 @@ export class CreateFacilityUseCase {
       name: input.name,
       stateId: input.stateId,
       municipalityId: input.municipalityId,
+      legalDocumentType: input.legalDocumentType,
+      legalDocument: input.legalDocument,
       lat: coordinates.lat,
       lng: coordinates.lng,
     });

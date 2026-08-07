@@ -3,7 +3,9 @@ import {
   facilities,
   facilityProfessionals,
   facilityVerticalProfiles,
+  municipalities,
   professionals,
+  states,
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "./normalize-search-filter";
 import {
@@ -404,13 +406,15 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         tradeName: facilities.tradeName,
         legalDocument: facilities.legalDocument,
         cnesCode: facilities.cnesCode,
-        city: facilities.city,
-        state: facilities.state,
+        city: municipalities.name,
+        state: states.abbreviation,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
       })
       .from(facilities)
+      .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+      .innerJoin(states, eq(states.id, facilities.stateId))
       .where(and(isNull(facilities.deactivatedAt), lastId ? gt(facilities.id, lastId) : undefined))
       .orderBy(asc(facilities.id))
       .limit(PAGE_SIZE);

@@ -150,25 +150,13 @@ export const territoriesRoute = new Elysia()
   .use(requirePermission("update", "TERRITORY"))
   .patch(
     "/territories/:id",
-    async ({ params, body, getUser, getScope }) => {
+    async ({ params, body, getUser }) => {
       const user = await getUser();
       if (isAdminRole(user.role.name as Role)) {
         return territoryUseCases.updateTerritory().updateTerritory(params.id, body);
       }
 
-      if (isManagerRole(user.role.name as Role) && body.isActive === false) {
-        const scope = await getScope();
-        return territoryUseCases.submitApproval().submitRequest({
-          requesterId: user.id,
-          requesterRole: user.role.name as Role,
-          scope,
-          type: "deactivate_territory",
-          targetTerritoryId: params.id,
-          entityPayload: body,
-          reason: body.reason,
-        });
-      }
-
+      // Manager deactivate-via-approval removed — admin-only updates for now.
       throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
     },
     {
@@ -333,90 +321,4 @@ export const territoriesRoute = new Elysia()
       }),
     }
   )
-  .use(requirePermission("update", "TERRITORY"))
-  .post(
-    "/territories/approval-requests",
-    async ({ body, getUser, getScope }) => {
-      const user = await getUser();
-      const scope = await getScope();
-      return territoryUseCases.submitApproval().submitRequest({
-        requesterId: user.id,
-        requesterRole: user.role.name as Role,
-        scope,
-        type: body.type,
-        entityPayload: body.entityPayload ?? {},
-        targetTerritoryId: body.targetTerritoryId,
-        facilityId: body.facilityId,
-        toTerritoryId: body.toTerritoryId,
-        reason: body.reason,
-      });
-    },
-    {
-      body: t.Object({
-        type: t.Literal("deactivate_territory"),
-        entityPayload: t.Optional(t.Record(t.String(), t.Any())),
-        targetTerritoryId: t.Optional(t.Number({ minimum: 1 })),
-        facilityId: t.Optional(t.Number({ minimum: 1 })),
-        toTerritoryId: t.Optional(t.Number({ minimum: 1 })),
-        reason: t.Optional(t.String()),
-      }),
-    }
-  )
-  .use(requirePermission("manage", "TERRITORY"))
-  .get(
-    "/territories/approval-requests",
-    async ({ query, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["territory:manage"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.listApprovalRequests().listRequests({
-        status: query.status as "pending" | undefined,
-        page: query.page,
-        limit: query.limit,
-      });
-    },
-    {
-      query: t.Object({
-        status: t.Optional(t.String()),
-        page: t.Optional(t.Number({ minimum: 1 })),
-        limit: t.Optional(t.Number({ minimum: 1 })),
-      }),
-    }
-  )
-  .post(
-    "/territories/approval-requests/:id/approve",
-    async ({ params, body, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["territory:manage"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.approveRequest().approveRequest({
-        requestId: params.id,
-        reviewerId: user.id,
-        note: body.note,
-      });
-    },
-    {
-      params: t.Object({ id: t.Number({ minimum: 1 }) }),
-      body: t.Object({ note: t.Optional(t.String()) }),
-    }
-  )
-  .post(
-    "/territories/approval-requests/:id/reject",
-    async ({ params, body, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["territory:manage"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.rejectRequest().rejectRequest({
-        requestId: params.id,
-        reviewerId: user.id,
-        note: body.note,
-      });
-    },
-    {
-      params: t.Object({ id: t.Number({ minimum: 1 }) }),
-      body: t.Object({ note: t.Optional(t.String()) }),
-    }
-  );
+;

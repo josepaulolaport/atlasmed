@@ -174,8 +174,6 @@ export const invitations = pgTable(
     firstName: text("first_name"),
     lastName: text("last_name"),
     birthDate: timestamp("birth_date"),
-    managerTerritoryId: bigint("manager_territory_id", { mode: "number" }),
-    repTerritoryId: bigint("rep_territory_id", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -186,8 +184,6 @@ export const invitations = pgTable(
     index("invitations_status_idx").on(t.status),
     index("invitations_accepted_by_user_id_idx").on(t.acceptedByUserId),
     index("invitations_invited_by_user_id_idx").on(t.invitedByUserId),
-    index("invitations_manager_territory_id_idx").on(t.managerTerritoryId),
-    index("invitations_rep_territory_id_idx").on(t.repTerritoryId),
   ]
 );
 

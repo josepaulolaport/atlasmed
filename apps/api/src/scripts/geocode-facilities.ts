@@ -203,18 +203,18 @@ function formatEta(seconds: number): string {
 
 async function loadFacilities(opts: CliOptions): Promise<FacilityRow[]> {
   const filters: ReturnType<typeof sql>[] = [
-    sql`deactivated_at is null`,
-    sql`nullif(trim(city), '') is not null`,
-    sql`nullif(trim(state), '') is not null`,
+    sql`f.deactivated_at is null`,
+    sql`nullif(trim(m.name), '') is not null`,
+    sql`nullif(trim(s.abbreviation), '') is not null`,
   ];
 
   if (opts.mode === "missing") {
-    filters.push(sql`location is null`);
+    filters.push(sql`f.location is null`);
   } else if (opts.mode === "refresh") {
-    filters.push(sql`location is not null`);
+    filters.push(sql`f.location is not null`);
   }
   if (opts.cnesOnly) {
-    filters.push(sql`cnes_code is not null`);
+    filters.push(sql`f.cnes_code is not null`);
   }
 
   const where = sql.join(filters, sql` and `);
@@ -223,20 +223,22 @@ async function loadFacilities(opts: CliOptions): Promise<FacilityRow[]> {
 
   const result = (await db.execute(sql`
     select
-      id,
-      name,
-      street_address,
-      street_number,
-      address_complement,
-      neighborhood,
-      city,
-      state,
-      postal_code,
-      cnes_code,
-      (location is not null) as has_location
-    from facilities
+      f.id,
+      f.name,
+      f.street_address,
+      f.street_number,
+      f.address_complement,
+      f.neighborhood,
+      m.name as city,
+      s.abbreviation as state,
+      f.postal_code,
+      f.cnes_code,
+      (f.location is not null) as has_location
+    from facilities f
+    inner join municipalities m on m.id = f.municipality_id
+    inner join states s on s.id = f.state_id
     where ${where}
-    order by created_at, id
+    order by f.created_at, f.id
     ${limitSql}
   `)) as unknown as Record<string, unknown>[];
 
