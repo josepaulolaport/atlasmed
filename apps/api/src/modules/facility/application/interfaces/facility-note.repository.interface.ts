@@ -18,4 +18,19 @@ export interface FacilityNoteRepository {
     userId: number;
     note: string;
   }): Promise<FacilityNoteRecord>;
+
+  /** Caller-owned only. `null` when missing or not owned by `userId`. */
+  updateOwned(input: {
+    noteId: number;
+    facilityId: number;
+    userId: number;
+    note: string;
+  }): Promise<FacilityNoteRecord | null>;
+
+  /** Hard delete, caller-owned only. `false` when missing or not owned. */
+  deleteOwned(input: {
+    noteId: number;
+    facilityId: number;
+    userId: number;
+  }): Promise<boolean>;
 }

@@ -79,4 +79,36 @@ void main() {
     expect(client.requests.first.url.queryParameters, isEmpty);
     expect(client.requests.first.body, {'note': 'Retornar em setembro.'});
   });
+
+  test('updateNote PATCHes note path', () async {
+    final client = _RecordingClient([
+      _response(200, {
+        'id': 1,
+        'note': 'Editada',
+        'createdAt': '2026-08-03T12:00:00.000Z',
+        'updatedAt': '2026-08-04T12:00:00.000Z',
+      }),
+      _response(200, []),
+    ]);
+    final repository = FacilityNotesRepository(1, client: client);
+
+    await repository.updateNote(1, 'Editada');
+
+    expect(client.requests.first.method, RepositoryHttpMethod.patch);
+    expect(client.requests.first.url.path, '/api/v1/facilities/1/notes/1');
+    expect(client.requests.first.body, {'note': 'Editada'});
+  });
+
+  test('deleteNote DELETEs note path', () async {
+    final client = _RecordingClient([
+      _response(200, {'id': 1, 'deleted': true}),
+      _response(200, []),
+    ]);
+    final repository = FacilityNotesRepository(1, client: client);
+
+    await repository.deleteNote(1);
+
+    expect(client.requests.first.method, RepositoryHttpMethod.delete);
+    expect(client.requests.first.url.path, '/api/v1/facilities/1/notes/1');
+  });
 }

@@ -58,7 +58,9 @@ import {
 } from "./application/use-cases/visit.use-cases";
 import {
   CreateFacilityNoteUseCase,
+  DeleteFacilityNoteUseCase,
   ListFacilityNotesUseCase,
+  UpdateFacilityNoteUseCase,
 } from "./application/use-cases/facility-note.use-cases";
 import {
   DownloadFacilityPhotoUseCase,
@@ -156,6 +158,14 @@ export const facilityUseCases = {
     }),
   createFacilityNote: () =>
     new CreateFacilityNoteUseCase({
+      facilityNoteRepository: facilityRepositories.note,
+    }),
+  updateFacilityNote: () =>
+    new UpdateFacilityNoteUseCase({
+      facilityNoteRepository: facilityRepositories.note,
+    }),
+  deleteFacilityNote: () =>
+    new DeleteFacilityNoteUseCase({
       facilityNoteRepository: facilityRepositories.note,
     }),
   listFacilityPhotos: () =>

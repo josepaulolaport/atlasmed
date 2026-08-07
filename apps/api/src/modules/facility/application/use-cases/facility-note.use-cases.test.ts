@@ -1,8 +1,11 @@
 import { describe, expect, it, mock } from "bun:test";
 import { type ScopeContext } from "@atlasmed/access";
+import { ResourceNotFoundError } from "../../../../shared/errors";
 import {
   CreateFacilityNoteUseCase,
+  DeleteFacilityNoteUseCase,
   ListFacilityNotesUseCase,
+  UpdateFacilityNoteUseCase,
 } from "./facility-note.use-cases";
 import type { FacilityNoteRepository } from "../interfaces/facility-note.repository.interface";
 
@@ -21,6 +24,17 @@ const globalScope: ScopeContext = {
   managedUserIds: [],
   isOperationallyActive: true,
 };
+
+function unusedOwned(): Pick<FacilityNoteRepository, "updateOwned" | "deleteOwned"> {
+  return {
+    updateOwned: async () => {
+      throw new Error("unused");
+    },
+    deleteOwned: async () => {
+      throw new Error("unused");
+    },
+  };
+}
 
 describe("Facility note use cases", () => {
   it("lists private notes for the current user", async () => {
@@ -41,6 +55,7 @@ describe("Facility note use cases", () => {
         create: async () => {
           throw new Error("unused");
         },
+        ...unusedOwned(),
       } satisfies FacilityNoteRepository,
     }).execute({
       facilityId: 1,
@@ -73,6 +88,7 @@ describe("Facility note use cases", () => {
       facilityNoteRepository: {
         findByFacilityAndUser: async () => [],
         create,
+        ...unusedOwned(),
       },
     }).execute({
       facilityId: 1,
@@ -101,6 +117,7 @@ describe("Facility note use cases", () => {
       facilityNoteRepository: {
         findByFacilityAndUser: async () => [],
         create,
+        ...unusedOwned(),
       },
     }).execute({
       facilityId: 101,
@@ -126,6 +143,7 @@ describe("Facility note use cases", () => {
           create: async () => {
             throw new Error("unused");
           },
+          ...unusedOwned(),
         },
       }).execute({
         facilityId: 999,
@@ -138,5 +156,108 @@ describe("Facility note use cases", () => {
         },
       })
     ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("updates caller-owned note", async () => {
+    const updateOwned = mock(async () => ({
+      id: 1,
+      userId: 1,
+      facilityId: 1,
+      note: "Editada",
+      createdAt: now,
+      updatedAt: new Date("2026-01-16T12:00:00.000Z"),
+    }));
+
+    const result = await new UpdateFacilityNoteUseCase({
+      facilityNoteRepository: {
+        findByFacilityAndUser: async () => [],
+        create: async () => {
+          throw new Error("unused");
+        },
+        updateOwned,
+        deleteOwned: async () => false,
+      },
+    }).execute({
+      facilityId: 1,
+      noteId: 1,
+      userId: 1,
+      note: "Editada",
+      scope: globalScope,
+    });
+
+    expect(updateOwned).toHaveBeenCalledWith({
+      noteId: 1,
+      facilityId: 1,
+      userId: 1,
+      note: "Editada",
+    });
+    expect(result.note).toBe("Editada");
+  });
+
+  it("404s update when note missing or not owned", async () => {
+    await expect(
+      new UpdateFacilityNoteUseCase({
+        facilityNoteRepository: {
+          findByFacilityAndUser: async () => [],
+          create: async () => {
+            throw new Error("unused");
+          },
+          updateOwned: async () => null,
+          deleteOwned: async () => false,
+        },
+      }).execute({
+        facilityId: 1,
+        noteId: 99,
+        userId: 1,
+        note: "x",
+        scope: globalScope,
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+
+  it("deletes caller-owned note", async () => {
+    const deleteOwned = mock(async () => true);
+    const result = await new DeleteFacilityNoteUseCase({
+      facilityNoteRepository: {
+        findByFacilityAndUser: async () => [],
+        create: async () => {
+          throw new Error("unused");
+        },
+        updateOwned: async () => null,
+        deleteOwned,
+      },
+    }).execute({
+      facilityId: 1,
+      noteId: 1,
+      userId: 1,
+      scope: globalScope,
+    });
+
+    expect(deleteOwned).toHaveBeenCalledWith({
+      noteId: 1,
+      facilityId: 1,
+      userId: 1,
+    });
+    expect(result).toEqual({ id: 1, deleted: true });
+  });
+
+  it("404s delete when note missing or not owned", async () => {
+    await expect(
+      new DeleteFacilityNoteUseCase({
+        facilityNoteRepository: {
+          findByFacilityAndUser: async () => [],
+          create: async () => {
+            throw new Error("unused");
+          },
+          updateOwned: async () => null,
+          deleteOwned: async () => false,
+        },
+      }).execute({
+        facilityId: 1,
+        noteId: 99,
+        userId: 1,
+        scope: globalScope,
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
   });
 });

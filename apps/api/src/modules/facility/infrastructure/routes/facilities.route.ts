@@ -707,6 +707,64 @@ const createFacilityNoteRoute = new Elysia()
     }
   );
 
+const updateFacilityNoteRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .patch(
+    "/facilities/:id/notes/:noteId",
+    async ({ params, body, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return facilityUseCases.updateFacilityNote().execute({
+        facilityId: params.id,
+        noteId: params.noteId,
+        userId,
+        note: body.note,
+        scope,
+      });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        noteId: t.Number({ minimum: 1 }),
+      }),
+      detail: {
+        summary: "Update my private field note for a facility",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        note: t.String({ minLength: 1, maxLength: MAX_FACILITY_NOTE_LENGTH }),
+      }),
+    }
+  );
+
+const deleteFacilityNoteRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .delete(
+    "/facilities/:id/notes/:noteId",
+    async ({ params, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return facilityUseCases.deleteFacilityNote().execute({
+        facilityId: params.id,
+        noteId: params.noteId,
+        userId,
+        scope,
+      });
+    },
+    {
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        noteId: t.Number({ minimum: 1 }),
+      }),
+      detail: {
+        summary: "Delete my private field note for a facility",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
 const listFacilityPhotosRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
@@ -806,6 +864,8 @@ export const facilitiesRoute = new Elysia()
   .use(deleteFacilityRoute)
   .use(listFacilityNotesRoute)
   .use(createFacilityNoteRoute)
+  .use(updateFacilityNoteRoute)
+  .use(deleteFacilityNoteRoute)
   .use(downloadFacilityPhotoRoute)
   .use(downloadFacilityCadastroFileRoute)
   .use(listFacilityPhotosRoute)

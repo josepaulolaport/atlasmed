@@ -96,7 +96,13 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
         children: [
           for (final (i, note) in notes.indexed) ...[
             if (i > 0) const SizedBox(height: 10),
-            _NoteRow(index: i + 1, note: note),
+            _NoteRow(
+              index: i + 1,
+              note: note,
+              canMutate: widget.canAdd,
+              onEdit: () => _editNote(note),
+              onDelete: () => _deleteNote(note),
+            ),
           ],
           if (widget.canAdd) ...[
             const SizedBox(height: 14),
@@ -118,7 +124,60 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
   }
 
   Future<void> _addNote() async {
-    final text = await showModalBottomSheet<String>(
+    final text = await _showNoteSheet();
+    if (text == null || text.isEmpty || !mounted) return;
+    await _persist(
+      action: () => ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .createNote(text),
+      successMessage: 'Nota salva',
+      failureMessage: 'Falha ao salvar nota',
+    );
+  }
+
+  Future<void> _editNote(FacilityFieldNote note) async {
+    final text = await _showNoteSheet(initial: note.text);
+    if (text == null || text.isEmpty || !mounted) return;
+    await _persist(
+      action: () => ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .updateNote(note.id, text),
+      successMessage: 'Nota atualizada',
+      failureMessage: 'Falha ao atualizar nota',
+    );
+  }
+
+  Future<void> _deleteNote(FacilityFieldNote note) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir nota?'),
+        content: const Text('Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _persist(
+      action: () => ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .deleteNote(note.id),
+      successMessage: 'Nota excluída',
+      failureMessage: 'Falha ao excluir nota',
+    );
+  }
+
+  Future<String?> _showNoteSheet({String? initial}) {
+    return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -126,11 +185,15 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const _AddFieldNoteSheet(),
+      builder: (_) => _AddFieldNoteSheet(initialText: initial),
     );
+  }
 
-    if (text == null || text.isEmpty || !mounted) return;
-
+  Future<void> _persist({
+    required Future<void> Function() action,
+    required String successMessage,
+    required String failureMessage,
+  }) async {
     if (!_useApi) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -143,19 +206,14 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
 
     setState(() => _saving = true);
     try {
-      // Use the shared repository — createNote() refreshes its cache. A
-      // throwaway repo would refresh a different instance while the provider
-      // kept serving stale currentValue via currentValueOrResolve().
-      await ref
-          .read(facilityNotesRepositoryProvider(widget.facilityId))
-          .createNote(text);
+      await action();
       if (!mounted) return;
       ref.invalidate(facilityNotesProvider(widget.facilityId));
       await ref.read(facilityNotesProvider(widget.facilityId).future);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nota salva'),
+        SnackBar(
+          content: Text(successMessage),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -165,8 +223,8 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
         SnackBar(
           content: Text(
             e is FacilityNotesException
-                ? (e.message ?? 'Falha ao salvar nota')
-                : 'Falha ao salvar nota',
+                ? (e.message ?? failureMessage)
+                : failureMessage,
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -180,7 +238,9 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
 /// Owns its [TextEditingController] so dismiss-while-empty cannot race
 /// InheritedWidget teardown (`_dependents.isEmpty`).
 class _AddFieldNoteSheet extends StatefulWidget {
-  const _AddFieldNoteSheet();
+  const _AddFieldNoteSheet({this.initialText});
+
+  final String? initialText;
 
   @override
   State<_AddFieldNoteSheet> createState() => _AddFieldNoteSheetState();
@@ -192,7 +252,7 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _controller = TextEditingController(text: widget.initialText ?? '');
   }
 
   @override
@@ -214,9 +274,9 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Nova nota de campo',
-            style: TextStyle(
+          Text(
+            widget.initialText == null ? 'Nova nota de campo' : 'Editar nota',
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.gray900,
@@ -268,10 +328,19 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
 }
 
 class _NoteRow extends StatelessWidget {
-  const _NoteRow({required this.index, required this.note});
+  const _NoteRow({
+    required this.index,
+    required this.note,
+    required this.canMutate,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final int index;
   final FacilityFieldNote note;
+  final bool canMutate;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -304,6 +373,23 @@ class _NoteRow extends StatelessWidget {
             style: const TextStyle(fontSize: 13, color: AppColors.gray700),
           ),
         ),
+        if (canMutate)
+          PopupMenuButton<String>(
+            padding: EdgeInsets.zero,
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              size: 18,
+              color: AppColors.gray400,
+            ),
+            onSelected: (value) {
+              if (value == 'edit') onEdit();
+              if (value == 'delete') onDelete();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'edit', child: Text('Editar')),
+              PopupMenuItem(value: 'delete', child: Text('Excluir')),
+            ],
+          ),
       ],
     );
   }

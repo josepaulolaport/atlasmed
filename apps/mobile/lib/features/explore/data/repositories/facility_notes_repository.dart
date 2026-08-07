@@ -16,7 +16,7 @@ class FacilityNotesException implements Exception {
   String toString() => message ?? 'FacilityNotesException';
 }
 
-/// Private facility field notes (`GET/POST /facilities/:id/notes`).
+/// Private facility field notes (`GET/POST/PATCH/DELETE /facilities/:id/notes`).
 class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
     with SessionEnvironmentMixin<List<FacilityFieldNote>> {
   FacilityNotesRepository(this.facilityId, {RepositoryHttpClient? client})
@@ -72,6 +72,52 @@ class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
     final created = _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
     await refresh();
     return created;
+  }
+
+  /// `PATCH /facilities/:id/notes/:noteId`
+  Future<FacilityFieldNote> updateNote(int noteId, String note) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'note': note},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityNotesException(
+          'Falha ao atualizar nota (${response.statusCode})',
+        );
+      }
+    }
+
+    final updated = _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
+    await refresh();
+    return updated;
+  }
+
+  /// `DELETE /facilities/:id/notes/:noteId`
+  Future<void> deleteNote(int noteId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.delete,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityNotesException(
+          'Falha ao excluir nota (${response.statusCode})',
+        );
+      }
+    }
+
+    await refresh();
   }
 
   FacilityFieldNote _fromApi(Map<String, dynamic> map) {
