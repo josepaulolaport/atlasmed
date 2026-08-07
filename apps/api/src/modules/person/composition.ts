@@ -18,6 +18,7 @@ import {
   GetPersonFacilityProjectionUseCase,
   ListPersonFacilityProjectionsUseCase,
   PatchPersonFacilityProjectionUseCase,
+  ReplacePersonFacilityRolesUseCase,
   UpsertPersonFacilityProjectionUseCase,
 } from "./application/use-cases/person-facility-projection.use-cases";
 import {
@@ -42,6 +43,8 @@ export const personUseCases = {
     new UpsertPersonFacilityProjectionUseCase({ repository: projectionRepository }),
   patchFacilityProjection: () =>
     new PatchPersonFacilityProjectionUseCase({ repository: projectionRepository }),
+  replaceFacilityProjectionRoles: () =>
+    new ReplacePersonFacilityRolesUseCase({ repository: projectionRepository }),
 
   getPerson: () => new GetPersonUseCase({ personRepository }),
   patchPerson: () => new PatchPersonUseCase({ personRepository }),

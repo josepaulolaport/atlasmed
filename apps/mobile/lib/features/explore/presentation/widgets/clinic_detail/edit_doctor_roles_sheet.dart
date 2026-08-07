@@ -3,7 +3,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_ro
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Edit facility-scoped doctor role flags (`PATCH …/healthcare-professionals/:id`).
+/// Edit facility-scoped doctor role flags
+/// (`PUT …/healthcare-professionals/:personFacilityId/roles`).
 Future<ProfessionalRoster?> showEditDoctorRolesSheet(
   BuildContext context, {
   required ProfessionalRoster doctor,

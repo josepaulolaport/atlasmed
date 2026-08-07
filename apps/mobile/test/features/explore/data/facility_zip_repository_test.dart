@@ -25,6 +25,7 @@ void main() {
             'notes': null,
             'hasHealthcareProfile': true,
             'classificationCodes': ['HEALTHCARE_PROFESSIONAL'],
+            'roleCodes': ['PRESCRIBER', 'DECISION_MAKER'],
           },
         ],
       }),
@@ -34,6 +35,7 @@ void main() {
     expect(page.pagination.page, 1);
     expect(page.pagination.total, 1);
     expect(page.pagination.totalPages, 1);
+    expect(page.items.single.roleCodes, ['PRESCRIBER', 'DECISION_MAKER']);
 
     final roster = ProfessionalRoster.fromRosterItem(page.items.single);
     expect(roster.id, 20);
@@ -41,6 +43,9 @@ void main() {
     expect(roster.name, 'João Silva');
     expect(roster.specialty, 'Ortopedista');
     expect(roster.email, 'joao@example.com');
+    expect(roster.isPrescriber, isTrue);
+    expect(roster.isDecisionMaker, isTrue);
+    expect(roster.roleBadge, 'DECISOR');
   });
 
   test('parses flat administrative-contacts list into domain', () {
@@ -62,6 +67,7 @@ void main() {
             'notes': null,
             'hasHealthcareProfile': false,
             'classificationCodes': ['ADMINISTRATIVE_CONTACT'],
+            'roleCodes': ['ADMINISTRATOR', 'BUYER'],
           },
         ],
       }),
@@ -72,6 +78,8 @@ void main() {
     expect(admin.name, 'Ana Costa');
     expect(admin.roleTitle, 'Administradora');
     expect(admin.phone, '11888888888');
+    expect(admin.isAdministrator, isTrue);
+    expect(admin.isBuyer, isTrue);
     expect(page.pagination.total, 1);
   });
 }

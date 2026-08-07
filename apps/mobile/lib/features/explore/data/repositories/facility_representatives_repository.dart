@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
@@ -88,7 +89,6 @@ class FacilityRepresentativesRepository
     String? roleTitle,
     String? email,
     String? mobilePhone,
-    // Legacy role flags — no longer accepted by API; ignored.
     bool isPartner = false,
     bool isAdministrator = false,
     bool isDecisionMaker = false,
@@ -112,7 +112,28 @@ class FacilityRepresentativesRepository
       ),
     );
 
-    return _parseMutationResponse(response, 'criar');
+    var api = _parseMutationApi(response, 'criar');
+    final roleCodes = AdministrativeRoleCodes.fromFlags(
+      isPartner: isPartner,
+      isAdministrator: isAdministrator,
+      isDecisionMaker: isDecisionMaker,
+      isBuyer: isBuyer,
+      isBiller: isBiller,
+      isSecretary: isSecretary,
+    );
+    if (roleCodes.isNotEmpty) {
+      try {
+        api = await _putAdminRoles(
+          personFacilityId: api.personFacilityId,
+          roleCodes: roleCodes,
+        );
+      } on FacilityRepresentativesException {
+        throw const FacilityRepresentativesException(
+          'Contato criado, mas falhou ao salvar papéis — edite os papéis e tente de novo',
+        );
+      }
+    }
+    return api.toDomain();
   }
 
   /// [representativeId] is `personFacilityId` (domain [AdministrativeProfessional.id]).
@@ -123,7 +144,6 @@ class FacilityRepresentativesRepository
     String? roleTitle,
     String? email,
     String? mobilePhone,
-    // Legacy role / relationship fields ignored — API has no equivalents.
     bool? isPartner,
     bool? isAdministrator,
     bool? isDecisionMaker,
@@ -136,12 +156,20 @@ class FacilityRepresentativesRepository
     // Relationship score has no administrative-contacts field.
     // Former user_representative_relationships PATCH is gone — fail closed
     // so UI (representative_detail_screen) reverts optimistic local state.
+    final rolesProvided =
+        isPartner != null ||
+        isAdministrator != null ||
+        isDecisionMaker != null ||
+        isBuyer != null ||
+        isBiller != null ||
+        isSecretary != null;
     final onlyRelationship =
         firstName == null &&
         lastName == null &&
         roleTitle == null &&
         email == null &&
         mobilePhone == null &&
+        !rolesProvided &&
         (relationshipLevel != null || clearRelationshipLevel);
     if (onlyRelationship) {
       throw const FacilityRepresentativesException(
@@ -149,27 +177,85 @@ class FacilityRepresentativesRepository
       );
     }
 
-    final body = <String, Object?>{
-      'firstName': ?firstName,
-      'lastName': ?lastName,
-      'roleTitle': ?roleTitle,
-      'email': ?email,
-      'mobilePhone': ?mobilePhone,
-    };
+    final onlyRoles =
+        firstName == null &&
+        lastName == null &&
+        roleTitle == null &&
+        email == null &&
+        mobilePhone == null &&
+        rolesProvided;
+    FacilityRepresentativeApi api;
+    if (onlyRoles) {
+      api = await _putAdminRoles(
+        personFacilityId: representativeId,
+        roleCodes: AdministrativeRoleCodes.fromFlags(
+          isPartner: isPartner ?? false,
+          isAdministrator: isAdministrator ?? false,
+          isDecisionMaker: isDecisionMaker ?? false,
+          isBuyer: isBuyer ?? false,
+          isBiller: isBiller ?? false,
+          isSecretary: isSecretary ?? false,
+        ),
+      );
+    } else {
+      final body = <String, Object?>{
+        'firstName': ?firstName,
+        'lastName': ?lastName,
+        'roleTitle': ?roleTitle,
+        'email': ?email,
+        'mobilePhone': ?mobilePhone,
+      };
 
-    final response = await client.call(
-      request: RepositoryHttpRequest(
-        url: Uri.parse('$_contactsPath/$representativeId'),
-        method: RepositoryHttpMethod.patch,
-        headers: const {'Content-Type': 'application/json'},
-        body: body,
-      ),
-    );
+      final response = await client.call(
+        request: RepositoryHttpRequest(
+          url: Uri.parse('$_contactsPath/$representativeId'),
+          method: RepositoryHttpMethod.patch,
+          headers: const {'Content-Type': 'application/json'},
+          body: body,
+        ),
+      );
 
-    return _parseMutationResponse(response, 'atualizar');
+      api = _parseMutationApi(response, 'atualizar');
+      if (rolesProvided) {
+        try {
+          api = await _putAdminRoles(
+            personFacilityId: representativeId,
+            roleCodes: AdministrativeRoleCodes.fromFlags(
+              isPartner: isPartner ?? false,
+              isAdministrator: isAdministrator ?? false,
+              isDecisionMaker: isDecisionMaker ?? false,
+              isBuyer: isBuyer ?? false,
+              isBiller: isBiller ?? false,
+              isSecretary: isSecretary ?? false,
+            ),
+          );
+        } on FacilityRepresentativesException {
+          throw const FacilityRepresentativesException(
+            'Dados salvos, mas falhou ao salvar papéis — edite os papéis e tente de novo',
+          );
+        }
+      }
+    }
+
+    return api.toDomain();
   }
 
-  AdministrativeProfessional _parseMutationResponse(
+  Future<FacilityRepresentativeApi> _putAdminRoles({
+    required int personFacilityId,
+    required List<String> roleCodes,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_contactsPath/$personFacilityId/roles'),
+        method: RepositoryHttpMethod.put,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'roleCodes': roleCodes},
+      ),
+    );
+    return _parseMutationApi(response, 'salvar papéis de');
+  }
+
+  FacilityRepresentativeApi _parseMutationApi(
     RepositoryHttpResponse response,
     String action,
   ) {
@@ -180,6 +266,6 @@ class FacilityRepresentativesRepository
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    return FacilityRepresentativeApi.fromMap(map).toDomain();
+    return FacilityRepresentativeApi.fromMap(map);
   }
 }

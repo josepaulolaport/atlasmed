@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
@@ -92,12 +93,14 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     String? crmState,
     String? phone,
     String? email,
+    bool isPartner = false,
     bool isPrescriber = false,
     bool isBuyer = false,
     bool isDecisionMaker = false,
   }) async {
-    // CRM / specialty / role booleans are not on the projection create body.
-    // `roleTitle` is the only affiliation label we can persist today.
+    // CRM / specialty are not on the projection create body.
+    // `roleTitle` is the only affiliation label we can persist on create;
+    // role codes go to PUT …/roles after affiliation exists.
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(_healthcarePath),
@@ -123,26 +126,36 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final dto = FacilityProfessionalItemDTO.fromMap(map);
-    final roster = ProfessionalRoster.fromRosterItem(dto);
+    var dto = FacilityProfessionalItemDTO.fromMap(map);
+    final roleCodes = HealthcareRoleCodes.fromFlags(
+      isPartner: isPartner,
+      isPrescriber: isPrescriber,
+      isBuyer: isBuyer,
+      isDecisionMaker: isDecisionMaker,
+    );
+    if (roleCodes.isNotEmpty) {
+      try {
+        dto = await _putHealthcareRoles(
+          personFacilityId: dto.personFacilityId,
+          roleCodes: roleCodes,
+        );
+      } on FacilityAssociateException {
+        throw const FacilityAssociateException(
+          'Médico criado, mas falhou ao salvar papéis — edite os papéis e tente de novo',
+        );
+      }
+    }
 
-    // Role booleans have no API — keep local flags for UI only.
+    final roster = ProfessionalRoster.fromRosterItem(dto);
     return roster.copyWith(
       specialty: specialty ?? roster.specialty,
       crm: _formatCrm(crmNumber, crmState) ?? roster.crm,
       phone: phone ?? roster.phone,
       email: email ?? roster.email,
-      isPrescriber: isPrescriber,
-      isBuyer: isBuyer,
-      isDecisionMaker: isDecisionMaker,
-      roleBadge: isDecisionMaker ? 'DECISOR' : null,
-      clearRoleBadge: !isDecisionMaker,
     );
   }
 
-  /// Role boolean assignment API was removed with `facility_professionals`.
-  /// Projection PATCH accepts only identity/roleTitle/notes — cannot map
-  /// isPrescriber/isBuyer/isDecisionMaker. Applies flags locally only.
+  /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
   Future<ProfessionalRoster> updateDoctorRoles(
     ProfessionalRoster doctor, {
     required bool isPartner,
@@ -150,25 +163,59 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     required bool isBuyer,
     required bool isDecisionMaker,
   }) async {
-    // Best-effort: if we have personFacilityId and roleTitle-like specialty,
-    // PATCH notes/roleTitle only. Boolean roles are intentionally not sent.
     final personFacilityId = doctor.personFacilityId;
-    if (personFacilityId != null) {
-      await _patchAffiliation(
-        personFacilityId,
-        roleTitle: doctor.specialty,
-        throwOnError: false,
+    if (personFacilityId == null) {
+      throw const FacilityAssociateException(
+        'personFacilityId é obrigatório para salvar papéis',
       );
     }
 
-    return doctor.copyWith(
+    final roleCodes = HealthcareRoleCodes.fromFlags(
       isPartner: isPartner,
       isPrescriber: isPrescriber,
       isBuyer: isBuyer,
       isDecisionMaker: isDecisionMaker,
-      roleBadge: isDecisionMaker ? 'DECISOR' : null,
-      clearRoleBadge: !isDecisionMaker,
     );
+    final dto = await _putHealthcareRoles(
+      personFacilityId: personFacilityId,
+      roleCodes: roleCodes,
+    );
+    final fromApi = ProfessionalRoster.fromRosterItem(dto);
+    return doctor.copyWith(
+      personFacilityId: fromApi.personFacilityId,
+      isPartner: fromApi.isPartner,
+      isPrescriber: fromApi.isPrescriber,
+      isBuyer: fromApi.isBuyer,
+      isDecisionMaker: fromApi.isDecisionMaker,
+      roleBadge: fromApi.roleBadge,
+      clearRoleBadge: fromApi.roleBadge == null,
+    );
+  }
+
+  Future<FacilityProfessionalItemDTO> _putHealthcareRoles({
+    required int personFacilityId,
+    required List<String> roleCodes,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/$personFacilityId/roles'),
+        method: RepositoryHttpMethod.put,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'roleCodes': roleCodes},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao salvar papéis (${response.statusCode})',
+        );
+      }
+    }
+
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    return FacilityProfessionalItemDTO.fromMap(map);
   }
 
   String get _relationshipPath =>
@@ -227,37 +274,6 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     final level = map['relationshipLevel'];
     if (level is num) return level.toInt();
     return null;
-  }
-
-  Future<void> _patchAffiliation(
-    int personFacilityId, {
-    String? roleTitle,
-    String? notes,
-    bool throwOnError = false,
-  }) async {
-    final body = <String, Object?>{
-      'roleTitle': ?roleTitle,
-      'notes': ?notes,
-    };
-    if (body.isEmpty) return;
-
-    final response = await client.call(
-      request: RepositoryHttpRequest(
-        url: Uri.parse('$_healthcarePath/$personFacilityId'),
-        method: RepositoryHttpMethod.patch,
-        headers: const {'Content-Type': 'application/json'},
-        body: body,
-      ),
-    );
-
-    if (!successfulCondition(response.statusCode, response.body)) {
-      if (throwOnError) {
-        throw FacilityAssociateException(
-          'Falha ao atualizar afiliação (${response.statusCode})',
-        );
-      }
-      await onErrorStatusCode(response.statusCode);
-    }
   }
 
   ProfessionalRoster _doctorFromDTO(ProfessionalDTO d) {

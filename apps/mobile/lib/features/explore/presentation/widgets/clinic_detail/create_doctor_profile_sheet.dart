@@ -4,7 +4,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // Create body → POST /facilities/:id/healthcare-professionals
-// (firstName/lastName/mobilePhone/email/roleTitle). Role toggles are local-only.
+// (firstName/lastName/mobilePhone/email/roleTitle), then PUT …/roles when
+// role chips are selected.
 
 /// Create a doctor profile. When [facilityId] is a real facility, persists via
 /// `POST /facilities/:id/healthcare-professionals`.

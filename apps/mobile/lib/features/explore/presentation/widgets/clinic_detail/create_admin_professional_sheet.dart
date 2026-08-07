@@ -282,7 +282,6 @@ class _CreateAdminProfessionalSheetState
       final names = splitPersonName(name);
       final repo = FacilityRepresentativesRepository(widget.facilityId!);
       try {
-        // Role boolean toggles are UI-only — API projection has no role flags.
         final AdministrativeProfessional saved;
         if (_isEdit) {
           saved = await repo.updateRepresentative(
@@ -292,6 +291,12 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle ?? '',
             mobilePhone: phone ?? '',
             email: email ?? '',
+            isPartner: _isPartner,
+            isAdministrator: _isAdministrator,
+            isDecisionMaker: _isDecisionMaker,
+            isBuyer: _isBuyer,
+            isBiller: _isBiller,
+            isSecretary: _isSecretary,
           );
         } else {
           saved = await repo.create(
@@ -300,6 +305,12 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle,
             mobilePhone: phone,
             email: email,
+            isPartner: _isPartner,
+            isAdministrator: _isAdministrator,
+            isDecisionMaker: _isDecisionMaker,
+            isBuyer: _isBuyer,
+            isBiller: _isBiller,
+            isSecretary: _isSecretary,
           );
         }
         if (!mounted) return;

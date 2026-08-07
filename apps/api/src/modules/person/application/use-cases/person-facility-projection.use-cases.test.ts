@@ -1,6 +1,6 @@
 import { createGlobalScopeContext } from "@atlasmed/access";
 import { describe, expect, it } from "bun:test";
-import { ResourceNotFoundError } from "../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type {
   PersonFacilityProjectionRecord,
   PersonFacilityProjectionRepository,
@@ -8,6 +8,7 @@ import type {
 import { CLASSIFICATION } from "../interfaces/person-facility-projection.repository.interface";
 import {
   PatchPersonFacilityProjectionUseCase,
+  ReplacePersonFacilityRolesUseCase,
   UpsertPersonFacilityProjectionUseCase,
 } from "./person-facility-projection.use-cases";
 
@@ -29,6 +30,7 @@ function baseRow(
     notes: null,
     hasHealthcareProfile: true,
     classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
+    roleCodes: [],
     endedAt: null,
     ...overrides,
   };
@@ -41,14 +43,17 @@ function fakeRepo(state: {
 }): PersonFacilityProjectionRepository & {
   adds: Array<{ personFacilityId: number; classificationCode: string }>;
   createdAffiliations: number;
+  replacedRoles: Array<{ personFacilityId: number; roleCodes: string[] }>;
 } {
   const adds: Array<{ personFacilityId: number; classificationCode: string }> = [];
+  const replacedRoles: Array<{ personFacilityId: number; roleCodes: string[] }> = [];
   let createdAffiliations = 0;
   let nextPfId = 100;
   let current = state.row ?? null;
 
   return {
     adds,
+    replacedRoles,
     get createdAffiliations() {
       return createdAffiliations;
     },
@@ -79,6 +84,7 @@ function fakeRepo(state: {
         roleTitle: input.roleTitle ?? null,
         notes: input.notes ?? null,
         classificationCodes: [],
+        roleCodes: [],
         hasHealthcareProfile: true,
       });
       return { id };
@@ -96,6 +102,12 @@ function fakeRepo(state: {
     },
     async updatePerson() {},
     async updateAffiliation() {},
+    async replaceRoleAssignments(input) {
+      replacedRoles.push(input);
+      if (current && current.personFacilityId === input.personFacilityId) {
+        current = { ...current, roleCodes: [...input.roleCodes] };
+      }
+    },
   };
 }
 
@@ -122,6 +134,7 @@ describe("UpsertPersonFacilityProjectionUseCase", () => {
       },
     ]);
     expect(result.classificationCodes).toContain(CLASSIFICATION.HEALTHCARE_PROFESSIONAL);
+    expect(result.roleCodes).toEqual([]);
   });
 
   it("creates affiliation when none active", async () => {
@@ -161,6 +174,87 @@ describe("PatchPersonFacilityProjectionUseCase", () => {
         classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
         scope: createGlobalScopeContext(),
         firstName: "X",
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+});
+
+describe("ReplacePersonFacilityRolesUseCase", () => {
+  it("replaces role assignments for healthcare affiliation", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
+        roleCodes: ["PARTNER"],
+      }),
+    });
+    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    const result = await uc.execute({
+      facilityId: 1,
+      personFacilityId: 10,
+      classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+      scope: createGlobalScopeContext(),
+      roleCodes: ["PRESCRIBER", "BUYER", "PRESCRIBER"],
+    });
+
+    expect(repo.replacedRoles).toEqual([
+      { personFacilityId: 10, roleCodes: ["PRESCRIBER", "BUYER"] },
+    ]);
+    expect(result.roleCodes).toEqual(["PRESCRIBER", "BUYER"]);
+  });
+
+  it("rejects role codes outside the classification allow-list", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
+      }),
+    });
+    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personFacilityId: 10,
+        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+        scope: createGlobalScopeContext(),
+        roleCodes: ["PRESCRIBER", "SECRETARY"],
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(repo.replacedRoles).toEqual([]);
+  });
+
+  it("404s when personFacilityId belongs to another facility", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        facilityId: 2,
+        classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
+      }),
+    });
+    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personFacilityId: 10,
+        classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+        scope: createGlobalScopeContext(),
+        roleCodes: ["BILLER"],
+      })
+    ).rejects.toBeInstanceOf(ResourceNotFoundError);
+    expect(repo.replacedRoles).toEqual([]);
+  });
+
+  it("404s when affiliation lacks the route classification", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
+      }),
+    });
+    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    expect(
+      uc.execute({
+        facilityId: 1,
+        personFacilityId: 10,
+        classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+        scope: createGlobalScopeContext(),
+        roleCodes: ["ADMINISTRATOR"],
       })
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
   });

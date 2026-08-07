@@ -20,6 +20,7 @@ export type PersonFacilityProjectionRecord = {
   notes: string | null;
   hasHealthcareProfile: boolean;
   classificationCodes: string[];
+  roleCodes: string[];
   endedAt: Date | null;
 };
 
@@ -83,4 +84,10 @@ export interface PersonFacilityProjectionRepository {
   updatePerson(personId: number, input: UpdatePersonInput): Promise<void>;
 
   updateAffiliation(personFacilityId: number, input: UpdateAffiliationInput): Promise<void>;
+
+  /** Atomic replace-set: delete all assignments for the affiliation, then insert `roleCodes`. */
+  replaceRoleAssignments(input: {
+    personFacilityId: number;
+    roleCodes: string[];
+  }): Promise<void>;
 }

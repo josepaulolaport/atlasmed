@@ -219,6 +219,7 @@ class FacilityProfessionalItemDTO {
   final String? notes;
   final bool hasHealthcareProfile;
   final List<String> classificationCodes;
+  final List<String> roleCodes;
 
   const FacilityProfessionalItemDTO({
     required this.personFacilityId,
@@ -235,6 +236,7 @@ class FacilityProfessionalItemDTO {
     this.notes,
     this.hasHealthcareProfile = false,
     this.classificationCodes = const [],
+    this.roleCodes = const [],
   });
 
   factory FacilityProfessionalItemDTO.fromMap(Map<String, dynamic> map) {
@@ -253,6 +255,7 @@ class FacilityProfessionalItemDTO {
       notes: readNullableString(map['notes']),
       hasHealthcareProfile: map['hasHealthcareProfile'] == true,
       classificationCodes: readStringList(map['classificationCodes']),
+      roleCodes: readStringList(map['roleCodes']),
     );
   }
 

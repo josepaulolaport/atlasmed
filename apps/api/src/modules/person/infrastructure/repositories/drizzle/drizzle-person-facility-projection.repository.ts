@@ -1,6 +1,7 @@
 import {
   personFacilities,
   personFacilityClassificationAssignments,
+  personFacilityRoleAssignments,
   personHealthcareProfiles,
   persons,
 } from "@atlasmed/database";
@@ -32,7 +33,26 @@ type Row = {
   endedAt: Date | null;
   hasHealthcareProfile: boolean;
   classificationCodes: string[] | null;
+  roleCodes: string[] | null;
 };
+
+const classificationCodesSql = sql<string[]>`coalesce(
+  (
+    SELECT array_agg(${personFacilityClassificationAssignments.classificationCode})
+    FROM ${personFacilityClassificationAssignments}
+    WHERE ${personFacilityClassificationAssignments.personFacilityId} = ${personFacilities.id}
+  ),
+  '{}'::text[]
+)`;
+
+const roleCodesSql = sql<string[]>`coalesce(
+  (
+    SELECT array_agg(${personFacilityRoleAssignments.roleCode} ORDER BY ${personFacilityRoleAssignments.roleCode})
+    FROM ${personFacilityRoleAssignments}
+    WHERE ${personFacilityRoleAssignments.personFacilityId} = ${personFacilities.id}
+  ),
+  '{}'::text[]
+)`;
 
 function mapRow(row: Row): PersonFacilityProjectionRecord {
   return {
@@ -51,6 +71,7 @@ function mapRow(row: Row): PersonFacilityProjectionRecord {
     endedAt: row.endedAt,
     hasHealthcareProfile: row.hasHealthcareProfile,
     classificationCodes: row.classificationCodes ?? [],
+    roleCodes: row.roleCodes ?? [],
   };
 }
 
@@ -77,14 +98,8 @@ export class DrizzlePersonFacilityProjectionRepository
         notes: personFacilities.notes,
         endedAt: personFacilities.endedAt,
         hasHealthcareProfile: sql<boolean>`(${personHealthcareProfiles.personId} IS NOT NULL)`,
-        classificationCodes: sql<string[]>`coalesce(
-          (
-            SELECT array_agg(${personFacilityClassificationAssignments.classificationCode})
-            FROM ${personFacilityClassificationAssignments}
-            WHERE ${personFacilityClassificationAssignments.personFacilityId} = ${personFacilities.id}
-          ),
-          '{}'::text[]
-        )`,
+        classificationCodes: classificationCodesSql,
+        roleCodes: roleCodesSql,
       })
       .from(personFacilities)
       .innerJoin(persons, eq(persons.id, personFacilities.personId))
@@ -133,14 +148,8 @@ export class DrizzlePersonFacilityProjectionRepository
         notes: personFacilities.notes,
         endedAt: personFacilities.endedAt,
         hasHealthcareProfile: sql<boolean>`(${personHealthcareProfiles.personId} IS NOT NULL)`,
-        classificationCodes: sql<string[]>`coalesce(
-          (
-            SELECT array_agg(${personFacilityClassificationAssignments.classificationCode})
-            FROM ${personFacilityClassificationAssignments}
-            WHERE ${personFacilityClassificationAssignments.personFacilityId} = ${personFacilities.id}
-          ),
-          '{}'::text[]
-        )`,
+        classificationCodes: classificationCodesSql,
+        roleCodes: roleCodesSql,
       })
       .from(personFacilities)
       .innerJoin(persons, eq(persons.id, personFacilities.personId))
@@ -268,5 +277,27 @@ export class DrizzlePersonFacilityProjectionRepository
       .update(personFacilities)
       .set(patch)
       .where(eq(personFacilities.id, personFacilityId));
+  }
+
+  async replaceRoleAssignments(input: {
+    personFacilityId: number;
+    roleCodes: string[];
+  }): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(personFacilityRoleAssignments)
+        .where(
+          eq(personFacilityRoleAssignments.personFacilityId, input.personFacilityId)
+        );
+
+      if (input.roleCodes.length === 0) return;
+
+      await tx.insert(personFacilityRoleAssignments).values(
+        input.roleCodes.map((roleCode) => ({
+          personFacilityId: input.personFacilityId,
+          roleCode,
+        }))
+      );
+    });
   }
 }

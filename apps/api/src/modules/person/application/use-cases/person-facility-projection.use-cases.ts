@@ -14,6 +14,28 @@ type Dependencies = {
   repository: PersonFacilityProjectionRepository;
 };
 
+/** Classification-scoped role allow-lists (ADR 0004 §5.12 / STEP 4). */
+export const HEALTHCARE_ROLE_CODES = [
+  "PARTNER",
+  "PRESCRIBER",
+  "BUYER",
+  "DECISION_MAKER",
+] as const;
+
+export const ADMINISTRATIVE_ROLE_CODES = [
+  "PARTNER",
+  "ADMINISTRATOR",
+  "DECISION_MAKER",
+  "BUYER",
+  "BILLER",
+  "SECRETARY",
+] as const;
+
+const ALLOWED_ROLES_BY_CLASSIFICATION: Record<ClassificationCode, ReadonlySet<string>> = {
+  [CLASSIFICATION.HEALTHCARE_PROFESSIONAL]: new Set(HEALTHCARE_ROLE_CODES),
+  [CLASSIFICATION.ADMINISTRATIVE_CONTACT]: new Set(ADMINISTRATIVE_ROLE_CODES),
+};
+
 export type PersonFacilityProjectionDto = {
   personFacilityId: number;
   personId: number;
@@ -29,6 +51,7 @@ export type PersonFacilityProjectionDto = {
   notes: string | null;
   hasHealthcareProfile: boolean;
   classificationCodes: string[];
+  roleCodes: string[];
 };
 
 function toDto(row: PersonFacilityProjectionRecord): PersonFacilityProjectionDto {
@@ -47,6 +70,7 @@ function toDto(row: PersonFacilityProjectionRecord): PersonFacilityProjectionDto
     notes: row.notes,
     hasHealthcareProfile: row.hasHealthcareProfile,
     classificationCodes: row.classificationCodes,
+    roleCodes: row.roleCodes,
   };
 }
 
@@ -237,6 +261,73 @@ export class PatchPersonFacilityProjectionUseCase {
     if (input.classificationCode === CLASSIFICATION.HEALTHCARE_PROFESSIONAL) {
       await this.deps.repository.ensureHealthcareProfile(row.personId);
     }
+
+    const updated = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!updated) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    return toDto(updated);
+  }
+}
+
+export type ReplacePersonFacilityRolesInput = {
+  facilityId: number;
+  personFacilityId: number;
+  classificationCode: ClassificationCode;
+  scope: ScopeContext;
+  roleCodes: string[];
+};
+
+function normalizeRoleCodes(roleCodes: string[]): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const code of roleCodes) {
+    if (seen.has(code)) continue;
+    seen.add(code);
+    unique.push(code);
+  }
+  return unique;
+}
+
+function assertRoleCodesAllowed(
+  classificationCode: ClassificationCode,
+  roleCodes: string[]
+): void {
+  const allowed = ALLOWED_ROLES_BY_CLASSIFICATION[classificationCode];
+  const invalid = roleCodes.filter((code) => !allowed.has(code));
+  if (invalid.length === 0) return;
+  throw new ValidationError(
+    invalid.map((code) => ({
+      field: "roleCodes",
+      message: `Role code "${code}" is not allowed for ${classificationCode}`,
+    }))
+  );
+}
+
+export class ReplacePersonFacilityRolesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: ReplacePersonFacilityRolesInput): Promise<PersonFacilityProjectionDto> {
+    assertFacilityScoped(input.scope, input.facilityId);
+
+    const roleCodes = normalizeRoleCodes(input.roleCodes);
+    assertRoleCodesAllowed(input.classificationCode, roleCodes);
+
+    const row = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!row || row.endedAt) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (row.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (!row.classificationCodes.includes(input.classificationCode)) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+
+    await this.deps.repository.replaceRoleAssignments({
+      personFacilityId: input.personFacilityId,
+      roleCodes,
+    });
 
     const updated = await this.deps.repository.findActiveById(input.personFacilityId);
     if (!updated) {

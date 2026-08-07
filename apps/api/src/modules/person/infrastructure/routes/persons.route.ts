@@ -225,26 +225,6 @@ const relationshipBody = t.Object({
   }),
 });
 
-function upsertRelationshipHandler(useCases: PersonsHttpUseCases) {
-  return async ({
-    params,
-    body,
-    getUserId,
-  }: {
-    params: { personId: number };
-    body: { relationshipLevel: number };
-    getUserId: () => Promise<number>;
-  }) => {
-    const parsed = parseSchema(relationshipSchema, body);
-    const userId = await getUserId();
-    return useCases.upsertPersonRelationship().execute({
-      personId: params.personId,
-      userId,
-      relationshipLevel: parsed.relationshipLevel,
-    });
-  };
-}
-
 const patchPersonRelationshipRoute = (
   useCases: PersonsHttpUseCases,
   authPlugin: any = auth
@@ -254,7 +234,15 @@ const patchPersonRelationshipRoute = (
     .use(requirePermission("update", "PERSON"))
     .patch(
       "/persons/:personId/relationship",
-      upsertRelationshipHandler(useCases),
+      async ({ params, body, getUserId }) => {
+        const parsed = parseSchema(relationshipSchema, body);
+        const userId = await getUserId();
+        return useCases.upsertPersonRelationship().execute({
+          personId: params.personId,
+          userId,
+          relationshipLevel: parsed.relationshipLevel,
+        });
+      },
       {
         params: personIdParams,
         body: relationshipBody,
@@ -275,7 +263,15 @@ const putPersonRelationshipRoute = (
     .use(requirePermission("update", "PERSON"))
     .put(
       "/persons/:personId/relationship",
-      upsertRelationshipHandler(useCases),
+      async ({ params, body, getUserId }) => {
+        const parsed = parseSchema(relationshipSchema, body);
+        const userId = await getUserId();
+        return useCases.upsertPersonRelationship().execute({
+          personId: params.personId,
+          userId,
+          relationshipLevel: parsed.relationshipLevel,
+        });
+      },
       {
         params: personIdParams,
         body: relationshipBody,

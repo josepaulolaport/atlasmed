@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
 /// Flat projection from
@@ -22,6 +23,7 @@ class FacilityRepresentativeApi {
     this.notes,
     this.hasHealthcareProfile = false,
     this.classificationCodes = const [],
+    this.roleCodes = const [],
   });
 
   factory FacilityRepresentativeApi.fromMap(Map<String, dynamic> map) {
@@ -40,6 +42,7 @@ class FacilityRepresentativeApi {
       notes: readNullableString(map['notes']),
       hasHealthcareProfile: map['hasHealthcareProfile'] == true,
       classificationCodes: readStringList(map['classificationCodes']),
+      roleCodes: readStringList(map['roleCodes']),
     );
   }
 
@@ -57,6 +60,7 @@ class FacilityRepresentativeApi {
   final String? notes;
   final bool hasHealthcareProfile;
   final List<String> classificationCodes;
+  final List<String> roleCodes;
 
   String get displayName {
     final social = socialName?.trim();
@@ -74,6 +78,7 @@ class FacilityRepresentativeApi {
 
   /// Domain [AdministrativeProfessional.id] = [personFacilityId] for PATCH.
   AdministrativeProfessional toDomain() {
+    final roles = AdministrativeRoleCodes.toFlags(roleCodes);
     return AdministrativeProfessional(
       id: personFacilityId,
       name: displayName,
@@ -81,6 +86,12 @@ class FacilityRepresentativeApi {
       email: email,
       phone: phone,
       contactType: 'PROFESSIONAL',
+      isPartner: roles.isPartner,
+      isAdministrator: roles.isAdministrator,
+      isDecisionMaker: roles.isDecisionMaker,
+      isBuyer: roles.isBuyer,
+      isBiller: roles.isBiller,
+      isSecretary: roles.isSecretary,
     );
   }
 }

@@ -1,10 +1,41 @@
 import { Elysia, t } from "elysia";
+import { z } from "zod";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
+import { ValidationError } from "../../../../shared/errors";
 import {
   CLASSIFICATION,
   personUseCases,
 } from "../../../person/composition";
+
+type Executable = { execute(input: any): Promise<any> };
+
+export interface PersonProjectionsHttpUseCases {
+  listFacilityProjections(): Executable;
+  getFacilityProjection(): Executable;
+  upsertFacilityProjection(): Executable;
+  patchFacilityProjection(): Executable;
+  replaceFacilityProjectionRoles(): Executable;
+}
+
+function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
+  const parsed = schema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.issues.map((issue) => ({
+        field: issue.path.join(".") || "body",
+        message: issue.message,
+      }))
+    );
+  }
+
+  return parsed.data;
+}
+
+const rolesBodySchema = z.object({
+  roleCodes: z.array(z.string().min(1)),
+});
 
 const identityBody = {
   personId: t.Optional(t.Integer({ minimum: 1 })),
@@ -31,228 +62,331 @@ const patchBody = {
   notes: t.Optional(t.Union([t.String(), t.Null()])),
 };
 
-const listHealthcareRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .get(
-    "/facilities/:facilityId/healthcare-professionals",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.listFacilityProjections().execute({
-        facilityId: params.facilityId,
-        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "List healthcare professionals at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
-      },
-      params: t.Object({ facilityId: t.Integer({ minimum: 1 }) }),
-    }
-  );
+const facilityIdParams = t.Object({ facilityId: t.Integer({ minimum: 1 }) });
+const affiliationParams = t.Object({
+  facilityId: t.Integer({ minimum: 1 }),
+  personFacilityId: t.Integer({ minimum: 1 }),
+});
 
-const createHealthcareRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("create", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .post(
-    "/facilities/:facilityId/healthcare-professionals",
-    async ({ params, body, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.upsertFacilityProjection().execute({
-        facilityId: params.facilityId,
-        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
-        scope,
-        ...body,
-      });
-    },
-    {
-      detail: {
-        summary: "Link or create healthcare professional at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
+const listHealthcareRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("read", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .get(
+      "/facilities/:facilityId/healthcare-professionals",
+      async ({ params, getScope }) => {
+        const scope = await getScope();
+        return useCases.listFacilityProjections().execute({
+          facilityId: params.facilityId,
+          classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+          scope,
+        });
       },
-      params: t.Object({ facilityId: t.Integer({ minimum: 1 }) }),
-      body: t.Object(identityBody),
-    }
-  );
+      {
+        detail: {
+          summary: "List healthcare professionals at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+      }
+    );
 
-const getHealthcareRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .get(
-    "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.getFacilityProjection().execute({
-        facilityId: params.facilityId,
-        personFacilityId: params.personFacilityId,
-        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "Get healthcare professional affiliation at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
+const createHealthcareRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("create", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .post(
+      "/facilities/:facilityId/healthcare-professionals",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCases.upsertFacilityProjection().execute({
+          facilityId: params.facilityId,
+          classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+          scope,
+          ...body,
+        });
       },
-      params: t.Object({
-        facilityId: t.Integer({ minimum: 1 }),
-        personFacilityId: t.Integer({ minimum: 1 }),
-      }),
-    }
-  );
+      {
+        detail: {
+          summary: "Link or create healthcare professional at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+        body: t.Object(identityBody),
+      }
+    );
 
-const patchHealthcareRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("update", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .patch(
-    "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
-    async ({ params, body, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.patchFacilityProjection().execute({
-        facilityId: params.facilityId,
-        personFacilityId: params.personFacilityId,
-        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
-        scope,
-        ...body,
-      });
-    },
-    {
-      detail: {
-        summary: "Update healthcare professional affiliation at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
+const getHealthcareRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("read", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .get(
+      "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
+      async ({ params, getScope }) => {
+        const scope = await getScope();
+        return useCases.getFacilityProjection().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+          scope,
+        });
       },
-      params: t.Object({
-        facilityId: t.Integer({ minimum: 1 }),
-        personFacilityId: t.Integer({ minimum: 1 }),
-      }),
-      body: t.Object(patchBody),
-    }
-  );
+      {
+        detail: {
+          summary: "Get healthcare professional affiliation at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+      }
+    );
 
-const listAdminRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .get(
-    "/facilities/:facilityId/administrative-contacts",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.listFacilityProjections().execute({
-        facilityId: params.facilityId,
-        classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "List administrative contacts at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
+const patchHealthcareRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .patch(
+      "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCases.patchFacilityProjection().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+          scope,
+          ...body,
+        });
       },
-      params: t.Object({ facilityId: t.Integer({ minimum: 1 }) }),
-    }
-  );
+      {
+        detail: {
+          summary: "Update healthcare professional affiliation at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+        body: t.Object(patchBody),
+      }
+    );
 
-const createAdminRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("create", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .post(
-    "/facilities/:facilityId/administrative-contacts",
-    async ({ params, body, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.upsertFacilityProjection().execute({
-        facilityId: params.facilityId,
-        classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
-        scope,
-        ...body,
-      });
-    },
-    {
-      detail: {
-        summary: "Link or create administrative contact at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
+const putHealthcareRolesRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .put(
+      "/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles",
+      async ({ params, body, getScope }) => {
+        const parsed = parseSchema(rolesBodySchema, body);
+        const scope = await getScope();
+        return useCases.replaceFacilityProjectionRoles().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+          scope,
+          roleCodes: parsed.roleCodes,
+        });
       },
-      params: t.Object({ facilityId: t.Integer({ minimum: 1 }) }),
-      body: t.Object(identityBody),
-    }
-  );
+      {
+        detail: {
+          summary: "Replace healthcare professional role assignments at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+        body: t.Object({
+          roleCodes: t.Array(t.String({ minLength: 1 })),
+        }),
+      }
+    );
 
-const getAdminRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .get(
-    "/facilities/:facilityId/administrative-contacts/:personFacilityId",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.getFacilityProjection().execute({
-        facilityId: params.facilityId,
-        personFacilityId: params.personFacilityId,
-        classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "Get administrative contact affiliation at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
+const listAdminRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("read", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .get(
+      "/facilities/:facilityId/administrative-contacts",
+      async ({ params, getScope }) => {
+        const scope = await getScope();
+        return useCases.listFacilityProjections().execute({
+          facilityId: params.facilityId,
+          classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+          scope,
+        });
       },
-      params: t.Object({
-        facilityId: t.Integer({ minimum: 1 }),
-        personFacilityId: t.Integer({ minimum: 1 }),
-      }),
-    }
-  );
+      {
+        detail: {
+          summary: "List administrative contacts at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+      }
+    );
 
-const patchAdminRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("update", "PERSON"))
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
-  .patch(
-    "/facilities/:facilityId/administrative-contacts/:personFacilityId",
-    async ({ params, body, getScope }) => {
-      const scope = await getScope();
-      return personUseCases.patchFacilityProjection().execute({
-        facilityId: params.facilityId,
-        personFacilityId: params.personFacilityId,
-        classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
-        scope,
-        ...body,
-      });
-    },
-    {
-      detail: {
-        summary: "Update administrative contact affiliation at a facility",
-        tags: ["Persons"],
-        security: [{ bearerAuth: [] }],
+const createAdminRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("create", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .post(
+      "/facilities/:facilityId/administrative-contacts",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCases.upsertFacilityProjection().execute({
+          facilityId: params.facilityId,
+          classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+          scope,
+          ...body,
+        });
       },
-      params: t.Object({
-        facilityId: t.Integer({ minimum: 1 }),
-        personFacilityId: t.Integer({ minimum: 1 }),
-      }),
-      body: t.Object(patchBody),
-    }
-  );
+      {
+        detail: {
+          summary: "Link or create administrative contact at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+        body: t.Object(identityBody),
+      }
+    );
 
-export const personProjectionsRoute = new Elysia()
-  .use(listHealthcareRoute)
-  .use(createHealthcareRoute)
-  .use(getHealthcareRoute)
-  .use(patchHealthcareRoute)
-  .use(listAdminRoute)
-  .use(createAdminRoute)
-  .use(getAdminRoute)
-  .use(patchAdminRoute);
+const getAdminRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("read", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .get(
+      "/facilities/:facilityId/administrative-contacts/:personFacilityId",
+      async ({ params, getScope }) => {
+        const scope = await getScope();
+        return useCases.getFacilityProjection().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+          scope,
+        });
+      },
+      {
+        detail: {
+          summary: "Get administrative contact affiliation at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+      }
+    );
+
+const patchAdminRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .patch(
+      "/facilities/:facilityId/administrative-contacts/:personFacilityId",
+      async ({ params, body, getScope }) => {
+        const scope = await getScope();
+        return useCases.patchFacilityProjection().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+          scope,
+          ...body,
+        });
+      },
+      {
+        detail: {
+          summary: "Update administrative contact affiliation at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+        body: t.Object(patchBody),
+      }
+    );
+
+const putAdminRolesRoute = (
+  useCases: PersonProjectionsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .put(
+      "/facilities/:facilityId/administrative-contacts/:personFacilityId/roles",
+      async ({ params, body, getScope }) => {
+        const parsed = parseSchema(rolesBodySchema, body);
+        const scope = await getScope();
+        return useCases.replaceFacilityProjectionRoles().execute({
+          facilityId: params.facilityId,
+          personFacilityId: params.personFacilityId,
+          classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
+          scope,
+          roleCodes: parsed.roleCodes,
+        });
+      },
+      {
+        detail: {
+          summary: "Replace administrative contact role assignments at a facility",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: affiliationParams,
+        body: t.Object({
+          roleCodes: t.Array(t.String({ minLength: 1 })),
+        }),
+      }
+    );
+
+export function createPersonProjectionsRoutes(
+  useCases: PersonProjectionsHttpUseCases = personUseCases,
+  authPlugin: any = auth
+) {
+  return new Elysia()
+    .use(listHealthcareRoute(useCases, authPlugin))
+    .use(createHealthcareRoute(useCases, authPlugin))
+    .use(getHealthcareRoute(useCases, authPlugin))
+    .use(patchHealthcareRoute(useCases, authPlugin))
+    .use(putHealthcareRolesRoute(useCases, authPlugin))
+    .use(listAdminRoute(useCases, authPlugin))
+    .use(createAdminRoute(useCases, authPlugin))
+    .use(getAdminRoute(useCases, authPlugin))
+    .use(patchAdminRoute(useCases, authPlugin))
+    .use(putAdminRolesRoute(useCases, authPlugin));
+}
+
+export const personProjectionsRoute = createPersonProjectionsRoutes();

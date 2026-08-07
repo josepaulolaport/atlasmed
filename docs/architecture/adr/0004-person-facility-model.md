@@ -306,7 +306,7 @@ Absent: role booleans, `occupation_code`, `contact_type`.
 
 ### 5.11 `person_facility_roles` — LOCKED
 
-Same catalog shape as classifications. **Empty** (no PRESCRIBER/… rows in overhaul).
+Same catalog shape as classifications. Seeded in STEP 4 (`0054_seed_person_facility_roles.sql`) with the map below (pt-BR names).
 
 ### 5.12 `person_facility_role_assignments` — LOCKED
 
@@ -316,17 +316,24 @@ Same catalog shape as classifications. **Empty** (no PRESCRIBER/… rows in over
 | `role_code` | `text` | NO | **PK**, **FK → roles.code** | |
 | `created_at` | `timestamp` | NO | | |
 
-**Future seed map (documentation only — not inserted now):**
+**Seed map (STEP 4):**
 
-| Old boolean | Future `role_code` |
+| Old boolean | `role_code` | name (pt-BR) |
+|---|---|---|
+| `is_prescriber` | `PRESCRIBER` | Prescritor |
+| `is_buyer` | `BUYER` | Comprador |
+| `is_decision_maker` | `DECISION_MAKER` | Decisor |
+| `is_partner` | `PARTNER` | Parceiro |
+| `is_administrator` | `ADMINISTRATOR` | Administrador |
+| `is_biller` | `BILLER` | Faturamento |
+| `is_secretary` | `SECRETARY` | Secretário(a) |
+
+**Classification allow-lists** (API validation — not DB CHECK):
+
+| Classification | Allowed `role_code`s |
 |---|---|
-| `is_prescriber` | `PRESCRIBER` |
-| `is_buyer` | `BUYER` |
-| `is_decision_maker` | `DECISION_MAKER` |
-| `is_partner` | `PARTNER` |
-| `is_administrator` | `ADMINISTRATOR` |
-| `is_biller` | `BILLER` |
-| `is_secretary` | `SECRETARY` |
+| `HEALTHCARE_PROFESSIONAL` | `PARTNER`, `PRESCRIBER`, `BUYER`, `DECISION_MAKER` |
+| `ADMINISTRATIVE_CONTACT` | `PARTNER`, `ADMINISTRATOR`, `DECISION_MAKER`, `BUYER`, `BILLER`, `SECRETARY` |
 
 ---
 
@@ -415,6 +422,15 @@ Facility routes may mount projections but call person ports only.
 | GET/PATCH | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` | |
 | GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` | `ADMINISTRATIVE_CONTACT` |
 | GET/PATCH | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` | |
+
+**Frozen role-assignment paths** (STEP 4 — 2026-08-07):
+
+| Method | Path | Notes |
+|---|---|---|
+| PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; allow-list per §5.12 |
+| PUT | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; allow-list per §5.12 |
+
+Projection DTOs include `roleCodes: string[]` (from `person_facility_role_assignments`).
 
 **Frozen notes / relationship / Explorar / identity paths** (STEP 3 — 2026-08-07):
 

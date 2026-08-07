@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
 
 /// Confirmed CRM doctor at a facility (roster context).
 ///
@@ -6,7 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.d
 /// (`/facilities/:id/healthcare-professionals`).
 ///
 /// [id] is [personId] (cart/checkout / associate by person).
-/// [personFacilityId] is the affiliation row id for PATCH paths.
+/// [personFacilityId] is the affiliation row id for PATCH / roles paths.
 class ProfessionalRoster {
   const ProfessionalRoster({
     required this.id,
@@ -34,7 +35,8 @@ class ProfessionalRoster {
   /// Person id — used by cart/checkout (`personId`) and associate.
   final int id;
 
-  /// `person_facilities.id` for PATCH `/healthcare-professionals/:id`.
+  /// `person_facilities.id` for PATCH `/healthcare-professionals/:id`
+  /// and PUT `…/roles`.
   final int? personFacilityId;
 
   final String name;
@@ -47,8 +49,7 @@ class ProfessionalRoster {
   final String? phone;
   final String? email;
 
-  /// Legacy role flags — projection API no longer returns booleans.
-  /// Kept for local UI / mock sheets only.
+  /// Mapped from projection [FacilityProfessionalItemDTO.roleCodes].
   final bool isPartner;
   final bool isPrescriber;
   final bool isBuyer;
@@ -77,6 +78,7 @@ class ProfessionalRoster {
 
   factory ProfessionalRoster.fromRosterItem(FacilityProfessionalItemDTO item) {
     final name = item.displayName;
+    final roles = HealthcareRoleCodes.toFlags(item.roleCodes);
     return ProfessionalRoster(
       id: item.personId,
       personFacilityId: item.personFacilityId,
@@ -86,6 +88,11 @@ class ProfessionalRoster {
       specialty: item.roleTitle,
       phone: item.phone,
       email: item.email,
+      isPartner: roles.isPartner,
+      isPrescriber: roles.isPrescriber,
+      isBuyer: roles.isBuyer,
+      isDecisionMaker: roles.isDecisionMaker,
+      roleBadge: roles.isDecisionMaker ? 'DECISOR' : null,
     );
   }
 
