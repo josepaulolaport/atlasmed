@@ -2,7 +2,6 @@ import {
   pgTable,
   text,
   timestamp,
-  integer,
   numeric,
   index,
   uniqueIndex,
@@ -19,8 +18,8 @@ import { users } from "./users";
  * Admin-defined potential metric fields per commercial Linha (vertical).
  * Soft-deleted via deleted_at — unique (vertical_id, key) among active rows.
  */
-export const potentialMetricDefinitions = pgTable(
-  "potential_metric_definitions",
+export const productPotentialDefinitions = pgTable(
+  "product_potential_definitions",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     verticalId: bigint("vertical_id", { mode: "number" })
@@ -34,8 +33,8 @@ export const potentialMetricDefinitions = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
-    index("potential_metric_definitions_vertical_id_idx").on(t.verticalId),
-    uniqueIndex("potential_metric_definitions_vertical_key_active_uidx")
+    index("product_potential_definitions_vertical_id_idx").on(t.verticalId),
+    uniqueIndex("product_potential_definitions_vertical_key_active_uidx")
       .on(t.verticalId, t.key)
       .where(sql`${t.deletedAt} is null`),
   ],
@@ -48,7 +47,7 @@ export const facilityPotentialValues = pgTable(
     facilityId: bigint("facility_id", { mode: "number" })
       .notNull().references(() => facilities.id, { onDelete: "cascade" }),
     definitionId: bigint("definition_id", { mode: "number" })
-      .notNull().references(() => potentialMetricDefinitions.id, { onDelete: "cascade" }),
+      .notNull().references(() => productPotentialDefinitions.id, { onDelete: "cascade" }),
     quantity: numeric("quantity", { precision: 14, scale: 2 }).notNull(),
     updatedByUserId: bigint("updated_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
@@ -73,7 +72,7 @@ export const productPotentialLinks = pgTable(
     productId: bigint("product_id", { mode: "number" })
       .primaryKey().references(() => products.id, { onDelete: "cascade" }),
     definitionId: bigint("definition_id", { mode: "number" })
-      .notNull().references(() => potentialMetricDefinitions.id, { onDelete: "cascade" }),
+      .notNull().references(() => productPotentialDefinitions.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
@@ -82,11 +81,11 @@ export const productPotentialLinks = pgTable(
   ],
 );
 
-export const potentialMetricDefinitionsRelations = relations(
-  potentialMetricDefinitions,
+export const productPotentialDefinitionsRelations = relations(
+  productPotentialDefinitions,
   ({ one, many }) => ({
     vertical: one(businessVerticals, {
-      fields: [potentialMetricDefinitions.verticalId],
+      fields: [productPotentialDefinitions.verticalId],
       references: [businessVerticals.id],
     }),
     facilityValues: many(facilityPotentialValues),
@@ -101,9 +100,9 @@ export const facilityPotentialValuesRelations = relations(
       fields: [facilityPotentialValues.facilityId],
       references: [facilities.id],
     }),
-    definition: one(potentialMetricDefinitions, {
+    definition: one(productPotentialDefinitions, {
       fields: [facilityPotentialValues.definitionId],
-      references: [potentialMetricDefinitions.id],
+      references: [productPotentialDefinitions.id],
     }),
     updatedBy: one(users, {
       fields: [facilityPotentialValues.updatedByUserId],
@@ -119,9 +118,9 @@ export const productPotentialLinksRelations = relations(
       fields: [productPotentialLinks.productId],
       references: [products.id],
     }),
-    definition: one(potentialMetricDefinitions, {
+    definition: one(productPotentialDefinitions, {
       fields: [productPotentialLinks.definitionId],
-      references: [potentialMetricDefinitions.id],
+      references: [productPotentialDefinitions.id],
     }),
   }),
 );

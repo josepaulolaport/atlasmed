@@ -2,7 +2,7 @@ import {
   facilityPotentialValues,
   orderItems,
   orders,
-  potentialMetricDefinitions,
+  productPotentialDefinitions,
   productPotentialLinks,
   productVerticals,
   products,
@@ -18,7 +18,7 @@ import type {
 } from "../../../application/interfaces/potential.repository.interface";
 
 function mapDefinition(
-  row: typeof potentialMetricDefinitions.$inferSelect,
+  row: typeof productPotentialDefinitions.$inferSelect,
 ): PotentialDefinitionRecord {
   return {
     id: row.id,
@@ -38,18 +38,18 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     includeDeleted?: boolean;
   }): Promise<PotentialDefinitionRecord[]> {
     const conditions = [
-      eq(potentialMetricDefinitions.verticalId, input.verticalId),
+      eq(productPotentialDefinitions.verticalId, input.verticalId),
     ];
     if (!input.includeDeleted) {
-      conditions.push(isNull(potentialMetricDefinitions.deletedAt));
+      conditions.push(isNull(productPotentialDefinitions.deletedAt));
     }
     const rows = await db
       .select()
-      .from(potentialMetricDefinitions)
+      .from(productPotentialDefinitions)
       .where(and(...conditions))
       .orderBy(
-        asc(potentialMetricDefinitions.sortOrder),
-        asc(potentialMetricDefinitions.label),
+        asc(productPotentialDefinitions.sortOrder),
+        asc(productPotentialDefinitions.label),
       );
     return rows.map(mapDefinition);
   }
@@ -59,8 +59,8 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   ): Promise<PotentialDefinitionRecord | null> {
     const [row] = await db
       .select()
-      .from(potentialMetricDefinitions)
-      .where(eq(potentialMetricDefinitions.id, id))
+      .from(productPotentialDefinitions)
+      .where(eq(productPotentialDefinitions.id, id))
       .limit(1);
     return row ? mapDefinition(row) : null;
   }
@@ -72,7 +72,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     sortOrder: number;
   }): Promise<PotentialDefinitionRecord> {
     const [row] = await db
-      .insert(potentialMetricDefinitions)
+      .insert(productPotentialDefinitions)
       .values({
         verticalId: input.verticalId,
         key: input.key,
@@ -88,18 +88,18 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     label?: string;
     sortOrder?: number;
   }): Promise<PotentialDefinitionRecord | null> {
-    const patch: Partial<typeof potentialMetricDefinitions.$inferInsert> = {
+    const patch: Partial<typeof productPotentialDefinitions.$inferInsert> = {
       updatedAt: new Date(),
     };
     if (input.label !== undefined) patch.label = input.label;
     if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;
     const [row] = await db
-      .update(potentialMetricDefinitions)
+      .update(productPotentialDefinitions)
       .set(patch)
       .where(
         and(
-          eq(potentialMetricDefinitions.id, input.id),
-          isNull(potentialMetricDefinitions.deletedAt),
+          eq(productPotentialDefinitions.id, input.id),
+          isNull(productPotentialDefinitions.deletedAt),
         ),
       )
       .returning();
@@ -108,15 +108,15 @@ export class DrizzlePotentialRepository implements PotentialRepository {
 
   async softDeleteDefinition(id: number): Promise<boolean> {
     const [row] = await db
-      .update(potentialMetricDefinitions)
+      .update(productPotentialDefinitions)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(
         and(
-          eq(potentialMetricDefinitions.id, id),
-          isNull(potentialMetricDefinitions.deletedAt),
+          eq(productPotentialDefinitions.id, id),
+          isNull(productPotentialDefinitions.deletedAt),
         ),
       )
-      .returning({ id: potentialMetricDefinitions.id });
+      .returning({ id: productPotentialDefinitions.id });
     return Boolean(row);
   }
 
