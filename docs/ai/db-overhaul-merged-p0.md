@@ -255,3 +255,4 @@ Answer before or during Slice A–C. Do not invent answers here.
 | 2026-08-06 | **M10 = B** drop `professional_classification` |
 | 2026-08-06 | **M11** bigint hard cut (wipe OK — app not live); **M12** wave = db + api + mobile only |
 | 2026-08-06 | **Checkpoint** commit on `feature/territory-clinic-ownership-20260801` (WIP bigint/CNES/docs) before rebase onto `main` |
+| 2026-08-06 | **Rebased onto `origin/main`** (skip duplicate Spec 0006; keep calendar `0045`; drop old WIP migration chain 0046–0091 — regenerate next) |
