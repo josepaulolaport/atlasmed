@@ -26,6 +26,10 @@ import type {
   FindAllUsersParams,
 } from "../../../application/interfaces/user.repository.interface";
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 async function fetchUserWithRole(userId: number, client: AnyDatabase = db) {
   const [row] = await client
     .select()
@@ -40,6 +44,7 @@ async function fetchUserWithRole(userId: number, client: AnyDatabase = db) {
 
 export class DrizzleUserRepository implements UserRepository {
   async findByIdentifier(params: FindUserByIdentifierParams) {
+    const identifierLower = params.identifier.trim().toLowerCase();
     const [row] = await db
       .select()
       .from(users)
@@ -48,7 +53,7 @@ export class DrizzleUserRepository implements UserRepository {
         and(
           isNull(users.deletedAt),
           or(
-            eq(users.email, params.identifier),
+            sql`lower(${users.email}) = ${identifierLower}`,
             eq(users.username, params.identifier),
             eq(users.phoneNumber, params.identifier as any),
           ),
@@ -91,7 +96,7 @@ export class DrizzleUserRepository implements UserRepository {
     const [inserted] = await db
       .insert(users)
       .values({
-        email: params.email,
+        email: normalizeEmail(params.email),
         username: params.username,
         phoneNumber: params.phoneNumber ?? null,
         passwordHash: params.passwordHash,
@@ -399,10 +404,11 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async findByEmail(email: string) {
+    const emailLower = normalizeEmail(email);
     const [row] = await db
       .select({ id: users.id })
       .from(users)
-      .where(eq(users.email, email))
+      .where(sql`lower(${users.email}) = ${emailLower}`)
       .limit(1);
 
     return row ?? null;
@@ -444,7 +450,7 @@ export class DrizzleUserRepository implements UserRepository {
     await db
       .update(users)
       .set({
-        email: newEmail,
+        email: normalizeEmail(newEmail),
         emailVerified: true,
         emailVerifiedAt: new Date(),
         updatedAt: new Date(),

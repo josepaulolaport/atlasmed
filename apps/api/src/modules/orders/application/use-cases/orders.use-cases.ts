@@ -56,7 +56,7 @@ function iso(date: Date | null): string | null {
 function serializeListOrder(order: Awaited<ReturnType<OrderRepository["findAll"]>>["orders"][number]) {
   return {
     id: order.id,
-    legacyId: order.legacyId,
+    idAvulsaEmultec: order.idAvulsaEmultec,
     verticalId: order.verticalId,
     status: order.status,
     type: order.type,
@@ -83,7 +83,7 @@ function serializeOrder(order: OrderDetailRecord) {
 
   return {
     id: order.id,
-    legacyId: order.legacyId,
+    idAvulsaEmultec: order.idAvulsaEmultec,
     verticalId: order.verticalId,
     status: order.status,
     type: order.type,

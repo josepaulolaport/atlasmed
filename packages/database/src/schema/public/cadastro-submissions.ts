@@ -198,7 +198,10 @@ export const reviewDecisions = pgTable(
     reasonCode: text("reason_code"),
     comment: text("comment"),
     documentVersion: bigint("document_version", { mode: "number" }).notNull(),
-    flaggedFileAssetIds: text("flagged_file_asset_ids").array().notNull().default([]),
+    flaggedFileAssetIds: bigint("flagged_file_asset_ids", { mode: "number" })
+      .array()
+      .notNull()
+      .default(sql`'{}'::bigint[]`),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

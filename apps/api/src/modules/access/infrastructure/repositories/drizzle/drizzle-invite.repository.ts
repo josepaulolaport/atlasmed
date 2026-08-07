@@ -19,6 +19,10 @@ import type {
   AcceptInviteTransactionResult,
 } from "../../../application/interfaces/invite.repository.interface";
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 async function fetchInviteWithRole(inviteId: number) {
   const [row] = await db
     .select()
@@ -39,7 +43,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       const [inserted] = await tx
         .insert(invitations)
         .values({
-          email: params.email ?? null,
+          email: params.email ? normalizeEmail(params.email) : null,
           phoneNumber: params.phoneNumber ?? null,
           tokenHash: params.tokenHash,
           roleId: params.roleId,
@@ -342,7 +346,8 @@ export class DrizzleInviteRepository implements InviteRepository {
         throw new InvalidInviteError("Invite has expired");
       }
 
-      if (inviteLock.email && inviteLock.email !== params.email) {
+      const emailNormalized = normalizeEmail(params.email);
+      if (inviteLock.email && inviteLock.email !== emailNormalized) {
         throw new InvalidInviteError("Email does not match invitation");
       }
 
@@ -351,7 +356,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       }
 
       const orConditions = [
-        eq(users.email, params.email),
+        sql`lower(${users.email}) = ${emailNormalized}`,
         eq(users.username, params.username),
       ];
       if (params.phoneNumber) {
@@ -371,7 +376,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       const [newUserRow] = await tx
         .insert(users)
         .values({
-          email: params.email,
+          email: emailNormalized,
           username: params.username,
           phoneNumber: params.phoneNumber ?? null,
           passwordHash: params.passwordHash,

@@ -3,13 +3,14 @@ import {
   text,
   boolean,
   timestamp,
-  integer,
-  json,
+  jsonb,
   index,
   uniqueIndex,
+  unique,
   bigint,
+  inet,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   userStatusEnum,
   authSessionDeviceTypeEnum,
@@ -35,7 +36,7 @@ export const users = pgTable(
   "users",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    email: text("email").notNull().unique(),
+    email: text("email").notNull(),
     username: text("username").notNull().unique(),
     phoneNumber: text("phone_number").unique(),
     emailVerified: boolean("email_verified").notNull().default(false),
@@ -59,15 +60,13 @@ export const users = pgTable(
     twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
     twoFactorSecret: text("two_factor_secret"),
     deletedAt: timestamp("deleted_at"),
-    metadata: json("metadata"),
+    metadata: jsonb("metadata"),
     roleId: bigint("role_id", { mode: "number" }).notNull().references(() => roles.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    index("users_email_idx").on(t.email),
-    index("users_username_idx").on(t.username),
-    index("users_phone_number_idx").on(t.phoneNumber),
+    uniqueIndex("users_email_lower_uidx").on(sql`lower(${t.email})`),
     index("users_status_idx").on(t.status),
     index("users_deleted_at_idx").on(t.deletedAt),
   ]
@@ -94,17 +93,16 @@ export const sessions = pgTable(
     deviceName: text("device_name"),
     deviceFingerprint: text("device_fingerprint"),
     sessionType: authSessionTypeEnum("session_type").notNull().default("WEB"),
-    ipAddress: text("ip_address"),
+    ipAddress: inet("ip_address"),
     ipCountry: text("ip_country"),
     ipCity: text("ip_city"),
     suspiciousActivity: boolean("suspicious_activity").notNull().default(false),
-    lastIpAddress: text("last_ip_address"),
+    lastIpAddress: inet("last_ip_address"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
     index("sessions_user_id_idx").on(t.userId),
-    index("sessions_refresh_token_hash_idx").on(t.refreshTokenHash),
     index("sessions_previous_refresh_token_hash_idx").on(t.previousRefreshTokenHash),
     index("sessions_expires_at_idx").on(t.expiresAt),
     index("sessions_revoked_at_idx").on(t.revokedAt),
@@ -122,14 +120,13 @@ export const passwordResets = pgTable(
     tokenHash: text("token_hash").notNull().unique(),
     expiresAt: timestamp("expires_at").notNull(),
     usedAt: timestamp("used_at"),
-    ipAddress: text("ip_address"),
+    ipAddress: inet("ip_address"),
     userAgent: text("user_agent"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
     index("password_resets_user_id_idx").on(t.userId),
-    index("password_resets_token_hash_idx").on(t.tokenHash),
     index("password_resets_expires_at_idx").on(t.expiresAt),
   ]
 );
@@ -149,7 +146,6 @@ export const verificationTokens = pgTable(
   },
   (t) => [
     index("verification_tokens_user_id_idx").on(t.userId),
-    index("verification_tokens_token_hash_idx").on(t.tokenHash),
     index("verification_tokens_type_idx").on(t.type),
     index("verification_tokens_expires_at_idx").on(t.expiresAt),
   ]
@@ -180,7 +176,6 @@ export const invitations = pgTable(
   (t) => [
     index("invitations_email_idx").on(t.email),
     index("invitations_phone_number_idx").on(t.phoneNumber),
-    index("invitations_token_hash_idx").on(t.tokenHash),
     index("invitations_status_idx").on(t.status),
     index("invitations_accepted_by_user_id_idx").on(t.acceptedByUserId),
     index("invitations_invited_by_user_id_idx").on(t.invitedByUserId),
@@ -195,7 +190,7 @@ export const permissions = pgTable(
     resource: text("resource").notNull(),
     resourceId: text("resource_id"),
     action: text("action").notNull(),
-    conditions: json("conditions"),
+    conditions: jsonb("conditions"),
     grantedBy: bigint("granted_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -206,12 +201,9 @@ export const permissions = pgTable(
     index("permissions_resource_resource_id_idx").on(t.resource, t.resourceId),
     index("permissions_user_id_resource_idx").on(t.userId, t.resource),
     index("permissions_expires_at_idx").on(t.expiresAt),
-    uniqueIndex("permissions_user_id_resource_resource_id_action_uidx").on(
-      t.userId,
-      t.resource,
-      t.resourceId,
-      t.action
-    ),
+    unique("permissions_user_id_resource_resource_id_action_key")
+      .on(t.userId, t.resource, t.resourceId, t.action)
+      .nullsNotDistinct(),
   ]
 );
 

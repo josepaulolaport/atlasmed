@@ -1,6 +1,7 @@
-import { pgSchema, text, timestamp, json, index,
+import { pgSchema, text, timestamp, jsonb, index,
   integer,
   bigint,
+  inet,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { users } from "../public/users";
@@ -25,13 +26,13 @@ export const auditLogs = auditSchema.table(
     resource: text("resource"),
     resourceId: text("resource_id"),
     action: text("action").notNull(),
-    details: json("details"),
-    ipAddress: text("ip_address"),
+    details: jsonb("details"),
+    ipAddress: inet("ip_address"),
     userAgent: text("user_agent"),
     sessionId: bigint("session_id", { mode: "number" }),
     outcome: text("outcome"),
     errorMessage: text("error_message"),
-    metadata: json("metadata"),
+    metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

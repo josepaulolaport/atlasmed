@@ -29,7 +29,7 @@ function createRepository(overrides: Partial<OrderRepository> = {}): OrderReposi
       orders: [
         {
           id: 1,
-          legacyId: 42,
+          idAvulsaEmultec: 42,
           verticalId: 1,
           facility: { id: 1, name: "Clínica Um" },
           professional: { id: 1, name: "Dra. Ana" },
@@ -49,7 +49,7 @@ function createRepository(overrides: Partial<OrderRepository> = {}): OrderReposi
       id === 2
         ? {
             id,
-            legacyId: null,
+            idAvulsaEmultec: null,
             verticalId: 1,
             facility: { id: 2, name: "Clínica Dois" },
             professional: null,
@@ -124,7 +124,7 @@ describe("orders use cases", () => {
     expect(result.pagination).toEqual({ page: 2, limit: 10, total: 1, totalPages: 1 });
     expect(result.data[0]).toMatchObject({
       id: 1,
-      legacyId: 42,
+      idAvulsaEmultec: 42,
       verticalId: 1,
       status: "PENDING",
       facility: { name: "Clínica Um" },
@@ -148,7 +148,7 @@ describe("orders use cases", () => {
     const repository = createRepository();
     repository.findById = async () => ({
       id: 1,
-      legacyId: null,
+      idAvulsaEmultec: null,
       verticalId: 1,
       facility: { id: 1, name: "Clínica Um" },
       professional: null,
@@ -194,7 +194,7 @@ describe("orders use cases", () => {
         created = input;
         return {
           id: 100,
-          legacyId: null,
+          idAvulsaEmultec: null,
           verticalId: input.verticalId,
           facility: { id: input.facilityId, name: "Clínica Um" },
           professional: null,
@@ -223,10 +223,9 @@ describe("orders use cases", () => {
           expenseAuthorizedAt: null,
           items: input.items.map((item, index) => ({
             id: index + 1,
-            legacyId: null,
-            lineNumber: index + 1,
+            idAvulsaItemEmultec: null,
             product: { id: item.productId, name: "Produto", code: "P1" },
-            legacyProductId: null,
+            idProdutoEmultec: null,
             quantity: item.quantity,
             unitPrice: item.unitPrice ?? 100,
             usdPrice: null,

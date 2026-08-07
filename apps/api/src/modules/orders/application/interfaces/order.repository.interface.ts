@@ -24,7 +24,7 @@ export interface OrderListItemPreview {
 
 export interface OrderListRecord {
   id: number;
-  legacyId: number | null;
+  idAvulsaEmultec: number | null;
   verticalId: number;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
@@ -42,7 +42,7 @@ export interface OrderListRecord {
 
 export interface OrderDetailRecord {
   id: number;
-  legacyId: number | null;
+  idAvulsaEmultec: number | null;
   verticalId: number;
   facility: OrderIdentity;
   professional: OrderIdentity | null;
@@ -71,10 +71,9 @@ export interface OrderDetailRecord {
   expenseAuthorizedAt: Date | null;
   items: Array<{
     id: number;
-    legacyId: number | null;
-    lineNumber: number | null;
+    idAvulsaItemEmultec: number | null;
     product: { id: number; name: string; code: string } | null;
-    legacyProductId: number | null;
+    idProdutoEmultec: number | null;
     quantity: number;
     unitPrice: number;
     usdPrice: number | null;

@@ -8,6 +8,7 @@ import {
   index,
   unique,
   bigint,
+  char,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { orderStatusEnum, orderTypeEnum } from "./enums";
@@ -21,7 +22,8 @@ export const orders = pgTable(
   "orders",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    legacyId: bigint("legacy_id", { mode: "number" }),
+    /** Emultec avulsa (order header) id. */
+    idAvulsaEmultec: bigint("id_avulsa_emultec", { mode: "number" }),
     facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id),
     /** Commercial vertical for this order (one vertical per order). */
     verticalId: bigint("vertical_id", { mode: "number" })
@@ -38,7 +40,7 @@ export const orders = pgTable(
     freight: numeric("freight", { precision: 10, scale: 2 }).notNull().default("0"),
     grossWeight: numeric("gross_weight", { precision: 10, scale: 3 }).notNull().default("0"),
     netWeight: numeric("net_weight", { precision: 10, scale: 3 }).notNull().default("0"),
-    currency: text("currency").notNull().default("BRL"),
+    currency: char("currency", { length: 3 }).notNull().default("BRL"),
     finalizedById: bigint("finalized_by_id", { mode: "number" }).references(() => users.id),
     finalizedAt: timestamp("finalized_at"),
     rejectedById: bigint("rejected_by_id", { mode: "number" }).references(() => users.id),
@@ -55,7 +57,7 @@ export const orders = pgTable(
     index("orders_facility_id_idx").on(t.facilityId),
     index("orders_vertical_id_idx").on(t.verticalId),
     index("orders_status_idx").on(t.status),
-    index("orders_legacy_id_idx").on(t.legacyId),
+    index("orders_id_avulsa_emultec_idx").on(t.idAvulsaEmultec),
     index("orders_ordered_at_idx").on(t.orderedAt),
     index("orders_professional_id_idx").on(t.professionalId),
     index("orders_interaction_id_idx").on(t.interactionId),
@@ -67,7 +69,7 @@ export const orders = pgTable(
       .on(t.facilityId, t.verticalId, t.orderedAt.desc())
       .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
     index("orders_updated_at_facility_id_idx").on(t.updatedAt, t.facilityId),
-    unique("orders_legacy_id_key").on(t.legacyId),
+    unique("orders_id_avulsa_emultec_key").on(t.idAvulsaEmultec),
   ]
 );
 
@@ -99,11 +101,12 @@ export const orderItems = pgTable(
   "order_items",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    legacyId: bigint("legacy_id", { mode: "number" }),
+    /** Emultec avulsa item (line) id. */
+    idAvulsaItemEmultec: bigint("id_avulsa_item_emultec", { mode: "number" }),
     orderId: bigint("order_id", { mode: "number" }).notNull().references(() => orders.id, { onDelete: "cascade" }),
     productId: bigint("product_id", { mode: "number" }).references(() => products.id),
-    legacyProductId: bigint("legacy_product_id", { mode: "number" }),
-    lineNumber: bigint("line_number", { mode: "number" }),
+    /** Denormalized Emultec product id on the line (may differ from products.id_produto_emultec historically). */
+    idProdutoEmultec: bigint("id_produto_emultec", { mode: "number" }),
     quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull().default("0"),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
     usdPrice: numeric("usd_price", { precision: 12, scale: 4 }).notNull().default("0"),
@@ -116,7 +119,7 @@ export const orderItems = pgTable(
     index("order_items_batch_number_idx").on(t.batchNumber),
     index("order_items_order_id_idx").on(t.orderId),
     index("order_items_product_id_idx").on(t.productId),
-    unique("order_items_legacy_id_key").on(t.legacyId),
+    unique("order_items_id_avulsa_item_emultec_key").on(t.idAvulsaItemEmultec),
   ]
 );
 

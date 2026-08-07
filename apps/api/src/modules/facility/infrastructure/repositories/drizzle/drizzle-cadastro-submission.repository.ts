@@ -706,7 +706,7 @@ export class DrizzleCadastroSubmissionRepository
       reasonCode: input.reasonCode ?? null,
       comment: input.comment ?? null,
       documentVersion: input.documentVersion,
-      flaggedFileAssetIds: (input.flaggedFileAssetIds ?? []).map(String),
+      flaggedFileAssetIds: input.flaggedFileAssetIds ?? [],
     });
   }
 

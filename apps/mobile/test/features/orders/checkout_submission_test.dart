@@ -24,7 +24,7 @@ void main() {
   test('confirmation snapshot is the immutable created order DTO', () {
     final order = ApiOrderDetail(
       id: 'order-real',
-      legacyId: 42,
+      idAvulsaEmultec: 42,
       verticalId: null,
       interactionId: 'interaction-1',
       status: 'PENDING',

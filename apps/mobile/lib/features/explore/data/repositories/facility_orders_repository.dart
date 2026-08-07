@@ -25,7 +25,7 @@ class FacilityOrdersPage {
 }
 
 FacilityOrderSummary _mapOrder(Map<String, dynamic> json) {
-  final legacyId = json['legacyId'];
+  final idAvulsaEmultec = json['idAvulsaEmultec'];
   final id = readCrmId(json['id'], 'id');
   final itemsRaw = json['items'];
   final items = itemsRaw is List
@@ -37,7 +37,7 @@ FacilityOrderSummary _mapOrder(Map<String, dynamic> json) {
 
   return FacilityOrderSummary(
     id: id,
-    displayId: legacyId == null ? id.toString() : 'PED-$legacyId',
+    displayId: idAvulsaEmultec == null ? id.toString() : 'PED-$idAvulsaEmultec',
     status: (json['status'] as String?) ?? 'PENDING',
     type: (json['type'] as String?) ?? 'SALE',
     orderedAt:

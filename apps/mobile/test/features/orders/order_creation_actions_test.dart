@@ -44,7 +44,7 @@ void main() {
   testWidgets('order detail has no repeat-order action', (tester) async {
     final detail = ApiOrderDetail(
       id: 'order-1',
-      legacyId: 1,
+      idAvulsaEmultec: 1,
       verticalId: null,
       interactionId: null,
       status: 'DELIVERED',

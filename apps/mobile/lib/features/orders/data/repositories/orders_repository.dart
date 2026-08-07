@@ -18,7 +18,7 @@ class ApiOrderIdentity {
 class ApiOrderListItem {
   const ApiOrderListItem({
     required this.id,
-    required this.legacyId,
+    required this.idAvulsaEmultec,
     required this.verticalId,
     required this.status,
     required this.type,
@@ -34,7 +34,7 @@ class ApiOrderListItem {
   });
 
   final int id;
-  final int? legacyId;
+  final int? idAvulsaEmultec;
   final int? verticalId;
   final String status;
   final String type;
@@ -48,12 +48,12 @@ class ApiOrderListItem {
   final double freight;
   final double total;
 
-  String get displayId => legacyId == null ? id.toString() : 'PED-$legacyId';
+  String get displayId => idAvulsaEmultec == null ? id.toString() : 'PED-$idAvulsaEmultec';
 
   factory ApiOrderListItem.fromJson(Map<String, dynamic> json) =>
       ApiOrderListItem(
         id: readCrmId(json['id'], 'id'),
-        legacyId: json['legacyId'] as int?,
+        idAvulsaEmultec: json['idAvulsaEmultec'] as int?,
         verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
         status: json['status'] as String,
         type: json['type'] as String,
@@ -138,7 +138,7 @@ class ApiOrderProduct {
 class ApiOrderDetail extends ApiOrderListItem {
   const ApiOrderDetail({
     required super.id,
-    required super.legacyId,
+    required super.idAvulsaEmultec,
     required super.verticalId,
     required super.status,
     required super.type,
@@ -164,7 +164,7 @@ class ApiOrderDetail extends ApiOrderListItem {
 
   factory ApiOrderDetail.fromJson(Map<String, dynamic> json) => ApiOrderDetail(
     id: readCrmId(json['id'], 'id'),
-    legacyId: json['legacyId'] as int?,
+    idAvulsaEmultec: json['idAvulsaEmultec'] as int?,
     verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
     status: json['status'] as String,
     type: json['type'] as String,

@@ -7,6 +7,7 @@ import {
   integer,
   bigint,
   date,
+  numeric,
   index,
   uniqueIndex,
   check,
@@ -538,7 +539,7 @@ export const facilityHealthcareProviderShares = pgTable(
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
     healthcareProviderId: bigint("healthcare_provider_id", { mode: "number" }).notNull().references(() => healthcareProviders.id, { onDelete: "restrict" }),
-    sharePercent: text("share_percent").notNull(),
+    sharePercent: numeric("share_percent", { precision: 5, scale: 2 }).notNull(),
     /** Whether this facility treats the provider share as a package (pacote). */
     isPackage: boolean("is_package").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -551,6 +552,10 @@ export const facilityHealthcareProviderShares = pgTable(
     ),
     index("facility_healthcare_provider_shares_facility_id_idx").on(t.facilityId),
     index("facility_healthcare_provider_shares_healthcare_provider_id_idx").on(t.healthcareProviderId),
+    check(
+      "facility_healthcare_provider_shares_share_percent_check",
+      sql`${t.sharePercent} >= 0 AND ${t.sharePercent} <= 100`
+    ),
   ]
 );
 

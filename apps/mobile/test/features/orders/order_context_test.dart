@@ -68,7 +68,7 @@ void main() {
         headers: const {},
         body: jsonEncode({
           'id': 'order-1',
-          'legacyId': null,
+          'idAvulsaEmultec': null,
           'interactionId': 'interaction-1',
           'verticalId': null,
           'status': 'PENDING',

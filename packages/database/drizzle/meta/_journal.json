@@ -351,6 +351,13 @@
       "when": 1786074729430,
       "tag": "0049_drop_territory_approval_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1786075647995,
+      "tag": "0050_slice_b_non_person_hygiene",
+      "breakpoints": true
     }
   ]
 }

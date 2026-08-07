@@ -74,7 +74,7 @@ void main() {
           'data': [
             {
               'id': 1,
-              'legacyId': 14,
+              'idAvulsaEmultec': 14,
               'status': 'SHIPPED',
               'type': 'STANDARD',
               'orderedAt': '2026-01-02T10:00:00.000Z',
@@ -105,7 +105,7 @@ void main() {
         headers: const {},
         body: jsonEncode({
           'id': 1,
-          'legacyId': null,
+          'idAvulsaEmultec': null,
           'status': 'DELIVERED',
           'type': 'STANDARD',
           'orderedAt': null,

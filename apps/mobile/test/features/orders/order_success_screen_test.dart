@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 ApiOrderDetail _order() => ApiOrderDetail(
   id: 'order-real',
-  legacyId: 42,
+  idAvulsaEmultec: 42,
   verticalId: null,
   interactionId: 'interaction-1',
   status: 'PENDING',

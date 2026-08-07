@@ -56,7 +56,7 @@ export class DrizzleOrderRepository implements OrderRepository {
       db
         .select({
           id: orders.id,
-          legacyId: orders.legacyId,
+          idAvulsaEmultec: orders.idAvulsaEmultec,
           verticalId: orders.verticalId,
           status: orders.status,
           type: orders.type,
@@ -100,7 +100,7 @@ export class DrizzleOrderRepository implements OrderRepository {
     return {
       orders: rows.map((row) => ({
         id: row.id,
-        legacyId: row.legacyId,
+        idAvulsaEmultec: row.idAvulsaEmultec,
         verticalId: row.verticalId,
         status: row.status,
         type: row.type,
@@ -139,13 +139,12 @@ export class DrizzleOrderRepository implements OrderRepository {
         productName: products.name,
         quantity: orderItems.quantity,
         unitPrice: orderItems.unitPrice,
-        lineNumber: orderItems.lineNumber,
         createdAt: orderItems.createdAt,
       })
       .from(orderItems)
       .leftJoin(products, eq(products.id, orderItems.productId))
       .where(inArray(orderItems.orderId, orderIds))
-      .orderBy(orderItems.lineNumber, orderItems.createdAt);
+      .orderBy(orderItems.createdAt, orderItems.id);
 
     const previews = new Map<
       number,
@@ -192,11 +191,28 @@ export class DrizzleOrderRepository implements OrderRepository {
       .from(orderItems)
       .leftJoin(products, eq(products.id, orderItems.productId))
       .where(eq(orderItems.orderId, id))
-      .orderBy(orderItems.lineNumber, orderItems.createdAt);
+      .orderBy(orderItems.createdAt, orderItems.id);
 
     return {
-      ...order.order,
+      id: order.order.id,
+      idAvulsaEmultec: order.order.idAvulsaEmultec,
+      verticalId: order.order.verticalId,
       status: order.order.status,
+      type: order.order.type,
+      orderedAt: order.order.orderedAt,
+      createdAt: order.order.createdAt,
+      updatedAt: order.order.updatedAt,
+      notes: order.order.notes,
+      currency: order.order.currency,
+      finalizedById: order.order.finalizedById,
+      finalizedAt: order.order.finalizedAt,
+      rejectedById: order.order.rejectedById,
+      rejectionReason: order.order.rejectionReason,
+      noBillingById: order.order.noBillingById,
+      noBillingAt: order.order.noBillingAt,
+      noBillingNotes: order.order.noBillingNotes,
+      expenseAuthorizedById: order.order.expenseAuthorizedById,
+      expenseAuthorizedAt: order.order.expenseAuthorizedAt,
       facility: { id: order.facilityId, name: order.facilityName },
       professional: order.professionalId
         ? {
@@ -221,13 +237,19 @@ export class DrizzleOrderRepository implements OrderRepository {
       surgeryType: null,
       surgerySubtype: null,
       items: items.map(({ item, productId, productName, productCode }) => ({
-        ...item,
+        id: item.id,
+        idAvulsaItemEmultec: item.idAvulsaItemEmultec,
+        idProdutoEmultec: item.idProdutoEmultec,
         product: productId
           ? { id: productId, name: productName ?? String(productId), code: productCode ?? "" }
           : null,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         usdPrice: item.usdPrice == null ? null : Number(item.usdPrice),
+        batchNumber: item.batchNumber,
+        writtenOff: item.writtenOff,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
       })),
     };
   }
@@ -296,10 +318,9 @@ export class DrizzleOrderRepository implements OrderRepository {
       if (!created) throw new Error("Failed to insert order");
 
       await tx.insert(orderItems).values(
-        input.items.map((item, index) => ({
+        input.items.map((item) => ({
           orderId: created.id,
           productId: item.productId,
-          lineNumber: index + 1,
           quantity: String(item.quantity),
           unitPrice: String(item.unitPrice ?? 0),
         }))

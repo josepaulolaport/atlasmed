@@ -21,8 +21,8 @@ export const products = pgTable(
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     code: text("code").notNull().unique(),
     name: text("name").notNull(),
-    // Enrichment columns (from legacy system)
-    legacyId: bigint("legacy_id", { mode: "number" }),
+    /** Emultec product id. */
+    idProdutoEmultec: bigint("id_produto_emultec", { mode: "number" }),
     description: text("description"),
     barcode: text("barcode"),
     commercialCode: text("commercial_code"),
@@ -57,7 +57,7 @@ export const products = pgTable(
     uniqueIndex("products_simpro_code_unique").on(t.simproCode),
     uniqueIndex("products_brasindice_code_unique").on(t.brasindiceCode),
     uniqueIndex("products_tiss_code_unique").on(t.tissCode),
-    unique("products_legacy_id_key").on(t.legacyId),
+    unique("products_id_produto_emultec_key").on(t.idProdutoEmultec),
   ]
 );
 
@@ -86,7 +86,6 @@ export const competitorProducts = pgTable(
     manufacturer: text("manufacturer"),
     brand: text("brand"),
     isActive: boolean("is_active").notNull().default(true),
-    legacyId: bigint("legacy_id", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     countryOfOrigin: text("country_of_origin"),
@@ -98,7 +97,6 @@ export const competitorProducts = pgTable(
   (t) => [
     index("competitor_products_is_active_idx").on(t.isActive),
     index("competitor_products_manufacturer_idx").on(t.manufacturer),
-    unique("competitor_products_legacy_id_key").on(t.legacyId),
   ]
 );
 
