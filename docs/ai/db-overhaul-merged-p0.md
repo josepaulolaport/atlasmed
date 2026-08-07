@@ -254,3 +254,4 @@ Answer before or during Slice A–C. Do not invent answers here.
 | 2026-08-06 | **M1 = A** all CRM `updated_at`; **M5** plan set + semantic peers; **M9** one PR per slice |
 | 2026-08-06 | **M10 = B** drop `professional_classification` |
 | 2026-08-06 | **M11** bigint hard cut (wipe OK — app not live); **M12** wave = db + api + mobile only |
+| 2026-08-06 | **Checkpoint** commit on `feature/territory-clinic-ownership-20260801` (WIP bigint/CNES/docs) before rebase onto `main` |
