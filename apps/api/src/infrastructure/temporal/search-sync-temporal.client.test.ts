@@ -27,7 +27,7 @@ describe("search sync Temporal client", () => {
       existing: false,
     });
     expect(startCalls).toHaveLength(1);
-    expect(fullSearchSyncWorkflowId("professionals")).toBe("search-sync-professionals-full");
+    expect(fullSearchSyncWorkflowId("persons")).toBe("search-sync-persons-full");
   });
 
   test("returns the running execution when Temporal reports a duplicate", async () => {

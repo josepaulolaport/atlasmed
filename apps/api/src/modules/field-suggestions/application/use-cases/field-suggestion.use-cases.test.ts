@@ -96,7 +96,7 @@ describe("CreateFacilityFieldSuggestionUseCase", () => {
           status: "PENDING" as const,
           facilityId: 1,
           facilityName: "Clinic",
-          professionalId: null,
+          personId: null,
           fieldKey: "phoneNumber",
           currentValue: "1100000000",
           proposedValue: "11999990000",

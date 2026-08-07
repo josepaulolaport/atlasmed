@@ -1,7 +1,4 @@
 import { DrizzleFacilityRepository } from "./infrastructure/repositories/drizzle/drizzle-facility.repository";
-import { DrizzleFacilityProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
-import { DrizzleFacilityRepresentativeRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
-import { DrizzleUserRepresentativeRelationshipRepository } from "./infrastructure/repositories/drizzle/drizzle-user-representative-relationship.repository";
 import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
 import { DrizzleFacilityNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-note.repository";
 import { DrizzleFacilityPhotoRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-photo.repository";
@@ -20,14 +17,6 @@ import {
   UpdateFacilityUseCase,
 } from "./application/use-cases/facility.use-cases";
 import { ListMapFacilityPointsUseCase } from "./application/use-cases/list-map-facility-points.use-case";
-import {
-  ConfirmProfessionalAtFacilityUseCase,
-  EndFacilityProfessionalUseCase,
-  GetFacilityProfessionalContextUseCase,
-  ListFacilityProfessionalsUseCase,
-  ManuallyAssociateProfessionalUseCase,
-  UpdateFacilityProfessionalRoleUseCase,
-} from "./application/use-cases/facility-professional.use-cases";
 import {
   AssignFacilityConsultantUseCase,
   ListFacilityConsultantAssignmentsUseCase,
@@ -68,11 +57,6 @@ import {
   CreateFacilityVisitUseCase,
 } from "./application/use-cases/visit.use-cases";
 import {
-  CreateFacilityRepresentativeUseCase,
-  ListFacilityRepresentativesUseCase,
-  UpdateFacilityRepresentativeUseCase,
-} from "./application/use-cases/facility-representative.use-cases";
-import {
   CreateFacilityNoteUseCase,
   ListFacilityNotesUseCase,
 } from "./application/use-cases/facility-note.use-cases";
@@ -89,15 +73,10 @@ import { FacilityGeocodingService } from "./application/services/facility-geocod
 import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
 import { searchService } from "../../infrastructure/search/search.service";
-import { professionalRepositories } from "../professional/composition";
 
 export const facilityRepositories = {
   facility: new DrizzleFacilityRepository(),
   purchaseRecurrence: new DrizzleFacilityPurchaseRecurrenceRepository(),
-  association: new DrizzleFacilityProfessionalRepository(),
-  representative: new DrizzleFacilityRepresentativeRepository(),
-  userRepresentativeRelationship:
-    new DrizzleUserRepresentativeRelationshipRepository(),
   consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
   note: new DrizzleFacilityNoteRepository(),
   photo: new DrizzleFacilityPhotoRepository(),
@@ -171,55 +150,6 @@ export const facilityUseCases = {
   createFacility: () => new CreateFacilityUseCase(facilityMembershipDeps),
   updateFacility: () => new UpdateFacilityUseCase(facilityMembershipDeps),
   deleteFacility: () => new DeleteFacilityUseCase(facilityMembershipDeps),
-  listFacilityProfessionals: () =>
-    new ListFacilityProfessionalsUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      userProfessionalRelationshipRepository:
-        professionalRepositories.userProfessionalRelationship,
-    }),
-  confirmProfessionalAtFacility: () =>
-    new ConfirmProfessionalAtFacilityUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-    }),
-  manuallyAssociateProfessional: () =>
-    new ManuallyAssociateProfessionalUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-    }),
-  endFacilityProfessional: () =>
-    new EndFacilityProfessionalUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-    }),
-  getFacilityProfessionalContext: () =>
-    new GetFacilityProfessionalContextUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      professionalRepository: professionalRepositories.professional,
-      userProfessionalRelationshipRepository:
-        professionalRepositories.userProfessionalRelationship,
-    }),
-  updateFacilityProfessionalRole: () =>
-    new UpdateFacilityProfessionalRoleUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      userProfessionalRelationshipRepository:
-        professionalRepositories.userProfessionalRelationship,
-    }),
-  listFacilityRepresentatives: () =>
-    new ListFacilityRepresentativesUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      userRepresentativeRelationshipRepository:
-        facilityRepositories.userRepresentativeRelationship,
-    }),
-  createFacilityRepresentative: () =>
-    new CreateFacilityRepresentativeUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      userRepresentativeRelationshipRepository:
-        facilityRepositories.userRepresentativeRelationship,
-    }),
-  updateFacilityRepresentative: () =>
-    new UpdateFacilityRepresentativeUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      userRepresentativeRelationshipRepository:
-        facilityRepositories.userRepresentativeRelationship,
-    }),
   listFacilityNotes: () =>
     new ListFacilityNotesUseCase({
       facilityNoteRepository: facilityRepositories.note,
@@ -268,7 +198,6 @@ export const facilityUseCases = {
         }
       },
       onConsultantAssignmentChanged: async (userIds) => {
-        // Lazy import avoids access ↔ facility composition cycle at module load.
         const { accessScopeServices } = await import("../access/composition");
         await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
           userIds,

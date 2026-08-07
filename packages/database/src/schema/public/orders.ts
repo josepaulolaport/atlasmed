@@ -13,7 +13,8 @@ import {
 import { relations, sql } from "drizzle-orm";
 import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
-import { facilities, professionals } from "./facilities";
+import { facilities } from "./facilities";
+import { persons } from "./persons";
 import { products } from "./catalog";
 import { interactions } from "./calendar";
 import { users } from "./users";
@@ -29,7 +30,7 @@ export const orders = pgTable(
     verticalId: bigint("vertical_id", { mode: "number" })
       .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
     sellerId: bigint("seller_id", { mode: "number" }).references(() => users.id),
-    professionalId: bigint("professional_id", { mode: "number" }).references(() => professionals.id),
+    personId: bigint("person_id", { mode: "number" }).references(() => persons.id),
     interactionId: bigint("interaction_id", { mode: "number" }).references(() => interactions.id, {
       onDelete: "restrict",
     }),
@@ -59,7 +60,7 @@ export const orders = pgTable(
     index("orders_status_idx").on(t.status),
     index("orders_id_avulsa_emultec_idx").on(t.idAvulsaEmultec),
     index("orders_ordered_at_idx").on(t.orderedAt),
-    index("orders_professional_id_idx").on(t.professionalId),
+    index("orders_person_id_idx").on(t.personId),
     index("orders_interaction_id_idx").on(t.interactionId),
     index("orders_seller_id_idx").on(t.sellerId),
     index("orders_valid_purchase_facility_ordered_at_idx")

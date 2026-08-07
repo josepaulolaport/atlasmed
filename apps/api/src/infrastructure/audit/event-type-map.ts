@@ -58,15 +58,6 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "PUT /api/v1/facilities/:id": { eventType: "FACILITY.UPDATED" },
   "PATCH /api/v1/facilities/:id": { eventType: "FACILITY.UPDATED" },
   "DELETE /api/v1/facilities/:id": { eventType: "FACILITY.DEACTIVATED", severity: "WARNING" },
-  "POST /api/v1/facilities/:id/professionals": { eventType: "FACILITY.PROFESSIONAL_LINKED" },
-  "PUT /api/v1/facilities/:id/professionals/:professionalId": { eventType: "FACILITY.PROFESSIONAL_UPDATED" },
-  "DELETE /api/v1/facilities/:id/professionals/:professionalId": { eventType: "FACILITY.PROFESSIONAL_UNLINKED" },
-
-  // --- Professionals ---
-  "POST /api/v1/professionals": { eventType: "PROFESSIONAL.CREATED" },
-  "PUT /api/v1/professionals/:id": { eventType: "PROFESSIONAL.UPDATED" },
-  "PATCH /api/v1/professionals/:id": { eventType: "PROFESSIONAL.UPDATED" },
-  "DELETE /api/v1/professionals/:id": { eventType: "PROFESSIONAL.DEACTIVATED", severity: "WARNING" },
 
   // --- Territories ---
   "POST /api/v1/territories": { eventType: "TERRITORY.CREATED" },

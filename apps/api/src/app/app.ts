@@ -8,7 +8,6 @@ import { sessions } from "../modules/sessions";
 import { facility } from "../modules/facility";
 import { fieldSuggestions } from "../modules/field-suggestions";
 import { catalog } from "../modules/catalog";
-import { professional } from "../modules/professional";
 import { searchSync } from "../modules/search-sync";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
@@ -145,7 +144,6 @@ const app = new Elysia()
       .use(facility)
       .use(fieldSuggestions)
       .use(catalog)
-      .use(professional)
       .use(searchSync)
       .use(territory)
       .use(maps)

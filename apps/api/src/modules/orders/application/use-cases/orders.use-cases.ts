@@ -63,7 +63,7 @@ function serializeListOrder(order: Awaited<ReturnType<OrderRepository["findAll"]
     orderedAt: iso(order.orderedAt),
     createdAt: order.createdAt.toISOString(),
     facility: order.facility,
-    professional: order.professional,
+    person: order.person,
     seller: order.seller,
     itemCount: order.itemCount,
     itemsTotal: order.itemsTotal,
@@ -91,7 +91,7 @@ function serializeOrder(order: OrderDetailRecord) {
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     facility: order.facility,
-    professional: order.professional,
+    person: order.person,
     seller: order.seller,
     surgeryType: order.surgeryType,
     surgerySubtype: order.surgerySubtype,
@@ -220,7 +220,7 @@ export class CreateOrderUseCase {
   async execute(input: {
     facilityId: number;
     verticalId?: number;
-    professionalId?: number | null;
+    personId?: number | null;
     status?: (typeof CREATE_ORDER_STATUSES)[number];
     type?: (typeof CREATE_ORDER_TYPES)[number];
     notes?: string | null;
@@ -313,7 +313,7 @@ export class CreateOrderUseCase {
       facilityId: input.facilityId,
       verticalId,
       sellerId: input.actor.userId,
-      professionalId: input.professionalId ?? null,
+      personId: input.personId ?? null,
       status: input.status ?? "PENDING",
       type: input.type ?? "SALE",
       notes: input.notes ?? null,

@@ -5,7 +5,7 @@ import {
   deriveFacilityProfileFunnelFields,
   fullSearchSyncWorkflowId,
   mapFacilitySearchDocument,
-  mapProfessionalSearchDocument,
+  mapPersonSearchDocument,
   rebuildSearchIndex,
 } from "./rebuild";
 
@@ -42,7 +42,7 @@ describe("search rebuild", () => {
 
   test("uses deterministic workflow ids for one full target rebuild", () => {
     expect(fullSearchSyncWorkflowId("facilities")).toBe("search-sync-facilities-full");
-    expect(fullSearchSyncWorkflowId("professionals")).toBe("search-sync-professionals-full");
+    expect(fullSearchSyncWorkflowId("persons")).toBe("search-sync-persons-full");
   });
 
   test("maps only safe eligible facility fields", () => {
@@ -122,7 +122,7 @@ describe("search rebuild", () => {
 
   test("maps only safe eligible professional fields", () => {
     expect(
-      mapProfessionalSearchDocument({
+      mapPersonSearchDocument({
         id: 1,
         firstName: "Ana",
         lastName: "Silva",
@@ -172,7 +172,7 @@ describe("search rebuild", () => {
       "_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin",
       "hasLastValidPurchase", "lastValidPurchaseSortAt", "id",
     ]));
-    expect(searchRebuild.PROFESSIONAL_SETTINGS.filterableAttributes).toEqual(
+    expect(searchRebuild.PERSON_SETTINGS.filterableAttributes).toEqual(
       expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"])
     );
   });

@@ -2,12 +2,12 @@ import { z } from "zod";
 import { isFullSearchSyncWorkflowId } from "../../../../infrastructure/temporal/temporal.client";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 
-export type SearchSyncEntity = "facilities" | "professionals" | "orders";
+export type SearchSyncEntity = "facilities" | "persons" | "orders";
 type SearchSyncTarget = Exclude<SearchSyncEntity, "orders">;
 type StartResult = { workflowId: string; runId: string; existing: boolean };
 
 const searchSyncRequestSchema = z.object({
-  entity: z.enum(["facilities", "professionals", "orders"]),
+  entity: z.enum(["facilities", "persons", "orders"]),
 }).strict();
 
 export function parseSearchSyncRequest(input: Record<string, unknown>): { entity: SearchSyncEntity } {

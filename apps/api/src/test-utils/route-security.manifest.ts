@@ -29,6 +29,8 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/access/infrastructure/routes/user-management.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/user-permissions.route.ts": "auth+permission",
 
+  "modules/calendar/infrastructure/routes/calendar.route.ts": "auth+permission",
+
   "modules/sessions/infrastructure/routes/sessions.route.ts": "auth",
   "modules/user/avatar.route.ts": "auth",
 
@@ -40,10 +42,10 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/facility/infrastructure/routes/facilities.route.ts": "auth+permission",
   "modules/facility/infrastructure/routes/map-facilities.route.ts": "auth+permission",
   "modules/field-suggestions/infrastructure/routes/field-suggestions.route.ts": "auth+permission",
+  "modules/interactions/infrastructure/routes/interactions.route.ts": "auth+permission",
   "modules/maps/infrastructure/routes/maps.route.ts": "auth+permission",
   "modules/orders/infrastructure/routes/orders.route.ts": "auth+permission",
   "modules/potential/infrastructure/routes/potential.route.ts": "auth+permission",
-  "modules/professional/infrastructure/routes/professionals.route.ts": "auth+permission",
   "modules/search-sync/infrastructure/routes/search-sync.route.ts": "auth+permission",
   "modules/territory/infrastructure/routes/territories.route.ts": "auth+permission",
   "modules/visits/infrastructure/routes/visits.route.ts": "auth+permission",

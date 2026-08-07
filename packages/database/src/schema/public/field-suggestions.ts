@@ -12,7 +12,8 @@ import {
   fieldSuggestionKindEnum,
   fieldSuggestionStatusEnum,
 } from "./enums";
-import { facilities, professionals } from "./facilities";
+import { facilities } from "./facilities";
+import { persons } from "./persons";
 import { users } from "./users";
 
 /**
@@ -27,8 +28,8 @@ export const fieldSuggestions = pgTable(
     status: fieldSuggestionStatusEnum("status").notNull().default("PENDING"),
     facilityId: bigint("facility_id", { mode: "number" })
       .notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    /** Reserved for a later doctor-target increment; unused in v1. */
-    professionalId: bigint("professional_id", { mode: "number" }).references(() => professionals.id, {
+    /** Optional person target (doctor suggestions). */
+    personId: bigint("person_id", { mode: "number" }).references(() => persons.id, {
       onDelete: "set null",
     }),
     /** Required for FIELD_CHANGE; null for DEACTIVATION. */
@@ -75,9 +76,9 @@ export const fieldSuggestionsRelations = relations(fieldSuggestions, ({ one }) =
     fields: [fieldSuggestions.facilityId],
     references: [facilities.id],
   }),
-  professional: one(professionals, {
-    fields: [fieldSuggestions.professionalId],
-    references: [professionals.id],
+  person: one(persons, {
+    fields: [fieldSuggestions.personId],
+    references: [persons.id],
   }),
   submittedBy: one(users, {
     fields: [fieldSuggestions.submittedByUserId],

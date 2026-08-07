@@ -3,7 +3,7 @@ import { DrizzleOrderRepository } from "./drizzle-order.repository";
 
 describe("DrizzleOrderRepository", () => {
   it("exposes create for order persistence", () => {
-    const repository = new DrizzleOrderRepository({} as never);
+    const repository = new DrizzleOrderRepository();
     expect(typeof repository.create).toBe("function");
   });
 });

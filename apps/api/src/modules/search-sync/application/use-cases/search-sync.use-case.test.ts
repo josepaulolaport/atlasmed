@@ -7,7 +7,7 @@ import {
 
 describe("search sync use cases", () => {
   test("starts full search rebuilds without accepting selective ids", async () => {
-    const started: Array<"facilities" | "professionals"> = [];
+    const started: Array<"facilities" | "persons"> = [];
     const useCase = new StartSearchSyncUseCase({
       start: async (entity) => {
         started.push(entity);

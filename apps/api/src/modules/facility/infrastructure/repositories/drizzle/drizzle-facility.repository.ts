@@ -1,6 +1,5 @@
 import {
   facilities,
-  facilityProfessionals,
   facilityConsultantAssignments,
   clinicalFocuses,
   facilityClinicalFocuses,
@@ -730,32 +729,18 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     );
 
     const [
-      profCounts,
       consultantMap,
       territoryNameById,
       lastVisitAtByFacility,
       clinicalFocusesByFacility,
     ] = await Promise.all([
-      db
-        .select({
-          facilityId: facilityProfessionals.facilityId,
-          count: sql<number>`count(*)::int`,
-        })
-        .from(facilityProfessionals)
-        .where(
-          and(
-            inArray(facilityProfessionals.facilityId, ids),
-            isNull(facilityProfessionals.endedAt)
-          )
-        )
-        .groupBy(facilityProfessionals.facilityId),
       loadConsultantInfo(ids),
       loadTerritoryNames(derivedTerritoryIds),
       loadLastVisitAt(ids, params.userId),
       loadClinicalFocusesByFacilityIds(ids),
     ]);
 
-    const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
+    const countMap = new Map<number, number>();
 
     return {
       facilities: rows.map((row) => {

@@ -1,8 +1,11 @@
 import {
   pgTable,
   text,
+  boolean,
   timestamp,
-  primaryKey
+  primaryKey,
+  bigint,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -11,16 +14,20 @@ import { relations } from "drizzle-orm";
  * Seeded separately from CNES CSV import — schema only here.
  */
 
-export const occupations = pgTable("occupations", {
-  occupationCode: text("occupation_code").primaryKey(),
-  occupationName: text("occupation_name").notNull(),
-  professionalClassification: text("professional_classification"),
-  isHealthOccupation: text("is_health_occupation"),
-  isRegulated: text("is_regulated"),
-  referenceYear: text("reference_year"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+/** CBO occupation catalog (ADR 0004 remake — empty until post-overhaul load). */
+export const occupations = pgTable(
+  "occupations",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    cnesId: text("cnes_id").notNull(),
+    name: text("name").notNull(),
+    isHealthOccupation: boolean("is_health_occupation"),
+    isRegulated: boolean("is_regulated"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [unique("occupations_cnes_id_key").on(t.cnesId)]
+);
 
 export const facilityTypes = pgTable("facility_types", {
   facilityTypeCode: text("facility_type_code").primaryKey(),

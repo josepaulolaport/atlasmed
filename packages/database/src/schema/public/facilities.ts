@@ -22,7 +22,6 @@ import {
   purchaseIntervalSourceEnum,
   purchaseProfileEnum,
   purchaseFunnelStageEnum,
-  contactTypeEnum,
   healthcareProviderTypeEnum,
   conformityRecordStatusEnum,
   facilityLegalDocumentTypeEnum,
@@ -31,7 +30,6 @@ import { territories } from "./territories";
 import { businessVerticals } from "./business-verticals";
 import { users } from "./users";
 import {
-  occupations,
   facilityTypes,
   unitTypes,
   deactivationReasons,
@@ -142,81 +140,6 @@ export const facilities = pgTable(
   ]
 );
 
-export const professionals = pgTable(
-  "professionals",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    firstName: text("first_name").notNull(),
-    lastName: text("last_name").notNull(),
-    fullName: text("full_name"),
-    socialName: text("social_name"),
-    taxId: text("tax_id"),
-    birthDate: timestamp("birth_date"),
-    mobilePhone: text("mobile_phone"),
-    landlinePhone: text("landline_phone"),
-    email: text("email"),
-    websiteUrl: text("website_url"),
-    imageUrl: text("image_url"),
-    favoriteTeam: text("favorite_team"),
-    imageBlurhash: text("image_blurhash"),
-    favoriteSport: text("favorite_sport"),
-    /** Free-text languages spoken, e.g. "Português, Inglês". */
-    languages: text("languages"),
-    hobbies: text("hobbies"),
-    primarySpecialtyLabel: text("primary_specialty_label"),
-    /** Canonical CNES CBO for this person (FK deferred until occupations are seeded). */
-    primaryOccupationCode: text("primary_occupation_code"),
-    /** CNES CO_PROFISSIONAL_SUS for matching. */
-    cnesProfessionalId: text("cnes_professional_id"),
-    crmCouncil: text("crm_council"),
-    crmNumber: text("crm_number"),
-    crmState: text("crm_state"),
-    deletedAt: timestamp("deleted_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    uniqueIndex("professionals_cnes_professional_id_uidx")
-      .on(t.cnesProfessionalId)
-      .where(sql`${t.cnesProfessionalId} IS NOT NULL AND ${t.deletedAt} IS NULL`),
-    index("professionals_deleted_at_idx").on(t.deletedAt),
-    index("professionals_last_name_first_name_idx").on(t.lastName, t.firstName),
-    index("professionals_tax_id_idx").on(t.taxId),
-    index("professionals_primary_occupation_code_idx")
-      .on(t.primaryOccupationCode)
-      .where(sql`${t.primaryOccupationCode} IS NOT NULL`),
-    index("professionals_cnes_professional_id_idx")
-      .on(t.cnesProfessionalId)
-      .where(sql`${t.cnesProfessionalId} IS NOT NULL`),
-  ]
-);
-
-export const professionalNotes = pgTable(
-  "professional_notes",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    userId: bigint("user_id", { mode: "number" })
-      .notNull().references(() => users.id, { onDelete: "cascade" }),
-    professionalId: bigint("professional_id", { mode: "number" })
-      .notNull().references(() => professionals.id, { onDelete: "cascade" }),
-    note: text("note").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    index("professional_notes_professional_id_user_id_created_at_idx").on(
-      t.professionalId,
-      t.userId,
-      t.createdAt
-    ),
-    index("professional_notes_user_id_created_at_idx").on(t.userId, t.createdAt),
-  ]
-);
-
-/**
- * Private facility-scoped field notes for the owning user only —
- * same privacy model as professional_notes (user × facility).
- */
 export const facilityNotes = pgTable(
   "facility_notes",
   {
@@ -265,135 +188,6 @@ export const facilityPhotos = pgTable(
   ]
 );
 
-/**
- * Per-user relationship strength with a CRM professional (1–10).
- * Private to the owning user — same privacy model as professional_notes.
- * Not facility-scoped.
- */
-export const userProfessionalRelationships = pgTable(
-  "user_professional_relationships",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    userId: bigint("user_id", { mode: "number" })
-      .notNull().references(() => users.id, { onDelete: "cascade" }),
-    professionalId: bigint("professional_id", { mode: "number" })
-      .notNull().references(() => professionals.id, { onDelete: "cascade" }),
-    relationshipLevel: smallint("relationship_level").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    uniqueIndex("user_professional_relationships_user_id_professional_id_uidx").on(
-      t.userId,
-      t.professionalId
-    ),
-    index("user_professional_relationships_professional_id_idx").on(t.professionalId),
-    index("user_professional_relationships_user_id_idx").on(t.userId),
-  ]
-);
-
-export const facilityProfessionals = pgTable(
-  "facility_professionals",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    professionalId: bigint("professional_id", { mode: "number" }).notNull().references(() => professionals.id, { onDelete: "cascade" }),
-    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    /** App-level role (LEGACY / MED / …) — not CNES CBO. */
-    occupationCode: text("occupation_code").notNull().default("LEGACY"),
-    specialtyLabel: text("specialty_label"),
-    employmentTypeCode: text("employment_type_code"),
-    isPrescriber: boolean("is_prescriber").notNull().default(false),
-    isBuyer: boolean("is_buyer").notNull().default(false),
-    isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
-    isPartner: boolean("is_partner").notNull().default(false),
-    notes: text("notes"),
-    confirmedAt: timestamp("confirmed_at"),
-    confirmedByUserId: bigint("confirmed_by_user_id", { mode: "number" }).references(() => users.id, {
-      onDelete: "set null",
-    }),
-    endedAt: timestamp("ended_at"),
-    endedByUserId: bigint("ended_by_user_id", { mode: "number" }).references(() => users.id, {
-      onDelete: "set null",
-    }),
-    endReason: text("end_reason"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    uniqueIndex("facility_professionals_facility_id_professional_id_occupation_code_uidx").on(
-      t.facilityId,
-      t.professionalId,
-      t.occupationCode
-    ),
-    index("facility_professionals_professional_id_idx").on(t.professionalId),
-    index("facility_professionals_facility_id_idx").on(t.facilityId),
-    index("facility_professionals_facility_id_confirmed_at_ended_at_idx").on(
-      t.facilityId,
-      t.confirmedAt,
-      t.endedAt
-    ),
-  ]
-);
-
-export const facilityRepresentatives = pgTable(
-  "facility_representatives",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    representativeName: text("representative_name").notNull(),
-    roleTitle: text("role_title"),
-    email: text("email"),
-    taxId: text("tax_id"),
-    /** Legacy single label — derived from role flags on write for back-compat. */
-    contactType: contactTypeEnum("contact_type").notNull().default("PROFESSIONAL"),
-    phone: text("phone"),
-    notes: text("notes"),
-    isPartner: boolean("is_partner").notNull().default(false),
-    isAdministrator: boolean("is_administrator").notNull().default(false),
-    isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
-    isBuyer: boolean("is_buyer").notNull().default(false),
-    isBiller: boolean("is_biller").notNull().default(false),
-    isSecretary: boolean("is_secretary").notNull().default(false),
-    confirmedAt: timestamp("confirmed_at"),
-    confirmedByUserId: bigint("confirmed_by_user_id", { mode: "number" }).references(() => users.id, {
-      onDelete: "set null",
-    }),
-    endedAt: timestamp("ended_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    index("facility_representatives_facility_id_idx").on(t.facilityId),
-    index("facility_representatives_facility_id_ended_at_idx").on(t.facilityId, t.endedAt),
-  ]
-);
-
-/**
- * Per-user relationship strength with a CRM facility representative (1–10).
- * Private to the owning user — mirrors user_professional_relationships.
- */
-export const userRepresentativeRelationships = pgTable(
-  "user_representative_relationships",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    userId: bigint("user_id", { mode: "number" })
-      .notNull().references(() => users.id, { onDelete: "cascade" }),
-    representativeId: bigint("representative_id", { mode: "number" })
-      .notNull().references(() => facilityRepresentatives.id, { onDelete: "cascade" }),
-    relationshipLevel: smallint("relationship_level").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    uniqueIndex("user_representative_relationships_user_id_representative_id_uidx").on(
-      t.userId,
-      t.representativeId
-    ),
-    index("user_representative_relationships_representative_id_idx").on(t.representativeId),
-    index("user_representative_relationships_user_id_idx").on(t.userId),
-  ]
-);
-
 export const facilityConsultantAssignments = pgTable(
   "facility_consultant_assignments",
   {
@@ -420,6 +214,10 @@ export const facilityConsultantAssignments = pgTable(
     uniqueIndex("facility_consultant_assignments_facility_vertical_active_uidx")
       .on(t.facilityId, t.verticalId)
       .where(sql`${t.endedAt} IS NULL`),
+    check(
+      "facility_consultant_assignments_ended_at_gte_started_at_check",
+      sql`${t.endedAt} IS NULL OR ${t.endedAt} >= ${t.startedAt}`
+    ),
   ]
 );
 
@@ -669,8 +467,6 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
     references: [deactivationReasons.deactivationCode],
   }),
   verticalProfiles: many(facilityVerticalProfiles),
-  professionalAssociations: many(facilityProfessionals),
-  representatives: many(facilityRepresentatives),
   consultantAssignments: many(facilityConsultantAssignments),
   healthcareProviderShares: many(facilityHealthcareProviderShares),
   conformityRecords: many(conformityRecords),
@@ -718,84 +514,6 @@ export const facilityClinicalFocusesRelations = relations(
     clinicalFocus: one(clinicalFocuses, {
       fields: [facilityClinicalFocuses.clinicalFocusId],
       references: [clinicalFocuses.id],
-    }),
-  })
-);
-
-export const professionalsRelations = relations(professionals, ({ one, many }) => ({
-  primaryOccupation: one(occupations, {
-    fields: [professionals.primaryOccupationCode],
-    references: [occupations.occupationCode],
-  }),
-  facilityAssociations: many(facilityProfessionals),
-  notes: many(professionalNotes),
-  userRelationships: many(userProfessionalRelationships),
-}));
-
-export const professionalNotesRelations = relations(professionalNotes, ({ one }) => ({
-  user: one(users, { fields: [professionalNotes.userId], references: [users.id] }),
-  professional: one(professionals, {
-    fields: [professionalNotes.professionalId],
-    references: [professionals.id],
-  }),
-}));
-
-export const facilityNotesRelations = relations(facilityNotes, ({ one }) => ({
-  user: one(users, { fields: [facilityNotes.userId], references: [users.id] }),
-  facility: one(facilities, {
-    fields: [facilityNotes.facilityId],
-    references: [facilities.id],
-  }),
-}));
-
-export const userProfessionalRelationshipsRelations = relations(
-  userProfessionalRelationships,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [userProfessionalRelationships.userId],
-      references: [users.id],
-    }),
-    professional: one(professionals, {
-      fields: [userProfessionalRelationships.professionalId],
-      references: [professionals.id],
-    }),
-  })
-);
-
-export const facilityProfessionalsRelations = relations(facilityProfessionals, ({ one }) => ({
-  professional: one(professionals, { fields: [facilityProfessionals.professionalId], references: [professionals.id] }),
-  facility: one(facilities, { fields: [facilityProfessionals.facilityId], references: [facilities.id] }),
-  confirmedBy: one(users, {
-    fields: [facilityProfessionals.confirmedByUserId],
-    references: [users.id],
-    relationName: "FacilityProfessionalConfirmedBy",
-  }),
-  endedBy: one(users, {
-    fields: [facilityProfessionals.endedByUserId],
-    references: [users.id],
-    relationName: "FacilityProfessionalEndedBy",
-  }),
-}));
-
-export const facilityRepresentativesRelations = relations(facilityRepresentatives, ({ one, many }) => ({
-  facility: one(facilities, { fields: [facilityRepresentatives.facilityId], references: [facilities.id] }),
-  confirmedBy: one(users, {
-    fields: [facilityRepresentatives.confirmedByUserId],
-    references: [users.id],
-  }),
-  userRelationships: many(userRepresentativeRelationships),
-}));
-
-export const userRepresentativeRelationshipsRelations = relations(
-  userRepresentativeRelationships,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [userRepresentativeRelationships.userId],
-      references: [users.id],
-    }),
-    representative: one(facilityRepresentatives, {
-      fields: [userRepresentativeRelationships.representativeId],
-      references: [facilityRepresentatives.id],
     }),
   })
 );

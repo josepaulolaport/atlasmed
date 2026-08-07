@@ -15,7 +15,7 @@ export interface AccessGrantRecord {
 /** Legacy grant resource names mapped to canonical values. */
 export const LEGACY_GRANT_RESOURCE_ALIASES: Record<string, string> = {
   CLINIC: "FACILITY",
-  DOCTOR: "PROFESSIONAL",
+  DOCTOR: "PERSON",
 };
 
 export function normalizeGrantResource(resource: string): string {
@@ -27,7 +27,9 @@ export function normalizeGrantResource(resource: string): string {
 export const GRANT_RESOURCE_TO_SUBJECT: Record<string, Subject> = {
   USER: "USER",
   FACILITY: "FACILITY",
-  PROFESSIONAL: "PROFESSIONAL",
+  PERSON: "PERSON",
+  /** Legacy grant resource — maps to PERSON after Slice C. */
+  PROFESSIONAL: "PERSON",
   TERRITORY: "TERRITORY",
   INVITATION: "INVITATION",
   CATALOG: "CATALOG",
@@ -36,7 +38,7 @@ export const GRANT_RESOURCE_TO_SUBJECT: Record<string, Subject> = {
   FIELD_SUGGESTION: "FIELD_SUGGESTION",
   CADASTRO_SUBMISSION: "CADASTRO_SUBMISSION",
   CLINIC: "FACILITY",
-  DOCTOR: "PROFESSIONAL",
+  DOCTOR: "PERSON",
 };
 
 export function grantActionToCaslAction(action: string): Action | null {

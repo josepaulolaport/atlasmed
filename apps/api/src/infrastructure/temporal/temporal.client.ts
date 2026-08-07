@@ -28,7 +28,7 @@ export async function getTemporalClient(): Promise<Client> {
   return clientPromise;
 }
 
-export type SearchSyncEntity = "facilities" | "professionals";
+export type SearchSyncEntity = "facilities" | "persons";
 type StartWorkflowResult = { workflowId: string; runId: string; existing: boolean };
 
 type SearchSyncWorkflowDescriptionHandle = {
@@ -116,7 +116,7 @@ export async function startPurchaseRecurrenceBackfillWorkflow(): Promise<StartWo
 
 export function isFullSearchSyncWorkflowId(workflowId: string): boolean {
   return workflowId === fullSearchSyncWorkflowId("facilities")
-    || workflowId === fullSearchSyncWorkflowId("professionals")
+    || workflowId === fullSearchSyncWorkflowId("persons")
     || workflowId === purchaseRecurrenceBackfillWorkflowId();
 }
 

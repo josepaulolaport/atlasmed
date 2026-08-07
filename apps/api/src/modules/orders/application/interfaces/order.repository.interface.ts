@@ -27,7 +27,7 @@ export interface OrderListRecord {
   idAvulsaEmultec: number | null;
   verticalId: number;
   facility: OrderIdentity;
-  professional: OrderIdentity | null;
+  person: OrderIdentity | null;
   seller: OrderIdentity | null;
   status: OrderStatus;
   type: string;
@@ -45,7 +45,7 @@ export interface OrderDetailRecord {
   idAvulsaEmultec: number | null;
   verticalId: number;
   facility: OrderIdentity;
-  professional: OrderIdentity | null;
+  person: OrderIdentity | null;
   seller: OrderIdentity | null;
   status: OrderStatus;
   type: string;
@@ -94,7 +94,7 @@ export interface CreateOrderInput {
   facilityId: number;
   verticalId: number;
   sellerId: number | null;
-  professionalId?: number | null;
+  personId?: number | null;
   status?: OrderStatus;
   type?: string;
   notes?: string | null;

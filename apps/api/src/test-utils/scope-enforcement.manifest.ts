@@ -44,6 +44,11 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope", "facility"],
   },
 
+  "modules/calendar/application/use-cases/calendar.use-cases.ts": {
+    kind: "inline-scope",
+    patterns: ["scope.isGlobal", "facilityIds"],
+  },
+
   "modules/facility/application/use-cases/conformity.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
@@ -53,10 +58,6 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope"],
   },
   "modules/facility/application/use-cases/cadastro-submission.use-cases.ts": {
-    kind: "assert-id",
-    patterns: ["assertResourceInScope"],
-  },
-  "modules/facility/application/use-cases/facility-professional.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
   },
@@ -73,10 +74,6 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope"],
   },
   "modules/facility/application/use-cases/facility-photo.use-cases.ts": {
-    kind: "assert-id",
-    patterns: ["assertResourceInScope"],
-  },
-  "modules/facility/application/use-cases/facility-representative.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
   },
@@ -99,6 +96,11 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope", "facilityIds"],
   },
 
+  "modules/interactions/application/use-cases/interaction.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope", "facility"],
+  },
+
   "modules/orders/application/use-cases/orders.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope", "facilityIds"],
@@ -107,11 +109,6 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
   "modules/potential/application/use-cases/potential.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
-  },
-
-  "modules/professional/application/use-cases/professional.use-cases.ts": {
-    kind: "assert-id",
-    patterns: ["assertResourceInScope", "assertProfessionalAccessible", "facilityIds"],
   },
 
   "modules/territory/application/use-cases/territory-boundary.use-cases.ts": {

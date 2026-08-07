@@ -74,13 +74,7 @@ export const purchaseFunnelStageEnum = pgEnum(
   PURCHASE_FUNNEL_STAGES,
 );
 
-export const contactTypeEnum = pgEnum("contact_type", [
-  "PROFESSIONAL",
-  "DECISOR",
-  "COMPRADOR",
-]);
-
-/** User×professional relationship strength on a 1–10 scale. */
+/** User×person relationship strength on a 1–10 scale. */
 export const RELATIONSHIP_LEVEL_MIN = 1;
 export const RELATIONSHIP_LEVEL_MAX = 10;
 

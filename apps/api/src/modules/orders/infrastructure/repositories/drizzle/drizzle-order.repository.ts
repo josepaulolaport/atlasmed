@@ -3,9 +3,9 @@ import {
   facilityVerticalProfiles,
   orderItems,
   orders,
+  persons,
   productVerticals,
   products,
-  professionals,
   users,
 } from "@atlasmed/database";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
@@ -65,10 +65,9 @@ export class DrizzleOrderRepository implements OrderRepository {
           freight: orders.freight,
           facilityId: facilities.id,
           facilityName: facilities.displayName,
-          professionalId: professionals.id,
-          professionalFirstName: professionals.firstName,
-          professionalLastName: professionals.lastName,
-          professionalFullName: professionals.fullName,
+          personId: persons.id,
+          personFirstName: persons.firstName,
+          personLastName: persons.lastName,
           sellerId: users.id,
           sellerFirstName: users.firstName,
           sellerLastName: users.lastName,
@@ -77,16 +76,11 @@ export class DrizzleOrderRepository implements OrderRepository {
         })
         .from(orders)
         .innerJoin(facilities, eq(facilities.id, orders.facilityId))
-        .leftJoin(professionals, eq(professionals.id, orders.professionalId))
+        .leftJoin(persons, eq(persons.id, orders.personId))
         .leftJoin(users, eq(users.id, orders.sellerId))
         .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
         .where(where)
-        .groupBy(
-          orders.id,
-          facilities.id,
-          professionals.id,
-          users.id
-        )
+        .groupBy(orders.id, facilities.id, persons.id, users.id)
         .orderBy(desc(orders.orderedAt), desc(orders.createdAt))
         .offset(skip)
         .limit(input.limit),
@@ -108,14 +102,12 @@ export class DrizzleOrderRepository implements OrderRepository {
         createdAt: row.createdAt,
         freight: Number(row.freight),
         facility: { id: row.facilityId, name: row.facilityName },
-        professional: row.professionalId
+        person: row.personId
           ? {
-              id: row.professionalId,
-              name: personName(
-                row.professionalFirstName,
-                row.professionalLastName,
-                row.professionalFullName
-              ) ?? String(row.professionalId),
+              id: row.personId,
+              name:
+                personName(row.personFirstName, row.personLastName, null) ??
+                String(row.personId),
             }
           : null,
         seller: row.sellerId
@@ -169,17 +161,16 @@ export class DrizzleOrderRepository implements OrderRepository {
         order: orders,
         facilityId: facilities.id,
         facilityName: facilities.displayName,
-        professionalId: professionals.id,
-        professionalFirstName: professionals.firstName,
-        professionalLastName: professionals.lastName,
-        professionalFullName: professionals.fullName,
+        personId: persons.id,
+        personFirstName: persons.firstName,
+        personLastName: persons.lastName,
         sellerId: users.id,
         sellerFirstName: users.firstName,
         sellerLastName: users.lastName,
       })
       .from(orders)
       .innerJoin(facilities, eq(facilities.id, orders.facilityId))
-      .leftJoin(professionals, eq(professionals.id, orders.professionalId))
+      .leftJoin(persons, eq(persons.id, orders.personId))
       .leftJoin(users, eq(users.id, orders.sellerId))
       .where(eq(orders.id, id))
       .limit(1);
@@ -214,14 +205,12 @@ export class DrizzleOrderRepository implements OrderRepository {
       expenseAuthorizedById: order.order.expenseAuthorizedById,
       expenseAuthorizedAt: order.order.expenseAuthorizedAt,
       facility: { id: order.facilityId, name: order.facilityName },
-      professional: order.professionalId
+      person: order.personId
         ? {
-            id: order.professionalId,
-            name: personName(
-              order.professionalFirstName,
-              order.professionalLastName,
-              order.professionalFullName
-            ) ?? String(order.professionalId),
+            id: order.personId,
+            name:
+              personName(order.personFirstName, order.personLastName, null) ??
+              String(order.personId),
           }
         : null,
       seller: order.sellerId
@@ -306,7 +295,7 @@ export class DrizzleOrderRepository implements OrderRepository {
           facilityId: input.facilityId,
           verticalId: input.verticalId,
           sellerId: input.sellerId,
-          professionalId: input.professionalId ?? null,
+          personId: input.personId ?? null,
           status: (input.status ?? "PENDING") as OrderStatus,
           type: (input.type ?? "SALE") as "SALE" | "CONSIGNMENT" | "DONATION" | "OTHER",
           notes: input.notes ?? null,

@@ -9,7 +9,7 @@ export interface FieldSuggestionRecord {
   status: FieldSuggestionStatus;
   facilityId: number;
   facilityName: string;
-  professionalId: number | null;
+  personId: number | null;
   fieldKey: string | null;
   currentValue: unknown;
   proposedValue: unknown;

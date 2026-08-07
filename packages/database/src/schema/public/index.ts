@@ -7,6 +7,7 @@ export * from "./cnes-lookups";
 export * from "./clinical-focuses";
 export * from "./admin-geography";
 export * from "./facilities";
+export * from "./persons";
 export * from "./cadastro-submissions";
 export * from "./field-suggestions";
 export * from "./catalog";

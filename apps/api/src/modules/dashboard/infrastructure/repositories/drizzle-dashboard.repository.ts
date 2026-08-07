@@ -1,7 +1,6 @@
 import { db } from "../../../../infrastructure/database/db";
 import {
   facilityVerticalProfiles,
-  facilityProfessionals,
   facilities,
   territories,
   userTerritoryAssignments,
@@ -77,35 +76,12 @@ export class DrizzleDashboardRepository {
     };
   }
 
-  async countDoctors(input: {
+  /** TODO(ADR-0004): count distinct persons via person_facilities after schema lands. */
+  async countDoctors(_input: {
     verticalIds: number[];
     facilityIds: number[] | null;
   }): Promise<number> {
-    if (input.verticalIds.length === 0) return 0;
-
-    const joinCondition = and(
-      eq(facilityVerticalProfiles.facilityId, facilityProfessionals.facilityId),
-      inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
-    );
-
-    if (input.facilityIds !== null && input.facilityIds.length === 0) {
-      return 0;
-    }
-
-    const where =
-      input.facilityIds === null
-        ? undefined
-        : inArray(facilityProfessionals.facilityId, input.facilityIds);
-
-    const [row] = await db
-      .select({
-        n: sql<number>`COUNT(DISTINCT ${facilityProfessionals.professionalId})::int`,
-      })
-      .from(facilityProfessionals)
-      .innerJoin(facilityVerticalProfiles, joinCondition)
-      .where(where);
-
-    return Number(row?.n ?? 0);
+    return 0;
   }
 
   /** Territories assigned to the user that belong to any of the verticals. */

@@ -57,7 +57,7 @@ export class DrizzleFieldSuggestionRepository implements FieldSuggestionReposito
       status: row.suggestion.status,
       facilityId: row.suggestion.facilityId,
       facilityName: row.facilityName ?? "",
-      professionalId: row.suggestion.professionalId,
+      personId: row.suggestion.personId,
       fieldKey: row.suggestion.fieldKey,
       currentValue: row.suggestion.currentValue,
       proposedValue: row.suggestion.proposedValue,

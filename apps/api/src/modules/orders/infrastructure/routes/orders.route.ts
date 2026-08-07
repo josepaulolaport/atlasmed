@@ -121,7 +121,7 @@ const createOrderRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) 
       return useCases.createOrder().execute({
         facilityId: body.facilityId,
         verticalId: body.verticalId,
-        professionalId: body.professionalId ?? null,
+        personId: body.personId ?? null,
         status: body.status,
         type: body.type,
         notes: body.notes,
@@ -144,7 +144,7 @@ const createOrderRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) 
       body: t.Object({
         facilityId: t.Number({ minimum: 1 }),
         verticalId: t.Optional(t.Number({ minimum: 1 })),
-        professionalId: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
+        personId: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
         status: t.Optional(t.Union([t.Literal("DRAFT"), t.Literal("PENDING")])),
         type: t.Optional(
           t.Union([

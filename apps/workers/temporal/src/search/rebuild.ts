@@ -1,10 +1,8 @@
 import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   facilities,
-  facilityProfessionals,
   facilityVerticalProfiles,
   municipalities,
-  professionals,
   states,
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "./normalize-search-filter";
@@ -18,7 +16,7 @@ import { Meilisearch } from "meilisearch";
 import { environment } from "@atlasmed/config";
 import { db } from "../infrastructure/db";
 
-export type SearchSyncTarget = "facilities" | "professionals";
+export type SearchSyncTarget = "facilities" | "persons";
 
 export type FacilityProfileFunnelData = {
   verticalId: number;
@@ -55,7 +53,7 @@ export type FacilitySearchDocument = {
   _geo?: { lat: number; lng: number };
 };
 
-export type ProfessionalSearchDocument = {
+export type PersonSearchDocument = {
   /** Meilisearch primary key (decimal string of CRM bigint id). */
   id: string;
   name: string;
@@ -179,7 +177,7 @@ export function mapFacilitySearchDocument(row: {
   };
 }
 
-export function mapProfessionalSearchDocument(row: {
+export function mapPersonSearchDocument(row: {
   id: number;
   firstName: string;
   lastName: string;
@@ -192,7 +190,7 @@ export function mapProfessionalSearchDocument(row: {
   crmState: string | null;
   activeAssociations: Array<{ facilityId: number; territoryId: number | null }>;
   deletedAt: Date | null;
-}): ProfessionalSearchDocument | null {
+}): PersonSearchDocument | null {
   if (row.deletedAt) return null;
 
   const activeFacilityIds = [...new Set(row.activeAssociations.map((association) => association.facilityId))].sort(
@@ -389,7 +387,7 @@ async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<Active
   }
   return { verticalIds, territoryIds, funnelData };
 }
-export const PROFESSIONAL_SETTINGS = {
+export const PERSON_SETTINGS = {
   searchableAttributes: ["name", "socialName", "taxId", "specialty", "crmCouncil", "crmNumber", "crmState"],
   filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds", "crmState"],
 };
@@ -435,79 +433,10 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
   }
 }
 
-async function loadActiveProfessionalAssociations(
-  professionalIds: number[]
-): Promise<Map<number, Array<{ facilityId: number; territoryId: number | null }>>> {
-  if (professionalIds.length === 0) return new Map();
-
-  const rows = await db
-    .select({
-      professionalId: facilityProfessionals.professionalId,
-      facilityId: facilityProfessionals.facilityId,
-      territoryId: facilityVerticalProfiles.managerZoneId,
-    })
-    .from(facilityProfessionals)
-    .innerJoin(facilities, eq(facilityProfessionals.facilityId, facilities.id))
-    .leftJoin(
-      facilityVerticalProfiles,
-      and(
-        eq(facilityVerticalProfiles.facilityId, facilities.id),
-        eq(facilityVerticalProfiles.isActive, true)
-      )
-    )
-    .where(and(
-      inArray(facilityProfessionals.professionalId, professionalIds),
-      isNull(facilityProfessionals.endedAt),
-      isNull(facilities.deactivatedAt)
-    ));
-
-  const associations = new Map<number, Array<{ facilityId: number; territoryId: number | null }>>();
-  for (const row of rows) {
-    const current = associations.get(row.professionalId) ?? [];
-    const already = current.some(
-      (entry) => entry.facilityId === row.facilityId && entry.territoryId === row.territoryId
-    );
-    if (!already) {
-      current.push({ facilityId: row.facilityId, territoryId: row.territoryId });
-      associations.set(row.professionalId, current);
-    }
-  }
-  return associations;
-}
-
-async function* professionalPages(): AsyncGenerator<ProfessionalSearchDocument[]> {
-  let lastId: number | undefined;
-
-  while (true) {
-    const rows = await db
-      .select({
-        id: professionals.id,
-        firstName: professionals.firstName,
-        lastName: professionals.lastName,
-        fullName: professionals.fullName,
-        socialName: professionals.socialName,
-        taxId: professionals.taxId,
-        primarySpecialtyLabel: professionals.primarySpecialtyLabel,
-        crmCouncil: professionals.crmCouncil,
-        crmNumber: professionals.crmNumber,
-        crmState: professionals.crmState,
-        deletedAt: professionals.deletedAt,
-      })
-      .from(professionals)
-      .where(and(isNull(professionals.deletedAt), lastId ? gt(professionals.id, lastId) : undefined))
-      .orderBy(asc(professionals.id))
-      .limit(PAGE_SIZE);
-    if (rows.length === 0) return;
-
-    lastId = rows.at(-1)!.id;
-    const associations = await loadActiveProfessionalAssociations(rows.map((row) => row.id));
-    yield rows
-      .map((row) => mapProfessionalSearchDocument({
-        ...row,
-        activeAssociations: associations.get(row.id) ?? [],
-      }))
-      .filter((row): row is ProfessionalSearchDocument => row !== null);
-  }
+// TODO(ADR-0004): rebuild person search documents from persons + person_facilities.
+async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
+  return;
+  yield [];
 }
 
 export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<void> {
@@ -517,7 +446,7 @@ export async function rebuildFullSearchIndex(target: SearchSyncTarget): Promise<
     target,
     temporaryIndex,
     search: createSearchClient(),
-    settings: target === "facilities" ? FACILITY_SETTINGS : PROFESSIONAL_SETTINGS,
-    pages: target === "facilities" ? facilityPages() : professionalPages(),
+    settings: target === "facilities" ? FACILITY_SETTINGS : PERSON_SETTINGS,
+    pages: target === "facilities" ? facilityPages() : personPages(),
   });
 }
