@@ -89,6 +89,7 @@ class FacilityRepresentativesRepository
     String? roleTitle,
     String? email,
     String? mobilePhone,
+    List<String>? roleCodes,
     bool isPartner = false,
     bool isAdministrator = false,
     bool isDecisionMaker = false,
@@ -113,19 +114,22 @@ class FacilityRepresentativesRepository
     );
 
     var api = _parseMutationApi(response, 'criar');
-    final roleCodes = AdministrativeRoleCodes.fromFlags(
-      isPartner: isPartner,
-      isAdministrator: isAdministrator,
-      isDecisionMaker: isDecisionMaker,
-      isBuyer: isBuyer,
-      isBiller: isBiller,
-      isSecretary: isSecretary,
+    final codes = PersonFacilityRoleCodes.sortedList(
+      roleCodes ??
+          [
+            if (isPartner) PersonFacilityRoleCodes.partner,
+            if (isAdministrator) PersonFacilityRoleCodes.administrator,
+            if (isDecisionMaker) PersonFacilityRoleCodes.decisionMaker,
+            if (isBuyer) PersonFacilityRoleCodes.buyer,
+            if (isBiller) PersonFacilityRoleCodes.biller,
+            if (isSecretary) PersonFacilityRoleCodes.secretary,
+          ],
     );
-    if (roleCodes.isNotEmpty) {
+    if (codes.isNotEmpty) {
       try {
         api = await _putAdminRoles(
           personFacilityId: api.personFacilityId,
-          roleCodes: roleCodes,
+          roleCodes: codes,
         );
       } on FacilityRepresentativesException {
         throw const FacilityRepresentativesException(
@@ -144,25 +148,14 @@ class FacilityRepresentativesRepository
     String? roleTitle,
     String? email,
     String? mobilePhone,
-    bool? isPartner,
-    bool? isAdministrator,
-    bool? isDecisionMaker,
-    bool? isBuyer,
-    bool? isBiller,
-    bool? isSecretary,
+    List<String>? roleCodes,
     int? relationshipLevel,
     bool clearRelationshipLevel = false,
   }) async {
     // Relationship score has no administrative-contacts field.
     // Former user_representative_relationships PATCH is gone — fail closed
     // so UI (representative_detail_screen) reverts optimistic local state.
-    final rolesProvided =
-        isPartner != null ||
-        isAdministrator != null ||
-        isDecisionMaker != null ||
-        isBuyer != null ||
-        isBiller != null ||
-        isSecretary != null;
+    final rolesProvided = roleCodes != null;
     final onlyRelationship =
         firstName == null &&
         lastName == null &&
@@ -188,14 +181,7 @@ class FacilityRepresentativesRepository
     if (onlyRoles) {
       api = await _putAdminRoles(
         personFacilityId: representativeId,
-        roleCodes: AdministrativeRoleCodes.fromFlags(
-          isPartner: isPartner ?? false,
-          isAdministrator: isAdministrator ?? false,
-          isDecisionMaker: isDecisionMaker ?? false,
-          isBuyer: isBuyer ?? false,
-          isBiller: isBiller ?? false,
-          isSecretary: isSecretary ?? false,
-        ),
+        roleCodes: PersonFacilityRoleCodes.sortedList(roleCodes),
       );
     } else {
       final body = <String, Object?>{
@@ -216,18 +202,11 @@ class FacilityRepresentativesRepository
       );
 
       api = _parseMutationApi(response, 'atualizar');
-      if (rolesProvided) {
+      if (roleCodes != null) {
         try {
           api = await _putAdminRoles(
             personFacilityId: representativeId,
-            roleCodes: AdministrativeRoleCodes.fromFlags(
-              isPartner: isPartner ?? false,
-              isAdministrator: isAdministrator ?? false,
-              isDecisionMaker: isDecisionMaker ?? false,
-              isBuyer: isBuyer ?? false,
-              isBiller: isBiller ?? false,
-              isSecretary: isSecretary ?? false,
-            ),
+            roleCodes: PersonFacilityRoleCodes.sortedList(roleCodes),
           );
         } on FacilityRepresentativesException {
           throw const FacilityRepresentativesException(

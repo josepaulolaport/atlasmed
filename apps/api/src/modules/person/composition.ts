@@ -1,10 +1,12 @@
 import { searchService } from "../../infrastructure/search/search.service";
 import { DrizzleHealthcareProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-professional.repository";
 import { DrizzlePersonFacilityProjectionRepository } from "./infrastructure/repositories/drizzle/drizzle-person-facility-projection.repository";
+import { DrizzlePersonFacilityRoleCatalogRepository } from "./infrastructure/repositories/drizzle/drizzle-person-facility-role-catalog.repository";
 import { DrizzlePersonNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-person-note.repository";
 import { DrizzlePersonRepository } from "./infrastructure/repositories/drizzle/drizzle-person.repository";
 import { DrizzleUserPersonRelationshipRepository } from "./infrastructure/repositories/drizzle/drizzle-user-person-relationship.repository";
 import { ListHealthcareProfessionalsUseCase } from "./application/use-cases/list-healthcare-professionals.use-case";
+import { ListPersonFacilityRolesUseCase } from "./application/use-cases/list-person-facility-roles.use-case";
 import {
   CreatePersonNoteUseCase,
   ListPersonNotesUseCase,
@@ -27,6 +29,7 @@ import {
 } from "./application/use-cases/user-person-relationship.use-cases";
 
 const projectionRepository = new DrizzlePersonFacilityProjectionRepository();
+const roleCatalogRepository = new DrizzlePersonFacilityRoleCatalogRepository();
 const personNoteRepository = new DrizzlePersonNoteRepository();
 const personRepository = new DrizzlePersonRepository();
 const userPersonRelationshipRepository =
@@ -44,7 +47,12 @@ export const personUseCases = {
   patchFacilityProjection: () =>
     new PatchPersonFacilityProjectionUseCase({ repository: projectionRepository }),
   replaceFacilityProjectionRoles: () =>
-    new ReplacePersonFacilityRolesUseCase({ repository: projectionRepository }),
+    new ReplacePersonFacilityRolesUseCase({
+      repository: projectionRepository,
+      roleCatalogRepository,
+    }),
+  listPersonFacilityRoles: () =>
+    new ListPersonFacilityRolesUseCase({ roleCatalogRepository }),
 
   getPerson: () => new GetPersonUseCase({ personRepository }),
   patchPerson: () => new PatchPersonUseCase({ personRepository }),

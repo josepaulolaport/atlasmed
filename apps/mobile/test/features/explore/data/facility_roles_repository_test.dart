@@ -80,10 +80,7 @@ void main() {
         initials: 'JS',
         hue: 1,
       ),
-      isPartner: false,
-      isPrescriber: true,
-      isBuyer: false,
-      isDecisionMaker: true,
+      roleCodes: ['PRESCRIBER', 'DECISION_MAKER'],
     );
 
     expect(client.requests.single.method, RepositoryHttpMethod.put);
@@ -92,7 +89,7 @@ void main() {
       '/api/v1/facilities/1/healthcare-professionals/10/roles',
     );
     expect(client.requests.single.body, {
-      'roleCodes': ['PRESCRIBER', 'DECISION_MAKER'],
+      'roleCodes': ['DECISION_MAKER', 'PRESCRIBER'],
     });
     expect(updated.isPrescriber, isTrue);
     expect(updated.isDecisionMaker, isTrue);
@@ -106,10 +103,7 @@ void main() {
           initials: 'S',
           hue: 1,
         ),
-        isPartner: false,
-        isPrescriber: true,
-        isBuyer: false,
-        isDecisionMaker: false,
+        roleCodes: ['PRESCRIBER'],
       ),
       throwsA(isA<FacilityAssociateException>()),
     );
@@ -140,15 +134,14 @@ void main() {
     final doctor = await repo.createAndAssociateDoctor(
       firstName: 'João',
       lastName: 'Silva',
-      isPrescriber: true,
-      isBuyer: true,
+      roleCodes: ['PRESCRIBER', 'BUYER'],
     );
 
     expect(client.requests, hasLength(2));
     expect(client.requests[0].method, RepositoryHttpMethod.post);
     expect(client.requests[1].method, RepositoryHttpMethod.put);
     expect(client.requests[1].body, {
-      'roleCodes': ['PRESCRIBER', 'BUYER'],
+      'roleCodes': ['BUYER', 'PRESCRIBER'],
     });
     expect(doctor.isPrescriber, isTrue);
     expect(doctor.isBuyer, isTrue);
@@ -192,8 +185,7 @@ void main() {
     final created = await createRepo.create(
       firstName: 'Ana',
       lastName: 'Costa',
-      isAdministrator: true,
-      isBiller: true,
+      roleCodes: ['ADMINISTRATOR', 'BILLER'],
     );
     expect(createClient.requests[1].method, RepositoryHttpMethod.put);
     expect(
@@ -225,7 +217,7 @@ void main() {
     );
     final updated = await updateRepo.updateRepresentative(
       representativeId: 11,
-      isSecretary: true,
+      roleCodes: ['SECRETARY'],
     );
     expect(updateClient.requests.single.method, RepositoryHttpMethod.put);
     expect(updateClient.requests.single.body, {

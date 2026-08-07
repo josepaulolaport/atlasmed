@@ -44,6 +44,7 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/facility/infrastructure/routes/person-projections.route.ts": "auth+permission",
   "modules/person/infrastructure/routes/persons.route.ts": "auth+permission",
   "modules/person/infrastructure/routes/healthcare-professionals.route.ts": "auth+permission",
+  "modules/person/infrastructure/routes/person-facility-roles.route.ts": "auth+permission",
   "modules/field-suggestions/infrastructure/routes/field-suggestions.route.ts": "auth+permission",
   "modules/interactions/infrastructure/routes/interactions.route.ts": "auth+permission",
   "modules/maps/infrastructure/routes/maps.route.ts": "auth+permission",

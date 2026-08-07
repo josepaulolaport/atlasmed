@@ -36,6 +36,22 @@ function baseRow(
   };
 }
 
+const ACTIVE_ROLE_CATALOG = [
+  { code: "PRESCRIBER", name: "Prescritor" },
+  { code: "BUYER", name: "Comprador" },
+  { code: "DECISION_MAKER", name: "Decisor" },
+  { code: "PARTNER", name: "Parceiro" },
+  { code: "ADMINISTRATOR", name: "Administrador" },
+  { code: "BILLER", name: "Faturamento" },
+  { code: "SECRETARY", name: "Secretário(a)" },
+];
+
+function fakeRoleCatalog() {
+  return {
+    listActive: async () => ACTIVE_ROLE_CATALOG,
+  };
+}
+
 function fakeRepo(state: {
   affiliation?: { id: number; facilityId: number; personId: number } | null;
   person?: { id: number; deletedAt: Date | null } | null;
@@ -187,7 +203,10 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
         roleCodes: ["PARTNER"],
       }),
     });
-    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    const uc = new ReplacePersonFacilityRolesUseCase({
+      repository: repo,
+      roleCatalogRepository: fakeRoleCatalog(),
+    });
     const result = await uc.execute({
       facilityId: 1,
       personFacilityId: 10,
@@ -202,20 +221,43 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
     expect(result.roleCodes).toEqual(["PRESCRIBER", "BUYER"]);
   });
 
-  it("rejects role codes outside the classification allow-list", async () => {
+  it("allows any seeded catalog role regardless of classification", async () => {
     const repo = fakeRepo({
       row: baseRow({
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
-    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    const uc = new ReplacePersonFacilityRolesUseCase({
+      repository: repo,
+      roleCatalogRepository: fakeRoleCatalog(),
+    });
+    const result = await uc.execute({
+      facilityId: 1,
+      personFacilityId: 10,
+      classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
+      scope: createGlobalScopeContext(),
+      roleCodes: ["PRESCRIBER", "SECRETARY"],
+    });
+    expect(result.roleCodes).toEqual(["PRESCRIBER", "SECRETARY"]);
+  });
+
+  it("rejects unknown role codes", async () => {
+    const repo = fakeRepo({
+      row: baseRow({
+        classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
+      }),
+    });
+    const uc = new ReplacePersonFacilityRolesUseCase({
+      repository: repo,
+      roleCatalogRepository: fakeRoleCatalog(),
+    });
     expect(
       uc.execute({
         facilityId: 1,
         personFacilityId: 10,
         classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
         scope: createGlobalScopeContext(),
-        roleCodes: ["PRESCRIBER", "SECRETARY"],
+        roleCodes: ["PRESCRIBER", "NOT_A_ROLE"],
       })
     ).rejects.toBeInstanceOf(ValidationError);
     expect(repo.replacedRoles).toEqual([]);
@@ -228,7 +270,10 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
         classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
       }),
     });
-    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    const uc = new ReplacePersonFacilityRolesUseCase({
+      repository: repo,
+      roleCatalogRepository: fakeRoleCatalog(),
+    });
     expect(
       uc.execute({
         facilityId: 1,
@@ -247,7 +292,10 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
-    const uc = new ReplacePersonFacilityRolesUseCase({ repository: repo });
+    const uc = new ReplacePersonFacilityRolesUseCase({
+      repository: repo,
+      roleCatalogRepository: fakeRoleCatalog(),
+    });
     expect(
       uc.execute({
         facilityId: 1,

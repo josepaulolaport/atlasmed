@@ -19,10 +19,7 @@ class ProfessionalRoster {
     this.crm,
     this.phone,
     this.email,
-    this.isPartner = false,
-    this.isPrescriber = false,
-    this.isBuyer = false,
-    this.isDecisionMaker = false,
+    this.roleCodes = const [],
     this.roleBadge,
     this.education,
     this.birthdayLabel,
@@ -49,13 +46,18 @@ class ProfessionalRoster {
   final String? phone;
   final String? email;
 
-  /// Mapped from projection [FacilityProfessionalItemDTO.roleCodes].
-  final bool isPartner;
-  final bool isPrescriber;
-  final bool isBuyer;
-  final bool isDecisionMaker;
+  /// Projection `roleCodes` (source of truth for facility roles).
+  final List<String> roleCodes;
 
-  /// Small highlight badge, e.g. "DECISORA", "NOVA".
+  bool get isPartner =>
+      roleCodes.contains(PersonFacilityRoleCodes.partner);
+  bool get isPrescriber =>
+      roleCodes.contains(PersonFacilityRoleCodes.prescriber);
+  bool get isBuyer => roleCodes.contains(PersonFacilityRoleCodes.buyer);
+  bool get isDecisionMaker =>
+      roleCodes.contains(PersonFacilityRoleCodes.decisionMaker);
+
+  /// Small highlight badge, e.g. "DECISOR", "NOVA".
   final String? roleBadge;
 
   /// "Formação" — no backing field yet.
@@ -70,15 +72,15 @@ class ProfessionalRoster {
   /// "Interesses" — not on projection DTO yet.
   final String? interests;
 
-  /// Most recent note — person notes API not landed.
+  /// Most recent note — person notes API.
   final String? noteText;
 
-  /// Relationship score — person relationship API not landed.
+  /// Relationship score — person relationship API.
   final int? relationshipScore;
 
   factory ProfessionalRoster.fromRosterItem(FacilityProfessionalItemDTO item) {
     final name = item.displayName;
-    final roles = HealthcareRoleCodes.toFlags(item.roleCodes);
+    final codes = PersonFacilityRoleCodes.sortedList(item.roleCodes);
     return ProfessionalRoster(
       id: item.personId,
       personFacilityId: item.personFacilityId,
@@ -88,11 +90,10 @@ class ProfessionalRoster {
       specialty: item.roleTitle,
       phone: item.phone,
       email: item.email,
-      isPartner: roles.isPartner,
-      isPrescriber: roles.isPrescriber,
-      isBuyer: roles.isBuyer,
-      isDecisionMaker: roles.isDecisionMaker,
-      roleBadge: roles.isDecisionMaker ? 'DECISOR' : null,
+      roleCodes: codes,
+      roleBadge: codes.contains(PersonFacilityRoleCodes.decisionMaker)
+          ? 'DECISOR'
+          : null,
     );
   }
 
@@ -106,10 +107,7 @@ class ProfessionalRoster {
     String? crm,
     String? phone,
     String? email,
-    bool? isPartner,
-    bool? isPrescriber,
-    bool? isBuyer,
-    bool? isDecisionMaker,
+    List<String>? roleCodes,
     String? roleBadge,
     bool clearRoleBadge = false,
     String? education,
@@ -129,10 +127,7 @@ class ProfessionalRoster {
       crm: crm ?? this.crm,
       phone: phone ?? this.phone,
       email: email ?? this.email,
-      isPartner: isPartner ?? this.isPartner,
-      isPrescriber: isPrescriber ?? this.isPrescriber,
-      isBuyer: isBuyer ?? this.isBuyer,
-      isDecisionMaker: isDecisionMaker ?? this.isDecisionMaker,
+      roleCodes: roleCodes ?? this.roleCodes,
       roleBadge: clearRoleBadge ? null : (roleBadge ?? this.roleBadge),
       education: education ?? this.education,
       birthdayLabel: birthdayLabel ?? this.birthdayLabel,

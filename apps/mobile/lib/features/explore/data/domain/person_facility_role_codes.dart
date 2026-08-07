@@ -1,101 +1,52 @@
-/// Facility-scoped person role codes (ADR 0004 §5.12).
+/// Facility-scoped person role codes (ADR 0004 §5.12 seed).
 ///
-/// Healthcare allow: PARTNER, PRESCRIBER, BUYER, DECISION_MAKER.
-/// Admin allow: PARTNER, ADMINISTRATOR, DECISION_MAKER, BUYER, BILLER, SECRETARY.
-abstract final class HealthcareRoleCodes {
+/// Prefer catalog names from `GET /person-facility-roles` in UI.
+/// [fallbackName] matches seed pt-BR when catalog is unavailable.
+abstract final class PersonFacilityRoleCodes {
   static const partner = 'PARTNER';
   static const prescriber = 'PRESCRIBER';
   static const buyer = 'BUYER';
   static const decisionMaker = 'DECISION_MAKER';
-
-  static List<String> fromFlags({
-    required bool isPartner,
-    required bool isPrescriber,
-    required bool isBuyer,
-    required bool isDecisionMaker,
-  }) => [
-    if (isPartner) partner,
-    if (isPrescriber) prescriber,
-    if (isBuyer) buyer,
-    if (isDecisionMaker) decisionMaker,
-  ];
-
-  static HealthcareRoleFlags toFlags(Iterable<String> codes) {
-    final set = codes.map((c) => c.toUpperCase()).toSet();
-    return HealthcareRoleFlags(
-      isPartner: set.contains(partner),
-      isPrescriber: set.contains(prescriber),
-      isBuyer: set.contains(buyer),
-      isDecisionMaker: set.contains(decisionMaker),
-    );
-  }
-}
-
-class HealthcareRoleFlags {
-  const HealthcareRoleFlags({
-    required this.isPartner,
-    required this.isPrescriber,
-    required this.isBuyer,
-    required this.isDecisionMaker,
-  });
-
-  final bool isPartner;
-  final bool isPrescriber;
-  final bool isBuyer;
-  final bool isDecisionMaker;
-}
-
-abstract final class AdministrativeRoleCodes {
-  static const partner = 'PARTNER';
   static const administrator = 'ADMINISTRATOR';
-  static const decisionMaker = 'DECISION_MAKER';
-  static const buyer = 'BUYER';
   static const biller = 'BILLER';
   static const secretary = 'SECRETARY';
 
-  static List<String> fromFlags({
-    required bool isPartner,
-    required bool isAdministrator,
-    required bool isDecisionMaker,
-    required bool isBuyer,
-    required bool isBiller,
-    required bool isSecretary,
-  }) => [
-    if (isPartner) partner,
-    if (isAdministrator) administrator,
-    if (isDecisionMaker) decisionMaker,
-    if (isBuyer) buyer,
-    if (isBiller) biller,
-    if (isSecretary) secretary,
-  ];
+  static const fallbackNames = <String, String>{
+    partner: 'Parceiro',
+    prescriber: 'Prescritor',
+    buyer: 'Comprador',
+    decisionMaker: 'Decisor',
+    administrator: 'Administrador',
+    biller: 'Faturamento',
+    secretary: 'Secretário(a)',
+  };
 
-  static AdministrativeRoleFlags toFlags(Iterable<String> codes) {
-    final set = codes.map((c) => c.toUpperCase()).toSet();
-    return AdministrativeRoleFlags(
-      isPartner: set.contains(partner),
-      isAdministrator: set.contains(administrator),
-      isDecisionMaker: set.contains(decisionMaker),
-      isBuyer: set.contains(buyer),
-      isBiller: set.contains(biller),
-      isSecretary: set.contains(secretary),
-    );
+  static String fallbackName(String code) =>
+      fallbackNames[code.toUpperCase()] ?? code;
+
+  static Set<String> normalize(Iterable<String> codes) =>
+      codes.map((c) => c.toUpperCase()).toSet();
+
+  static List<String> sortedList(Iterable<String> codes) {
+    final list = normalize(codes).toList()..sort();
+    return list;
   }
 }
 
-class AdministrativeRoleFlags {
-  const AdministrativeRoleFlags({
-    required this.isPartner,
-    required this.isAdministrator,
-    required this.isDecisionMaker,
-    required this.isBuyer,
-    required this.isBiller,
-    required this.isSecretary,
+/// Catalog row from `GET /api/v1/person-facility-roles`.
+class PersonFacilityRoleCatalogEntry {
+  const PersonFacilityRoleCatalogEntry({
+    required this.code,
+    required this.name,
   });
 
-  final bool isPartner;
-  final bool isAdministrator;
-  final bool isDecisionMaker;
-  final bool isBuyer;
-  final bool isBiller;
-  final bool isSecretary;
+  final String code;
+  final String name;
+
+  factory PersonFacilityRoleCatalogEntry.fromMap(Map<String, dynamic> map) {
+    return PersonFacilityRoleCatalogEntry(
+      code: (map['code'] as String).toUpperCase(),
+      name: (map['name'] as String).trim(),
+    );
+  }
 }

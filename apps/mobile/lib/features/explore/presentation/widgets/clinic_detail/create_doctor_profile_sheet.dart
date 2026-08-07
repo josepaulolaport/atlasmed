@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/person_facility_role_toggles.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 // Create body → POST /facilities/:id/healthcare-professionals
 // (firstName/lastName/mobilePhone/email/roleTitle), then PUT …/roles when
-// role chips are selected.
+// role toggles are selected.
 
 /// Create a doctor profile. When [facilityId] is a real facility, persists via
 /// `POST /facilities/:id/healthcare-professionals`.
@@ -41,14 +44,48 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
   final _crmCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  bool _prescriber = true;
-  bool _decisionMaker = false;
-  bool _buyer = false;
+  Set<String> _selectedRoles = {PersonFacilityRoleCodes.prescriber};
+  List<PersonFacilityRoleCatalogEntry> _catalog = const [];
+  bool _loadingCatalog = true;
   bool _saving = false;
 
   bool get _useApi {
     final id = widget.facilityId;
     return id != null && id > 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCatalog();
+  }
+
+  Future<void> _loadCatalog() async {
+    final repo = PersonFacilityRolesCatalogRepository();
+    try {
+      final roles = await repo.listActive();
+      if (!mounted) return;
+      setState(() {
+        _catalog = roles.isEmpty
+            ? [
+                for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
+                  PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
+              ]
+            : roles;
+        _loadingCatalog = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _catalog = [
+          for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
+            PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
+        ];
+        _loadingCatalog = false;
+      });
+    } finally {
+      repo.dispose();
+    }
   }
 
   @override
@@ -107,30 +144,38 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
             _field(_phoneCtrl, 'Telefone', TextInputType.phone),
             const SizedBox(height: 10),
             _field(_emailCtrl, 'E-mail', TextInputType.emailAddress),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                FilterChip(
-                  label: const Text('Prescritor'),
-                  selected: _prescriber,
-                  onSelected: (v) => setState(() => _prescriber = v),
-                ),
-                FilterChip(
-                  label: const Text('Decisor'),
-                  selected: _decisionMaker,
-                  onSelected: (v) => setState(() => _decisionMaker = v),
-                ),
-                FilterChip(
-                  label: const Text('Comprador'),
-                  selected: _buyer,
-                  onSelected: (v) => setState(() => _buyer = v),
-                ),
-              ],
+            const SizedBox(height: 16),
+            const Text(
+              'FUNÇÕES',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+                color: AppColors.gray500,
+              ),
             ),
+            const SizedBox(height: 4),
+            if (_loadingCatalog)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else
+              PersonFacilityRoleToggles(
+                catalog: _catalog,
+                selected: _selectedRoles,
+                enabled: !_saving,
+                onChanged: (next) => setState(() => _selectedRoles = next),
+              ),
             const SizedBox(height: 18),
             FilledButton(
-              onPressed: _saving ? null : _save,
+              onPressed: _saving || _loadingCatalog ? null : _save,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.navyBright,
                 minimumSize: const Size.fromHeight(48),
@@ -207,6 +252,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
     final email = _emailCtrl.text.trim().isEmpty
         ? null
         : _emailCtrl.text.trim();
+    final roleCodes = PersonFacilityRoleCodes.sortedList(_selectedRoles);
 
     try {
       if (!_useApi) {
@@ -222,9 +268,10 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
             crm: crmRaw,
             phone: phone,
             email: email,
-            isPrescriber: _prescriber,
-            isDecisionMaker: _decisionMaker,
-            isBuyer: _buyer,
+            roleCodes: roleCodes,
+            roleBadge: roleCodes.contains(PersonFacilityRoleCodes.decisionMaker)
+                ? 'DECISOR'
+                : null,
           ),
         );
         return;
@@ -242,9 +289,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
           crmState: crm.state,
           phone: phone,
           email: email,
-          isPrescriber: _prescriber,
-          isBuyer: _buyer,
-          isDecisionMaker: _decisionMaker,
+          roleCodes: roleCodes,
         );
         if (!mounted) return;
         Navigator.of(context).pop(doctor);

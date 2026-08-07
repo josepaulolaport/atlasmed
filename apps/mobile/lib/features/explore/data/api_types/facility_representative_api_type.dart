@@ -78,7 +78,6 @@ class FacilityRepresentativeApi {
 
   /// Domain [AdministrativeProfessional.id] = [personFacilityId] for PATCH.
   AdministrativeProfessional toDomain() {
-    final roles = AdministrativeRoleCodes.toFlags(roleCodes);
     return AdministrativeProfessional(
       id: personFacilityId,
       name: displayName,
@@ -86,12 +85,7 @@ class FacilityRepresentativeApi {
       email: email,
       phone: phone,
       contactType: 'PROFESSIONAL',
-      isPartner: roles.isPartner,
-      isAdministrator: roles.isAdministrator,
-      isDecisionMaker: roles.isDecisionMaker,
-      isBuyer: roles.isBuyer,
-      isBiller: roles.isBiller,
-      isSecretary: roles.isSecretary,
+      roleCodes: PersonFacilityRoleCodes.sortedList(roleCodes),
     );
   }
 }

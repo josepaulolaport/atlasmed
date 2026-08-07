@@ -14,6 +14,10 @@ import {
   type HealthcareProfessionalsHttpUseCases,
 } from "./infrastructure/routes/healthcare-professionals.route";
 import {
+  createPersonFacilityRolesRoutes,
+  type PersonFacilityRolesHttpUseCases,
+} from "./infrastructure/routes/person-facility-roles.route";
+import {
   createPersonsRoutes,
   type PersonsHttpUseCases,
 } from "./infrastructure/routes/persons.route";
@@ -89,17 +93,35 @@ function healthcareUseCases(
   };
 }
 
+function roleCatalogUseCases(
+  overrides: Partial<PersonFacilityRolesHttpUseCases> = {}
+): PersonFacilityRolesHttpUseCases {
+  return {
+    listPersonFacilityRoles: () => ({
+      execute: mock(async () => ({
+        data: [
+          { code: "BUYER", name: "Comprador" },
+          { code: "PRESCRIBER", name: "Prescritor" },
+        ],
+      })),
+    }),
+    ...overrides,
+  };
+}
+
 function app(
   persons: PersonsHttpUseCases = personUseCases(),
   healthcare: HealthcareProfessionalsHttpUseCases = healthcareUseCases(),
-  role: Role | "unauthenticated" = "REP"
+  role: Role | "unauthenticated" = "REP",
+  roles: PersonFacilityRolesHttpUseCases = roleCatalogUseCases()
 ) {
   const authPlugin =
     role === "unauthenticated" ? unauthenticatedPlugin() : actorPlugin(role);
 
   return createHttpIntegrationApp(
     createPersonsRoutes(persons, authPlugin),
-    createHealthcareProfessionalsRoutes(healthcare, authPlugin)
+    createHealthcareProfessionalsRoutes(healthcare, authPlugin),
+    createPersonFacilityRolesRoutes(roles, authPlugin)
   );
 }
 
@@ -248,5 +270,18 @@ describe("Person HTTP routes", () => {
     };
     expect(Array.isArray(specialtiesBody.data)).toBe(true);
     expect(specialtiesBody.data).toEqual(["Cardiologia"]);
+
+    const rolesResponse = await authRequest(
+      application,
+      "http://localhost/api/v1/person-facility-roles",
+      "token"
+    );
+    expect(rolesResponse.status).toBe(200);
+    expect(await rolesResponse.json()).toEqual({
+      data: [
+        { code: "BUYER", name: "Comprador" },
+        { code: "PRESCRIBER", name: "Prescritor" },
+      ],
+    });
   });
 });

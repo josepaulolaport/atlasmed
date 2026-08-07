@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -28,7 +29,7 @@ class EstablishmentLocation {
   final String? formattedAddress;
 }
 
-/// CRM row from `facility_representatives`.
+/// CRM administrative contact at a facility (person-facility projection).
 class AdministrativeProfessional {
   const AdministrativeProfessional({
     required this.id,
@@ -37,12 +38,7 @@ class AdministrativeProfessional {
     this.email,
     this.phone,
     this.contactType = 'PROFESSIONAL',
-    this.isPartner = false,
-    this.isAdministrator = false,
-    this.isDecisionMaker = false,
-    this.isBuyer = false,
-    this.isBiller = false,
-    this.isSecretary = false,
+    this.roleCodes = const [],
     this.relationshipScore,
   });
 
@@ -55,15 +51,20 @@ class AdministrativeProfessional {
   /// Legacy single label — prefer [roleChipLabels] for UI.
   final String contactType;
 
-  final bool isPartner;
-  final bool isAdministrator;
-  final bool isDecisionMaker;
-  final bool isBuyer;
-  final bool isBiller;
-  final bool isSecretary;
+  final List<String> roleCodes;
 
-  /// Authenticated user's relationship (1–10) from
-  /// `user_representative_relationships`. Null = not yet assessed.
+  bool get isPartner =>
+      roleCodes.contains(PersonFacilityRoleCodes.partner);
+  bool get isAdministrator =>
+      roleCodes.contains(PersonFacilityRoleCodes.administrator);
+  bool get isDecisionMaker =>
+      roleCodes.contains(PersonFacilityRoleCodes.decisionMaker);
+  bool get isBuyer => roleCodes.contains(PersonFacilityRoleCodes.buyer);
+  bool get isBiller => roleCodes.contains(PersonFacilityRoleCodes.biller);
+  bool get isSecretary =>
+      roleCodes.contains(PersonFacilityRoleCodes.secretary);
+
+  /// Authenticated user's relationship (1–10). Null = not yet assessed.
   final int? relationshipScore;
 
   String get contactTypeLabel {
@@ -77,14 +78,9 @@ class AdministrativeProfessional {
     }
   }
 
-  /// Multi-select role chips for list/profile UI.
+  /// Multi-select role chips for list/profile UI (catalog fallback names).
   List<String> get roleChipLabels => [
-    if (isPartner) 'Sócio',
-    if (isAdministrator) 'Administrador',
-    if (isDecisionMaker) 'Decisor',
-    if (isBuyer) 'Comprador',
-    if (isBiller) 'Faturista',
-    if (isSecretary) 'Secretária',
+    for (final code in roleCodes) PersonFacilityRoleCodes.fallbackName(code),
   ];
 
   AdministrativeProfessional copyWith({
@@ -94,12 +90,7 @@ class AdministrativeProfessional {
     String? email,
     String? phone,
     String? contactType,
-    bool? isPartner,
-    bool? isAdministrator,
-    bool? isDecisionMaker,
-    bool? isBuyer,
-    bool? isBiller,
-    bool? isSecretary,
+    List<String>? roleCodes,
     int? relationshipScore,
     bool clearRelationshipScore = false,
   }) {
@@ -110,12 +101,7 @@ class AdministrativeProfessional {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       contactType: contactType ?? this.contactType,
-      isPartner: isPartner ?? this.isPartner,
-      isAdministrator: isAdministrator ?? this.isAdministrator,
-      isDecisionMaker: isDecisionMaker ?? this.isDecisionMaker,
-      isBuyer: isBuyer ?? this.isBuyer,
-      isBiller: isBiller ?? this.isBiller,
-      isSecretary: isSecretary ?? this.isSecretary,
+      roleCodes: roleCodes ?? this.roleCodes,
       relationshipScore: clearRelationshipScore
           ? null
           : (relationshipScore ?? this.relationshipScore),

@@ -1,5 +1,6 @@
 import { assertResourceInScope, type ScopeContext } from "@atlasmed/access";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import type { PersonFacilityRoleCatalogRepository } from "../interfaces/person-facility-role-catalog.repository.interface";
 import type {
   ClassificationCode,
   PersonFacilityProjectionRecord,
@@ -14,26 +15,8 @@ type Dependencies = {
   repository: PersonFacilityProjectionRepository;
 };
 
-/** Classification-scoped role allow-lists (ADR 0004 §5.12 / STEP 4). */
-export const HEALTHCARE_ROLE_CODES = [
-  "PARTNER",
-  "PRESCRIBER",
-  "BUYER",
-  "DECISION_MAKER",
-] as const;
-
-export const ADMINISTRATIVE_ROLE_CODES = [
-  "PARTNER",
-  "ADMINISTRATOR",
-  "DECISION_MAKER",
-  "BUYER",
-  "BILLER",
-  "SECRETARY",
-] as const;
-
-const ALLOWED_ROLES_BY_CLASSIFICATION: Record<ClassificationCode, ReadonlySet<string>> = {
-  [CLASSIFICATION.HEALTHCARE_PROFESSIONAL]: new Set(HEALTHCARE_ROLE_CODES),
-  [CLASSIFICATION.ADMINISTRATIVE_CONTACT]: new Set(ADMINISTRATIVE_ROLE_CODES),
+type ReplaceRolesDependencies = Dependencies & {
+  roleCatalogRepository: PersonFacilityRoleCatalogRepository;
 };
 
 export type PersonFacilityProjectionDto = {
@@ -289,29 +272,31 @@ function normalizeRoleCodes(roleCodes: string[]): string[] {
   return unique;
 }
 
-function assertRoleCodesAllowed(
-  classificationCode: ClassificationCode,
+async function assertRoleCodesInCatalog(
+  roleCatalogRepository: PersonFacilityRoleCatalogRepository,
   roleCodes: string[]
-): void {
-  const allowed = ALLOWED_ROLES_BY_CLASSIFICATION[classificationCode];
+): Promise<void> {
+  if (roleCodes.length === 0) return;
+  const catalog = await roleCatalogRepository.listActive();
+  const allowed = new Set(catalog.map((r) => r.code));
   const invalid = roleCodes.filter((code) => !allowed.has(code));
   if (invalid.length === 0) return;
   throw new ValidationError(
     invalid.map((code) => ({
       field: "roleCodes",
-      message: `Role code "${code}" is not allowed for ${classificationCode}`,
+      message: `Unknown or inactive role code "${code}"`,
     }))
   );
 }
 
 export class ReplacePersonFacilityRolesUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(private readonly deps: ReplaceRolesDependencies) {}
 
   async execute(input: ReplacePersonFacilityRolesInput): Promise<PersonFacilityProjectionDto> {
     assertFacilityScoped(input.scope, input.facilityId);
 
     const roleCodes = normalizeRoleCodes(input.roleCodes);
-    assertRoleCodesAllowed(input.classificationCode, roleCodes);
+    await assertRoleCodesInCatalog(this.deps.roleCatalogRepository, roleCodes);
 
     const row = await this.deps.repository.findActiveById(input.personFacilityId);
     if (!row || row.endedAt) {

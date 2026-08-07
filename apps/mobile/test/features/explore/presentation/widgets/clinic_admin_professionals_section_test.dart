@@ -14,7 +14,7 @@ void main() {
         email: 'carlos@test.com',
         phone: '11999999999',
         contactType: 'DECISOR',
-        isDecisionMaker: true,
+        roleCodes: ['DECISION_MAKER'],
       ),
     ];
 
@@ -63,7 +63,7 @@ void main() {
           email: 'carlos@test.com',
           phone: '11999999999',
           contactType: 'DECISOR',
-          isDecisionMaker: true,
+          roleCodes: ['DECISION_MAKER'],
         ),
       ];
 

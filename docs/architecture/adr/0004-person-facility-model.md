@@ -328,12 +328,7 @@ Same catalog shape as classifications. Seeded in STEP 4 (`0054_seed_person_facil
 | `is_biller` | `BILLER` | Faturamento |
 | `is_secretary` | `SECRETARY` | Secretário(a) |
 
-**Classification allow-lists** (API validation — not DB CHECK):
-
-| Classification | Allowed `role_code`s |
-|---|---|
-| `HEALTHCARE_PROFESSIONAL` | `PARTNER`, `PRESCRIBER`, `BUYER`, `DECISION_MAKER` |
-| `ADMINISTRATIVE_CONTACT` | `PARTNER`, `ADMINISTRATOR`, `DECISION_MAKER`, `BUYER`, `BILLER`, `SECRETARY` |
+**Role assignment validation (superseded 2026-08-07):** classification allow-lists removed. `PUT …/roles` accepts any **active** seeded catalog code for either projection route (still scoped to the affiliation’s classification via the route + row check). Catalog list: `GET /api/v1/person-facility-roles`. UI shows the full catalog; filter-by-classification may return later.
 
 ---
 
@@ -427,8 +422,9 @@ Facility routes may mount projections but call person ports only.
 
 | Method | Path | Notes |
 |---|---|---|
-| PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; allow-list per §5.12 |
-| PUT | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; allow-list per §5.12 |
+| PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; any active catalog code |
+| PUT | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; any active catalog code |
+| GET | `/api/v1/person-facility-roles` | Active catalog `{ data: { code, name }[] }` (`read` PERSON) |
 
 Projection DTOs include `roleCodes: string[]` (from `person_facility_role_assignments`).
 

@@ -93,6 +93,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     String? crmState,
     String? phone,
     String? email,
+    List<String>? roleCodes,
     bool isPartner = false,
     bool isPrescriber = false,
     bool isBuyer = false,
@@ -127,17 +128,20 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
     var dto = FacilityProfessionalItemDTO.fromMap(map);
-    final roleCodes = HealthcareRoleCodes.fromFlags(
-      isPartner: isPartner,
-      isPrescriber: isPrescriber,
-      isBuyer: isBuyer,
-      isDecisionMaker: isDecisionMaker,
+    final codes = PersonFacilityRoleCodes.sortedList(
+      roleCodes ??
+          [
+            if (isPartner) PersonFacilityRoleCodes.partner,
+            if (isPrescriber) PersonFacilityRoleCodes.prescriber,
+            if (isBuyer) PersonFacilityRoleCodes.buyer,
+            if (isDecisionMaker) PersonFacilityRoleCodes.decisionMaker,
+          ],
     );
-    if (roleCodes.isNotEmpty) {
+    if (codes.isNotEmpty) {
       try {
         dto = await _putHealthcareRoles(
           personFacilityId: dto.personFacilityId,
-          roleCodes: roleCodes,
+          roleCodes: codes,
         );
       } on FacilityAssociateException {
         throw const FacilityAssociateException(
@@ -158,10 +162,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
   Future<ProfessionalRoster> updateDoctorRoles(
     ProfessionalRoster doctor, {
-    required bool isPartner,
-    required bool isPrescriber,
-    required bool isBuyer,
-    required bool isDecisionMaker,
+    required List<String> roleCodes,
   }) async {
     final personFacilityId = doctor.personFacilityId;
     if (personFacilityId == null) {
@@ -170,23 +171,14 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
       );
     }
 
-    final roleCodes = HealthcareRoleCodes.fromFlags(
-      isPartner: isPartner,
-      isPrescriber: isPrescriber,
-      isBuyer: isBuyer,
-      isDecisionMaker: isDecisionMaker,
-    );
     final dto = await _putHealthcareRoles(
       personFacilityId: personFacilityId,
-      roleCodes: roleCodes,
+      roleCodes: PersonFacilityRoleCodes.sortedList(roleCodes),
     );
     final fromApi = ProfessionalRoster.fromRosterItem(dto);
     return doctor.copyWith(
       personFacilityId: fromApi.personFacilityId,
-      isPartner: fromApi.isPartner,
-      isPrescriber: fromApi.isPrescriber,
-      isBuyer: fromApi.isBuyer,
-      isDecisionMaker: fromApi.isDecisionMaker,
+      roleCodes: fromApi.roleCodes,
       roleBadge: fromApi.roleBadge,
       clearRoleBadge: fromApi.roleBadge == null,
     );

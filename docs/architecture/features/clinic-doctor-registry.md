@@ -48,6 +48,7 @@ Person-scoped:
 | GET + PUT/PATCH | `/api/v1/persons/:personId/relationship` |
 | GET | `/api/v1/healthcare-professionals` (Explorar / Meili) |
 | GET | `/api/v1/healthcare-professionals/specialties` |
+| GET | `/api/v1/person-facility-roles` (seeded role catalog) |
 
 Do not call removed registry endpoints (`/registry/*`) or deleted `/api/v1/professionals/*`.
 

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/person_facility_role_toggles.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Create or edit an administrative professional.
@@ -44,12 +47,9 @@ class _CreateAdminProfessionalSheetState
   late final TextEditingController _roleCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _emailCtrl;
-  late bool _isPartner;
-  late bool _isAdministrator;
-  late bool _isDecisionMaker;
-  late bool _isBuyer;
-  late bool _isBiller;
-  late bool _isSecretary;
+  late Set<String> _selectedRoles;
+  List<PersonFacilityRoleCatalogEntry> _catalog = const [];
+  bool _loadingCatalog = true;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
@@ -67,12 +67,38 @@ class _CreateAdminProfessionalSheetState
     _roleCtrl = TextEditingController(text: existing?.roleTitle ?? '');
     _phoneCtrl = TextEditingController(text: existing?.phone ?? '');
     _emailCtrl = TextEditingController(text: existing?.email ?? '');
-    _isPartner = existing?.isPartner ?? false;
-    _isAdministrator = existing?.isAdministrator ?? false;
-    _isDecisionMaker = existing?.isDecisionMaker ?? false;
-    _isBuyer = existing?.isBuyer ?? false;
-    _isBiller = existing?.isBiller ?? false;
-    _isSecretary = existing?.isSecretary ?? false;
+    _selectedRoles = PersonFacilityRoleCodes.normalize(
+      existing?.roleCodes ?? const [],
+    );
+    _loadCatalog();
+  }
+
+  Future<void> _loadCatalog() async {
+    final repo = PersonFacilityRolesCatalogRepository();
+    try {
+      final roles = await repo.listActive();
+      if (!mounted) return;
+      setState(() {
+        _catalog = roles.isEmpty
+            ? [
+                for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
+                  PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
+              ]
+            : roles;
+        _loadingCatalog = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _catalog = [
+          for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
+            PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
+        ];
+        _loadingCatalog = false;
+      });
+    } finally {
+      repo.dispose();
+    }
   }
 
   @override
@@ -143,23 +169,27 @@ class _CreateAdminProfessionalSheetState
               ),
             ),
             const SizedBox(height: 4),
-            _roleToggle('Sócio', _isPartner, (v) => _isPartner = v),
-            _roleToggle(
-              'Administrador',
-              _isAdministrator,
-              (v) => _isAdministrator = v,
-            ),
-            _roleToggle(
-              'Decisor',
-              _isDecisionMaker,
-              (v) => _isDecisionMaker = v,
-            ),
-            _roleToggle('Comprador', _isBuyer, (v) => _isBuyer = v),
-            _roleToggle('Faturista', _isBiller, (v) => _isBiller = v),
-            _roleToggle('Secretária', _isSecretary, (v) => _isSecretary = v),
+            if (_loadingCatalog)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else
+              PersonFacilityRoleToggles(
+                catalog: _catalog,
+                selected: _selectedRoles,
+                enabled: !_saving,
+                onChanged: (next) => setState(() => _selectedRoles = next),
+              ),
             const SizedBox(height: 18),
             FilledButton(
-              onPressed: _saving ? null : _save,
+              onPressed: _saving || _loadingCatalog ? null : _save,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.navyBright,
                 minimumSize: const Size.fromHeight(48),
@@ -181,24 +211,6 @@ class _CreateAdminProfessionalSheetState
           ],
         ),
       ),
-    );
-  }
-
-  Widget _roleToggle(String label, bool value, ValueChanged<bool> onChanged) {
-    return SwitchListTile.adaptive(
-      contentPadding: EdgeInsets.zero,
-      dense: true,
-      title: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: AppColors.gray900,
-        ),
-      ),
-      value: value,
-      activeThumbColor: AppColors.navyBright,
-      onChanged: (next) => setState(() => onChanged(next)),
     );
   }
 
@@ -253,6 +265,7 @@ class _CreateAdminProfessionalSheetState
     final email = _emailCtrl.text.trim().isEmpty
         ? null
         : _emailCtrl.text.trim();
+    final roleCodes = PersonFacilityRoleCodes.sortedList(_selectedRoles);
 
     try {
       if (!_useApi) {
@@ -267,12 +280,7 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle,
             phone: phone,
             email: email,
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
+            roleCodes: roleCodes,
             relationshipScore: widget.existing?.relationshipScore,
           ),
         );
@@ -291,12 +299,7 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle ?? '',
             mobilePhone: phone ?? '',
             email: email ?? '',
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
+            roleCodes: roleCodes,
           );
         } else {
           saved = await repo.create(
@@ -305,12 +308,7 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle,
             mobilePhone: phone,
             email: email,
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
+            roleCodes: roleCodes,
           );
         }
         if (!mounted) return;
