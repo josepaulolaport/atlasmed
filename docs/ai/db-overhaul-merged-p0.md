@@ -165,8 +165,8 @@ flowchart TD
 3. ~~Search rebuild (fields per Q31)~~ **done**  
 4. ~~Mobile person/facility projections~~ **done** (MVP; minor UX polish may remain)  
 5. ~~Retarget current-state docs~~ **done** (2026-08-07 docs retarget)  
-6. Catalog **data** later (occupations / unit types still empty until load)  
-7. **Web later** (out of this wave — M12)  
+6. Catalog **data** later (occupations / unit types still empty until load) — **Phase 2+**  
+7. ~~**Web later**~~ — **out of wave permanently for this line of work** (M12 ignored)  
 
 ---
 
@@ -265,3 +265,4 @@ Answer before or during Slice A–C. Do not invent answers here.
 | 2026-08-07 | **Slice C `0051`**: person hard cut (ADR 0004); remake occupations; drop professional/rep tables; orders/field_suggestions → `person_id`; API professional surfaces removed; CASL PERSON. Mobile rewire deferred. |
 | 2026-08-07 | **Slice D `0052`**: Drizzle `$onUpdate` on all public CRM `updated_at` (59 cols, schema-only); drop exact dup `orders_id_avulsa_emultec_idx` (unique key remains). |
 | 2026-08-07 | **After-schema**: person projections + notes/relationship/identity + roles (`0053`/`0054`); Meili persons Q31; mobile rewire. **Slice E** `0055`/`0056`: drop `facility_types`; unit catalogs occupation-shaped. **`0057`**: rename `potential_metric_definitions` → `product_potential_definitions`. Docs retarget (clinic-doctor-registry, current.md, Spec 0005 terminology, ADR 0004 status). |
+| 2026-08-07 | **P0 closed → Phase 2 ready**: role catalog GET + mobile toggles; Spec 0006 merge (territory ownership) with bigint compile-fix; test suites green; Spec 0002/0008 terminology retarget. **Web never in this wave.** Catalog CNES data load, note update/delete, broader `*_code`→`*_id` remain Phase 2 / later. |

@@ -112,12 +112,12 @@ class _AdministrativeProfessionalsListScreenState
 
   Map<String, List<String>> get _filterSections => {
     _typeSection: const [
-      'Sócio',
+      'Parceiro',
       'Administrador',
       'Decisor',
       'Comprador',
-      'Faturista',
-      'Secretária',
+      'Faturamento',
+      'Secretário(a)',
     ],
   };
 

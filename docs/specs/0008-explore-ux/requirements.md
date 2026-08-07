@@ -90,7 +90,7 @@ Exact km cutoffs can be tuned in design; principle is band headers on a globally
 
 | Filter | UI | API |
 |---|---|---|
-| Especialidade | Chips from scoped facet list (no hardcoded labels) | Facet: `GET /professionals/specialties` → `{ data: string[] }`; filter list with `specialty` |
+| Especialidade | Chips from scoped facet list (no hardcoded labels) | Facet: `GET /healthcare-professionals/specialties` → `{ data: string[] }`; filter list with `specialty` |
 | ~~Raio~~ | — | **Do not send `radiusKm`** |
 
 Distance **display + default sort** still use `latitude`/`longitude` (and `sort=distance` when applicable).
@@ -100,7 +100,7 @@ Distance **display + default sort** still use `latitude`/`longitude` (and `sort=
 ### API / DB
 
 - Facilities: `latitude`, `longitude`, `radiusKm`, `sort`, `search`, `commercialStatus`, `productIds`.
-- Professionals: geo + `specialty` (+ `facilityId`); specialty facet via `GET /professionals/specialties`; **no** commercial-status-style filters.
+- Healthcare professionals (persons): geo + `specialty` (+ `facilityId`); specialty facet via `GET /healthcare-professionals/specialties`; **no** commercial-status-style filters. List path: `GET /healthcare-professionals` (Meili `persons` when searching).
 - `facilities.location` PostGIS point; **no GiST index** yet.
 
 ### Mobile gaps

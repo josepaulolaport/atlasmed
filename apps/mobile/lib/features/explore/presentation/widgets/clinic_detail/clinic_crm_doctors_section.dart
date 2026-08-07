@@ -272,7 +272,7 @@ class _DoctorCard extends StatelessWidget {
     if (doctor.isDecisionMaker && doctor.roleBadge == null) {
       badges.add(const _Flag(label: 'Decisor'));
     }
-    if (doctor.isPartner) badges.add(const _Flag(label: 'Sócio'));
+    if (doctor.isPartner) badges.add(const _Flag(label: 'Parceiro'));
     return badges;
   }
 

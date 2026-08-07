@@ -116,7 +116,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
   Map<String, List<String>> get _filterSections => {
     if (_specialtyOptions.isNotEmpty) 'Especialidade': _specialtyOptions,
-    'Papel': const ['Prescritor', 'Decisor', 'Comprador', 'Sócio'],
+    'Papel': const ['Prescritor', 'Decisor', 'Comprador', 'Parceiro'],
   };
 
   int get _filterCount =>
@@ -149,7 +149,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         if (roles.contains('Prescritor') && d.isPrescriber) return true;
         if (roles.contains('Decisor') && d.isDecisionMaker) return true;
         if (roles.contains('Comprador') && d.isBuyer) return true;
-        if (roles.contains('Sócio') && d.isPartner) return true;
+        if (roles.contains('Parceiro') && d.isPartner) return true;
         return false;
       }).toList();
     }
@@ -325,7 +325,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         (d.roleBadge == null || d.roleBadge!.trim().isEmpty)) {
       badges.add('Decisor');
     }
-    if (d.isPartner) badges.add('Sócio');
+    if (d.isPartner) badges.add('Parceiro');
     return badges;
   }
 

@@ -18,7 +18,7 @@ flowchart TD
   shell --> explore[Explorar]
   explore --> pos[LocationSession]
   explore --> clinics["GET /facilities?lat&lng&radiusKm?&commercialStatus?&sort=distance"]
-  explore --> doctors["GET /professionals?lat&lng&specialty? — no radiusKm"]
+  explore --> doctors["GET /healthcare-professionals?lat&lng&specialty? — no radiusKm"]
   clinics --> bands[Distance-sorted list + band headers]
   doctors --> bandsDoc[Distance-sorted list + band headers]
   timer[Periodic timer while Explorar visible] --> pos
