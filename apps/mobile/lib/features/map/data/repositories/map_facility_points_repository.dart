@@ -49,9 +49,22 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
   MapFacilityPointsPage fromJson(String json) {
     final decoded = jsonDecode(json);
     if (decoded is! Map<String, dynamic>) {
-      return const MapFacilityPointsPage(points: []);
+      throw const FormatException(
+        'Map facility points: expected a JSON object',
+      );
     }
-    final features = decoded['features'] as List<dynamic>? ?? const [];
+    // Error payloads must not look like "zero clinics in area".
+    if (decoded.containsKey('error') && !decoded.containsKey('features')) {
+      throw FormatException(
+        'Map facility points: API error ${decoded['error']}',
+      );
+    }
+    final features = decoded['features'];
+    if (features is! List) {
+      throw const FormatException(
+        'Map facility points: missing features array',
+      );
+    }
     final points = <NearbyEstablishment>[];
     for (final raw in features) {
       if (raw is! Map<String, dynamic>) continue;
@@ -78,6 +91,7 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
           name: name,
           latitude: lat,
           longitude: lng,
+          // Points endpoint has no user origin — filled in map_provider.
           distanceKm: 0,
           purchaseBucket: purchaseBucket,
           status: _statusForBucket(purchaseBucket),
@@ -94,7 +108,10 @@ Future<List<NearbyEstablishment>> fetchMapFacilityPoints({
   final repo = MapFacilityPointsRepository(verticalId: verticalId);
   try {
     final page = await repo.currentValueOrResolve();
-    return page?.points ?? const [];
+    if (page == null) {
+      throw StateError('Map facility points: resolve returned null');
+    }
+    return page.points;
   } finally {
     repo.dispose();
   }

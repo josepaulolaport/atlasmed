@@ -158,10 +158,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final token = AppConfig.mapboxAccessToken;
     final session = ref.watch(locationSessionProvider);
     final location = session.location;
-    ref.watch(liveMapFacilityPointsProvider);
+    ref.watch(liveMapFacilityPointsWithDistanceProvider);
 
     ref.listen<AsyncValue<List<NearbyEstablishment>>>(
-      liveMapFacilityPointsProvider,
+      liveMapFacilityPointsWithDistanceProvider,
       (previous, next) {
         next.when(
           data: (items) {
@@ -1060,7 +1060,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (raw == null) continue;
       final props = raw['properties'];
       if (props is! Map) continue;
-      final id = props['facilityId']?.toString();
+      final id = readCrmIdLoose(props['facilityId']);
       if (id == null) continue;
       final e = byId[id];
       if (e != null) out.add(e);
@@ -1171,7 +1171,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final byId = {for (final e in _visibleClinics) e.id: e};
 
     NearbyEstablishment? fromFeature() {
-      final id = feature.properties['facilityId']?.toString();
+      final id = readCrmIdLoose(feature.properties['facilityId']);
       if (id != null && byId.containsKey(id)) return byId[id];
       final point = _pointFromGeometry(feature.geometry);
       if (point == null) return null;
@@ -1200,9 +1200,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final raw = hit?.queriedFeature.feature;
         if (raw == null) continue;
         final props = raw['properties'];
-        final id = props is Map
-            ? props['facilityId']?.toString()
-            : raw['facilityId']?.toString();
+        final id = readCrmIdLoose(
+          props is Map ? props['facilityId'] : raw['facilityId'],
+        );
         final e = id == null ? null : byId[id];
         if (e == null) continue;
         final screen = await map.pixelForCoordinate(
@@ -1275,7 +1275,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           iconAnchor: IconAnchor.BOTTOM,
           iconOffset: [0, -16],
           symbolSortKey: 10,
-          customData: {'action': 'open', 'facilityId': establishment.id},
+          // String — Mapbox customData often round-trips ints as doubles ("3.0").
+          customData: {
+            'action': 'open',
+            'facilityId': '${establishment.id}',
+          },
         ),
       );
       if (previous != null) await manager.delete(previous);
@@ -1365,8 +1369,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       unawaited(_dismissCallout());
       return;
     }
-    final id = annotation.customData?['facilityId']?.toString();
-    if (id != null) _openEstablishment(parseRouteCrmId(id, 'facilityId'));
+    final id = readCrmIdLoose(annotation.customData?['facilityId']);
+    if (id != null) _openEstablishment(id);
   }
 
   ({double latitude, double longitude})? _pointFromGeometry(
@@ -1514,7 +1518,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       context.push(
         Uri(
           path: '/explore/clinic/$id',
-          queryParameters: {'verticalId': verticalId},
+          queryParameters: {'verticalId': verticalId.toString()},
         ).toString(),
       );
       return;

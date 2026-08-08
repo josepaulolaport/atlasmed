@@ -1,4 +1,3 @@
-import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 /// CRM entity ids are JSON numbers (DB bigint → API number).
 ///
 /// Decode at wire edges only; domain models keep [int].
@@ -43,11 +42,21 @@ int? parseRouteCrmIdOrNull(String? value, [String field = 'id']) {
 }
 
 /// Mapbox / GeoJSON — id may arrive as [num] or digit [String].
+///
+/// Platform bridges often stringify ints as `"3.0"`; accept whole-number
+/// decimals there (not for GoRouter path segments — use [parseRouteCrmId]).
 int? readCrmIdLoose(Object? value) {
   if (value == null) return null;
   if (value is int) return value;
   if (value is num) return value.toInt();
-  if (value is String) return int.tryParse(value);
+  if (value is String) {
+    final asInt = int.tryParse(value);
+    if (asInt != null) return asInt;
+    final asNum = num.tryParse(value);
+    if (asNum != null && asNum == asNum.roundToDouble()) {
+      return asNum.toInt();
+    }
+  }
   return null;
 }
 

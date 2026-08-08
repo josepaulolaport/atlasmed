@@ -5,8 +5,10 @@ import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_facility_points_repository.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';
+import 'package:atlasmed_mobile_app/features/map/presentation/utils/map_pin_distance.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,8 +40,8 @@ final mapTerritoryProvider = FutureProvider<TerritoryGeometry?>((ref) async {
 /// Bump to force a re-fetch of map pins (refresh button).
 final mapFacilityPointsRefreshProvider = StateProvider<int>((ref) => 0);
 
-/// All in-scope thin map pins. Reloads on vertical change / refresh bump /
-/// session change — not on pan/zoom.
+/// Raw in-scope thin map pins (no distance). Reloads on vertical / refresh /
+/// session — not on pan/zoom.
 final liveMapFacilityPointsProvider = FutureProvider<List<NearbyEstablishment>>(
   (ref) async {
     ref.watch(sessionProvider);
@@ -50,3 +52,15 @@ final liveMapFacilityPointsProvider = FutureProvider<List<NearbyEstablishment>>(
     return fetchMapFacilityPoints(verticalId: verticalId);
   },
 );
+
+/// Map pins with distance from the current location session origin.
+///
+/// `GET /map/facilities/points` never returns `distanceKm` (no user lat/lng),
+/// so callouts used to show `0.0 km` for every clinic.
+final liveMapFacilityPointsWithDistanceProvider =
+    Provider<AsyncValue<List<NearbyEstablishment>>>((ref) {
+      final origin = ref.watch(locationSessionProvider).location;
+      return ref
+          .watch(liveMapFacilityPointsProvider)
+          .whenData((points) => withDistanceFromOrigin(points, origin));
+    });
