@@ -60,10 +60,3 @@ int? readCrmIdLoose(Object? value) {
   return null;
 }
 
-/// Negative ids are mock-only facilities (nearby stack / empty state).
-bool isMockFacilityId(int facilityId) => facilityId < 0;
-
-bool isMockNearbyFacilityId(int facilityId) => facilityId < 0;
-
-bool isMockEmptyFacilityId(int facilityId) => facilityId < 0;
-
