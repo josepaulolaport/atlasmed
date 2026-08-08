@@ -156,3 +156,9 @@ codedb.snapshot
 
 # Local DB dumps / ETL backups (never commit)
 .local-backups/
+
+# Local fake-data seed scripts + payloads (never commit)
+/local-seed/
+
+# Local iOS Simulator GPX routes (never commit)
+**/SimulatorLocation*.gpx

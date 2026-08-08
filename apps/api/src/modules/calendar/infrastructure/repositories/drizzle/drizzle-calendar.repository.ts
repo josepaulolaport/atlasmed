@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { calendar, calendarCommandReceipts, calendarOccurrenceOverrides, facilities, interactionEvents, interactions, orders, users, type AnyDatabase } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
@@ -84,15 +84,23 @@ export class DrizzleCalendarRepository implements CalendarRepository {
   }
 
   async listByOwner(ownerUserId: number, range?: { from: Date; to: Date }): Promise<CalendarEventRecord[]> {
+    // Date values inside sql`` are not bound by postgres.js — use drizzle ops
+    // or ISO strings. See: TypeError Buffer.byteLength(Date).
     const likelyOverlap = range
       ? or(
         isNull(calendar.firstStartsAt),
-        and(sql`${calendar.firstStartsAt} < ${range.to}`, or(isNull(calendar.recurrenceUntil), sql`${calendar.recurrenceUntil} >= ${range.from.toISOString().slice(0, 10)}`)),
+        and(
+          lt(calendar.firstStartsAt, range.to),
+          or(
+            isNull(calendar.recurrenceUntil),
+            gte(calendar.recurrenceUntil, range.from.toISOString().slice(0, 10)),
+          ),
+        ),
         sql`exists (select 1 from ${calendarOccurrenceOverrides}
           where ${calendarOccurrenceOverrides.calendarId} = ${calendar.id}
             and ${calendarOccurrenceOverrides.status} = 'ACTIVE'
-            and ${calendarOccurrenceOverrides.startsAt} < ${range.to}
-            and ${calendarOccurrenceOverrides.endsAt} > ${range.from})`,
+            and ${calendarOccurrenceOverrides.startsAt} < ${range.to.toISOString()}
+            and ${calendarOccurrenceOverrides.endsAt} > ${range.from.toISOString()})`,
       )
       : undefined;
     return this.hydrate(await this.database.select().from(calendar).where(and(

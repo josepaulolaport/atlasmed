@@ -40,8 +40,6 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "PATCH /api/v1/users/:id/deactivate": { eventType: "USER.DEACTIVATE", severity: "WARNING" },
   "PATCH /api/v1/users/:id/suspend": { eventType: "USER.SUSPEND", severity: "WARNING" },
   "PATCH /api/v1/users/:id/unsuspend": { eventType: "USER.UNSUSPEND" },
-  "PUT /api/v1/users/:id/manager": { eventType: "USER.MANAGER_ASSIGNED" },
-  "DELETE /api/v1/users/:id/manager": { eventType: "USER.MANAGER_REMOVED" },
   "PUT /api/v1/users/:id/territory": { eventType: "USER.TERRITORY_ASSIGNED" },
   "DELETE /api/v1/users/:id/territory/:territoryId": { eventType: "USER.TERRITORY_REVOKED" },
   "PUT /api/v1/users/:id/permissions": { eventType: "USER.PERMISSION_GRANT", severity: "WARNING" },
