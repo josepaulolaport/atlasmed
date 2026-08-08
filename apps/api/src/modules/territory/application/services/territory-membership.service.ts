@@ -53,6 +53,8 @@ interface Dependencies {
   spatialRepository: TerritorySpatialRepository;
   territoryRepository: TerritoryRepository;
   clinicWriter: ClinicMembershipWriter;
+  /** Keep Meili `territoryIds` in sync after zone membership writes. */
+  onClinicMembershipChanged?: (facilityId: number) => Promise<void>;
 }
 
 export class TerritoryMembershipService {
@@ -60,10 +62,24 @@ export class TerritoryMembershipService {
 
   async assignClinicByGeo(
     clinic: ClinicMembershipTarget,
-    options?: { excludeTerritoryId?: number; force?: boolean }
+    options?: {
+      excludeTerritoryId?: number;
+      force?: boolean;
+      /**
+       * When false, skip Meili upsert (bulk recompute / boundary jobs).
+       * Single-clinic paths keep default true. Follow bulk with Temporal
+       * facilities search sync if Meili territoryIds must catch up immediately.
+       */
+      notifySearch?: boolean;
+    }
   ): Promise<void> {
+    const notifySearch = options?.notifySearch !== false;
+
     if (clinic.lat === null || clinic.lng === null) {
       await this.deps.clinicWriter.updateProfileTerritoryMemberships(clinic.id, []);
+      if (notifySearch) {
+        await this.deps.onClinicMembershipChanged?.(clinic.id);
+      }
       return;
     }
 
@@ -81,6 +97,9 @@ export class TerritoryMembershipService {
         managerZoneId: match.id,
       }))
     );
+    if (notifySearch) {
+      await this.deps.onClinicMembershipChanged?.(clinic.id);
+    }
   }
 
   /**
@@ -95,7 +114,11 @@ export class TerritoryMembershipService {
     });
 
     for (const clinic of clinics) {
-      await this.assignClinicByGeo(clinic, { excludeTerritoryId: territoryId, force: true });
+      await this.assignClinicByGeo(clinic, {
+        excludeTerritoryId: territoryId,
+        force: true,
+        notifySearch: false,
+      });
     }
 
     return { processed: clinics.length };
@@ -118,7 +141,8 @@ export class TerritoryMembershipService {
 
     for (const clinic of clinics) {
       const before = clinic.managerZoneId;
-      await this.assignClinicByGeo(clinic);
+      // Bulk path: no per-clinic Meili round-trip (HTTP timeout risk).
+      await this.assignClinicByGeo(clinic, { notifySearch: false });
       const after = (
         await this.deps.clinicWriter.findClinicsForMembership({
           facilityIds: [clinic.id],
@@ -154,7 +178,7 @@ export class TerritoryMembershipService {
 
     let processed = 0;
     for (const clinic of clinicsById.values()) {
-      await this.assignClinicByGeo(clinic);
+      await this.assignClinicByGeo(clinic, { notifySearch: false });
       processed += 1;
     }
 

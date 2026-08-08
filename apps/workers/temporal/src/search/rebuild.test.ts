@@ -56,8 +56,11 @@ describe("search rebuild", () => {
         cnesCode: "789",
         city: "São Paulo",
         state: "SP",
+        streetAddress: "Rua Augusta",
+        neighborhood: "Consolação",
         verticalIds: [10],
         territoryIds: [20],
+        repUserIds: [7, 3, 3],
         profileFunnelData: [{
           verticalId: 10,
           purchaseFunnelStage: "NEVER_PURCHASED",
@@ -79,8 +82,11 @@ describe("search rebuild", () => {
       cnesCode: "789",
       city: "São Paulo",
       state: "SP",
+      streetAddress: "Rua Augusta",
+      neighborhood: "Consolação",
       verticalIds: [10],
       territoryIds: [20],
+      repUserIds: [3, 7],
       territoryAssignmentStatus: "assigned",
       verticalFunnelStages: ["10:NEVER_PURCHASED"],
       verticalPurchaseIntervalSources: ["10:DEFAULT"],
@@ -167,6 +173,12 @@ describe("search rebuild", () => {
     );
     expect(facilityFilterable).not.toContain("commercialStatus");
     expect(facilityFilterable).not.toContain("territoryId");
+    expect(searchRebuild.FACILITY_SETTINGS.searchableAttributes).toEqual(
+      expect.arrayContaining(["streetAddress", "neighborhood", "city", "state"])
+    );
+    expect(searchRebuild.FACILITY_SETTINGS.filterableAttributes).toEqual(
+      expect.arrayContaining(["repUserIds", "territoryIds", "verticalIds"])
+    );
     expect(searchRebuild.FACILITY_SETTINGS.sortableAttributes).toEqual(expect.arrayContaining([
       "_geo", "name", "purchaseFunnelStageRank", "purchaseIntervalDaysMin",
       "hasLastValidPurchase", "lastValidPurchaseSortAt", "id",
@@ -191,6 +203,7 @@ describe("search rebuild", () => {
         events.push(`documents:${uid}:${documents.length}`);
         return { taskUid: 3 };
       },
+      deleteDocuments: async () => ({ taskUid: 7 }),
       waitForTask: async (taskUid: number) => events.push(`wait:${taskUid}`),
       getIndex: async (uid: string) => {
         events.push(`get:${uid}`);
@@ -240,6 +253,7 @@ describe("search rebuild", () => {
       },
       updateSettings: async () => ({ taskUid: 2 }),
       addDocuments: async () => ({ taskUid: 3 }),
+      deleteDocuments: async () => ({ taskUid: 7 }),
       getIndex: async () => {
         throw { cause: { code: "index_not_found" } };
       },
@@ -283,6 +297,7 @@ describe("search rebuild", () => {
         events.push(`documents:${uid}:${documents.length}`);
         return { taskUid: 3 };
       },
+      deleteDocuments: async () => ({ taskUid: 7 }),
       waitForTask: async (taskUid: number) => events.push(`wait:${taskUid}`),
       getIndex: async (uid: string) => events.push(`get:${uid}`),
       swapIndexes: async (swaps: Array<{ indexes: [string, string] }>) => {

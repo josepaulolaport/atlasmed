@@ -51,6 +51,7 @@ const listHealthcareProfessionalsRoute = (
           search: query.search,
           facilityId: query.facilityId,
           userId: user.id,
+          role: user.role.name,
           ...filters,
           scope,
         });

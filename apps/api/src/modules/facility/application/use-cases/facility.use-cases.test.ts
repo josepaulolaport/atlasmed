@@ -1,7 +1,7 @@
 import { Role } from "@atlasmed/access";
 import { describe, expect, it } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
-import { ListFacilitiesUseCase } from "./facility.use-cases";
+import { ListFacilitiesUseCase, parseMeiliFacilityIds } from "./facility.use-cases";
 import type {
   FacilityListRecord,
   FacilityRepository,
@@ -250,8 +250,12 @@ describe("ListFacilitiesUseCase", () => {
     expect(result.pagination.total).toBe(8);
   });
 
-  it("returns a short Meilisearch page when canonical hydration rejects stale candidates", async () => {
-    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+  it("falls back to SQL when Meili hydration drops any hit", async () => {
+    let findAllCalls = 0;
+    const repository = fakeRepository(async () => {
+      findAllCalls += 1;
+      return { facilities: [facilityRecord(9)], total: 1 };
+    });
     repository.findAllByIds = async () => [facilityRecord(2)];
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: repository,
@@ -266,24 +270,93 @@ describe("ListFacilitiesUseCase", () => {
 
     const result = await useCase.execute(withRole({ search: "CNES", limit: 2, scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } }));
 
-    expect(result.data.map((facility) => facility.id)).toEqual([2]);
-    expect(result.pagination.total).toBe(2);
+    expect(findAllCalls).toBe(1);
+    expect(result.data.map((facility) => facility.id)).toEqual([9]);
+    expect(result.pagination.total).toBe(1);
   });
 
-  it("returns a typed 503 error when Meilisearch is unavailable", async () => {
+  it("falls back to SQL when Meili returns empty hits", async () => {
+    let findAllCalls = 0;
     const useCase = new ListFacilitiesUseCase({
-      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      facilityRepository: {
+        findAll: async () => {
+          findAllCalls += 1;
+          return { facilities: [facilityRecord(3)], total: 1 };
+        },
+        findAllByIds: async () => [],
+      } as unknown as FacilityRepository,
+      searchService: {
+        isConfigured: () => true,
+        search: async () => ({ hits: [], estimatedTotalHits: 0 }),
+      },
+    });
+
+    const result = await useCase.execute(
+      withRole({
+        search: "Augusta",
+        scope: {
+          isGlobal: true,
+          assignedTerritoryIds: [],
+          effectiveTerritoryIds: [],
+          analyticsEffectiveTerritoryIds: [],
+          territoryIds: [],
+          facilityIds: [],
+          analyticsFacilityIds: [],
+          clinicIds: [],
+          analyticsClinicIds: [],
+          managedUserIds: [],
+          isOperationallyActive: true,
+        },
+      }),
+    );
+
+    expect(findAllCalls).toBe(1);
+    expect(result.data.map((f) => f.id)).toEqual([3]);
+  });
+
+  it("falls back to SQL when Meilisearch is not configured", async () => {
+    let findAllCalls = 0;
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: {
+        findAll: async () => {
+          findAllCalls += 1;
+          return { facilities: [facilityRecord(9)], total: 1 };
+        },
+        findAllByIds: async () => [],
+      } as unknown as FacilityRepository,
       searchService: { isConfigured: () => false, search: async () => ({ hits: [] }) },
     });
 
-    await expect(
-      useCase.execute(withRole({ search: "CNPJ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } }))
-    ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE", statusCode: 503 });
+    const result = await useCase.execute(
+      withRole({
+        search: "CNPJ",
+        scope: {
+          isGlobal: true,
+          assignedTerritoryIds: [],
+          effectiveTerritoryIds: [],
+          analyticsEffectiveTerritoryIds: [],
+          territoryIds: [],
+          facilityIds: [],
+          analyticsFacilityIds: [],
+          clinicIds: [],
+          analyticsClinicIds: [],
+          managedUserIds: [],
+          isOperationallyActive: true,
+        },
+      }),
+    );
+
+    expect(findAllCalls).toBe(1);
+    expect(result.data.map((f) => f.id)).toEqual([9]);
   });
 
   it("prefilters textual facility search by facility scope, radius, and distance sort (status in Postgres)", async () => {
     let options: unknown;
-    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    let findAllCalls = 0;
+    const repository = fakeRepository(async () => {
+      findAllCalls += 1;
+      return { facilities: [], total: 0 };
+    });
     repository.findAllByIds = async () => [];
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: repository,
@@ -291,6 +364,7 @@ describe("ListFacilitiesUseCase", () => {
         isConfigured: () => true,
         search: async (_index, _query, received) => {
           options = received;
+          // Empty Meili → SQL fallback (still verified Meili filter shape first).
           return { hits: [], estimatedTotalHits: 0 };
         },
       },
@@ -312,12 +386,20 @@ describe("ListFacilitiesUseCase", () => {
       filter: "_geoRadius(-23.55, -46.63, 5000) AND id IN [1, 2]",
       sort: ["_geoPoint(-23.55, -46.63):asc"],
     });
+    expect(findAllCalls).toBe(1);
   });
 
-  it("prefilters an empty non-global facility scope to no Meilisearch documents", async () => {
+  it("prefilters an empty non-global facility scope then falls back to SQL on empty Meili", async () => {
     let options: { filter?: string } | undefined;
+    let findAllCalls = 0;
     const useCase = new ListFacilitiesUseCase({
-      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      facilityRepository: {
+        findAll: async () => {
+          findAllCalls += 1;
+          return { facilities: [], total: 0 };
+        },
+        findAllByIds: async () => [],
+      } as unknown as FacilityRepository,
       searchService: {
         isConfigured: () => true,
         search: async (_index, _query, received) => { options = received; return { hits: [] }; },
@@ -328,16 +410,24 @@ describe("ListFacilitiesUseCase", () => {
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
     expect(options?.filter).toBe("id = -1");
+    expect(findAllCalls).toBe(1);
   });
 
-  it("drops oversized scope filter and keeps geo/vertical Meili clauses when bound exceeded", async () => {
-    let options: { filter?: string } | undefined;
+  it("falls back to SQL when Meili scope filter exceeds length bound", async () => {
+    let searchCalls = 0;
+    let findAllCalls = 0;
     const useCase = new ListFacilitiesUseCase({
-      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      facilityRepository: {
+        findAll: async () => {
+          findAllCalls += 1;
+          return { facilities: [], total: 0 };
+        },
+        findAllByIds: async () => [],
+      } as unknown as FacilityRepository,
       searchService: {
         isConfigured: () => true,
-        search: async (_index, _query, received) => {
-          options = received;
+        search: async () => {
+          searchCalls += 1;
           return { hits: [] };
         },
       },
@@ -349,8 +439,9 @@ describe("ListFacilitiesUseCase", () => {
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 2_500 }, (_, index) => index + 1), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
     }));
 
-    // commercialStatus is applied in Postgres hydrate; oversized id IN is dropped.
-    expect(options?.filter).toBeUndefined();
+    // Oversized id IN → SQL before Meili (never drop scope).
+    expect(searchCalls).toBe(0);
+    expect(findAllCalls).toBe(1);
   });
 
   it("does not call Meilisearch for blank facility searches", async () => {
@@ -371,4 +462,129 @@ describe("ListFacilitiesUseCase", () => {
     expect(searchCalls).toBe(0);
   });
 
+  it("falls back to SQL when Meili search throws", async () => {
+    let findAllCalls = 0;
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: {
+        findAll: async () => {
+          findAllCalls += 1;
+          return { facilities: [facilityRecord(1)], total: 1 };
+        },
+        findAllByIds: async () => [],
+      } as unknown as FacilityRepository,
+      searchService: {
+        isConfigured: () => true,
+        search: async () => {
+          throw new Error("Attribute purchaseFunnelStagesAny is not filterable");
+        },
+      },
+    });
+
+    const result = await useCase.execute(
+      withRole({
+        search: "Rua",
+        purchaseBucket: "neverBought",
+        scope: {
+          isGlobal: true,
+          assignedTerritoryIds: [],
+          effectiveTerritoryIds: [],
+          analyticsEffectiveTerritoryIds: [],
+          territoryIds: [],
+          facilityIds: [],
+          analyticsFacilityIds: [],
+          clinicIds: [],
+          analyticsClinicIds: [],
+          managedUserIds: [],
+          isOperationallyActive: true,
+        },
+      }),
+    );
+
+    expect(findAllCalls).toBe(1);
+    expect(result.data).toHaveLength(1);
+  });
+
+  it("uses compact REP Meili scope (repUserIds) instead of giant facilityIds IN", async () => {
+    let options: { filter?: string } | undefined;
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [] };
+        },
+      },
+    });
+
+    await useCase.execute({
+      search: "Augusta",
+      role: Role.REP,
+      userId: 77,
+      scope: {
+        isGlobal: false,
+        assignedTerritoryIds: [],
+        effectiveTerritoryIds: [],
+        analyticsEffectiveTerritoryIds: [],
+        territoryIds: [],
+        facilityIds: Array.from({ length: 500 }, (_, i) => i + 1),
+        analyticsFacilityIds: [],
+        clinicIds: [],
+        analyticsClinicIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true,
+      },
+    });
+
+    expect(options?.filter).toBe("repUserIds = 77");
+  });
+
+  it("uses compact MANAGER Meili scope (territoryIds / oversight zones)", async () => {
+    let options: { filter?: string } | undefined;
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [] };
+        },
+      },
+    });
+
+    await useCase.execute({
+      search: "Augusta",
+      role: Role.MANAGER,
+      userId: 3,
+      scope: {
+        isGlobal: false,
+        assignedTerritoryIds: [10],
+        effectiveTerritoryIds: [10],
+        analyticsEffectiveTerritoryIds: [10],
+        territoryIds: [10],
+        oversightZoneIds: [10, 11],
+        facilityIds: Array.from({ length: 500 }, (_, i) => i + 1),
+        analyticsFacilityIds: [],
+        clinicIds: [],
+        analyticsClinicIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true,
+      },
+    });
+
+    expect(options?.filter).toBe("territoryIds IN [10, 11]");
+  });
+});
+
+describe("parseMeiliFacilityIds", () => {
+  it("keeps CRM bigints and drops legacy UUID strings", () => {
+    expect(
+      parseMeiliFacilityIds([
+        { id: 1 },
+        { id: "2" },
+        { id: "46ebcd8c907149f2a85c4d5c5718703b" },
+        { id: "3.0" },
+      ]),
+    ).toEqual([1, 2]);
+  });
 });

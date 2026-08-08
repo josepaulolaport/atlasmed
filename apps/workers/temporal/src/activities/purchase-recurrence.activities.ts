@@ -2,6 +2,7 @@ import { environment } from "@atlasmed/config";
 import {
   facilities,
   facilityVerticalProfiles,
+  facilityVerticalRepAssignments,
   municipalities,
   orders,
   states,
@@ -271,6 +272,17 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         });
       }
 
+      const profileIds = profiles.map((profile) => profile.id);
+      const repRows = profileIds.length === 0
+        ? []
+        : await tx
+          .select({ userId: facilityVerticalRepAssignments.userId })
+          .from(facilityVerticalRepAssignments)
+          .where(and(
+            inArray(facilityVerticalRepAssignments.facilityVerticalProfileId, profileIds),
+            isNull(facilityVerticalRepAssignments.endedAt),
+          ));
+
       const [row] = await tx.select({
         id: facilities.id,
         displayName: facilities.displayName,
@@ -280,6 +292,8 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         cnesCode: facilities.cnesCode,
         city: municipalities.name,
         state: states.abbreviation,
+        streetAddress: facilities.streetAddress,
+        neighborhood: facilities.neighborhood,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
@@ -294,6 +308,7 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
           ...row,
           verticalIds: profileFunnelData.map((profile) => profile.verticalId),
           territoryIds: [...new Set(profiles.flatMap((profile) => profile.managerZoneId ? [profile.managerZoneId] : []))],
+          repUserIds: repRows.map((rep) => rep.userId),
           profileFunnelData,
         }) : null,
       };
@@ -312,9 +327,24 @@ async function updateFacilitySearchDocuments(documents: FacilitySearchDocument[]
   await search.waitForTask(task.taskUid);
 }
 
+async function deleteFacilitySearchDocuments(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  if (!environment.MEILISEARCH_URL) throw new Error("Meilisearch is not configured");
+  const search = createSearchIndexClient(new Meilisearch({
+    host: environment.MEILISEARCH_URL,
+    ...(environment.MEILISEARCH_API_KEY ? { apiKey: environment.MEILISEARCH_API_KEY } : {}),
+  }));
+  const task = await search.deleteDocuments(
+    "facilities",
+    ids.map((id) => String(id)),
+  );
+  await search.waitForTask(task.taskUid);
+}
+
 export function createPurchaseRecurrenceBatchActivity(dependencies: {
   store: PurchaseRecurrenceStore;
   updateSearchDocuments: (documents: FacilitySearchDocument[]) => Promise<void>;
+  deleteSearchDocuments?: (ids: number[]) => Promise<void>;
 }) {
   return async function recalculatePurchaseRecurrenceBatch(
     input: PurchaseRecurrenceBatchInput,
@@ -366,13 +396,19 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
 
     const failures: PurchaseRecurrenceFailure[] = [];
     const documents: FacilitySearchDocument[] = [];
+    const deleteIds: number[] = [];
     let updated = 0;
     for (const facilityId of facilityIds) {
       try {
         const result = await dependencies.store.recalculateFacility(facilityId, input.today);
         if (result.changed) updated += 1;
         // Re-publish no-op snapshots too: a prior DB commit may have outlived a failed search update.
-        if (result.document) documents.push(result.document);
+        if (result.document) {
+          documents.push(result.document);
+        } else {
+          // Deactivated / unindexable — remove ghost Meili docs.
+          deleteIds.push(facilityId);
+        }
       } catch (error) {
         failures.push({ facilityId, message: errorMessage(error) });
       }
@@ -399,6 +435,25 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
       } catch (error) {
         const failure = { facilityId: null, message: `Meilisearch partial update failed: ${errorMessage(error)}` };
         logger.error("facility_purchase_recurrence.search_publication_failed", {
+          mode: input.mode,
+          processed: facilityIds.length,
+          cursor: input.cursor ?? undefined,
+          failure,
+        });
+        throw ApplicationFailure.retryable(
+          failure.message,
+          "PurchaseRecurrenceSearchPublicationFailure",
+          [failure],
+        );
+      }
+    }
+
+    if (deleteIds.length > 0 && dependencies.deleteSearchDocuments) {
+      try {
+        await dependencies.deleteSearchDocuments(deleteIds);
+      } catch (error) {
+        const failure = { facilityId: null, message: `Meilisearch delete failed: ${errorMessage(error)}` };
+        logger.error("facility_purchase_recurrence.search_delete_failed", {
           mode: input.mode,
           processed: facilityIds.length,
           cursor: input.cursor ?? undefined,
@@ -466,4 +521,5 @@ export async function logPurchaseRecurrenceLifecycle(input: PurchaseRecurrenceLi
 export const recalculatePurchaseRecurrenceBatch = createPurchaseRecurrenceBatchActivity({
   store: new DrizzlePurchaseRecurrenceStore(),
   updateSearchDocuments: updateFacilitySearchDocuments,
+  deleteSearchDocuments: deleteFacilitySearchDocuments,
 });

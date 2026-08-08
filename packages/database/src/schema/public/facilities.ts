@@ -32,7 +32,6 @@ import { users } from "./users";
 import {
   unitTypes,
   unitSubtypes,
-  deactivationReasons,
 } from "./cnes-lookups";
 import { clinicalFocuses } from "./clinical-focuses";
 import { municipalities, states } from "./admin-geography";
@@ -48,9 +47,6 @@ export const facilities = pgTable(
 
     // --- Registry provenance ---
     cnesCode: text("cnes_code"),
-    /** CNES deactivation code → deactivation_reasons (FK deferred until lookups are seeded). */
-    registryDeactivationCode: text("registry_deactivation_code"),
-
     // --- Legal document (digits only; type CNPJ=14 / CPF=11) ---
     /** Required on every insert — no DB default (CNPJ vs CPF must be explicit). */
     legalDocumentType: facilityLegalDocumentTypeEnum("legal_document_type").notNull(),
@@ -192,42 +188,10 @@ export const facilityPhotos = pgTable(
   ]
 );
 
-export const facilityConsultantAssignments = pgTable(
-  "facility_consultant_assignments",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    userId: bigint("user_id", { mode: "number" })
-      .notNull().references(() => users.id, { onDelete: "cascade" }),
-    verticalId: bigint("vertical_id", { mode: "number" })
-      .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
-    startedAt: timestamp("started_at").notNull().defaultNow(),
-    endedAt: timestamp("ended_at"),
-    assignedByUserId: bigint("assigned_by_user_id", { mode: "number" }).references(() => users.id, {
-      onDelete: "set null",
-    }),
-    endReason: text("end_reason"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  },
-  (t) => [
-    index("facility_consultant_assignments_facility_id_idx").on(t.facilityId),
-    index("facility_consultant_assignments_user_id_idx").on(t.userId),
-    index("facility_consultant_assignments_vertical_id_idx").on(t.verticalId),
-    index("facility_consultant_assignments_facility_id_ended_at_idx").on(t.facilityId, t.endedAt),
-    uniqueIndex("facility_consultant_assignments_facility_vertical_active_uidx")
-      .on(t.facilityId, t.verticalId)
-      .where(sql`${t.endedAt} IS NULL`),
-    check(
-      "facility_consultant_assignments_ended_at_gte_started_at_check",
-      sql`${t.endedAt} IS NULL OR ${t.endedAt} >= ${t.startedAt}`
-    ),
-  ]
-);
-
 /**
  * Vertical-specific commercial + purchase-funnel profile for a facility.
  * Funnel/recurrence is computed from orders of this verticalId only.
+ * Canonical: facility participates in this business vertical.
  */
 export const facilityVerticalProfiles = pgTable(
   "facility_vertical_profiles",
@@ -320,6 +284,45 @@ export const facilityVerticalProfiles = pgTable(
         or (${t.purchaseIntervalSource} <> 'MANUAL' and ${t.manualPurchaseProfile} is null)`,
     ),
   ]
+);
+
+/**
+ * Time-bounded REP responsibility under a facility×vertical profile.
+ * One active assignment per profile (`ended_at IS NULL`).
+ */
+export const facilityVerticalRepAssignments = pgTable(
+  "facility_vertical_rep_assignments",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
+      .notNull()
+      .references(() => facilityVerticalProfiles.id, { onDelete: "cascade" }),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at").notNull().defaultNow(),
+    endedAt: timestamp("ended_at"),
+    assignedByUserId: bigint("assigned_by_user_id", { mode: "number" }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    endReason: text("end_reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("facility_vertical_rep_assignments_profile_id_ended_at_idx").on(
+      t.facilityVerticalProfileId,
+      t.endedAt,
+    ),
+    index("facility_vertical_rep_assignments_user_id_ended_at_idx").on(t.userId, t.endedAt),
+    uniqueIndex("facility_vertical_rep_assignments_profile_active_uidx")
+      .on(t.facilityVerticalProfileId)
+      .where(sql`${t.endedAt} IS NULL`),
+    check(
+      "facility_vertical_rep_assignments_ended_at_gte_started_at_check",
+      sql`${t.endedAt} IS NULL OR ${t.endedAt} >= ${t.startedAt}`,
+    ),
+  ],
 );
 
 export const healthcareProviders = pgTable(
@@ -466,12 +469,7 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
     fields: [facilities.unitSubtypeId],
     references: [unitSubtypes.id],
   }),
-  deactivationReason: one(deactivationReasons, {
-    fields: [facilities.registryDeactivationCode],
-    references: [deactivationReasons.deactivationCode],
-  }),
   verticalProfiles: many(facilityVerticalProfiles),
-  consultantAssignments: many(facilityConsultantAssignments),
   healthcareProviderShares: many(facilityHealthcareProviderShares),
   conformityRecords: many(conformityRecords),
   clinicalFocusLinks: many(facilityClinicalFocuses),
@@ -481,7 +479,7 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
 
 export const facilityVerticalProfilesRelations = relations(
   facilityVerticalProfiles,
-  ({ one }) => ({
+  ({ one, many }) => ({
     facility: one(facilities, {
       fields: [facilityVerticalProfiles.facilityId],
       references: [facilities.id],
@@ -494,7 +492,28 @@ export const facilityVerticalProfilesRelations = relations(
       fields: [facilityVerticalProfiles.managerZoneId],
       references: [territories.id],
     }),
+    repAssignments: many(facilityVerticalRepAssignments),
   })
+);
+
+export const facilityVerticalRepAssignmentsRelations = relations(
+  facilityVerticalRepAssignments,
+  ({ one }) => ({
+    profile: one(facilityVerticalProfiles, {
+      fields: [facilityVerticalRepAssignments.facilityVerticalProfileId],
+      references: [facilityVerticalProfiles.id],
+    }),
+    user: one(users, {
+      fields: [facilityVerticalRepAssignments.userId],
+      references: [users.id],
+      relationName: "FacilityVerticalRepUser",
+    }),
+    assignedBy: one(users, {
+      fields: [facilityVerticalRepAssignments.assignedByUserId],
+      references: [users.id],
+      relationName: "FacilityVerticalRepAssignedBy",
+    }),
+  }),
 );
 
 export const facilityPhotosRelations = relations(facilityPhotos, ({ one }) => ({
@@ -521,24 +540,6 @@ export const facilityClinicalFocusesRelations = relations(
     }),
   })
 );
-
-export const facilityConsultantAssignmentsRelations = relations(facilityConsultantAssignments, ({ one }) => ({
-  facility: one(facilities, { fields: [facilityConsultantAssignments.facilityId], references: [facilities.id] }),
-  vertical: one(businessVerticals, {
-    fields: [facilityConsultantAssignments.verticalId],
-    references: [businessVerticals.id],
-  }),
-  user: one(users, {
-    fields: [facilityConsultantAssignments.userId],
-    references: [users.id],
-    relationName: "FacilityConsultantUser",
-  }),
-  assignedBy: one(users, {
-    fields: [facilityConsultantAssignments.assignedByUserId],
-    references: [users.id],
-    relationName: "FacilityConsultantAssignedBy",
-  }),
-}));
 
 export const healthcareProvidersRelations = relations(healthcareProviders, ({ many }) => ({
   facilityShares: many(facilityHealthcareProviderShares),

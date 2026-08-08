@@ -40,6 +40,9 @@ export const states = pgTable(
     uniqueIndex("states_cnes_code_uidx")
       .on(t.cnesCode)
       .where(sql`${t.cnesCode} IS NOT NULL`),
+    index("states_boundary_gist_idx")
+      .using("gist", t.boundary)
+      .where(sql`${t.boundary} IS NOT NULL`),
   ]
 );
 
@@ -68,6 +71,9 @@ export const municipalities = pgTable(
     uniqueIndex("municipalities_id_state_id_uidx").on(t.id, t.stateId),
     index("municipalities_state_id_idx").on(t.stateId),
     index("municipalities_name_idx").on(t.name),
+    index("municipalities_boundary_gist_idx")
+      .using("gist", t.boundary)
+      .where(sql`${t.boundary} IS NOT NULL`),
   ]
 );
 
@@ -89,5 +95,8 @@ export const neighborhoods = pgTable(
     uniqueIndex("neighborhoods_ibge_code_uidx").on(t.ibgeCode),
     index("neighborhoods_municipality_id_idx").on(t.municipalityId),
     index("neighborhoods_name_idx").on(t.name),
+    index("neighborhoods_boundary_gist_idx")
+      .using("gist", t.boundary)
+      .where(sql`${t.boundary} IS NOT NULL`),
   ]
 );

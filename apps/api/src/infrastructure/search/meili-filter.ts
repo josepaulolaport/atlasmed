@@ -1,3 +1,5 @@
+import { Role } from "@atlasmed/access";
+
 export const MEILI_FILTER_MAX_LENGTH = 8_000;
 
 const FILTER_FIELDS = [
@@ -8,6 +10,7 @@ const FILTER_FIELDS = [
   "specialtyNormalized",
   "activeFacilityIds",
   "activeTerritoryIds",
+  "repUserIds",
   "verticalFunnelStages",
   "verticalPurchaseIntervalSources",
   "verticalManualPurchaseProfiles",
@@ -70,6 +73,15 @@ export function geoRadiusFilter(latitude: number, longitude: number, radiusMeter
   return { expression: `_geoRadius(${latitude}, ${longitude}, ${radiusMeters})` };
 }
 
+export function orGroup(clauses: Array<FilterClause | undefined>): FilterClause | undefined {
+  const present = clauses.filter((clause): clause is FilterClause => clause !== undefined);
+  if (present.length === 0) return undefined;
+  if (present.length === 1) return present[0];
+  return {
+    expression: `(${present.map((clause) => clause.expression).join(" OR ")})`,
+  };
+}
+
 export function buildMeiliFilter(
   clauses: Array<FilterClause | undefined>,
   maxLength = MEILI_FILTER_MAX_LENGTH
@@ -80,4 +92,54 @@ export function buildMeiliFilter(
     .join(" AND ");
   if (!expression) return undefined;
   return expression.length <= maxLength ? expression : undefined;
+}
+
+/**
+ * Compact Meili pre-filter for facilities list search.
+ * MANAGER → zone ids; REP → assignment user id; else facility id IN (OPS/legacy).
+ * SQL hydrate remains authority.
+ */
+export function compactFacilityMeiliScopeFilter(input: {
+  isGlobal: boolean;
+  role: string;
+  userId: number;
+  oversightZoneIds?: number[];
+  facilityIds: number[];
+}): FilterClause | undefined {
+  if (input.isGlobal) return undefined;
+
+  if (input.role === Role.MANAGER) {
+    const zones = input.oversightZoneIds ?? [];
+    if (zones.length > 0) return inFilter("territoryIds", zones);
+  }
+
+  if (input.role === Role.REP) {
+    return eqFilter("repUserIds", input.userId);
+  }
+
+  return input.facilityIds.length > 0
+    ? inFilter("id", input.facilityIds)
+    : eqFilter("id", -1);
+}
+
+/**
+ * Compact Meili pre-filter for persons list search.
+ * MANAGER → activeTerritoryIds; REP/OPS → activeFacilityIds IN (oversized → SQL).
+ */
+export function compactPersonMeiliScopeFilter(input: {
+  isGlobal: boolean;
+  role?: string;
+  oversightZoneIds?: number[];
+  facilityIds: number[];
+}): FilterClause | undefined {
+  if (input.isGlobal) return undefined;
+
+  if (input.role === Role.MANAGER) {
+    const zones = input.oversightZoneIds ?? [];
+    if (zones.length > 0) return inFilter("activeTerritoryIds", zones);
+  }
+
+  return input.facilityIds.length > 0
+    ? inFilter("activeFacilityIds", input.facilityIds)
+    : eqFilter("activeFacilityIds", -1);
 }

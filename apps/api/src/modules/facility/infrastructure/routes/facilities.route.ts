@@ -226,86 +226,115 @@ const deleteFacilityRoute = new Elysia()
     }
   );
 
-const listConsultantAssignmentsRoute = new Elysia()
+const verticalPathParams = t.Object({
+  id: t.Number({ minimum: 1 }),
+  verticalId: t.Number({ minimum: 1 }),
+});
+
+const listVerticalRepAssignmentsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
-    "/facilities/:id/consultant-assignments",
-    async ({ params, getScope }) => {
+    "/facilities/:id/verticals/:verticalId/rep-assignments",
+    async ({ params, getScope, getUser }) => {
       const scope = await getScope();
-      return facilityUseCases.listConsultantAssignments().execute({
+      const user = await getUser();
+      return facilityUseCases.listVerticalRepAssignments().execute({
         facilityId: params.id,
+        verticalId: params.verticalId,
         scope,
+        role: user.role.name,
       });
     },
     {
-      params: t.Object({
-        id: t.Number({ minimum: 1 }),
-      }),
+      params: verticalPathParams,
       detail: {
-        summary: "List facility consultant assignments",
+        summary: "List facility vertical REP assignment history",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
-    }
+    },
   );
 
-const assignConsultantRoute = new Elysia()
+const assignVerticalRepRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
-  .post(
-    "/facilities/:id/consultant-assignments",
+  .put(
+    "/facilities/:id/verticals/:verticalId/rep",
     async ({ params, body, getUserId, getScope, getUser }) => {
       const scope = await getScope();
       const assignedByUserId = await getUserId();
       const user = await getUser();
-      return facilityUseCases.assignConsultant().execute({
+      return facilityUseCases.assignVerticalRep().execute({
         facilityId: params.id,
+        verticalId: params.verticalId,
         userId: body.userId,
-        verticalId: body.verticalId,
         assignedByUserId,
         scope,
         role: user.role.name,
       });
     },
     {
-      params: t.Object({
-        id: t.Number({ minimum: 1 }),
+      params: verticalPathParams,
+      body: t.Object({
+        userId: t.Number({ minimum: 1 }),
       }),
       detail: {
-        summary: "Assign consultant to facility",
+        summary: "Assign or replace REP for facility vertical",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
-      body: t.Object({
-        userId: t.Number({ minimum: 1 }),
-        verticalId: t.Optional(t.Number({ minimum: 1 })),
-      }),
-    }
+    },
   );
 
-const unassignConsultantRoute = new Elysia()
+const unassignVerticalRepRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .delete(
-    "/facilities/:id/consultant-assignments/current",
-    async ({ params, getScope }) => {
+    "/facilities/:id/verticals/:verticalId/rep",
+    async ({ params, getScope, getUser }) => {
       const scope = await getScope();
-      return facilityUseCases.unassignConsultant().execute({
+      const user = await getUser();
+      return facilityUseCases.unassignVerticalRep().execute({
         facilityId: params.id,
+        verticalId: params.verticalId,
         scope,
+        role: user.role.name,
       });
     },
     {
-      params: t.Object({
-        id: t.Number({ minimum: 1 }),
-      }),
+      params: verticalPathParams,
       detail: {
-        summary: "End current consultant assignment for facility",
+        summary: "End active REP assignment for facility vertical",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
-    }
+    },
+  );
+
+const deactivateFacilityVerticalRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .delete(
+    "/facilities/:id/verticals/:verticalId",
+    async ({ params, getScope, getUser }) => {
+      const scope = await getScope();
+      const user = await getUser();
+      return facilityUseCases.deactivateFacilityVertical().execute({
+        facilityId: params.id,
+        verticalId: params.verticalId,
+        scope,
+        role: user.role.name,
+      });
+    },
+    {
+      params: verticalPathParams,
+      detail: {
+        summary: "Deactivate facility vertical (ends active REP, keeps history)",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
   );
 
 const listConformityRequirementsRoute = new Elysia()
@@ -870,9 +899,10 @@ export const facilitiesRoute = new Elysia()
   .use(downloadFacilityCadastroFileRoute)
   .use(listFacilityPhotosRoute)
   .use(uploadFacilityPhotoRoute)
-  .use(listConsultantAssignmentsRoute)
-  .use(assignConsultantRoute)
-  .use(unassignConsultantRoute)
+  .use(listVerticalRepAssignmentsRoute)
+  .use(assignVerticalRepRoute)
+  .use(unassignVerticalRepRoute)
+  .use(deactivateFacilityVerticalRoute)
   .use(listConformityRequirementsRoute)
   .use(listFacilityConformityRecordsRoute)
   .use(createFacilityConformityRecordRoute)

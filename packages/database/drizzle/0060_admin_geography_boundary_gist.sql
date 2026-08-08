@@ -1,0 +1,3 @@
+CREATE INDEX "municipalities_boundary_gist_idx" ON "municipalities" USING gist ("boundary") WHERE "municipalities"."boundary" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX "neighborhoods_boundary_gist_idx" ON "neighborhoods" USING gist ("boundary") WHERE "neighborhoods"."boundary" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX "states_boundary_gist_idx" ON "states" USING gist ("boundary") WHERE "states"."boundary" IS NOT NULL;

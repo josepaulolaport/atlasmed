@@ -12,6 +12,7 @@ interface Dependencies {
   territoryRepository: TerritoryRepository;
   membershipService: TerritoryMembershipService;
   clinicWriter: ClinicMembershipWriter;
+  onFacilityChanged?: (facilityId: number) => Promise<void>;
 }
 
 export class TerritoryMembershipUseCases {
@@ -110,6 +111,7 @@ export class TerritoryMembershipUseCases {
       territory.verticalId,
       input.territoryId,
     );
+    await this.deps.onFacilityChanged?.(input.facilityId);
 
     return { success: true };
   }

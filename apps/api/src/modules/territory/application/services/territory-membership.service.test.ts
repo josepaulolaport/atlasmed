@@ -43,6 +43,62 @@ describe("TerritoryMembershipService", () => {
     ]);
   });
 
+  it("notifies search index after single membership write", async () => {
+    const onClinicMembershipChanged = mock(async () => {});
+    const clinicWriter = createClinicWriter();
+
+    const service = new TerritoryMembershipService({
+      spatialRepository: {
+        findContainingClinicAssignmentTerritoryIds: mock(async () => [
+          { id: LEAF_TERRITORY_ID, verticalId: 1 },
+        ]),
+      } as never,
+      territoryRepository: {} as never,
+      clinicWriter,
+      onClinicMembershipChanged,
+    });
+
+    await service.assignClinicByGeo({
+      id: CLINIC_ID,
+      lat: -23.5,
+      lng: -46.6,
+      managerZoneId: null,
+    });
+
+    expect(onClinicMembershipChanged).toHaveBeenCalledWith(CLINIC_ID);
+  });
+
+  it("skips Meili notify on bulk recompute paths", async () => {
+    const onClinicMembershipChanged = mock(async () => {});
+    const clinicWriter = createClinicWriter({
+      findClinicsForMembership: mock(async () => [
+        {
+          id: CLINIC_ID,
+          lat: -23.5,
+          lng: -46.6,
+          managerZoneId: ZONE_TERRITORY_ID,
+        },
+      ]),
+    });
+
+    const service = new TerritoryMembershipService({
+      spatialRepository: {
+        findContainingClinicAssignmentTerritoryIds: mock(async () => [
+          { id: LEAF_TERRITORY_ID, verticalId: 1 },
+        ]),
+        getBoundaryBoundingBox: mock(async () => null),
+      } as never,
+      territoryRepository: {} as never,
+      clinicWriter,
+      onClinicMembershipChanged,
+    });
+
+    await service.recomputeAll();
+    await service.recomputeForTerritoryBoundary(ZONE_TERRITORY_ID);
+
+    expect(onClinicMembershipChanged).not.toHaveBeenCalled();
+  });
+
   it("updates profiles per vertical and clears ambiguous vertical matches", async () => {
     const clinicWriter = createClinicWriter();
 
@@ -177,11 +233,13 @@ describe("TerritoryMembershipService", () => {
       ),
     });
     const findContainingClinicAssignmentTerritoryIds = mock(async () => []);
+    const onClinicMembershipChanged = mock(async () => {});
 
     const service = new TerritoryMembershipService({
       spatialRepository: { findContainingClinicAssignmentTerritoryIds } as never,
       territoryRepository: {} as never,
       clinicWriter,
+      onClinicMembershipChanged,
     });
 
     const result = await service.disassociateClinicsForTerritory(ZONE_TERRITORY_ID);
@@ -192,5 +250,7 @@ describe("TerritoryMembershipService", () => {
       excludeTerritoryId: ZONE_TERRITORY_ID,
     });
     expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledTimes(2);
+    // Bulk path: notifySearch:false — no per-clinic Meili upsert.
+    expect(onClinicMembershipChanged).not.toHaveBeenCalled();
   });
 });

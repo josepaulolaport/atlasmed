@@ -14,3 +14,11 @@ export type {
   PurchaseRecurrenceValidationErrorCode,
   PurchaseRecurrenceSnapshot,
 } from "./purchase-recurrence";
+export {
+  deriveFacilityProfileFunnelFields,
+  mapFacilitySearchDocument,
+} from "./facility-search-document";
+export type {
+  FacilityProfileFunnelData,
+  FacilitySearchDocument,
+} from "./facility-search-document";

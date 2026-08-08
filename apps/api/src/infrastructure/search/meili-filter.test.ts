@@ -1,12 +1,16 @@
 import { describe, expect, it } from "bun:test";
+import { Role } from "@atlasmed/access";
 import {
   buildMeiliFilter,
+  compactFacilityMeiliScopeFilter,
+  compactPersonMeiliScopeFilter,
   eqFilter,
   geoRadiusFilter,
   gteFilter,
   inFilter,
   isNullFilter,
   lteFilter,
+  orGroup,
 } from "./meili-filter";
 
 describe("Meilisearch filter builder", () => {
@@ -41,5 +45,89 @@ describe("Meilisearch filter builder", () => {
     expect(buildMeiliFilter([inFilter("verticalIds", [2, 1])])).toBe(
       "verticalIds IN [1, 2]"
     );
+  });
+
+  it("groups OR specialty filters", () => {
+    expect(
+      buildMeiliFilter([
+        orGroup([
+          eqFilter("specialtyNormalized", "cardiologia"),
+          eqFilter("specialtyNormalized", "pediatria"),
+        ]),
+      ])
+    ).toBe(
+      "(specialtyNormalized = 'cardiologia' OR specialtyNormalized = 'pediatria')"
+    );
+  });
+
+  it("builds compact facility scope by role (REP assignment / MANAGER zone)", () => {
+    expect(
+      compactFacilityMeiliScopeFilter({
+        isGlobal: true,
+        role: Role.ADMIN,
+        userId: 1,
+        facilityIds: [9],
+      })
+    ).toBeUndefined();
+
+    expect(
+      compactFacilityMeiliScopeFilter({
+        isGlobal: false,
+        role: Role.REP,
+        userId: 42,
+        oversightZoneIds: [7],
+        facilityIds: Array.from({ length: 500 }, (_, i) => i + 1),
+      })?.expression
+    ).toBe("repUserIds = 42");
+
+    expect(
+      compactFacilityMeiliScopeFilter({
+        isGlobal: false,
+        role: Role.MANAGER,
+        userId: 9,
+        oversightZoneIds: [3, 1],
+        facilityIds: Array.from({ length: 500 }, (_, i) => i + 1),
+      })?.expression
+    ).toBe("territoryIds IN [1, 3]");
+
+    // Unassigned-in-zone: manager zone filter does not require facility ids.
+    expect(
+      compactFacilityMeiliScopeFilter({
+        isGlobal: false,
+        role: Role.MANAGER,
+        userId: 9,
+        oversightZoneIds: [5],
+        facilityIds: [],
+      })?.expression
+    ).toBe("territoryIds IN [5]");
+
+    expect(
+      compactFacilityMeiliScopeFilter({
+        isGlobal: false,
+        role: Role.OPS,
+        userId: 2,
+        facilityIds: [4, 2],
+      })?.expression
+    ).toBe("id IN [2, 4]");
+  });
+
+  it("builds compact person scope (MANAGER territory; REP facility IN)", () => {
+    expect(
+      compactPersonMeiliScopeFilter({
+        isGlobal: false,
+        role: Role.MANAGER,
+        oversightZoneIds: [8, 2],
+        facilityIds: Array.from({ length: 500 }, (_, i) => i + 1),
+      })?.expression
+    ).toBe("activeTerritoryIds IN [2, 8]");
+
+    expect(
+      compactPersonMeiliScopeFilter({
+        isGlobal: false,
+        role: Role.REP,
+        oversightZoneIds: [1],
+        facilityIds: [3, 1],
+      })?.expression
+    ).toBe("activeFacilityIds IN [1, 3]");
   });
 });

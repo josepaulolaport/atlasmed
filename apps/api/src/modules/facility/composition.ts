@@ -1,5 +1,5 @@
 import { DrizzleFacilityRepository } from "./infrastructure/repositories/drizzle/drizzle-facility.repository";
-import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
+import { DrizzleFacilityVerticalRepAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-vertical-rep-assignment.repository";
 import { DrizzleFacilityNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-note.repository";
 import { DrizzleFacilityPhotoRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-photo.repository";
 import { DrizzleConformityRepository } from "./infrastructure/repositories/drizzle/drizzle-conformity.repository";
@@ -18,10 +18,11 @@ import {
 } from "./application/use-cases/facility.use-cases";
 import { ListMapFacilityPointsUseCase } from "./application/use-cases/list-map-facility-points.use-case";
 import {
-  AssignFacilityConsultantUseCase,
-  ListFacilityConsultantAssignmentsUseCase,
-  UnassignFacilityConsultantUseCase,
-} from "./application/use-cases/facility-consultant.use-cases";
+  AssignFacilityVerticalRepUseCase,
+  DeactivateFacilityVerticalUseCase,
+  ListFacilityVerticalRepAssignmentsUseCase,
+  UnassignFacilityVerticalRepUseCase,
+} from "./application/use-cases/facility-vertical-rep.use-cases";
 import {
   CreateFacilityConformityRecordUseCase,
   ListConformityRequirementsUseCase,
@@ -74,12 +75,13 @@ import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
 import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
+import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
 import { searchService } from "../../infrastructure/search/search.service";
 
 export const facilityRepositories = {
   facility: new DrizzleFacilityRepository(),
   purchaseRecurrence: new DrizzleFacilityPurchaseRecurrenceRepository(),
-  consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
+  verticalRepAssignment: new DrizzleFacilityVerticalRepAssignmentRepository(),
   note: new DrizzleFacilityNoteRepository(),
   photo: new DrizzleFacilityPhotoRepository(),
   conformity: new DrizzleConformityRepository(),
@@ -115,7 +117,7 @@ export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
 );
 
 export const facilityAssociationPort = new DrizzleFacilityAssociationPort(
-  facilityRepositories.consultantAssignment,
+  facilityRepositories.verticalRepAssignment,
 );
 
 export const facilityGeocodingService = new FacilityGeocodingService({
@@ -128,6 +130,10 @@ async function handleFacilityLocationChanged(facilityId: number): Promise<void> 
   await territoryMembershipService.assignFacilityById(facilityId);
 }
 
+async function handleFacilityChanged(facilityId: number): Promise<void> {
+  await upsertFacilitySearchDocument(facilityId);
+}
+
 export const purchaseRecurrenceService = new PurchaseRecurrenceService(
   facilityRepositories.purchaseRecurrence,
 );
@@ -138,6 +144,7 @@ const facilityMembershipDeps = {
   facilityGeocodingService,
   purchaseRecurrenceService,
   onFacilityLocationChanged: handleFacilityLocationChanged,
+  onFacilityChanged: handleFacilityChanged,
 };
 
 export const facilityUseCases = {
@@ -185,13 +192,53 @@ export const facilityUseCases = {
       facilityPhotoRepository: facilityRepositories.photo,
       storage: facilityPhotoStorage,
     }),
-  listConsultantAssignments: () =>
-    new ListFacilityConsultantAssignmentsUseCase({
-      consultantAssignmentRepository: facilityRepositories.consultantAssignment,
+  listVerticalRepAssignments: () =>
+    new ListFacilityVerticalRepAssignmentsUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
     }),
-  assignConsultant: () =>
-    new AssignFacilityConsultantUseCase({
-      consultantAssignmentRepository: facilityRepositories.consultantAssignment,
+  assignVerticalRep: () =>
+    new AssignFacilityVerticalRepUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+      assertVerticalActive: async (verticalId) => {
+        const { businessVerticals } = await import("@atlasmed/database");
+        const { eq } = await import("drizzle-orm");
+        const { db } = await import("../../infrastructure/database/db");
+        const { ValidationError } = await import("../../shared/errors");
+        const [row] = await db
+          .select({ id: businessVerticals.id, isActive: businessVerticals.isActive })
+          .from(businessVerticals)
+          .where(eq(businessVerticals.id, verticalId))
+          .limit(1);
+        if (!row || !row.isActive) {
+          throw new ValidationError([
+            { field: "verticalId", message: "vertical is inactive or missing" },
+          ]);
+        }
+      },
+      assertAssigneeHasVertical: async ({ userId, verticalId }) => {
+        const { userVerticalAssignments } = await import("@atlasmed/database");
+        const { and, eq } = await import("drizzle-orm");
+        const { db } = await import("../../infrastructure/database/db");
+        const { ValidationError } = await import("../../shared/errors");
+        const [row] = await db
+          .select({ id: userVerticalAssignments.id })
+          .from(userVerticalAssignments)
+          .where(
+            and(
+              eq(userVerticalAssignments.userId, userId),
+              eq(userVerticalAssignments.verticalId, verticalId),
+            ),
+          )
+          .limit(1);
+        if (!row) {
+          throw new ValidationError([
+            {
+              field: "userId",
+              message: "assignee must have user_vertical_assignments for this vertical",
+            },
+          ]);
+        }
+      },
       assertAssigneeCoversFacility: async ({ userId, facilityId }) => {
         const { territoryRepositories } = await import("../territory/composition");
         const { OperationNotAllowedError } = await import("../../shared/errors");
@@ -202,27 +249,40 @@ export const facilityUseCases = {
           );
         if (!covers) {
           throw new OperationNotAllowedError(
-            "assign_consultant",
+            "assign_vertical_rep",
             "Representative must have a territory patch covering this clinic",
           );
         }
       },
-      onConsultantAssignmentChanged: async (userIds) => {
+      onRepAssignmentChanged: async (userIds) => {
         const { accessScopeServices } = await import("../access/composition");
         await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
           userIds,
         );
       },
+      onFacilityChanged: handleFacilityChanged,
     }),
-  unassignConsultant: () =>
-    new UnassignFacilityConsultantUseCase({
-      consultantAssignmentRepository: facilityRepositories.consultantAssignment,
-      onConsultantAssignmentChanged: async (userIds) => {
+  unassignVerticalRep: () =>
+    new UnassignFacilityVerticalRepUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+      onRepAssignmentChanged: async (userIds) => {
         const { accessScopeServices } = await import("../access/composition");
         await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
           userIds,
         );
       },
+      onFacilityChanged: handleFacilityChanged,
+    }),
+  deactivateFacilityVertical: () =>
+    new DeactivateFacilityVerticalUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+      onRepAssignmentChanged: async (userIds) => {
+        const { accessScopeServices } = await import("../access/composition");
+        await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
+          userIds,
+        );
+      },
+      onFacilityChanged: handleFacilityChanged,
     }),
   listConformityRequirements: () =>
     new ListConformityRequirementsUseCase({

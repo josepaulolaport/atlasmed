@@ -161,6 +161,24 @@ describe("purchase recurrence batch processing", () => {
     expect(updateSearchDocuments).toHaveBeenCalledWith([document]);
   });
 
+  test("deletes Meili documents when recalculation returns null document", async () => {
+    const updateSearchDocuments = mock(async () => {});
+    const deleteSearchDocuments = mock(async () => {});
+    const activity = createPurchaseRecurrenceBatchActivity({
+      store: createStore({
+        listBackfillFacilityIds: async () => [7],
+        recalculateFacility: async () => ({ facilityId: 7, changed: true, document: null }),
+      }),
+      updateSearchDocuments,
+      deleteSearchDocuments,
+    });
+
+    const result = await activity({ mode: "BACKFILL", cursor: null, limit: 500, today: "2026-07-22" });
+    expect(result).toMatchObject({ processed: 1, updated: 1, failed: 0 });
+    expect(updateSearchDocuments).not.toHaveBeenCalled();
+    expect(deleteSearchDocuments).toHaveBeenCalledWith([7]);
+  });
+
   test("re-publishes a no-op persisted document after Meilisearch fails on the first attempt", async () => {
     let recalculations = 0;
     let publications = 0;

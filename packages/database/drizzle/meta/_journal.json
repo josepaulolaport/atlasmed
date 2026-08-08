@@ -414,6 +414,34 @@
       "when": 1786114255767,
       "tag": "0058_seed_crm_registration_council",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1786117779101,
+      "tag": "0059_facility_vertical_rep_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1786119605415,
+      "tag": "0060_admin_geography_boundary_gist",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1786217347819,
+      "tag": "0061_drop_deactivation_reasons_legacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1786217354736,
+      "tag": "0062_reshape_deactivation_reasons",
+      "breakpoints": true
     }
   ]
 }

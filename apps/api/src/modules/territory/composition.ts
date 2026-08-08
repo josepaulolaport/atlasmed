@@ -3,7 +3,7 @@ import { DrizzleTerritoryTypeRepository } from "./infrastructure/repositories/dr
 import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
 import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
-import { DrizzleFacilityConsultantAssignmentRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
+import { DrizzleFacilityVerticalRepAssignmentRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-vertical-rep-assignment.repository";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
 import { TerritoryContainmentService } from "./application/services/territory-containment.service";
@@ -12,6 +12,7 @@ import { TerritoryTypeUseCases } from "./application/use-cases/territory-type.us
 import { TerritoryBoundaryUseCases } from "./application/use-cases/territory-boundary.use-cases";
 import { TerritoryMembershipUseCases } from "./application/use-cases/territory-membership.use-cases";
 import { territoryMembershipQueue } from "../../infrastructure/jobs/territory-membership.queue";
+import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 import { isManagerZoneType } from "./application/constants/territory-roles.constants";
 
@@ -31,6 +32,9 @@ const territoryMembershipService = new TerritoryMembershipService({
   spatialRepository: territoryRepositories.spatial,
   territoryRepository: territoryRepositories.territory,
   clinicWriter: facilityMembershipWriter,
+  onClinicMembershipChanged: async (facilityId) => {
+    await upsertFacilitySearchDocument(facilityId);
+  },
 });
 
 const territoryContainmentService = new TerritoryContainmentService({
@@ -107,8 +111,8 @@ const territoryCrud = new TerritoryCrudUseCases({
 
 const territoryTypeCrud = new TerritoryTypeUseCases(territoryRepositories.territoryType);
 
-const consultantAssignmentRepository =
-  new DrizzleFacilityConsultantAssignmentRepository();
+const repAssignmentRepository =
+  new DrizzleFacilityVerticalRepAssignmentRepository();
 
 function createBoundaryUseCases() {
   return new TerritoryBoundaryUseCases({
@@ -116,7 +120,7 @@ function createBoundaryUseCases() {
     territoryTypeRepository: territoryRepositories.territoryType,
     spatialRepository: territoryRepositories.spatial,
     containmentService: territoryContainmentService,
-    consultantAssignmentRepository,
+    repAssignmentRepository,
     onBoundaryChanged: onTerritoryBoundaryChanged,
     onManagerTerritoryChanged: onManagerTerritoryChanged,
   });
@@ -149,23 +153,27 @@ export const territoryUseCases = {
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
   listUnassignedFacilities: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
   adminOverrideClinicTerritory: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
   unlockClinicGeo: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
 };

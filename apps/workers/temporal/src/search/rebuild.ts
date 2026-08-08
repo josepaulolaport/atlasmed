@@ -2,6 +2,7 @@ import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   facilities,
   facilityVerticalProfiles,
+  facilityVerticalRepAssignments,
   healthcareSpecialties,
   municipalities,
   personFacilities,
@@ -13,7 +14,10 @@ import {
 } from "@atlasmed/database";
 import { normalizeSearchFilterValue } from "./normalize-search-filter";
 import {
-  PURCHASE_FUNNEL_STAGES,
+  deriveFacilityProfileFunnelFields,
+  mapFacilitySearchDocument,
+  type FacilityProfileFunnelData,
+  type FacilitySearchDocument,
   type PurchaseFunnelStage,
   type PurchaseIntervalSource,
   type PurchaseProfile,
@@ -24,40 +28,12 @@ import { db } from "../infrastructure/db";
 
 export type SearchSyncTarget = "facilities" | "persons";
 
-export type FacilityProfileFunnelData = {
-  verticalId: number;
-  purchaseFunnelStage: PurchaseFunnelStage;
-  purchaseIntervalDays: number;
-  purchaseIntervalSource: PurchaseIntervalSource;
-  manualPurchaseProfile: PurchaseProfile | null;
-  lastValidPurchaseDate: string | null;
+/** Re-export shared Meili facility document helpers (SoT: @atlasmed/facility-insights). */
+export {
+  deriveFacilityProfileFunnelFields,
+  mapFacilitySearchDocument,
 };
-
-export type FacilitySearchDocument = {
-  /** Meilisearch primary key (decimal string of CRM bigint id). */
-  id: string;
-  name: string;
-  legalName: string | null;
-  tradeName: string | null;
-  legalDocument: string | null;
-  cnesCode: string | null;
-  city: string | null;
-  state: string | null;
-  /** Active facility_vertical_profiles vertical ids. */
-  verticalIds: number[];
-  /** Active profile territory ids (membership). */
-  territoryIds: number[];
-  territoryAssignmentStatus: string;
-  verticalFunnelStages: string[];
-  verticalPurchaseIntervalSources: string[];
-  verticalManualPurchaseProfiles: string[];
-  purchaseFunnelStagesAny: string[];
-  purchaseFunnelStageRank: number;
-  purchaseIntervalDaysMin: number;
-  hasLastValidPurchase: 0 | 1;
-  lastValidPurchaseSortAt: number;
-  _geo?: { lat: number; lng: number };
-};
+export type { FacilityProfileFunnelData, FacilitySearchDocument };
 
 /**
  * Q31 frozen Meili persons document fields (ADR 0004 §6.4):
@@ -85,6 +61,7 @@ export type SearchIndexClient = {
   getIndex(uid: string): Promise<unknown>;
   updateSettings(uid: string, settings: Record<string, unknown>): Promise<EnqueuedTask>;
   addDocuments(uid: string, documents: unknown[], options?: { primaryKey?: string }): Promise<EnqueuedTask>;
+  deleteDocuments(uid: string, ids: string[]): Promise<EnqueuedTask>;
   waitForTask(task: number): Promise<unknown>;
   swapIndexes(params: Array<{ indexes: [string, string] }>): Promise<EnqueuedTask>;
   deleteIndex(uid: string): Promise<EnqueuedTask>;
@@ -99,93 +76,6 @@ const SEARCH_REBUILD_TASK_WAIT_OPTIONS = {
 
 export function fullSearchSyncWorkflowId(target: SearchSyncTarget): string {
   return `search-sync-${target}-full`;
-}
-
-export function deriveFacilityProfileFunnelFields(profiles: FacilityProfileFunnelData[]): {
-  verticalFunnelStages: string[];
-  verticalPurchaseIntervalSources: string[];
-  verticalManualPurchaseProfiles: string[];
-  purchaseFunnelStagesAny: string[];
-  purchaseFunnelStageRank: number;
-  purchaseIntervalDaysMin: number;
-  hasLastValidPurchase: 0 | 1;
-  lastValidPurchaseSortAt: number;
-} {
-  const verticalFunnelStages = profiles.map(
-    (profile) => `${profile.verticalId}:${profile.purchaseFunnelStage}`,
-  );
-  const verticalPurchaseIntervalSources = profiles.map(
-    (profile) => `${profile.verticalId}:${profile.purchaseIntervalSource}`,
-  );
-  const verticalManualPurchaseProfiles = profiles.flatMap((profile) =>
-    profile.manualPurchaseProfile === null
-      ? []
-      : [`${profile.verticalId}:${profile.manualPurchaseProfile}`],
-  );
-  const purchaseFunnelStagesAny = [...new Set(profiles.map((profile) => profile.purchaseFunnelStage))];
-  const purchaseFunnelStageRank = profiles.length === 0
-    ? 0
-    : Math.max(...profiles.map((profile) => PURCHASE_FUNNEL_STAGES.indexOf(profile.purchaseFunnelStage)));
-  const purchaseIntervalDaysMin = profiles.length === 0
-    ? 30
-    : Math.min(...profiles.map((profile) => profile.purchaseIntervalDays));
-  const lastValidPurchaseDates = profiles
-    .map((profile) => profile.lastValidPurchaseDate)
-    .filter((date): date is string => date !== null);
-  const lastValidPurchaseSortAt = lastValidPurchaseDates.length === 0
-    ? 0
-    : Math.max(...lastValidPurchaseDates.map((date) => Date.parse(`${date}T00:00:00.000Z`)));
-
-  return {
-    verticalFunnelStages,
-    verticalPurchaseIntervalSources,
-    verticalManualPurchaseProfiles,
-    purchaseFunnelStagesAny,
-    purchaseFunnelStageRank,
-    purchaseIntervalDaysMin,
-    hasLastValidPurchase: lastValidPurchaseDates.length === 0 ? 0 : 1,
-    lastValidPurchaseSortAt,
-  };
-}
-
-export function mapFacilitySearchDocument(row: {
-  id: number;
-  displayName: string;
-  legalName: string | null;
-  tradeName: string | null;
-  legalDocument: string | null;
-  cnesCode: string | null;
-  city: string | null;
-  state: string | null;
-  verticalIds?: number[];
-  territoryIds?: number[];
-  profileFunnelData?: FacilityProfileFunnelData[];
-  latitude: number | null;
-  longitude: number | null;
-  deactivatedAt: Date | null;
-}): FacilitySearchDocument | null {
-  if (row.deactivatedAt) return null;
-
-  const territoryIds = row.territoryIds ?? [];
-  const profileFunnelData = row.profileFunnelData ?? [];
-
-  return {
-    id: String(row.id),
-    name: row.displayName,
-    legalName: row.legalName,
-    tradeName: row.tradeName,
-    legalDocument: row.legalDocument,
-    cnesCode: row.cnesCode,
-    city: row.city,
-    state: row.state,
-    verticalIds: row.verticalIds ?? [],
-    territoryIds,
-    territoryAssignmentStatus: territoryIds.length > 0 ? "assigned" : "unassigned",
-    ...deriveFacilityProfileFunnelFields(profileFunnelData),
-    ...(row.latitude !== null && row.longitude !== null
-      ? { _geo: { lat: row.latitude, lng: row.longitude } }
-      : {}),
-  };
 }
 
 export function mapPersonSearchDocument(row: {
@@ -303,6 +193,7 @@ export function createSearchIndexClient(client: Meilisearch): SearchIndexClient 
     getIndex: (uid) => client.getIndex(uid),
     updateSettings: (uid, settings) => client.index(uid).updateSettings(settings),
     addDocuments: (uid, documents, options) => client.index(uid).addDocuments(documents as Record<string, unknown>[], options),
+    deleteDocuments: (uid, ids) => client.index(uid).deleteDocuments(ids),
     waitForTask: (taskUid) => client.tasks.waitForTask(taskUid, SEARCH_REBUILD_TASK_WAIT_OPTIONS),
     swapIndexes: (swaps) => client.swapIndexes(swaps.map(({ indexes }) => ({ indexes, rename: false }))),
     deleteIndex: (uid) => client.deleteIndex(uid),
@@ -321,13 +212,24 @@ function createSearchClient(): SearchIndexClient {
 }
 
 export const FACILITY_SETTINGS = {
-  searchableAttributes: ["name", "legalName", "tradeName", "legalDocument", "cnesCode", "city", "state"],
+  searchableAttributes: [
+    "name",
+    "legalName",
+    "tradeName",
+    "legalDocument",
+    "cnesCode",
+    "city",
+    "state",
+    "streetAddress",
+    "neighborhood",
+  ],
   filterableAttributes: [
     "id",
     "state",
     "city",
     "verticalIds",
     "territoryIds",
+    "repUserIds",
     "territoryAssignmentStatus",
     "verticalFunnelStages",
     "verticalPurchaseIntervalSources",
@@ -343,14 +245,18 @@ export const FACILITY_SETTINGS = {
 type ActiveFacilityProfiles = {
   verticalIds: Map<number, number[]>;
   territoryIds: Map<number, number[]>;
+  repUserIds: Map<number, number[]>;
   funnelData: Map<number, FacilityProfileFunnelData[]>;
 };
 
 async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<ActiveFacilityProfiles> {
   const verticalIds = new Map<number, number[]>();
   const territoryIds = new Map<number, number[]>();
+  const repUserIds = new Map<number, number[]>();
   const funnelData = new Map<number, FacilityProfileFunnelData[]>();
-  if (facilityIds.length === 0) return { verticalIds, territoryIds, funnelData };
+  if (facilityIds.length === 0) {
+    return { verticalIds, territoryIds, repUserIds, funnelData };
+  }
 
   const rows = await db
     .select({
@@ -395,7 +301,34 @@ async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<Active
     });
     funnelData.set(row.facilityId, profiles);
   }
-  return { verticalIds, territoryIds, funnelData };
+
+  const repRows = await db
+    .select({
+      facilityId: facilityVerticalProfiles.facilityId,
+      userId: facilityVerticalRepAssignments.userId,
+    })
+    .from(facilityVerticalRepAssignments)
+    .innerJoin(
+      facilityVerticalProfiles,
+      eq(facilityVerticalProfiles.id, facilityVerticalRepAssignments.facilityVerticalProfileId)
+    )
+    .where(
+      and(
+        inArray(facilityVerticalProfiles.facilityId, facilityIds),
+        eq(facilityVerticalProfiles.isActive, true),
+        isNull(facilityVerticalRepAssignments.endedAt)
+      )
+    );
+
+  for (const row of repRows) {
+    const current = repUserIds.get(row.facilityId) ?? [];
+    if (!current.includes(row.userId)) {
+      current.push(row.userId);
+      repUserIds.set(row.facilityId, current);
+    }
+  }
+
+  return { verticalIds, territoryIds, repUserIds, funnelData };
 }
 /** Q31 frozen settings — keep in sync with PersonSearchDocument field list. */
 export const PERSON_SETTINGS = {
@@ -417,6 +350,8 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         cnesCode: facilities.cnesCode,
         city: municipalities.name,
         state: states.abbreviation,
+        streetAddress: facilities.streetAddress,
+        neighborhood: facilities.neighborhood,
         latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
@@ -437,6 +372,7 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
           ...row,
           verticalIds: profiles.verticalIds.get(row.id) ?? [],
           territoryIds: profiles.territoryIds.get(row.id) ?? [],
+          repUserIds: profiles.repUserIds.get(row.id) ?? [],
           profileFunnelData: profiles.funnelData.get(row.id) ?? [],
         })
       )
