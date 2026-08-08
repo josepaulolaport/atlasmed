@@ -1,14 +1,17 @@
 /// CRM entity ids are JSON numbers (DB bigint → API number).
 ///
 /// Decode at wire edges only; domain models keep [int].
-/// - [readCrmId] — strict API JSON (number only).
+/// - [readCrmId] — strict API JSON (integral number only; no silent truncate).
 /// - [parseRouteCrmId] — GoRouter path segments (always String).
 /// - [readCrmIdLoose] — Mapbox/GeoJSON property edges (num or digit String).
 int readCrmId(Object? value, [String field = 'id']) {
   if (value is int) return value;
-  if (value is num) return value.toInt();
+  if (value is num && value.isFinite && value == value.truncate()) {
+    return value.toInt();
+  }
   throw FormatException(
-    'Expected CRM id number for $field, got ${value.runtimeType}',
+    'Expected CRM id integer for $field, '
+    'got $value (${value.runtimeType})',
   );
 }
 
@@ -30,7 +33,7 @@ int parseRouteCrmId(String value, [String field = 'id']) {
   final parsed = int.tryParse(value);
   if (parsed == null) {
     throw FormatException(
-      'Expected CRM id number in route for $field, got $value',
+      'Expected CRM id integer in route for $field, got "$value"',
     );
   }
   return parsed;
@@ -45,18 +48,22 @@ int? parseRouteCrmIdOrNull(String? value, [String field = 'id']) {
 ///
 /// Platform bridges often stringify ints as `"3.0"`; accept whole-number
 /// decimals there (not for GoRouter path segments — use [parseRouteCrmId]).
+/// Do not use for regular API JSON — use [readCrmId].
 int? readCrmIdLoose(Object? value) {
   if (value == null) return null;
   if (value is int) return value;
-  if (value is num) return value.toInt();
+  if (value is num) {
+    if (!value.isFinite || value != value.truncate()) return null;
+    return value.toInt();
+  }
   if (value is String) {
-    final asInt = int.tryParse(value);
-    if (asInt != null) return asInt;
-    final asNum = num.tryParse(value);
-    if (asNum != null && asNum == asNum.roundToDouble()) {
-      return asNum.toInt();
+    final parsed = num.tryParse(value);
+    if (parsed == null ||
+        !parsed.isFinite ||
+        parsed != parsed.truncate()) {
+      return null;
     }
+    return parsed.toInt();
   }
   return null;
 }
-

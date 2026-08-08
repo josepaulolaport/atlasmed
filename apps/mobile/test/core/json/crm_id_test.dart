@@ -14,13 +14,11 @@ void main() {
       expect(readCrmId(42.0), 42);
     });
 
-    // Phase B will reject silent truncate of non-integral nums / strings.
-    test('currently truncates non-integral num (Phase B target: reject)', () {
-      expect(readCrmId(12.9), 12);
-    });
-
-    test('rejects string, null, and non-numbers', () {
+    test('rejects non-integral num, string, null, and non-numbers', () {
+      expect(() => readCrmId(12.9), throwsA(isA<FormatException>()));
+      expect(() => readCrmId(1.5), throwsA(isA<FormatException>()));
       expect(() => readCrmId('1'), throwsA(isA<FormatException>()));
+      expect(() => readCrmId('1.0'), throwsA(isA<FormatException>()));
       expect(() => readCrmId(null), throwsA(isA<FormatException>()));
       expect(() => readCrmId(<String, Object>{}), throwsA(isA<FormatException>()));
       expect(() => readCrmId(<Object>[]), throwsA(isA<FormatException>()));
@@ -91,9 +89,10 @@ void main() {
       expect(readCrmIdLoose(<String, Object>{}), isNull);
     });
 
-    // Phase B hardens num path (currently truncates 3.5 → 3).
-    test('currently truncates non-integral num (Phase B target: null)', () {
-      expect(readCrmIdLoose(3.5), 3);
+    test('rejects non-integral num', () {
+      expect(readCrmIdLoose(3.5), isNull);
+      expect(readCrmIdLoose(double.nan), isNull);
+      expect(readCrmIdLoose(double.infinity), isNull);
     });
   });
 }

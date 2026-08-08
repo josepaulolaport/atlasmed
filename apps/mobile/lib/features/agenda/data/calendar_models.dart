@@ -733,7 +733,8 @@ class CalendarConflict extends Equatable {
           ).toUtc(),
         ),
         existing: CalendarConflictInterval(
-          id: readCrmIdOrNull(json['existingId'] ?? json['occurrenceId'], 'existingId'),
+          // CRM calendar/override id only — never occurrence key strings.
+          id: readCrmIdOrNull(json['existingId'], 'existingId'),
           startsAt: DateTime.parse(
             (json['existingStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),
