@@ -4,6 +4,7 @@ import {
   getClientIp,
 } from "../../../../infrastructure/middleware/global-rate-limit.middleware";
 import { TooManyLoginAttemptsError } from "../../../../shared/errors";
+import type { IpServer } from "../../../../shared/utils/client-ip";
 
 /**
  * Business-aware rate limiting for access module routes.
@@ -13,24 +14,27 @@ import { TooManyLoginAttemptsError } from "../../../../shared/errors";
  * - Use-case RateLimiterService: failed attempts only, account lockout, clears on success
  */
 
-export function getLoginRateLimitKey(context: {
-  body?: { identifier?: string };
+/** Elysia handler context fields needed for peer-aware getClientIp. */
+type RateLimitIpContext = {
   request: Request;
-}): string {
+  server?: IpServer | null;
+};
+
+export function getLoginRateLimitKey(
+  context: RateLimitIpContext & { body?: { identifier?: string } },
+): string {
   return context.body?.identifier || getClientIp(context);
 }
 
-export function getPasswordResetRateLimitKey(context: {
-  body?: { identifier?: string };
-  request: Request;
-}): string {
+export function getPasswordResetRateLimitKey(
+  context: RateLimitIpContext & { body?: { identifier?: string } },
+): string {
   return context.body?.identifier || getClientIp(context);
 }
 
-export function getPasswordResetConfirmRateLimitKey(context: {
-  body?: { token?: string };
-  request: Request;
-}): string {
+export function getPasswordResetConfirmRateLimitKey(
+  context: RateLimitIpContext & { body?: { token?: string } },
+): string {
   const ip = getClientIp(context);
   const token = context.body?.token;
   if (token && token.length >= 8) {
@@ -48,10 +52,9 @@ export const loginRateLimit = asRateLimitPlugin("login", {
   createError: (retryAfterMs) => new TooManyLoginAttemptsError(retryAfterMs),
 });
 
-export function getTwoFactorVerifyRateLimitKey(context: {
-  body?: { pendingToken?: string };
-  request: Request;
-}): string {
+export function getTwoFactorVerifyRateLimitKey(
+  context: RateLimitIpContext & { body?: { pendingToken?: string } },
+): string {
   const ip = getClientIp(context);
   const pendingToken = context.body?.pendingToken;
   if (pendingToken && pendingToken.length >= 8) {

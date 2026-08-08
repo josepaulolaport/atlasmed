@@ -6,11 +6,9 @@
  * 2. Mutations/lists: ScopeContext from getScope() — use `facilityIds` for operational
  *    visibility and `analyticsFacilityIds` for manager analytics roll-ups.
  * 3. AccessGrants (Permission table): exceptional overrides merged into CASL and scope (territory/clinic ids).
- * 4. facilityIds = territory clinics (TerritoryScopePort) ∪ active consultant
- *    assignments (FacilityAssociationPort).
+ * 4. facilityIds = territory clinics (TerritoryScopePort) ∪ active
+ *    facility_vertical_rep_assignments (FacilityAssociationPort).
  * 5. Session validity: JWT + session row + tokenVersion; caches revalidate from DB periodically.
- *
- * domain/ is intentionally empty until domain entities are justified.
  */
 
 import { redis } from "../../infrastructure/cache/redis.client";
@@ -553,7 +551,7 @@ export const auth = createAuthPlugin({
 /**
  * Example usage in routes:
  *
- * import { accessUseCases, auth } from "../../composition";
+ * import { accessUseCases, auth } from "../access/composition";
  *
  * const loginUseCase = accessUseCases.login();
  * const result = await loginUseCase.execute({ email, password });

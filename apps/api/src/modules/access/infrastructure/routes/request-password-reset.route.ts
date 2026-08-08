@@ -11,10 +11,10 @@ export const requestPasswordResetRoute = new Elysia({
   .use(passwordResetRateLimit)
   .post(
   "/password-reset/request",
-  async ({ body, request }) => {
+  async ({ body, request, server }) => {
     await accessUseCases.requestPasswordReset().execute({
       identifier: body.identifier,
-      ipAddress: getClientIp(request),
+      ipAddress: getClientIp({ request, server }),
       userAgent: request.headers.get("user-agent") || undefined,
     });
 

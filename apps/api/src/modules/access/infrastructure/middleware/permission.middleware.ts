@@ -8,7 +8,7 @@ import {
   type AccessGrantRecord,
 } from "@atlasmed/access";
 import { ForbiddenError } from "../../../../shared/errors";
-import { parseRouteId } from "../../../../shared/utils/parse-route-id";
+import { parseRouteId } from "../../../../shared/utils/crm-id";
 
 let permissionPluginSeq = 0;
 

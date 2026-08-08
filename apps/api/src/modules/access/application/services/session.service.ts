@@ -15,6 +15,7 @@ import { generateDeviceFingerprint } from "../../../../shared/utils/device-finge
 
 import type { Role } from "@atlasmed/access";
 import { environment } from "../../../../app/config/environment";
+import { normalizeIpForInet } from "../../../../shared/utils/client-ip";
 
 interface Dependencies {
   sessionRepository: SessionRepository;
@@ -84,7 +85,7 @@ export class SessionService {
 
         refreshTokenHash,
 
-        ipAddress: params.ipAddress || undefined,
+        ipAddress: normalizeIpForInet(params.ipAddress),
 
         userAgent: params.userAgent || undefined,
 

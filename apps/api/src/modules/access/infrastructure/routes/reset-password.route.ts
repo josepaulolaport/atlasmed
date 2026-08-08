@@ -12,11 +12,11 @@ export const resetPasswordRoute = new Elysia({
   .post(
   "/password-reset/confirm",
 
-  async ({ body, request }) => {
+  async ({ body, request, server }) => {
     const result = await accessUseCases.resetPassword().execute({
       token: body.token,
       newPassword: body.newPassword,
-      ipAddress: getClientIp(request),
+      ipAddress: getClientIp({ request, server }),
     });
 
     return result;

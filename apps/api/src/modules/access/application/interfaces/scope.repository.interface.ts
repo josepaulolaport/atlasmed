@@ -79,7 +79,7 @@ export interface TerritoryScopePort {
 
 /**
  * Clinics linked to a user outside pure territory membership.
- * Today: active `facility_consultant_assignments` only.
+ * Today: active `facility_vertical_rep_assignments` only.
  */
 export interface FacilityAssociationPort {
   getAssociatedFacilityIds(

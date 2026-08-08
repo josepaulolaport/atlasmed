@@ -203,7 +203,7 @@ export class ScopeResolver {
     });
   }
 
-  /** Territory clinics ∪ active facility_consultant_assignments for the user. */
+  /** Territory clinics ∪ active facility_vertical_rep_assignments for the user. */
   private async mergeAssociatedFacilityIds(
     userId: number,
     territoryFacilityIds: number[],

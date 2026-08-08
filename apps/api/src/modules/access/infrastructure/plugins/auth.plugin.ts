@@ -419,9 +419,9 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
   const { userRepository, scopeService, accessGrantService } = dependencies;
 
   return new Elysia({ name: "auth" })
-    .derive({ as: "scoped" }, async ({ request }) => {
+    .derive({ as: "scoped" }, async ({ request, server }) => {
       const authHeader = request.headers.get("authorization");
-      const ipAddress = getClientIp(request);
+      const ipAddress = getClientIp({ request, server });
 
       if (!authHeader?.startsWith("Bearer ")) {
         logger.warn({ ipAddress }, "Missing or invalid authorization header");

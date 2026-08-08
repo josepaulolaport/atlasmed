@@ -3,6 +3,7 @@ import { users, roles, sessions } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { UnauthorizedError } from "../../../../../shared/errors";
 import { sessionsMatchSameDevice } from "../../../../../shared/utils/device-fingerprint";
+import { normalizeIpForInet } from "../../../../../shared/utils/client-ip";
 
 import type {
   SessionRepository,
@@ -19,7 +20,7 @@ export class DrizzleSessionRepository implements SessionRepository {
       .values({
         userId: params.userId,
         refreshTokenHash: params.refreshTokenHash,
-        ipAddress: params.ipAddress ?? null,
+        ipAddress: normalizeIpForInet(params.ipAddress) ?? null,
         userAgent: params.userAgent ?? null,
         browserName: params.browserName ?? null,
         browserVersion: params.browserVersion ?? null,
@@ -407,7 +408,7 @@ export class DrizzleSessionRepository implements SessionRepository {
         .values({
           userId: params.userId,
           refreshTokenHash: params.refreshTokenHash,
-          ipAddress: params.ipAddress ?? null,
+          ipAddress: normalizeIpForInet(params.ipAddress) ?? null,
           userAgent: params.userAgent ?? null,
           browserName: params.browserName ?? null,
           browserVersion: params.browserVersion ?? null,
@@ -481,8 +482,9 @@ export class DrizzleSessionRepository implements SessionRepository {
       };
 
       if (params.ipAddress !== undefined) {
-        updateSet.ipAddress = params.ipAddress;
-        updateSet.lastIpAddress = params.ipAddress;
+        const ip = normalizeIpForInet(params.ipAddress) ?? null;
+        updateSet.ipAddress = ip;
+        updateSet.lastIpAddress = ip;
       }
 
       if (params.userAgent !== undefined) {

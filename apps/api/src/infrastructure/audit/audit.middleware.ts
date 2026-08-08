@@ -42,7 +42,7 @@ export const auditMiddleware = new Elysia({ name: "audit-middleware" }).onAfterH
 
     if (!getAuthContext) return;
 
-    const ipAddress = getClientIp(request);
+    const ipAddress = getClientIp(ctx);
     const userAgent = request.headers.get("user-agent") ?? undefined;
 
     const params =
@@ -52,7 +52,9 @@ export const auditMiddleware = new Elysia({ name: "audit-middleware" }).onAfterH
 
     const resourceId =
       params["id"] ??
-      params["professionalId"] ??
+      params["personId"] ??
+      params["personFacilityId"] ??
+      params["facilityId"] ??
       params["territoryId"] ??
       params["permissionId"] ??
       undefined;

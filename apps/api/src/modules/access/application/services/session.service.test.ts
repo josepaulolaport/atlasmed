@@ -216,6 +216,18 @@ describe("SessionService", () => {
       expect(createCall.ipAddress).toBeUndefined();
     });
 
+    it("should drop sentinel unknown ipAddress (not valid inet)", async () => {
+      await sessionService.create({
+        userId: 123,
+        userRole: "REP",
+        ipAddress: "unknown",
+      });
+
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
+      expect(createCall.ipAddress).toBeUndefined();
+    });
+
     it("should handle empty string userAgent", async () => {
       await sessionService.create({
         userId: 123,

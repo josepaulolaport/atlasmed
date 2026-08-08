@@ -7,6 +7,5 @@ export interface IMetrics {
   recordAuditLogFailure(eventType: string): void;
   recordSessionRevoked(reason: string): void;
   recordSuspiciousActivity(type: string): void;
-  recordScopeClinicResolutionStub(territoryCount: number): void;
   recordSiemExportBatch(success: boolean): void;
 }

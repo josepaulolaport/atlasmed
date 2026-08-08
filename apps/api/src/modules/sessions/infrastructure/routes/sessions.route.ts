@@ -31,13 +31,13 @@ export const sessionsRoute = new Elysia({
   .use(loginRateLimit)
   .post(
     "/",
-    async ({ body, request, cookie, set }) => {
+    async ({ body, request, server, cookie, set }) => {
       const parsed = loginSchema.parse(body);
 
       const result = await accessUseCases.login().execute({
         identifier: parsed.identifier,
         password: parsed.password,
-        ipAddress: getClientIp(request),
+        ipAddress: getClientIp({ request, server }),
         userAgent: request.headers.get("user-agent") || undefined,
         acceptLanguage: request.headers.get("accept-language") || undefined,
       });
@@ -119,7 +119,7 @@ export const sessionsRoute = new Elysia({
   .use(refreshRateLimit)
   .put(
     "/",
-    async ({ body, request, cookie }) => {
+    async ({ body, request, server, cookie }) => {
       // Accept refresh token from cookie (web) or body (mobile/dev)
       const bodyData = body as { refreshToken?: string } | undefined;
       const cookieToken = cookie[REFRESH_TOKEN_COOKIE_NAME]?.value;
@@ -135,7 +135,7 @@ export const sessionsRoute = new Elysia({
 
       const result = await accessUseCases.refreshSession().execute({
         refreshToken,
-        ipAddress: getClientIp(request),
+        ipAddress: getClientIp({ request, server }),
         userAgent: request.headers.get("user-agent") || undefined,
         acceptLanguage: request.headers.get("accept-language") || undefined,
       });
@@ -205,14 +205,14 @@ export const sessionsRoute = new Elysia({
   // DELETE / (logout current session)
   .delete(
     "/",
-    async ({ getUserId, getSessionId, cookie, request }) => {
+    async ({ getUserId, getSessionId, cookie, request, server }) => {
       const userId = await getUserId();
       const sessionId = await getSessionId();
 
       await accessUseCases.logout().execute({
         sessionId,
         userId,
-        ipAddress: getClientIp(request),
+        ipAddress: getClientIp({ request, server }),
       });
 
       cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(getRefreshCookieRemoveOptions());
