@@ -235,14 +235,6 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> assignManager(int userId, int? managerId) async {
-    // Spec 0006: manager is territory-derived — endpoint removed.
-    throw UnsupportedError(
-      'Atribuição de gerente removida. Use zonas/patches territoriais.',
-    );
-  }
-
-  @override
   Future<void> assignTerritory(int userId, int territoryId) async {
     final response = await _send(
       _accessUri('/users/$userId/territories'),
@@ -478,55 +470,5 @@ class HttpUsersRepository implements UsersRepository {
       );
     }
     return options;
-  }
-
-  @override
-  Future<ManagerTerritoryScope> getTerritoriesForManager(
-    int managerId, {
-    int? verticalId,
-  }) async {
-    if (verticalId == null || (verticalId <= 0)) {
-      return ManagerTerritoryScope(
-        managerId: managerId,
-        managerName: '',
-        territories: const [],
-      );
-    }
-
-    final response = await _get(
-      _accessUri('/managers/$managerId/assignable-territories', {
-        'verticalId': verticalId.toString(),
-      }),
-    );
-    _throwIfError(response);
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final territories = (decoded['territories'] as List<dynamic>? ?? const [])
-        .cast<Map<String, dynamic>>()
-        .map(TerritoryOption.fromJson)
-        .toList();
-    final zones = (decoded['managerZones'] as List<dynamic>? ?? const [])
-        .cast<Map<String, dynamic>>();
-    final firstZone = zones.isEmpty ? null : zones.first;
-
-    TerritoryGeometry? zoneBoundary;
-    if (firstZone?['boundary'] != null) {
-      zoneBoundary = TerritoryGeometry.tryFromGeoJson(
-        firstZone!['boundary'] as Map<String, dynamic>,
-      );
-    }
-
-    String managerName = '';
-    final manager = await getUserById(managerId);
-    managerName = manager?.displayName ?? '';
-
-    return ManagerTerritoryScope(
-      managerId: managerId,
-      managerName: managerName,
-      managerTerritoryId: readCrmIdOrNull(firstZone?['id'], 'id'),
-      managerTerritoryName: firstZone?['name'] as String?,
-      managerZoneCentroid: zoneBoundary?.labelAnchor,
-      managerZoneBoundary: zoneBoundary,
-      territories: territories,
-    );
   }
 }

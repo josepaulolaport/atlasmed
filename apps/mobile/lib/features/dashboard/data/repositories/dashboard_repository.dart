@@ -16,8 +16,8 @@ class DashboardRepository extends Repository<DashboardSummary>
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/dashboard/summary')
             .replace(
               queryParameters: {
-                if (verticalId != null && (verticalId > 0))
-                  'verticalId': verticalId,
+                if (verticalId != null && verticalId > 0)
+                  'verticalId': verticalId.toString(),
               },
             ),
         resolveOnCreate: false,

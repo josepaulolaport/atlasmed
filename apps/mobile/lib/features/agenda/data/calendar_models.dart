@@ -582,10 +582,12 @@ class CalendarOccurrence extends Equatable {
     final endsAt = DateTime.parse(json['endsAt'] as String).toUtc();
     final localStart = startsAt.toLocal();
     final localEnd = endsAt.toLocal();
-    final occurrenceId =
-        (json['occurrenceId'] as String?) ??
-        readCrmId(json['id'], 'id').toString();
-    final calendarId = readCrmId(json['calendarId'] ?? json['id'], 'calendarId');
+    // List DTO: `id` is occurrence key string (`{calendarId}:{recurrenceKey}`).
+    // Older fixtures may send numeric `id` + separate `occurrenceId`.
+    final occurrenceId = _readOccurrenceId(json['occurrenceId'] ?? json['id']);
+    final calendarId = json['calendarId'] != null
+        ? readCrmId(json['calendarId'], 'calendarId')
+        : readCrmId(json['id'], 'calendarId');
     final ownerUserId = readCrmIdOrNull(json['ownerUserId'], 'ownerUserId')
         ?? readCrmIdOrNull((json['owner'] as Map<String, dynamic>?)?['id'], 'owner.id')
         ?? 0;
@@ -809,3 +811,12 @@ DateTime _dateOnly(DateTime value) =>
 
 String _formatTime(DateTime value) =>
     '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+/// Occurrence list identity — composite string from API, not a CRM bigint.
+String _readOccurrenceId(Object? value) {
+  if (value is String && value.isNotEmpty) return value;
+  if (value is num) return value.toInt().toString();
+  throw FormatException(
+    'Expected occurrence id string for id, got ${value.runtimeType}',
+  );
+}

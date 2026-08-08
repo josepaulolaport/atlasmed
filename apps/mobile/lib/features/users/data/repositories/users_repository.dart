@@ -69,9 +69,6 @@ abstract interface class UsersRepository {
   /// `PATCH /access/users/:id/role`
   Future<void> changeUserRole(int userId, int roleId);
 
-  /// `PATCH /access/users/:id/manager`
-  Future<void> assignManager(int userId, int? managerId);
-
   /// `POST /access/users/:id/territories`
   Future<void> assignTerritory(int userId, int territoryId);
 
@@ -120,13 +117,6 @@ abstract interface class UsersRepository {
   /// under a manager zone (includes [TerritoryOption.isOccupied]).
   Future<List<TerritoryOption>> getPatchesForZone({
     required int managerZoneId,
-    int? verticalId,
-  });
-
-  /// Legacy: patches under a manager user via assignable-territories.
-  /// Prefer [getPatchesForZone] for territory-derived invite flow.
-  Future<ManagerTerritoryScope> getTerritoriesForManager(
-    int managerId, {
     int? verticalId,
   });
 }

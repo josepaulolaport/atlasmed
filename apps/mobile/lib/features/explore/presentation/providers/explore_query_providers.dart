@@ -74,6 +74,8 @@ DoctorsQuery buildDoctorsQuery(ExploreState state) {
     searchQuery: _nonEmpty(state.searchQuery),
     latitude: state.origin?.latitude,
     longitude: state.origin?.longitude,
+    radiusKm: state.radiusKm,
+    // Comma-joined specialties → API OR-matches normalized primary specialties.
     specialty: _commaJoin(state.filters['specialties']),
     sort: sort.sort,
     order: sort.order,

@@ -21,9 +21,6 @@ final businessVerticalsProvider = FutureProvider<List<BusinessVertical>>((ref) {
   return ref.watch(territoryRepositoryProvider).getVerticals();
 });
 
-@Deprecated('Use businessVerticalsProvider')
-final sectorsProvider = businessVerticalsProvider;
-
 final selectedTerritoryKindProvider = StateProvider<TerritoryKind>((ref) {
   return TerritoryKind.managerZone;
 });

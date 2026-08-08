@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 const _resourceOptions = <String>[
   'USER',
   'FACILITY',
-  'PROFESSIONAL',
+  'PERSON',
   'TERRITORY',
   'CATALOG',
 ];

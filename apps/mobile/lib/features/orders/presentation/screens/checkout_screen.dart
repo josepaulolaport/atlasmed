@@ -98,7 +98,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _showDoctorSheet(BuildContext context, WidgetRef ref) {
     final cart = ref.read(cartProvider);
-    // TODO: fetch real doctor list via ProfessionalsRepository filtered by clinicId
+    // TODO: fetch real doctor list via healthcare-professionals API filtered by clinicId
     final doctors = <SelectableDoctor>[];
 
     showModalBottomSheet(

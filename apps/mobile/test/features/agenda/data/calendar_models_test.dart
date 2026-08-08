@@ -3,6 +3,36 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('CalendarOccurrence', () {
+    test('parses live API list DTO where id is the occurrence key string', () {
+      final occurrence = CalendarOccurrence.fromJson({
+        'id': '1:2026-08-17T12:00[America/Sao_Paulo]',
+        'calendarId': 1,
+        'recurrenceKey': '2026-08-17T12:00[America/Sao_Paulo]',
+        'ownerUserId': 6,
+        'kind': 'PERSONAL_BLOCK',
+        'title': 'Alomoco',
+        'startsAt': '2026-08-17T15:00:00.000Z',
+        'endsAt': '2026-08-17T16:00:00.000Z',
+        'timeZone': 'America/Sao_Paulo',
+        'durationMinutes': 60,
+        'recurrence': 'DAILY',
+        'version': 1,
+        'calendarVersion': 1,
+        'owner': {'id': 6, 'name': 'Admin Local'},
+        'facility': null,
+        'canMutate': true,
+      });
+
+      expect(occurrence.occurrenceId, '1:2026-08-17T12:00[America/Sao_Paulo]');
+      expect(occurrence.calendarId, 1);
+      expect(occurrence.recurrenceKey, '2026-08-17T12:00[America/Sao_Paulo]');
+      expect(occurrence.kind, CalendarEventKind.personalBlock);
+      expect(occurrence.owner.id, 6);
+      expect(occurrence.owner.name, 'Admin Local');
+      expect(occurrence.facility, isNull);
+      expect(occurrence.canMutate, isTrue);
+    });
+
     test(
       'parses the canonical Calendar API list DTO without invented local fields',
       () {

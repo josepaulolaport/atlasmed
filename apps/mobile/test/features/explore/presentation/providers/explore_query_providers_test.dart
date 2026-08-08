@@ -152,7 +152,7 @@ void main() {
     ]);
   });
 
-  test('doctor query builder maps specialty and name sort', () {
+  test('doctor query builder maps specialty, radius, and name sort', () {
     const state = ExploreState(
       searchQuery: 'ana',
       filters: {
@@ -160,6 +160,7 @@ void main() {
       },
       sort: 'name-asc',
       origin: DeviceLocation(latitude: -23.5, longitude: -46.6),
+      radiusKm: 15,
     );
 
     final query = buildDoctorsQuery(state);
@@ -168,7 +169,7 @@ void main() {
     expect(query.searchQuery, 'ana');
     expect(query.latitude, -23.5);
     expect(query.longitude, -46.6);
-    expect(query.radiusKm, isNull);
+    expect(query.radiusKm, 15);
     expect(query.specialty, 'Cardiologia,Pediatria');
     expect(query.sort, FacilitySort.name);
     expect(query.order, SortOrder.asc);
