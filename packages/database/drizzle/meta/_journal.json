@@ -505,6 +505,13 @@
       "when": 1786224394248,
       "tag": "0071_drop_registration_types",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1786228627817,
+      "tag": "0072_ibge_geo_districts",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Load IBGE Malha + CNES municipality dict into public admin geography tables.
 
-PKs are integer identity (omit id on insert). Stable keys = ibge_code / cnes_code.
+PKs are integer identity (omit id on insert). Stable keys = ibge_id / cnes_code.
 No sentinel unknown rows — facilities must map to a real municipality.
 """
 
@@ -45,18 +45,18 @@ def shape_to_multipolygon_geojson(shape) -> str | None:
 
 
 def state_id_by_ibge(cur: psycopg.Cursor, ibge: str) -> int:
-    cur.execute("SELECT id FROM states WHERE ibge_code = %s", (ibge,))
+    cur.execute("SELECT id FROM states WHERE ibge_id = %s", (ibge,))
     row = cur.fetchone()
     if not row:
-        raise SystemExit(f"missing state ibge_code={ibge}")
+        raise SystemExit(f"missing state ibge_id={ibge}")
     return int(row[0])
 
 
 def mun_id_by_ibge(cur: psycopg.Cursor, ibge: str) -> int:
-    cur.execute("SELECT id FROM municipalities WHERE ibge_code = %s", (ibge,))
+    cur.execute("SELECT id FROM municipalities WHERE ibge_id = %s", (ibge,))
     row = cur.fetchone()
     if not row:
-        raise SystemExit(f"missing municipality ibge_code={ibge}")
+        raise SystemExit(f"missing municipality ibge_id={ibge}")
     return int(row[0])
 
 
@@ -67,11 +67,11 @@ def load_states(conn: psycopg.Connection) -> int:
     fields = [f[0] for f in reader.fields[1:]]
     sql = """
     INSERT INTO states (
-      name, ibge_code, cnes_code, abbreviation, boundary,
+      name, ibge_id, cnes_code, abbreviation, boundary,
       boundary_min_lng, boundary_min_lat, boundary_max_lng, boundary_max_lat,
       boundary_area_sq_km, created_at, updated_at
     ) VALUES (
-      %(name)s, %(ibge_code)s, %(cnes_code)s, %(abbreviation)s,
+      %(name)s, %(ibge_id)s, %(cnes_code)s, %(abbreviation)s,
       ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)), 3)),
       ST_XMin(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
       ST_YMin(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
@@ -79,7 +79,7 @@ def load_states(conn: psycopg.Connection) -> int:
       ST_YMax(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
       %(area_km2)s, now(), now()
     )
-    ON CONFLICT (ibge_code) DO UPDATE SET
+    ON CONFLICT (ibge_id) DO UPDATE SET
       name = EXCLUDED.name,
       abbreviation = EXCLUDED.abbreviation,
       boundary = EXCLUDED.boundary,
@@ -102,7 +102,7 @@ def load_states(conn: psycopg.Connection) -> int:
                 sql,
                 {
                     "name": str(rec["NM_UF"]).strip(),
-                    "ibge_code": ibge,
+                    "ibge_id": ibge,
                     "cnes_code": ibge,
                     "abbreviation": str(rec["SIGLA_UF"]).strip().upper(),
                     "geojson": geojson,
@@ -121,11 +121,11 @@ def load_municipalities(conn: psycopg.Connection) -> int:
     fields = [f[0] for f in reader.fields[1:]]
     sql = """
     INSERT INTO municipalities (
-      state_id, name, ibge_code, cnes_code, boundary,
+      state_id, name, ibge_id, cnes_code, boundary,
       boundary_min_lng, boundary_min_lat, boundary_max_lng, boundary_max_lat,
       boundary_area_sq_km, created_at, updated_at
     ) VALUES (
-      %(state_id)s, %(name)s, %(ibge_code)s, %(cnes_code)s,
+      %(state_id)s, %(name)s, %(ibge_id)s, %(cnes_code)s,
       ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)), 3)),
       ST_XMin(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
       ST_YMin(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
@@ -133,7 +133,7 @@ def load_municipalities(conn: psycopg.Connection) -> int:
       ST_YMax(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
       %(area_km2)s, now(), now()
     )
-    ON CONFLICT (ibge_code) DO UPDATE SET
+    ON CONFLICT (ibge_id) DO UPDATE SET
       state_id = EXCLUDED.state_id,
       name = EXCLUDED.name,
       cnes_code = COALESCE(EXCLUDED.cnes_code, municipalities.cnes_code),
@@ -168,7 +168,7 @@ def load_municipalities(conn: psycopg.Connection) -> int:
                 {
                     "state_id": state_cache[uf],
                     "name": str(rec["NM_MUN"]).strip(),
-                    "ibge_code": ibge,
+                    "ibge_id": ibge,
                     "cnes_code": cnes,
                     "geojson": geojson,
                     "area_km2": float(rec["AREA_KM2"]) if rec.get("AREA_KM2") is not None else None,
@@ -208,7 +208,7 @@ def apply_cnes_municipio_dict(conn: psycopg.Connection) -> int:
                 FROM states s
                 WHERE m.state_id = s.id
                   AND s.abbreviation = %(uf)s
-                  AND left(m.ibge_code, 6) = %(code6)s
+                  AND left(m.ibge_id, 6) = %(code6)s
                 """,
                 {"code6": code6, "name": name, "uf": uf},
             )
@@ -223,11 +223,11 @@ def load_neighborhoods(conn: psycopg.Connection) -> int:
         return 0
     sql = """
     INSERT INTO neighborhoods (
-      municipality_id, name, ibge_code, boundary,
+      municipality_id, name, ibge_id, boundary,
       boundary_min_lng, boundary_min_lat, boundary_max_lng, boundary_max_lat,
       boundary_area_sq_km, created_at, updated_at
     ) VALUES (
-      %(municipality_id)s, %(name)s, %(ibge_code)s,
+      %(municipality_id)s, %(name)s, %(ibge_id)s,
       ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)), 3)),
       ST_XMin(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
       ST_YMin(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
@@ -235,7 +235,7 @@ def load_neighborhoods(conn: psycopg.Connection) -> int:
       ST_YMax(ST_SetSRID(ST_GeomFromGeoJSON(%(geojson)s), 4326)),
       NULL, now(), now()
     )
-    ON CONFLICT (ibge_code) DO UPDATE SET
+    ON CONFLICT (ibge_id) DO UPDATE SET
       municipality_id = EXCLUDED.municipality_id,
       name = EXCLUDED.name,
       boundary = EXCLUDED.boundary,
@@ -281,7 +281,7 @@ def load_neighborhoods(conn: psycopg.Connection) -> int:
                         {
                             "municipality_id": mun_cache[cd_mun],
                             "name": name,
-                            "ibge_code": cd_bairro,
+                            "ibge_id": cd_bairro,
                             "geojson": geojson,
                         },
                     )
