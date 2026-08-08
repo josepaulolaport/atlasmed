@@ -22,7 +22,6 @@ export const clinicalFocuses = pgTable(
     /** Optional CNES code when mapped from official catalogs. */
     cnesCode: text("cnes_code"),
     isActive: boolean("is_active").notNull().default(true),
-    sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },

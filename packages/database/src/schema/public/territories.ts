@@ -24,7 +24,6 @@ export const territoryTypes = pgTable(
     description: text("description"),
     canHaveBoundary: boolean("can_have_boundary").notNull().default(true),
     blockSiblingOverlap: boolean("block_sibling_overlap").notNull().default(false),
-    sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),

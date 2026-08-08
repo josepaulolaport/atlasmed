@@ -15,7 +15,6 @@ function mapType(record: {
   description: string | null;
   canHaveBoundary: boolean;
   blockSiblingOverlap: boolean;
-  sortOrder: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -45,7 +44,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
       .select()
       .from(territoryTypes)
       .where(activeOnly ? eq(territoryTypes.isActive, true) : undefined)
-      .orderBy(asc(territoryTypes.sortOrder), asc(territoryTypes.name));
+      .orderBy(asc(territoryTypes.slug));
     return rows.map(mapType);
   }
 
@@ -58,7 +57,6 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
         description: input.description ?? null,
         canHaveBoundary: input.canHaveBoundary ?? true,
         blockSiblingOverlap: input.blockSiblingOverlap ?? false,
-        sortOrder: input.sortOrder ?? 0,
       })
       .returning();
     return mapType(record!);

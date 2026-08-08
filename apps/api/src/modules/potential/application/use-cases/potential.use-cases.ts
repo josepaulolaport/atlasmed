@@ -74,7 +74,6 @@ export class ListFacilityPotentialsUseCase {
           definitionId: def.id,
           key: def.key,
           label: def.label,
-          sortOrder: def.sortOrder,
           potentialQuantity,
           atlasmedMonthlyAvgQty,
           /** Fraction 0–1+ (e.g. 0.3 = 30%). Null when potential missing. */
@@ -160,7 +159,6 @@ export class ListPotentialDefinitionsUseCase {
         verticalId: d.verticalId,
         key: d.key,
         label: d.label,
-        sortOrder: d.sortOrder,
       })),
     };
   }
@@ -173,7 +171,6 @@ export class CreatePotentialDefinitionUseCase {
     verticalId: number;
     key?: string;
     label: string;
-    sortOrder?: number;
     scope: ScopeContext;
   }) {
     assertVerticalAccess(input.scope, input.verticalId);
@@ -189,14 +186,12 @@ export class CreatePotentialDefinitionUseCase {
         verticalId: input.verticalId,
         key,
         label: input.label.trim(),
-        sortOrder: input.sortOrder ?? 0,
       });
       return {
         id: created.id,
         verticalId: created.verticalId,
         key: created.key,
         label: created.label,
-        sortOrder: created.sortOrder,
       };
     } catch {
       throw new ValidationError([
@@ -212,7 +207,6 @@ export class UpdatePotentialDefinitionUseCase {
   async execute(input: {
     id: number;
     label?: string;
-    sortOrder?: number;
     scope: ScopeContext;
   }) {
     const existing = await this.deps.potentialRepository.findDefinitionById(input.id);
@@ -223,7 +217,6 @@ export class UpdatePotentialDefinitionUseCase {
     const updated = await this.deps.potentialRepository.updateDefinition({
       id: input.id,
       label: input.label?.trim(),
-      sortOrder: input.sortOrder,
     });
     if (!updated) throw new ResourceNotFoundError("PotentialDefinition", input.id);
     return {
@@ -231,7 +224,6 @@ export class UpdatePotentialDefinitionUseCase {
       verticalId: updated.verticalId,
       key: updated.key,
       label: updated.label,
-      sortOrder: updated.sortOrder,
     };
   }
 }

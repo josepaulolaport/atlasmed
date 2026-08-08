@@ -33,7 +33,6 @@ function buildService(options: {
         description: null,
         canHaveBoundary: true,
         blockSiblingOverlap: false,
-        sortOrder: 0,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),

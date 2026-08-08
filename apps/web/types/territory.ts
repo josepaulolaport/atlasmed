@@ -8,7 +8,6 @@ export interface TerritoryType {
   assignableToUsers: boolean;
   assignableToManagers: boolean;
   blockSiblingOverlap: boolean;
-  sortOrder: number;
   isActive: boolean;
 }
 
@@ -62,13 +61,11 @@ export interface CreateTerritoryTypeRequest extends TerritoryTypeFlags {
   slug: string;
   name: string;
   description?: string;
-  sortOrder?: number;
 }
 
 export interface UpdateTerritoryTypeRequest extends TerritoryTypeFlags {
   name?: string;
   description?: string | null;
-  sortOrder?: number;
   isActive?: boolean;
 }
 

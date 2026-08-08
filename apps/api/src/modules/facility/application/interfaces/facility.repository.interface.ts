@@ -104,7 +104,7 @@ export interface FacilityRecord {
   conformityStatus: FacilityConformityStatus;
   /** Active consultant display name when loaded (list + detail). */
   consultantName: string | null;
-  /** Active consultant assignment start (`facility_consultant_assignments.started_at`). */
+  /** Active vertical REP assignment start (`facility_vertical_rep_assignments.started_at`). */
   consultantSince: Date | null;
   /**
    * Display name of the manager for the clinic's manager zone (zone UTA).

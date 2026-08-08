@@ -27,7 +27,6 @@ export const productPotentialDefinitions = pgTable(
     /** Stable key, e.g. ampolas_mes, prp. */
     key: text("key").notNull(),
     label: text("label").notNull(),
-    sortOrder: bigint("sort_order", { mode: "number" }).notNull().default(0),
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),

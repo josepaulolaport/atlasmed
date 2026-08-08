@@ -25,7 +25,6 @@ function mapDefinition(
     verticalId: row.verticalId,
     key: row.key,
     label: row.label,
-    sortOrder: row.sortOrder,
     deletedAt: row.deletedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -47,10 +46,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       .select()
       .from(productPotentialDefinitions)
       .where(and(...conditions))
-      .orderBy(
-        asc(productPotentialDefinitions.sortOrder),
-        asc(productPotentialDefinitions.label),
-      );
+      .orderBy(asc(productPotentialDefinitions.label));
     return rows.map(mapDefinition);
   }
 
@@ -69,7 +65,6 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     verticalId: number;
     key: string;
     label: string;
-    sortOrder: number;
   }): Promise<PotentialDefinitionRecord> {
     const [row] = await db
       .insert(productPotentialDefinitions)
@@ -77,7 +72,6 @@ export class DrizzlePotentialRepository implements PotentialRepository {
         verticalId: input.verticalId,
         key: input.key,
         label: input.label,
-        sortOrder: input.sortOrder,
       })
       .returning();
     return mapDefinition(row!);
@@ -86,13 +80,11 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   async updateDefinition(input: {
     id: number;
     label?: string;
-    sortOrder?: number;
   }): Promise<PotentialDefinitionRecord | null> {
     const patch: Partial<typeof productPotentialDefinitions.$inferInsert> = {
       updatedAt: new Date(),
     };
     if (input.label !== undefined) patch.label = input.label;
-    if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;
     const [row] = await db
       .update(productPotentialDefinitions)
       .set(patch)

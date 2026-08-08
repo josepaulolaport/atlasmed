@@ -41,7 +41,6 @@ function serializeTerritoryType(type: NonNullable<Awaited<ReturnType<TerritoryTy
     description: type.description ?? undefined,
     canHaveBoundary: type.canHaveBoundary,
     blockSiblingOverlap: type.blockSiblingOverlap,
-    sortOrder: type.sortOrder,
     isActive: type.isActive,
   };
 }

@@ -73,7 +73,6 @@ export const territoriesRoute = new Elysia()
         description: t.Optional(t.String()),
         canHaveBoundary: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
-        sortOrder: t.Optional(t.Number()),
       }),
     }
   )
@@ -93,7 +92,6 @@ export const territoriesRoute = new Elysia()
         description: t.Optional(t.Union([t.String(), t.Null()])),
         canHaveBoundary: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
-        sortOrder: t.Optional(t.Number()),
         isActive: t.Optional(t.Boolean()),
       }),
     }

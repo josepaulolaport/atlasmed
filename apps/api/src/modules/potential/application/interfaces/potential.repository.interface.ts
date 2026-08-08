@@ -3,7 +3,6 @@ export type PotentialDefinitionRecord = {
   verticalId: number;
   key: string;
   label: string;
-  sortOrder: number;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -41,13 +40,11 @@ export interface PotentialRepository {
     verticalId: number;
     key: string;
     label: string;
-    sortOrder: number;
   }): Promise<PotentialDefinitionRecord>;
 
   updateDefinition(input: {
     id: number;
     label?: string;
-    sortOrder?: number;
   }): Promise<PotentialDefinitionRecord | null>;
 
   softDeleteDefinition(id: number): Promise<boolean>;

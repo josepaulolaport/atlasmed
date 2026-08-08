@@ -1,6 +1,6 @@
 import {
   facilities,
-  facilityConsultantAssignments,
+  facilityVerticalRepAssignments,
   clinicalFocuses,
   facilityClinicalFocuses,
   facilityVerticalProfiles,
@@ -292,25 +292,44 @@ function displayName(
 }
 
 async function loadConsultantInfo(
-  facilityIds: number[]
+  facilityIds: number[],
+  verticalIds?: number[],
 ): Promise<Map<number, ConsultantInfo>> {
   if (facilityIds.length === 0) return new Map();
 
+  const assignConditions = [
+    inArray(facilityVerticalProfiles.facilityId, facilityIds),
+    eq(facilityVerticalProfiles.isActive, true),
+    isNull(facilityVerticalRepAssignments.endedAt),
+  ];
+  if (verticalIds && verticalIds.length > 0) {
+    assignConditions.push(
+      inArray(facilityVerticalProfiles.verticalId, verticalIds),
+    );
+  }
+
+  // Flat list DTO has one consultantName: when scope has a single verticalId the
+  // join is exact; when multi-vertical, pick lowest verticalId (stable, not
+  // "most recently touched"). Prefer single-vertical scope for accurate display.
   const consultantRows = await db
     .select({
-      facilityId: facilityConsultantAssignments.facilityId,
+      facilityId: facilityVerticalProfiles.facilityId,
       firstName: users.firstName,
       lastName: users.lastName,
-      startedAt: facilityConsultantAssignments.startedAt,
+      startedAt: facilityVerticalRepAssignments.startedAt,
+      verticalId: facilityVerticalProfiles.verticalId,
     })
-    .from(facilityConsultantAssignments)
-    .innerJoin(users, eq(users.id, facilityConsultantAssignments.userId))
-    .where(
-      and(
-        inArray(facilityConsultantAssignments.facilityId, facilityIds),
-        isNull(facilityConsultantAssignments.endedAt)
-      )
-    );
+    .from(facilityVerticalRepAssignments)
+    .innerJoin(
+      facilityVerticalProfiles,
+      eq(
+        facilityVerticalProfiles.id,
+        facilityVerticalRepAssignments.facilityVerticalProfileId,
+      ),
+    )
+    .innerJoin(users, eq(users.id, facilityVerticalRepAssignments.userId))
+    .where(and(...assignConditions))
+    .orderBy(asc(facilityVerticalProfiles.verticalId));
 
   // Spec 0006: clinic gerente = zone UTA on manager_zone_id (not users.manager_id).
   const zoneManagerRows = await db.execute(sql`
@@ -344,16 +363,26 @@ async function loadConsultantInfo(
     );
   }
 
-  return new Map(
-    consultantRows.map((row) => [
-      row.facilityId,
-      {
-        name: displayName(row.firstName, row.lastName),
-        since: row.startedAt ?? null,
-        managerName: zoneManagerNameByFacility.get(row.facilityId) ?? null,
-      },
-    ])
-  );
+  const consultantByFacility = new Map<number, ConsultantInfo>();
+  for (const row of consultantRows) {
+    if (consultantByFacility.has(row.facilityId)) continue;
+    consultantByFacility.set(row.facilityId, {
+      name: displayName(row.firstName, row.lastName),
+      since: row.startedAt ?? null,
+      managerName: zoneManagerNameByFacility.get(row.facilityId) ?? null,
+    });
+  }
+
+  for (const facilityId of facilityIds) {
+    if (consultantByFacility.has(facilityId)) continue;
+    consultantByFacility.set(facilityId, {
+      name: null,
+      since: null,
+      managerName: zoneManagerNameByFacility.get(facilityId) ?? null,
+    });
+  }
+
+  return consultantByFacility;
 }
 
 async function loadTerritoryNames(
@@ -461,6 +490,8 @@ export function buildFacilityListConditions(params: {
       ilike(facilities.displayName, pattern), ilike(facilities.legalName, pattern),
       ilike(facilities.tradeName, pattern), ilike(facilities.legalDocument, pattern),
       ilike(facilities.cnesCode, pattern),
+      ilike(facilities.streetAddress, pattern),
+      ilike(facilities.neighborhood, pattern),
       inArray(
         facilities.municipalityId,
         db
@@ -733,7 +764,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       lastVisitAtByFacility,
       clinicalFocusesByFacility,
     ] = await Promise.all([
-      loadConsultantInfo(ids),
+      loadConsultantInfo(ids, params.scope.verticalIds),
       loadTerritoryNames(derivedTerritoryIds),
       loadLastVisitAt(ids, params.userId),
       loadClinicalFocusesByFacilityIds(ids),
@@ -812,7 +843,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       })
       .from(clinicalFocuses)
       .where(eq(clinicalFocuses.isActive, true))
-      .orderBy(asc(clinicalFocuses.sortOrder), asc(clinicalFocuses.name));
+      .orderBy(asc(clinicalFocuses.name));
 
     return rows.map((row) => ({
       id: row.id,

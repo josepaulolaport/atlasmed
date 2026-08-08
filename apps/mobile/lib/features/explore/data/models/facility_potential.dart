@@ -4,7 +4,6 @@ class FacilityPotentialItem {
     required this.definitionId,
     required this.key,
     required this.label,
-    required this.sortOrder,
     this.potentialQuantity,
     required this.atlasmedMonthlyAvgQty,
     this.penetration,
@@ -13,7 +12,6 @@ class FacilityPotentialItem {
   final int definitionId;
   final String key;
   final String label;
-  final int sortOrder;
   final double? potentialQuantity;
   final double atlasmedMonthlyAvgQty;
 
@@ -25,7 +23,6 @@ class FacilityPotentialItem {
       definitionId: readCrmId(json['definitionId'], 'definitionId'),
       key: json['key'] as String? ?? '',
       label: json['label'] as String? ?? '',
-      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
       potentialQuantity: _numOrNull(json['potentialQuantity']),
       atlasmedMonthlyAvgQty: _numOrNull(json['atlasmedMonthlyAvgQty']) ?? 0,
       penetration: _numOrNull(json['penetration']),

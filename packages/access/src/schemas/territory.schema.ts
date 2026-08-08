@@ -10,7 +10,6 @@ export const createTerritoryTypeSchema = z
     slug: z.string().trim().min(3).max(50),
     name: z.string().trim().min(1).max(100),
     description: z.string().trim().max(500).optional(),
-    sortOrder: z.number().int().optional(),
   })
   .merge(territoryTypeFlagSchema);
 
@@ -18,7 +17,6 @@ export const updateTerritoryTypeSchema = z
   .object({
     name: z.string().trim().min(1).max(100).optional(),
     description: z.union([z.string().trim().max(500), z.null()]).optional(),
-    sortOrder: z.number().int().optional(),
     isActive: z.boolean().optional(),
   })
   .merge(territoryTypeFlagSchema);

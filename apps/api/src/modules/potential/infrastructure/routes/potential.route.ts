@@ -110,7 +110,6 @@ const createDefinitionRoute = new Elysia()
         verticalId: t.Number({ minimum: 1 }),
         key: t.Optional(t.String()),
         label: t.String({ minLength: 1 }),
-        sortOrder: t.Optional(t.Number()),
       }),
     },
   );
@@ -137,7 +136,6 @@ const updateDefinitionRoute = new Elysia()
       params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         label: t.Optional(t.String({ minLength: 1 })),
-        sortOrder: t.Optional(t.Number()),
       }),
     },
   );

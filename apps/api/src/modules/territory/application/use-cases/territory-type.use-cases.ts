@@ -13,7 +13,6 @@ function serializeType(type: {
   description: string | null;
   canHaveBoundary: boolean;
   blockSiblingOverlap: boolean;
-  sortOrder: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -25,7 +24,6 @@ function serializeType(type: {
     description: type.description ?? undefined,
     canHaveBoundary: type.canHaveBoundary,
     blockSiblingOverlap: type.blockSiblingOverlap,
-    sortOrder: type.sortOrder,
     isActive: type.isActive,
     createdAt: type.createdAt.toISOString(),
     updatedAt: type.updatedAt.toISOString(),
@@ -54,7 +52,6 @@ export class TerritoryTypeUseCases {
     description?: string;
     canHaveBoundary?: boolean;
     blockSiblingOverlap?: boolean;
-    sortOrder?: number;
   }) {
     const slug = input.slug.trim().toLowerCase();
     if (!SLUG_PATTERN.test(slug)) {
@@ -78,7 +75,6 @@ export class TerritoryTypeUseCases {
       description: input.description?.trim() || null,
       canHaveBoundary: input.canHaveBoundary,
       blockSiblingOverlap: input.blockSiblingOverlap,
-      sortOrder: input.sortOrder,
     });
 
     return serializeType(type);
@@ -91,7 +87,6 @@ export class TerritoryTypeUseCases {
       description?: string | null;
       canHaveBoundary?: boolean;
       blockSiblingOverlap?: boolean;
-      sortOrder?: number;
       isActive?: boolean;
     }
   ) {

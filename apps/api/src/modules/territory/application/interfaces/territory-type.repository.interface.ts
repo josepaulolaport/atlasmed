@@ -5,7 +5,6 @@ export interface TerritoryTypeRecord {
   description: string | null;
   canHaveBoundary: boolean;
   blockSiblingOverlap: boolean;
-  sortOrder: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -17,7 +16,6 @@ export interface CreateTerritoryTypeInput {
   description?: string | null;
   canHaveBoundary?: boolean;
   blockSiblingOverlap?: boolean;
-  sortOrder?: number;
 }
 
 export interface UpdateTerritoryTypeInput {
@@ -25,7 +23,6 @@ export interface UpdateTerritoryTypeInput {
   description?: string | null;
   canHaveBoundary?: boolean;
   blockSiblingOverlap?: boolean;
-  sortOrder?: number;
   isActive?: boolean;
 }
 

@@ -12,14 +12,12 @@ class PotentialDefinition {
     required this.verticalId,
     required this.key,
     required this.label,
-    required this.sortOrder,
   });
 
   final int id;
   final int verticalId;
   final String key;
   final String label;
-  final int sortOrder;
 
   factory PotentialDefinition.fromJson(Map<String, dynamic> json) {
     return PotentialDefinition(
@@ -27,7 +25,6 @@ class PotentialDefinition {
       verticalId: readCrmId(json['verticalId'], 'verticalId'),
       key: json['key'] as String? ?? '',
       label: json['label'] as String? ?? '',
-      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -113,7 +110,6 @@ class PotentialDefinitionsRepository {
     required int verticalId,
     required String label,
     String? key,
-    int? sortOrder,
   }) async {
     final response = await _send(
       _uri('/potential-definitions'),
@@ -122,7 +118,6 @@ class PotentialDefinitionsRepository {
         'verticalId': verticalId,
         'label': label,
         if (key != null) 'key': key,
-        if (sortOrder != null) 'sortOrder': sortOrder,
       },
     );
     _throwIfError(response);
@@ -134,14 +129,12 @@ class PotentialDefinitionsRepository {
   Future<PotentialDefinition> update({
     required int id,
     String? label,
-    int? sortOrder,
   }) async {
     final response = await _send(
       _uri('/potential-definitions/$id'),
       RepositoryHttpMethod.patch,
       {
         if (label != null) 'label': label,
-        if (sortOrder != null) 'sortOrder': sortOrder,
       },
     );
     _throwIfError(response);
