@@ -2,10 +2,22 @@ import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  setUp(() {
+    PersonFacilityRoleCatalogCache.replace(const [
+      PersonFacilityRoleCatalogEntry(id: 1, name: 'Prescritor'),
+      PersonFacilityRoleCatalogEntry(id: 2, name: 'Comprador'),
+      PersonFacilityRoleCatalogEntry(id: 3, name: 'Decisor'),
+      PersonFacilityRoleCatalogEntry(id: 5, name: 'Administrador'),
+    ]);
+  });
+
+  tearDown(PersonFacilityRoleCatalogCache.resetForTest);
+
   test('parses flat healthcare-professionals list without pagination', () {
     final page = PaginatedFacilityProfessionals.fromJson(
       jsonEncode({
@@ -24,8 +36,8 @@ void main() {
             'roleTitle': 'Ortopedista',
             'notes': null,
             'hasHealthcareProfile': true,
-            'classificationCodes': ['HEALTHCARE_PROFESSIONAL'],
-            'roleCodes': ['PRESCRIBER', 'DECISION_MAKER'],
+            'classificationIds': [1],
+            'roleIds': [1, 3],
           },
         ],
       }),
@@ -35,7 +47,7 @@ void main() {
     expect(page.pagination.page, 1);
     expect(page.pagination.total, 1);
     expect(page.pagination.totalPages, 1);
-    expect(page.items.single.roleCodes, ['PRESCRIBER', 'DECISION_MAKER']);
+    expect(page.items.single.roleIds, [1, 3]);
 
     final roster = ProfessionalRoster.fromRosterItem(page.items.single);
     expect(roster.id, 20);
@@ -43,9 +55,8 @@ void main() {
     expect(roster.name, 'João Silva');
     expect(roster.specialty, 'Ortopedista');
     expect(roster.email, 'joao@example.com');
-    expect(roster.isPrescriber, isTrue);
-    expect(roster.isDecisionMaker, isTrue);
-    expect(roster.roleBadge, 'DECISOR');
+    expect(roster.roleIds, [1, 3]);
+    expect(roster.roleChipLabels, ['Prescritor', 'Decisor']);
   });
 
   test('parses flat administrative-contacts list into domain', () {
@@ -66,8 +77,8 @@ void main() {
             'roleTitle': 'Administradora',
             'notes': null,
             'hasHealthcareProfile': false,
-            'classificationCodes': ['ADMINISTRATIVE_CONTACT'],
-            'roleCodes': ['ADMINISTRATOR', 'BUYER'],
+            'classificationIds': [2],
+            'roleIds': [5, 2],
           },
         ],
       }),
@@ -78,8 +89,8 @@ void main() {
     expect(admin.name, 'Ana Costa');
     expect(admin.roleTitle, 'Administradora');
     expect(admin.phone, '11888888888');
-    expect(admin.isAdministrator, isTrue);
-    expect(admin.isBuyer, isTrue);
+    expect(admin.roleIds, [2, 5]);
+    expect(admin.roleChipLabels, ['Comprador', 'Administrador']);
     expect(page.pagination.total, 1);
   });
 }

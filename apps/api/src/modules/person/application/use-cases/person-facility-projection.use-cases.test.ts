@@ -13,6 +13,21 @@ import {
   UpsertPersonFacilityProjectionUseCase,
 } from "./person-facility-projection.use-cases";
 
+const ROLE = {
+  PRESCRIBER: 1,
+  BUYER: 2,
+  DECISION_MAKER: 3,
+  PARTNER: 4,
+  ADMINISTRATOR: 5,
+  BILLER: 6,
+  SECRETARY: 7,
+} as const;
+
+const CLASSIFICATION_ID = {
+  HEALTHCARE_PROFESSIONAL: 1,
+  ADMINISTRATIVE_CONTACT: 2,
+} as const;
+
 function baseRow(
   overrides: Partial<PersonFacilityProjectionRecord> = {}
 ): PersonFacilityProjectionRecord {
@@ -30,21 +45,22 @@ function baseRow(
     roleTitle: null,
     notes: null,
     hasHealthcareProfile: true,
+    classificationIds: [CLASSIFICATION_ID.ADMINISTRATIVE_CONTACT],
     classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
-    roleCodes: [],
+    roleIds: [],
     endedAt: null,
     ...overrides,
   };
 }
 
 const ACTIVE_ROLE_CATALOG = [
-  { code: "PRESCRIBER", name: "Prescritor" },
-  { code: "BUYER", name: "Comprador" },
-  { code: "DECISION_MAKER", name: "Decisor" },
-  { code: "PARTNER", name: "Parceiro" },
-  { code: "ADMINISTRATOR", name: "Administrador" },
-  { code: "BILLER", name: "Faturamento" },
-  { code: "SECRETARY", name: "Secretário(a)" },
+  { id: ROLE.PRESCRIBER, name: "Prescritor", isActive: true },
+  { id: ROLE.BUYER, name: "Comprador", isActive: true },
+  { id: ROLE.DECISION_MAKER, name: "Decisor", isActive: true },
+  { id: ROLE.PARTNER, name: "Parceiro", isActive: true },
+  { id: ROLE.ADMINISTRATOR, name: "Administrador", isActive: true },
+  { id: ROLE.BILLER, name: "Faturamento", isActive: true },
+  { id: ROLE.SECRETARY, name: "Secretário(a)", isActive: true },
 ];
 
 function fakeRoleCatalog() {
@@ -61,12 +77,12 @@ function fakeRepo(state: {
 }): PersonFacilityProjectionRepository & {
   adds: Array<{ personFacilityId: number; classificationCode: string }>;
   createdAffiliations: number;
-  replacedRoles: Array<{ personFacilityId: number; roleCodes: string[] }>;
+  replacedRoles: Array<{ personFacilityId: number; roleIds: number[] }>;
   ended: Array<{ personFacilityId: number; endedByUserId: number }>;
   crmUpserts: Array<{ personId: number; registrationNumber: string; stateCode: string }>;
 } {
   const adds: Array<{ personFacilityId: number; classificationCode: string }> = [];
-  const replacedRoles: Array<{ personFacilityId: number; roleCodes: string[] }> = [];
+  const replacedRoles: Array<{ personFacilityId: number; roleIds: number[] }> = [];
   const ended: Array<{ personFacilityId: number; endedByUserId: number }> = [];
   const crmUpserts: Array<{
     personId: number;
@@ -116,8 +132,9 @@ function fakeRepo(state: {
         facilityId: input.facilityId,
         roleTitle: input.roleTitle ?? null,
         notes: input.notes ?? null,
+        classificationIds: [],
         classificationCodes: [],
-        roleCodes: [],
+        roleIds: [],
         hasHealthcareProfile: true,
       });
       return { id };
@@ -126,9 +143,17 @@ function fakeRepo(state: {
       adds.push(input);
       if (current && current.personFacilityId === input.personFacilityId) {
         if (!current.classificationCodes.includes(input.classificationCode)) {
+          const classificationId =
+            input.classificationCode === CLASSIFICATION.HEALTHCARE_PROFESSIONAL
+              ? CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL
+              : CLASSIFICATION_ID.ADMINISTRATIVE_CONTACT;
           current = {
             ...current,
-            classificationCodes: [...current.classificationCodes, input.classificationCode],
+            classificationIds: [...current.classificationIds, classificationId],
+            classificationCodes: [
+              ...current.classificationCodes,
+              input.classificationCode,
+            ],
           };
         }
       }
@@ -153,7 +178,10 @@ function fakeRepo(state: {
     async replaceRoleAssignments(input) {
       replacedRoles.push(input);
       if (current && current.personFacilityId === input.personFacilityId) {
-        current = { ...current, roleCodes: [...input.roleCodes] };
+        current = {
+          ...current,
+          roleIds: [...input.roleIds],
+        };
       }
     },
   };
@@ -181,8 +209,10 @@ describe("UpsertPersonFacilityProjectionUseCase", () => {
         classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
       },
     ]);
-    expect(result.classificationCodes).toContain(CLASSIFICATION.HEALTHCARE_PROFESSIONAL);
-    expect(result.roleCodes).toEqual([]);
+    expect(result.classificationIds).toContain(
+      CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL
+    );
+    expect(result.roleIds).toEqual([]);
   });
 
   it("creates affiliation when none active", async () => {
@@ -271,6 +301,7 @@ describe("PatchPersonFacilityProjectionUseCase", () => {
     const repo = fakeRepo({
       row: baseRow({
         facilityId: 2,
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
@@ -291,6 +322,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
   it("ends active affiliation with actor user id", async () => {
     const repo = fakeRepo({
       row: baseRow({
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
@@ -312,6 +344,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
     const repo = fakeRepo({
       row: baseRow({
         endedAt: new Date("2026-01-01T00:00:00.000Z"),
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
@@ -332,6 +365,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
   it("404s when guarded UPDATE matches zero rows (race)", async () => {
     const repo = fakeRepo({
       row: baseRow({
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
@@ -354,6 +388,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
     const repo = fakeRepo({
       row: baseRow({
         facilityId: 2,
+        classificationIds: [CLASSIFICATION_ID.ADMINISTRATIVE_CONTACT],
         classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
       }),
     });
@@ -375,8 +410,9 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
   it("replaces role assignments for healthcare affiliation", async () => {
     const repo = fakeRepo({
       row: baseRow({
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
-        roleCodes: ["PARTNER"],
+        roleIds: [ROLE.PARTNER],
       }),
     });
     const uc = new ReplacePersonFacilityRolesUseCase({
@@ -388,18 +424,19 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
       personFacilityId: 10,
       classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
       scope: createGlobalScopeContext(),
-      roleCodes: ["PRESCRIBER", "BUYER", "PRESCRIBER"],
+      roleIds: [ROLE.PRESCRIBER, ROLE.BUYER, ROLE.PRESCRIBER],
     });
 
     expect(repo.replacedRoles).toEqual([
-      { personFacilityId: 10, roleCodes: ["PRESCRIBER", "BUYER"] },
+      { personFacilityId: 10, roleIds: [ROLE.PRESCRIBER, ROLE.BUYER] },
     ]);
-    expect(result.roleCodes).toEqual(["PRESCRIBER", "BUYER"]);
+    expect(result.roleIds).toEqual([ROLE.PRESCRIBER, ROLE.BUYER]);
   });
 
   it("allows any seeded catalog role regardless of classification", async () => {
     const repo = fakeRepo({
       row: baseRow({
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
@@ -412,14 +449,15 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
       personFacilityId: 10,
       classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
       scope: createGlobalScopeContext(),
-      roleCodes: ["PRESCRIBER", "SECRETARY"],
+      roleIds: [ROLE.PRESCRIBER, ROLE.SECRETARY],
     });
-    expect(result.roleCodes).toEqual(["PRESCRIBER", "SECRETARY"]);
+    expect(result.roleIds).toEqual([ROLE.PRESCRIBER, ROLE.SECRETARY]);
   });
 
-  it("rejects unknown role codes", async () => {
+  it("rejects unknown role ids", async () => {
     const repo = fakeRepo({
       row: baseRow({
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
@@ -433,7 +471,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
         personFacilityId: 10,
         classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
         scope: createGlobalScopeContext(),
-        roleCodes: ["PRESCRIBER", "NOT_A_ROLE"],
+        roleIds: [ROLE.PRESCRIBER, 999],
       })
     ).rejects.toBeInstanceOf(ValidationError);
     expect(repo.replacedRoles).toEqual([]);
@@ -443,6 +481,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
     const repo = fakeRepo({
       row: baseRow({
         facilityId: 2,
+        classificationIds: [CLASSIFICATION_ID.ADMINISTRATIVE_CONTACT],
         classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
       }),
     });
@@ -456,7 +495,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
         personFacilityId: 10,
         classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
         scope: createGlobalScopeContext(),
-        roleCodes: ["BILLER"],
+        roleIds: [ROLE.BILLER],
       })
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
     expect(repo.replacedRoles).toEqual([]);
@@ -465,6 +504,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
   it("404s when affiliation lacks the route classification", async () => {
     const repo = fakeRepo({
       row: baseRow({
+        classificationIds: [CLASSIFICATION_ID.HEALTHCARE_PROFESSIONAL],
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
@@ -478,7 +518,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
         personFacilityId: 10,
         classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
         scope: createGlobalScopeContext(),
-        roleCodes: ["ADMINISTRATOR"],
+        roleIds: [ROLE.ADMINISTRATOR],
       })
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
   });

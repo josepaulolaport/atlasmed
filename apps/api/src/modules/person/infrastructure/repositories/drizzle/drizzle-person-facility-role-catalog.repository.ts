@@ -12,12 +12,13 @@ export class DrizzlePersonFacilityRoleCatalogRepository
   async listActive(): Promise<PersonFacilityRoleCatalogEntry[]> {
     const rows = await db
       .select({
-        code: personFacilityRoles.code,
+        id: personFacilityRoles.id,
         name: personFacilityRoles.name,
+        isActive: personFacilityRoles.isActive,
       })
       .from(personFacilityRoles)
       .where(eq(personFacilityRoles.isActive, true))
-      .orderBy(asc(personFacilityRoles.code));
+      .orderBy(asc(personFacilityRoles.name));
 
     return rows;
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
@@ -44,7 +44,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
   final _crmCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  Set<String> _selectedRoles = {PersonFacilityRoleCodes.prescriber};
+  Set<int> _selectedRoles = {};
   List<PersonFacilityRoleCatalogEntry> _catalog = const [];
   bool _loadingCatalog = true;
   bool _saving = false;
@@ -66,21 +66,15 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
       final roles = await repo.listActive();
       if (!mounted) return;
       setState(() {
-        _catalog = roles.isEmpty
-            ? [
-                for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
-                  PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
-              ]
-            : roles;
+        _catalog = roles;
+        _selectedRoles = {};
         _loadingCatalog = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _catalog = [
-          for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
-            PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
-        ];
+        _catalog = const [];
+        _selectedRoles = {};
         _loadingCatalog = false;
       });
     } finally {
@@ -252,7 +246,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
     final email = _emailCtrl.text.trim().isEmpty
         ? null
         : _emailCtrl.text.trim();
-    final roleCodes = PersonFacilityRoleCodes.sortedList(_selectedRoles);
+    final roleIds = PersonFacilityRoleCatalog.sortedIds(_selectedRoles);
 
     try {
       if (!_useApi) {
@@ -268,10 +262,7 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
             crm: crmRaw,
             phone: phone,
             email: email,
-            roleCodes: roleCodes,
-            roleBadge: roleCodes.contains(PersonFacilityRoleCodes.decisionMaker)
-                ? 'DECISOR'
-                : null,
+            roleIds: roleIds,
           ),
         );
         return;
@@ -289,7 +280,8 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
           crmState: crm.state,
           phone: phone,
           email: email,
-          roleCodes: roleCodes,
+          roleIds: roleIds,
+          catalog: _catalog,
         );
         if (!mounted) return;
         Navigator.of(context).pop(doctor);

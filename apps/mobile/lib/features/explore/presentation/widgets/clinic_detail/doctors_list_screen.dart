@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterListPageSize;
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
@@ -115,10 +116,15 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     return list;
   }
 
-  Map<String, List<String>> get _filterSections => {
-    if (_specialtyOptions.isNotEmpty) 'Especialidade': _specialtyOptions,
-    'Papel': const ['Prescritor', 'Decisor', 'Comprador', 'Parceiro'],
-  };
+  Map<String, List<String>> get _filterSections {
+    final papel = PersonFacilityRoleCatalog.activeNames(
+      PersonFacilityRoleCatalogCache.entries,
+    );
+    return {
+      if (_specialtyOptions.isNotEmpty) 'Especialidade': _specialtyOptions,
+      if (papel.isNotEmpty) 'Papel': papel,
+    };
+  }
 
   int get _filterCount =>
       _filters.values.fold<int>(0, (sum, list) => sum + list.length);
@@ -146,13 +152,13 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
     final roles = _filters['Papel'] ?? const <String>[];
     if (roles.isNotEmpty) {
-      list = list.where((d) {
-        if (roles.contains('Prescritor') && d.isPrescriber) return true;
-        if (roles.contains('Decisor') && d.isDecisionMaker) return true;
-        if (roles.contains('Comprador') && d.isBuyer) return true;
-        if (roles.contains('Parceiro') && d.isPartner) return true;
-        return false;
-      }).toList();
+      final selectedIds = PersonFacilityRoleCatalog.idsForNames(
+        roles,
+        PersonFacilityRoleCatalogCache.entries,
+      );
+      list = list
+          .where((d) => d.roleIds.any(selectedIds.contains))
+          .toList();
     }
 
     switch (_sort) {
@@ -315,20 +321,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     );
   }
 
-  List<String> _badgesFor(ProfessionalRoster d) {
-    final badges = <String>[];
-    if (d.roleBadge != null && d.roleBadge!.trim().isNotEmpty) {
-      badges.add(d.roleBadge!);
-    }
-    if (d.isPrescriber) badges.add('Prescritor');
-    if (d.isBuyer) badges.add('Comprador');
-    if (d.isDecisionMaker &&
-        (d.roleBadge == null || d.roleBadge!.trim().isEmpty)) {
-      badges.add('Decisor');
-    }
-    if (d.isPartner) badges.add('Parceiro');
-    return badges;
-  }
+  List<String> _badgesFor(ProfessionalRoster d) => d.roleChipLabels;
 
   Future<void> _onMoreActions(ProfessionalRoster doctor) async {
     final action = await showDoctorClinicActionsSheet(

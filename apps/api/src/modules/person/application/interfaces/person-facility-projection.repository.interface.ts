@@ -19,8 +19,10 @@ export type PersonFacilityProjectionRecord = {
   roleTitle: string | null;
   notes: string | null;
   hasHealthcareProfile: boolean;
+  /** Wire/DTO surface uses ids; classification codes kept for route discriminators. */
+  classificationIds: number[];
   classificationCodes: string[];
-  roleCodes: string[];
+  roleIds: number[];
   endedAt: Date | null;
 };
 
@@ -86,7 +88,7 @@ export interface PersonFacilityProjectionRepository {
     stateCode: string;
   }): Promise<{ kind: "upserted"; id: number } | { kind: "conflict" }>;
 
-  /** Idempotent — ON CONFLICT DO NOTHING on PK. */
+  /** Idempotent — ON CONFLICT DO NOTHING on PK. Resolves classification id by code. */
   addClassification(input: {
     personFacilityId: number;
     classificationCode: ClassificationCode;
@@ -107,9 +109,9 @@ export interface PersonFacilityProjectionRepository {
     endedAt: Date;
   }): Promise<{ endedAt: Date } | null>;
 
-  /** Atomic replace-set: delete all assignments for the affiliation, then insert `roleCodes`. */
+  /** Atomic replace-set: delete all assignments for the affiliation, then insert `roleIds`. */
   replaceRoleAssignments(input: {
     personFacilityId: number;
-    roleCodes: string[];
+    roleIds: number[];
   }): Promise<void>;
 }

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
@@ -37,13 +37,15 @@ class PersonFacilityRolesCatalogRepository
     if (data is! List) {
       return const [];
     }
-    return data
+    final entries = data
         .whereType<Map>()
         .map((e) => PersonFacilityRoleCatalogEntry.fromMap(
               e.cast<String, dynamic>(),
             ))
-        .where((e) => e.code.isNotEmpty && e.name.isNotEmpty)
+        .where((e) => e.id != 0 && e.name.isNotEmpty)
         .toList(growable: false);
+    PersonFacilityRoleCatalogCache.replace(entries);
+    return entries;
   }
 
   Future<List<PersonFacilityRoleCatalogEntry>> listActive() async {

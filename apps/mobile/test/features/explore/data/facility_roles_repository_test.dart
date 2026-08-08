@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
@@ -39,9 +40,20 @@ class MemoryCacheStorage extends RepositoryCacheStorage {
   Future<void> write({required String key, required String value}) async {}
 }
 
+/// Test catalog with stable positive ids matching API wire shape.
+const _testCatalog = <PersonFacilityRoleCatalogEntry>[
+  PersonFacilityRoleCatalogEntry(id: 1, name: 'Prescritor'),
+  PersonFacilityRoleCatalogEntry(id: 2, name: 'Comprador'),
+  PersonFacilityRoleCatalogEntry(id: 3, name: 'Decisor'),
+  PersonFacilityRoleCatalogEntry(id: 4, name: 'Parceiro'),
+  PersonFacilityRoleCatalogEntry(id: 5, name: 'Administrador'),
+  PersonFacilityRoleCatalogEntry(id: 6, name: 'Faturamento'),
+  PersonFacilityRoleCatalogEntry(id: 7, name: 'Secretário(a)'),
+];
+
 Map<String, dynamic> _projection({
   required int personFacilityId,
-  required List<String> roleCodes,
+  required List<int> roleIds,
 }) => {
   'personFacilityId': personFacilityId,
   'personId': 20,
@@ -49,15 +61,21 @@ Map<String, dynamic> _projection({
   'firstName': 'João',
   'lastName': 'Silva',
   'roleTitle': 'Ortopedista',
-  'roleCodes': roleCodes,
-  'classificationCodes': ['HEALTHCARE_PROFESSIONAL'],
+  'roleIds': roleIds,
+  'classificationIds': [1],
   'hasHealthcareProfile': true,
 };
 
 void main() {
   BaseRepository.storage = const MemoryCacheStorage();
 
-  test('updateDoctorRoles PUTs roleCodes and fails without personFacilityId', () async {
+  setUp(() {
+    PersonFacilityRoleCatalogCache.replace(_testCatalog);
+  });
+
+  tearDown(PersonFacilityRoleCatalogCache.resetForTest);
+
+  test('updateDoctorRoles PUTs roleIds and fails without personFacilityId', () async {
     final client = FakeClient([
       RepositoryHttpResponse(
         statusCode: 200,
@@ -65,7 +83,7 @@ void main() {
         body: jsonEncode(
           _projection(
             personFacilityId: 10,
-            roleCodes: ['PRESCRIBER', 'DECISION_MAKER'],
+            roleIds: [1, 3],
           ),
         ),
       ),
@@ -80,7 +98,8 @@ void main() {
         initials: 'JS',
         hue: 1,
       ),
-      roleCodes: ['PRESCRIBER', 'DECISION_MAKER'],
+      roleIds: [1, 3],
+      catalog: _testCatalog,
     );
 
     expect(client.requests.single.method, RepositoryHttpMethod.put);
@@ -89,11 +108,10 @@ void main() {
       '/api/v1/facilities/1/healthcare-professionals/10/roles',
     );
     expect(client.requests.single.body, {
-      'roleCodes': ['DECISION_MAKER', 'PRESCRIBER'],
+      'roleIds': [1, 3],
     });
-    expect(updated.isPrescriber, isTrue);
-    expect(updated.isDecisionMaker, isTrue);
-    expect(updated.roleBadge, 'DECISOR');
+    expect(updated.roleIds, [1, 3]);
+    expect(updated.roleChipLabels, ['Prescritor', 'Decisor']);
 
     expect(
       () => repo.updateDoctorRoles(
@@ -103,19 +121,19 @@ void main() {
           initials: 'S',
           hue: 1,
         ),
-        roleCodes: ['PRESCRIBER'],
+        roleIds: [1],
       ),
       throwsA(isA<FacilityAssociateException>()),
     );
   });
 
-  test('createAndAssociateDoctor PUTs roles after create when flags set', () async {
+  test('createAndAssociateDoctor PUTs roles after create when ids set', () async {
     final client = FakeClient([
       RepositoryHttpResponse(
         statusCode: 201,
         headers: const {},
         body: jsonEncode(
-          _projection(personFacilityId: 10, roleCodes: const []),
+          _projection(personFacilityId: 10, roleIds: const []),
         ),
       ),
       RepositoryHttpResponse(
@@ -124,7 +142,7 @@ void main() {
         body: jsonEncode(
           _projection(
             personFacilityId: 10,
-            roleCodes: ['PRESCRIBER', 'BUYER'],
+            roleIds: [1, 2],
           ),
         ),
       ),
@@ -134,7 +152,8 @@ void main() {
     final doctor = await repo.createAndAssociateDoctor(
       firstName: 'João',
       lastName: 'Silva',
-      roleCodes: ['PRESCRIBER', 'BUYER'],
+      roleIds: [1, 2],
+      catalog: _testCatalog,
       crmNumber: '74127',
       crmState: 'SP',
     );
@@ -149,10 +168,10 @@ void main() {
     });
     expect(client.requests[1].method, RepositoryHttpMethod.put);
     expect(client.requests[1].body, {
-      'roleCodes': ['BUYER', 'PRESCRIBER'],
+      'roleIds': [1, 2],
     });
-    expect(doctor.isPrescriber, isTrue);
-    expect(doctor.isBuyer, isTrue);
+    expect(doctor.roleIds, [1, 2]);
+    expect(doctor.roleChipLabels, ['Prescritor', 'Comprador']);
     expect(doctor.crm, 'CRM/SP 74127');
   });
 
@@ -168,8 +187,8 @@ void main() {
           'firstName': 'Ana',
           'lastName': 'Costa',
           'roleTitle': 'Admin',
-          'roleCodes': <String>[],
-          'classificationCodes': ['ADMINISTRATIVE_CONTACT'],
+          'roleIds': <int>[],
+          'classificationIds': [2],
         }),
       ),
       RepositoryHttpResponse(
@@ -182,8 +201,8 @@ void main() {
           'firstName': 'Ana',
           'lastName': 'Costa',
           'roleTitle': 'Admin',
-          'roleCodes': ['ADMINISTRATOR', 'BILLER'],
-          'classificationCodes': ['ADMINISTRATIVE_CONTACT'],
+          'roleIds': [5, 6],
+          'classificationIds': [2],
         }),
       ),
     ]);
@@ -194,15 +213,18 @@ void main() {
     final created = await createRepo.create(
       firstName: 'Ana',
       lastName: 'Costa',
-      roleCodes: ['ADMINISTRATOR', 'BILLER'],
+      roleIds: [5, 6],
     );
     expect(createClient.requests[1].method, RepositoryHttpMethod.put);
     expect(
       createClient.requests[1].url.path,
       '/api/v1/facilities/1/administrative-contacts/11/roles',
     );
-    expect(created.isAdministrator, isTrue);
-    expect(created.isBiller, isTrue);
+    expect(createClient.requests[1].body, {
+      'roleIds': [5, 6],
+    });
+    expect(created.roleIds, [5, 6]);
+    expect(created.roleChipLabels, ['Administrador', 'Faturamento']);
 
     final updateClient = FakeClient([
       RepositoryHttpResponse(
@@ -215,8 +237,8 @@ void main() {
           'firstName': 'Ana',
           'lastName': 'Costa',
           'roleTitle': 'Admin',
-          'roleCodes': ['SECRETARY'],
-          'classificationCodes': ['ADMINISTRATIVE_CONTACT'],
+          'roleIds': [7],
+          'classificationIds': [2],
         }),
       ),
     ]);
@@ -226,13 +248,14 @@ void main() {
     );
     final updated = await updateRepo.updateRepresentative(
       representativeId: 11,
-      roleCodes: ['SECRETARY'],
+      roleIds: [7],
     );
     expect(updateClient.requests.single.method, RepositoryHttpMethod.put);
     expect(updateClient.requests.single.body, {
-      'roleCodes': ['SECRETARY'],
+      'roleIds': [7],
     });
-    expect(updated.isSecretary, isTrue);
+    expect(updated.roleIds, [7]);
+    expect(updated.roleChipLabels, ['Secretário(a)']);
   });
 
   test('endDoctorAffiliation DELETEs affiliation and requires personFacilityId', () async {

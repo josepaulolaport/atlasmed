@@ -102,8 +102,8 @@ function roleCatalogUseCases(
     listPersonFacilityRoles: () => ({
       execute: mock(async () => ({
         data: [
-          { code: "BUYER", name: "Comprador" },
-          { code: "PRESCRIBER", name: "Prescritor" },
+          { id: 2, name: "Comprador", isActive: true },
+          { id: 1, name: "Prescritor", isActive: true },
         ],
       })),
     }),
@@ -281,8 +281,8 @@ describe("Person HTTP routes", () => {
     expect(rolesResponse.status).toBe(200);
     expect(await rolesResponse.json()).toEqual({
       data: [
-        { code: "BUYER", name: "Comprador" },
-        { code: "PRESCRIBER", name: "Prescritor" },
+        { id: 2, name: "Comprador", isActive: true },
+        { id: 1, name: "Prescritor", isActive: true },
       ],
     });
   });

@@ -202,15 +202,21 @@ export const personFacilities = pgTable(
   ]
 );
 
+/**
+ * Person×facility classification catalog (occupation-shaped: bigint id + stable code).
+ * Seed: HEALTHCARE_PROFESSIONAL, ADMINISTRATIVE_CONTACT.
+ */
 export const personFacilityClassifications = pgTable(
   "person_facility_classifications",
   {
-    code: text("code").primaryKey(),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    code: text("code").notNull(),
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  }
+  },
+  (t) => [unique("person_facility_classifications_code_key").on(t.code)]
 );
 
 export const personFacilityClassificationAssignments = pgTable(
@@ -219,28 +225,37 @@ export const personFacilityClassificationAssignments = pgTable(
     personFacilityId: bigint("person_facility_id", { mode: "number" })
       .notNull()
       .references(() => personFacilities.id, { onDelete: "cascade" }),
-    classificationCode: text("classification_code")
+    classificationId: bigint("classification_id", { mode: "number" })
       .notNull()
-      .references(() => personFacilityClassifications.code, { onDelete: "restrict" }),
+      .references(() => personFacilityClassifications.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
     primaryKey({
       name: "person_facility_classification_assignments_pkey",
-      columns: [t.personFacilityId, t.classificationCode],
+      columns: [t.personFacilityId, t.classificationId],
     }),
   ]
 );
 
+/**
+ * Person×facility role catalog — admin-dynamic (no seed, no machine code).
+ * UNIQUE on lower(trim(name)) so duplicate labels cannot accumulate.
+ */
 export const personFacilityRoles = pgTable(
   "person_facility_roles",
   {
-    code: text("code").primaryKey(),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  }
+  },
+  (t) => [
+    uniqueIndex("person_facility_roles_name_normalized_uidx").on(
+      sql`lower(trim(${t.name}))`
+    ),
+  ]
 );
 
 export const personFacilityRoleAssignments = pgTable(
@@ -249,15 +264,15 @@ export const personFacilityRoleAssignments = pgTable(
     personFacilityId: bigint("person_facility_id", { mode: "number" })
       .notNull()
       .references(() => personFacilities.id, { onDelete: "cascade" }),
-    roleCode: text("role_code")
+    roleId: bigint("role_id", { mode: "number" })
       .notNull()
-      .references(() => personFacilityRoles.code, { onDelete: "restrict" }),
+      .references(() => personFacilityRoles.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
     primaryKey({
       name: "person_facility_role_assignments_pkey",
-      columns: [t.personFacilityId, t.roleCode],
+      columns: [t.personFacilityId, t.roleId],
     }),
   ]
 );
@@ -414,8 +429,8 @@ export const personFacilityClassificationAssignmentsRelations = relations(
       references: [personFacilities.id],
     }),
     classification: one(personFacilityClassifications, {
-      fields: [personFacilityClassificationAssignments.classificationCode],
-      references: [personFacilityClassifications.code],
+      fields: [personFacilityClassificationAssignments.classificationId],
+      references: [personFacilityClassifications.id],
     }),
   })
 );
@@ -428,8 +443,8 @@ export const personFacilityRoleAssignmentsRelations = relations(
       references: [personFacilities.id],
     }),
     role: one(personFacilityRoles, {
-      fields: [personFacilityRoleAssignments.roleCode],
-      references: [personFacilityRoles.code],
+      fields: [personFacilityRoleAssignments.roleId],
+      references: [personFacilityRoles.id],
     }),
   })
 );

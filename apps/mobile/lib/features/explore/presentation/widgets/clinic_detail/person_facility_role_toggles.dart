@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Catalog-driven role switches. Parent owns [selected] and mutates via [onChanged].
@@ -13,8 +13,8 @@ class PersonFacilityRoleToggles extends StatelessWidget {
   });
 
   final List<PersonFacilityRoleCatalogEntry> catalog;
-  final Set<String> selected;
-  final ValueChanged<Set<String>> onChanged;
+  final Set<int> selected;
+  final ValueChanged<Set<int>> onChanged;
   final bool enabled;
 
   @override
@@ -43,16 +43,16 @@ class PersonFacilityRoleToggles extends StatelessWidget {
                 color: AppColors.gray900,
               ),
             ),
-            value: selected.contains(role.code),
+            value: selected.contains(role.id),
             activeThumbColor: AppColors.navyBright,
             onChanged: !enabled
                 ? null
                 : (next) {
-                    final nextSet = Set<String>.from(selected);
+                    final nextSet = Set<int>.from(selected);
                     if (next) {
-                      nextSet.add(role.code);
+                      nextSet.add(role.id);
                     } else {
-                      nextSet.remove(role.code);
+                      nextSet.remove(role.id);
                     }
                     onChanged(nextSet);
                   },

@@ -276,26 +276,31 @@ Absent: role booleans, `occupation_code`, `contact_type`.
 
 ---
 
-### 5.9 `person_facility_classifications` — LOCKED
+### 5.9 `person_facility_classifications` — LOCKED (id-PK reshape 2026-08-08)
+
+Occupation-shaped catalog (matches `occupations` / `unit_types`):
 
 | Column | Type | Null | Keys | Notes |
 |---|---|---|---|---|
-| `code` | `text` | NO | **PK** | |
-| `name` | `text` | NO | | |
+| `id` | `bigint` identity | NO | **PK** | |
+| `code` | `text` | NO | **UNIQUE** | Stable wire/discriminator key |
+| `name` | `text` | NO | | pt-BR label |
 | `is_active` | `boolean` | NO | | default true |
 | `created_at` / `updated_at` | `timestamp` | NO | | |
 
-### 5.10 `person_facility_classification_assignments` — LOCKED
+Migrations: `0063` drop code-PK → `0064` recreate → `0065` re-seed.
+
+### 5.10 `person_facility_classification_assignments` — LOCKED (id-PK reshape 2026-08-08)
 
 | Column | Type | Null | Keys | Notes |
 |---|---|---|---|---|
 | `person_facility_id` | `bigint` | NO | **PK**, **FK → `person_facilities.id`** CASCADE | |
-| `classification_code` | `text` | NO | **PK**, **FK → classifications.code** | |
+| `classification_id` | `bigint` | NO | **PK**, **FK → classifications.id** RESTRICT | |
 | `created_at` | `timestamp` | NO | | |
 
 **Q23 = A:** no `created_by_user_id` on assignments.
 
-**D20 seed (when API wires) only:**
+**D20 seed:**
 
 | code | name (pt-BR label) |
 |---|---|
@@ -304,31 +309,28 @@ Absent: role booleans, `occupation_code`, `contact_type`.
 
 ---
 
-### 5.11 `person_facility_roles` — LOCKED
+### 5.11 `person_facility_roles` — LOCKED (dynamic admin catalog 2026-08-08)
 
-Same catalog shape as classifications. Seeded in STEP 4 (`0054_seed_person_facility_roles.sql`) with the map below (pt-BR names).
+Admin-managed toggles — **not** fixed enums. No migration seed. Empty catalog valid until admin creates rows (CRUD UI later).
 
-### 5.12 `person_facility_role_assignments` — LOCKED
+| Column | Type | Null | Keys | Notes |
+|---|---|---|---|---|
+| `id` | `bigint` identity | NO | **PK** | Wire / FK identity |
+| `name` | `text` | NO | **UNIQUE** via `lower(trim(name))` | Display label (pt-BR) |
+| `is_active` | `boolean` | NO | | default true; deactivate hides from toggles |
+| `created_at` / `updated_at` | `timestamp` | NO | | |
+
+**No `code` column.** Migrations: `0066` drop code-era roles → `0067` recreate dynamic shape.
+
+### 5.12 `person_facility_role_assignments` — LOCKED (dynamic roles 2026-08-08)
 
 | Column | Type | Null | Keys | Notes |
 |---|---|---|---|---|
 | `person_facility_id` | `bigint` | NO | **PK**, **FK → `person_facilities.id`** CASCADE | |
-| `role_code` | `text` | NO | **PK**, **FK → roles.code** | |
+| `role_id` | `bigint` | NO | **PK**, **FK → roles.id** RESTRICT | |
 | `created_at` | `timestamp` | NO | | |
 
-**Seed map (STEP 4):**
-
-| Old boolean | `role_code` | name (pt-BR) |
-|---|---|---|
-| `is_prescriber` | `PRESCRIBER` | Prescritor |
-| `is_buyer` | `BUYER` | Comprador |
-| `is_decision_maker` | `DECISION_MAKER` | Decisor |
-| `is_partner` | `PARTNER` | Parceiro |
-| `is_administrator` | `ADMINISTRATOR` | Administrador |
-| `is_biller` | `BILLER` | Faturamento |
-| `is_secretary` | `SECRETARY` | Secretário(a) |
-
-**Role assignment validation (superseded 2026-08-07):** classification allow-lists removed. `PUT …/roles` accepts any **active** seeded catalog code for either projection route (still scoped to the affiliation’s classification via the route + row check). Catalog list: `GET /api/v1/person-facility-roles`. UI shows the full catalog; filter-by-classification may return later.
+**Role assignment validation:** `PUT …/roles` accepts any **active** catalog **id**. Catalog: `GET /api/v1/person-facility-roles` → `{ id, name, isActive }[]`. Mobile Papel filter/badges are catalog-driven by id (no hardcoded role identities).
 
 ---
 
@@ -422,11 +424,11 @@ Facility routes may mount projections but call person ports only.
 
 | Method | Path | Notes |
 |---|---|---|
-| PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; any active catalog code |
-| PUT | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId/roles` | Body `{ roleCodes: string[] }`; replace-set; any active catalog code |
-| GET | `/api/v1/person-facility-roles` | Active catalog `{ data: { code, name }[] }` (`read` PERSON) |
+| PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` | Body `{ roleIds: number[] }`; replace-set; any active catalog id |
+| PUT | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId/roles` | Body `{ roleIds: number[] }`; replace-set; any active catalog id |
+| GET | `/api/v1/person-facility-roles` | Active catalog `{ data: { id, name, isActive }[] }` (`read` PERSON) |
 
-Projection DTOs include `roleCodes: string[]` (from `person_facility_role_assignments`).
+Projection DTOs include `roleIds: number[]` and `classificationIds: number[]` (codes remain internal/route discriminators only).
 
 **Frozen notes / relationship / Explorar / identity paths** (STEP 3 — 2026-08-07):
 

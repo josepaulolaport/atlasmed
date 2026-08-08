@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 
 /// Confirmed CRM doctor at a facility (roster context).
 ///
@@ -19,8 +19,7 @@ class ProfessionalRoster {
     this.crm,
     this.phone,
     this.email,
-    this.roleCodes = const [],
-    this.roleBadge,
+    this.roleIds = const [],
     this.education,
     this.birthdayLabel,
     this.favoriteTeam,
@@ -46,19 +45,14 @@ class ProfessionalRoster {
   final String? phone;
   final String? email;
 
-  /// Projection `roleCodes` (source of truth for facility roles).
-  final List<String> roleCodes;
+  /// Projection `roleIds` (source of truth for facility roles).
+  final List<int> roleIds;
 
-  bool get isPartner =>
-      roleCodes.contains(PersonFacilityRoleCodes.partner);
-  bool get isPrescriber =>
-      roleCodes.contains(PersonFacilityRoleCodes.prescriber);
-  bool get isBuyer => roleCodes.contains(PersonFacilityRoleCodes.buyer);
-  bool get isDecisionMaker =>
-      roleCodes.contains(PersonFacilityRoleCodes.decisionMaker);
-
-  /// Small highlight badge, e.g. "DECISOR", "NOVA".
-  final String? roleBadge;
+  /// Catalog display names for [roleIds] (via session cache).
+  List<String> get roleChipLabels => PersonFacilityRoleCatalog.labelsFor(
+        roleIds,
+        PersonFacilityRoleCatalogCache.entries,
+      );
 
   /// "Formação" — no backing field yet.
   final String? education;
@@ -78,9 +72,12 @@ class ProfessionalRoster {
   /// Relationship score — person relationship API.
   final int? relationshipScore;
 
-  factory ProfessionalRoster.fromRosterItem(FacilityProfessionalItemDTO item) {
+  factory ProfessionalRoster.fromRosterItem(
+    FacilityProfessionalItemDTO item, {
+    List<PersonFacilityRoleCatalogEntry>? catalog,
+  }) {
     final name = item.displayName;
-    final codes = PersonFacilityRoleCodes.sortedList(item.roleCodes);
+    final ids = PersonFacilityRoleCatalog.sortedIds(item.roleIds);
     return ProfessionalRoster(
       id: item.personId,
       personFacilityId: item.personFacilityId,
@@ -90,10 +87,7 @@ class ProfessionalRoster {
       specialty: item.roleTitle,
       phone: item.phone,
       email: item.email,
-      roleCodes: codes,
-      roleBadge: codes.contains(PersonFacilityRoleCodes.decisionMaker)
-          ? 'DECISOR'
-          : null,
+      roleIds: ids,
     );
   }
 
@@ -107,9 +101,7 @@ class ProfessionalRoster {
     String? crm,
     String? phone,
     String? email,
-    List<String>? roleCodes,
-    String? roleBadge,
-    bool clearRoleBadge = false,
+    List<int>? roleIds,
     String? education,
     String? birthdayLabel,
     String? favoriteTeam,
@@ -127,8 +119,7 @@ class ProfessionalRoster {
       crm: crm ?? this.crm,
       phone: phone ?? this.phone,
       email: email ?? this.email,
-      roleCodes: roleCodes ?? this.roleCodes,
-      roleBadge: clearRoleBadge ? null : (roleBadge ?? this.roleBadge),
+      roleIds: roleIds ?? this.roleIds,
       education: education ?? this.education,
       birthdayLabel: birthdayLabel ?? this.birthdayLabel,
       favoriteTeam: favoriteTeam ?? this.favoriteTeam,

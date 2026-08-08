@@ -35,7 +35,7 @@ function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<
 }
 
 const rolesBodySchema = z.object({
-  roleCodes: z.array(z.string().min(1)),
+  roleIds: z.array(z.number().int().positive()),
 });
 
 const identityBody = {
@@ -65,9 +65,9 @@ const patchBody = {
   notes: t.Optional(t.Union([t.String(), t.Null()])),
 };
 
-const facilityIdParams = t.Object({ facilityId: t.Integer({ minimum: 1 }) });
+const facilityIdParams = t.Object({ id: t.Integer({ minimum: 1 }) });
 const affiliationParams = t.Object({
-  facilityId: t.Integer({ minimum: 1 }),
+  id: t.Integer({ minimum: 1 }),
   personFacilityId: t.Integer({ minimum: 1 }),
 });
 
@@ -78,13 +78,13 @@ const listHealthcareRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("read", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .get(
-      "/facilities/:facilityId/healthcare-professionals",
+      "/facilities/:id/healthcare-professionals",
       async ({ params, getScope }) => {
         const scope = await getScope();
         return useCases.listFacilityProjections().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
           scope,
         });
@@ -106,13 +106,13 @@ const createHealthcareRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("create", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .post(
-      "/facilities/:facilityId/healthcare-professionals",
+      "/facilities/:id/healthcare-professionals",
       async ({ params, body, getScope }) => {
         const scope = await getScope();
         return useCases.upsertFacilityProjection().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
           scope,
           ...body,
@@ -136,13 +136,13 @@ const getHealthcareRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("read", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .get(
-      "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
+      "/facilities/:id/healthcare-professionals/:personFacilityId",
       async ({ params, getScope }) => {
         const scope = await getScope();
         return useCases.getFacilityProjection().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
           scope,
@@ -165,13 +165,13 @@ const patchHealthcareRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("update", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .patch(
-      "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
+      "/facilities/:id/healthcare-professionals/:personFacilityId",
       async ({ params, body, getScope }) => {
         const scope = await getScope();
         return useCases.patchFacilityProjection().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
           scope,
@@ -196,18 +196,18 @@ const putHealthcareRolesRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("update", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .put(
-      "/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles",
+      "/facilities/:id/healthcare-professionals/:personFacilityId/roles",
       async ({ params, body, getScope }) => {
         const parsed = parseSchema(rolesBodySchema, body);
         const scope = await getScope();
         return useCases.replaceFacilityProjectionRoles().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
           scope,
-          roleCodes: parsed.roleCodes,
+          roleIds: parsed.roleIds,
         });
       },
       {
@@ -218,7 +218,7 @@ const putHealthcareRolesRoute = (
         },
         params: affiliationParams,
         body: t.Object({
-          roleCodes: t.Array(t.String({ minLength: 1 })),
+          roleIds: t.Array(t.Integer({ minimum: 1 })),
         }),
       }
     );
@@ -230,13 +230,13 @@ const deleteHealthcareRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("update", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .delete(
-      "/facilities/:facilityId/healthcare-professionals/:personFacilityId",
+      "/facilities/:id/healthcare-professionals/:personFacilityId",
       async ({ params, getScope, getUser }) => {
         const [scope, user] = await Promise.all([getScope(), getUser()]);
         return useCases.endFacilityAffiliation().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
           scope,
@@ -260,13 +260,13 @@ const listAdminRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("read", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .get(
-      "/facilities/:facilityId/administrative-contacts",
+      "/facilities/:id/administrative-contacts",
       async ({ params, getScope }) => {
         const scope = await getScope();
         return useCases.listFacilityProjections().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
           scope,
         });
@@ -288,13 +288,13 @@ const createAdminRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("create", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .post(
-      "/facilities/:facilityId/administrative-contacts",
+      "/facilities/:id/administrative-contacts",
       async ({ params, body, getScope }) => {
         const scope = await getScope();
         return useCases.upsertFacilityProjection().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
           scope,
           ...body,
@@ -318,13 +318,13 @@ const getAdminRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("read", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .get(
-      "/facilities/:facilityId/administrative-contacts/:personFacilityId",
+      "/facilities/:id/administrative-contacts/:personFacilityId",
       async ({ params, getScope }) => {
         const scope = await getScope();
         return useCases.getFacilityProjection().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
           scope,
@@ -347,13 +347,13 @@ const patchAdminRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("update", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .patch(
-      "/facilities/:facilityId/administrative-contacts/:personFacilityId",
+      "/facilities/:id/administrative-contacts/:personFacilityId",
       async ({ params, body, getScope }) => {
         const scope = await getScope();
         return useCases.patchFacilityProjection().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
           scope,
@@ -378,18 +378,18 @@ const putAdminRolesRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("update", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .put(
-      "/facilities/:facilityId/administrative-contacts/:personFacilityId/roles",
+      "/facilities/:id/administrative-contacts/:personFacilityId/roles",
       async ({ params, body, getScope }) => {
         const parsed = parseSchema(rolesBodySchema, body);
         const scope = await getScope();
         return useCases.replaceFacilityProjectionRoles().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
           scope,
-          roleCodes: parsed.roleCodes,
+          roleIds: parsed.roleIds,
         });
       },
       {
@@ -400,7 +400,7 @@ const putAdminRolesRoute = (
         },
         params: affiliationParams,
         body: t.Object({
-          roleCodes: t.Array(t.String({ minLength: 1 })),
+          roleIds: t.Array(t.Integer({ minimum: 1 })),
         }),
       }
     );
@@ -412,13 +412,13 @@ const deleteAdminRoute = (
   new Elysia()
     .use(authPlugin)
     .use(requirePermission("update", "PERSON"))
-    .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
     .delete(
-      "/facilities/:facilityId/administrative-contacts/:personFacilityId",
+      "/facilities/:id/administrative-contacts/:personFacilityId",
       async ({ params, getScope, getUser }) => {
         const [scope, user] = await Promise.all([getScope(), getUser()]);
         return useCases.endFacilityAffiliation().execute({
-          facilityId: params.facilityId,
+          facilityId: params.id,
           personFacilityId: params.personFacilityId,
           classificationCode: CLASSIFICATION.ADMINISTRATIVE_CONTACT,
           scope,

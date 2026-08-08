@@ -1,9 +1,10 @@
 export type PersonFacilityRoleCatalogEntry = {
-  code: string;
+  id: number;
   name: string;
+  isActive: boolean;
 };
 
 export interface PersonFacilityRoleCatalogRepository {
-  /** Active catalog rows, stable order by code. */
+  /** Active catalog rows, stable order by name. */
   listActive(): Promise<PersonFacilityRoleCatalogEntry[]>;
 }

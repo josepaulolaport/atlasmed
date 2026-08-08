@@ -2,8 +2,10 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
@@ -55,8 +57,18 @@ class FacilityProfessionalsRepository
     if (result == null) {
       throw const FacilityProfessionalsException();
     }
+    // Warm id→name catalog cache so roleChipLabels resolve.
+    List<PersonFacilityRoleCatalogEntry>? catalog;
+    final catalogRepo = PersonFacilityRolesCatalogRepository(client: _client);
+    try {
+      catalog = await catalogRepo.listActive();
+    } catch (_) {
+      // Labels stay empty until a roles sheet loads catalog.
+    } finally {
+      catalogRepo.dispose();
+    }
     var items = result.items
-        .map((item) => ProfessionalRoster.fromRosterItem(item))
+        .map((item) => ProfessionalRoster.fromRosterItem(item, catalog: catalog))
         .toList(growable: false);
     final q = search?.trim();
     if (q != null && q.isNotEmpty) {

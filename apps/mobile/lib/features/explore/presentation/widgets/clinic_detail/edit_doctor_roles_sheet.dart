@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
@@ -37,8 +37,8 @@ class _EditDoctorRolesSheet extends StatefulWidget {
 }
 
 class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
-  late Set<String> _selected;
-  late Set<String> _initial;
+  late Set<int> _selected;
+  late Set<int> _initial;
   List<PersonFacilityRoleCatalogEntry> _catalog = const [];
   bool _loadingCatalog = true;
   String? _catalogError;
@@ -52,8 +52,8 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
   @override
   void initState() {
     super.initState();
-    _selected = PersonFacilityRoleCodes.normalize(widget.doctor.roleCodes);
-    _initial = Set<String>.from(_selected);
+    _selected = {...widget.doctor.roleIds};
+    _initial = Set<int>.from(_selected);
     _loadCatalog();
   }
 
@@ -63,8 +63,8 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
       final roles = await repo.listActive();
       if (!mounted) return;
       setState(() {
-        _catalog = roles;
         _loadingCatalog = false;
+        _catalog = roles;
         if (roles.isEmpty) {
           _catalogError = 'Catálogo de papéis vazio';
         }
@@ -74,10 +74,7 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
       setState(() {
         _loadingCatalog = false;
         _catalogError = 'Não foi possível carregar os papéis';
-        _catalog = [
-          for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
-            PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
-        ];
+        _catalog = const [];
       });
     } finally {
       repo.dispose();
@@ -172,11 +169,10 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
   }
 
   Future<void> _save() async {
-    final codes = PersonFacilityRoleCodes.sortedList(_selected);
-    final unchanged = PersonFacilityRoleCodes.normalize(codes)
-        .difference(_initial)
-        .isEmpty &&
-        _initial.difference(PersonFacilityRoleCodes.normalize(codes)).isEmpty;
+    final ids = PersonFacilityRoleCatalog.sortedIds(_selected);
+    final unchanged =
+        ids.toSet().difference(_initial).isEmpty &&
+        _initial.difference(ids.toSet()).isEmpty;
     if (unchanged) {
       if (!mounted) return;
       Navigator.of(context).pop(widget.doctor);
@@ -191,20 +187,14 @@ class _EditDoctorRolesSheetState extends State<_EditDoctorRolesSheet> {
         try {
           updated = await repo.updateDoctorRoles(
             widget.doctor,
-            roleCodes: codes,
+            roleIds: ids,
+            catalog: _catalog,
           );
         } finally {
           repo.dispose();
         }
       } else {
-        updated = widget.doctor.copyWith(
-          roleCodes: codes,
-          roleBadge: codes.contains(PersonFacilityRoleCodes.decisionMaker)
-              ? 'DECISOR'
-              : null,
-          clearRoleBadge:
-              !codes.contains(PersonFacilityRoleCodes.decisionMaker),
-        );
+        updated = widget.doctor.copyWith(roleIds: ids);
       }
       if (!mounted) return;
       Navigator.of(context).pop(updated);

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
@@ -93,11 +93,8 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     String? crmState,
     String? phone,
     String? email,
-    List<String>? roleCodes,
-    bool isPartner = false,
-    bool isPrescriber = false,
-    bool isBuyer = false,
-    bool isDecisionMaker = false,
+    List<int>? roleIds,
+    List<PersonFacilityRoleCatalogEntry>? catalog,
   }) async {
     // Specialty → roleTitle (affiliation label). CRM → crmNumber/crmState
     // (primary person_professional_registrations). Roles → PUT …/roles after.
@@ -129,20 +126,12 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
     var dto = FacilityProfessionalItemDTO.fromMap(map);
-    final codes = PersonFacilityRoleCodes.sortedList(
-      roleCodes ??
-          [
-            if (isPartner) PersonFacilityRoleCodes.partner,
-            if (isPrescriber) PersonFacilityRoleCodes.prescriber,
-            if (isBuyer) PersonFacilityRoleCodes.buyer,
-            if (isDecisionMaker) PersonFacilityRoleCodes.decisionMaker,
-          ],
-    );
-    if (codes.isNotEmpty) {
+    final ids = PersonFacilityRoleCatalog.sortedIds(roleIds ?? const []);
+    if (ids.isNotEmpty) {
       try {
         dto = await _putHealthcareRoles(
           personFacilityId: dto.personFacilityId,
-          roleCodes: codes,
+          roleIds: ids,
         );
       } on FacilityAssociateException {
         throw const FacilityAssociateException(
@@ -151,7 +140,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
       }
     }
 
-    final roster = ProfessionalRoster.fromRosterItem(dto);
+    final roster = ProfessionalRoster.fromRosterItem(dto, catalog: catalog);
     return roster.copyWith(
       specialty: specialty ?? roster.specialty,
       crm: _formatCrm(crmNumber, crmState) ?? roster.crm,
@@ -163,7 +152,8 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
   Future<ProfessionalRoster> updateDoctorRoles(
     ProfessionalRoster doctor, {
-    required List<String> roleCodes,
+    required List<int> roleIds,
+    List<PersonFacilityRoleCatalogEntry>? catalog,
   }) async {
     final personFacilityId = doctor.personFacilityId;
     if (personFacilityId == null) {
@@ -174,27 +164,25 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
 
     final dto = await _putHealthcareRoles(
       personFacilityId: personFacilityId,
-      roleCodes: PersonFacilityRoleCodes.sortedList(roleCodes),
+      roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
     );
-    final fromApi = ProfessionalRoster.fromRosterItem(dto);
+    final fromApi = ProfessionalRoster.fromRosterItem(dto, catalog: catalog);
     return doctor.copyWith(
       personFacilityId: fromApi.personFacilityId,
-      roleCodes: fromApi.roleCodes,
-      roleBadge: fromApi.roleBadge,
-      clearRoleBadge: fromApi.roleBadge == null,
+      roleIds: fromApi.roleIds,
     );
   }
 
   Future<FacilityProfessionalItemDTO> _putHealthcareRoles({
     required int personFacilityId,
-    required List<String> roleCodes,
+    required List<int> roleIds,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse('$_healthcarePath/$personFacilityId/roles'),
         method: RepositoryHttpMethod.put,
         headers: const {'Content-Type': 'application/json'},
-        body: {'roleCodes': roleCodes},
+        body: {'roleIds': roleIds},
       ),
     );
 

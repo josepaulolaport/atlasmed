@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -38,7 +38,7 @@ class AdministrativeProfessional {
     this.email,
     this.phone,
     this.contactType = 'PROFESSIONAL',
-    this.roleCodes = const [],
+    this.roleIds = const [],
     this.relationshipScore,
   });
 
@@ -51,18 +51,7 @@ class AdministrativeProfessional {
   /// Legacy single label — prefer [roleChipLabels] for UI.
   final String contactType;
 
-  final List<String> roleCodes;
-
-  bool get isPartner =>
-      roleCodes.contains(PersonFacilityRoleCodes.partner);
-  bool get isAdministrator =>
-      roleCodes.contains(PersonFacilityRoleCodes.administrator);
-  bool get isDecisionMaker =>
-      roleCodes.contains(PersonFacilityRoleCodes.decisionMaker);
-  bool get isBuyer => roleCodes.contains(PersonFacilityRoleCodes.buyer);
-  bool get isBiller => roleCodes.contains(PersonFacilityRoleCodes.biller);
-  bool get isSecretary =>
-      roleCodes.contains(PersonFacilityRoleCodes.secretary);
+  final List<int> roleIds;
 
   /// Authenticated user's relationship (1–10). Null = not yet assessed.
   final int? relationshipScore;
@@ -78,10 +67,11 @@ class AdministrativeProfessional {
     }
   }
 
-  /// Multi-select role chips for list/profile UI (catalog fallback names).
-  List<String> get roleChipLabels => [
-    for (final code in roleCodes) PersonFacilityRoleCodes.fallbackName(code),
-  ];
+  /// Multi-select role chips for list/profile UI (via catalog cache).
+  List<String> get roleChipLabels => PersonFacilityRoleCatalog.labelsFor(
+        roleIds,
+        PersonFacilityRoleCatalogCache.entries,
+      );
 
   AdministrativeProfessional copyWith({
     int? id,
@@ -90,7 +80,7 @@ class AdministrativeProfessional {
     String? email,
     String? phone,
     String? contactType,
-    List<String>? roleCodes,
+    List<int>? roleIds,
     int? relationshipScore,
     bool clearRelationshipScore = false,
   }) {
@@ -101,7 +91,7 @@ class AdministrativeProfessional {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       contactType: contactType ?? this.contactType,
-      roleCodes: roleCodes ?? this.roleCodes,
+      roleIds: roleIds ?? this.roleIds,
       relationshipScore: clearRelationshipScore
           ? null
           : (relationshipScore ?? this.relationshipScore),
@@ -233,6 +223,38 @@ class NearbyEstablishment {
   final String? streetAddress;
   final String? streetNumber;
   final String? addressComplement;
+
+  NearbyEstablishment copyWith({
+    int? id,
+    String? name,
+    double? latitude,
+    double? longitude,
+    double? distanceKm,
+    String? specialtyLabel,
+    ClinicStatus? status,
+    String? purchaseBucket,
+    String? neighborhood,
+    String? streetAddress,
+    String? streetNumber,
+    String? addressComplement,
+    List<NearbyVerticalBadge>? verticals,
+  }) {
+    return NearbyEstablishment(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      distanceKm: distanceKm ?? this.distanceKm,
+      specialtyLabel: specialtyLabel ?? this.specialtyLabel,
+      status: status ?? this.status,
+      purchaseBucket: purchaseBucket ?? this.purchaseBucket,
+      neighborhood: neighborhood ?? this.neighborhood,
+      streetAddress: streetAddress ?? this.streetAddress,
+      streetNumber: streetNumber ?? this.streetNumber,
+      addressComplement: addressComplement ?? this.addressComplement,
+      verticals: verticals ?? this.verticals,
+    );
+  }
 
   /// Short single-line address for compact cards, e.g.
   /// "Rua Augusta, 320 — Consolação". Falls back gracefully when parts

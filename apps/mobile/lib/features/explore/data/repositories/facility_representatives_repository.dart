@@ -4,8 +4,9 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
@@ -62,6 +63,15 @@ class FacilityRepresentativesRepository
     if (result == null) {
       throw const FacilityRepresentativesException();
     }
+    // Warm id→name catalog cache so roleChipLabels resolve.
+    final catalogRepo = PersonFacilityRolesCatalogRepository(client: _client);
+    try {
+      await catalogRepo.listActive();
+    } catch (_) {
+      // Labels stay empty until a roles sheet loads catalog.
+    } finally {
+      catalogRepo.dispose();
+    }
     var items = result.items
         .map((item) => item.toDomain())
         .toList(growable: false);
@@ -89,13 +99,7 @@ class FacilityRepresentativesRepository
     String? roleTitle,
     String? email,
     String? mobilePhone,
-    List<String>? roleCodes,
-    bool isPartner = false,
-    bool isAdministrator = false,
-    bool isDecisionMaker = false,
-    bool isBuyer = false,
-    bool isBiller = false,
-    bool isSecretary = false,
+    List<int>? roleIds,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -114,22 +118,12 @@ class FacilityRepresentativesRepository
     );
 
     var api = _parseMutationApi(response, 'criar');
-    final codes = PersonFacilityRoleCodes.sortedList(
-      roleCodes ??
-          [
-            if (isPartner) PersonFacilityRoleCodes.partner,
-            if (isAdministrator) PersonFacilityRoleCodes.administrator,
-            if (isDecisionMaker) PersonFacilityRoleCodes.decisionMaker,
-            if (isBuyer) PersonFacilityRoleCodes.buyer,
-            if (isBiller) PersonFacilityRoleCodes.biller,
-            if (isSecretary) PersonFacilityRoleCodes.secretary,
-          ],
-    );
-    if (codes.isNotEmpty) {
+    final ids = PersonFacilityRoleCatalog.sortedIds(roleIds ?? const []);
+    if (ids.isNotEmpty) {
       try {
         api = await _putAdminRoles(
           personFacilityId: api.personFacilityId,
-          roleCodes: codes,
+          roleIds: ids,
         );
       } on FacilityRepresentativesException {
         throw const FacilityRepresentativesException(
@@ -148,14 +142,14 @@ class FacilityRepresentativesRepository
     String? roleTitle,
     String? email,
     String? mobilePhone,
-    List<String>? roleCodes,
+    List<int>? roleIds,
     int? relationshipLevel,
     bool clearRelationshipLevel = false,
   }) async {
     // Relationship score has no administrative-contacts field.
     // Former user_representative_relationships PATCH is gone — fail closed
     // so UI (representative_detail_screen) reverts optimistic local state.
-    final rolesProvided = roleCodes != null;
+    final rolesProvided = roleIds != null;
     final onlyRelationship =
         firstName == null &&
         lastName == null &&
@@ -181,7 +175,7 @@ class FacilityRepresentativesRepository
     if (onlyRoles) {
       api = await _putAdminRoles(
         personFacilityId: representativeId,
-        roleCodes: PersonFacilityRoleCodes.sortedList(roleCodes),
+        roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
       );
     } else {
       final body = <String, Object?>{
@@ -202,11 +196,11 @@ class FacilityRepresentativesRepository
       );
 
       api = _parseMutationApi(response, 'atualizar');
-      if (roleCodes != null) {
+      if (roleIds != null) {
         try {
           api = await _putAdminRoles(
             personFacilityId: representativeId,
-            roleCodes: PersonFacilityRoleCodes.sortedList(roleCodes),
+            roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
           );
         } on FacilityRepresentativesException {
           throw const FacilityRepresentativesException(
@@ -221,14 +215,14 @@ class FacilityRepresentativesRepository
 
   Future<FacilityRepresentativeApi> _putAdminRoles({
     required int personFacilityId,
-    required List<String> roleCodes,
+    required List<int> roleIds,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse('$_contactsPath/$personFacilityId/roles'),
         method: RepositoryHttpMethod.put,
         headers: const {'Content-Type': 'application/json'},
-        body: {'roleCodes': roleCodes},
+        body: {'roleIds': roleIds},
       ),
     );
     return _parseMutationApi(response, 'salvar papéis de');

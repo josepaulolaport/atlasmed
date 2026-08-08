@@ -6,16 +6,16 @@ describe("ListPersonFacilityRolesUseCase", () => {
     const result = await new ListPersonFacilityRolesUseCase({
       roleCatalogRepository: {
         listActive: async () => [
-          { code: "BUYER", name: "Comprador" },
-          { code: "PRESCRIBER", name: "Prescritor" },
+          { id: 2, name: "Comprador", isActive: true },
+          { id: 1, name: "Prescritor", isActive: true },
         ],
       },
     }).execute();
 
     expect(result).toEqual({
       data: [
-        { code: "BUYER", name: "Comprador" },
-        { code: "PRESCRIBER", name: "Prescritor" },
+        { id: 2, name: "Comprador", isActive: true },
+        { id: 1, name: "Prescritor", isActive: true },
       ],
     });
   });

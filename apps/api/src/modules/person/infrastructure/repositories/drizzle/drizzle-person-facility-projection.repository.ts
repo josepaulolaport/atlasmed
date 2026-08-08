@@ -1,7 +1,9 @@
 import {
   personFacilities,
   personFacilityClassificationAssignments,
+  personFacilityClassifications,
   personFacilityRoleAssignments,
+  personFacilityRoles,
   personHealthcareProfiles,
   personProfessionalRegistrations,
   persons,
@@ -34,26 +36,39 @@ type Row = {
   notes: string | null;
   endedAt: Date | null;
   hasHealthcareProfile: boolean;
+  classificationIds: number[] | null;
   classificationCodes: string[] | null;
-  roleCodes: string[] | null;
+  roleIds: number[] | null;
 };
+
+const classificationIdsSql = sql<number[]>`coalesce(
+  (
+    SELECT array_agg(a.classification_id ORDER BY c.code)
+    FROM ${personFacilityClassificationAssignments} a
+    INNER JOIN ${personFacilityClassifications} c ON c.id = a.classification_id
+    WHERE a.person_facility_id = ${personFacilities.id}
+  ),
+  '{}'::bigint[]
+)`;
 
 const classificationCodesSql = sql<string[]>`coalesce(
   (
-    SELECT array_agg(${personFacilityClassificationAssignments.classificationCode})
-    FROM ${personFacilityClassificationAssignments}
-    WHERE ${personFacilityClassificationAssignments.personFacilityId} = ${personFacilities.id}
+    SELECT array_agg(c.code ORDER BY c.code)
+    FROM ${personFacilityClassificationAssignments} a
+    INNER JOIN ${personFacilityClassifications} c ON c.id = a.classification_id
+    WHERE a.person_facility_id = ${personFacilities.id}
   ),
   '{}'::text[]
 )`;
 
-const roleCodesSql = sql<string[]>`coalesce(
+const roleIdsSql = sql<number[]>`coalesce(
   (
-    SELECT array_agg(${personFacilityRoleAssignments.roleCode} ORDER BY ${personFacilityRoleAssignments.roleCode})
-    FROM ${personFacilityRoleAssignments}
-    WHERE ${personFacilityRoleAssignments.personFacilityId} = ${personFacilities.id}
+    SELECT array_agg(a.role_id ORDER BY r.name, a.role_id)
+    FROM ${personFacilityRoleAssignments} a
+    INNER JOIN ${personFacilityRoles} r ON r.id = a.role_id
+    WHERE a.person_facility_id = ${personFacilities.id}
   ),
-  '{}'::text[]
+  '{}'::bigint[]
 )`;
 
 function mapRow(row: Row): PersonFacilityProjectionRecord {
@@ -72,10 +87,31 @@ function mapRow(row: Row): PersonFacilityProjectionRecord {
     notes: row.notes,
     endedAt: row.endedAt,
     hasHealthcareProfile: row.hasHealthcareProfile,
+    classificationIds: row.classificationIds ?? [],
     classificationCodes: row.classificationCodes ?? [],
-    roleCodes: row.roleCodes ?? [],
+    roleIds: row.roleIds ?? [],
   };
 }
+
+const projectionSelect = {
+  personFacilityId: personFacilities.id,
+  personId: persons.id,
+  facilityId: personFacilities.facilityId,
+  firstName: persons.firstName,
+  lastName: persons.lastName,
+  socialName: persons.socialName,
+  cpf: persons.cpf,
+  email: persons.email,
+  mobilePhone: persons.mobilePhone,
+  landlinePhone: persons.landlinePhone,
+  roleTitle: personFacilities.roleTitle,
+  notes: personFacilities.notes,
+  endedAt: personFacilities.endedAt,
+  hasHealthcareProfile: sql<boolean>`(${personHealthcareProfiles.personId} IS NOT NULL)`,
+  classificationIds: classificationIdsSql,
+  classificationCodes: classificationCodesSql,
+  roleIds: roleIdsSql,
+};
 
 export class DrizzlePersonFacilityProjectionRepository
   implements PersonFacilityProjectionRepository
@@ -85,34 +121,21 @@ export class DrizzlePersonFacilityProjectionRepository
     classificationCode: ClassificationCode;
   }): Promise<PersonFacilityProjectionRecord[]> {
     const rows = await db
-      .select({
-        personFacilityId: personFacilities.id,
-        personId: persons.id,
-        facilityId: personFacilities.facilityId,
-        firstName: persons.firstName,
-        lastName: persons.lastName,
-        socialName: persons.socialName,
-        cpf: persons.cpf,
-        email: persons.email,
-        mobilePhone: persons.mobilePhone,
-        landlinePhone: persons.landlinePhone,
-        roleTitle: personFacilities.roleTitle,
-        notes: personFacilities.notes,
-        endedAt: personFacilities.endedAt,
-        hasHealthcareProfile: sql<boolean>`(${personHealthcareProfiles.personId} IS NOT NULL)`,
-        classificationCodes: classificationCodesSql,
-        roleCodes: roleCodesSql,
-      })
+      .select(projectionSelect)
       .from(personFacilities)
       .innerJoin(persons, eq(persons.id, personFacilities.personId))
       .innerJoin(
         personFacilityClassificationAssignments,
+        eq(personFacilityClassificationAssignments.personFacilityId, personFacilities.id)
+      )
+      .innerJoin(
+        personFacilityClassifications,
         and(
-          eq(personFacilityClassificationAssignments.personFacilityId, personFacilities.id),
           eq(
-            personFacilityClassificationAssignments.classificationCode,
-            input.classificationCode
-          )
+            personFacilityClassifications.id,
+            personFacilityClassificationAssignments.classificationId
+          ),
+          eq(personFacilityClassifications.code, input.classificationCode)
         )
       )
       .leftJoin(
@@ -135,24 +158,7 @@ export class DrizzlePersonFacilityProjectionRepository
     personFacilityId: number
   ): Promise<PersonFacilityProjectionRecord | null> {
     const [row] = await db
-      .select({
-        personFacilityId: personFacilities.id,
-        personId: persons.id,
-        facilityId: personFacilities.facilityId,
-        firstName: persons.firstName,
-        lastName: persons.lastName,
-        socialName: persons.socialName,
-        cpf: persons.cpf,
-        email: persons.email,
-        mobilePhone: persons.mobilePhone,
-        landlinePhone: persons.landlinePhone,
-        roleTitle: personFacilities.roleTitle,
-        notes: personFacilities.notes,
-        endedAt: personFacilities.endedAt,
-        hasHealthcareProfile: sql<boolean>`(${personHealthcareProfiles.personId} IS NOT NULL)`,
-        classificationCodes: classificationCodesSql,
-        roleCodes: roleCodesSql,
-      })
+      .select(projectionSelect)
       .from(personFacilities)
       .innerJoin(persons, eq(persons.id, personFacilities.personId))
       .leftJoin(
@@ -346,11 +352,23 @@ export class DrizzlePersonFacilityProjectionRepository
     personFacilityId: number;
     classificationCode: ClassificationCode;
   }): Promise<void> {
+    const [classification] = await db
+      .select({ id: personFacilityClassifications.id })
+      .from(personFacilityClassifications)
+      .where(eq(personFacilityClassifications.code, input.classificationCode))
+      .limit(1);
+
+    if (!classification) {
+      throw new DatabaseError(
+        `unknown person facility classification: ${input.classificationCode}`
+      );
+    }
+
     await db
       .insert(personFacilityClassificationAssignments)
       .values({
         personFacilityId: input.personFacilityId,
-        classificationCode: input.classificationCode,
+        classificationId: classification.id,
       })
       .onConflictDoNothing();
   }
@@ -404,7 +422,7 @@ export class DrizzlePersonFacilityProjectionRepository
 
   async replaceRoleAssignments(input: {
     personFacilityId: number;
-    roleCodes: string[];
+    roleIds: number[];
   }): Promise<void> {
     await db.transaction(async (tx) => {
       await tx
@@ -413,12 +431,12 @@ export class DrizzlePersonFacilityProjectionRepository
           eq(personFacilityRoleAssignments.personFacilityId, input.personFacilityId)
         );
 
-      if (input.roleCodes.length === 0) return;
+      if (input.roleIds.length === 0) return;
 
       await tx.insert(personFacilityRoleAssignments).values(
-        input.roleCodes.map((roleCode) => ({
+        input.roleIds.map((roleId) => ({
           personFacilityId: input.personFacilityId,
-          roleCode,
+          roleId,
         }))
       );
     });

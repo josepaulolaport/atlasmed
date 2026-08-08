@@ -41,8 +41,8 @@ const projectionDto = {
   roleTitle: null,
   notes: null,
   hasHealthcareProfile: true,
-  classificationCodes: ["HEALTHCARE_PROFESSIONAL"],
-  roleCodes: ["PRESCRIBER", "BUYER"],
+  classificationIds: [1],
+  roleIds: [1, 2],
 };
 
 function projectionUseCases(
@@ -88,13 +88,13 @@ describe("Person projection HTTP routes", () => {
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ roleCodes: ["PRESCRIBER"] }),
+        body: JSON.stringify({ roleIds: [1] }),
       }
     );
     expect(response.status).toBe(401);
   });
 
-  it("PUT healthcare roles calls replace use-case and returns roleCodes", async () => {
+  it("PUT healthcare roles calls replace use-case and returns roleIds", async () => {
     const replace = mock(async () => projectionDto);
     const application = app(
       projectionUseCases({
@@ -109,7 +109,7 @@ describe("Person projection HTTP routes", () => {
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ roleCodes: ["PRESCRIBER", "BUYER"] }),
+        body: JSON.stringify({ roleIds: [1, 2] }),
       }
     );
 
@@ -117,7 +117,7 @@ describe("Person projection HTTP routes", () => {
     expect(await response.json()).toEqual(
       expect.objectContaining({
         personFacilityId: 10,
-        roleCodes: ["PRESCRIBER", "BUYER"],
+        roleIds: [1, 2],
       })
     );
     expect(replace).toHaveBeenCalledWith(
@@ -125,7 +125,7 @@ describe("Person projection HTTP routes", () => {
         facilityId: 1,
         personFacilityId: 10,
         classificationCode: "HEALTHCARE_PROFESSIONAL",
-        roleCodes: ["PRESCRIBER", "BUYER"],
+        roleIds: [1, 2],
       })
     );
   });
@@ -133,8 +133,8 @@ describe("Person projection HTTP routes", () => {
   it("PUT administrative roles uses ADMINISTRATIVE_CONTACT classification", async () => {
     const replace = mock(async () => ({
       ...projectionDto,
-      classificationCodes: ["ADMINISTRATIVE_CONTACT"],
-      roleCodes: ["BILLER"],
+      classificationIds: [2],
+      roleIds: [6],
     }));
     const application = app(
       projectionUseCases({
@@ -149,7 +149,7 @@ describe("Person projection HTTP routes", () => {
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ roleCodes: ["BILLER"] }),
+        body: JSON.stringify({ roleIds: [6] }),
       }
     );
 
@@ -157,7 +157,7 @@ describe("Person projection HTTP routes", () => {
     expect(replace).toHaveBeenCalledWith(
       expect.objectContaining({
         classificationCode: "ADMINISTRATIVE_CONTACT",
-        roleCodes: ["BILLER"],
+        roleIds: [6],
       })
     );
   });

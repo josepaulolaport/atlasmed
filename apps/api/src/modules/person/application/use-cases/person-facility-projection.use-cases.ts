@@ -33,8 +33,8 @@ export type PersonFacilityProjectionDto = {
   roleTitle: string | null;
   notes: string | null;
   hasHealthcareProfile: boolean;
-  classificationCodes: string[];
-  roleCodes: string[];
+  classificationIds: number[];
+  roleIds: number[];
 };
 
 function toDto(row: PersonFacilityProjectionRecord): PersonFacilityProjectionDto {
@@ -52,8 +52,8 @@ function toDto(row: PersonFacilityProjectionRecord): PersonFacilityProjectionDto
     roleTitle: row.roleTitle,
     notes: row.notes,
     hasHealthcareProfile: row.hasHealthcareProfile,
-    classificationCodes: row.classificationCodes,
-    roleCodes: row.roleCodes,
+    classificationIds: row.classificationIds,
+    roleIds: row.roleIds,
   };
 }
 
@@ -314,33 +314,33 @@ export type ReplacePersonFacilityRolesInput = {
   personFacilityId: number;
   classificationCode: ClassificationCode;
   scope: ScopeContext;
-  roleCodes: string[];
+  roleIds: number[];
 };
 
-function normalizeRoleCodes(roleCodes: string[]): string[] {
-  const seen = new Set<string>();
-  const unique: string[] = [];
-  for (const code of roleCodes) {
-    if (seen.has(code)) continue;
-    seen.add(code);
-    unique.push(code);
+function normalizeRoleIds(roleIds: number[]): number[] {
+  const seen = new Set<number>();
+  const unique: number[] = [];
+  for (const id of roleIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
   }
   return unique;
 }
 
-async function assertRoleCodesInCatalog(
+async function assertRoleIdsInCatalog(
   roleCatalogRepository: PersonFacilityRoleCatalogRepository,
-  roleCodes: string[]
+  roleIds: number[]
 ): Promise<void> {
-  if (roleCodes.length === 0) return;
+  if (roleIds.length === 0) return;
   const catalog = await roleCatalogRepository.listActive();
-  const allowed = new Set(catalog.map((r) => r.code));
-  const invalid = roleCodes.filter((code) => !allowed.has(code));
+  const allowed = new Set(catalog.map((r) => r.id));
+  const invalid = roleIds.filter((id) => !allowed.has(id));
   if (invalid.length === 0) return;
   throw new ValidationError(
-    invalid.map((code) => ({
-      field: "roleCodes",
-      message: `Unknown or inactive role code "${code}"`,
+    invalid.map((id) => ({
+      field: "roleIds",
+      message: `Unknown or inactive role id "${id}"`,
     }))
   );
 }
@@ -395,8 +395,8 @@ export class ReplacePersonFacilityRolesUseCase {
   async execute(input: ReplacePersonFacilityRolesInput): Promise<PersonFacilityProjectionDto> {
     assertFacilityScoped(input.scope, input.facilityId);
 
-    const roleCodes = normalizeRoleCodes(input.roleCodes);
-    await assertRoleCodesInCatalog(this.deps.roleCatalogRepository, roleCodes);
+    const roleIds = normalizeRoleIds(input.roleIds);
+    await assertRoleIdsInCatalog(this.deps.roleCatalogRepository, roleIds);
 
     const row = await this.deps.repository.findActiveById(input.personFacilityId);
     if (!row || row.endedAt) {
@@ -411,7 +411,7 @@ export class ReplacePersonFacilityRolesUseCase {
 
     await this.deps.repository.replaceRoleAssignments({
       personFacilityId: input.personFacilityId,
-      roleCodes,
+      roleIds,
     });
 
     const updated = await this.deps.repository.findActiveById(input.personFacilityId);

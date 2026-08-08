@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_codes.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
@@ -47,7 +47,7 @@ class _CreateAdminProfessionalSheetState
   late final TextEditingController _roleCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _emailCtrl;
-  late Set<String> _selectedRoles;
+  late Set<int> _selectedRoles;
   List<PersonFacilityRoleCatalogEntry> _catalog = const [];
   bool _loadingCatalog = true;
   bool _saving = false;
@@ -67,9 +67,7 @@ class _CreateAdminProfessionalSheetState
     _roleCtrl = TextEditingController(text: existing?.roleTitle ?? '');
     _phoneCtrl = TextEditingController(text: existing?.phone ?? '');
     _emailCtrl = TextEditingController(text: existing?.email ?? '');
-    _selectedRoles = PersonFacilityRoleCodes.normalize(
-      existing?.roleCodes ?? const [],
-    );
+    _selectedRoles = {...?existing?.roleIds};
     _loadCatalog();
   }
 
@@ -79,21 +77,13 @@ class _CreateAdminProfessionalSheetState
       final roles = await repo.listActive();
       if (!mounted) return;
       setState(() {
-        _catalog = roles.isEmpty
-            ? [
-                for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
-                  PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
-              ]
-            : roles;
+        _catalog = roles;
         _loadingCatalog = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _catalog = [
-          for (final e in PersonFacilityRoleCodes.fallbackNames.entries)
-            PersonFacilityRoleCatalogEntry(code: e.key, name: e.value),
-        ];
+        _catalog = const [];
         _loadingCatalog = false;
       });
     } finally {
@@ -265,7 +255,7 @@ class _CreateAdminProfessionalSheetState
     final email = _emailCtrl.text.trim().isEmpty
         ? null
         : _emailCtrl.text.trim();
-    final roleCodes = PersonFacilityRoleCodes.sortedList(_selectedRoles);
+    final roleIds = PersonFacilityRoleCatalog.sortedIds(_selectedRoles);
 
     try {
       if (!_useApi) {
@@ -280,7 +270,7 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle,
             phone: phone,
             email: email,
-            roleCodes: roleCodes,
+            roleIds: roleIds,
             relationshipScore: widget.existing?.relationshipScore,
           ),
         );
@@ -299,7 +289,7 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle ?? '',
             mobilePhone: phone ?? '',
             email: email ?? '',
-            roleCodes: roleCodes,
+            roleIds: roleIds,
           );
         } else {
           saved = await repo.create(
@@ -308,7 +298,7 @@ class _CreateAdminProfessionalSheetState
             roleTitle: roleTitle,
             mobilePhone: phone,
             email: email,
-            roleCodes: roleCodes,
+            roleIds: roleIds,
           );
         }
         if (!mounted) return;

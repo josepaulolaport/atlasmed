@@ -442,6 +442,41 @@
       "when": 1786217354736,
       "tag": "0062_reshape_deactivation_reasons",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1786218125328,
+      "tag": "0063_drop_person_facility_role_classif_code_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1786218141207,
+      "tag": "0064_reshape_person_facility_role_classif_id_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1786218141823,
+      "tag": "0065_seed_person_facility_role_classif_id_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1786219746377,
+      "tag": "0066_drop_person_facility_roles_code_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1786219754236,
+      "tag": "0067_person_facility_roles_dynamic_no_code",
+      "breakpoints": true
     }
   ]
 }

@@ -21,7 +21,7 @@ export function createPersonFacilityRolesRoutes(
       async () => useCases.listPersonFacilityRoles().execute(),
       {
         detail: {
-          summary: "List active person–facility role catalog (seeded codes)",
+          summary: "List active person–facility role catalog (id, name, isActive)",
           tags: ["Persons"],
           security: [{ bearerAuth: [] }],
         },

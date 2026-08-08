@@ -13,7 +13,7 @@ Person model design: [ADR 0004](../adr/0004-person-facility-model.md).
 - **Facility** — Pessoa Jurídica (CNPJ) or Pessoa Física (CPF), discriminated by `legal_document_type` / `legal_document`. May carry `cnes_code`, `unit_type_id` / `unit_subtype_id` (CNES TP_UNIDADE catalogs), and other CRM fields.
 - **Person** — one external human (`persons`): identity (`first_name`, `last_name`, `cpf`, phones, email, …). Soft-delete via `deleted_at`.
 - **Healthcare profile** — optional `person_healthcare_profiles` (e.g. CNES professional id) + specialties M2M + professional registrations (CRM triple).
-- **Affiliation** — `person_facilities` (active when `ended_at` is null). Classifications via `person_facility_classification_assignments` (`HEALTHCARE_PROFESSIONAL` / `ADMINISTRATIVE_CONTACT`). Roles via `person_facility_role_assignments` (seeded codes: PRESCRIBER, BUYER, …).
+- **Affiliation** — `person_facilities` (active when `ended_at` is null). Classifications via `person_facility_classification_assignments` → catalog `id` + stable `code` (`HEALTHCARE_PROFESSIONAL` / `ADMINISTRATIVE_CONTACT`, seeded). Roles via `person_facility_role_assignments` → admin-dynamic role catalog `id` + `name` (no machine `code`, no migration seed). Wire DTOs use `roleIds` / `classificationIds`.
 - **Person notes** / **facility notes** — private per-user notes (`person_notes`, `facility_notes`).
 - **User–person relationships** — private 1–10 relationship strength (`user_person_relationships`).
 - **Occupations** — CNES CBO catalog (`occupations`: `id` + `cnes_id` + `name`); affiliation occupations in `person_facility_occupations`.
@@ -48,7 +48,7 @@ Person-scoped:
 | GET + PUT/PATCH | `/api/v1/persons/:personId/relationship` |
 | GET | `/api/v1/healthcare-professionals` (Explorar / Meili) |
 | GET | `/api/v1/healthcare-professionals/specialties` |
-| GET | `/api/v1/person-facility-roles` (seeded role catalog) |
+| GET | `/api/v1/person-facility-roles` (dynamic role catalog `{ id, name, isActive }`) |
 
 Do not call removed registry endpoints (`/registry/*`) or deleted `/api/v1/professionals/*`.
 

@@ -110,16 +110,16 @@ class _AdministrativeProfessionalsListScreenState
     }
   }
 
-  Map<String, List<String>> get _filterSections => {
-    _typeSection: const [
-      'Parceiro',
-      'Administrador',
-      'Decisor',
-      'Comprador',
-      'Faturamento',
-      'Secretário(a)',
-    ],
-  };
+  Map<String, List<String>> get _filterSections {
+    final names = <String>{};
+    for (final p in _professionals) {
+      names.addAll(p.roleChipLabels);
+    }
+    final sorted = names.toList()..sort();
+    return {
+      if (sorted.isNotEmpty) _typeSection: sorted,
+    };
+  }
 
   int get _filterCount =>
       _filters.values.fold<int>(0, (sum, list) => sum + list.length);

@@ -262,19 +262,9 @@ class _DoctorCard extends StatelessWidget {
     );
   }
 
-  List<Widget> get _badges {
-    final badges = <Widget>[];
-    if (doctor.roleBadge != null) {
-      badges.add(_RoleBadge(label: doctor.roleBadge!));
-    }
-    if (doctor.isPrescriber) badges.add(const _Flag(label: 'Prescritor'));
-    if (doctor.isBuyer) badges.add(const _Flag(label: 'Comprador'));
-    if (doctor.isDecisionMaker && doctor.roleBadge == null) {
-      badges.add(const _Flag(label: 'Decisor'));
-    }
-    if (doctor.isPartner) badges.add(const _Flag(label: 'Parceiro'));
-    return badges;
-  }
+  List<Widget> get _badges => [
+        for (final label in doctor.roleChipLabels) _Flag(label: label),
+      ];
 
   Future<void> _editRoles(BuildContext context) async {
     final updated = await showEditDoctorRolesSheet(
@@ -391,30 +381,3 @@ class _Flag extends StatelessWidget {
   }
 }
 
-class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final isNew = label.toUpperCase() == 'NOVA';
-    final color = isNew ? AppColors.green : AppColors.purple;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: color,
-          letterSpacing: 0.3,
-        ),
-      ),
-    );
-  }
-}
