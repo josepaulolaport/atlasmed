@@ -15,7 +15,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/nearby_vertical_badges.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/nearby_stack_marker.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
@@ -1749,10 +1748,6 @@ class _StackedEstablishmentTile extends StatelessWidget {
                       ),
                     ),
                   ] else ...[
-                    if (establishment.verticals.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      NearbyVerticalBadges(verticals: establishment.verticals),
-                    ],
                     if (establishment.specialtyLabel != null) ...[
                       const SizedBox(height: 2),
                       Text(
@@ -1969,10 +1964,6 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (establishment.verticals.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              NearbyVerticalBadges(verticals: establishment.verticals),
-            ],
             if (establishment.specialtyLabel != null) ...[
               const SizedBox(height: 3),
               Text(

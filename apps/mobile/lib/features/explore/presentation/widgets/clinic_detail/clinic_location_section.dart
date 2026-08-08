@@ -5,7 +5,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_nearby_map_screen.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/nearby_vertical_badges.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
@@ -281,10 +280,6 @@ class _NearbyClinicCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (establishment.verticals.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              NearbyVerticalBadges(verticals: establishment.verticals),
-            ],
             if (establishment.specialtyLabel != null) ...[
               const SizedBox(height: 3),
               Text(

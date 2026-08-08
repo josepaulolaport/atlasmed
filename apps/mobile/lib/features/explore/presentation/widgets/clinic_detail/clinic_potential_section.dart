@@ -24,20 +24,23 @@ class ClinicPotentialSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
     final async = ref.watch(clinicDetailPotentialsProvider(facilityId));
+    final hasFields = async.asData?.value?.items.isNotEmpty ?? false;
+    final editVerticalId =
+        canEdit && hasFields ? verticalId : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ClinicSectionHeader(
           title: 'Potencial & share',
-          trailing: !canEdit || verticalId == null
+          trailing: editVerticalId == null
               ? null
               : TextButton(
                   onPressed: () => _openEditor(
                     context,
                     ref,
                     facilityId: facilityId,
-                    verticalId: verticalId,
+                    verticalId: editVerticalId,
                   ),
                   child: const Text(
                     'Editar potencial',
@@ -129,6 +132,7 @@ class ClinicPotentialSection extends ConsumerWidget {
       )).future,
     );
     if (!context.mounted) return;
+    if (page.items.isEmpty) return;
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,

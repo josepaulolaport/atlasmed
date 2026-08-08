@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_consultant_assignments_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_consultant_assignments_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_vertical_rep_assignments_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_vertical_rep_assignments_provider.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
@@ -993,7 +993,8 @@ class _ClinicDetailContent extends ConsumerWidget {
                             ? detail.address!.city
                             : null,
                         canManageConsultant: canAssignConsultant,
-                        onAssignConsultant: canAssignConsultant
+                        onAssignConsultant: canAssignConsultant &&
+                                activeLinhaId != null
                             ? () => _assignClinicConsultant(
                                 context,
                                 ref,
@@ -1001,8 +1002,8 @@ class _ClinicDetailContent extends ConsumerWidget {
                                 verticalId: activeLinhaId,
                               )
                             : null,
-                        onUnassignConsultant:
-                            canAssignConsultant &&
+                        onUnassignConsultant: canAssignConsultant &&
+                                activeLinhaId != null &&
                                 (detail.territory?.consultantName
                                         ?.trim()
                                         .isNotEmpty ==
@@ -1011,6 +1012,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                                 context,
                                 ref,
                                 facilityId: clinicId,
+                                verticalId: activeLinhaId,
                               )
                             : null,
                       ),
@@ -1295,7 +1297,7 @@ Future<void> _assignClinicConsultant(
   BuildContext context,
   WidgetRef ref, {
   required int facilityId,
-  int? verticalId,
+  required int verticalId,
 }) async {
   final userId = await UserPickerSheet.pickAssignee(
     context,
@@ -1307,7 +1309,7 @@ Future<void> _assignClinicConsultant(
 
   try {
     await ref
-        .read(facilityConsultantAssignmentsRepositoryProvider(facilityId))
+        .read(facilityVerticalRepAssignmentsRepositoryProvider(facilityId))
         .assign(userId: userId, verticalId: verticalId);
     ref.invalidate(clinicDetailRepositoryProvider(facilityId));
     ref.invalidate(establishmentDetailSectionsProvider(facilityId));
@@ -1315,7 +1317,7 @@ Future<void> _assignClinicConsultant(
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Consultor atribuído.')));
-  } on FacilityConsultantAssignmentsException catch (error) {
+  } on FacilityVerticalRepAssignmentsException catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1336,6 +1338,7 @@ Future<void> _unassignClinicConsultant(
   BuildContext context,
   WidgetRef ref, {
   required int facilityId,
+  required int verticalId,
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -1360,15 +1363,15 @@ Future<void> _unassignClinicConsultant(
 
   try {
     await ref
-        .read(facilityConsultantAssignmentsRepositoryProvider(facilityId))
-        .unassignCurrent();
+        .read(facilityVerticalRepAssignmentsRepositoryProvider(facilityId))
+        .unassign(verticalId: verticalId);
     ref.invalidate(clinicDetailRepositoryProvider(facilityId));
     ref.invalidate(establishmentDetailSectionsProvider(facilityId));
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Consultor removido.')));
-  } on FacilityConsultantAssignmentsException catch (error) {
+  } on FacilityVerticalRepAssignmentsException catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
