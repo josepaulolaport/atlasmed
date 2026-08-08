@@ -67,7 +67,7 @@ CNES ingest mapping (when/if reintroduced): many CNES rows → one person → on
 | D7 | Role catalog + assignments | No role seed data in overhaul |
 | D8 | Remake `occupations` + `person_facility_occupations` | No `LEGACY`/`MED` as CBO |
 | D9 | Catalog name `occupations` | Not `facility_occupations` |
-| D10 | Registrations + council + type catalogs | Catalogs empty until later |
+| D10 | Registrations + council catalog | Type catalog removed (unused); council empty OK until later |
 | D11 | `person_notes` + `user_person_relationships` | User-scoped privacy; notes have **no** `facility_id` — `facility_notes` stays separate |
 | D12 | Separate projection APIs | Not one sparse `/people` resource |
 | D13 | CASL `PERSON` | Replaces `PROFESSIONAL` |
@@ -219,9 +219,9 @@ No `description` / `display_order` (Q15).
 
 ---
 
-### 5.6 `person_professional_registration_types` — LOCKED
+### 5.6 ~~`person_professional_registration_types`~~ — REMOVED
 
-Same shape as before (`code` PK, `name`, `is_active`, timestamps). Empty.
+Dropped: unused empty catalog + nullable FK on registrations. No product consumer. Do not reintroduce without ADR + product need.
 
 ---
 
@@ -236,7 +236,6 @@ Multi-registration storage. **No create-time CRM shortcircuit** — registration
 | `council_id` | `bigint` | NO | **FK → councils.id** RESTRICT | |
 | `state_code` | `char(2)` | NO | | UF, uppercase |
 | `registration_number` | `text` | NO | | **Q17 = A** — not int (formatting/leading zeros) |
-| `registration_type_code` | `text` | YES | **FK → types.code** | Empty catalog; nullable until used |
 | `is_primary` | `boolean` | NO | **Q18 = A** — partial unique per person WHERE true | default false |
 | `is_active` | `boolean` | NO | | default true |
 | `created_at` | `timestamp` | NO | | |

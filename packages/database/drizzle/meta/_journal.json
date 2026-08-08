@@ -498,6 +498,13 @@
       "when": 1786222800539,
       "tag": "0070_drop_catalog_sort_order",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1786224394248,
+      "tag": "0071_drop_registration_types",
+      "breakpoints": true
     }
   ]
 }

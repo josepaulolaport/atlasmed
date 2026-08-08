@@ -123,17 +123,6 @@ export const personProfessionalRegistrationCouncils = pgTable(
   }
 );
 
-export const personProfessionalRegistrationTypes = pgTable(
-  "person_professional_registration_types",
-  {
-    code: text("code").primaryKey(),
-    name: text("name").notNull(),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  }
-);
-
 export const personProfessionalRegistrations = pgTable(
   "person_professional_registrations",
   {
@@ -146,10 +135,6 @@ export const personProfessionalRegistrations = pgTable(
       .references(() => personProfessionalRegistrationCouncils.id, { onDelete: "restrict" }),
     stateCode: char("state_code", { length: 2 }).notNull(),
     registrationNumber: text("registration_number").notNull(),
-    registrationTypeCode: text("registration_type_code").references(
-      () => personProfessionalRegistrationTypes.code,
-      { onDelete: "set null" }
-    ),
     isPrimary: boolean("is_primary").notNull().default(false),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -386,10 +371,6 @@ export const personProfessionalRegistrationsRelations = relations(
     council: one(personProfessionalRegistrationCouncils, {
       fields: [personProfessionalRegistrations.councilId],
       references: [personProfessionalRegistrationCouncils.id],
-    }),
-    registrationType: one(personProfessionalRegistrationTypes, {
-      fields: [personProfessionalRegistrations.registrationTypeCode],
-      references: [personProfessionalRegistrationTypes.code],
     }),
   })
 );
