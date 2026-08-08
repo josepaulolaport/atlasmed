@@ -477,6 +477,20 @@
       "when": 1786219754236,
       "tag": "0067_person_facility_roles_dynamic_no_code",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1786221462768,
+      "tag": "0068_drop_registration_councils_code_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1786221472303,
+      "tag": "0069_councils_abbrev_cnes_id_fk",
+      "breakpoints": true
     }
   ]
 }

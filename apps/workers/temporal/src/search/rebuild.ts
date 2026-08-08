@@ -8,7 +8,6 @@ import {
   personFacilities,
   personHealthcareProfileSpecialties,
   personHealthcareProfiles,
-  personProfessionalRegistrations,
   persons,
   states,
 } from "@atlasmed/database";
@@ -38,7 +37,8 @@ export type { FacilityProfileFunnelData, FacilitySearchDocument };
 /**
  * Q31 frozen Meili persons document fields (ADR 0004 §6.4):
  * id, name, socialName, cpf, specialty, specialtyNormalized,
- * activeFacilityIds, activeTerritoryIds, crmCouncil, crmNumber, crmState.
+ * activeFacilityIds, activeTerritoryIds.
+ * Registrations intentionally omitted until multi-registration UI populates them.
  */
 export type PersonSearchDocument = {
   /** Meilisearch primary key (decimal string of persons.id). */
@@ -50,9 +50,6 @@ export type PersonSearchDocument = {
   specialtyNormalized: string | null;
   activeFacilityIds: number[];
   activeTerritoryIds: number[];
-  crmCouncil: string | null;
-  crmNumber: string | null;
-  crmState: string | null;
 };
 
 type EnqueuedTask = { taskUid: number };
@@ -85,9 +82,6 @@ export function mapPersonSearchDocument(row: {
   socialName: string | null;
   cpf: string | null;
   primarySpecialtyLabel: string | null;
-  crmCouncil: string | null;
-  crmNumber: string | null;
-  crmState: string | null;
   activeAssociations: Array<{ facilityId: number; territoryId: number | null }>;
   deletedAt: Date | null;
 }): PersonSearchDocument | null {
@@ -111,9 +105,6 @@ export function mapPersonSearchDocument(row: {
       : null,
     activeFacilityIds,
     activeTerritoryIds,
-    crmCouncil: row.crmCouncil,
-    crmNumber: row.crmNumber,
-    crmState: row.crmState,
   };
 }
 
@@ -332,8 +323,8 @@ async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<Active
 }
 /** Q31 frozen settings — keep in sync with PersonSearchDocument field list. */
 export const PERSON_SETTINGS = {
-  searchableAttributes: ["name", "socialName", "cpf", "specialty", "crmCouncil", "crmNumber", "crmState"],
-  filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds", "crmState"],
+  searchableAttributes: ["name", "socialName", "cpf", "specialty"],
+  filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"],
 };
 
 async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
@@ -446,37 +437,6 @@ async function loadPrimarySpecialtyLabels(
   return map;
 }
 
-async function loadPrimaryRegistrations(
-  personIds: number[]
-): Promise<Map<number, { crmCouncil: string; crmNumber: string; crmState: string } | null>> {
-  const map = new Map<number, { crmCouncil: string; crmNumber: string; crmState: string } | null>();
-  if (personIds.length === 0) return map;
-
-  for (const id of personIds) map.set(id, null);
-
-  const rows = await db
-    .select({
-      personId: personProfessionalRegistrations.personId,
-      crmCouncil: personProfessionalRegistrations.councilCode,
-      crmNumber: personProfessionalRegistrations.registrationNumber,
-      crmState: personProfessionalRegistrations.stateCode,
-    })
-    .from(personProfessionalRegistrations)
-    .where(and(
-      inArray(personProfessionalRegistrations.personId, personIds),
-      eq(personProfessionalRegistrations.isPrimary, true)
-    ));
-
-  for (const row of rows) {
-    map.set(row.personId, {
-      crmCouncil: row.crmCouncil,
-      crmNumber: row.crmNumber,
-      crmState: row.crmState,
-    });
-  }
-  return map;
-}
-
 /** Persons with healthcare profiles only (D16 / Q31). */
 async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
   let lastId: number | undefined;
@@ -503,24 +463,19 @@ async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
 
     lastId = rows.at(-1)!.id;
     const personIds = rows.map((row) => row.id);
-    const [associations, specialties, registrations] = await Promise.all([
+    const [associations, specialties] = await Promise.all([
       loadActivePersonAssociations(personIds),
       loadPrimarySpecialtyLabels(personIds),
-      loadPrimaryRegistrations(personIds),
     ]);
 
     yield rows
-      .map((row) => {
-        const registration = registrations.get(row.id);
-        return mapPersonSearchDocument({
+      .map((row) =>
+        mapPersonSearchDocument({
           ...row,
           primarySpecialtyLabel: specialties.get(row.id) ?? null,
-          crmCouncil: registration?.crmCouncil ?? null,
-          crmNumber: registration?.crmNumber ?? null,
-          crmState: registration?.crmState ?? null,
           activeAssociations: associations.get(row.id) ?? [],
-        });
-      })
+        })
+      )
       .filter((row): row is PersonSearchDocument => row !== null);
   }
 }

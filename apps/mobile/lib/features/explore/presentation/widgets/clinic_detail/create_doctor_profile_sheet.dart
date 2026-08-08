@@ -41,7 +41,6 @@ class _CreateDoctorProfileSheet extends StatefulWidget {
 class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
   final _nameCtrl = TextEditingController();
   final _specialtyCtrl = TextEditingController();
-  final _crmCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   Set<int> _selectedRoles = {};
@@ -86,7 +85,6 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
   void dispose() {
     _nameCtrl.dispose();
     _specialtyCtrl.dispose();
-    _crmCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     super.dispose();
@@ -132,8 +130,6 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
             _field(_nameCtrl, 'Nome completo', TextInputType.name),
             const SizedBox(height: 10),
             _field(_specialtyCtrl, 'Especialidade', TextInputType.text),
-            const SizedBox(height: 10),
-            _field(_crmCtrl, 'CRM', TextInputType.text),
             const SizedBox(height: 10),
             _field(_phoneCtrl, 'Telefone', TextInputType.phone),
             const SizedBox(height: 10),
@@ -239,7 +235,6 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
     final specialty = _specialtyCtrl.text.trim().isEmpty
         ? null
         : _specialtyCtrl.text.trim();
-    final crmRaw = _crmCtrl.text.trim().isEmpty ? null : _crmCtrl.text.trim();
     final phone = _phoneCtrl.text.trim().isEmpty
         ? null
         : _phoneCtrl.text.trim();
@@ -259,7 +254,6 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
             initials: initialsFromName(name),
             hue: hueFromName(name),
             specialty: specialty,
-            crm: crmRaw,
             phone: phone,
             email: email,
             roleIds: roleIds,
@@ -269,15 +263,12 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
       }
 
       final names = splitPersonName(name);
-      final crm = parseCrmField(crmRaw);
       final repo = FacilityAssociateRepository(widget.facilityId!);
       try {
         final doctor = await repo.createAndAssociateDoctor(
           firstName: names.firstName,
           lastName: names.lastName,
           specialty: specialty,
-          crmNumber: crm.number,
-          crmState: crm.state,
           phone: phone,
           email: email,
           roleIds: roleIds,

@@ -117,34 +117,7 @@ export type UpsertPersonFacilityProjectionInput = {
   landlinePhone?: string | null;
   roleTitle?: string | null;
   notes?: string | null;
-  /** Primary CRM registration (healthcare only). Both or neither. */
-  crmNumber?: string | null;
-  crmState?: string | null;
 };
-
-function normalizeCrmRegistration(input: {
-  crmNumber?: string | null;
-  crmState?: string | null;
-}): { registrationNumber: string; stateCode: string } | null {
-  const numberRaw = input.crmNumber?.trim() ?? "";
-  const stateRaw = input.crmState?.trim() ?? "";
-  if (!numberRaw && !stateRaw) return null;
-  if (!numberRaw || !stateRaw) {
-    throw new ValidationError([
-      {
-        field: !numberRaw ? "crmNumber" : "crmState",
-        message: "crmNumber and crmState must be provided together",
-      },
-    ]);
-  }
-  const stateCode = stateRaw.toUpperCase();
-  if (!/^[A-Z]{2}$/.test(stateCode)) {
-    throw new ValidationError([
-      { field: "crmState", message: "crmState must be a 2-letter UF code" },
-    ]);
-  }
-  return { registrationNumber: numberRaw, stateCode };
-}
 
 export class UpsertPersonFacilityProjectionUseCase {
   constructor(private readonly deps: Dependencies) {}
@@ -183,19 +156,6 @@ export class UpsertPersonFacilityProjectionUseCase {
       await this.deps.repository.ensureHealthcareProfile(personId);
     }
 
-    const crm = normalizeCrmRegistration({
-      crmNumber: input.crmNumber,
-      crmState: input.crmState,
-    });
-    if (crm && input.classificationCode !== CLASSIFICATION.HEALTHCARE_PROFESSIONAL) {
-      throw new ValidationError([
-        {
-          field: "crmNumber",
-          message: "CRM registration is only valid for healthcare professionals",
-        },
-      ]);
-    }
-
     const active = await this.deps.repository.findActiveAffiliation({
       facilityId: input.facilityId,
       personId,
@@ -224,22 +184,6 @@ export class UpsertPersonFacilityProjectionUseCase {
       personFacilityId,
       classificationCode: input.classificationCode,
     });
-
-    if (crm) {
-      const result = await this.deps.repository.upsertPrimaryCrmRegistration({
-        personId,
-        registrationNumber: crm.registrationNumber,
-        stateCode: crm.stateCode,
-      });
-      if (result.kind === "conflict") {
-        throw new ValidationError([
-          {
-            field: "crmNumber",
-            message: "CRM registration already belongs to another person",
-          },
-        ]);
-      }
-    }
 
     const row = await this.deps.repository.findActiveById(personFacilityId);
     if (!row) {

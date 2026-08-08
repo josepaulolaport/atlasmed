@@ -77,17 +77,6 @@ export interface PersonFacilityProjectionRepository {
     notes?: string | null;
   }): Promise<{ id: number }>;
 
-  /**
-   * Upsert primary CRM registration for a healthcare person.
-   * Requires council seed (`CRM`). `conflict` when (council, state, number)
-   * already belongs to another person (Q19).
-   */
-  upsertPrimaryCrmRegistration(input: {
-    personId: number;
-    registrationNumber: string;
-    stateCode: string;
-  }): Promise<{ kind: "upserted"; id: number } | { kind: "conflict" }>;
-
   /** Idempotent — ON CONFLICT DO NOTHING on PK. Resolves classification id by code. */
   addClassification(input: {
     personFacilityId: number;

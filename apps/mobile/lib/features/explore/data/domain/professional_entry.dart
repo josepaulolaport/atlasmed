@@ -42,7 +42,7 @@ class ProfessionalEntry {
       initials: initials.toUpperCase(),
       hue: 0,
       specialty: dto.specialty,
-      crm: dto.crm,
+      crm: dto.crm.isEmpty ? null : dto.crm,
       displayFacilityName: dto.displayFacility?.name,
       relationshipLevel: dto.relationshipLevel,
       isPriority: dto.isPriority,

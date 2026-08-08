@@ -135,9 +135,6 @@ describe("search rebuild", () => {
         socialName: "Dra. Ana",
         cpf: "12345678901",
         primarySpecialtyLabel: "Cardiologia",
-        crmCouncil: "CRM",
-        crmNumber: "12345",
-        crmState: "SP",
         activeAssociations: [
           { facilityId: 2, territoryId: 22 },
           { facilityId: 1, territoryId: 11 },
@@ -154,9 +151,6 @@ describe("search rebuild", () => {
       specialtyNormalized: "cardiologia",
       activeFacilityIds: [1, 2],
       activeTerritoryIds: [11, 22],
-      crmCouncil: "CRM",
-      crmNumber: "12345",
-      crmState: "SP",
     });
   });
 

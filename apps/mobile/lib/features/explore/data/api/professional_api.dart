@@ -34,8 +34,6 @@ class ProfessionalDTO {
   final String lastName;
   final String? fullName;
   final String? specialty;
-  final String? crmNumber;
-  final String? crmState;
   final String? mobilePhone;
   final String? landlinePhone;
   final String? email;
@@ -54,7 +52,6 @@ class ProfessionalDTO {
   final String? websiteUrl;
   final String? imageUrl;
   final String? imageBlurhash;
-  final String? crmCouncil;
   final String? favoriteSport;
   final String? notes;
   final List<ProfessionalFacilityRef> facilities;
@@ -75,8 +72,6 @@ class ProfessionalDTO {
     this.isPriority = false,
     this.fullName,
     this.specialty,
-    this.crmNumber,
-    this.crmState,
     this.mobilePhone,
     this.landlinePhone,
     this.email,
@@ -90,7 +85,6 @@ class ProfessionalDTO {
     this.websiteUrl,
     this.imageUrl,
     this.imageBlurhash,
-    this.crmCouncil,
     this.notes,
     this.distanceKm,
     this.createdAt,
@@ -106,8 +100,6 @@ class ProfessionalDTO {
       specialty: readNullableString(
         map['specialty'] ?? map['primarySpecialtyLabel'],
       ),
-      crmNumber: readNullableString(map['crmNumber']),
-      crmState: readNullableString(map['crmState']),
       mobilePhone: readNullableString(map['mobilePhone']),
       landlinePhone: readNullableString(map['landlinePhone']),
       email: readNullableString(map['email']),
@@ -136,7 +128,6 @@ class ProfessionalDTO {
       websiteUrl: readNullableString(map['websiteUrl']),
       imageUrl: readNullableString(map['imageUrl']),
       imageBlurhash: readNullableString(map['imageBlurhash']),
-      crmCouncil: readNullableString(map['crmCouncil']),
       notes: readNullableString(map['notes']),
       distanceKm: readNullableDouble(map['distanceKm']),
       createdAt: readNullableDateTime(map['createdAt']),
@@ -156,15 +147,8 @@ class ProfessionalDTO {
     return '$firstName $lastName'.trim();
   }
 
-  String get crm {
-    if (crmNumber == null || crmNumber!.isEmpty) {
-      return '';
-    }
-    if (crmState == null || crmState!.isEmpty) {
-      return crmNumber!;
-    }
-    return 'CRM-$crmState $crmNumber';
-  }
+  /// Registrations removed from list/detail DTO until multi-reg UI.
+  String get crm => '';
 
   String? get phone {
     final mobile = mobilePhone?.trim();
@@ -254,7 +238,10 @@ class FacilityProfessionalItemDTO {
       roleTitle: readNullableString(map['roleTitle']),
       notes: readNullableString(map['notes']),
       hasHealthcareProfile: map['hasHealthcareProfile'] == true,
-      classificationIds: readCrmIdList(map['classificationIds'], 'classificationIds'),
+      classificationIds: readCrmIdList(
+        map['classificationIds'],
+        'classificationIds',
+      ),
       roleIds: readCrmIdList(map['roleIds'], 'roleIds'),
     );
   }
@@ -301,10 +288,7 @@ class PaginatedFacilityProfessionals {
             total: items.length,
             totalPages: 1,
           );
-    return PaginatedFacilityProfessionals(
-      items: items,
-      pagination: pagination,
-    );
+    return PaginatedFacilityProfessionals(items: items, pagination: pagination);
   }
 
   final List<FacilityProfessionalItemDTO> items;

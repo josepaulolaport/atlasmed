@@ -73,22 +73,15 @@ function fakeRepo(state: {
   affiliation?: { id: number; facilityId: number; personId: number } | null;
   person?: { id: number; deletedAt: Date | null } | null;
   row?: PersonFacilityProjectionRecord | null;
-  crmConflict?: boolean;
 }): PersonFacilityProjectionRepository & {
   adds: Array<{ personFacilityId: number; classificationCode: string }>;
   createdAffiliations: number;
   replacedRoles: Array<{ personFacilityId: number; roleIds: number[] }>;
   ended: Array<{ personFacilityId: number; endedByUserId: number }>;
-  crmUpserts: Array<{ personId: number; registrationNumber: string; stateCode: string }>;
 } {
   const adds: Array<{ personFacilityId: number; classificationCode: string }> = [];
   const replacedRoles: Array<{ personFacilityId: number; roleIds: number[] }> = [];
   const ended: Array<{ personFacilityId: number; endedByUserId: number }> = [];
-  const crmUpserts: Array<{
-    personId: number;
-    registrationNumber: string;
-    stateCode: string;
-  }> = [];
   let createdAffiliations = 0;
   let nextPfId = 100;
   let current = state.row ?? null;
@@ -97,7 +90,6 @@ function fakeRepo(state: {
     adds,
     replacedRoles,
     ended,
-    crmUpserts,
     get createdAffiliations() {
       return createdAffiliations;
     },
@@ -118,11 +110,6 @@ function fakeRepo(state: {
       return { id: 99 };
     },
     async ensureHealthcareProfile() {},
-    async upsertPrimaryCrmRegistration(input) {
-      if (state.crmConflict) return { kind: "conflict" as const };
-      crmUpserts.push(input);
-      return { kind: "upserted" as const, id: 1 };
-    },
     async createAffiliation(input) {
       createdAffiliations += 1;
       const id = nextPfId++;
@@ -235,65 +222,6 @@ describe("UpsertPersonFacilityProjectionUseCase", () => {
     expect(repo.adds[0]?.classificationCode).toBe(CLASSIFICATION.HEALTHCARE_PROFESSIONAL);
   });
 
-  it("upserts primary CRM registration on healthcare create", async () => {
-    const repo = fakeRepo({
-      affiliation: null,
-      person: { id: 5, deletedAt: null },
-      row: null,
-    });
-    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
-    await uc.execute({
-      facilityId: 1,
-      personId: 5,
-      classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
-      scope: createGlobalScopeContext(),
-      crmNumber: "74127",
-      crmState: "sp",
-    });
-
-    expect(repo.crmUpserts).toEqual([
-      { personId: 5, registrationNumber: "74127", stateCode: "SP" },
-    ]);
-  });
-
-  it("rejects CRM when only one of number/state is provided", async () => {
-    const repo = fakeRepo({
-      affiliation: null,
-      person: { id: 5, deletedAt: null },
-      row: null,
-    });
-    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
-    expect(
-      uc.execute({
-        facilityId: 1,
-        personId: 5,
-        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
-        scope: createGlobalScopeContext(),
-        crmNumber: "74127",
-      })
-    ).rejects.toBeInstanceOf(ValidationError);
-    expect(repo.crmUpserts).toEqual([]);
-  });
-
-  it("rejects CRM that conflicts with another person", async () => {
-    const repo = fakeRepo({
-      affiliation: null,
-      person: { id: 5, deletedAt: null },
-      row: null,
-      crmConflict: true,
-    });
-    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
-    expect(
-      uc.execute({
-        facilityId: 1,
-        personId: 5,
-        classificationCode: CLASSIFICATION.HEALTHCARE_PROFESSIONAL,
-        scope: createGlobalScopeContext(),
-        crmNumber: "74127",
-        crmState: "SP",
-      })
-    ).rejects.toBeInstanceOf(ValidationError);
-  });
 });
 
 describe("PatchPersonFacilityProjectionUseCase", () => {

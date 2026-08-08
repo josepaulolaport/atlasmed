@@ -113,8 +113,10 @@ export const personHealthcareProfileSpecialties = pgTable(
 export const personProfessionalRegistrationCouncils = pgTable(
   "person_professional_registration_councils",
   {
-    code: text("code").primaryKey(),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     name: text("name").notNull(),
+    abbreviation: text("abbreviation").notNull().unique(),
+    cnesId: text("cnes_id").unique(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
@@ -139,9 +141,9 @@ export const personProfessionalRegistrations = pgTable(
     personId: bigint("person_id", { mode: "number" })
       .notNull()
       .references(() => personHealthcareProfiles.personId, { onDelete: "cascade" }),
-    councilCode: text("council_code")
+    councilId: bigint("council_id", { mode: "number" })
       .notNull()
-      .references(() => personProfessionalRegistrationCouncils.code, { onDelete: "restrict" }),
+      .references(() => personProfessionalRegistrationCouncils.id, { onDelete: "restrict" }),
     stateCode: char("state_code", { length: 2 }).notNull(),
     registrationNumber: text("registration_number").notNull(),
     registrationTypeCode: text("registration_type_code").references(
@@ -156,7 +158,7 @@ export const personProfessionalRegistrations = pgTable(
   (t) => [
     index("person_professional_registrations_person_id_idx").on(t.personId),
     unique("person_professional_registrations_council_state_number_key").on(
-      t.councilCode,
+      t.councilId,
       t.stateCode,
       t.registrationNumber
     ),
@@ -374,6 +376,24 @@ export const personHealthcareProfilesRelations = relations(
   })
 );
 
+export const personProfessionalRegistrationsRelations = relations(
+  personProfessionalRegistrations,
+  ({ one }) => ({
+    profile: one(personHealthcareProfiles, {
+      fields: [personProfessionalRegistrations.personId],
+      references: [personHealthcareProfiles.personId],
+    }),
+    council: one(personProfessionalRegistrationCouncils, {
+      fields: [personProfessionalRegistrations.councilId],
+      references: [personProfessionalRegistrationCouncils.id],
+    }),
+    registrationType: one(personProfessionalRegistrationTypes, {
+      fields: [personProfessionalRegistrations.registrationTypeCode],
+      references: [personProfessionalRegistrationTypes.code],
+    }),
+  })
+);
+
 export const healthcareSpecialtiesRelations = relations(healthcareSpecialties, ({ many }) => ({
   profileLinks: many(personHealthcareProfileSpecialties),
 }));
@@ -388,24 +408,6 @@ export const personHealthcareProfileSpecialtiesRelations = relations(
     specialty: one(healthcareSpecialties, {
       fields: [personHealthcareProfileSpecialties.specialtyId],
       references: [healthcareSpecialties.id],
-    }),
-  })
-);
-
-export const personProfessionalRegistrationsRelations = relations(
-  personProfessionalRegistrations,
-  ({ one }) => ({
-    profile: one(personHealthcareProfiles, {
-      fields: [personProfessionalRegistrations.personId],
-      references: [personHealthcareProfiles.personId],
-    }),
-    council: one(personProfessionalRegistrationCouncils, {
-      fields: [personProfessionalRegistrations.councilCode],
-      references: [personProfessionalRegistrationCouncils.code],
-    }),
-    registrationType: one(personProfessionalRegistrationTypes, {
-      fields: [personProfessionalRegistrations.registrationTypeCode],
-      references: [personProfessionalRegistrationTypes.code],
     }),
   })
 );

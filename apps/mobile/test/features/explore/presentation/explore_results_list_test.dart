@@ -35,7 +35,6 @@ void main() {
     fullName: 'Dra. Ana',
     facilityIds: [],
     specialty: 'Cardiologia',
-    crmNumber: '12345',
   );
 
   testWidgets('renders a skeleton while a virtual page is loading', (

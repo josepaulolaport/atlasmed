@@ -10,9 +10,6 @@ export interface HealthcareProfessionalRecord {
   socialName: string | null;
   cpf: string | null;
   specialty: string | null;
-  crmCouncil: string | null;
-  crmNumber: string | null;
-  crmState: string | null;
   facilityIds: number[];
   displayFacility?: HealthcareProfessionalFacilitySummary | null;
   createdAt: Date;

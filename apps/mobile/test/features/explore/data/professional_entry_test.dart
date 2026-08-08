@@ -12,8 +12,6 @@ void main() {
       'displayFacility': {'id': 1, 'name': 'Clínica Central'},
       'relationshipLevel': 10,
       'isPriority': true,
-      'crmNumber': '12345',
-      'crmState': 'SP',
     });
 
     final entry = ProfessionalEntry.fromDTO(dto);
@@ -22,6 +20,6 @@ void main() {
     expect(entry.displayFacilityName, 'Clínica Central');
     expect(entry.relationshipLevel, 10);
     expect(entry.isPriority, isTrue);
-    expect(entry.crm, 'CRM-SP 12345');
+    expect(entry.crm, isNull);
   });
 }

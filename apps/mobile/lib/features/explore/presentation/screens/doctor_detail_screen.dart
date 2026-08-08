@@ -809,14 +809,16 @@ class _DoctorHeader extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          detail.crm,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.78),
+                        if (detail.crm.trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            detail.crm,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.78),
+                            ),
                           ),
-                        ),
+                        ],
                         if (detail.residency != null) ...[
                           const SizedBox(height: 2),
                           Text(

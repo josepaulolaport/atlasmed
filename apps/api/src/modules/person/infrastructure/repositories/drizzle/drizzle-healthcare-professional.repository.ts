@@ -4,7 +4,6 @@ import {
   personFacilities,
   personHealthcareProfileSpecialties,
   personHealthcareProfiles,
-  personProfessionalRegistrations,
   persons,
 } from "@atlasmed/database";
 import {
@@ -18,7 +17,6 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { normalizeSearchFilterValue } from "../../../../../shared/normalize-search-filter";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   HealthcareProfessionalFacilitySummary,
@@ -26,6 +24,7 @@ import type {
   HealthcareProfessionalRecord,
   HealthcareProfessionalRepository,
 } from "../../../application/interfaces/healthcare-professional.repository.interface";
+import { parseSpecialtyFilterValues } from "../../../application/specialty-filter";
 
 type PersonFacilityAssociation = {
   facilityId: number;
@@ -35,9 +34,6 @@ type PersonFacilityAssociation = {
 
 type PersonEnrichment = {
   specialty: string | null;
-  crmCouncil: string | null;
-  crmNumber: string | null;
-  crmState: string | null;
 };
 
 function resolveFacilityName(row: {
@@ -82,9 +78,6 @@ function mapRecord(
     socialName: person.socialName,
     cpf: person.cpf,
     specialty: enrichment.specialty,
-    crmCouncil: enrichment.crmCouncil,
-    crmNumber: enrichment.crmNumber,
-    crmState: enrichment.crmState,
     facilityIds: [
       ...new Set(activeFacilities.map((association) => association.facilityId)),
     ],
@@ -148,12 +141,7 @@ async function loadEnrichmentMap(
   if (personIds.length === 0) return map;
 
   for (const id of personIds) {
-    map.set(id, {
-      specialty: null,
-      crmCouncil: null,
-      crmNumber: null,
-      crmState: null,
-    });
+    map.set(id, { specialty: null });
   }
 
   const specialtyRows = await db
@@ -176,28 +164,6 @@ async function loadEnrichmentMap(
   for (const row of specialtyRows) {
     const current = map.get(row.personId)!;
     current.specialty = row.specialtyName;
-  }
-
-  const registrationRows = await db
-    .select({
-      personId: personProfessionalRegistrations.personId,
-      councilCode: personProfessionalRegistrations.councilCode,
-      registrationNumber: personProfessionalRegistrations.registrationNumber,
-      stateCode: personProfessionalRegistrations.stateCode,
-    })
-    .from(personProfessionalRegistrations)
-    .where(
-      and(
-        inArray(personProfessionalRegistrations.personId, personIds),
-        eq(personProfessionalRegistrations.isPrimary, true)
-      )
-    );
-
-  for (const row of registrationRows) {
-    const current = map.get(row.personId)!;
-    current.crmCouncil = row.councilCode;
-    current.crmNumber = row.registrationNumber;
-    current.crmState = row.stateCode;
   }
 
   return map;
@@ -259,22 +225,27 @@ export class DrizzleHealthcareProfessionalRepository
     }
 
     if (params.specialty) {
-      const normalizedSpecialty = normalizeSearchFilterValue(params.specialty);
-      conditions.push(
-        sql`exists (
-          select 1
-          from person_healthcare_profile_specialties phps
-          inner join healthcare_specialties hs on hs.id = phps.specialty_id
-          where phps.person_id = ${persons.id}
-            and phps.is_primary = true
-            and regexp_replace(
-              trim(translate(lower(hs.name),
-                'áàâãäéèêëíìîïóòôõöúùûüç' || chr(768) || chr(769) || chr(770) || chr(771) || chr(776) || chr(807),
-                'aaaaaeeeeiiiiooooouuuuc')),
-              '[[:space:]]+', ' ', 'g'
-            ) = ${normalizedSpecialty}
-        )`
-      );
+      const specialtyValues = parseSpecialtyFilterValues(params.specialty);
+      if (specialtyValues.length > 0) {
+        conditions.push(
+          sql`exists (
+            select 1
+            from person_healthcare_profile_specialties phps
+            inner join healthcare_specialties hs on hs.id = phps.specialty_id
+            where phps.person_id = ${persons.id}
+              and phps.is_primary = true
+              and regexp_replace(
+                trim(translate(lower(hs.name),
+                  'áàâãäéèêëíìîïóòôõöúùûüç' || chr(768) || chr(769) || chr(770) || chr(771) || chr(776) || chr(807),
+                  'aaaaaeeeeiiiiooooouuuuc')),
+                '[[:space:]]+', ' ', 'g'
+              ) in (${sql.join(
+                specialtyValues.map((value) => sql`${value}`),
+                sql`, `
+              )})
+          )`
+        );
+      }
     }
 
     const scopedFacilityIds = params.scope.isGlobal
@@ -405,12 +376,7 @@ export class DrizzleHealthcareProfessionalRepository
       professionals: rows.map((row) =>
         mapRecord(
           row,
-          enrichmentMap.get(row.id) ?? {
-            specialty: null,
-            crmCouncil: null,
-            crmNumber: null,
-            crmState: null,
-          },
+          enrichmentMap.get(row.id) ?? { specialty: null },
           associationsMap.get(row.id) ?? []
         )
       ),

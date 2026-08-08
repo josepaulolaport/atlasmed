@@ -154,8 +154,6 @@ void main() {
       lastName: 'Silva',
       roleIds: [1, 2],
       catalog: _testCatalog,
-      crmNumber: '74127',
-      crmState: 'SP',
     );
 
     expect(client.requests, hasLength(2));
@@ -163,8 +161,6 @@ void main() {
     expect(client.requests[0].body, {
       'firstName': 'João',
       'lastName': 'Silva',
-      'crmNumber': '74127',
-      'crmState': 'SP',
     });
     expect(client.requests[1].method, RepositoryHttpMethod.put);
     expect(client.requests[1].body, {
@@ -172,7 +168,7 @@ void main() {
     });
     expect(doctor.roleIds, [1, 2]);
     expect(doctor.roleChipLabels, ['Prescritor', 'Comprador']);
-    expect(doctor.crm, 'CRM/SP 74127');
+    expect(doctor.crm, isNull);
   });
 
   test('admin create then PUT roles; update replaces roles', () async {

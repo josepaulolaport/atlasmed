@@ -203,12 +203,14 @@ Absent: primary occupation, free-text specialty, CRM triple.
 
 ### 5.5 `person_professional_registration_councils` — LOCKED
 
-Minimal seed: `CRM` (`0058_seed_crm_registration_council`). Full council catalog later (D10). **Q15 = A** minimal catalog pattern.
+Admin-dynamic catalog (empty OK). No migrate seed required for CRM shortcircuit (removed). Local-seed may insert demo councils by `abbreviation`. **Q15 = A** minimal catalog pattern.
 
 | Column | Type | Null | Keys | Notes |
 |---|---|---|---|---|
-| `code` | `text` | NO | **PK** | e.g. CRM, CRO — immutable in app |
+| `id` | `bigint` identity | NO | **PK** | FK target always |
 | `name` | `text` | NO | | |
+| `abbreviation` | `text` | NO | **UNIQUE** | e.g. CRM, CRO — display/stable label, never FK |
+| `cnes_id` | `text` | YES | **UNIQUE** | nullable until mapped |
 | `is_active` | `boolean` | NO | | default true |
 | `created_at` | `timestamp` | NO | | |
 | `updated_at` | `timestamp` | NO | | |
@@ -219,19 +221,19 @@ No `description` / `display_order` (Q15).
 
 ### 5.6 `person_professional_registration_types` — LOCKED
 
-Same shape as councils (`code`, `name`, `is_active`, timestamps). Empty.
+Same shape as before (`code` PK, `name`, `is_active`, timestamps). Empty.
 
 ---
 
 ### 5.7 `person_professional_registrations` — LOCKED (Q17–Q19)
 
-From `crm_council`, `crm_number`, `crm_state`.
+Multi-registration storage. **No create-time CRM shortcircuit** — registrations written only via future multi-reg UI / explicit APIs.
 
 | Column | Type | Null | Keys | Notes |
 |---|---|---|---|---|
 | `id` | `bigint` identity | NO | **PK** | |
 | `person_id` | `bigint` | NO | **FK → `person_healthcare_profiles.person_id`** CASCADE | idx |
-| `council_code` | `text` | NO | **FK → councils.code** | |
+| `council_id` | `bigint` | NO | **FK → councils.id** RESTRICT | |
 | `state_code` | `char(2)` | NO | | UF, uppercase |
 | `registration_number` | `text` | NO | | **Q17 = A** — not int (formatting/leading zeros) |
 | `registration_type_code` | `text` | YES | **FK → types.code** | Empty catalog; nullable until used |
@@ -240,7 +242,7 @@ From `crm_council`, `crm_number`, `crm_state`.
 | `created_at` | `timestamp` | NO | | |
 | `updated_at` | `timestamp` | NO | | |
 
-**Q19 = A:** `UNIQUE (council_code, state_code, registration_number)` global.  
+**Q19 = A:** `UNIQUE (council_id, state_code, registration_number)` global.  
 No `registered_at` / `valid_until` / source columns (not in current schema).
 
 ---
@@ -415,7 +417,7 @@ Facility routes may mount projections but call person ports only.
 
 | Method | Path | Classification filter |
 |---|---|---|
-| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` | `HEALTHCARE_PROFESSIONAL`; POST optional `crmNumber`+`crmState` → primary CRM registration |
+| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` | `HEALTHCARE_PROFESSIONAL`; POST creates person+affiliation (no registration shortcircuit) |
 | GET/PATCH/DELETE | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` | DELETE = soft-end (`ended_at` + `ended_by_user_id`); `update` PERSON |
 | GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` | `ADMINISTRATIVE_CONTACT` |
 | GET/PATCH/DELETE | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` | DELETE = soft-end; same auth as healthcare |
@@ -463,7 +465,8 @@ Index uid = `persons`. Document id = `persons.id` (string). Documents only for p
 | `specialty` / `specialtyNormalized` | primary `healthcare_specialties.name` via `person_healthcare_profile_specialties` |
 | `activeFacilityIds` | `person_facilities` where `ended_at IS NULL` (+ active facility) |
 | `activeTerritoryIds` | `facility_vertical_profiles.manager_zone_id` for those facilities (active profiles) |
-| `crmCouncil` / `crmNumber` / `crmState` | primary `person_professional_registrations` (`council_code`, `registration_number`, `state_code`) |
+
+Registrations intentionally omitted from Meili until multi-registration UI populates `person_professional_registrations`.
 
 ### 6.5 Classification seed
 

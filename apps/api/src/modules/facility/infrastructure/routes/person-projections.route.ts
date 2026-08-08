@@ -49,8 +49,6 @@ const identityBody = {
   landlinePhone: t.Optional(t.Union([t.String(), t.Null()])),
   roleTitle: t.Optional(t.Union([t.String(), t.Null()])),
   notes: t.Optional(t.Union([t.String(), t.Null()])),
-  crmNumber: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
-  crmState: t.Optional(t.Union([t.String({ minLength: 2, maxLength: 2 }), t.Null()])),
 };
 
 const patchBody = {

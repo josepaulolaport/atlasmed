@@ -89,15 +89,13 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     required String firstName,
     required String lastName,
     String? specialty,
-    String? crmNumber,
-    String? crmState,
     String? phone,
     String? email,
     List<int>? roleIds,
     List<PersonFacilityRoleCatalogEntry>? catalog,
   }) async {
-    // Specialty → roleTitle (affiliation label). CRM → crmNumber/crmState
-    // (primary person_professional_registrations). Roles → PUT …/roles after.
+    // Specialty → roleTitle (affiliation label). Roles → PUT …/roles after.
+    // Professional registrations: multi-reg UI later (not on create).
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse(_healthcarePath),
@@ -109,8 +107,6 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
           if (phone != null && phone.isNotEmpty) 'mobilePhone': phone,
           if (email != null && email.isNotEmpty) 'email': email,
           if (specialty != null && specialty.isNotEmpty) 'roleTitle': specialty,
-          if (crmNumber != null && crmNumber.isNotEmpty) 'crmNumber': crmNumber,
-          if (crmState != null && crmState.isNotEmpty) 'crmState': crmState,
         },
       ),
     );
@@ -143,7 +139,6 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     final roster = ProfessionalRoster.fromRosterItem(dto, catalog: catalog);
     return roster.copyWith(
       specialty: specialty ?? roster.specialty,
-      crm: _formatCrm(crmNumber, crmState) ?? roster.crm,
       phone: phone ?? roster.phone,
       email: email ?? roster.email,
     );
@@ -291,7 +286,6 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
       initials: initialsFromName(name),
       hue: hueFromName(name),
       specialty: d.specialty,
-      crm: d.crm.isEmpty ? null : d.crm,
     );
   }
 }
@@ -306,31 +300,4 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     return (firstName: parts.first, lastName: '-');
   }
   return (firstName: parts.first, lastName: parts.sublist(1).join(' '));
-}
-
-/// Best-effort CRM parse from free text like `CRM/SP 74.127`.
-({String? number, String? state}) parseCrmField(String? raw) {
-  if (raw == null) return (number: null, state: null);
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty) return (number: null, state: null);
-
-  final stateMatch = RegExp(
-    r'(?:CRM[/\-\s]?)?([A-Z]{2})\b',
-    caseSensitive: false,
-  ).firstMatch(trimmed);
-  final state = stateMatch?.group(1)?.toUpperCase();
-
-  final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-  if (digits.isEmpty) {
-    return (number: trimmed, state: state);
-  }
-  return (number: digits, state: state);
-}
-
-String? _formatCrm(String? number, String? state) {
-  final n = number?.trim();
-  if (n == null || n.isEmpty) return null;
-  final s = state?.trim();
-  if (s == null || s.isEmpty) return 'CRM $n';
-  return 'CRM/$s $n';
 }

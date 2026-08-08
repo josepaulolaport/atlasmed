@@ -152,8 +152,6 @@ void main() {
       "lastName": "Silva",
       "fullName": "Ana Silva",
       "specialty": "Cardiologia",
-      "crmNumber": "123456",
-      "crmState": "SP",
       "facilityIds": [10],
       "createdAt": "2026-01-01T00:00:00.000Z",
       "updatedAt": "2026-01-02T00:00:00.000Z"
@@ -166,7 +164,7 @@ void main() {
       expect(result.items, hasLength(1));
       expect(result.items.first.id, 1);
       expect(result.items.first.displayName, 'Ana Silva');
-      expect(result.items.first.crm, 'CRM-SP 123456');
+      expect(result.items.first.crm, '');
       expect(result.pagination.total, 42);
     });
   });
