@@ -31,7 +31,7 @@ Clinic address   = human location on clinic page (not a rep-patch FK)
 | Patch containment | Patch must remain `ST_CoveredBy` its manager zone |
 | UTA | One active user assignment per patch (rep); manager UTA on zone |
 | Clinic geo membership | `facility_vertical_profiles.manager_zone_id` → **manager zone** (renamed from `territory_id`) |
-| Clinic ownership | `facility_consultant_assignments` — one active primary per facility×vertical |
+| Clinic ownership | `facility_vertical_rep_assignments` under `facility_vertical_profiles` — one active REP per facility×vertical profile (see ADR 0005) |
 | Assignment mode | **MANUAL only** |
 | Assign eligibility | **Restricted**: assignee must have a patch covering the clinic point; if none → cannot assign |
 | Who edits zones | **ADMIN only** (create/update/delete manager zones) |
@@ -56,7 +56,7 @@ Clinic gerente → manager_zone_id → zone → zone UTA → Manager
 
 | Role | Cached in scope | Clinic access |
 |---|---|---|
-| REP | Consultant-derived (or equivalent) | Active `facility_consultant_assignments` ∩ verticals |
+| REP | Consultant-derived (or equivalent) | Active `facility_vertical_rep_assignments` ∩ verticals |
 | MANAGER | **`oversightZoneIds`** (+ verticals; optional derived team ids) | SQL: `manager_zone_id IN oversightZoneIds` OR own consultant assign — **do not** materialize all clinic ids for geo |
 | OPS / ADMIN | Unchanged idea | Vertical / global |
 
@@ -121,8 +121,10 @@ Ownership: manager assigns only to a rep whose patch covers the point
 | `POST` | `/territories/:id/boundary/impact` | Proposed GeoJSON → `{ mode, clinics[] }` (assigned clinics needing deassign) |
 | `PUT` | `/territories/:id/boundary` | GeoJSON + optional `acceptedFacilityIds` (exact set required when impact non-empty) |
 | `GET` | `/territories/unassigned-facilities` | Clinics in oversight zones with no active consultant (`managerZoneId` filter optional) |
-| `POST` | `/facilities/:id/consultant-assignments` | Restricted: assignee must have covering rep patch |
-| `DELETE` | `/facilities/:id/consultant-assignments/current` | Manual unassign (`endReason: manual_unassign`) |
+| `PUT` | `/facilities/:facilityId/verticals/:verticalId/rep` | Assign/replace REP; upserts profile; restricted cover gate |
+| `DELETE` | `/facilities/:facilityId/verticals/:verticalId/rep` | Manual unassign (`endReason: manual_unassign`); profile untouched |
+| `GET` | `/facilities/:facilityId/verticals/:verticalId/rep-assignments` | Assignment history for that facility×vertical |
+| `DELETE` | `/facilities/:facilityId/verticals/:verticalId` | Deactivate vertical (`is_active=false` + end active REP) |
 
 ## Migration
 

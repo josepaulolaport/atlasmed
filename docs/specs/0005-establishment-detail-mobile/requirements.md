@@ -49,7 +49,7 @@
 >
 > **v22 note:** Médicos roster switches from `GET /facilities/:id/professionals?view=confirmed` to `view=all`. Imported CNES links are `source_active` with `confirmed_at` null everywhere in current demo data (0 confirmed rows), so `confirmed` left the strip empty while Explorar/Meili still listed the same doctors via `activeFacilityIds`. `view=all` matches that association set (source-active **or** confirmed). Decision v1 #3 and F-003 are superseded.
 >
-> **v23 note:** Facility DTO exposes `consultantSince` (`facility_consultant_assignments.started_at` of the active assignment). Equipe responsável prefers live `consultantName`/`consultantSince` from `GET /facilities/:id` over mock sections. Per-field edit pencils / suggestion sheet → PATCH remain deferred (UI stay mock-local).
+> **v23 note:** Facility DTO exposes `consultantSince` (`facility_vertical_rep_assignments.started_at` of the active assignment for the resolved vertical; ADR 0005). Equipe responsável prefers live `consultantName`/`consultantSince` from `GET /facilities/:id` over mock sections. Per-field edit pencils / suggestion sheet → PATCH remain deferred (UI stay mock-local).
 >
 > **v23b note:** `managerName` on the facility DTO is derived from the active consultor's `users.manager_id` (join to manager user). There is no `facility_manager_assignments` table and no `managerSince` — the card shows "gerente responsável" without tenure.
 >
@@ -172,7 +172,7 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 |----------|---------|
 | `GET /facilities/:id/professionals` | CRM doctors at facility |
 | `GET /facilities/:id/healthcare-provider-shares` | Payer mix |
-| `GET /facilities/:id/consultant-assignments` | Rep assignment history |
+| `GET /facilities/:facilityId/verticals/:verticalId/rep-assignments` | Rep assignment history (ADR 0005) |
 | `GET /orders`, `GET /orders/:id` | Orders (no `facilityId` filter yet) |
 
 ### API — missing for this spec
@@ -227,7 +227,7 @@ WHEN `GET /facilities/:id` or list returns a facility with a stored `location` T
 - `phone`, `email`, `website`, `streetAddress`, `streetNumber`, `addressComplement`, `postalCode`, `neighborhood`, `city`, `state`
 - `commercialStatus` (enum exposed for status chip mapping)
 - `consultantName` (already on list; ensure on detail)
-- `consultantSince` (ISO date of active `facility_consultant_assignments.started_at`, omitted when none)
+- `consultantSince` (ISO date of active `facility_vertical_rep_assignments.started_at` for the resolved vertical, omitted when none)
 - `managerName` (active consultor's manager via `users.manager_id`; null when no consultor or no manager)
 - `services[]` (already on detail)
 

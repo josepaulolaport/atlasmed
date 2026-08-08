@@ -44,7 +44,7 @@ Registration identity: inviter sets `birthDate` + name on the invite; invitee mu
 |---|---|
 | `ADMIN` | Global (`isGlobal`); `assignedVerticalIds` = all active verticals. Optional request `verticalId` filter narrows lists. |
 | `OPS` / `MANAGER` / `REP` | **Not** global. Verticals from `user_vertical_assignments`. Unprofiled facilities are ADMIN-only. Facility visibility is role-specific (below) ∩ active `facility_vertical_profiles` in resolved verticals. |
-| `REP` | Patch UTA kept for org/map; clinic `facilityIds` = active `facility_consultant_assignments` only (filtered by resolved verticals). Geo patch does **not** grant clinic list access. |
+| `REP` | Patch UTA kept for org/map; clinic `facilityIds` = active `facility_vertical_rep_assignments` only (filtered by resolved verticals; ADR 0005). Geo patch does **not** grant clinic list access. |
 | `MANAGER` | Clinic access via Spec 0006: `manager_zone_id IN oversightZoneIds` ∪ own consultant assigns (scope caches zone ids; membership is manager zone, not rep patch). |
 | `OPS` | Clinic `facilityIds` = all facilities with active profile in assigned verticals (no zone cover). |
 | `MANAGER` | Own territory oversight ∪ own consultant assignments. Does **not** include peer managers’ zones. Analytics facility set remains report-territory based (no consultant union). |

@@ -65,7 +65,7 @@ sectors  (id, slug, name, is_active)
 | Territory create/edit `sectorId` | Exists (mobile); web weak |
 | Product ↔ sector join | Exists |
 | Scope: REP/MANAGER intersect territories by user sectors | Exists (`ScopeResolver.applySectorFilter`) |
-| Direct facility assign | Exists as `facility_consultant_assignments` — **not vertical-scoped** |
+| Direct facility assign | `facility_vertical_rep_assignments` under `facility_vertical_profiles` — **vertical-scoped** (ADR 0005) |
 | Facility commercial fields | `commercialStatus` / `purchaseStatus` on **global** facility |
 | Explore / Map sector UI | **None** |
 | Active vertical request context | **None** |
@@ -92,7 +92,7 @@ sectors  (id, slug, name, is_active)
 |---|---|---|
 | Territory geometry is global; ownership is vertical-scoped | `territories.sector_id` + `user_territory_assignments` unique on `(user, territory)` only | **High** |
 | Facility commercial data per vertical | `primary_sector_id` + commercial enums on `facilities` | **High** |
-| Direct clinic assignment per vertical | `facility_consultant_assignments` has no sector | **High** |
+| Direct clinic assignment per vertical | Done — `facility_vertical_rep_assignments` parented by profile (ADR 0005) | **Done** |
 | Active vertical in every commercial API | Scope is user-global; no vertical header/path context | **High** |
 | Specialty ≠ vertical | Specialty mostly free text / CBO; no vertical↔specialty map | Medium |
 | Explore/map filter by vertical profile | Lists use facility scope only; no profile concept | **High** |

@@ -120,7 +120,7 @@ Each item: **Situation now** (as of triage close) · **Problem** · placement / 
 
 | | |
 |---|---|
-| **Situation now** | Per-Linha profile owns `manager_zone_id` + commercial/funnel. Optional `facility_consultant_assignments` for commercial ownership. Facility-level territory status/source already dropped. |
+| **Situation now** | Per-Linha profile owns `manager_zone_id` + commercial/funnel. REP ownership = `facility_vertical_rep_assignments` under the profile (ADR 0005). Facility-level territory status/source already dropped. |
 | **Problem** | Was unclear whether consultant “owns” geometry vs routing. Model is settled: geo membership on profile; consultant overrides routing, not polygons. **No further schema needed.** |
 | **Placement** | **DONE** (optional ADR note only) |
 | **Blast / Effort** | S / S |
@@ -168,7 +168,7 @@ Each item: **Situation now** (as of triage close) · **Problem** · placement / 
 
 | | |
 |---|---|
-| **Situation now** | UTA = current user↔territory link (create/delete). No `started_at`/`ended_at`/`end_reason` history. Contrast: `facility_consultant_assignments` **does** soft-end history and app uses it. |
+| **Situation now** | UTA = current user↔territory link (create/delete). No `started_at`/`ended_at`/`end_reason` history. Contrast: `facility_vertical_rep_assignments` **does** soft-end history and app uses it. |
 | **Problem** | Cannot answer “who owned this patch last year” from UTA. Fine for access-scope-now; weak for historical reporting/audit. Consultant history exists because clinic ownership continuity matters more. |
 | **Placement** | **Later phase** |
 | **Blast / Effort** | M / M |

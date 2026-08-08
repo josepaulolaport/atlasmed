@@ -47,7 +47,7 @@ Wire convention: JSON/API/Dart use **numbers** for CRM ids (same type family end
 | Triage | ADR | Execution resolution |
 |---|---|---|
 | **#11 D** `reference_year` → `smallint` | **Q26 = C** drop | **DROP** column on remade `occupations`. Triage text historical; this file wins for code. |
-| **#20** CHECK `ended_at >= started_at` (pros/reps) | **Q21** no `started_at` on `person_facilities`; **Q22** `ended_at` + `ended_by` only | **Split:** (1) `person_facilities` → CHECK `(ended_at IS NULL) = (ended_by_user_id IS NULL)` — no `started_at` / `end_reason`. (2) Tables that keep `started_at` (e.g. `facility_consultant_assignments`) → keep `#20` as `ended_at >= started_at`. |
+| **#20** CHECK `ended_at >= started_at` (pros/reps) | **Q21** no `started_at` on `person_facilities`; **Q22** `ended_at` + `ended_by` only | **Split:** (1) `person_facilities` → CHECK `(ended_at IS NULL) = (ended_by_user_id IS NULL)` — no `started_at` / `end_reason`. (2) Tables that keep `started_at` (e.g. `facility_vertical_rep_assignments`) → keep `#20` as `ended_at >= started_at`. |
 | **#3** FK occupation → `occupations.occupation_code` | Remake `occupations` (`id` + `cnes_id text`) + `person_facility_occupations` | FKs only to **new** shape. Never FK to dropped PK-as-code. |
 | **#11 C** flags → boolean | **Q25 = A** boolean nullable | Aligned → Slice C. |
 | **#11 H / #12** `professionals.birth_date` → `date` | `persons.birth_date` = `date` | Create `persons` correctly; drop `professionals`. No intermediate migrate. |
