@@ -1,8 +1,8 @@
 import { db } from "../../../../infrastructure/database/db";
 import {
   facilities,
-  facilityConsultantAssignments,
   facilityVerticalProfiles,
+  facilityVerticalRepAssignments,
   territories,
 } from "@atlasmed/database";
 import { eq, isNull, and, inArray, sql } from "drizzle-orm";
@@ -167,9 +167,9 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
           isNull(facilities.deactivatedAt),
           sql`NOT EXISTS (
             SELECT 1
-            FROM ${facilityConsultantAssignments}
-            WHERE ${facilityConsultantAssignments.facilityId} = ${facilities.id}
-              AND ${facilityConsultantAssignments.endedAt} IS NULL
+            FROM ${facilityVerticalRepAssignments}
+            WHERE ${facilityVerticalRepAssignments.facilityVerticalProfileId} = ${facilityVerticalProfiles.id}
+              AND ${facilityVerticalRepAssignments.endedAt} IS NULL
           )`,
         ),
       );

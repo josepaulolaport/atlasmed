@@ -76,6 +76,7 @@ export interface TerritorySpatialRepository {
     Array<{
       facilityId: number;
       facilityName: string;
+      facilityVerticalProfileId: number;
       consultantUserId: number;
       consultantName: string;
     }>

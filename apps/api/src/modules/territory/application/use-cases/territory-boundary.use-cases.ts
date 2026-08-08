@@ -4,7 +4,7 @@ import type { TerritoryRepository } from "../interfaces/territory.repository.int
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
-import type { FacilityConsultantAssignmentRepository } from "../../../facility/application/interfaces/facility-consultant-assignment.repository.interface";
+import type { FacilityVerticalRepAssignmentRepository } from "../../../facility/application/interfaces/facility-vertical-rep-assignment.repository.interface";
 import { applyTerritoryBoundary } from "../services/territory-boundary.application";
 import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
 import {
@@ -26,7 +26,7 @@ interface Dependencies {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
-  consultantAssignmentRepository: FacilityConsultantAssignmentRepository;
+  repAssignmentRepository: FacilityVerticalRepAssignmentRepository;
   onBoundaryChanged?: (territoryId: number) => Promise<void>;
   onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
 }
@@ -34,6 +34,7 @@ interface Dependencies {
 export type BoundaryImpactClinic = {
   facilityId: number;
   facilityName: string;
+  facilityVerticalProfileId: number;
   consultantUserId: number;
   consultantName: string;
 };
@@ -148,9 +149,12 @@ export class TerritoryBoundaryUseCases {
       const impactedIds = clinics.map((c) => c.facilityId);
       assertAcceptedImpactFacilityIds(impactedIds, input.acceptedFacilityIds);
 
-      if (impactedIds.length > 0) {
-        await this.deps.consultantAssignmentRepository.endActiveForFacilities({
-          facilityIds: impactedIds,
+      const profileIds = [
+        ...new Set(clinics.map((c) => c.facilityVerticalProfileId)),
+      ];
+      if (profileIds.length > 0) {
+        await this.deps.repAssignmentRepository.endActiveForProfiles({
+          facilityVerticalProfileIds: profileIds,
           endReason: "boundary_impact",
         });
       }

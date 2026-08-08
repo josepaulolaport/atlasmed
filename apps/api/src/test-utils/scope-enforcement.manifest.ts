@@ -61,7 +61,7 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
   },
-  "modules/facility/application/use-cases/facility-consultant.use-cases.ts": {
+  "modules/facility/application/use-cases/facility-vertical-rep.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
   },

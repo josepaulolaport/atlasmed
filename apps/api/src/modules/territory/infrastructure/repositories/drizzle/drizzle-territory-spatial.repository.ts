@@ -208,6 +208,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     Array<{
       facilityId: number;
       facilityName: string;
+      facilityVerticalProfileId: number;
       consultantUserId: number;
       consultantName: string;
     }>
@@ -222,17 +223,18 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         SELECT
           f.id AS facility_id,
           f.display_name AS facility_name,
-          fca.user_id AS consultant_user_id,
-          COALESCE(u.name, u.email, fca.user_id) AS consultant_name
+          fvp.id AS facility_vertical_profile_id,
+          fvra.user_id AS consultant_user_id,
+          COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS consultant_name
         FROM facilities f
         INNER JOIN facility_vertical_profiles fvp
           ON fvp.facility_id = f.id
           AND fvp.is_active = true
           AND fvp.manager_zone_id = ${input.territoryId}
-        INNER JOIN facility_consultant_assignments fca
-          ON fca.facility_id = f.id
-          AND fca.ended_at IS NULL
-        INNER JOIN users u ON u.id = fca.user_id
+        INNER JOIN facility_vertical_rep_assignments fvra
+          ON fvra.facility_vertical_profile_id = fvp.id
+          AND fvra.ended_at IS NULL
+        INNER JOIN users u ON u.id = fvra.user_id
         CROSS JOIN proposed
         WHERE f.deactivated_at IS NULL
           AND f.location IS NOT NULL
@@ -240,6 +242,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       `) as Array<{
         facility_id: string;
         facility_name: string;
+        facility_vertical_profile_id: string;
         consultant_user_id: string;
         consultant_name: string;
       }>;
@@ -247,6 +250,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       return rows.map((row) => ({
         facilityId: Number(row.facility_id),
         facilityName: row.facility_name,
+        facilityVerticalProfileId: Number(row.facility_vertical_profile_id),
         consultantUserId: Number(row.consultant_user_id),
         consultantName: row.consultant_name,
       }));
@@ -257,22 +261,29 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       ),
       patch_rep AS (
-        SELECT uta.user_id
+        SELECT uta.user_id, t.vertical_id
         FROM user_territory_assignments uta
+        INNER JOIN territories t ON t.id = uta.territory_id
         WHERE uta.territory_id = ${input.territoryId}
         LIMIT 1
       )
       SELECT
         f.id AS facility_id,
         f.display_name AS facility_name,
-        fca.user_id AS consultant_user_id,
-        COALESCE(u.name, u.email, fca.user_id) AS consultant_name
+        fvp.id AS facility_vertical_profile_id,
+        fvra.user_id AS consultant_user_id,
+        COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS consultant_name
       FROM facilities f
-      INNER JOIN facility_consultant_assignments fca
-        ON fca.facility_id = f.id
-        AND fca.ended_at IS NULL
-      INNER JOIN patch_rep pr ON pr.user_id = fca.user_id
-      INNER JOIN users u ON u.id = fca.user_id
+      INNER JOIN patch_rep pr ON true
+      INNER JOIN facility_vertical_profiles fvp
+        ON fvp.facility_id = f.id
+        AND fvp.is_active = true
+        AND fvp.vertical_id = pr.vertical_id
+      INNER JOIN facility_vertical_rep_assignments fvra
+        ON fvra.facility_vertical_profile_id = fvp.id
+        AND fvra.ended_at IS NULL
+        AND fvra.user_id = pr.user_id
+      INNER JOIN users u ON u.id = fvra.user_id
       CROSS JOIN proposed
       WHERE f.deactivated_at IS NULL
         AND f.location IS NOT NULL
@@ -292,6 +303,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     `) as Array<{
       facility_id: string;
       facility_name: string;
+      facility_vertical_profile_id: string;
       consultant_user_id: string;
       consultant_name: string;
     }>;
@@ -299,6 +311,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     return rows.map((row) => ({
       facilityId: Number(row.facility_id),
       facilityName: row.facility_name,
+      facilityVerticalProfileId: Number(row.facility_vertical_profile_id),
       consultantUserId: Number(row.consultant_user_id),
       consultantName: row.consultant_name,
     }));
