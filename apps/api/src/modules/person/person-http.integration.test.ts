@@ -18,6 +18,10 @@ import {
   type PersonFacilityRolesHttpUseCases,
 } from "./infrastructure/routes/person-facility-roles.route";
 import {
+  createPersonProfessionalRegistrationCouncilsRoutes,
+  type PersonProfessionalRegistrationCouncilsHttpUseCases,
+} from "./infrastructure/routes/person-professional-registration-councils.route";
+import {
   createPersonsRoutes,
   type PersonsHttpUseCases,
 } from "./infrastructure/routes/persons.route";
@@ -68,6 +72,8 @@ function personUseCases(
   };
   const mutated = { execute: mock(async () => ({ id: 1 })) };
 
+  const emptyRegistrations = { execute: mock(async () => []) };
+
   return {
     getPerson: () => person,
     patchPerson: () => mutated,
@@ -77,6 +83,10 @@ function personUseCases(
     deletePersonNote: () => mutated,
     getPersonRelationship: () => relationship,
     upsertPersonRelationship: () => mutated,
+    listPersonProfessionalRegistrations: () => emptyRegistrations,
+    createPersonProfessionalRegistration: () => mutated,
+    updatePersonProfessionalRegistration: () => mutated,
+    deactivatePersonProfessionalRegistration: () => mutated,
     ...overrides,
   };
 }
@@ -111,11 +121,32 @@ function roleCatalogUseCases(
   };
 }
 
+function registrationCouncilUseCases(
+  overrides: Partial<PersonProfessionalRegistrationCouncilsHttpUseCases> = {}
+): PersonProfessionalRegistrationCouncilsHttpUseCases {
+  return {
+    listPersonProfessionalRegistrationCouncils: () => ({
+      execute: mock(async () => ({
+        data: [
+          {
+            id: 2,
+            name: "Conselho Regional de Medicina",
+            abbreviation: "CRM",
+            isActive: true,
+          },
+        ],
+      })),
+    }),
+    ...overrides,
+  };
+}
+
 function app(
   persons: PersonsHttpUseCases = personUseCases(),
   healthcare: HealthcareProfessionalsHttpUseCases = healthcareUseCases(),
   role: Role | "unauthenticated" = "REP",
-  roles: PersonFacilityRolesHttpUseCases = roleCatalogUseCases()
+  roles: PersonFacilityRolesHttpUseCases = roleCatalogUseCases(),
+  councils: PersonProfessionalRegistrationCouncilsHttpUseCases = registrationCouncilUseCases()
 ) {
   const authPlugin =
     role === "unauthenticated" ? unauthenticatedPlugin() : actorPlugin(role);
@@ -123,7 +154,8 @@ function app(
   return createHttpIntegrationApp(
     createPersonsRoutes(persons, authPlugin),
     createHealthcareProfessionalsRoutes(healthcare, authPlugin),
-    createPersonFacilityRolesRoutes(roles, authPlugin)
+    createPersonFacilityRolesRoutes(roles, authPlugin),
+    createPersonProfessionalRegistrationCouncilsRoutes(councils, authPlugin)
   );
 }
 
@@ -285,6 +317,31 @@ describe("Person HTTP routes", () => {
         { id: 1, name: "Prescritor", isActive: true },
       ],
     });
+
+    const councilsResponse = await authRequest(
+      application,
+      "http://localhost/api/v1/person-professional-registration-councils",
+      "token"
+    );
+    expect(councilsResponse.status).toBe(200);
+    expect(await councilsResponse.json()).toEqual({
+      data: [
+        {
+          id: 2,
+          name: "Conselho Regional de Medicina",
+          abbreviation: "CRM",
+          isActive: true,
+        },
+      ],
+    });
+
+    const registrationsResponse = await authRequest(
+      application,
+      "http://localhost/api/v1/persons/10/professional-registrations",
+      "token"
+    );
+    expect(registrationsResponse.status).toBe(200);
+    expect(await registrationsResponse.json()).toEqual([]);
   });
 
   it("PATCH person note calls update use-case with actor user id", async () => {

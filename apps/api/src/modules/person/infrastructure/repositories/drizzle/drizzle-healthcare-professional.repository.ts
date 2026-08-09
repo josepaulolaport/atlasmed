@@ -25,6 +25,7 @@ import type {
   HealthcareProfessionalRepository,
 } from "../../../application/interfaces/healthcare-professional.repository.interface";
 import { parseSpecialtyFilterValues } from "../../../application/specialty-filter";
+import { loadPrimaryRegistrationDisplayMap } from "./load-primary-registration-display-map";
 
 type PersonFacilityAssociation = {
   facilityId: number;
@@ -62,7 +63,8 @@ function mapRecord(
     distanceKm?: number | null;
   },
   enrichment: PersonEnrichment,
-  facilityAssociations: PersonFacilityAssociation[]
+  facilityAssociations: PersonFacilityAssociation[],
+  primaryRegistrationDisplay: string | null = null
 ): HealthcareProfessionalRecord {
   const activeFacilities = facilityAssociations
     .filter((association) => association.endedAt === null)
@@ -84,6 +86,7 @@ function mapRecord(
     displayFacility: displayFacility
       ? { id: displayFacility.facilityId, name: displayFacility.facilityName }
       : null,
+    primaryRegistrationDisplay,
     createdAt: person.createdAt,
     updatedAt: person.updatedAt,
     distanceKm: person.distanceKm ?? null,
@@ -367,17 +370,20 @@ export class DrizzleHealthcareProfessionalRepository
         ? params.scope.facilityIds
         : [-1];
     const personIds = rows.map((row) => row.id);
-    const [associationsMap, enrichmentMap] = await Promise.all([
-      loadAssociationsMap(personIds, visibleFacilityIds),
-      loadEnrichmentMap(personIds),
-    ]);
+    const [associationsMap, enrichmentMap, primaryRegistrationMap] =
+      await Promise.all([
+        loadAssociationsMap(personIds, visibleFacilityIds),
+        loadEnrichmentMap(personIds),
+        loadPrimaryRegistrationDisplayMap(personIds),
+      ]);
 
     return {
       professionals: rows.map((row) =>
         mapRecord(
           row,
           enrichmentMap.get(row.id) ?? { specialty: null },
-          associationsMap.get(row.id) ?? []
+          associationsMap.get(row.id) ?? [],
+          primaryRegistrationMap.get(row.id) ?? null
         )
       ),
       total: countRows[0]?.count ?? 0,

@@ -17,6 +17,10 @@ export interface PersonsHttpUseCases {
   deletePersonNote(): Executable;
   getPersonRelationship(): Executable;
   upsertPersonRelationship(): Executable;
+  listPersonProfessionalRegistrations(): Executable;
+  createPersonProfessionalRegistration(): Executable;
+  updatePersonProfessionalRegistration(): Executable;
+  deactivatePersonProfessionalRegistration(): Executable;
 }
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -56,6 +60,36 @@ const personNoteParams = t.Object({
   personId: t.Number({ minimum: 1 }),
   noteId: t.Number({ minimum: 1 }),
 });
+
+const personRegistrationParams = t.Object({
+  personId: t.Number({ minimum: 1 }),
+  registrationId: t.Number({ minimum: 1 }),
+});
+
+const createRegistrationSchema = z.object({
+  councilId: z.number().int().positive(),
+  stateCode: z.string().trim().min(2).max(2),
+  registrationNumber: z.string().trim().min(1).max(64),
+  isPrimary: z.boolean().optional(),
+});
+
+const patchRegistrationSchema = z
+  .object({
+    councilId: z.number().int().positive().optional(),
+    stateCode: z.string().trim().min(2).max(2).optional(),
+    registrationNumber: z.string().trim().min(1).max(64).optional(),
+    isPrimary: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(
+    (value) =>
+      value.councilId !== undefined ||
+      value.stateCode !== undefined ||
+      value.registrationNumber !== undefined ||
+      value.isPrimary !== undefined ||
+      value.isActive !== undefined,
+    { message: "At least one field is required" }
+  );
 
 const nullableString = t.Union([t.String(), t.Null()]);
 const nullableCpf = t.Union([
@@ -343,6 +377,126 @@ const putPersonRelationshipRoute = (
       }
     );
 
+const listPersonRegistrationsRoute = (
+  useCases: PersonsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("read", "PERSON"))
+    .get(
+      "/persons/:personId/professional-registrations",
+      async ({ params, query }) =>
+        useCases.listPersonProfessionalRegistrations().execute({
+          personId: params.personId,
+          includeInactive: query.includeInactive === true,
+        }),
+      {
+        params: personIdParams,
+        query: t.Object({
+          includeInactive: t.Optional(t.Boolean()),
+        }),
+        detail: {
+          summary: "List professional registrations for a person",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+      }
+    );
+
+const createPersonRegistrationRoute = (
+  useCases: PersonsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .post(
+      "/persons/:personId/professional-registrations",
+      async ({ params, body }) => {
+        const parsed = parseSchema(createRegistrationSchema, body);
+        return useCases.createPersonProfessionalRegistration().execute({
+          personId: params.personId,
+          ...parsed,
+        });
+      },
+      {
+        params: personIdParams,
+        body: t.Object({
+          councilId: t.Number({ minimum: 1 }),
+          stateCode: t.String({ minLength: 2, maxLength: 2 }),
+          registrationNumber: t.String({ minLength: 1, maxLength: 64 }),
+          isPrimary: t.Optional(t.Boolean()),
+        }),
+        detail: {
+          summary: "Create a professional registration for a person",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+      }
+    );
+
+const updatePersonRegistrationRoute = (
+  useCases: PersonsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .patch(
+      "/persons/:personId/professional-registrations/:registrationId",
+      async ({ params, body }) => {
+        const parsed = parseSchema(patchRegistrationSchema, body);
+        return useCases.updatePersonProfessionalRegistration().execute({
+          personId: params.personId,
+          registrationId: params.registrationId,
+          ...parsed,
+        });
+      },
+      {
+        params: personRegistrationParams,
+        body: t.Object({
+          councilId: t.Optional(t.Number({ minimum: 1 })),
+          stateCode: t.Optional(t.String({ minLength: 2, maxLength: 2 })),
+          registrationNumber: t.Optional(
+            t.String({ minLength: 1, maxLength: 64 })
+          ),
+          isPrimary: t.Optional(t.Boolean()),
+          isActive: t.Optional(t.Boolean()),
+        }),
+        detail: {
+          summary: "Update a professional registration",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+      }
+    );
+
+const deactivatePersonRegistrationRoute = (
+  useCases: PersonsHttpUseCases,
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("update", "PERSON"))
+    .delete(
+      "/persons/:personId/professional-registrations/:registrationId",
+      async ({ params }) =>
+        useCases.deactivatePersonProfessionalRegistration().execute({
+          personId: params.personId,
+          registrationId: params.registrationId,
+        }),
+      {
+        params: personRegistrationParams,
+        detail: {
+          summary:
+            "Soft-deactivate a professional registration (clears primary if set)",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+      }
+    );
+
 export function createPersonsRoutes(
   useCases: PersonsHttpUseCases = personUseCases,
   authPlugin: any = auth
@@ -356,7 +510,11 @@ export function createPersonsRoutes(
     .use(deletePersonNoteRoute(useCases, authPlugin))
     .use(getPersonRelationshipRoute(useCases, authPlugin))
     .use(patchPersonRelationshipRoute(useCases, authPlugin))
-    .use(putPersonRelationshipRoute(useCases, authPlugin));
+    .use(putPersonRelationshipRoute(useCases, authPlugin))
+    .use(listPersonRegistrationsRoute(useCases, authPlugin))
+    .use(createPersonRegistrationRoute(useCases, authPlugin))
+    .use(updatePersonRegistrationRoute(useCases, authPlugin))
+    .use(deactivatePersonRegistrationRoute(useCases, authPlugin));
 }
 
 export const personsRoute = createPersonsRoutes();

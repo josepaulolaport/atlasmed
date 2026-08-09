@@ -84,6 +84,8 @@ describe("GetPersonUseCase", () => {
       imageUrl: null,
       facilityIds: [10, 20],
       hasHealthcareProfile: true,
+      registrations: [],
+      primaryRegistrationDisplay: null,
     });
   });
 

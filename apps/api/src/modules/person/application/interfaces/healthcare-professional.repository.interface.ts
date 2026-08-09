@@ -12,6 +12,8 @@ export interface HealthcareProfessionalRecord {
   specialty: string | null;
   facilityIds: number[];
   displayFacility?: HealthcareProfessionalFacilitySummary | null;
+  /** Prefer primary active reg; else first active. Null when none. */
+  primaryRegistrationDisplay?: string | null;
   createdAt: Date;
   updatedAt: Date;
   distanceKm?: number | null;

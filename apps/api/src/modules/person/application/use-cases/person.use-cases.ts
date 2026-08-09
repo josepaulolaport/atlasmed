@@ -1,16 +1,59 @@
 import { ResourceNotFoundError } from "../../../../shared/errors";
+import { formatPrimaryRegistrationDisplay } from "../../infrastructure/repositories/drizzle/load-primary-registration-display-map";
 import type {
   PatchPersonInput,
   PersonRecord,
   PersonRepository,
 } from "../interfaces/person.repository.interface";
+import type { PersonProfessionalRegistrationRepository } from "../interfaces/person-professional-registration.repository.interface";
 
 interface Dependencies {
   personRepository: PersonRepository;
+  registrationRepository?: PersonProfessionalRegistrationRepository;
+}
+
+function serializeRegistrationSummary(
+  row: Awaited<
+    ReturnType<PersonProfessionalRegistrationRepository["listByPersonId"]>
+  >[number]
+) {
+  return {
+    id: row.id,
+    personId: row.personId,
+    councilId: row.councilId,
+    councilAbbreviation: row.councilAbbreviation,
+    councilName: row.councilName,
+    stateCode: row.stateCode,
+    registrationNumber: row.registrationNumber,
+    isPrimary: row.isPrimary,
+    isActive: row.isActive,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 /** Mobile-compatible identity DTO (`ProfessionalDTO`-ish). */
-function serializePerson(person: PersonRecord) {
+async function serializePerson(
+  person: PersonRecord,
+  registrationRepository?: PersonProfessionalRegistrationRepository
+) {
+  const registrations = registrationRepository
+    ? (
+        await registrationRepository.listByPersonId(person.id, {
+          includeInactive: false,
+        })
+      ).map(serializeRegistrationSummary)
+    : [];
+
+  const primary = registrations.find((row) => row.isPrimary) ?? registrations[0];
+  const primaryRegistrationDisplay = primary
+    ? formatPrimaryRegistrationDisplay({
+        councilAbbreviation: primary.councilAbbreviation,
+        stateCode: primary.stateCode,
+        registrationNumber: primary.registrationNumber,
+      })
+    : null;
+
   return {
     id: person.id,
     firstName: person.firstName,
@@ -32,6 +75,8 @@ function serializePerson(person: PersonRecord) {
     imageUrl: person.imageUrl,
     facilityIds: person.facilityIds,
     hasHealthcareProfile: person.hasHealthcareProfile,
+    registrations,
+    primaryRegistrationDisplay,
   };
 }
 
@@ -45,7 +90,7 @@ export class GetPersonUseCase {
     if (!person) {
       throw new ResourceNotFoundError("Person", input.personId);
     }
-    return serializePerson(person);
+    return serializePerson(person, this.deps.registrationRepository);
   }
 }
 
@@ -67,7 +112,7 @@ export class PatchPersonUseCase {
     if (!updated) {
       throw new ResourceNotFoundError("Person", personId);
     }
-    return serializePerson(updated);
+    return serializePerson(updated, this.deps.registrationRepository);
   }
 }
 

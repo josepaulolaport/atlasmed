@@ -45,6 +45,7 @@ function personRecord(id: number): HealthcareProfessionalRecord {
     specialty: "Ortopedia",
     facilityIds: [1],
     displayFacility: null,
+    primaryRegistrationDisplay: null,
     distanceKm: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),

@@ -63,6 +63,8 @@ function serializeSummary(
     primarySpecialtyLabel: professional.specialty ?? undefined,
     facilityIds: professional.facilityIds,
     displayFacility: professional.displayFacility ?? undefined,
+    primaryRegistrationDisplay:
+      professional.primaryRegistrationDisplay ?? null,
     relationshipLevel,
     isPriority: relationshipLevel === RELATIONSHIP_LEVEL_MAX,
     distanceKm: professional.distanceKm ?? undefined,

@@ -1,5 +1,6 @@
 import { assertResourceInScope, type ScopeContext } from "@atlasmed/access";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { loadPrimaryRegistrationDisplayMap } from "../../infrastructure/repositories/drizzle/load-primary-registration-display-map";
 import type { PersonFacilityRoleCatalogRepository } from "../interfaces/person-facility-role-catalog.repository.interface";
 import type {
   ClassificationCode,
@@ -11,8 +12,13 @@ import { CLASSIFICATION } from "../interfaces/person-facility-projection.reposit
 export { CLASSIFICATION };
 export type { ClassificationCode };
 
+type PrimaryRegistrationDisplayLoader = (
+  personIds: number[]
+) => Promise<Map<number, string>>;
+
 type Dependencies = {
   repository: PersonFacilityProjectionRepository;
+  loadPrimaryRegistrationDisplays?: PrimaryRegistrationDisplayLoader;
 };
 
 type ReplaceRolesDependencies = Dependencies & {
@@ -35,9 +41,14 @@ export type PersonFacilityProjectionDto = {
   hasHealthcareProfile: boolean;
   classificationIds: number[];
   roleIds: number[];
+  /** Prefer primary active reg; else first active. Null when none. */
+  primaryRegistrationDisplay: string | null;
 };
 
-function toDto(row: PersonFacilityProjectionRecord): PersonFacilityProjectionDto {
+function toDto(
+  row: PersonFacilityProjectionRecord,
+  primaryRegistrationDisplay: string | null = null
+): PersonFacilityProjectionDto {
   return {
     personFacilityId: row.personFacilityId,
     personId: row.personId,
@@ -54,7 +65,26 @@ function toDto(row: PersonFacilityProjectionRecord): PersonFacilityProjectionDto
     hasHealthcareProfile: row.hasHealthcareProfile,
     classificationIds: row.classificationIds,
     roleIds: row.roleIds,
+    primaryRegistrationDisplay,
   };
+}
+
+async function withPrimaryDisplays(
+  rows: PersonFacilityProjectionRecord[],
+  load: PrimaryRegistrationDisplayLoader = loadPrimaryRegistrationDisplayMap
+): Promise<PersonFacilityProjectionDto[]> {
+  const displays = await load(rows.map((row) => row.personId));
+  return rows.map((row) =>
+    toDto(row, displays.get(row.personId) ?? null)
+  );
+}
+
+async function withPrimaryDisplay(
+  row: PersonFacilityProjectionRecord,
+  load: PrimaryRegistrationDisplayLoader = loadPrimaryRegistrationDisplayMap
+): Promise<PersonFacilityProjectionDto> {
+  const [dto] = await withPrimaryDisplays([row], load);
+  return dto!;
 }
 
 function assertFacilityScoped(scope: ScopeContext, facilityId: number) {
@@ -74,7 +104,7 @@ export class ListPersonFacilityProjectionsUseCase {
       facilityId: input.facilityId,
       classificationCode: input.classificationCode,
     });
-    return { data: rows.map(toDto) };
+    return { data: await withPrimaryDisplays(rows, this.deps.loadPrimaryRegistrationDisplays) };
   }
 }
 
@@ -99,7 +129,7 @@ export class GetPersonFacilityProjectionUseCase {
     if (!row.classificationCodes.includes(input.classificationCode)) {
       throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
     }
-    return toDto(row);
+    return withPrimaryDisplay(row, this.deps.loadPrimaryRegistrationDisplays);
   }
 }
 
@@ -189,7 +219,7 @@ export class UpsertPersonFacilityProjectionUseCase {
     if (!row) {
       throw new ResourceNotFoundError("person_facility", String(personFacilityId));
     }
-    return toDto(row);
+    return withPrimaryDisplay(row, this.deps.loadPrimaryRegistrationDisplays);
   }
 }
 
@@ -249,7 +279,7 @@ export class PatchPersonFacilityProjectionUseCase {
     if (!updated) {
       throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
     }
-    return toDto(updated);
+    return withPrimaryDisplay(updated, this.deps.loadPrimaryRegistrationDisplays);
   }
 }
 
@@ -362,6 +392,6 @@ export class ReplacePersonFacilityRolesUseCase {
     if (!updated) {
       throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
     }
-    return toDto(updated);
+    return withPrimaryDisplay(updated, this.deps.loadPrimaryRegistrationDisplays);
   }
 }

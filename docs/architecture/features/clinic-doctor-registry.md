@@ -32,7 +32,7 @@ Facility-scoped projections (CASL `PERSON` + facility scope):
 
 | Method | Path |
 |---|---|
-| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` |
+| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` (DTO includes `primaryRegistrationDisplay`) |
 | GET/PATCH | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` |
 | PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` |
 | GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` |
@@ -43,9 +43,12 @@ Person-scoped:
 
 | Method | Path |
 |---|---|
-| GET/PATCH | `/api/v1/persons/:personId` |
+| GET/PATCH | `/api/v1/persons/:personId` (GET embeds active `registrations[]`) |
 | GET/POST | `/api/v1/persons/:personId/notes` |
 | GET + PUT/PATCH | `/api/v1/persons/:personId/relationship` |
+| GET/POST | `/api/v1/persons/:personId/professional-registrations` |
+| PATCH/DELETE | `/api/v1/persons/:personId/professional-registrations/:registrationId` (DELETE = soft deactivate) |
+| GET | `/api/v1/person-professional-registration-councils` (`{ id, name, abbreviation }`) |
 | GET | `/api/v1/healthcare-professionals` (Explorar / Meili) |
 | GET | `/api/v1/healthcare-professionals/specialties` |
 | GET | `/api/v1/person-facility-roles` (dynamic role catalog `{ id, name, isActive }`) |

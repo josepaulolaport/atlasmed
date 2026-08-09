@@ -13,6 +13,8 @@ import {
   UpsertPersonFacilityProjectionUseCase,
 } from "./person-facility-projection.use-cases";
 
+const noPrimaryDisplays = async () => new Map<number, string>();
+
 const ROLE = {
   PRESCRIBER: 1,
   BUYER: 2,
@@ -181,7 +183,7 @@ describe("UpsertPersonFacilityProjectionUseCase", () => {
       person: { id: 5, deletedAt: null },
       row: baseRow(),
     });
-    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
+    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo, loadPrimaryRegistrationDisplays: noPrimaryDisplays });
     const result = await uc.execute({
       facilityId: 1,
       personId: 5,
@@ -208,7 +210,7 @@ describe("UpsertPersonFacilityProjectionUseCase", () => {
       person: { id: 5, deletedAt: null },
       row: null,
     });
-    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo });
+    const uc = new UpsertPersonFacilityProjectionUseCase({ repository: repo, loadPrimaryRegistrationDisplays: noPrimaryDisplays });
     const result = await uc.execute({
       facilityId: 1,
       personId: 5,
@@ -233,7 +235,7 @@ describe("PatchPersonFacilityProjectionUseCase", () => {
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
-    const uc = new PatchPersonFacilityProjectionUseCase({ repository: repo });
+    const uc = new PatchPersonFacilityProjectionUseCase({ repository: repo, loadPrimaryRegistrationDisplays: noPrimaryDisplays });
     expect(
       uc.execute({
         facilityId: 1,
@@ -254,7 +256,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
         classificationCodes: [CLASSIFICATION.HEALTHCARE_PROFESSIONAL],
       }),
     });
-    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo, loadPrimaryRegistrationDisplays: noPrimaryDisplays });
     const result = await uc.execute({
       facilityId: 1,
       personFacilityId: 10,
@@ -277,7 +279,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
       }),
     });
     // findActiveById returns row even with endedAt set in fake; use-case checks endedAt
-    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo, loadPrimaryRegistrationDisplays: noPrimaryDisplays });
     expect(
       uc.execute({
         facilityId: 1,
@@ -300,7 +302,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
     // Concurrent end: find still active, guarded UPDATE matches 0 rows.
     repo.endAffiliation = async () => null;
 
-    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo, loadPrimaryRegistrationDisplays: noPrimaryDisplays });
     expect(
       uc.execute({
         facilityId: 1,
@@ -320,7 +322,7 @@ describe("EndPersonFacilityAffiliationUseCase", () => {
         classificationCodes: [CLASSIFICATION.ADMINISTRATIVE_CONTACT],
       }),
     });
-    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo });
+    const uc = new EndPersonFacilityAffiliationUseCase({ repository: repo, loadPrimaryRegistrationDisplays: noPrimaryDisplays });
     expect(
       uc.execute({
         facilityId: 1,
@@ -346,6 +348,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
     const uc = new ReplacePersonFacilityRolesUseCase({
       repository: repo,
       roleCatalogRepository: fakeRoleCatalog(),
+      loadPrimaryRegistrationDisplays: noPrimaryDisplays,
     });
     const result = await uc.execute({
       facilityId: 1,
@@ -371,6 +374,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
     const uc = new ReplacePersonFacilityRolesUseCase({
       repository: repo,
       roleCatalogRepository: fakeRoleCatalog(),
+      loadPrimaryRegistrationDisplays: noPrimaryDisplays,
     });
     const result = await uc.execute({
       facilityId: 1,
@@ -392,6 +396,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
     const uc = new ReplacePersonFacilityRolesUseCase({
       repository: repo,
       roleCatalogRepository: fakeRoleCatalog(),
+      loadPrimaryRegistrationDisplays: noPrimaryDisplays,
     });
     expect(
       uc.execute({
@@ -416,6 +421,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
     const uc = new ReplacePersonFacilityRolesUseCase({
       repository: repo,
       roleCatalogRepository: fakeRoleCatalog(),
+      loadPrimaryRegistrationDisplays: noPrimaryDisplays,
     });
     expect(
       uc.execute({
@@ -439,6 +445,7 @@ describe("ReplacePersonFacilityRolesUseCase", () => {
     const uc = new ReplacePersonFacilityRolesUseCase({
       repository: repo,
       roleCatalogRepository: fakeRoleCatalog(),
+      loadPrimaryRegistrationDisplays: noPrimaryDisplays,
     });
     expect(
       uc.execute({
