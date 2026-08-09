@@ -10,6 +10,7 @@ import { person } from "../modules/person";
 import { fieldSuggestions } from "../modules/field-suggestions";
 import { catalog } from "../modules/catalog";
 import { searchSync } from "../modules/search-sync";
+import { schedules } from "../modules/schedules";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
 import { orders } from "../modules/orders";
@@ -147,6 +148,7 @@ const app = new Elysia()
       .use(fieldSuggestions)
       .use(catalog)
       .use(searchSync)
+  .use(schedules)
       .use(territory)
       .use(maps)
       .use(orders)

@@ -48,6 +48,7 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/maps/infrastructure/routes/maps.route.ts": "auth+permission",
   "modules/orders/infrastructure/routes/orders.route.ts": "auth+permission",
   "modules/potential/infrastructure/routes/potential.route.ts": "auth+permission",
+  "modules/schedules/infrastructure/routes/schedules.route.ts": "auth+permission",
   "modules/search-sync/infrastructure/routes/search-sync.route.ts": "auth+permission",
   "modules/territory/infrastructure/routes/territories.route.ts": "auth+permission",
   "modules/visits/infrastructure/routes/visits.route.ts": "auth+permission",
