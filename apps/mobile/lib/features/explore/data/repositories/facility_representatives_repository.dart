@@ -178,6 +178,7 @@ class FacilityRepresentativesRepository
         roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
       );
     } else {
+      // ignore_for_file: use_null_aware_elements — value-nullable map entries, not key-nullable.
       final body = <String, Object?>{
         if (firstName != null) 'firstName': firstName,
         if (lastName != null) 'lastName': lastName,

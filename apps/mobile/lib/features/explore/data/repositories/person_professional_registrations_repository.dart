@@ -87,6 +87,7 @@ class PersonProfessionalRegistrationsRepository
     String? registrationNumber,
     bool? isPrimary,
   }) async {
+    // ignore_for_file: use_null_aware_elements — value-nullable map entries, not key-nullable.
     final body = <String, dynamic>{
       if (councilId != null) 'councilId': councilId,
       if (stateCode != null) 'stateCode': stateCode,

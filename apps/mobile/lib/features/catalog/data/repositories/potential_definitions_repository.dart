@@ -117,6 +117,7 @@ class PotentialDefinitionsRepository {
       {
         'verticalId': verticalId,
         'label': label,
+        // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
         if (key != null) 'key': key,
       },
     );
@@ -134,6 +135,7 @@ class PotentialDefinitionsRepository {
       _uri('/potential-definitions/$id'),
       RepositoryHttpMethod.patch,
       {
+        // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
         if (label != null) 'label': label,
       },
     );

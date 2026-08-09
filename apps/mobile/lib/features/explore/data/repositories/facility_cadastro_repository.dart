@@ -393,6 +393,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         'sizeBytes': file.bytes.length,
         'checksum': checksum,
         'role': role,
+        // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
         if (position != null) 'position': position,
       },
     );

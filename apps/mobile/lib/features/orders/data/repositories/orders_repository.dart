@@ -296,6 +296,7 @@ class OrdersRepository extends Repository<OrdersPage>
         url: _baseUri.replace(path: '/api/v1/orders'),
         method: RepositoryHttpMethod.post,
         headers: headers,
+        // ignore_for_file: use_null_aware_elements — value-nullable map entries, not key-nullable.
         body: {
           'facilityId': facilityId,
           if (verticalId != null) 'verticalId': verticalId,

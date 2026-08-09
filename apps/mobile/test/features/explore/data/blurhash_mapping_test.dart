@@ -81,6 +81,7 @@ Map<String, dynamic> _userJson({String? avatarBlurhash}) => {
   'email': 'ana@example.com',
   'username': 'ana',
   'avatarUrl': '/avatar.png',
+  // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
   if (avatarBlurhash != null) 'avatarBlurhash': avatarBlurhash,
   'status': 'ACTIVE',
   'emailVerified': true,

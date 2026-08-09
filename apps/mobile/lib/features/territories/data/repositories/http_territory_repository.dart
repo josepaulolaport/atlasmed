@@ -160,6 +160,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
     TerritoryGeometry geometry, {
     List<int>? acceptedFacilityIds,
   }) async {
+    // ignore_for_file: use_null_aware_elements — value-nullable map entry, not key-nullable.
     final body = <String, dynamic>{
       ...Map<String, dynamic>.from(geometry.toGeoJson()),
       if (acceptedFacilityIds != null) 'acceptedFacilityIds': acceptedFacilityIds,

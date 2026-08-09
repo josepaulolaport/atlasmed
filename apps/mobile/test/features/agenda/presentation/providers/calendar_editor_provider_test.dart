@@ -70,6 +70,7 @@ CalendarOccurrence _occurrence({int version = 8, int? overrideVersion}) =>
       'durationMinutes': 60,
       'recurrence': 'WEEKLY',
       'version': version,
+      // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
       if (overrideVersion != null) 'overrideVersion': overrideVersion,
       'canMutate': true,
     });

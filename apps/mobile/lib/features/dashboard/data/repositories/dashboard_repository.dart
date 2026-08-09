@@ -32,7 +32,7 @@ class DashboardRepository extends Repository<DashboardSummary>
         url: endpoint,
         method: RepositoryHttpMethod.get,
         headers: {
-          if (_verticalId != null && _verticalId! > 0)
+          if (_verticalId != null && _verticalId > 0)
             'X-AtlasMed-Vertical-Id': _verticalId.toString(),
         },
       ),

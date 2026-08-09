@@ -341,7 +341,7 @@ class _RegistrationSheetState extends ConsumerState<_RegistrationSheet> {
             )
           else ...[
             DropdownButtonFormField<int>(
-              value: _councilId,
+              initialValue: _councilId,
               decoration: const InputDecoration(
                 labelText: 'Conselho',
                 border: OutlineInputBorder(),
@@ -360,7 +360,7 @@ class _RegistrationSheetState extends ConsumerState<_RegistrationSheet> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _stateCode,
+              initialValue: _stateCode,
               decoration: const InputDecoration(
                 labelText: 'UF',
                 border: OutlineInputBorder(),

@@ -42,12 +42,16 @@ void main() {
         'session': {'token': 'test-token', 'refreshToken': 'test-refresh'},
       }),
     );
+    // ignore: invalid_use_of_protected_member — test-only reset to avoid leaking a pending Timer across tests.
     SessionEnvironment.instance.timer?.cancel();
+    // ignore: invalid_use_of_protected_member
     SessionEnvironment.instance.timer = null;
   });
 
   tearDown(() {
+    // ignore: invalid_use_of_protected_member
     SessionEnvironment.instance.timer?.cancel();
+    // ignore: invalid_use_of_protected_member
     SessionEnvironment.instance.timer = null;
   });
   testWidgets('header renders identity for a loaded facility', (tester) async {
