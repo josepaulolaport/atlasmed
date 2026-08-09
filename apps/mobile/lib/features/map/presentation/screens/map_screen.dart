@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -21,10 +22,11 @@ import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Live map tab: in-scope clinic pins with Mapbox Supercluster.
 class MapScreen extends ConsumerStatefulWidget {
@@ -98,6 +100,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _calloutTapListenerRegistered = false;
   bool _pointsRefreshing = false;
 
+  /// Style must be loaded before any StyleManager pigeon call.
+  bool _styleReady = false;
+
+  /// Bumped on every style load / map remount — drops stale in-flight style work.
+  int _styleEpoch = 0;
+
   static const _polygonGeometryFilter = <Object>[
     'any',
     [
@@ -147,9 +155,28 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   void dispose() {
+    _styleEpoch += 1;
+    _styleReady = false;
     _clusterImageThrottle?.cancel();
     _missingImageFlush?.cancel();
     super.dispose();
+  }
+
+  /// True only while [map] is still the live Mapbox handle for the current style.
+  bool _isLiveMapStyle(MapboxMap map, int epoch) {
+    return mounted &&
+        !_mapUnavailable &&
+        _styleReady &&
+        epoch == _styleEpoch &&
+        identical(_mapboxMap, map);
+  }
+
+  /// Pigeon channel gone — style reload / platform view tear-down mid-await.
+  bool _isStaleMapChannel(Object error) {
+    if (error is! PlatformException) return false;
+    if (error.code != 'channel-error') return false;
+    final message = error.message ?? '';
+    return message.contains('Unable to establish connection on channel');
   }
 
   @override
@@ -157,32 +184,51 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final token = AppConfig.mapboxAccessToken;
     final session = ref.watch(locationSessionProvider);
     final location = session.location;
-    ref.watch(liveMapFacilityPointsProvider);
+    ref.watch(liveMapFacilityPointsWithDistanceProvider);
 
-    ref.listen<AsyncValue<List<NearbyEstablishment>>>(
-      liveMapFacilityPointsProvider,
-      (previous, next) {
-        next.when(
-          data: (items) {
-            if (!mounted) return;
-            setState(() {
-              _clinics = items;
-              _pointsRefreshing = false;
-            });
+    ref.listen<
+      AsyncValue<List<NearbyEstablishment>>
+    >(liveMapFacilityPointsWithDistanceProvider, (previous, next) {
+      next.when(
+        data: (items) {
+          if (!mounted) return;
+          setState(() {
+            _clinics = items;
+            _pointsRefreshing = false;
+          });
+          // StyleManager pigeon is dead until onStyleLoaded — skip early sync.
+          if (_styleReady && _mapboxMap != null) {
             unawaited(_syncAnnotations());
-            if (_selected != null && !items.any((e) => e.id == _selected!.id)) {
-              unawaited(_dismissCallout());
+          }
+          if (_selected != null && !items.any((e) => e.id == _selected!.id)) {
+            unawaited(_dismissCallout());
+          }
+        },
+        loading: () {
+          // Drop previous user's pins while the scoped list reloads.
+          if (mounted) {
+            setState(() {
+              _pointsRefreshing = true;
+              _clinics = const [];
+            });
+            if (_styleReady && _mapboxMap != null) {
+              unawaited(_syncAnnotations());
             }
-          },
-          loading: () {
-            if (mounted) setState(() => _pointsRefreshing = true);
-          },
-          error: (_, _) {
-            if (mounted) setState(() => _pointsRefreshing = false);
-          },
-        );
-      },
-    );
+          }
+        },
+        error: (_, _) {
+          if (mounted) {
+            setState(() {
+              _pointsRefreshing = false;
+              _clinics = const [];
+            });
+            if (_styleReady && _mapboxMap != null) {
+              unawaited(_syncAnnotations());
+            }
+          }
+        },
+      );
+    });
 
     ref.listen<AsyncValue<TerritoryGeometry?>>(mapTerritoryProvider, (_, next) {
       next.whenData((territory) => unawaited(_drawTerritory(territory)));
@@ -225,6 +271,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       setState(() {
                         _mapUnavailable = false;
                         _mapGeneration += 1;
+                        _styleEpoch += 1;
+                        _styleReady = false;
                         _mapboxMap = null;
                         _calloutManager = null;
                         _calloutAnnotation = null;
@@ -248,19 +296,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           viewport: _viewport,
                           onMapCreated: _onMapCreated,
                           onStyleLoadedListener: (_) async {
-                            _clinicLayersReady = false;
-                            _clinicInteractionsRegistered = false;
-                            _calloutManager = null;
-                            _calloutAnnotation = null;
-                            _calloutCloseAnnotation = null;
-                            _calloutTapListenerRegistered = false;
-                            _pendingMissingImageIds.clear();
-                            await _enableLocationPuck();
-                            await _drawTerritory(
-                              ref.read(mapTerritoryProvider).valueOrNull,
-                            );
-                            await _ensureClinicLayers();
-                            await _syncAnnotations();
+                            await _onStyleLoaded();
                           },
                           onStyleImageMissingListener: _onStyleImageMissing,
                           onMapLoadErrorListener: _onMapLoadError,
@@ -327,6 +363,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   void _onMapCreated(MapboxMap map) {
     _mapboxMap = map;
+    _styleReady = false;
     _clinicLayersReady = false;
     _clinicInteractionsRegistered = false;
     _calloutManager = null;
@@ -343,6 +380,43 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     } catch (error, stack) {
       _logMapIssue('tap-mapa-fundo', error, stack);
     }
+  }
+
+  /// Sole entry that mutates style after a fresh style load.
+  Future<void> _onStyleLoaded() async {
+    final epoch = ++_styleEpoch;
+    _styleReady = false;
+    _clinicLayersReady = false;
+    _clinicInteractionsRegistered = false;
+    _calloutManager = null;
+    _calloutAnnotation = null;
+    _calloutCloseAnnotation = null;
+    _calloutTapListenerRegistered = false;
+    _pendingMissingImageIds.clear();
+
+    // Drain prior style work so it cannot race addStyleImage on a new style.
+    final prior = _ensureClinicLayersInFlight;
+    if (prior != null) {
+      try {
+        await prior;
+      } catch (_) {}
+    }
+    if (!mounted || epoch != _styleEpoch) return;
+
+    _styleReady = true;
+    final map = _mapboxMap;
+    if (map == null || !_isLiveMapStyle(map, epoch)) return;
+
+    await _enableLocationPuck();
+    if (!_isLiveMapStyle(map, epoch)) return;
+
+    await _drawTerritory(ref.read(mapTerritoryProvider).valueOrNull);
+    if (!_isLiveMapStyle(map, epoch)) return;
+
+    await _ensureClinicLayers();
+    if (!_isLiveMapStyle(map, epoch)) return;
+
+    await _syncAnnotations();
   }
 
   /// Only style/source failures are fatal. Tile/glyph/sprite blips are common
@@ -414,7 +488,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _flushMissingStyleImages() async {
     final map = _mapboxMap;
-    if (map == null || !mounted || _pendingMissingImageIds.isEmpty) return;
+    final epoch = _styleEpoch;
+    if (map == null ||
+        !_isLiveMapStyle(map, epoch) ||
+        _pendingMissingImageIds.isEmpty) {
+      return;
+    }
     final ids = _pendingMissingImageIds.toList(growable: false);
     _pendingMissingImageIds.clear();
     try {
@@ -423,6 +502,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           .where((id) => id.startsWith(ClinicClusterMarker.imageIdPrefix))
           .toList(growable: false);
       if (clusterIds.isNotEmpty) {
+        if (!_isLiveMapStyle(map, epoch)) return;
         await ClinicClusterMarker.ensureImagesById(
           map.style,
           devicePixelRatio: dpr,
@@ -430,9 +510,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
       }
       if (ids.any((id) => id.startsWith('atlasmed-clinic-pin'))) {
+        if (!_isLiveMapStyle(map, epoch)) return;
         await ClinicMapPin.ensureRegistered(map.style, devicePixelRatio: dpr);
       }
     } catch (error, stack) {
+      if (_isStaleMapChannel(error)) {
+        _logMapIssue('style-image-missing-stale', error, stack);
+        return;
+      }
       _logMapIssue('style-image-missing', error, stack);
     }
   }
@@ -561,17 +646,22 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _ensureClinicLayersBody() async {
     final map = _mapboxMap;
-    if (map == null || _clinicLayersReady) return;
+    final epoch = _styleEpoch;
+    if (map == null || !_styleReady || _clinicLayersReady) return;
+    if (!_isLiveMapStyle(map, epoch)) return;
     final dpr = MediaQuery.devicePixelRatioOf(context);
 
     try {
       final style = map.style;
 
       await ClinicMapPin.ensureRegistered(style, devicePixelRatio: dpr);
+      if (!_isLiveMapStyle(map, epoch)) return;
       await ClinicClusterMarker.ensureRegistered(style, devicePixelRatio: dpr);
+      if (!_isLiveMapStyle(map, epoch)) return;
 
       final layerIds = _clinicLayerIds;
       final sourceExists = await style.styleSourceExists(_clinicsSourceId);
+      if (!_isLiveMapStyle(map, epoch)) return;
       final configCurrent =
           _mountedClusterSourceConfigVersion == _clusterSourceConfigVersion;
       var allLayersExist = sourceExists && configCurrent;
@@ -581,10 +671,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             allLayersExist = false;
             break;
           }
+          if (!_isLiveMapStyle(map, epoch)) return;
         }
       }
 
       if (sourceExists && allLayersExist) {
+        if (!_isLiveMapStyle(map, epoch)) return;
         _clinicLayersReady = true;
         _registerClinicInteractions(map);
         return;
@@ -737,9 +829,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         ),
       );
 
+      if (!_isLiveMapStyle(map, epoch)) return;
       _clinicLayersReady = true;
       _registerClinicInteractions(map);
     } catch (error, stack) {
+      _clinicLayersReady = false;
+      if (_isStaleMapChannel(error)) {
+        _logMapIssue('clinic-layers-stale', error, stack);
+        return;
+      }
       _logMapIssue('clinic-layers', error, stack);
     }
   }
@@ -793,11 +891,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _syncAnnotations() async {
     final map = _mapboxMap;
-    if (map == null || !mounted) return;
+    final epoch = _styleEpoch;
+    if (map == null || !_isLiveMapStyle(map, epoch)) return;
 
     try {
       await _ensureClinicLayers();
-      if (!_clinicLayersReady || !mounted) return;
+      if (!_clinicLayersReady || !_isLiveMapStyle(map, epoch)) return;
 
       final selectedId = _selected?.id;
       final features = [
@@ -809,9 +908,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         'data',
         jsonEncode({'type': 'FeatureCollection', 'features': features}),
       );
+      if (!_isLiveMapStyle(map, epoch)) return;
       // Cluster aggregates exist after source update — bake pin bitmaps.
       _scheduleClusterPinImages();
     } catch (error, stack) {
+      if (_isStaleMapChannel(error)) {
+        _clinicLayersReady = false;
+        _logMapIssue('sync-pins-stale', error, stack);
+        return;
+      }
       _logMapIssue('sync-pins', error, stack);
     }
   }
@@ -826,16 +931,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// Lazily paint+register atomic pin PNGs for current cluster aggregates.
   Future<void> _ensureClusterPinImages() async {
     final map = _mapboxMap;
-    if (map == null || !_clinicLayersReady || !mounted) return;
+    final epoch = _styleEpoch;
+    if (map == null || !_clinicLayersReady || !_isLiveMapStyle(map, epoch)) {
+      return;
+    }
     try {
       // Clustering tiles lag the data write — retry once if empty.
       var specs = await _queryClusterPinSpecs(map);
       if (specs.isEmpty) {
         await Future<void>.delayed(const Duration(milliseconds: 200));
-        if (!mounted || _mapboxMap == null) return;
-        specs = await _queryClusterPinSpecs(_mapboxMap!);
+        if (!_isLiveMapStyle(map, epoch)) return;
+        specs = await _queryClusterPinSpecs(map);
       }
-      if (specs.isEmpty || !mounted) return;
+      if (specs.isEmpty || !_isLiveMapStyle(map, epoch) || !mounted) return;
 
       final dpr = MediaQuery.devicePixelRatioOf(context);
       await ClinicClusterMarker.ensureImages(
@@ -844,6 +952,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         specs: specs,
       );
     } catch (error, stack) {
+      if (_isStaleMapChannel(error)) {
+        _logMapIssue('cluster-pin-images-stale', error, stack);
+        return;
+      }
       _logMapIssue('cluster-pin-images', error, stack);
     }
   }
@@ -899,7 +1011,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   static Map<String, Object?> _pinFeature(
     NearbyEstablishment e, {
-    required String? selectedId,
+    int? selectedId,
   }) {
     return {
       'type': 'Feature',
@@ -1059,7 +1171,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (raw == null) continue;
       final props = raw['properties'];
       if (props is! Map) continue;
-      final id = props['facilityId']?.toString();
+      final id = readCrmIdLoose(props['facilityId']);
       if (id == null) continue;
       final e = byId[id];
       if (e != null) out.add(e);
@@ -1170,7 +1282,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final byId = {for (final e in _visibleClinics) e.id: e};
 
     NearbyEstablishment? fromFeature() {
-      final id = feature.properties['facilityId']?.toString();
+      final id = readCrmIdLoose(feature.properties['facilityId']);
       if (id != null && byId.containsKey(id)) return byId[id];
       final point = _pointFromGeometry(feature.geometry);
       if (point == null) return null;
@@ -1199,9 +1311,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         final raw = hit?.queriedFeature.feature;
         if (raw == null) continue;
         final props = raw['properties'];
-        final id = props is Map
-            ? props['facilityId']?.toString()
-            : raw['facilityId']?.toString();
+        final id = readCrmIdLoose(
+          props is Map ? props['facilityId'] : raw['facilityId'],
+        );
         final e = id == null ? null : byId[id];
         if (e == null) continue;
         final screen = await map.pixelForCoordinate(
@@ -1274,7 +1386,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           iconAnchor: IconAnchor.BOTTOM,
           iconOffset: [0, -16],
           symbolSortKey: 10,
-          customData: {'action': 'open', 'facilityId': establishment.id},
+          // String — Mapbox customData often round-trips ints as doubles ("3.0").
+          customData: {'action': 'open', 'facilityId': '${establishment.id}'},
         ),
       );
       if (previous != null) await manager.delete(previous);
@@ -1364,7 +1477,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       unawaited(_dismissCallout());
       return;
     }
-    final id = annotation.customData?['facilityId']?.toString();
+    final id = readCrmIdLoose(annotation.customData?['facilityId']);
     if (id != null) _openEstablishment(id);
   }
 
@@ -1497,7 +1610,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
-  void _openEstablishment(String id) {
+  void _openEstablishment(int id) {
     for (final clinic in _clinics) {
       if (clinic.id == id) {
         seedClinicDetailShellFromNearby(ref, clinic);
@@ -1509,16 +1622,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final verticalId = ref
         .read(effectiveFacilityVerticalIdProvider)
         .valueOrNull;
-    if (verticalId != null && verticalId.isNotEmpty) {
-      context.push(
-        Uri(
-          path: '/explore/clinic/$id',
-          queryParameters: {'verticalId': verticalId},
-        ).toString(),
-      );
+    if (verticalId != null && verticalId > 0) {
+      ClinicDetailRoute(id: id, verticalId: verticalId).push(context);
       return;
     }
-    context.push('/explore/clinic/$id');
+    ClinicDetailRoute(id: id).push(context);
   }
 }
 

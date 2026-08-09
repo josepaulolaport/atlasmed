@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
+import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterListPageSize;
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
@@ -18,6 +19,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Full list of CRM doctors at an establishment — same table chrome as
 /// Explorar (search + filter + sort chips + [DoctorRow]).
@@ -36,7 +38,7 @@ class DoctorsListScreen extends ConsumerStatefulWidget {
   final String facilityName;
 
   /// When set, load a larger roster page after first frame.
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   ConsumerState<DoctorsListScreen> createState() => _DoctorsListScreenState();
@@ -56,26 +58,22 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
   Future<void> _hydrateFullList({bool force = false}) async {
     final facilityId = widget.facilityId;
-    if (facilityId == null || facilityId.isEmpty) return;
+    if (facilityId == null || (facilityId <= 0)) return;
 
-    List<ProfessionalRoster> next;
-    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-      next = const [];
-    } else {
-      final repo = FacilityProfessionalsRepository(
-        facilityId,
-        page: 1,
-        limit: facilityRosterListPageSize,
-        view: 'all',
-      );
-      try {
-        final page = await repo.loadPage();
-        next = page.items;
-      } catch (_) {
-        return;
-      } finally {
-        repo.dispose();
-      }
+    final repo = FacilityProfessionalsRepository(
+      facilityId,
+      page: 1,
+      limit: facilityRosterListPageSize,
+      view: 'all',
+    );
+    final List<ProfessionalRoster> next;
+    try {
+      final page = await repo.loadPage();
+      next = page.items;
+    } catch (_) {
+      return;
+    } finally {
+      repo.dispose();
     }
 
     if (!mounted) return;
@@ -91,7 +89,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       _doctors = [..._doctors, ...added.where((d) => !existing.contains(d.id))];
     });
     final facilityId = widget.facilityId;
-    if (facilityId != null && facilityId.isNotEmpty) {
+    if (facilityId != null && (facilityId > 0)) {
       // Refresh detail strip behind this route + re-hydrate list from API.
       await ref
           .read(facilityDoctorsRosterProvider(facilityId).notifier)
@@ -118,10 +116,15 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     return list;
   }
 
-  Map<String, List<String>> get _filterSections => {
-    if (_specialtyOptions.isNotEmpty) 'Especialidade': _specialtyOptions,
-    'Papel': const ['Prescritor', 'Decisor', 'Comprador', 'Sócio'],
-  };
+  Map<String, List<String>> get _filterSections {
+    final papel = PersonFacilityRoleCatalog.activeNames(
+      PersonFacilityRoleCatalogCache.entries,
+    );
+    return {
+      if (_specialtyOptions.isNotEmpty) 'Especialidade': _specialtyOptions,
+      if (papel.isNotEmpty) 'Papel': papel,
+    };
+  }
 
   int get _filterCount =>
       _filters.values.fold<int>(0, (sum, list) => sum + list.length);
@@ -149,13 +152,11 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
     final roles = _filters['Papel'] ?? const <String>[];
     if (roles.isNotEmpty) {
-      list = list.where((d) {
-        if (roles.contains('Prescritor') && d.isPrescriber) return true;
-        if (roles.contains('Decisor') && d.isDecisionMaker) return true;
-        if (roles.contains('Comprador') && d.isBuyer) return true;
-        if (roles.contains('Sócio') && d.isPartner) return true;
-        return false;
-      }).toList();
+      final selectedIds = PersonFacilityRoleCatalog.idsForNames(
+        roles,
+        PersonFacilityRoleCatalogCache.entries,
+      );
+      list = list.where((d) => d.roleIds.any(selectedIds.contains)).toList();
     }
 
     switch (_sort) {
@@ -318,20 +319,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     );
   }
 
-  List<String> _badgesFor(ProfessionalRoster d) {
-    final badges = <String>[];
-    if (d.roleBadge != null && d.roleBadge!.trim().isNotEmpty) {
-      badges.add(d.roleBadge!);
-    }
-    if (d.isPrescriber) badges.add('Prescritor');
-    if (d.isBuyer) badges.add('Comprador');
-    if (d.isDecisionMaker &&
-        (d.roleBadge == null || d.roleBadge!.trim().isEmpty)) {
-      badges.add('Decisor');
-    }
-    if (d.isPartner) badges.add('Sócio');
-    return badges;
-  }
+  List<String> _badgesFor(ProfessionalRoster d) => d.roleChipLabels;
 
   Future<void> _onMoreActions(ProfessionalRoster doctor) async {
     final action = await showDoctorClinicActionsSheet(
@@ -344,15 +332,93 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         await _editRoles(doctor);
       case DoctorClinicAction.viewProfile:
         _openProfile(doctor);
+      case DoctorClinicAction.endAffiliation:
+        await _endAffiliation(doctor);
     }
+  }
+
+  Future<void> _endAffiliation(ProfessionalRoster doctor) async {
+    final facilityId = widget.facilityId;
+    if (facilityId == null || facilityId <= 0) return;
+    if (doctor.personFacilityId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Não foi possível encerrar — vínculo sem identificador',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Encerrar vínculo?'),
+        content: Text(
+          '${doctor.name} deixará de aparecer como médico desta clínica. '
+          'O cadastro da pessoa permanece.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB42318),
+            ),
+            child: const Text('Encerrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final repo = FacilityAssociateRepository(facilityId);
+    try {
+      await repo.endDoctorAffiliation(doctor);
+    } on FacilityAssociateException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Falha ao encerrar vínculo'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    } finally {
+      repo.dispose();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _doctors = [
+        for (final d in _doctors)
+          if (d.id != doctor.id) d,
+      ];
+    });
+    ref
+        .read(facilityDoctorsRosterProvider(facilityId).notifier)
+        .removeWhere((d) => d.id == doctor.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${doctor.name} desvinculado da clínica'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _openProfile(ProfessionalRoster doctor) {
     final facilityId = widget.facilityId;
-    final uri = facilityId == null || facilityId.isEmpty
-        ? '/explore/doctor/${doctor.id}'
-        : '/explore/doctor/${doctor.id}?facilityId=$facilityId';
-    context.push(uri);
+    DoctorDetailRoute(
+      id: doctor.id,
+      facilityId: facilityId != null && facilityId > 0 ? facilityId : null,
+    ).push(context);
   }
 
   Future<void> _editRoles(ProfessionalRoster doctor) async {
@@ -371,7 +437,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     });
 
     final facilityId = widget.facilityId;
-    if (facilityId != null && facilityId.isNotEmpty) {
+    if (facilityId != null && (facilityId > 0)) {
       ref
           .read(facilityDoctorsRosterProvider(facilityId).notifier)
           .replaceWhere((d) => d.id == updated.id, (_) => updated);

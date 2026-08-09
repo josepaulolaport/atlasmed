@@ -1,27 +1,24 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
-// ── ClinicService ───────────────────────────────────────────
+// ── ClinicalFocus ───────────────────────────────────────────
 
-/// Coberto por GET /facilities e GET /facilities/:id — services array.
-class ClinicService {
-  final String serviceCode;
-  final String classificationCode;
-  final String serviceName;
+/// Coberto por GET /facilities e GET /facilities/:id — clinicalFocuses array.
+class ClinicalFocus {
+  final int id;
+  final String name;
+  final String? cnesCode;
 
-  const ClinicService({
-    required this.serviceCode,
-    required this.classificationCode,
-    this.serviceName = '',
-  });
+  const ClinicalFocus({required this.id, required this.name, this.cnesCode});
 
-  factory ClinicService.fromMap(Map<String, dynamic> map) {
-    return ClinicService(
-      serviceCode: readString(map['serviceCode']),
-      classificationCode: readString(map['classificationCode']),
-      serviceName: readString(map['serviceName']),
+  factory ClinicalFocus.fromMap(Map<String, dynamic> map) {
+    return ClinicalFocus(
+      id: readCrmId(map['id'], 'id'),
+      name: readString(map['name']),
+      cnesCode: readNullableString(map['cnesCode']),
     );
   }
 }
@@ -34,23 +31,26 @@ class FacilityVerticalProfileDTO {
     this.verticalCode,
     this.commercialStatus,
     this.purchaseStatus,
+    this.territoryId,
     this.purchaseRecurrence,
   });
 
-  final String verticalId;
+  final int verticalId;
   final String verticalName;
   final String? verticalCode;
   final String? commercialStatus;
   final String? purchaseStatus;
+  final int? territoryId;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
   factory FacilityVerticalProfileDTO.fromMap(Map<String, dynamic> map) {
     return FacilityVerticalProfileDTO(
-      verticalId: readString(map['verticalId']),
+      verticalId: readCrmId(map['verticalId'], 'verticalId'),
       verticalName: readString(map['verticalName']),
       verticalCode: readNullableString(map['verticalCode']),
       commercialStatus: readNullableString(map['commercialStatus']),
       purchaseStatus: readNullableString(map['purchaseStatus']),
+      territoryId: readCrmIdOrNull(map['territoryId'], 'territoryId'),
       purchaseRecurrence: map['purchaseRecurrence'] is Map
           ? PurchaseRecurrenceSnapshot.fromMap(
               (map['purchaseRecurrence'] as Map).cast<String, dynamic>(),
@@ -60,11 +60,40 @@ class FacilityVerticalProfileDTO {
   }
 }
 
+/// Prefer [verticalId] when set; else the sole profile; else null.
+FacilityVerticalProfileDTO? pickVerticalProfile(
+  List<FacilityVerticalProfileDTO> profiles, {
+  int? verticalId,
+}) {
+  if (profiles.isEmpty) return null;
+  if (verticalId != null) {
+    for (final profile in profiles) {
+      if (profile.verticalId == verticalId) return profile;
+    }
+    return null;
+  }
+  if (profiles.length == 1) return profiles.first;
+  return null;
+}
+
+/// Prefer API-derived status when present; otherwise infer from territory links.
+String resolveTerritoryAssignmentStatus({
+  String? apiStatus,
+  int? territoryId,
+  List<FacilityVerticalProfileDTO> verticalProfiles = const [],
+}) {
+  if (apiStatus != null && apiStatus.isNotEmpty) return apiStatus;
+  final hasProfileTerritory = verticalProfiles.any(
+    (p) => p.territoryId != null,
+  );
+  return territoryId != null || hasProfileTerritory ? 'assigned' : 'unassigned';
+}
+
 // ── FacilityDTO ─────────────────────────────────────────────
 
 /// DTO único para facility — cobre campos de GET /facilities e GET /facilities/:id.
 class FacilityDTO {
-  final String id;
+  final int id;
   final String name;
   final String? neighborhood;
   final String? city;
@@ -81,27 +110,26 @@ class FacilityDTO {
   final String? responsibleName;
   final String? openingHours;
   final String? registeredSince;
-  final String? taxIdType;
-  final String? cnpj;
-  final String? cpf;
+  final String? legalDocumentType;
+  final String? legalDocument;
   final double? lat;
   final double? lng;
-  final String? territoryId;
+  final int? territoryId;
   final String? territoryName;
   final String? territoryAssignmentStatus;
-  final String? commercialStatus;
-  final String? purchaseStatus;
   final String? conformityStatus;
-  final PurchaseRecurrenceSnapshot? purchaseRecurrence;
   final int professionalCount;
   final String? consultantName;
   final String? consultantSince;
   final String? managerName;
   final String? imageUrl;
   final String? imageBlurhash;
+  final String? cnesCode;
+  final int? unitTypeId;
+  final int? unitSubtypeId;
   final double? distanceKm;
   final String? lastVisitAt;
-  final List<ClinicService> services;
+  final List<ClinicalFocus> clinicalFocuses;
   final List<FacilityVerticalProfileDTO> verticalProfiles;
   final String? createdAt;
   final String? updatedAt;
@@ -125,26 +153,25 @@ class FacilityDTO {
     this.responsibleName,
     this.openingHours,
     this.registeredSince,
-    this.taxIdType,
-    this.cnpj,
-    this.cpf,
+    this.legalDocumentType,
+    this.legalDocument,
     this.lat,
     this.lng,
     this.territoryId,
     this.territoryName,
     this.territoryAssignmentStatus,
-    this.commercialStatus,
-    this.purchaseStatus,
     this.conformityStatus,
-    this.purchaseRecurrence,
     this.consultantName,
     this.consultantSince,
     this.managerName,
     this.imageUrl,
     this.imageBlurhash,
+    this.cnesCode,
+    this.unitTypeId,
+    this.unitSubtypeId,
     this.distanceKm,
     this.lastVisitAt,
-    this.services = const [],
+    this.clinicalFocuses = const [],
     this.verticalProfiles = const [],
     this.createdAt,
     this.updatedAt,
@@ -155,8 +182,14 @@ class FacilityDTO {
   }
 
   factory FacilityDTO.fromMap(Map<String, dynamic> map) {
+    final territoryId = readCrmIdOrNull(map['territoryId'], 'territoryId');
+    final verticalProfiles = readObjectList(map['verticalProfiles'])
+        .map(FacilityVerticalProfileDTO.fromMap)
+        .where((p) => p.verticalId > 0)
+        .toList(growable: false);
+
     return FacilityDTO(
-      id: readString(map['id']),
+      id: readCrmId(map['id'], 'id'),
       name: readString(map['name']),
       neighborhood: readNullableString(map['neighborhood']),
       city: readNullableString(map['city']),
@@ -175,39 +208,33 @@ class FacilityDTO {
       responsibleName: readNullableString(map['responsibleName']),
       openingHours: readNullableString(map['openingHours']),
       registeredSince: readNullableString(map['registeredSince']),
-      taxIdType: readNullableString(map['taxIdType']),
-      cnpj: readNullableString(map['cnpj']),
-      cpf: readNullableString(map['cpf']),
+      legalDocumentType: readNullableString(map['legalDocumentType']),
+      legalDocument: readNullableString(map['legalDocument']),
       lat: readNullableDouble(map['lat']),
       lng: readNullableDouble(map['lng']),
-      territoryId: readNullableString(map['territoryId']),
+      territoryId: territoryId,
       territoryName: readNullableString(map['territoryName']),
-      territoryAssignmentStatus: readNullableString(
-        map['territoryAssignmentStatus'],
+      territoryAssignmentStatus: resolveTerritoryAssignmentStatus(
+        apiStatus: readNullableString(map['territoryAssignmentStatus']),
+        territoryId: territoryId,
+        verticalProfiles: verticalProfiles,
       ),
-      commercialStatus: readNullableString(map['commercialStatus']),
-      purchaseStatus: readNullableString(map['purchaseStatus']),
       conformityStatus: readNullableString(map['conformityStatus']),
-      purchaseRecurrence: map['purchaseRecurrence'] is Map
-          ? PurchaseRecurrenceSnapshot.fromMap(
-              (map['purchaseRecurrence'] as Map).cast<String, dynamic>(),
-            )
-          : null,
       professionalCount: readInt(map['professionalCount']),
       consultantName: readNullableString(map['consultantName']),
       consultantSince: readNullableString(map['consultantSince']),
       managerName: readNullableString(map['managerName']),
       imageUrl: readNullableString(map['imageUrl'] ?? map['profileImageUrl']),
       imageBlurhash: readNullableString(map['imageBlurhash']),
+      cnesCode: readNullableString(map['cnesCode']),
+      unitTypeId: readCrmIdOrNull(map['unitTypeId'], 'unitTypeId'),
+      unitSubtypeId: readCrmIdOrNull(map['unitSubtypeId'], 'unitSubtypeId'),
       distanceKm: readNullableDouble(map['distanceKm']),
       lastVisitAt: readNullableString(map['lastVisitAt']),
-      services: readObjectList(
-        map['services'],
-      ).map(ClinicService.fromMap).toList(growable: false),
-      verticalProfiles: readObjectList(map['verticalProfiles'])
-          .map(FacilityVerticalProfileDTO.fromMap)
-          .where((p) => p.verticalId.isNotEmpty)
-          .toList(growable: false),
+      clinicalFocuses: readObjectList(
+        map['clinicalFocuses'],
+      ).map(ClinicalFocus.fromMap).toList(growable: false),
+      verticalProfiles: verticalProfiles,
       createdAt: readNullableString(map['createdAt']),
       updatedAt: readNullableString(map['updatedAt']),
     );

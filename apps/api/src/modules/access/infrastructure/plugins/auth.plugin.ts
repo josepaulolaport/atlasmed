@@ -12,17 +12,17 @@ import type { UserRepository } from "../../application/interfaces/user.repositor
 import type { AuthCacheService } from "../cache/auth-cache.service";
 import type { SessionCacheService } from "../cache/session-cache.service";
 import type { ScopeService } from "../../application/services/scope.service";
-import type { AccessGrantService } from "../../application/services/access-grant.service";
 import type { Redis } from "ioredis";
 import { logger } from "../../../../infrastructure/logging/logger";
 import { getClientIp } from "../../../../shared/utils/client-ip";
 import { readVerticalIdHeader, resolveVerticalIds } from "../../application/services/vertical-access.service";
+import { parseCrmId } from "../../../../shared/utils/parse-crm-id";
 
 const LAST_SEEN_THRESHOLD = 5 * 60 * 1000;
 
 function assertActiveUserStatus(
   status: string,
-  userId: string,
+  userId: number,
   ipAddress: string
 ): void {
   if (status === "ACTIVE") {
@@ -50,7 +50,6 @@ export interface AuthPluginDependencies {
   authCacheService: AuthCacheService;
   sessionCacheService: SessionCacheService;
   scopeService: ScopeService;
-  accessGrantService: AccessGrantService;
   redis: Redis;
 }
 
@@ -62,9 +61,9 @@ type AccessTokenPayload = {
 };
 
 type AuthContext = {
-  userId: string;
-  sessionId: string;
-  roleId: string;
+  userId: number;
+  sessionId: number;
+  roleId: number;
   roleName: string;
   status: string;
 };
@@ -84,11 +83,13 @@ async function resolveAccessSessionFromToken(
   } = dependencies;
 
   const payload = await tokenService.verifyAccessToken(token) as AccessTokenPayload;
+  const userId = parseCrmId(payload.sub, "user id");
+  const sessionId = parseCrmId(payload.sid, "session id");
 
-  let session = await sessionCacheService.getById(payload.sid);
+  let session = await sessionCacheService.getById(sessionId);
 
   if (!session) {
-    const dbSession = await sessionRepository.findById(payload.sid);
+    const dbSession = await sessionRepository.findById(sessionId);
 
     if (!dbSession) {
       logger.warn(
@@ -98,7 +99,7 @@ async function resolveAccessSessionFromToken(
       throw new UnauthorizedError();
     }
 
-    if (payload.sub !== dbSession.userId) {
+    if (userId !== dbSession.userId) {
       logger.warn(
         {
           sessionId: payload.sid,
@@ -135,7 +136,7 @@ async function resolveAccessSessionFromToken(
     };
 
     await sessionCacheService.set(session!);
-    await sessionCacheService.markValidated(payload.sid);
+    await sessionCacheService.markValidated(sessionId);
 
     // A revoked marker can be left behind by a transient false-positive
     // (e.g. a DB hiccup during revalidation) while this exact session is
@@ -143,25 +144,25 @@ async function resolveAccessSessionFromToken(
     // the situation that (incorrectly) set it — otherwise it self-renews
     // its TTL forever every time a request hits it.
     if (!session.revokedAt) {
-      await sessionCacheService.clearRevoked(payload.sid);
+      await sessionCacheService.clearRevoked(sessionId);
     }
   } else {
-    if (await sessionCacheService.isMarkedRevoked(payload.sid)) {
-      const dbStatus = await sessionRepository.findSessionStatus(payload.sid);
+    if (await sessionCacheService.isMarkedRevoked(sessionId)) {
+      const dbStatus = await sessionRepository.findSessionStatus(sessionId);
 
       const dbConfirmsRevoked =
         !dbStatus ||
         dbStatus.revokedAt !== null ||
         dbStatus.expiresAt < new Date() ||
-        payload.sub !== dbStatus.userId ||
-        payload.sub !== session.userId;
+        userId !== dbStatus.userId ||
+        userId !== session.userId;
 
       if (dbConfirmsRevoked) {
         logger.warn(
           { sessionId: payload.sid, userId: payload.sub, ipAddress },
           "Revoked session marker confirmed by DB revalidation"
         );
-        await sessionCacheService.invalidate(payload.sid);
+        await sessionCacheService.invalidate(sessionId);
         throw new UnauthorizedError();
       }
 
@@ -173,21 +174,21 @@ async function resolveAccessSessionFromToken(
         { sessionId: payload.sid, userId: payload.sub, ipAddress },
         "Cleared stale revoked marker after DB confirmed session is healthy"
       );
-      await sessionCacheService.clearRevoked(payload.sid);
-      await sessionCacheService.markValidated(payload.sid);
-    } else if (!(await sessionCacheService.isRecentlyValidated(payload.sid))) {
-      const dbStatus = await sessionRepository.findSessionStatus(payload.sid);
+      await sessionCacheService.clearRevoked(sessionId);
+      await sessionCacheService.markValidated(sessionId);
+    } else if (!(await sessionCacheService.isRecentlyValidated(sessionId))) {
+      const dbStatus = await sessionRepository.findSessionStatus(sessionId);
 
       if (!dbStatus) {
         logger.warn(
           { sessionId: payload.sid, userId: payload.sub, ipAddress },
           "Session not found in DB but present in cache"
         );
-        await sessionCacheService.invalidate(payload.sid);
+        await sessionCacheService.invalidate(sessionId);
         throw new UnauthorizedError();
       }
 
-      if (payload.sub !== dbStatus.userId || payload.sub !== session.userId) {
+      if (userId !== dbStatus.userId || userId !== session.userId) {
         logger.warn(
           {
             sessionId: payload.sid,
@@ -198,7 +199,7 @@ async function resolveAccessSessionFromToken(
           },
           "Session user mismatch"
         );
-        await sessionCacheService.invalidate(payload.sid);
+        await sessionCacheService.invalidate(sessionId);
         throw new UnauthorizedError();
       }
 
@@ -218,11 +219,11 @@ async function resolveAccessSessionFromToken(
           },
           "Stale cached session rejected after DB revalidation"
         );
-        await sessionCacheService.invalidate(payload.sid);
+        await sessionCacheService.invalidate(sessionId);
         throw new UnauthorizedError();
       }
 
-      await sessionCacheService.markValidated(payload.sid);
+      await sessionCacheService.markValidated(sessionId);
     }
   }
 
@@ -256,10 +257,10 @@ async function resolveAccessSessionFromToken(
     throw new UnauthorizedError();
   }
 
-  let authContext = await authCacheService.get(payload.sub);
+  let authContext = await authCacheService.get(userId);
 
   if (!authContext) {
-    const user = await userRepository.findById(payload.sub);
+    const user = await userRepository.findById(userId);
 
     if (!user) {
       logger.warn(
@@ -279,15 +280,15 @@ async function resolveAccessSessionFromToken(
 
     await authCacheService.set(user.id, authContext);
     await authCacheService.markValidated(user.id);
-  } else if (!(await authCacheService.isRecentlyValidated(payload.sub))) {
-    const dbAuthStatus = await userRepository.findUserAuthStatus(payload.sub);
+  } else if (!(await authCacheService.isRecentlyValidated(userId))) {
+    const dbAuthStatus = await userRepository.findUserAuthStatus(userId);
 
     if (!dbAuthStatus) {
       logger.warn(
         { userId: payload.sub, sessionId: payload.sid, ipAddress },
         "User not found in DB but present in auth cache"
       );
-      await authCacheService.invalidate(payload.sub);
+      await authCacheService.invalidate(userId);
       throw new UnauthorizedError();
     }
 
@@ -312,17 +313,17 @@ async function resolveAccessSessionFromToken(
       );
 
       authContext = {
-        userId: payload.sub,
+        userId,
         roleId: dbAuthStatus.roleId,
         roleName: dbAuthStatus.roleName,
         status: dbAuthStatus.status,
         tokenVersion: dbAuthStatus.tokenVersion,
       };
 
-      await authCacheService.set(payload.sub, authContext);
+      await authCacheService.set(userId, authContext);
     }
 
-    await authCacheService.markValidated(payload.sub);
+    await authCacheService.markValidated(userId);
   }
 
   if (payload.tokenVersion !== authContext.tokenVersion) {
@@ -353,19 +354,19 @@ async function resolveAccessSessionFromToken(
     throw new UnauthorizedError();
   }
 
-  assertActiveUserStatus(authContext.status, payload.sub, ipAddress);
+  assertActiveUserStatus(authContext.status, userId, ipAddress);
 
-  const lastSeenKey = `session:${payload.sid}:lastSeen`;
+  const lastSeenKey = `session:${sessionId}:lastSeen`;
   const lastSeenCache = await redis.get(lastSeenKey);
   
   if (!lastSeenCache) {
-    sessionRepository.updateLastSeen(payload.sid).catch((error) => {
+    sessionRepository.updateLastSeen(sessionId).catch((error) => {
       logger.error(
         { sessionId: payload.sid, error: error.message },
         "Failed to update lastSeen"
       );
     });
-    sessionCacheService.updateLastSeen(payload.sid).catch((error) => {
+    sessionCacheService.updateLastSeen(sessionId).catch((error) => {
       logger.error(
         { sessionId: payload.sid, error: error.message },
         "Failed to update lastSeen in cache"
@@ -382,13 +383,13 @@ async function resolveAccessSessionFromToken(
     const timeSinceLastUpdate = Date.now() - lastSeenTime;
     
     if (timeSinceLastUpdate > LAST_SEEN_THRESHOLD) {
-      sessionRepository.updateLastSeen(payload.sid).catch((error) => {
+      sessionRepository.updateLastSeen(sessionId).catch((error) => {
         logger.error(
         { sessionId: payload.sid, error: error.message },
         "Failed to update lastSeen"
       );
       });
-      sessionCacheService.updateLastSeen(payload.sid).catch((error) => {
+      sessionCacheService.updateLastSeen(sessionId).catch((error) => {
         logger.error(
         { sessionId: payload.sid, error: error.message },
         "Failed to update lastSeen in cache"
@@ -404,8 +405,8 @@ async function resolveAccessSessionFromToken(
   }
 
   return {
-    userId: payload.sub,
-    sessionId: payload.sid,
+    userId,
+    sessionId,
     roleId: authContext.roleId,
     roleName: authContext.roleName,
     status: authContext.status,
@@ -413,12 +414,12 @@ async function resolveAccessSessionFromToken(
 }
 
 export function createAuthPlugin(dependencies: AuthPluginDependencies) {
-  const { userRepository, scopeService, accessGrantService } = dependencies;
+  const { userRepository, scopeService } = dependencies;
 
   return new Elysia({ name: "auth" })
-    .derive({ as: "scoped" }, async ({ request }) => {
+    .derive({ as: "scoped" }, async ({ request, server }) => {
       const authHeader = request.headers.get("authorization");
-      const ipAddress = getClientIp(request);
+      const ipAddress = getClientIp({ request, server });
 
       if (!authHeader?.startsWith("Bearer ")) {
         logger.warn({ ipAddress }, "Missing or invalid authorization header");
@@ -460,8 +461,6 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
             }
             return user;
           },
-          getAccessGrants: async () =>
-            accessGrantService.getActiveGrants(authContext.userId),
         };
       } catch (error) {
         // Domain auth failures (expired/invalid token, suspended, etc.) — expected.

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -11,22 +12,19 @@ class PotentialDefinition {
     required this.verticalId,
     required this.key,
     required this.label,
-    required this.sortOrder,
   });
 
-  final String id;
-  final String verticalId;
+  final int id;
+  final int verticalId;
   final String key;
   final String label;
-  final int sortOrder;
 
   factory PotentialDefinition.fromJson(Map<String, dynamic> json) {
     return PotentialDefinition(
-      id: json['id'] as String,
-      verticalId: json['verticalId'] as String,
+      id: readCrmId(json['id'], 'id'),
+      verticalId: readCrmId(json['verticalId'], 'verticalId'),
       key: json['key'] as String? ?? '',
       label: json['label'] as String? ?? '',
-      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -39,15 +37,15 @@ class LinkedPotentialProduct {
     required this.code,
   });
 
-  final String productId;
-  final String definitionId;
+  final int productId;
+  final int definitionId;
   final String name;
   final String code;
 
   factory LinkedPotentialProduct.fromJson(Map<String, dynamic> json) {
     return LinkedPotentialProduct(
-      productId: json['productId'] as String,
-      definitionId: json['definitionId'] as String,
+      productId: readCrmId(json['productId'], 'productId'),
+      definitionId: readCrmId(json['definitionId'], 'definitionId'),
       name: json['name'] as String? ?? '',
       code: json['code'] as String? ?? '',
     );
@@ -91,9 +89,9 @@ class PotentialDefinitionsRepository {
     }
   }
 
-  Future<List<PotentialDefinition>> list(String verticalId) async {
+  Future<List<PotentialDefinition>> list(int verticalId) async {
     final response = await _send(
-      _uri('/potential-definitions', {'verticalId': verticalId}),
+      _uri('/potential-definitions', {'verticalId': verticalId.toString()}),
       RepositoryHttpMethod.get,
     );
     _throwIfError(response);
@@ -109,10 +107,9 @@ class PotentialDefinitionsRepository {
   }
 
   Future<PotentialDefinition> create({
-    required String verticalId,
+    required int verticalId,
     required String label,
     String? key,
-    int? sortOrder,
   }) async {
     final response = await _send(
       _uri('/potential-definitions'),
@@ -120,8 +117,8 @@ class PotentialDefinitionsRepository {
       {
         'verticalId': verticalId,
         'label': label,
-        'key': ?key,
-        'sortOrder': ?sortOrder,
+        // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
+        if (key != null) 'key': key,
       },
     );
     _throwIfError(response);
@@ -130,15 +127,14 @@ class PotentialDefinitionsRepository {
     );
   }
 
-  Future<PotentialDefinition> update({
-    required String id,
-    String? label,
-    int? sortOrder,
-  }) async {
+  Future<PotentialDefinition> update({required int id, String? label}) async {
     final response = await _send(
       _uri('/potential-definitions/$id'),
       RepositoryHttpMethod.patch,
-      {'label': ?label, 'sortOrder': ?sortOrder},
+      {
+        // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
+        if (label != null) 'label': label,
+      },
     );
     _throwIfError(response);
     return PotentialDefinition.fromJson(
@@ -146,7 +142,7 @@ class PotentialDefinitionsRepository {
     );
   }
 
-  Future<void> softDelete(String id) async {
+  Future<void> softDelete(int id) async {
     final response = await _send(
       _uri('/potential-definitions/$id'),
       RepositoryHttpMethod.delete,
@@ -154,7 +150,7 @@ class PotentialDefinitionsRepository {
     _throwIfError(response);
   }
 
-  Future<List<LinkedPotentialProduct>> listProducts(String definitionId) async {
+  Future<List<LinkedPotentialProduct>> listProducts(int definitionId) async {
     final response = await _send(
       _uri('/potential-definitions/$definitionId/products'),
       RepositoryHttpMethod.get,
@@ -173,8 +169,8 @@ class PotentialDefinitionsRepository {
   }
 
   Future<void> linkProduct({
-    required String productId,
-    required String definitionId,
+    required int productId,
+    required int definitionId,
   }) async {
     final response = await _send(
       _uri('/products/$productId/potential-definition'),
@@ -184,7 +180,7 @@ class PotentialDefinitionsRepository {
     _throwIfError(response);
   }
 
-  Future<void> unlinkProduct(String productId) async {
+  Future<void> unlinkProduct(int productId) async {
     final response = await _send(
       _uri('/products/$productId/potential-definition'),
       RepositoryHttpMethod.delete,

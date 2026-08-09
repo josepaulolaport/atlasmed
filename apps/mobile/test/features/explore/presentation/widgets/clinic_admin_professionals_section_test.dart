@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 
 void main() {
+  setUp(() {
+    PersonFacilityRoleCatalogCache.replace(const [
+      PersonFacilityRoleCatalogEntry(id: 3, name: 'Decisor'),
+    ]);
+  });
+
+  tearDown(PersonFacilityRoleCatalogCache.resetForTest);
+
   testWidgets('renders administrative professional rows', (tester) async {
     const professionals = [
       AdministrativeProfessional(
-        id: '1',
+        id: 1,
         name: 'Carlos Mendes',
         roleTitle: 'Diretor administrativo',
         email: 'carlos@test.com',
         phone: '11999999999',
         contactType: 'DECISOR',
-        isDecisionMaker: true,
+        roleIds: [3],
       ),
     ];
 
@@ -57,13 +66,13 @@ void main() {
     (tester) async {
       const professionals = [
         AdministrativeProfessional(
-          id: '1',
+          id: 1,
           name: 'Carlos Mendes',
           roleTitle: 'Diretor administrativo',
           email: 'carlos@test.com',
           phone: '11999999999',
           contactType: 'DECISOR',
-          isDecisionMaker: true,
+          roleIds: [3],
         ),
       ];
 

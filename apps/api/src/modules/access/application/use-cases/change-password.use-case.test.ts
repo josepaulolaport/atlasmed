@@ -27,7 +27,7 @@ describe("ChangePasswordUseCase", () => {
   let currentPasswordHash: string;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     get passwordHash() {
       return currentPasswordHash;
     },
@@ -39,7 +39,7 @@ describe("ChangePasswordUseCase", () => {
     mockAuditLog = createMockAuditLogService();
     mockUserRepository = createMockUserRepository({
       findById: mock(async () => mockUser) as any,
-      changePasswordTransaction: mock(async () => ({ user: { id: "user-123" } })) as any,
+      changePasswordTransaction: mock(async () => ({ user: { id: 123 } })) as any,
     });
     mockAuthCache = createMockAuthCache();
     mockSessionCache = createMockSessionCache();
@@ -55,49 +55,49 @@ describe("ChangePasswordUseCase", () => {
 
   it("should change password with valid credentials", async () => {
     const result = await useCase.execute({
-      userId: "user-123",
+      userId: 123,
       currentPassword: "CurrentPassword1!",
       newPassword: "NewPassword1!",
     });
 
     expect(result).toEqual({ success: true });
     expect(mockUserRepository.changePasswordTransaction).toHaveBeenCalled();
-    expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
+    expect(mockAuthCache.invalidate).toHaveBeenCalledWith(123);
     expect(mockAuditLog.logPasswordChange).toHaveBeenCalled();
   });
 
   it("should invalidate other sessions by default when changing password", async () => {
     await useCase.execute({
-      userId: "user-123",
+      userId: 123,
       currentPassword: "CurrentPassword1!",
       newPassword: "NewPassword1!",
-      sessionId: "session-123",
+      sessionId: 1,
     });
 
     expect(mockUserRepository.changePasswordTransaction).toHaveBeenCalledWith(
       expect.objectContaining({
         revokeOtherSessions: true,
-        keepSessionId: "session-123",
+        keepSessionId: 1,
       })
     );
     expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith(
-      "user-123",
-      "session-123"
+      123,
+      1
     );
   });
 
   it("should invalidate other sessions when revokeOtherSessions is true", async () => {
     await useCase.execute({
-      userId: "user-123",
+      userId: 123,
       currentPassword: "CurrentPassword1!",
       newPassword: "NewPassword1!",
       revokeOtherSessions: true,
-      sessionId: "session-123",
+      sessionId: 1,
     });
 
     expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith(
-      "user-123",
-      "session-123"
+      123,
+      1
     );
   });
 
@@ -106,7 +106,7 @@ describe("ChangePasswordUseCase", () => {
 
     await expect(
       useCase.execute({
-        userId: "missing",
+        userId: 999,
         currentPassword: "CurrentPassword1!",
         newPassword: "NewPassword1!",
       })
@@ -116,7 +116,7 @@ describe("ChangePasswordUseCase", () => {
   it("should throw when current password is wrong", async () => {
     await expect(
       useCase.execute({
-        userId: "user-123",
+        userId: 123,
         currentPassword: "WrongPassword1!",
         newPassword: "NewPassword1!",
       })
@@ -126,7 +126,7 @@ describe("ChangePasswordUseCase", () => {
   it("should throw when new password fails validation", async () => {
     await expect(
       useCase.execute({
-        userId: "user-123",
+        userId: 123,
         currentPassword: "CurrentPassword1!",
         newPassword: "short",
       })
@@ -136,7 +136,7 @@ describe("ChangePasswordUseCase", () => {
   it("should throw when new password matches current password", async () => {
     await expect(
       useCase.execute({
-        userId: "user-123",
+        userId: 123,
         currentPassword: "CurrentPassword1!",
         newPassword: "CurrentPassword1!",
       })

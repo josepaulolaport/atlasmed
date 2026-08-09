@@ -3,7 +3,7 @@ import type { UserStatus } from "@atlasmed/database";
 import type { RoleContract } from "./role.contract";
 
 export interface UserContract {
-  id: string;
+  id: number;
 
   email?: string;
 

@@ -6,14 +6,13 @@ export default defineConfig({
   schema: [
     "./src/schema/public/index.ts",
     "./src/schema/audit/index.ts",
-    "./src/schema/registry/index.ts",
-    "./src/schema/ingestion/index.ts",
+    "./src/schema/ops/index.ts",
   ],
   out: "./drizzle",
   dbCredentials: {
     url: environment.DATABASE_URL,
   },
-  schemaFilter: ["public", "audit", "registry", "ingestion"],
+  schemaFilter: ["public", "audit", "ops"],
   // Keep PostGIS system tables out of push/generate diffs.
   // extensionsFilters alone is unreliable on drizzle-kit 0.31.x — also negate via tablesFilter.
   extensionsFilters: ["postgis"],

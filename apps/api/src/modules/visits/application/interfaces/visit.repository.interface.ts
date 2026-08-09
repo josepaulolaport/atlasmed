@@ -1,18 +1,18 @@
 export interface VisitRecord {
-  id: string;
-  userId: string;
-  facilityId: string;
+  id: number;
+  userId: number;
+  facilityId: number;
   visitedAt: Date;
   createdAt: Date;
 }
 
 export interface VisitRepository {
-  create(input: { userId: string; facilityId: string; visitedAt: Date }): Promise<VisitRecord>;
+  create(input: { userId: number; facilityId: number; visitedAt: Date }): Promise<VisitRecord>;
   countDistinctFacilitiesForUserInPeriod(input: {
-    userId: string;
+    userId: number;
     start: Date;
     end: Date;
-    facilityIds?: string[];
+    facilityIds?: number[];
   }): Promise<number>;
-  countFacilities(input: { facilityIds?: string[] }): Promise<number>;
+  countFacilities(input: { facilityIds?: number[] }): Promise<number>;
 }

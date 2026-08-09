@@ -5,7 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// "Produtos em uso" — revenue, trend and share-of-clinic per product.
-/// Mocked in V1; backend aggregation from `orders` designed in Phase 2.
+/// Empty until backend aggregation from `orders` is wired (Phase 2).
 class ClinicProductsSection extends StatelessWidget {
   const ClinicProductsSection({super.key, required this.products});
 

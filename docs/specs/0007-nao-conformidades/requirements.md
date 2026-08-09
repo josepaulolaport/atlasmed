@@ -8,7 +8,7 @@
 - [Spec 0005 — Mobile Establishment Detail](../0005-establishment-detail-mobile/requirements.md) (F-015 Phase 2)
 - [api-mobile integration](../../ai/integration-tasks/api-mobile.md)
 
-> **Scope boundary:** This feature is **user-submitted only**. It does not read, write, extend, or share a review queue with CNES / `ingestion.cnes_suggestions` / `/registry-suggestions`. Registry ingestion remains a separate product surface.
+> **Scope boundary:** This feature is **user-submitted only**. It does not read, write, extend, or share a review queue with any CNES registry warehouse (removed). Do not couple Não Conformidades to a reintroduced registry-suggestion surface without a new ADR.
 
 ## User Story
 
@@ -25,13 +25,13 @@ As a reviewer (MANAGER in scope, or ADMIN), I want a queue of pending Não Confo
 | Ops queue: list / detail / accept / reject | Web admin UI (mobile first; web can reuse API later) |
 | “My suggestions” on the establishment (own submissions, view-only) | Document / cadastro approval queue |
 | Geocode-on-accept for address suggestions | Live geocode preview in the submit sheet |
-| Supersede: auto-reject older pending on resubmit | Any coupling to CNES registry suggestions |
+| Supersede: auto-reject older pending on resubmit | Any coupling to a CNES registry-suggestion queue (removed) |
 
 Mobile Phase 1 mock UX already exists under `apps/mobile/lib/features/nao_conformidades/`. This spec is the backend + wire-up contract that replaces that mock.
 
 ## Locked decisions
 
-1. **User-only store in `public`.** Persist in `public.field_suggestions`. No `cnes_run_id`, no ingestion schema, no shared approve path with registry-ingestion.
+1. **User-only store in `public`.** Persist in `public.field_suggestions`. No `cnes_run_id`, no `ingestion`/`registry` schema coupling, no shared approve path with a CNES warehouse.
 2. **Clinic-only v1.** Schema may reserve `professional_id` for later; APIs and mobile do not accept doctor targets in v1.
 3. **No direct PATCH of CRM fields from field pencils.** Pencils always create a pending suggestion. Accept applies the change.
 4. **Administrative fields + deactivation.** v1 covers Dados administrativos edits (name, contact, address, hours, responsible, tax identifiers as exposed by pencils, etc.) and kind `DEACTIVATION`. **`commercialStatus` is out of scope** for this pipeline.
@@ -104,7 +104,7 @@ Exact CASL subject naming is in [design.md](./design.md). Backend remains source
 
 ## Non-goals
 
-- Any persistence or API shared with CNES registry suggestions
+- Any persistence or API shared with a CNES registry-suggestion queue (removed)
 - `commercialStatus` / Sinais editing via this pipeline
 - Auto-accept without an explicit approve action
 - Offline sync queue for suggestions (submit may be online-only in v1; form should not lose typed values on retry)

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -48,7 +49,7 @@ class FacilityPhotosResponse {
       photos: data
           .map(
             (item) => (
-              id: item['id'] as String,
+              id: readCrmId(item['id'], 'id'),
               url: item['url'] as String,
               blurhash: item['blurhash'] as String?,
             ),
@@ -59,7 +60,7 @@ class FacilityPhotosResponse {
 
   final String? imageUrl;
   final String? imageBlurhash;
-  final List<({String id, String url, String? blurhash})> photos;
+  final List<({int id, String url, String? blurhash})> photos;
 
   PhotoGallerySummary toSummary() {
     final urls = photos.map((p) => p.url).toList(growable: false);
@@ -89,7 +90,7 @@ class FacilityPhotosRepository extends Repository<FacilityPhotosResponse>
         name: 'FacilityPhotosRepository',
       );
 
-  final String facilityId;
+  final int facilityId;
   final RepositoryHttpClient? _client;
 
   @override
@@ -108,7 +109,7 @@ class FacilityPhotosRepository extends Repository<FacilityPhotosResponse>
   }
 
   /// Multipart upload (`photo` field) — mirrors profile avatar upload.
-  Future<({String id, String url})> upload(FacilityPhotoFile file) async {
+  Future<({int id, String url})> upload(FacilityPhotoFile file) async {
     final token = SessionEnvironment.instance.currentValue?.token;
     if (token == null || token.isEmpty) {
       throw const FacilityPhotosException(
@@ -139,7 +140,7 @@ class FacilityPhotosRepository extends Repository<FacilityPhotosResponse>
       throw const FacilityPhotosException('A resposta do servidor é inválida.');
     }
 
-    final id = decoded['id'] as String?;
+    final id = readCrmIdOrNull(decoded['id'], 'id');
     final url = decoded['url'] as String?;
     if (id == null || url == null) {
       throw const FacilityPhotosException('A resposta do servidor é inválida.');

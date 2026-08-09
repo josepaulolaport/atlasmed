@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/widgets/suggestion_change_summary.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Ops queue: field-change suggestions from reps/managers + accepted history.
 class NaoConformidadesListScreen extends ConsumerStatefulWidget {
@@ -177,9 +177,9 @@ class _NaoConformidadesListScreenState
                               if (i > 0) const SizedBox(height: 10),
                               _SuggestionListCard(
                                 suggestion: item,
-                                onTap: () => context.push(
-                                  '/non-conformities/${item.id}',
-                                ),
+                                onTap: () => NonConformityDetailRoute(
+                                  id: item.id,
+                                ).push(context),
                               ),
                             ],
                           ],

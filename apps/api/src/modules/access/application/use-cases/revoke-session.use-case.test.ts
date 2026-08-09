@@ -17,8 +17,8 @@ describe("RevokeSessionUseCase", () => {
   let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
 
   const targetSession = {
-    id: "session-target",
-    userId: "user-123",
+    id: 2,
+    userId: 123,
     refreshTokenHash: "hash",
     ipAddress: "192.168.1.1",
     userAgent: "Mozilla/5.0 (iPhone)",
@@ -32,8 +32,8 @@ describe("RevokeSessionUseCase", () => {
   };
 
   const currentSession = {
-    id: "session-current",
-    userId: "user-123",
+    id: 1,
+    userId: 123,
     refreshTokenHash: "hash-current",
     ipAddress: "192.168.1.2",
     userAgent: "Mozilla/5.0 (Macintosh)",
@@ -49,12 +49,12 @@ describe("RevokeSessionUseCase", () => {
   beforeEach(() => {
     mockAuditLog = createMockAuditLogService();
     mockSessionRepository = createMockSessionRepository({
-      findById: mock(async (id: string) => {
-        if (id === "session-target") return targetSession;
-        if (id === "session-current") return currentSession;
+      findById: mock(async (id: number) => {
+        if (id === 2) return targetSession;
+        if (id === 1) return currentSession;
         return null;
       }) as any,
-      revokeAllActiveForDevice: mock(async () => ["session-target", "session-target-2"]),
+      revokeAllActiveForDevice: mock(async () => [2, 3]),
     });
 
     mockSessionCache = createMockSessionCache({
@@ -70,24 +70,24 @@ describe("RevokeSessionUseCase", () => {
 
   it("should audit each revoked session on success", async () => {
     const result = await useCase.execute({
-      sessionId: "session-target",
-      userId: "user-123",
-      currentSessionId: "session-current",
+      sessionId: 2,
+      userId: 123,
+      currentSessionId: 1,
     });
 
     expect(result).toEqual({ success: true });
     expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledTimes(2);
     expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledWith({
-      userId: "user-123",
-      sessionId: "session-target",
+      userId: 123,
+      sessionId: 2,
       reason: "Revoked by user",
-      revokedByUserId: "user-123",
+      revokedByUserId: 123,
     });
     expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledWith({
-      userId: "user-123",
-      sessionId: "session-target-2",
+      userId: 123,
+      sessionId: 3,
       reason: "Revoked by user",
-      revokedByUserId: "user-123",
+      revokedByUserId: 123,
     });
   });
 });

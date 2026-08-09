@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Suggestion sheet to propose PF vs PJ for a facility.
+/// Suggestion sheet to propose CPF vs CNPJ for a facility.
 ///
 /// Phase 1: confirmation snackbar only. Phase 2 wires to the field-suggestion
-/// review pipeline (`FACILITY_FIELD_UPDATE`).
+/// review pipeline (`FACILITY_FIELD_UPDATE`) with fieldKey `legalDocumentType`.
 Future<void> showTaxIdTypeSuggestionSheet(
   BuildContext context, {
-  required String? currentTaxIdType,
+  required String? currentLegalDocumentType,
 }) async {
   await Future<void>.delayed(Duration.zero);
   if (!context.mounted) return;
@@ -22,8 +22,10 @@ Future<void> showTaxIdTypeSuggestionSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _TaxIdTypeSuggestionSheetBody(
-      currentTaxIdType: parseFacilityTaxIdType(currentTaxIdType),
+    builder: (_) => _LegalDocumentTypeSuggestionSheetBody(
+      currentLegalDocumentType: parseFacilityLegalDocumentType(
+        currentLegalDocumentType,
+      ),
     ),
   );
 
@@ -37,19 +39,21 @@ Future<void> showTaxIdTypeSuggestionSheet(
   }
 }
 
-class _TaxIdTypeSuggestionSheetBody extends StatefulWidget {
-  const _TaxIdTypeSuggestionSheetBody({required this.currentTaxIdType});
+class _LegalDocumentTypeSuggestionSheetBody extends StatefulWidget {
+  const _LegalDocumentTypeSuggestionSheetBody({
+    required this.currentLegalDocumentType,
+  });
 
-  final FacilityTaxIdType? currentTaxIdType;
+  final FacilityLegalDocumentType? currentLegalDocumentType;
 
   @override
-  State<_TaxIdTypeSuggestionSheetBody> createState() =>
-      _TaxIdTypeSuggestionSheetBodyState();
+  State<_LegalDocumentTypeSuggestionSheetBody> createState() =>
+      _LegalDocumentTypeSuggestionSheetBodyState();
 }
 
-class _TaxIdTypeSuggestionSheetBodyState
-    extends State<_TaxIdTypeSuggestionSheetBody> {
-  late FacilityTaxIdType? _selected = widget.currentTaxIdType;
+class _LegalDocumentTypeSuggestionSheetBodyState
+    extends State<_LegalDocumentTypeSuggestionSheetBody> {
+  late FacilityLegalDocumentType? _selected = widget.currentLegalDocumentType;
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +85,7 @@ class _TaxIdTypeSuggestionSheetBodyState
           ),
           const SizedBox(height: 6),
           const Text(
-            'Pessoa Física (PF) ou Pessoa Jurídica (PJ). A alteração '
+            'Pessoa Física (CPF) ou Pessoa Jurídica (CNPJ). A alteração '
             'passa por revisão administrativa antes de valer no cadastro.',
             style: TextStyle(fontSize: 12.5, color: AppColors.gray500),
           ),
@@ -90,19 +94,22 @@ class _TaxIdTypeSuggestionSheetBodyState
             children: [
               Expanded(
                 child: _TypeChip(
-                  label: 'Pessoa Física (PF)',
+                  label: 'Pessoa Física (CPF)',
                   icon: Icons.person_rounded,
-                  selected: _selected == FacilityTaxIdType.pf,
-                  onTap: () => setState(() => _selected = FacilityTaxIdType.pf),
+                  selected: _selected == FacilityLegalDocumentType.cpf,
+                  onTap: () =>
+                      setState(() => _selected = FacilityLegalDocumentType.cpf),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _TypeChip(
-                  label: 'Pessoa Jurídica (PJ)',
+                  label: 'Pessoa Jurídica (CNPJ)',
                   icon: Icons.apartment_rounded,
-                  selected: _selected == FacilityTaxIdType.pj,
-                  onTap: () => setState(() => _selected = FacilityTaxIdType.pj),
+                  selected: _selected == FacilityLegalDocumentType.cnpj,
+                  onTap: () => setState(
+                    () => _selected = FacilityLegalDocumentType.cnpj,
+                  ),
                 ),
               ),
             ],

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, a Flutter mobile app, and shared packages for access control, database, config, observability, and UI.
+Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, a Flutter mobile app, Temporal workers, and shared packages for access control, database, config, observability, Mapbox, and facility insights.
 
 ## Backend Runtime
 
@@ -12,19 +12,20 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, 
 - Database: PostgreSQL + PostGIS through Drizzle ORM.
 - Cache/ephemeral state: Redis.
 - Jobs: BullMQ.
-- Background workflows: Temporal.
-- Logging/observability: Pino, OpenTelemetry utilities, Prometheus metrics.
+- Background workflows: Temporal (`apps/workers/temporal`, package `@atlasmed/temporal-worker`, default queue `atlasmed-workflows`).
+- Logging/observability: structured logger, OpenTelemetry utilities, Prometheus metrics.
+- Search: Meilisearch (facility and persons indexes; rebuild via search-sync workflows).
 
 ## Backend Module Boundaries
 
 - `access`: identity, users, roles, sessions, invitations, verification, 2FA, permissions, scopes.
-- `facility`: facilities, professionals, facility-professional associations, conformity requirements and records.
-- `territory`: territory types, territory hierarchy, spatial assignment, approval workflows.
-- `calendar`: personal blocks, interaction scheduling, recurrence, per-occurrence overrides, availability, and conflict detection.
-- `interactions`: per-occurrence commercial lifecycle, linked orders, compatibility visits, transition history, and overdue processing.
+- `facility`: facilities, consultant assignments, cadastro submissions, conformity; HTTP adapters for person–facility projections.
+- `person`: persons, healthcare/admin facility projections, notes, user–person relationships, Explorar list/specialties.
+- `territory`: territory types, hierarchy, spatial assignment (manager approve flow removed).
 - `catalog`: products.
-- `ingestion`: ingestion runs, diffs, suggestions.
-- `registry-ingestion`: external CNES registry ingestion and suggestion workflows.
+- `orders`: orders linked to facilities (and optionally `person_id`).
+- `field-suggestions`: user-submitted Não Conformidades (`field_suggestions`).
+- `dashboard`, `maps`, `potential`, `search-sync`, `sessions`, `user`, `visits`.
 
 ## Web Architecture
 
@@ -33,26 +34,33 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, 
 - API client modules under `apps/web/lib/api`.
 - Role/permission helpers under `apps/web/lib/permissions.ts`.
 - Reusable UI components under `apps/web/components/ui`.
+- UI language: pt-BR.
+
+## Mobile Architecture
+
+- Flutter app under `apps/mobile` (Explore, facility detail / person roster, orders-related surfaces).
+- ADR 0002 (React Native/Expo) remains **Proposed**; Flutter is the implemented client.
 
 ## Data Architecture
 
 ### Schemas
 
-The PostgreSQL database uses two named schemas:
+PostgreSQL named schemas in use:
 
-- `public` — CRM and operational data (users, sessions, facilities, territories, catalog, ingestion).
-- `registry` — CNES registry warehouse (raw external registry records).
+- `public` — CRM and operational data (users, sessions, facilities, persons / person_facilities, territories, catalog, orders, field suggestions, cadastro, CNES lookup catalogs, etc.).
+- `audit` — `audit_logs` compliance trail.
+
+There is **no** `registry` or `ingestion` schema. CNES FTP/archive warehouse ingest and registry READ/confirm were removed. Public CNES lookup tables and `facilities.cnes_code` remain. Do not reintroduce a registry warehouse without a new ADR and product decision.
 
 ### Geometry
 
-PostGIS is enabled. All geographic data uses PostGIS geometry columns — no separate lat/lng float fields:
+PostGIS is enabled. Geographic data uses PostGIS geometry columns:
 
 - `facilities.location` — `geometry(Point, 4326)`.
 - `territories.boundary` — `geometry(MultiPolygon, 4326)`.
 - `territories.centroid` — `geometry(Point, 4326)`.
-- `registry_facilities.location` — `geometry(Point, 4326)`.
 
-Spatial queries use raw `sql` tagged templates via Drizzle's `db.execute()`.
+Spatial queries use raw `sql` tagged templates via Drizzle's `db.execute()` where needed.
 
 ### ORM
 
@@ -62,20 +70,9 @@ Drizzle ORM with Drizzle Kit for migrations. Schema files live in `packages/data
 
 Facility cadastro uses versioned **submissions** with logical **documents** (catalogued in `conformity_requirements`) and ordered **file assets** in private object storage. Clients upload via signed URLs (PUT / multipart); Temporal runs `cadastroFileUploadedWorkflow` for checksum/MIME validation. Ops review is manual per logical document. See `docs/specs/0004-cadastro-submissions/design.md`.
 
-## Calendar and Interactions
-
-The delivered Calendar/Interactions domain supports personal blocks and in-person or remote facility contacts. It includes timezone-aware recurrence, last-day clamping, per-occurrence overrides and interaction state, overlap checks, optimistic versions, and idempotent commands.
-
-Representatives manage their own agenda and interaction lifecycle. Managers have scoped read-only visibility into managed representatives, with private block titles redacted. The Flutter app provides the agenda, editor, and attendance workspace; the web app does not expose this domain.
-
-A BullMQ job persists overdue scheduled interactions as `NOT_COMPLETED`. Completed interactions create one compatibility `visits` ledger row for existing consumers. See [Calendar and Commercial Interactions](features/calendar-interactions.md).
-
-Per owner instruction, migrations were intentionally not generated in the delivery branch. Migration generation, SQL/metadata review, the pending overlap exclusion, `db:migrate`, and `drizzle-kit check` are required before merge or deployment.
-
 ## Current Gaps
 
 - No explicit multi-tenant organization model.
-- Calendar/Interactions still depends on `visits` as a compatibility ledger for completed interactions and existing metrics.
-- Calendar overlap protection is serialized by owner in the API, but the database exclusion constraint remains a required migration gate.
+- Visit/activity domain is early / incomplete relative to product vision.
 - No AI assistant domain yet.
-- No production mobile architecture decision yet (Flutter app present; React Native/Expo preferred per ADR 0002).
+- Mobile stack migration (Flutter → React Native/Expo) not decided for production (ADR 0002 Proposed).

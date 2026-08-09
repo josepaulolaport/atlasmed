@@ -9,19 +9,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// `null` = not overridden yet → [clinicDetailActiveLinhaIdProvider] falls back
 /// to entry / Explorar / Dashboard / first shared option.
 final clinicDetailSelectedLinhaIdProvider = StateProvider.autoDispose
-    .family<String?, String>((ref, facilityId) => null);
+    .family<int?, int>((ref, facilityId) => null);
 
 /// Vertical id from navigation (e.g. Desempenho bucket `?verticalId=`).
 /// Set once when opening clinic detail; cleared with autoDispose.
 final clinicDetailEntryVerticalIdProvider = StateProvider.autoDispose
-    .family<String?, String>((ref, facilityId) => null);
+    .family<int?, int>((ref, facilityId) => null);
 
 /// Clinic vertical profile ids learned after first detail/zip load.
 ///
 /// Used to intersect with user options without circular dependency on the
 /// scoped repository (bootstrap uses user options alone until this is set).
 final clinicDetailKnownProfileIdsProvider = StateProvider.autoDispose
-    .family<Set<String>, String>((ref, facilityId) => const {});
+    .family<Set<int>, int>((ref, facilityId) => const {});
 
 /// User ∩ clinic verticals as switcher options.
 List<BusinessVertical> clinicDetailLinhaOptions({
@@ -29,7 +29,7 @@ List<BusinessVertical> clinicDetailLinhaOptions({
   required List<FacilityVerticalProfileDTO> clinicProfiles,
 }) {
   final clinicIds = clinicProfiles
-      .where((p) => p.verticalId.isNotEmpty)
+      .where((p) => p.verticalId > 0)
       .map((p) => p.verticalId)
       .toSet();
   if (clinicIds.isEmpty) return const [];
@@ -46,17 +46,17 @@ bool shouldShowClinicDetailLinhaSwitcher(List<BusinessVertical> options) =>
 ///
 /// Priority: clinic override → route/entry hint → Explorar → Dashboard →
 /// first shared option.
-String? resolveClinicDetailActiveLinhaId({
+int? resolveClinicDetailActiveLinhaId({
   required List<BusinessVertical> options,
-  required String? clinicOverride,
-  required String? entryVerticalId,
-  required String? exploreSelected,
-  required String? dashboardSelected,
-  required String? effectiveFallback,
+  required int? clinicOverride,
+  int? entryVerticalId,
+  required int? exploreSelected,
+  required int? dashboardSelected,
+  required int? effectiveFallback,
 }) {
   if (options.isEmpty) return effectiveFallback;
   if (options.length == 1) return options.first.id;
-  bool inOptions(String? id) => id != null && options.any((v) => v.id == id);
+  bool inOptions(int? id) => id != null && options.any((v) => v.id == id);
   if (inOptions(clinicOverride)) return clinicOverride;
   if (inOptions(entryVerticalId)) return entryVerticalId;
   if (inOptions(exploreSelected)) return exploreSelected;
@@ -66,7 +66,7 @@ String? resolveClinicDetailActiveLinhaId({
 
 /// Active Linha for clinic detail sections (never "Todas" when 2+ shared).
 final clinicDetailActiveLinhaIdProvider = Provider.autoDispose
-    .family<String?, String>((ref, facilityId) {
+    .family<int?, int>((ref, facilityId) {
       final userOptions =
           ref.watch(currentUserFacilityVerticalOptionsProvider).valueOrNull ??
           const <BusinessVertical>[];
@@ -109,7 +109,7 @@ final clinicDetailActiveLinhaIdProvider = Provider.autoDispose
 /// True when active clinic Linha is Ortopedia (payers apply).
 bool isClinicLinhaOrtopedia({
   required List<FacilityVerticalProfileDTO> profiles,
-  required String? activeVerticalId,
+  int? activeVerticalId,
 }) {
   if (activeVerticalId == null) {
     // Single-profile / unscored: any ortho profile counts.

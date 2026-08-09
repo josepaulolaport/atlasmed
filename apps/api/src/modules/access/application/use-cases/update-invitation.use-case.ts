@@ -27,12 +27,12 @@ export class UpdateInvitationUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    inviteId: string;
-    actorUserId: string;
+    inviteId: number;
+    actorUserId: number;
     actorRole: Role;
     email?: string;
     phoneNumber?: string | null;
-    roleId?: string;
+    roleId?: number;
     firstName?: string;
     lastName?: string;
     birthDate?: string;
@@ -94,8 +94,6 @@ export class UpdateInvitationUseCase {
         inviterUserId: params.actorUserId,
         inviterRoleName: params.actorRole,
         excludeInvitationId: params.inviteId,
-        managerTerritoryId: assignments.managerTerritoryId,
-        repTerritoryId: assignments.repTerritoryId,
         verticalAssignments: assignments.verticalAssignments,
       });
     }
@@ -113,8 +111,6 @@ export class UpdateInvitationUseCase {
           : undefined,
       ...(assignments
         ? {
-            managerTerritoryId: assignments.managerTerritoryId ?? null,
-            repTerritoryId: assignments.repTerritoryId ?? null,
             verticalAssignments: assignments.verticalAssignments.map((v) => ({
               verticalId: v.verticalId,
               territoryIds: v.territoryIds,

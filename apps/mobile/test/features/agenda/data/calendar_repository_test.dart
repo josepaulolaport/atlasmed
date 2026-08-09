@@ -67,13 +67,13 @@ void main() {
       await repository.listCalendar(
         from: DateTime.parse('2026-08-03T00:00:00-03:00'),
         to: DateTime.parse('2026-08-10T00:00:00-03:00'),
-        ownerUserId: 'user-2',
+        ownerUserId: 2,
       );
 
       expect(client.requests.single.method, RepositoryHttpMethod.get);
       expect(
         client.requests.single.url.toString(),
-        'https://api.atlasmed.test/api/v1/calendar?from=2026-08-03T03%3A00%3A00.000Z&to=2026-08-10T03%3A00%3A00.000Z&ownerUserId=user-2',
+        'https://api.atlasmed.test/api/v1/calendar?from=2026-08-03T03%3A00%3A00.000Z&to=2026-08-10T03%3A00%3A00.000Z&ownerUserId=2',
       );
     },
   );
@@ -130,8 +130,8 @@ void main() {
           'message': 'Horário indisponível.',
           'conflicts': [
             {
-              'candidateId': 'candidate-1',
-              'existingId': 'calendar-1',
+              'candidateId': 10,
+              'existingId': 1,
               'candidateStartsAt': '2026-08-03T12:00:00.000Z',
               'candidateEndsAt': '2026-08-03T13:00:00.000Z',
               'existingStartsAt': '2026-08-03T12:30:00.000Z',
@@ -154,7 +154,7 @@ void main() {
         'error': {
           'code': 'CALENDAR_VERSION_CONFLICT',
           'message': 'Versão desatualizada.',
-          'calendarId': 'calendar-1',
+          'calendarId': 1,
           'expectedVersion': 4,
         },
       }),
@@ -162,7 +162,7 @@ void main() {
 
     expect(error, isA<CalendarVersionConflictException>());
     final versionError = error as CalendarVersionConflictException;
-    expect(versionError.calendarId, 'calendar-1');
+    expect(versionError.calendarId, 1);
     expect(versionError.expectedVersion, 4);
   });
 
@@ -195,7 +195,7 @@ void main() {
     'creates calendar with idempotency header and exact API contract',
     () async {
       final client = _RecordingClient([
-        _response(200, {'id': 'calendar-1'}),
+        _response(200, {'id': 1}),
       ]);
       final repository = CalendarRepository(
         baseUrl: 'https://api.atlasmed.test',
@@ -207,7 +207,7 @@ void main() {
         command: const CalendarCreateCommand(
           kind: CalendarEventKind.interaction,
           title: 'Visita',
-          facilityId: 'facility-1',
+          facilityId: 1,
           modality: CalendarModality.inPerson,
           startsAt: '2026-08-03T09:00:00-03:00',
           timeZone: 'America/Sao_Paulo',
@@ -224,7 +224,7 @@ void main() {
       expect(request.body, {
         'kind': 'INTERACTION',
         'title': 'Visita',
-        'facilityId': 'facility-1',
+        'facilityId': 1,
         'modality': 'IN_PERSON',
         'startsAt': '2026-08-03T09:00:00-03:00',
         'timeZone': 'America/Sao_Paulo',
@@ -239,9 +239,9 @@ void main() {
     'updates series, occurrence and cancellation with expected versions',
     () async {
       final client = _RecordingClient([
-        _response(200, {'id': 'calendar-1'}),
-        _response(200, {'id': 'override-1'}),
-        _response(200, {'id': 'calendar-1', 'cancelled': true}),
+        _response(200, {'id': 1}),
+        _response(200, {'id': 2}),
+        _response(200, {'id': 1, 'cancelled': true}),
       ]);
       final repository = CalendarRepository(
         baseUrl: 'https://api.atlasmed.test',
@@ -249,7 +249,7 @@ void main() {
       );
 
       await repository.updateCalendar(
-        calendarId: 'calendar-1',
+        calendarId: 1,
         idempotencyKey: 'update-series',
         command: const CalendarUpdateCommand(
           expectedVersion: 3,
@@ -257,7 +257,7 @@ void main() {
         ),
       );
       await repository.updateCalendarOccurrence(
-        calendarId: 'calendar-1',
+        calendarId: 1,
         recurrenceKey: '2026-08-03T09:00',
         idempotencyKey: 'update-occurrence',
         command: const CalendarOccurrenceUpdateCommand(
@@ -267,7 +267,7 @@ void main() {
         ),
       );
       await repository.cancelCalendar(
-        calendarId: 'calendar-1',
+        calendarId: 1,
         idempotencyKey: 'cancel-series',
         command: const CalendarCancellationCommand(
           expectedVersion: 3,
@@ -279,7 +279,7 @@ void main() {
       expect(client.requests[0].body?['expectedVersion'], 3);
       expect(
         client.requests[1].url.path,
-        '/api/v1/calendar/calendar-1/occurrences/2026-08-03T09%3A00',
+        '/api/v1/calendar/1/occurrences/2026-08-03T09%3A00',
       );
       expect(client.requests[1].body?['expectedVersion'], 0);
       expect(client.requests[2].method, RepositoryHttpMethod.delete);
@@ -294,17 +294,14 @@ void main() {
       client: client,
     );
 
-    final interaction = await repository.getInteraction('interaction-1');
+    final interaction = await repository.getInteraction(1);
 
     expect(client.requests, hasLength(1));
     expect(client.requests.single.method, RepositoryHttpMethod.get);
-    expect(
-      client.requests.single.url.path,
-      '/api/v1/interactions/interaction-1',
-    );
+    expect(client.requests.single.url.path, '/api/v1/interactions/1');
     expect(interaction.status, InteractionStatus.scheduled);
     expect(interaction.facility.displayName, 'Clínica Central');
-    expect(interaction.linkedOrders.single.id, 'order-1');
+    expect(interaction.linkedOrders.single.id, 1);
   });
 
   test(
@@ -319,14 +316,14 @@ void main() {
       );
 
       final interaction = await repository.startInteraction(
-        'interaction-1',
+        1,
         expectedVersion: 3,
         idempotencyKey: 'start-interaction-1-3',
       );
 
       final request = client.requests.single;
       expect(request.method, RepositoryHttpMethod.post);
-      expect(request.url.path, '/api/v1/interactions/interaction-1/start');
+      expect(request.url.path, '/api/v1/interactions/1/start');
       expect(request.headers['Idempotency-Key'], 'start-interaction-1-3');
       expect(request.body, {'expectedVersion': 3});
       expect(interaction.status, InteractionStatus.inProgress);
@@ -346,7 +343,7 @@ void main() {
       );
 
       await repository.completeInteraction(
-        'interaction-1',
+        1,
         expectedVersion: 4,
         idempotencyKey: 'complete-interaction-1-4',
         correctionReason: 'Atendimento confirmado posteriormente.',
@@ -375,7 +372,7 @@ void main() {
       );
       expect(
         () => transitionRepository.startInteraction(
-          'interaction-1',
+          1,
           expectedVersion: 1,
           idempotencyKey: 'stable-key',
         ),
@@ -397,7 +394,7 @@ void main() {
       );
       expect(
         () => versionRepository.completeInteraction(
-          'interaction-1',
+          1,
           expectedVersion: 2,
           idempotencyKey: 'stable-key',
         ),
@@ -411,8 +408,8 @@ Map<String, dynamic> _interactionJson({
   String status = 'SCHEDULED',
   int version = 3,
 }) => {
-  'id': 'interaction-1',
-  'calendarId': 'calendar-1',
+  'id': 1,
+  'calendarId': 1,
   'recurrenceKey': '2026-08-03T09:00',
   'modality': 'IN_PERSON',
   'status': status,
@@ -423,7 +420,7 @@ Map<String, dynamic> _interactionJson({
   'correctionReason': null,
   'visitId': null,
   'version': version,
-  'calendar': {'id': 'calendar-1', 'title': 'Visita comercial'},
+  'calendar': {'id': 1, 'title': 'Visita comercial'},
   'occurrence': {
     'recurrenceKey': '2026-08-03T09:00',
     'startsAt': '2026-08-03T12:00:00.000Z',
@@ -431,20 +428,20 @@ Map<String, dynamic> _interactionJson({
     'timeZone': 'America/Sao_Paulo',
   },
   'facility': {
-    'id': 'facility-1',
+    'id': 1,
     'displayName': 'Clínica Central',
     'city': 'São Paulo',
     'state': 'SP',
   },
   'agent': {
-    'id': 'agent-1',
+    'id': 1,
     'firstName': 'Ana',
     'lastName': 'Souza',
     'displayName': 'Ana Souza',
   },
   'linkedOrders': [
     {
-      'id': 'order-1',
+      'id': 1,
       'status': 'PENDING',
       'type': 'SALE',
       'orderedAt': '2026-08-03T12:30:00.000Z',

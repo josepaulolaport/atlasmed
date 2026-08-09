@@ -9,8 +9,8 @@ describe("GetUserSessionsUseCase", () => {
 
   const sessions = [
     {
-      id: "session-current",
-      userId: "user-123",
+      id: 1,
+      userId: 123,
       refreshTokenHash: "hash-1",
       ipAddress: "192.168.1.1",
       userAgent: "Mozilla/5.0 (Macintosh)",
@@ -26,8 +26,8 @@ describe("GetUserSessionsUseCase", () => {
       revokedReason: null,
     },
     {
-      id: "session-other",
-      userId: "user-123",
+      id: 2,
+      userId: 123,
       refreshTokenHash: "hash-2",
       ipAddress: "192.168.1.2",
       userAgent: "Mozilla/5.0 (Macintosh)",
@@ -43,8 +43,8 @@ describe("GetUserSessionsUseCase", () => {
       revokedReason: null,
     },
     {
-      id: "session-phone",
-      userId: "user-123",
+      id: 3,
+      userId: 123,
       refreshTokenHash: "hash-3",
       ipAddress: "192.168.1.3",
       userAgent: "Mozilla/5.0 (iPhone)",
@@ -64,7 +64,7 @@ describe("GetUserSessionsUseCase", () => {
   beforeEach(() => {
     mockSessionRepository = createMockSessionRepository({
       findByUserId: mock(async () => sessions) as any,
-      findById: mock(async (id: string) =>
+      findById: mock(async (id: number) =>
         sessions.find((session) => session.id === id) ?? null
       ) as any,
     });
@@ -76,23 +76,23 @@ describe("GetUserSessionsUseCase", () => {
 
   it("should return sessions with device metadata and current flag", async () => {
     const result = await useCase.execute({
-      userId: "user-123",
-      currentSessionId: "session-current",
+      userId: 123,
+      currentSessionId: 1,
     });
 
     expect(result.sessions).toHaveLength(3);
     expect(result.sessions[0]).toMatchObject({
-      id: "session-current",
+      id: 1,
       deviceType: "desktop",
       browserName: "Chrome",
       isCurrent: true,
     });
     expect(result.sessions[1]).toMatchObject({
-      id: "session-other",
+      id: 2,
       isCurrent: true,
     });
     expect(result.sessions[2]).toMatchObject({
-      id: "session-phone",
+      id: 3,
       isCurrent: false,
     });
   });
@@ -101,11 +101,11 @@ describe("GetUserSessionsUseCase", () => {
     mockSessionRepository.findById = mock(async () => null);
 
     const result = await useCase.execute({
-      userId: "user-123",
-      currentSessionId: "session-phone",
+      userId: 123,
+      currentSessionId: 3,
     });
 
-    expect(result.sessions.find((s) => s.id === "session-phone")?.isCurrent).toBe(true);
-    expect(result.sessions.find((s) => s.id === "session-current")?.isCurrent).toBe(false);
+    expect(result.sessions.find((s) => s.id === 3)?.isCurrent).toBe(true);
+    expect(result.sessions.find((s) => s.id === 1)?.isCurrent).toBe(false);
   });
 });

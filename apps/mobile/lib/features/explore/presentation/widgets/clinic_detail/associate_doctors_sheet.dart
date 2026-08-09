@@ -2,18 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_doctor_profile_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Search + multi-select doctors to associate with a facility.
 /// Returns the selected doctors (already-associated + newly picked).
 Future<List<ProfessionalRoster>?> showAssociateDoctorsSheet(
   BuildContext context, {
-  required Set<String> alreadyAssociatedIds,
+  required Set<int> alreadyAssociatedIds,
   required List<ProfessionalRoster> alreadyAssociatedDoctors,
-  String? facilityId,
+  int? facilityId,
 }) {
   return showModalBottomSheet<List<ProfessionalRoster>>(
     context: context,
@@ -38,9 +36,9 @@ class _AssociateDoctorsSheet extends StatefulWidget {
     this.facilityId,
   });
 
-  final Set<String> alreadyAssociatedIds;
+  final Set<int> alreadyAssociatedIds;
   final List<ProfessionalRoster> alreadyAssociatedDoctors;
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   State<_AssociateDoctorsSheet> createState() => _AssociateDoctorsSheetState();
@@ -48,7 +46,7 @@ class _AssociateDoctorsSheet extends StatefulWidget {
 
 class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   List<ProfessionalRoster> _pool = const [];
-  final Set<String> _selected = {};
+  final Set<int> _selected = {};
   String _query = '';
   bool _loading = true;
   bool _saving = false;
@@ -60,8 +58,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
 
   bool get _useApi {
     final id = widget.facilityId;
-    if (id == null || id.isEmpty) return false;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
+    return id != null && id > 0;
   }
 
   @override
@@ -85,18 +82,11 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
 
     try {
       if (!_useApi) {
-        // Merge mock pool with already-associated doctors (for pinning).
-        final base = mockAssociableDoctors();
-        final merged = <ProfessionalRoster>[...base];
-        for (final d in _associated) {
-          if (!merged.any((m) => m.id == d.id)) {
-            merged.add(d);
-          }
-        }
         if (!mounted) return;
         setState(() {
-          _pool = merged;
+          _pool = const [];
           _loading = false;
+          _error = 'Estabelecimento inválido.';
         });
         return;
       }
@@ -139,19 +129,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     });
   }
 
-  List<ProfessionalRoster> get _filtered {
-    if (_useApi) return _pool;
-    final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return _pool;
-    return _pool
-        .where(
-          (d) =>
-              d.name.toLowerCase().contains(q) ||
-              (d.specialty?.toLowerCase().contains(q) ?? false) ||
-              (d.crm?.toLowerCase().contains(q) ?? false),
-        )
-        .toList();
-  }
+  List<ProfessionalRoster> get _filtered => _pool;
 
   /// Combined items list with section headers for the list view.
   /// Items are either [String] section headers or [ProfessionalRoster] rows.
@@ -310,23 +288,6 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               children: [
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _saving ? null : _createProfile,
-                    icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                    label: const Text('Criar perfil de médico'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.navyBright,
-                      side: const BorderSide(color: AppColors.blue100),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
                   child: FilledButton(
                     onPressed: _selected.isEmpty || _saving ? null : _confirm,
                     style: FilledButton.styleFrom(
@@ -455,37 +416,11 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     );
   }
 
-  Future<void> _createProfile() async {
-    final created = await showCreateDoctorProfileSheet(
-      context,
-      facilityId: widget.facilityId,
-    );
-    if (created == null || !mounted) return;
-    setState(() {
-      _pool = [created, ..._pool.where((d) => d.id != created.id)];
-      _selected.add(created.id);
-      _query = '';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${created.name} criado e selecionado'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   Future<void> _confirm() async {
     final chosen = _pool.where((d) => _selected.contains(d.id)).toList();
-    if (chosen.isEmpty) return;
+    if (chosen.isEmpty || !_useApi) return;
 
-    if (!_useApi) {
-      Navigator.of(context).pop(chosen);
-      return;
-    }
-
-    // Doctors created via POST /professionals?facilityIds= already linked.
-    // Only call associate for pool picks that were not just created into this
-    // facility (create flow already associates).
+    // Associate existing persons only (POST { personId }).
     setState(() => _saving = true);
     final repo = FacilityAssociateRepository(widget.facilityId!);
     try {

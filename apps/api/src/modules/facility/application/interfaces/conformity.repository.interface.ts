@@ -1,3 +1,5 @@
+import type { FacilityLegalDocumentType } from "@atlasmed/database";
+
 export type ConformityRecordStatus =
   | "PENDING"
   | "SUBMITTED"
@@ -5,15 +7,15 @@ export type ConformityRecordStatus =
   | "REJECTED"
   | "EXPIRED";
 
-export type FacilityTaxIdType = "PF" | "PJ";
+export type { FacilityLegalDocumentType };
 
 export interface ConformityRequirementRecord {
-  id: string;
+  id: number;
   slug: string;
   name: string;
   description: string | null;
-  verticalId: string | null;
-  appliesToTaxIdType: FacilityTaxIdType | null;
+  verticalId: number | null;
+  appliesToLegalDocumentType: FacilityLegalDocumentType | null;
   isActive: boolean;
   allowedMimeTypes: string[];
   maxFiles: number;
@@ -25,14 +27,14 @@ export interface ConformityRequirementRecord {
 }
 
 export interface ConformityRecordRow {
-  id: string;
-  facilityId: string;
-  requirementId: string;
+  id: number;
+  facilityId: number;
+  requirementId: number;
   status: ConformityRecordStatus;
   submittedAt: Date | null;
   validatedAt: Date | null;
   expiresAt: Date | null;
-  validatedByUserId: string | null;
+  validatedByUserId: number | null;
   storageKey: string | null;
   url: string | null;
   contentType: string | null;
@@ -41,33 +43,33 @@ export interface ConformityRecordRow {
   createdAt: Date;
   updatedAt: Date;
   requirement: {
-    id: string;
+    id: number;
     slug: string;
     name: string;
     description: string | null;
-    appliesToTaxIdType: FacilityTaxIdType | null;
+    appliesToLegalDocumentType: FacilityLegalDocumentType | null;
   };
   facility?: {
-    id: string;
+    id: number;
     name: string;
-    taxIdType: FacilityTaxIdType | null;
+    legalDocumentType: FacilityLegalDocumentType | null;
   };
 }
 
 export interface ConformityRepository {
   findActiveRequirements(params?: {
-    taxIdType?: FacilityTaxIdType | null;
+    legalDocumentType?: FacilityLegalDocumentType | null;
   }): Promise<ConformityRequirementRecord[]>;
 
-  findRequirementById(id: string): Promise<ConformityRequirementRecord | null>;
+  findRequirementById(id: number): Promise<ConformityRequirementRecord | null>;
 
-  findRecordsByFacility(facilityId: string): Promise<ConformityRecordRow[]>;
+  findRecordsByFacility(facilityId: number): Promise<ConformityRecordRow[]>;
 
-  findRecordById(id: string): Promise<ConformityRecordRow | null>;
+  findRecordById(id: number): Promise<ConformityRecordRow | null>;
 
   findRecordByFacilityAndRequirement(
-    facilityId: string,
-    requirementId: string
+    facilityId: number,
+    requirementId: number
   ): Promise<ConformityRecordRow | null>;
 
   findRecordByStorageKey(storageKey: string): Promise<ConformityRecordRow | null>;
@@ -79,14 +81,14 @@ export interface ConformityRepository {
   }): Promise<{ records: ConformityRecordRow[]; total: number }>;
 
   createRecord(params: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     status?: ConformityRecordStatus;
   }): Promise<ConformityRecordRow>;
 
   upsertSubmittedRecord(params: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     storageKey: string;
     url: string;
     contentType: string;
@@ -94,13 +96,13 @@ export interface ConformityRepository {
   }): Promise<ConformityRecordRow>;
 
   approveRecord(params: {
-    recordId: string;
-    validatedByUserId: string;
+    recordId: number;
+    validatedByUserId: number;
   }): Promise<ConformityRecordRow>;
 
   rejectRecord(params: {
-    recordId: string;
-    validatedByUserId: string;
+    recordId: number;
+    validatedByUserId: number;
     reviewerNote: string;
   }): Promise<ConformityRecordRow>;
 }

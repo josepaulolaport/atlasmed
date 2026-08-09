@@ -1,5 +1,5 @@
-import { ensureBucketExists } from "@atlasmed/cnes-ingestion";
 import { environment } from "../../app/config/environment";
+import { ensureBucketExists } from "./ensure-bucket-exists";
 import { getStorageClient, isStorageConfigured } from "./storage.client";
 
 export async function ensureStorageBuckets(): Promise<void> {

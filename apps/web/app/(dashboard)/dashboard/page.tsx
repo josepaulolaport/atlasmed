@@ -129,9 +129,6 @@ export default function DashboardPage() {
               <Button variant="outline" asChild>
                 <Link href="/facilities">Ver unidades de saúde</Link>
               </Button>
-              <Button variant="outline" asChild>
-                <Link href="/registry-suggestions">Revisar sugestões</Link>
-              </Button>
             </div>
           </div>
         )}

@@ -13,11 +13,11 @@ import type { Role } from "@atlasmed/access";
 import { ForbiddenError } from "../../../shared/errors";
 
 export interface RouteTestUser {
-  id: string;
+  id: number;
   email: string;
   username: string;
   role: {
-    id: string;
+    id: number;
     name: Role;
     description?: string | null;
   };
@@ -25,16 +25,16 @@ export interface RouteTestUser {
 
 export const routeTestContext = {
   user: {
-    id: "admin-test",
+    id: 1,
     email: "admin@test.example.com",
     username: "admintest",
-    role: { id: "role-admin", name: "ADMIN" as Role },
+    role: { id: 1, name: "ADMIN" as Role },
   } satisfies RouteTestUser,
   scope: createGlobalScopeContext() as ScopeContext,
   mocks: {
     getUserAssignmentsExecute: mock(async (_params?: unknown) =>
       Promise.resolve({
-        userId: "target-user",
+        userId: 2,
         isOperationallyActive: false,
         verticalAssignments: [],
       }),
@@ -95,10 +95,10 @@ export function createRouteTestAuthPlugin(
         getUserId: async () => user.id,
         getUser: async () => user,
         getScope: async () => resolvedScope,
-        getSessionId: async () => "test-session-id",
+        getSessionId: async () => 1,
         getAuthContext: async () => ({
           userId: user.id,
-          sessionId: "test-session-id",
+          sessionId: 1,
           roleName: user.role.name,
         }),
       };
@@ -120,27 +120,27 @@ export async function assertRoutePermission(
 }
 
 export const adminRouteTestUser: RouteTestUser = {
-  id: "admin-test",
+  id: 1,
   email: "admin@test.example.com",
   username: "admintest",
-  role: { id: "role-admin", name: "ADMIN" },
+  role: { id: 1, name: "ADMIN" },
 };
 
 export const managerRouteTestUser: RouteTestUser = {
-  id: "manager-test",
+  id: 2,
   email: "manager@test.example.com",
   username: "managertest",
-  role: { id: "role-manager", name: "MANAGER" },
+  role: { id: 2, name: "MANAGER" },
 };
 
 export const userRouteTestUser: RouteTestUser = {
-  id: "user-test",
+  id: 3,
   email: "user@test.example.com",
   username: "usertest",
-  role: { id: "role-user", name: "REP" },
+  role: { id: 3, name: "REP" },
 };
 
-export function managerScopedContext(territoryIds: string[]): ScopeContext {
+export function managerScopedContext(territoryIds: number[]): ScopeContext {
   return withTerritoryScopeAliases({
     isGlobal: false,
     assignedTerritoryIds: territoryIds,
@@ -148,19 +148,18 @@ export function managerScopedContext(territoryIds: string[]): ScopeContext {
     analyticsEffectiveTerritoryIds: [],
     facilityIds: [],
     analyticsFacilityIds: [],
-    managedUserIds: ["field-user-test"],
+    managedUserIds: [4],
     isOperationallyActive: territoryIds.length > 0,
   });
 }
 
 export function scopedManagerContext(input: {
-  territoryIds: string[];
-  facilityIds?: string[];
-  analyticsFacilityIds?: string[];
-  analyticsTerritoryIds?: string[];
-  managedUserIds?: string[];
+  territoryIds: number[];
+  facilityIds?: number[];
+  analyticsFacilityIds?: number[];
+  analyticsTerritoryIds?: number[];
+  managedUserIds?: number[];
   isOperationallyActive?: boolean;
-  grantIds?: string[];
 }): ScopeContext {
   return withTerritoryScopeAliases({
     isGlobal: false,
@@ -172,7 +171,6 @@ export function scopedManagerContext(input: {
     managedUserIds: input.managedUserIds ?? [],
     isOperationallyActive:
       input.isOperationallyActive ?? input.territoryIds.length > 0,
-    grantIds: input.grantIds,
   });
 }
 

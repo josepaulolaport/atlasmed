@@ -7,16 +7,12 @@ import {
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 
 function serializeType(type: {
-  id: string;
+  id: number;
   slug: string;
   name: string;
   description: string | null;
   canHaveBoundary: boolean;
-  assignsClinics: boolean;
-  assignableToUsers: boolean;
-  assignableToManagers: boolean;
   blockSiblingOverlap: boolean;
-  sortOrder: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -27,11 +23,7 @@ function serializeType(type: {
     name: type.name,
     description: type.description ?? undefined,
     canHaveBoundary: type.canHaveBoundary,
-    assignsClinics: type.assignsClinics,
-    assignableToUsers: type.assignableToUsers,
-    assignableToManagers: type.assignableToManagers,
     blockSiblingOverlap: type.blockSiblingOverlap,
-    sortOrder: type.sortOrder,
     isActive: type.isActive,
     createdAt: type.createdAt.toISOString(),
     updatedAt: type.updatedAt.toISOString(),
@@ -46,7 +38,7 @@ export class TerritoryTypeUseCases {
     return { data: types.map(serializeType) };
   }
 
-  async getType(id: string) {
+  async getType(id: number) {
     const type = await this.typeRepository.findById(id);
     if (!type) {
       throw new ResourceNotFoundError("TerritoryType", id);
@@ -59,11 +51,7 @@ export class TerritoryTypeUseCases {
     name: string;
     description?: string;
     canHaveBoundary?: boolean;
-    assignsClinics?: boolean;
-    assignableToUsers?: boolean;
-    assignableToManagers?: boolean;
     blockSiblingOverlap?: boolean;
-    sortOrder?: number;
   }) {
     const slug = input.slug.trim().toLowerCase();
     if (!SLUG_PATTERN.test(slug)) {
@@ -86,27 +74,19 @@ export class TerritoryTypeUseCases {
       name: input.name.trim(),
       description: input.description?.trim() || null,
       canHaveBoundary: input.canHaveBoundary,
-      assignsClinics: input.assignsClinics,
-      assignableToUsers: input.assignableToUsers,
-      assignableToManagers: input.assignableToManagers,
       blockSiblingOverlap: input.blockSiblingOverlap,
-      sortOrder: input.sortOrder,
     });
 
     return serializeType(type);
   }
 
   async updateType(
-    id: string,
+    id: number,
     input: {
       name?: string;
       description?: string | null;
       canHaveBoundary?: boolean;
-      assignsClinics?: boolean;
-      assignableToUsers?: boolean;
-      assignableToManagers?: boolean;
       blockSiblingOverlap?: boolean;
-      sortOrder?: number;
       isActive?: boolean;
     }
   ) {

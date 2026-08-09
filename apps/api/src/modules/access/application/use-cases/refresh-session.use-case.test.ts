@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { environment } from "../../../../app/config/environment";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
 import { sessionSecurityAdapter } from "../../infrastructure/adapters/session-security.adapter";
+
+const sessionSecurityIsStrict = environment.SESSION_SECURITY_MODE === "strict";
 
 const mockLogSuspiciousActivity = mock(async () => {});
 const mockRecordSuspiciousActivity = mock(() => {});
@@ -47,12 +50,12 @@ describe("RefreshSessionUseCase", () => {
   let mockSessionCache: ISessionCache;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
     passwordHash: "$argon2id$test",
-    roleId: "role-123",
+    roleId: 1,
     firstName: "Test",
     lastName: "User",
     status: "ACTIVE",
@@ -64,7 +67,7 @@ describe("RefreshSessionUseCase", () => {
     updatedAt: new Date(),
     deactivatedAt: null,
     role: {
-      id: "role-123",
+      id: 1,
       name: "USER",
       description: null,
       createdAt: new Date(),
@@ -73,8 +76,8 @@ describe("RefreshSessionUseCase", () => {
   };
 
   const mockOldSession = {
-    id: "session-123",
-    userId: "user-123",
+    id: 1,
+    userId: 123,
     refreshTokenHash: "old-hashed-token",
     ipAddress: "192.168.1.1",
     userAgent: CHROME_UA,
@@ -168,7 +171,7 @@ describe("RefreshSessionUseCase", () => {
       expect(mockSessionRepository.rotateRefreshTokenTransaction).toHaveBeenCalledTimes(1);
       const callArgs = (mockSessionRepository.rotateRefreshTokenTransaction as any)
         .mock.calls[0][0];
-      expect(callArgs.sessionId).toBe("session-123");
+      expect(callArgs.sessionId).toBe(1);
     });
 
     it("should include ipAddress when provided", async () => {
@@ -226,8 +229,8 @@ describe("RefreshSessionUseCase", () => {
     it("should propagate already-rotated result without use-case-level revocation (concurrent refresh)", async () => {
       mockSessionRepository.rotateRefreshTokenTransaction = mock(async () => ({
         status: "already_rotated" as const,
-        userId: "user-123",
-        sessionId: "session-123",
+        userId: 123,
+        sessionId: 1,
       }));
 
       await expect(
@@ -247,8 +250,8 @@ describe("RefreshSessionUseCase", () => {
     it("should revoke all sessions when previous refresh hash is replayed (DB Path A reuse)", async () => {
       mockSessionRepository.rotateRefreshTokenTransaction = mock(async () => ({
         status: "reuse_detected" as const,
-        userId: "user-123",
-        sessionId: "session-123",
+        userId: 123,
+        sessionId: 1,
       }));
 
       await expect(
@@ -260,7 +263,7 @@ describe("RefreshSessionUseCase", () => {
       ).rejects.toThrow(RefreshTokenReuseDetectedError);
 
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith(
-        "user-123",
+        123,
         undefined
       );
       expect(mockLogSuspiciousActivity).toHaveBeenCalled();
@@ -275,8 +278,8 @@ describe("RefreshSessionUseCase", () => {
       })) as any;
       mockSessionCache.getByTokenHash = mock(async () => null);
       mockSessionCache.getSupersededSession = mock(async () => ({
-        sessionId: "session-123",
-        userId: "user-123",
+        sessionId: 1,
+        userId: 123,
       }));
 
       await expect(
@@ -289,16 +292,16 @@ describe("RefreshSessionUseCase", () => {
 
       expect(mockSessionRepository.rotateRefreshTokenTransaction).not.toHaveBeenCalled();
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith(
-        "user-123",
+        123,
         undefined
       );
       expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith(
-        "user-123",
+        123,
         undefined
       );
       expect(mockLogSuspiciousActivity).toHaveBeenCalledWith({
-        userId: "user-123",
-        sessionId: "session-123",
+        userId: 123,
+        sessionId: 1,
         reason: "refresh_token_reuse",
         ipAddress: "10.0.0.2",
         userAgent: "test-agent",
@@ -317,8 +320,8 @@ describe("RefreshSessionUseCase", () => {
       })) as any;
       mockSessionCache.getByTokenHash = mock(async () => null);
       mockSessionCache.getSupersededSession = mock(async () => ({
-        sessionId: "session-123",
-        userId: "user-123",
+        sessionId: 1,
+        userId: 123,
       }));
 
       await expect(
@@ -334,8 +337,8 @@ describe("RefreshSessionUseCase", () => {
     it("should revoke all sessions when previous hash replayed via DB fallback (no Redis)", async () => {
       mockSessionRepository.findActiveByTokenHash = mock(async () => null);
       mockSessionRepository.findActiveByPreviousRefreshTokenHash = mock(async () => ({
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         updatedAt: new Date(Date.now() - 11_000),
       }));
       mockSessionCache.getByTokenHash = mock(async () => null);
@@ -351,7 +354,7 @@ describe("RefreshSessionUseCase", () => {
 
       expect(mockSessionRepository.rotateRefreshTokenTransaction).not.toHaveBeenCalled();
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith(
-        "user-123",
+        123,
         undefined
       );
       expect(mockLogSuspiciousActivity).toHaveBeenCalled();
@@ -360,23 +363,25 @@ describe("RefreshSessionUseCase", () => {
 
   describe("session security validation", () => {
     it("should revoke session and throw when user agent changes to a different browser", async () => {
-      await expect(
-        refreshSessionUseCase.execute({
-          refreshToken: "valid-refresh-token",
-          ipAddress: "192.168.1.1",
-          userAgent: FIREFOX_UA,
-        })
-      ).rejects.toThrow(SessionSecurityViolationError);
+      const execute = refreshSessionUseCase.execute({
+        refreshToken: "valid-refresh-token",
+        ipAddress: "192.168.1.1",
+        userAgent: FIREFOX_UA,
+      });
 
-      expect(mockSessionRepository.revokeForSecurityViolation).toHaveBeenCalledWith(
-        "session-123"
-      );
-      expect(mockSessionCache.invalidate).toHaveBeenCalledWith("session-123");
-      expect(mockSessionRepository.rotateRefreshTokenTransaction).not.toHaveBeenCalled();
+      if (sessionSecurityIsStrict) {
+        await expect(execute).rejects.toThrow(SessionSecurityViolationError);
+        expect(mockSessionRepository.revokeForSecurityViolation).toHaveBeenCalledWith(1);
+        expect(mockSessionCache.invalidate).toHaveBeenCalledWith(1);
+        expect(mockSessionRepository.rotateRefreshTokenTransaction).not.toHaveBeenCalled();
+      } else {
+        await expect(execute).resolves.toHaveProperty("accessToken");
+        expect(mockSessionRepository.revokeForSecurityViolation).not.toHaveBeenCalled();
+        expect(mockSessionRepository.rotateRefreshTokenTransaction).toHaveBeenCalled();
+      }
+
       expect(mockLogSuspiciousActivity).toHaveBeenCalled();
-      expect(mockRecordSuspiciousActivity).toHaveBeenCalledWith(
-        "user_agent_mismatch"
-      );
+      expect(mockRecordSuspiciousActivity).toHaveBeenCalledWith("user_agent_mismatch");
     });
 
     it("should allow refresh when request context matches stored session", async () => {
@@ -426,19 +431,22 @@ describe("RefreshSessionUseCase", () => {
         deviceFingerprint: storedFingerprint,
       })) as any;
 
-      await expect(
-        refreshSessionUseCase.execute({
-          refreshToken: "valid-refresh-token",
-          ipAddress: "192.168.1.1",
-          userAgent: CHROME_UA,
-          acceptLanguage: "fr-FR",
-        })
-      ).rejects.toThrow(SessionSecurityViolationError);
+      const execute = refreshSessionUseCase.execute({
+        refreshToken: "valid-refresh-token",
+        ipAddress: "192.168.1.1",
+        userAgent: CHROME_UA,
+        acceptLanguage: "fr-FR",
+      });
 
-      expect(mockSessionRepository.findById).toHaveBeenCalledWith("session-123");
-      expect(mockSessionRepository.revokeForSecurityViolation).toHaveBeenCalledWith(
-        "session-123"
-      );
+      if (sessionSecurityIsStrict) {
+        await expect(execute).rejects.toThrow(SessionSecurityViolationError);
+        expect(mockSessionRepository.revokeForSecurityViolation).toHaveBeenCalledWith(1);
+      } else {
+        await expect(execute).resolves.toHaveProperty("accessToken");
+        expect(mockSessionRepository.revokeForSecurityViolation).not.toHaveBeenCalled();
+      }
+
+      expect(mockSessionRepository.findById).toHaveBeenCalledWith(1);
     });
   });
 

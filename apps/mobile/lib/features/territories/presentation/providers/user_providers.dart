@@ -9,6 +9,6 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 
 /// Looks up a single user by id — used to resolve a territory's
 /// `assignedUserId` into a display name/avatar wherever it's shown.
-final userByIdProvider = FutureProvider.family<AppUser?, String>((ref, id) {
+final userByIdProvider = FutureProvider.family<AppUser?, int>((ref, id) {
   return ref.watch(userRepositoryProvider).getUserById(id);
 });

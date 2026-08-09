@@ -15,7 +15,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class EditUserAssignmentsScreen extends ConsumerStatefulWidget {
   const EditUserAssignmentsScreen({super.key, required this.userId});
 
-  final String userId;
+  final int userId;
 
   @override
   ConsumerState<EditUserAssignmentsScreen> createState() =>
@@ -24,7 +24,7 @@ class EditUserAssignmentsScreen extends ConsumerStatefulWidget {
 
 class _EditUserAssignmentsScreenState
     extends ConsumerState<EditUserAssignmentsScreen> {
-  final Map<String, InviteVerticalAssignment> _verticalAssignments = {};
+  final Map<int, InviteVerticalAssignment> _verticalAssignments = {};
   User? _user;
   bool _loading = true;
   bool _submitting = false;

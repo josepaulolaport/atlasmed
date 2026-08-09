@@ -13,7 +13,7 @@ enum _ProductDetailTab { overview, use, evidence, competitors }
 /// concentration switcher picks which [MockProduct] is active. Overview only
 /// for now.
 class ProductDetailScreen extends StatefulWidget {
-  final String familyId;
+  final int familyId;
 
   const ProductDetailScreen({super.key, required this.familyId});
 
@@ -25,15 +25,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late final List<MockProduct> _familyProducts = mockProductsInFamily(
     widget.familyId,
   );
-  late String _selectedProductId = _familyProducts.isEmpty
-      ? ''
+  late int _selectedProductId = _familyProducts.isEmpty
+      ? 0
       : _familyProducts.first.id;
   _ProductDetailTab _tab = _ProductDetailTab.overview;
 
   MockProductFamily? get _family => mockFamilyById(widget.familyId);
 
   MockProduct? get _product =>
-      _selectedProductId.isEmpty ? null : mockProductById(_selectedProductId);
+      _selectedProductId == 0 ? null : mockProductById(_selectedProductId);
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +138,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
 class _ConcentrationSwitcher extends StatelessWidget {
   final List<MockProduct> products;
-  final String selectedId;
-  final ValueChanged<String> onSelected;
+  final int selectedId;
+  final ValueChanged<int> onSelected;
 
   const _ConcentrationSwitcher({
     required this.products,

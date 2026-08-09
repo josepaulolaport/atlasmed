@@ -21,7 +21,7 @@ interface Dependencies {
 }
 
 function serializePhoto(photo: {
-  id: string;
+  id: number;
   url: string;
   contentType: string;
   blurhash: string | null;
@@ -43,7 +43,7 @@ function photoUrl(key: string): string {
 export class ListFacilityPhotosUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -67,8 +67,8 @@ export class UploadFacilityPhotoUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    userId: string;
+    facilityId: number;
+    userId: number;
     scope: ScopeContext;
     file: File;
   }) {

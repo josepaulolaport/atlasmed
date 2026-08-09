@@ -15,7 +15,7 @@ class MySuggestionsScreen extends ConsumerWidget {
     required this.targetName,
   });
 
-  final String targetId;
+  final int targetId;
   final String targetName;
 
   @override

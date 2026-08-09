@@ -20,7 +20,7 @@ class DriverInfo {
 
 // ── Tracking order item ──────────────────────────────────────
 class TrackingOrderItem {
-  final String id;
+  final int id;
   final String productName;
   final String code;
   final int quantity;
@@ -52,7 +52,7 @@ class TrackingEvent {
 
 // ── Tracking order detail ────────────────────────────────────
 class TrackingOrderDetail {
-  final String id;
+  final int id;
   final TrackingStatus status;
   final String createdAt;
   final String estimatedDelivery;
@@ -78,7 +78,7 @@ class TrackingOrderDetail {
 }
 
 class TrackingClinic {
-  final String id;
+  final int id;
   final String name;
   final String address;
 
@@ -113,7 +113,7 @@ class PriceHistoryEntry {
   final String date;
   final SuggestionKind kind;
   final int qty;
-  final String orderId;
+  final int orderId;
 
   const PriceHistoryEntry({
     required this.unit,

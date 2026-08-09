@@ -15,8 +15,8 @@ export class UnsuspendUserUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    userId: string;
-    unsuspendedBy: string;
+    userId: number;
+    unsuspendedBy: number;
     actorRole: Role;
     scope: ScopeContext;
   }) {

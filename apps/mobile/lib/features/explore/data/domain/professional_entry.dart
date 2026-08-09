@@ -4,7 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.d
 ///
 /// Maps from [ProfessionalDTO] — the unified API response type.
 class ProfessionalEntry {
-  final String id;
+  final int id;
   final String name;
   final String initials;
   final double hue;
@@ -42,7 +42,7 @@ class ProfessionalEntry {
       initials: initials.toUpperCase(),
       hue: 0,
       specialty: dto.specialty,
-      crm: dto.crm,
+      crm: dto.crm.isEmpty ? null : dto.crm,
       displayFacilityName: dto.displayFacility?.name,
       relationshipLevel: dto.relationshipLevel,
       isPriority: dto.isPriority,

@@ -24,9 +24,9 @@ export class Confirm2FASetupUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    userId: string;
+    userId: number;
     code: string;
-    sessionId?: string;
+    sessionId?: number;
     ipAddress?: string;
   }) {
     const user = await this.deps.userRepository.findById(params.userId);

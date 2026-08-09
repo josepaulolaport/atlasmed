@@ -17,7 +17,7 @@ import type {
 } from "../interfaces/cadastro-submission.repository.interface";
 import { FacilityCadastroCompletionService } from "../services/facility-cadastro-completion.service";
 import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
-import { resolveFacilityTaxIdType } from "../utils/facility-tax-id.utils";
+import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 
 const DEFAULT_PART_SIZE = 10 * 1024 * 1024;
 const UPLOAD_TTL_MS = 6 * 60 * 60 * 1000;
@@ -72,7 +72,7 @@ function countPdfPages(bytes: Uint8Array): number | null {
 
 async function markDocumentReadyIfAllFilesReady(
   repo: CadastroSubmissionRepository,
-  fileAssetId: string
+  fileAssetId: number
 ) {
   const link = await repo.findDocumentFileByFileAssetId(fileAssetId);
   if (!link) return;
@@ -100,7 +100,7 @@ const INCOMPLETE_UPLOAD_STATUSES = new Set(["PENDING_UPLOAD", "UPLOADING"]);
  */
 async function pruneIncompleteDocumentUploads(
   repo: CadastroSubmissionRepository,
-  documentId: string
+  documentId: number
 ) {
   const files = await repo.listDocumentFiles(documentId);
   for (const file of files) {
@@ -188,11 +188,11 @@ interface Dependencies {
 }
 
 function serializeFile(file: {
-  id: string;
+  id: number;
   position: number;
   role: string;
   fileAsset?: {
-    id: string;
+    id: number;
     originalFilename: string;
     declaredMimeType: string;
     detectedMimeType: string | null;
@@ -225,7 +225,7 @@ function serializeFile(file: {
 
 async function serializeDocument(
   repo: CadastroSubmissionRepository,
-  documentId: string
+  documentId: number
 ) {
   const document = await repo.findDocumentById(documentId);
   if (!document) return null;
@@ -244,7 +244,7 @@ async function serializeDocument(
           slug: document.requirement.slug,
           name: document.requirement.name,
           description: document.requirement.description ?? undefined,
-          appliesToTaxIdType: document.requirement.appliesToTaxIdType ?? undefined,
+          appliesToLegalDocumentType: document.requirement.appliesToLegalDocumentType ?? undefined,
           allowedMimeTypes: document.requirement.allowedMimeTypes,
           maxFiles: document.requirement.maxFiles,
           maxFileSizeBytes: document.requirement.maxFileSizeBytes,
@@ -260,10 +260,10 @@ export class EnsureDraftCadastroSubmissionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    userId: string;
+    facilityId: number;
+    userId: number;
     scope: ScopeContext;
-    verticalId?: string;
+    verticalId?: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -312,9 +312,9 @@ export class CreateCadastroSubmissionDocumentUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    submissionId: string;
-    requirementId: string;
+    facilityId: number;
+    submissionId: number;
+    requirementId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -357,8 +357,8 @@ export class InitiateCadastroFileUploadUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    documentId: string;
+    facilityId: number;
+    documentId: number;
     scope: ScopeContext;
     filename: string;
     contentType: string;
@@ -435,7 +435,6 @@ export class InitiateCadastroFileUploadUseCase {
     const objectKey = `facilities/${input.facilityId}/submissions/${submission.id}/documents/${document.id}/files/${fileId}/original`;
 
     const asset = await this.deps.cadastroRepository.createFileAsset({
-      id: fileId,
       facilityId: input.facilityId,
       bucket: storageService.bucket(),
       objectKey,
@@ -512,8 +511,8 @@ export class SignCadastroUploadPartsUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    uploadSessionId: string;
+    facilityId: number;
+    uploadSessionId: number;
     partNumbers: number[];
     scope: ScopeContext;
   }) {
@@ -555,9 +554,9 @@ export class CompleteCadastroFileUploadUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    uploadSessionId?: string | null;
-    fileId: string;
+    facilityId: number;
+    uploadSessionId?: number | null;
+    fileId: number;
     scope: ScopeContext;
     parts?: Array<{ partNumber: number; etag: string; sizeBytes?: number }>;
     checksum?: string;
@@ -656,11 +655,11 @@ export class ReorderCadastroDocumentFilesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    documentId: string;
+    facilityId: number;
+    documentId: number;
     scope: ScopeContext;
     ordered: Array<{
-      fileAssetId: string;
+      fileAssetId: number;
       position: number;
       role: CadastroDocumentFileRole;
     }>;
@@ -694,8 +693,8 @@ export class GetCadastroFileSignedUrlUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    fileAssetId: string;
+    facilityId: number;
+    fileAssetId: number;
     scope: ScopeContext;
     variant?: "original" | "thumb" | "preview";
   }) {
@@ -721,8 +720,8 @@ export class DeleteDraftCadastroSubmissionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    submissionId: string;
+    facilityId: number;
+    submissionId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -743,7 +742,7 @@ export class DeleteDraftCadastroSubmissionUseCase {
 
     const documents =
       await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
-    const assetIds: string[] = [];
+    const assetIds: number[] = [];
     for (const doc of documents) {
       const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
       for (const file of files) {
@@ -784,9 +783,9 @@ export class SubmitCadastroSubmissionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    submissionId: string;
-    userId: string;
+    facilityId: number;
+    submissionId: number;
+    userId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -803,9 +802,9 @@ export class SubmitCadastroSubmissionUseCase {
       throw new ForbiddenError();
     }
 
-    const taxIdType = resolveFacilityTaxIdType(facility);
+    const legalDocumentType = resolveFacilityLegalDocumentType(facility);
     const requirements =
-      await this.deps.conformityRepository.findActiveRequirements({ taxIdType });
+      await this.deps.conformityRepository.findActiveRequirements({ legalDocumentType });
     const documents =
       await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
 
@@ -878,14 +877,14 @@ export class ReviewCadastroDocumentUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    documentId: string;
-    userId: string;
+    facilityId: number;
+    documentId: number;
+    userId: number;
     scope: ScopeContext;
     decision: "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
     comment?: string;
     reasonCode?: string;
-    flaggedFileAssetIds?: string[];
+    flaggedFileAssetIds?: number[];
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const document = await this.deps.cadastroRepository.findDocumentById(
@@ -1062,8 +1061,8 @@ export class ListCadastroRequirementSubmissionsUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -1108,11 +1107,11 @@ export class SubmitCadastroRequirementUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    requirementId: string;
-    userId: string;
+    facilityId: number;
+    requirementId: number;
+    userId: number;
     scope: ScopeContext;
-    documentId?: string;
+    documentId?: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -1120,7 +1119,7 @@ export class SubmitCadastroRequirementUseCase {
 
     const requirement = (
       await this.deps.conformityRepository.findActiveRequirements({
-        taxIdType: resolveFacilityTaxIdType(facility),
+        legalDocumentType: resolveFacilityLegalDocumentType(facility),
       })
     ).find((r) => r.id === input.requirementId);
     if (!requirement) {

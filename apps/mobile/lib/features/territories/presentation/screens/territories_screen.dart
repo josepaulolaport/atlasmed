@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
@@ -22,9 +23,9 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/ve
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class TerritoriesScreen extends ConsumerWidget {
   const TerritoriesScreen({super.key});
@@ -121,13 +122,12 @@ class _NewTerritoryButton extends ConsumerWidget {
       ),
       onPressed: () {
         final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
-        context.push(
-          '/territories/create',
-          extra: TerritoryEditorTarget.creating(
+        TerritoryCreateRoute(
+          $extra: TerritoryEditorTarget.creating(
             initialKind: createKind,
             initialVerticalId: verticalId,
           ),
-        );
+        ).push(context);
       },
     );
   }
@@ -253,7 +253,7 @@ class _TerritoriesBody extends ConsumerWidget {
                 final repIds =
                     territories
                         .map((t) => t.assignedUserId)
-                        .whereType<String>()
+                        .whereType<int>()
                         .toSet()
                         .toList()
                       ..sort();
@@ -334,9 +334,9 @@ class _RepGeographyFilter extends ConsumerWidget {
     required this.onChanged,
   });
 
-  final List<String> repUserIds;
-  final String? selectedRepUserId;
-  final ValueChanged<String> onChanged;
+  final List<int> repUserIds;
+  final int? selectedRepUserId;
+  final ValueChanged<int?> onChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -551,7 +551,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
                 onEditInfo: () => _editInfo(selectedTerritory),
                 onAssign: () => _assignUser(selectedTerritory),
                 onEditArea: () =>
-                    context.push('/territories/${selectedTerritory.id}/edit'),
+                    TerritoryEditRoute(id: selectedTerritory.id).push(context),
                 onDelete: () => _confirmAndDelete(selectedTerritory),
                 onClose: _deselectTerritory,
               ),
@@ -582,7 +582,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
   }
 
   void _handleTap(PolygonAnnotation annotation) {
-    final territoryId = annotation.customData?['territoryId'] as String?;
+    final territoryId = readCrmIdLoose(annotation.customData?['territoryId']);
     final territory = _findTerritory(territoryId);
     if (territory == null) return;
 
@@ -590,7 +590,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     _selectTerritory(territory);
   }
 
-  Territory? _findTerritory(String? id) {
+  Territory? _findTerritory(int? id) {
     if (id == null) return null;
     for (final territory in widget.territories) {
       if (territory.id == id) return territory;
@@ -698,7 +698,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     );
     if (result == null) return;
 
-    final userId = result == clearAssignee ? null : result;
+    final userId = result == kClearAssigneeId ? null : result;
     try {
       await ref
           .read(territoryRepositoryProvider)

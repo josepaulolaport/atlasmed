@@ -8,14 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('maps nullable blurhash fields from image-bearing API responses', () {
     final facility = FacilityDTO.fromMap({
-      'id': 'facility-1',
+      'id': 1,
       'name': 'Clínica Central',
       'professionalCount': 0,
       'imageUrl': '/facility.png',
       'imageBlurhash': 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
     });
     final professional = ProfessionalDTO.fromMap({
-      'id': 'professional-1',
+      'id': 1,
       'firstName': 'Ana',
       'lastName': 'Silva',
       'facilityIds': const [],
@@ -26,14 +26,14 @@ void main() {
       _userJson(avatarBlurhash: 'L9AS#?t7I=%2^+Rj00M{Rj?bxuM{'),
     );
     final manager = ManagerOption.fromJson({
-      'id': 'manager-1',
+      'id': 1,
       'name': 'Maria Souza',
       'avatarUrl': '/manager.png',
       'avatarBlurhash': 'L6Pj0^tl0f%g~qIURjIU00IU%Mxu',
     });
     final photos = FacilityPhotosResponse.fromJson('''
       {"imageUrl":"/facility.png","imageBlurhash":"L5H2EC=PM+yV0g-mq.wG9c010J}I","data":[
-        {"id":"photo-1","url":"/photo-1.png","blurhash":"LKO2?U%2Tw=w]~RBVZRi};RPxuwH"}
+        {"id":1,"url":"/photo-1.png","blurhash":"LKO2?U%2Tw=w]~RBVZRi};RPxuwH"}
       ]}
     ''');
 
@@ -50,7 +50,7 @@ void main() {
 
   test('accepts API responses that do not yet contain blurhash fields', () {
     final facility = FacilityDTO.fromMap({
-      'id': 'facility-1',
+      'id': 1,
       'name': 'Clínica Central',
       'professionalCount': 0,
     });
@@ -65,7 +65,7 @@ void main() {
   test('keeps the first photo blurhash fallback for legacy responses', () {
     final photos = FacilityPhotosResponse.fromJson('''
       {"imageUrl":"/photo-1.png","data":[
-        {"id":"photo-1","url":"/photo-1.png","blurhash":"LKO2?U%2Tw=w]~RBVZRi};RPxuwH"}
+        {"id":1,"url":"/photo-1.png","blurhash":"LKO2?U%2Tw=w]~RBVZRi};RPxuwH"}
       ]}
     ''');
 
@@ -77,16 +77,17 @@ void main() {
 }
 
 Map<String, dynamic> _userJson({String? avatarBlurhash}) => {
-  'id': 'user-1',
+  'id': 1,
   'email': 'ana@example.com',
   'username': 'ana',
   'avatarUrl': '/avatar.png',
-  'avatarBlurhash': ?avatarBlurhash,
+  // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
+  if (avatarBlurhash != null) 'avatarBlurhash': avatarBlurhash,
   'status': 'ACTIVE',
   'emailVerified': true,
   'phoneVerified': false,
   'twoFactorEnabled': false,
-  'role': {'id': 'role-1', 'name': 'REP', 'permissions': const []},
+  'role': {'id': 1, 'name': 'REP', 'permissions': const []},
   'createdAt': '2026-01-01T00:00:00.000Z',
   'updatedAt': '2026-01-01T00:00:00.000Z',
 };

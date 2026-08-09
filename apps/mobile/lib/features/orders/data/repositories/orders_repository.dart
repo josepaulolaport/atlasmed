@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
@@ -7,19 +8,21 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 class ApiOrderIdentity {
   const ApiOrderIdentity({required this.id, required this.name});
 
-  final String id;
+  final int id;
   final String name;
 
   factory ApiOrderIdentity.fromJson(Map<String, dynamic> json) =>
-      ApiOrderIdentity(id: json['id'] as String, name: json['name'] as String);
+      ApiOrderIdentity(
+        id: readCrmId(json['id'], 'id'),
+        name: json['name'] as String,
+      );
 }
 
 class ApiOrderListItem {
   const ApiOrderListItem({
     required this.id,
-    required this.legacyId,
+    required this.idAvulsaEmultec,
     required this.verticalId,
-    required this.interactionId,
     required this.status,
     required this.type,
     required this.orderedAt,
@@ -33,10 +36,9 @@ class ApiOrderListItem {
     required this.total,
   });
 
-  final String id;
-  final int? legacyId;
-  final String? verticalId;
-  final String? interactionId;
+  final int id;
+  final int? idAvulsaEmultec;
+  final int? verticalId;
   final String status;
   final String type;
   final DateTime? orderedAt;
@@ -49,14 +51,14 @@ class ApiOrderListItem {
   final double freight;
   final double total;
 
-  String get displayId => legacyId == null ? id : 'PED-$legacyId';
+  String get displayId =>
+      idAvulsaEmultec == null ? id.toString() : 'PED-$idAvulsaEmultec';
 
   factory ApiOrderListItem.fromJson(Map<String, dynamic> json) =>
       ApiOrderListItem(
-        id: json['id'] as String,
-        legacyId: json['legacyId'] as int?,
-        verticalId: json['verticalId'] as String?,
-        interactionId: json['interactionId'] as String?,
+        id: readCrmId(json['id'], 'id'),
+        idAvulsaEmultec: json['idAvulsaEmultec'] as int?,
+        verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
         status: json['status'] as String,
         type: json['type'] as String,
         orderedAt: _dateOrNull(json['orderedAt']),
@@ -80,7 +82,7 @@ class CreateOrderItemInput {
     this.unitPrice,
   });
 
-  final String productId;
+  final int productId;
   final double quantity;
   final double? unitPrice;
 
@@ -101,7 +103,7 @@ class ApiOrderItem {
     required this.product,
   });
 
-  final String id;
+  final int id;
   final double quantity;
   final double unitPrice;
   final double lineTotal;
@@ -109,7 +111,7 @@ class ApiOrderItem {
   final ApiOrderProduct? product;
 
   factory ApiOrderItem.fromJson(Map<String, dynamic> json) => ApiOrderItem(
-    id: json['id'] as String,
+    id: readCrmId(json['id'], 'id'),
     quantity: _number(json['quantity']),
     unitPrice: _number(json['unitPrice']),
     lineTotal: _number(json['lineTotal']),
@@ -126,12 +128,12 @@ class ApiOrderProduct {
     required this.name,
     required this.code,
   });
-  final String id;
+  final int id;
   final String name;
   final String code;
   factory ApiOrderProduct.fromJson(Map<String, dynamic> json) =>
       ApiOrderProduct(
-        id: json['id'] as String,
+        id: readCrmId(json['id'], 'id'),
         name: json['name'] as String,
         code: json['code'] as String,
       );
@@ -140,9 +142,8 @@ class ApiOrderProduct {
 class ApiOrderDetail extends ApiOrderListItem {
   const ApiOrderDetail({
     required super.id,
-    required super.legacyId,
+    required super.idAvulsaEmultec,
     required super.verticalId,
-    required super.interactionId,
     required super.status,
     required super.type,
     required super.orderedAt,
@@ -166,10 +167,9 @@ class ApiOrderDetail extends ApiOrderListItem {
   final List<ApiOrderItem> items;
 
   factory ApiOrderDetail.fromJson(Map<String, dynamic> json) => ApiOrderDetail(
-    id: json['id'] as String,
-    legacyId: json['legacyId'] as int?,
-    verticalId: json['verticalId'] as String?,
-    interactionId: json['interactionId'] as String?,
+    id: readCrmId(json['id'], 'id'),
+    idAvulsaEmultec: json['idAvulsaEmultec'] as int?,
+    verticalId: readCrmIdOrNull(json['verticalId'], 'verticalId'),
     status: json['status'] as String,
     type: json['type'] as String,
     orderedAt: _dateOrNull(json['orderedAt']),
@@ -247,14 +247,8 @@ class OrdersRepository extends Repository<OrdersPage>
     int page = 1,
     int limit = 20,
     List<String>? statuses,
-    String? interactionId,
   }) async {
-    final query = <String, String>{
-      'page': '$page',
-      'limit': '$limit',
-      if (interactionId != null && interactionId.isNotEmpty)
-        'interactionId': interactionId,
-    };
+    final query = <String, String>{'page': '$page', 'limit': '$limit'};
     if (statuses != null && statuses.isNotEmpty) {
       query['status'] = statuses.join(',');
     }
@@ -271,7 +265,7 @@ class OrdersRepository extends Repository<OrdersPage>
     );
   }
 
-  Future<ApiOrderDetail> getOrder(String id) async {
+  Future<ApiOrderDetail> getOrder(int id) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/orders/$id'),
@@ -286,27 +280,33 @@ class OrdersRepository extends Repository<OrdersPage>
   }
 
   Future<ApiOrderDetail> createOrder({
-    required String facilityId,
+    required int facilityId,
     required List<CreateOrderItemInput> items,
-    required String idempotencyKey,
-    String? interactionId,
-    String? verticalId,
-    String? professionalId,
+    int? verticalId,
+    int? personId,
     String? notes,
     double? freight,
+    String? idempotencyKey,
+    int? interactionId,
   }) async {
+    final headers = <String, String>{
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+        'Idempotency-Key': idempotencyKey,
+    };
+    // [interactionId] accepted for checkout call-site alignment; create-order
+    // body schema does not include it yet (would 422 if sent).
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: _baseUri.replace(path: '/api/v1/orders'),
         method: RepositoryHttpMethod.post,
-        headers: {'Idempotency-Key': idempotencyKey},
+        headers: headers,
+        // ignore_for_file: use_null_aware_elements — value-nullable map entries, not key-nullable.
         body: {
           'facilityId': facilityId,
-          'interactionId': ?interactionId,
-          'verticalId': ?verticalId,
-          'professionalId': ?professionalId,
-          'notes': ?notes,
-          'freight': ?freight,
+          if (verticalId != null) 'verticalId': verticalId,
+          if (personId != null) 'personId': personId,
+          if (notes != null) 'notes': notes,
+          if (freight != null) 'freight': freight,
           'items': items.map((item) => item.toJson()).toList(growable: false),
         },
       ),

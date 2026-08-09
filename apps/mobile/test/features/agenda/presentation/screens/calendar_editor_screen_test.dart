@@ -24,26 +24,26 @@ class _EditorRepository implements CalendarMutationRepositoryContract {
 
   @override
   Future<void> updateCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarUpdateCommand command,
     required String idempotencyKey,
   }) async {}
   @override
   Future<void> updateCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarOccurrenceUpdateCommand command,
     required String idempotencyKey,
   }) async {}
   @override
   Future<void> cancelCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
   }) async {}
   @override
   Future<void> cancelCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
@@ -65,10 +65,11 @@ Widget _app(
 );
 
 CalendarOccurrence _recurringOccurrence() => CalendarOccurrence.fromJson({
-  'id': 'calendar-1:key-1',
-  'calendarId': 'calendar-1',
+  'id': 1,
+  'occurrenceId': '1:key-1',
+  'calendarId': 1,
   'recurrenceKey': 'key-1',
-  'ownerUserId': 'rep-1',
+  'ownerUserId': 1,
   'kind': 'PERSONAL_BLOCK',
   'title': 'Bloqueio semanal',
   'startsAt': '2026-08-03T12:00:00.000Z',
@@ -147,7 +148,7 @@ void main() {
         _app(
           repository,
           prefill: const CalendarEditorPrefill(
-            facilityId: 'facility-1',
+            facilityId: 1,
             facilityName: 'Clínica Central',
             kind: CalendarEventKind.interaction,
           ),
@@ -175,7 +176,7 @@ void main() {
       _app(
         repository,
         prefill: const CalendarEditorPrefill(
-          facilityId: 'facility-1',
+          facilityId: 1,
           facilityName: 'Clínica Central',
           kind: CalendarEventKind.interaction,
         ),
@@ -187,6 +188,6 @@ void main() {
     await tester.tap(find.text('Salvar compromisso'));
     await tester.pumpAndSettle();
 
-    expect(repository.command?.facilityId, 'facility-1');
+    expect(repository.command?.facilityId, 1);
   });
 }

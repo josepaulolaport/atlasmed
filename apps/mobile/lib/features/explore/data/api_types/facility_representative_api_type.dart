@@ -1,94 +1,95 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
-/// DTO from `GET|POST|PATCH /facilities/:id/representatives`.
+/// Flat projection from
+/// `GET|POST|PATCH /facilities/:id/administrative-contacts`.
 class FacilityRepresentativeApi {
   const FacilityRepresentativeApi({
-    required this.id,
+    required this.personFacilityId,
+    required this.personId,
     required this.facilityId,
-    required this.representativeName,
-    this.roleTitle,
+    required this.firstName,
+    required this.lastName,
+    this.socialName,
+    this.cpf,
     this.email,
-    this.phone,
-    this.taxId,
-    required this.contactType,
-    this.isPartner = false,
-    this.isAdministrator = false,
-    this.isDecisionMaker = false,
-    this.isBuyer = false,
-    this.isBiller = false,
-    this.isSecretary = false,
-    this.relationshipLevel,
-    this.sourceProvider,
-    this.confirmedAt,
+    this.mobilePhone,
+    this.landlinePhone,
+    this.roleTitle,
+    this.notes,
+    this.hasHealthcareProfile = false,
+    this.classificationIds = const [],
+    this.roleIds = const [],
   });
 
   factory FacilityRepresentativeApi.fromMap(Map<String, dynamic> map) {
     return FacilityRepresentativeApi(
-      id: readString(map['id']),
-      facilityId: readString(map['facilityId']),
-      representativeName: readString(map['representativeName']),
-      roleTitle: readNullableString(map['roleTitle']),
+      personFacilityId: readCrmId(map['personFacilityId'], 'personFacilityId'),
+      personId: readCrmId(map['personId'], 'personId'),
+      facilityId: readCrmId(map['facilityId'], 'facilityId'),
+      firstName: readString(map['firstName']),
+      lastName: readString(map['lastName']),
+      socialName: readNullableString(map['socialName']),
+      cpf: readNullableString(map['cpf']),
       email: readNullableString(map['email']),
-      phone: readNullableString(map['phone']),
-      taxId: readNullableString(map['taxId']),
-      contactType: readString(map['contactType']).isEmpty
-          ? 'PROFESSIONAL'
-          : readString(map['contactType']),
-      isPartner: map['isPartner'] == true,
-      isAdministrator: map['isAdministrator'] == true,
-      isDecisionMaker: map['isDecisionMaker'] == true,
-      isBuyer: map['isBuyer'] == true,
-      isBiller: map['isBiller'] == true,
-      isSecretary: map['isSecretary'] == true,
-      relationshipLevel: _readLevel(map['relationshipLevel']),
-      sourceProvider: readNullableString(map['sourceProvider']),
-      confirmedAt: readNullableDateTime(map['confirmedAt']),
+      mobilePhone: readNullableString(map['mobilePhone']),
+      landlinePhone: readNullableString(map['landlinePhone']),
+      roleTitle: readNullableString(map['roleTitle']),
+      notes: readNullableString(map['notes']),
+      hasHealthcareProfile: map['hasHealthcareProfile'] == true,
+      classificationIds: readCrmIdList(
+        map['classificationIds'],
+        'classificationIds',
+      ),
+      roleIds: readCrmIdList(map['roleIds'], 'roleIds'),
     );
   }
 
-  final String id;
-  final String facilityId;
-  final String representativeName;
-  final String? roleTitle;
+  final int personFacilityId;
+  final int personId;
+  final int facilityId;
+  final String firstName;
+  final String lastName;
+  final String? socialName;
+  final String? cpf;
   final String? email;
-  final String? phone;
-  final String? taxId;
-  final String contactType;
-  final bool isPartner;
-  final bool isAdministrator;
-  final bool isDecisionMaker;
-  final bool isBuyer;
-  final bool isBiller;
-  final bool isSecretary;
-  final int? relationshipLevel;
-  final String? sourceProvider;
-  final DateTime? confirmedAt;
+  final String? mobilePhone;
+  final String? landlinePhone;
+  final String? roleTitle;
+  final String? notes;
+  final bool hasHealthcareProfile;
+  final List<int> classificationIds;
+  final List<int> roleIds;
 
+  String get displayName {
+    final social = socialName?.trim();
+    if (social != null && social.isNotEmpty) return social;
+    return '$firstName $lastName'.trim();
+  }
+
+  String? get phone {
+    final mobile = mobilePhone?.trim();
+    if (mobile != null && mobile.isNotEmpty) return mobile;
+    final landline = landlinePhone?.trim();
+    if (landline != null && landline.isNotEmpty) return landline;
+    return null;
+  }
+
+  /// Domain [AdministrativeProfessional.id] = [personFacilityId] for PATCH.
   AdministrativeProfessional toDomain() {
     return AdministrativeProfessional(
-      id: id,
-      name: representativeName,
+      id: personFacilityId,
+      name: displayName,
       roleTitle: roleTitle,
       email: email,
       phone: phone,
-      contactType: contactType,
-      isPartner: isPartner,
-      isAdministrator: isAdministrator,
-      isDecisionMaker: isDecisionMaker,
-      isBuyer: isBuyer,
-      isBiller: isBiller,
-      isSecretary: isSecretary,
-      relationshipScore: relationshipLevel,
+      contactType: 'PROFESSIONAL',
+      roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
     );
-  }
-
-  static int? _readLevel(Object? value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return null;
   }
 }
 
@@ -104,13 +105,21 @@ class PaginatedFacilityRepresentatives {
   }
 
   factory PaginatedFacilityRepresentatives.fromMap(Map<String, dynamic> map) {
+    final items = readObjectList(
+      map['data'],
+    ).map(FacilityRepresentativeApi.fromMap).toList(growable: false);
+    final paginationMap = (map['pagination'] as Map?)?.cast<String, dynamic>();
+    final pagination = paginationMap != null
+        ? Pagination.fromMap(paginationMap)
+        : Pagination(
+            page: 1,
+            limit: items.length,
+            total: items.length,
+            totalPages: 1,
+          );
     return PaginatedFacilityRepresentatives(
-      items: readObjectList(
-        map['data'],
-      ).map(FacilityRepresentativeApi.fromMap).toList(growable: false),
-      pagination: Pagination.fromMap(
-        (map['pagination'] as Map?)?.cast<String, dynamic>() ?? const {},
-      ),
+      items: items,
+      pagination: pagination,
     );
   }
 

@@ -16,11 +16,9 @@ export function applyRoleAbilities(
     case "ADMIN":
       can("manage", "USER");
       can("manage", "FACILITY");
-      can("manage", "PROFESSIONAL");
+      can("manage", "PERSON");
       can("manage", "TERRITORY");
       can("manage", "INVITATION");
-      can("manage", "REGISTRY_INGESTION");
-      can("manage", "REGISTRY_SUGGESTION");
       can("manage", "SEARCH_SYNC");
       can("manage", "CATALOG");
       can("manage", "VISIT");
@@ -43,14 +41,12 @@ export function applyRoleAbilities(
       can("delete", "INVITATION");
       can("read", "FACILITY");
       can("update", "FACILITY");
-      can("read", "PROFESSIONAL");
-      can("update", "PROFESSIONAL");
+      can("read", "PERSON");
+      can("create", "PERSON");
+      can("update", "PERSON");
       can("read", "TERRITORY");
       can("create", "TERRITORY");
       can("update", "TERRITORY");
-      can("read", "REGISTRY_SUGGESTION");
-      can("update", "REGISTRY_SUGGESTION");
-      can("read", "REGISTRY_INGESTION");
       can("read", "CATALOG");
       can("create", "FIELD_SUGGESTION");
       can("read", "FIELD_SUGGESTION");
@@ -72,8 +68,9 @@ export function applyRoleAbilities(
       can("delete", "INTERACTION");
       can("read", "FACILITY");
       can("update", "FACILITY");
-      can("read", "PROFESSIONAL");
-      can("update", "PROFESSIONAL");
+      can("read", "PERSON");
+      can("create", "PERSON");
+      can("update", "PERSON");
       can("read", "CATALOG");
       // Mine list is facility-scoped (read FACILITY); ops queue requires read FIELD_SUGGESTION.
       can("create", "FIELD_SUGGESTION");
@@ -89,7 +86,7 @@ export function applyRoleAbilities(
 
     case "OPS":
       can("read", "FACILITY");
-      can("read", "PROFESSIONAL");
+      can("read", "PERSON");
       can("read", "TERRITORY");
       can("read", "USER");
       can("read", "FIELD_SUGGESTION");
@@ -100,9 +97,9 @@ export function applyRoleAbilities(
       cannot("create", "FACILITY");
       cannot("update", "FACILITY");
       cannot("delete", "FACILITY");
-      cannot("create", "PROFESSIONAL");
-      cannot("update", "PROFESSIONAL");
-      cannot("delete", "PROFESSIONAL");
+      cannot("create", "PERSON");
+      cannot("update", "PERSON");
+      cannot("delete", "PERSON");
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");

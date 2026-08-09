@@ -25,10 +25,10 @@ export class Disable2FAUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    userId: string;
+    userId: number;
     password: string;
     code: string;
-    sessionId?: string;
+    sessionId?: number;
     ipAddress?: string;
   }) {
     const user = await this.deps.userRepository.findById(params.userId);

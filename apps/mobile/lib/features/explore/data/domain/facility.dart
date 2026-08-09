@@ -7,7 +7,7 @@ import 'package:flutter/painting.dart';
 // ═══════════════════════════════════════════════════════════════
 
 class Facility {
-  final String id;
+  final int id;
   final String name;
 
   // Subtipos agrupando campos relacionados
@@ -23,7 +23,7 @@ class Facility {
   final int professionalCount;
   final String? imageUrl;
   final String? imageBlurhash;
-  final List<ClinicService> services;
+  final List<ClinicalFocus> clinicalFocuses;
   final List<FacilityVerticalProfileDTO> verticalProfiles;
   final String? createdAt;
   final String? updatedAt;
@@ -41,7 +41,7 @@ class Facility {
     this.professionalCount = 0,
     this.imageUrl,
     this.imageBlurhash,
-    this.services = const [],
+    this.clinicalFocuses = const [],
     this.verticalProfiles = const [],
     this.createdAt,
     this.updatedAt,
@@ -49,7 +49,7 @@ class Facility {
 
   /// Apenas o básico — a partir do DTO do detail.
   /// Copia a lógica do antigo [ClinicDetail.fromApi].
-  factory Facility.fromDTO(FacilityDTO dto) {
+  factory Facility.fromDTO(FacilityDTO dto, {int? verticalId}) {
     String? nonEmpty(String? value) {
       final trimmed = value?.trim();
       return trimmed == null || trimmed.isEmpty ? null : trimmed;
@@ -57,6 +57,10 @@ class Facility {
 
     final city = nonEmpty(dto.city) ?? '';
     final neighborhood = nonEmpty(dto.neighborhood) ?? '';
+    final profile = pickVerticalProfile(
+      dto.verticalProfiles,
+      verticalId: verticalId,
+    );
 
     return Facility(
       id: dto.id,
@@ -80,8 +84,8 @@ class Facility {
         billingEmail: nonEmpty(dto.billingEmail),
       ),
       commercial: FacilityCommercial(
-        commercialStatus: dto.commercialStatus,
-        purchaseStatus: dto.purchaseStatus,
+        commercialStatus: profile?.commercialStatus,
+        purchaseStatus: profile?.purchaseStatus,
         conformityStatus: dto.conformityStatus,
         doctorCount: dto.professionalCount,
       ),
@@ -94,9 +98,8 @@ class Facility {
         territoryName: dto.territoryName,
       ),
       registration: FacilityRegistration(
-        taxIdType: dto.taxIdType,
-        cnpj: dto.cnpj,
-        cpf: dto.cpf,
+        legalDocumentType: dto.legalDocumentType,
+        legalDocument: dto.legalDocument,
         responsiblePerson: nonEmpty(dto.responsibleName),
         openingHours: nonEmpty(dto.openingHours),
         registeredSince: dto.registeredSince != null
@@ -106,11 +109,11 @@ class Facility {
                   : null),
       ),
       distanceKm: dto.distanceKm,
-      purchaseRecurrence: dto.purchaseRecurrence,
+      purchaseRecurrence: profile?.purchaseRecurrence,
       professionalCount: dto.professionalCount,
       imageUrl: dto.imageUrl,
       imageBlurhash: dto.imageBlurhash,
-      services: dto.services,
+      clinicalFocuses: dto.clinicalFocuses,
       verticalProfiles: dto.verticalProfiles,
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt,
@@ -244,17 +247,15 @@ class FacilityTerritory {
 }
 
 class FacilityRegistration {
-  final String? taxIdType;
-  final String? cnpj;
-  final String? cpf;
+  final String? legalDocumentType;
+  final String? legalDocument;
   final String? responsiblePerson;
   final String? openingHours;
   final DateTime? registeredSince;
 
   const FacilityRegistration({
-    this.taxIdType,
-    this.cnpj,
-    this.cpf,
+    this.legalDocumentType,
+    this.legalDocument,
     this.responsiblePerson,
     this.openingHours,
     this.registeredSince,

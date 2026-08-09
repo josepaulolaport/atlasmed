@@ -16,7 +16,7 @@ class ClinicRegistrationDocumentDetailScreen extends ConsumerStatefulWidget {
     required this.initialDocument,
   });
 
-  final String facilityId;
+  final int facilityId;
   final EstablishmentDocument initialDocument;
 
   @override
@@ -87,7 +87,7 @@ class _ClinicRegistrationDocumentDetailScreenState
         approved?.submittedAt ?? _document.latestSubmittedAt ?? DateTime.now();
     final version = approved?.version ?? 1;
     final viewable = _document.files
-        .where((f) => f.canView && f.fileAssetId.isNotEmpty)
+        .where((f) => f.canView && f.fileAssetId > 0)
         .toList(growable: false);
     final previewPages = [
       for (var i = 0; i < viewable.length; i++)
@@ -292,7 +292,7 @@ class _CurrentDocumentCard extends StatelessWidget {
   final EstablishmentDocument document;
   final bool hasApproved;
   final List<CadastroPreviewPage> previewPages;
-  final Future<String> Function(String fileId) resolveUrl;
+  final Future<String> Function(int fileId) resolveUrl;
 
   EstablishmentDocumentStatus get _badgeStatus {
     if (hasApproved) return EstablishmentDocumentStatus.approved;

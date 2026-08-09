@@ -22,8 +22,8 @@ export const userAssignmentsRoute = new Elysia({
       const parsed = assignUserTerritorySchema.parse(body);
 
       await accessUseCases.assignUserTerritory().execute({
-        targetUserId: params.id,
-        territoryId: parsed.territoryId,
+        targetUserId: Number(params.id),
+        territoryId: Number(parsed.territoryId),
         assignedBy,
         actorRole: actor.role.name,
       });
@@ -45,8 +45,8 @@ export const userAssignmentsRoute = new Elysia({
       const actor = await getUser();
 
       await accessUseCases.revokeUserTerritory().execute({
-        targetUserId: params.id,
-        territoryId: params.territoryId,
+        targetUserId: Number(params.id),
+        territoryId: Number(params.territoryId),
         revokedBy,
         actorRole: actor.role.name,
       });
@@ -62,8 +62,8 @@ export const userAssignmentsRoute = new Elysia({
       const assignedByUserId = await getUserId();
 
       await accessRepositories.scope.assignVertical({
-        userId: params.id,
-        verticalId: (body as any).verticalId,
+        userId: Number(params.id),
+        verticalId: Number((body as any).verticalId),
         assignedByUserId,
       });
 
@@ -86,8 +86,8 @@ export const userAssignmentsRoute = new Elysia({
       await getUserId();
 
       await accessRepositories.scope.revokeVertical({
-        userId: params.id,
-        verticalId: params.verticalId,
+        userId: Number(params.id),
+        verticalId: Number(params.verticalId),
       });
 
       return { message: "Business vertical revoked successfully" };
@@ -98,7 +98,7 @@ export const userAssignmentsRoute = new Elysia({
     async ({ params, getUser }: any) => {
       const actor = await getUser();
       return accessUseCases.getUserAssignments().execute({
-        targetUserId: params.id,
+        targetUserId: Number(params.id),
         actorRole: actor.role.name,
       });
     },
@@ -120,7 +120,7 @@ export const userAssignmentsRoute = new Elysia({
       const parsed = replaceUserAssignmentsSchema.parse(body);
 
       return accessUseCases.replaceUserAssignments().execute({
-        targetUserId: params.id,
+        targetUserId: Number(params.id),
         actorUserId: assignedBy,
         actorRole: actor.role.name as Role,
         verticalAssignments: parsed.verticalAssignments.map((v) => ({

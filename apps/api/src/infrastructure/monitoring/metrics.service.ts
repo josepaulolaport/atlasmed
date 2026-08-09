@@ -21,10 +21,10 @@ export class MetricsService {
   public readonly notificationQueueSize: Gauge;
   public readonly notificationsSent: Counter;
   public readonly notificationsFailed: Counter;
-  public readonly scopeClinicStubCounter: Counter;
   public readonly auditLogFailureCounter: Counter;
   public readonly auditSiemExportBatchesCounter: Counter;
   public readonly auditSiemExportFailuresCounter: Counter;
+  public readonly searchMeiliFallbackCounter: Counter;
 
   private constructor() {
     this.httpRequestDuration = new Histogram({
@@ -130,12 +130,6 @@ export class MetricsService {
       labelNames: ["type", "channel", "reason"],
     });
 
-    this.scopeClinicStubCounter = new Counter({
-      name: "scope_clinic_stub_unresolved_total",
-      help: "Territory scope resolved but clinic port returned no clinics",
-      labelNames: ["territory_count_bucket"],
-    });
-
     this.auditLogFailureCounter = new Counter({
       name: "audit_log_write_failures_total",
       help: "Audit log writes that failed after retry",
@@ -151,6 +145,12 @@ export class MetricsService {
     this.auditSiemExportFailuresCounter = new Counter({
       name: "audit_siem_export_failures_total",
       help: "SIEM audit export batch failures",
+    });
+
+    this.searchMeiliFallbackCounter = new Counter({
+      name: "search_meili_fallback_total",
+      help: "Meilisearch list/search requests that fell back to SQL",
+      labelNames: ["index", "reason"],
     });
   }
 
@@ -234,10 +234,8 @@ export class MetricsService {
     this.auditLogFailureCounter.inc({ event_type: eventType });
   }
 
-  public recordScopeClinicResolutionStub(territoryCount: number): void {
-    const bucket =
-      territoryCount <= 1 ? "1" : territoryCount <= 5 ? "2-5" : "6+";
-    this.scopeClinicStubCounter.inc({ territory_count_bucket: bucket });
+  public recordSearchMeiliFallback(index: string, reason: string): void {
+    this.searchMeiliFallbackCounter.inc({ index, reason });
   }
 
   public async updateActiveMetrics(): Promise<void> {

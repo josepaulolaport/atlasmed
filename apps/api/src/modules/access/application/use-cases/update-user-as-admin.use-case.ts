@@ -21,7 +21,7 @@ export class UpdateUserAsAdminUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
+    targetUserId: number;
     actorRole: Role;
     data: UpdateUserAsAdminParams;
   }) {

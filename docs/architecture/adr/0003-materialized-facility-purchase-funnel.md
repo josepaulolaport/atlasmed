@@ -2,16 +2,20 @@
 
 ## Status
 
-Accepted — **amended 2026-07-28**: funnel is per Linha comercial (`facility_vertical_profiles`), not facility-global.
+Accepted — **amended 2026-07-28**: funnel is per Linha comercial (`facility_vertical_profiles`), not facility-global. **Amended 2026-08-06**: `facilities` funnel rollup columns removed; Meilisearch uses per-vertical composite fields.
 
 ### Amendment (per-vertical materialization)
 
 - Eligible orders are filtered by `(facility_id, vertical_id)`.
 - Snapshot columns live on `facility_vertical_profiles` (same fields as originally on `facilities`).
 - API list/detail expose top-level `purchaseRecurrence` from the matching profile(s): single profile or multi-profile **consensus**; when stages disagree, omit top-level and keep per-profile `verticalProfiles[].purchaseRecurrence`.
-- `facilities.*` funnel columns remain a **rollup** (most actionable stage across active profiles) for Meili / legacy sort until search is vertical-aware.
 - Manual configure / PATCH requires `verticalId` when the clinic has more than one active profile.
-- Worker backfill/reconcile recalculates every active profile for each facility, then refreshes the facility rollup.
+- Worker backfill/reconcile recalculates every active profile for each facility, then publishes Meilisearch documents with per-vertical composite funnel fields (no facility rollup).
+
+### Amendment (Meilisearch per-vertical composites)
+
+- `facilities.*` funnel rollup columns are **removed**; the purchase-recurrence worker no longer writes them.
+- Facility search documents derive funnel filter/sort fields from active `facility_vertical_profiles`: `verticalFunnelStages`, `verticalPurchaseIntervalSources`, `verticalManualPurchaseProfiles`, plus facility-level aggregates (`purchaseFunnelStagesAny`, `purchaseFunnelStageRank`, `purchaseIntervalDaysMin`, `hasLastValidPurchase`, `lastValidPurchaseSortAt`).
 
 ## Context
 
@@ -59,7 +63,7 @@ A boundary date belongs to the stage that starts on that date. `next_purchase_fu
 
 ### Materialized fields
 
-The facility read model stores:
+The facility read model stores funnel snapshots on `facility_vertical_profiles` only (rollup columns on `facilities` were removed):
 
 - `observed_purchase_interval_days`;
 - `purchase_interval_days` and `purchase_interval_source`;
@@ -74,7 +78,7 @@ Schema changes and SQL migrations are generated with Drizzle Kit and committed t
 
 ### SQL and Meilisearch consistency
 
-SQL and Meilisearch expose the same materialized stage, effective interval, source, manual profile, and last-purchase sort keys. SQL is authoritative. Worker batches recalculate PostgreSQL first, then publish complete facility search documents, including unchanged snapshots, so a retry can repair a prior search-publication failure. Meilisearch filtering happens before pagination, and business sorts use deterministic rank and tie-break fields equivalent to SQL.
+SQL and Meilisearch expose the same per-profile materialized stage, effective interval, source, manual profile, and last-purchase sort keys. SQL is authoritative. Worker batches recalculate PostgreSQL profiles first, then publish complete facility search documents with per-vertical composite funnel fields, including unchanged snapshots, so a retry can repair a prior search-publication failure. Meilisearch filtering happens before pagination, and business sorts use deterministic rank and tie-break fields equivalent to SQL.
 
 A full facilities search rebuild uses the existing blue/green `search-sync-facilities-full` workflow. It is required after initial backfill and remains the repair mechanism for projection drift; it is not the primary update path.
 
@@ -95,6 +99,8 @@ The initial `BACKFILL` is started explicitly through `POST /sync` with `{ "entit
 Both the API override path and worker recalculation lock the facility row with `SELECT ... FOR UPDATE`, then re-read manual configuration and eligible purchase dates and persist the complete snapshot in one transaction. This prevents a reconciliation from losing a concurrent manual override.
 
 When an order writer/importer is added to this repository, its post-commit hook must enqueue recalculation for changes to `facility_id`, `ordered_at`, `status`, or `type`, and for deletion. If the facility changes, both the old and new facility IDs must be recalculated. This hook improves freshness but does not replace hourly reconciliation and midnight repair.
+
+**Emultec avulsa importer (2026-08):** Temporal `emultecOrderImportWorkflow` (`HYBRID` by default: DLQ replay → reconcile → incremental) upserts eligible Emultec orders/items. After successful upserts it starts a child `purchaseRecurrenceWorkflow` `RECONCILE`. Trigger: `POST /sync` `{ "entity": "emultec-orders" }` (stable id `emultec-order-import-hybrid`) or schedule `emultec-order-import-every-10m` (every 10m, `BUFFER_ONE` + 1h catchup). Digests / hard-failure DLQ: `ops.emultec_order_import_runs`, `ops.emultec_order_import_dead_letters`. Ops: [`docs/ops/emultec-order-import.md`](../../ops/emultec-order-import.md). Does not replace the hourly purchase-recurrence schedule.
 
 ## Alternatives
 

@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import {
+  Role,
   updateProfileSchema,
   updateUserPreferencesSchema,
 } from "@atlasmed/access";
@@ -53,7 +54,7 @@ export const userRoute = new Elysia({
   )
   .patch(
     "/user",
-    async ({ getUserId, body }: any) => {
+    async ({ getUserId, body }) => {
       const parsed = updateProfileSchema.safeParse(body);
       if (!parsed.success) {
         throw toValidationError(parsed.error);
@@ -82,13 +83,13 @@ export const userRoute = new Elysia({
   )
   .get(
     "/user/assignments",
-    async ({ getUserId, getUser }: any) => {
+    async ({ getUserId, getUser }) => {
       const userId = await getUserId();
       const actor = await getUser();
 
       return accessUseCases.getUserAssignments().execute({
         targetUserId: userId,
-        actorRole: actor.role.name,
+        actorRole: actor.role.name as Role,
         self: true,
       });
     },
@@ -102,7 +103,7 @@ export const userRoute = new Elysia({
   )
   .get(
     "/user/preferences",
-    async ({ getUserId }: any) => {
+    async ({ getUserId }) => {
       const userId = await getUserId();
       return accessUseCases.getUserPreferences().execute({ userId });
     },
@@ -116,7 +117,7 @@ export const userRoute = new Elysia({
   )
   .patch(
     "/user/preferences",
-    async ({ getUserId, body }: any) => {
+    async ({ getUserId, body }) => {
       const parsed = updateUserPreferencesSchema.safeParse(body);
       if (!parsed.success) {
         throw toValidationError(parsed.error);

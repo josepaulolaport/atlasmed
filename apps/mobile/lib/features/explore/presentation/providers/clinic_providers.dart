@@ -15,7 +15,7 @@ class ClinicsQuery {
     this.commercialStatus,
     this.purchaseBucket,
     this.productIds,
-    this.serviceCodes,
+    this.clinicalFocusIds,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -34,14 +34,14 @@ class ClinicsQuery {
   final String? commercialStatus;
   final String? purchaseBucket;
   final String? productIds;
-  final String? serviceCodes;
+  final String? clinicalFocusIds;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
   final int? purchaseIntervalMaxDays;
   final FacilitySort? sort;
   final SortOrder? order;
-  final String? verticalId;
+  final int? verticalId;
 
   ClinicsQuery copyWith({int? page}) {
     return ClinicsQuery(
@@ -54,7 +54,7 @@ class ClinicsQuery {
       commercialStatus: commercialStatus,
       purchaseBucket: purchaseBucket,
       productIds: productIds,
-      serviceCodes: serviceCodes,
+      clinicalFocusIds: clinicalFocusIds,
       purchaseFunnelStages: purchaseFunnelStages,
       purchaseProfile: purchaseProfile,
       purchaseIntervalMinDays: purchaseIntervalMinDays,
@@ -77,7 +77,7 @@ class ClinicsQuery {
         other.commercialStatus == commercialStatus &&
         other.purchaseBucket == purchaseBucket &&
         other.productIds == productIds &&
-        other.serviceCodes == serviceCodes &&
+        other.clinicalFocusIds == clinicalFocusIds &&
         _sameStages(other.purchaseFunnelStages, purchaseFunnelStages) &&
         other.purchaseProfile == purchaseProfile &&
         other.purchaseIntervalMinDays == purchaseIntervalMinDays &&
@@ -98,7 +98,7 @@ class ClinicsQuery {
     commercialStatus,
     purchaseBucket,
     productIds,
-    serviceCodes,
+    clinicalFocusIds,
     Object.hashAll(purchaseFunnelStages),
     purchaseProfile,
     purchaseIntervalMinDays,
@@ -149,7 +149,7 @@ final clinicsRepositoryProvider = Provider.autoDispose
         commercialStatus: query.commercialStatus,
         purchaseBucket: query.purchaseBucket,
         productIds: query.productIds,
-        serviceCodes: query.serviceCodes,
+        clinicalFocusIds: query.clinicalFocusIds,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,
         purchaseIntervalMinDays: query.purchaseIntervalMinDays,
@@ -179,7 +179,7 @@ final _clinicsPageRepositoryProvider = Provider.autoDispose
         commercialStatus: query.commercialStatus,
         purchaseBucket: query.purchaseBucket,
         productIds: query.productIds,
-        serviceCodes: query.serviceCodes,
+        clinicalFocusIds: query.clinicalFocusIds,
         purchaseFunnelStages: query.purchaseFunnelStages,
         purchaseProfile: query.purchaseProfile,
         purchaseIntervalMinDays: query.purchaseIntervalMinDays,

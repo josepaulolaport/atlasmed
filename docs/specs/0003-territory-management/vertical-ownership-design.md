@@ -15,7 +15,7 @@ After P0:
 
 - Territory **geometry** is global (no `territories.sector_id`).
 - Facility **commercial** data is per-vertical (`facility_vertical_profiles`).
-- Direct clinic ownership is per-vertical (`facility_consultant_assignments.vertical_id`, one active REP per facility×vertical).
+- Direct clinic ownership is per-vertical (`facility_vertical_rep_assignments` under `facility_vertical_profiles`, one active REP per facility×vertical).
 - Live user↔territory assignment is still **`UNIQUE (user_id, territory_id)`** — **no vertical**.
 
 So a REP’s patches apply to **all** their verticals at once. That is wrong once Dermatologia (or a second vertical) shares the same map:
@@ -55,7 +55,7 @@ P0 scope = territory ∪ consultant facilities **∩** profiles in resolved vert
 | Territory ↔ vertical | Territory belongs to **one** vertical (`territories.vertical_id` candidate) |
 | Clinic ↔ patch membership | **Per vertical** (Q6 **C**) — not a single global `facilities.territoryId` for access. Store membership (join / profile FK); PIP only on write/recompute |
 | `facility_vertical_profiles` | Clinic participates commercially in a vertical |
-| `facility_consultant_assignments` | Authoritative **clinic×vertical** REP (manual; one per pair) |
+| `facility_vertical_rep_assignments` | Authoritative **clinic×vertical** REP under profile (manual; one active per profile; ADR 0005) |
 | `user_territory_assignments` | User ↔ territory row (territory already implies vertical). **MANAGER and REP** both get UTA. **Many REPs per patch** allowed (Q2). Q1: same user cannot hold same territory in two verticals — satisfied if territory has one vertical |
 
 ### 4.2 Schema direction (candidate — revise vs early draft)
@@ -178,7 +178,7 @@ No vertical id in URL paths (verticals P0 rule).
 | **Q1** | May the **same user** hold the **same patch** in **multiple verticals**? | **Locked: B — no.** A user may hold a given patch in only one vertical. |
 | **Q2** | How many REPs per `(patch, vertical)`? | **Locked: B — zero or more.** REPs **still receive patch UTA** (patches remain assignable). Many REPs on same patch OK. Patch UTA does **not** grant REP clinic list access — clinics via **manual consultant** only (Q4). **Manager** zone UTA **does** bind geo coverage for manager scope. Spec 0006 (richer shared-coverage) still later. |
 | **Q3** | Managers: zone assignment **per vertical** or vertical-agnostic? | **Locked: A + product wording.** Zones are **individual to their vertical**. A manager may own **one or more zones** in **one or more verticals**. Not vertical-agnostic (B). |
-| **Q4** | REP clinic visibility vs territory / consultant | **Locked: D (product).** REPs see a clinic **only** via **manual** `facility_consultant_assignments` for a vertical they have. **One REP per (clinic, vertical).** Geo patch assignment does **not** grant REP clinic visibility. |
+| **Q4** | REP clinic visibility vs territory / consultant | **Locked: D (product).** REPs see a clinic **only** via **manual** `facility_vertical_rep_assignments` for a vertical they have. **One REP per (clinic, vertical).** Geo patch assignment does **not** grant REP clinic visibility. |
 | **Q4b** | Clinic with profile, **no** consultant yet | **Locked: B + vertical.** **MANAGER** whose **zone covers** the clinic **and** who belongs to that clinic’s vertical; plus **ADMIN**. REPs still only via consultant. |
 | **Q4c** | OPS sees unassigned (no consultant) profiled clinic? | **Locked: B.** Yes if OPS has that vertical (no zone cover required). |
 | **Q5** | New vertical vs existing Ortopedia zones | **Locked: D.** Zones are **recreated per vertical** (new territory rows), not copied assigns onto shared geometry. Dermatologia gets its own zone/patch entities. |
@@ -195,7 +195,7 @@ A clinic enters a vertical’s analytics **only if all** hold for that V:
 
 1. Active `facility_vertical_profiles` for V  
 2. In-scope for the viewer for V (MANAGER: stored membership in their V zones ∪ own consultant; REP: consultant only; OPS: profile in V; ADMIN: global + filter)  
-3. Metrics that need a consultant (e.g. “assigned”) use `facility_consultant_assignments` for **that same V** — not another vertical’s assign
+3. Metrics that need a consultant (e.g. “assigned”) use `facility_vertical_rep_assignments` for **that same V** — not another vertical’s assign
 
 | Situation | Ortopedia filter | Dermatologia filter |
 |---|---|---|

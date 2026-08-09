@@ -125,20 +125,6 @@ export interface InviteUserRequest {
   }>;
 }
 
-export interface AccessGrant {
-  id: string;
-  resource: string;
-  resourceId?: string;
-  action: string;
-  conditions?: Record<string, unknown>;
-  expiresAt?: string;
-}
-
-export interface CapabilitiesResponse {
-  role: string;
-  grants: AccessGrant[];
-}
-
 export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;

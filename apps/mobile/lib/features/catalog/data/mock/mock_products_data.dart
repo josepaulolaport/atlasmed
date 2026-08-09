@@ -14,7 +14,7 @@ class MockProductFamily {
     required this.tagline,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String manufacturer;
   final String countryOfOrigin;
@@ -41,10 +41,10 @@ class MockProduct {
     this.competitorMatchCount = 0,
   });
 
-  final String id;
+  final int id;
 
   /// Groups concentrations of the same brand (e.g. Reviscon 1.0% / Plus / Mono).
-  final String familyId;
+  final int familyId;
   final String name;
   final String presentation;
   final String manufacturer;
@@ -64,7 +64,7 @@ const mockProductSectors = <String>['Viscossuplementação'];
 
 const mockProductFamilies = <MockProductFamily>[
   MockProductFamily(
-    id: 'family-reviscon',
+    id: 1001,
     name: 'Reviscon',
     manufacturer: 'VSY',
     countryOfOrigin: 'DE',
@@ -75,8 +75,8 @@ const mockProductFamilies = <MockProductFamily>[
 
 const mockProducts = <MockProduct>[
   MockProduct(
-    id: 'mock-reviscon-1',
-    familyId: 'family-reviscon',
+    id: 1002,
+    familyId: 1001,
     name: 'Reviscon 1.0%',
     presentation: '20mg / 2mL',
     manufacturer: 'VSY',
@@ -95,8 +95,8 @@ const mockProducts = <MockProduct>[
     competitorMatchCount: 2,
   ),
   MockProduct(
-    id: 'mock-reviscon-plus',
-    familyId: 'family-reviscon',
+    id: 1003,
+    familyId: 1001,
     name: 'Reviscon Plus 1.6%',
     presentation: '32mg / 2mL',
     manufacturer: 'VSY',
@@ -114,8 +114,8 @@ const mockProducts = <MockProduct>[
     competitorMatchCount: 3,
   ),
   MockProduct(
-    id: 'mock-reviscon-mono',
-    familyId: 'family-reviscon',
+    id: 1004,
+    familyId: 1001,
     name: 'Reviscon Mono 2.0%',
     presentation: '40mg / 2mL',
     manufacturer: 'VSY',
@@ -134,21 +134,21 @@ const mockProducts = <MockProduct>[
   ),
 ];
 
-MockProductFamily? mockFamilyById(String id) {
+MockProductFamily? mockFamilyById(int id) {
   for (final family in mockProductFamilies) {
     if (family.id == id) return family;
   }
   return null;
 }
 
-MockProduct? mockProductById(String id) {
+MockProduct? mockProductById(int id) {
   for (final product in mockProducts) {
     if (product.id == id) return product;
   }
   return null;
 }
 
-List<MockProduct> mockProductsInFamily(String familyId) {
+List<MockProduct> mockProductsInFamily(int familyId) {
   return [
     for (final product in mockProducts)
       if (product.familyId == familyId) product,
@@ -156,7 +156,7 @@ List<MockProduct> mockProductsInFamily(String familyId) {
 }
 
 /// Default concentration when opening a family from the list.
-MockProduct? mockDefaultProductForFamily(String familyId) {
+MockProduct? mockDefaultProductForFamily(int familyId) {
   final products = mockProductsInFamily(familyId);
   return products.isEmpty ? null : products.first;
 }

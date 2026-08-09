@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 String formatDate(DateTime date) {
   final d = date.day.toString().padLeft(2, '0');
@@ -241,7 +241,7 @@ class CatalogSearchBar extends StatelessWidget {
 /// manufacturer/country of origin so a rep can narrow "only what VSY
 /// makes" or "only German-made" alongside the usual family filter.
 class ProductFilterSelection {
-  final String? familyId;
+  final int? familyId;
   final String? manufacturer;
   final String? country;
 
@@ -255,7 +255,7 @@ class ProductFilterSelection {
       [familyId, manufacturer, country].where((v) => v != null).length;
 
   ProductFilterSelection copyWith({
-    String? Function()? familyId,
+    int? Function()? familyId,
     String? Function()? manufacturer,
     String? Function()? country,
   }) {
@@ -315,14 +315,14 @@ class _ProductFilterSheet extends StatefulWidget {
 class _ProductFilterSheetState extends State<_ProductFilterSheet> {
   late ProductFilterSelection _selection = widget.initial;
 
-  String? _familyName(String? familyId) {
+  String? _familyName(int? familyId) {
     for (final family in widget.families) {
       if (family.id == familyId) return family.name;
     }
     return null;
   }
 
-  String? _familyIdForName(String? name) {
+  int? _familyIdForName(String? name) {
     for (final family in widget.families) {
       if (family.name == name) return family.id;
     }
@@ -711,14 +711,14 @@ class CatalogTabBar extends StatelessWidget {
               child: _segment(
                 label: 'Produtos',
                 selected: active == CatalogTab.produtos,
-                onTap: () => context.go('/catalog'),
+                onTap: () => const CatalogHomeRoute().go(context),
               ),
             ),
             Expanded(
               child: _segment(
                 label: 'Tabela Brasíndice',
                 selected: active == CatalogTab.tabelaCompleta,
-                onTap: () => context.go('/catalog/price-index'),
+                onTap: () => const CatalogPriceIndexRoute().go(context),
               ),
             ),
           ],

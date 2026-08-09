@@ -21,8 +21,8 @@ function mapNote(row: NoteRow): FacilityNoteRecord {
 
 export class DrizzleFacilityNoteRepository implements FacilityNoteRepository {
   async findByFacilityAndUser(
-    facilityId: string,
-    userId: string
+    facilityId: number,
+    userId: number
   ): Promise<FacilityNoteRecord[]> {
     const rows = await db
       .select()
@@ -39,11 +39,49 @@ export class DrizzleFacilityNoteRepository implements FacilityNoteRepository {
   }
 
   async create(input: {
-    facilityId: string;
-    userId: string;
+    facilityId: number;
+    userId: number;
     note: string;
   }): Promise<FacilityNoteRecord> {
     const [note] = await db.insert(facilityNotes).values(input).returning();
     return mapNote(note!);
+  }
+
+  async updateOwned(input: {
+    noteId: number;
+    facilityId: number;
+    userId: number;
+    note: string;
+  }): Promise<FacilityNoteRecord | null> {
+    const [row] = await db
+      .update(facilityNotes)
+      .set({ note: input.note })
+      .where(
+        and(
+          eq(facilityNotes.id, input.noteId),
+          eq(facilityNotes.facilityId, input.facilityId),
+          eq(facilityNotes.userId, input.userId)
+        )
+      )
+      .returning();
+    return row ? mapNote(row) : null;
+  }
+
+  async deleteOwned(input: {
+    noteId: number;
+    facilityId: number;
+    userId: number;
+  }): Promise<boolean> {
+    const deleted = await db
+      .delete(facilityNotes)
+      .where(
+        and(
+          eq(facilityNotes.id, input.noteId),
+          eq(facilityNotes.facilityId, input.facilityId),
+          eq(facilityNotes.userId, input.userId)
+        )
+      )
+      .returning({ id: facilityNotes.id });
+    return deleted.length > 0;
   }
 }

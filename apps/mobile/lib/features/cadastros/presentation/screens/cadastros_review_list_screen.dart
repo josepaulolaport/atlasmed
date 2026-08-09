@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_models.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Ops queue: documents submitted by reps awaiting approve/reject.
 class CadastrosReviewListScreen extends ConsumerStatefulWidget {
@@ -148,8 +148,9 @@ class _CadastrosReviewListScreenState
                             if (i > 0) const SizedBox(height: 10),
                             _ReviewListCard(
                               submission: item,
-                              onTap: () =>
-                                  context.push('/registrations/${item.id}'),
+                              onTap: () => RegistrationDetailRoute(
+                                id: item.id,
+                              ).push(context),
                             ),
                           ],
                         ];

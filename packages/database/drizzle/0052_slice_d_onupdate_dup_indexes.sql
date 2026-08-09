@@ -1,0 +1,1 @@
+DROP INDEX "orders_id_avulsa_emultec_idx";

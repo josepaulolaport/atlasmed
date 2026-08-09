@@ -1,0 +1,397 @@
+import { assertResourceInScope, type ScopeContext } from "@atlasmed/access";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { loadPrimaryRegistrationDisplayMap } from "../../infrastructure/repositories/drizzle/load-primary-registration-display-map";
+import type { PersonFacilityRoleCatalogRepository } from "../interfaces/person-facility-role-catalog.repository.interface";
+import type {
+  ClassificationCode,
+  PersonFacilityProjectionRecord,
+  PersonFacilityProjectionRepository,
+} from "../interfaces/person-facility-projection.repository.interface";
+import { CLASSIFICATION } from "../interfaces/person-facility-projection.repository.interface";
+
+export { CLASSIFICATION };
+export type { ClassificationCode };
+
+type PrimaryRegistrationDisplayLoader = (
+  personIds: number[]
+) => Promise<Map<number, string>>;
+
+type Dependencies = {
+  repository: PersonFacilityProjectionRepository;
+  loadPrimaryRegistrationDisplays?: PrimaryRegistrationDisplayLoader;
+};
+
+type ReplaceRolesDependencies = Dependencies & {
+  roleCatalogRepository: PersonFacilityRoleCatalogRepository;
+};
+
+export type PersonFacilityProjectionDto = {
+  personFacilityId: number;
+  personId: number;
+  facilityId: number;
+  firstName: string;
+  lastName: string;
+  socialName: string | null;
+  cpf: string | null;
+  email: string | null;
+  mobilePhone: string | null;
+  landlinePhone: string | null;
+  roleTitle: string | null;
+  notes: string | null;
+  hasHealthcareProfile: boolean;
+  classificationIds: number[];
+  roleIds: number[];
+  /** Prefer primary active reg; else first active. Null when none. */
+  primaryRegistrationDisplay: string | null;
+};
+
+function toDto(
+  row: PersonFacilityProjectionRecord,
+  primaryRegistrationDisplay: string | null = null
+): PersonFacilityProjectionDto {
+  return {
+    personFacilityId: row.personFacilityId,
+    personId: row.personId,
+    facilityId: row.facilityId,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    socialName: row.socialName,
+    cpf: row.cpf,
+    email: row.email,
+    mobilePhone: row.mobilePhone,
+    landlinePhone: row.landlinePhone,
+    roleTitle: row.roleTitle,
+    notes: row.notes,
+    hasHealthcareProfile: row.hasHealthcareProfile,
+    classificationIds: row.classificationIds,
+    roleIds: row.roleIds,
+    primaryRegistrationDisplay,
+  };
+}
+
+async function withPrimaryDisplays(
+  rows: PersonFacilityProjectionRecord[],
+  load: PrimaryRegistrationDisplayLoader = loadPrimaryRegistrationDisplayMap
+): Promise<PersonFacilityProjectionDto[]> {
+  const displays = await load(rows.map((row) => row.personId));
+  return rows.map((row) =>
+    toDto(row, displays.get(row.personId) ?? null)
+  );
+}
+
+async function withPrimaryDisplay(
+  row: PersonFacilityProjectionRecord,
+  load: PrimaryRegistrationDisplayLoader = loadPrimaryRegistrationDisplayMap
+): Promise<PersonFacilityProjectionDto> {
+  const [dto] = await withPrimaryDisplays([row], load);
+  return dto!;
+}
+
+function assertFacilityScoped(scope: ScopeContext, facilityId: number) {
+  assertResourceInScope(scope, "facility", facilityId);
+}
+
+export class ListPersonFacilityProjectionsUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: {
+    facilityId: number;
+    classificationCode: ClassificationCode;
+    scope: ScopeContext;
+  }): Promise<{ data: PersonFacilityProjectionDto[] }> {
+    assertFacilityScoped(input.scope, input.facilityId);
+    const rows = await this.deps.repository.listActiveByFacilityAndClassification({
+      facilityId: input.facilityId,
+      classificationCode: input.classificationCode,
+    });
+    return { data: await withPrimaryDisplays(rows, this.deps.loadPrimaryRegistrationDisplays) };
+  }
+}
+
+export class GetPersonFacilityProjectionUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: {
+    facilityId: number;
+    personFacilityId: number;
+    classificationCode: ClassificationCode;
+    scope: ScopeContext;
+  }): Promise<PersonFacilityProjectionDto> {
+    assertFacilityScoped(input.scope, input.facilityId);
+
+    const row = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!row || row.endedAt) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (row.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (!row.classificationCodes.includes(input.classificationCode)) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    return withPrimaryDisplay(row, this.deps.loadPrimaryRegistrationDisplays);
+  }
+}
+
+export type UpsertPersonFacilityProjectionInput = {
+  facilityId: number;
+  classificationCode: ClassificationCode;
+  scope: ScopeContext;
+  personId?: number;
+  firstName?: string;
+  lastName?: string;
+  socialName?: string | null;
+  cpf?: string | null;
+  email?: string | null;
+  mobilePhone?: string | null;
+  landlinePhone?: string | null;
+  roleTitle?: string | null;
+  notes?: string | null;
+};
+
+export class UpsertPersonFacilityProjectionUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: UpsertPersonFacilityProjectionInput): Promise<PersonFacilityProjectionDto> {
+    assertFacilityScoped(input.scope, input.facilityId);
+
+    let personId = input.personId;
+    if (personId != null) {
+      const existing = await this.deps.repository.findPersonById(personId);
+      if (!existing || existing.deletedAt) {
+        throw new ResourceNotFoundError("person", String(personId));
+      }
+    } else {
+      if (!input.firstName?.trim() || !input.lastName?.trim()) {
+        throw new ValidationError([
+          {
+            field: "firstName",
+            message: "firstName and lastName are required when personId is omitted",
+          },
+        ]);
+      }
+      const created = await this.deps.repository.createPerson({
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        socialName: input.socialName,
+        cpf: input.cpf,
+        email: input.email,
+        mobilePhone: input.mobilePhone,
+        landlinePhone: input.landlinePhone,
+      });
+      personId = created.id;
+    }
+
+    if (input.classificationCode === CLASSIFICATION.HEALTHCARE_PROFESSIONAL) {
+      await this.deps.repository.ensureHealthcareProfile(personId);
+    }
+
+    const active = await this.deps.repository.findActiveAffiliation({
+      facilityId: input.facilityId,
+      personId,
+    });
+
+    let personFacilityId: number;
+    if (active) {
+      personFacilityId = active.id;
+      if (input.roleTitle !== undefined || input.notes !== undefined) {
+        await this.deps.repository.updateAffiliation(personFacilityId, {
+          roleTitle: input.roleTitle,
+          notes: input.notes,
+        });
+      }
+    } else {
+      const created = await this.deps.repository.createAffiliation({
+        personId,
+        facilityId: input.facilityId,
+        roleTitle: input.roleTitle,
+        notes: input.notes,
+      });
+      personFacilityId = created.id;
+    }
+
+    await this.deps.repository.addClassification({
+      personFacilityId,
+      classificationCode: input.classificationCode,
+    });
+
+    const row = await this.deps.repository.findActiveById(personFacilityId);
+    if (!row) {
+      throw new ResourceNotFoundError("person_facility", String(personFacilityId));
+    }
+    return withPrimaryDisplay(row, this.deps.loadPrimaryRegistrationDisplays);
+  }
+}
+
+export type PatchPersonFacilityProjectionInput = {
+  facilityId: number;
+  personFacilityId: number;
+  classificationCode: ClassificationCode;
+  scope: ScopeContext;
+  firstName?: string;
+  lastName?: string;
+  socialName?: string | null;
+  cpf?: string | null;
+  email?: string | null;
+  mobilePhone?: string | null;
+  landlinePhone?: string | null;
+  roleTitle?: string | null;
+  notes?: string | null;
+};
+
+export class PatchPersonFacilityProjectionUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: PatchPersonFacilityProjectionInput): Promise<PersonFacilityProjectionDto> {
+    assertFacilityScoped(input.scope, input.facilityId);
+
+    const row = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!row || row.endedAt) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    // URL facilityId must own this affiliation (Claude STRONGLY RECOMMENDED).
+    if (row.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (!row.classificationCodes.includes(input.classificationCode)) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+
+    await this.deps.repository.updatePerson(row.personId, {
+      firstName: input.firstName,
+      lastName: input.lastName,
+      socialName: input.socialName,
+      cpf: input.cpf,
+      email: input.email,
+      mobilePhone: input.mobilePhone,
+      landlinePhone: input.landlinePhone,
+    });
+    await this.deps.repository.updateAffiliation(row.personFacilityId, {
+      roleTitle: input.roleTitle,
+      notes: input.notes,
+    });
+
+    if (input.classificationCode === CLASSIFICATION.HEALTHCARE_PROFESSIONAL) {
+      await this.deps.repository.ensureHealthcareProfile(row.personId);
+    }
+
+    const updated = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!updated) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    return withPrimaryDisplay(updated, this.deps.loadPrimaryRegistrationDisplays);
+  }
+}
+
+export type ReplacePersonFacilityRolesInput = {
+  facilityId: number;
+  personFacilityId: number;
+  classificationCode: ClassificationCode;
+  scope: ScopeContext;
+  roleIds: number[];
+};
+
+function normalizeRoleIds(roleIds: number[]): number[] {
+  const seen = new Set<number>();
+  const unique: number[] = [];
+  for (const id of roleIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+  return unique;
+}
+
+async function assertRoleIdsInCatalog(
+  roleCatalogRepository: PersonFacilityRoleCatalogRepository,
+  roleIds: number[]
+): Promise<void> {
+  if (roleIds.length === 0) return;
+  const catalog = await roleCatalogRepository.listActive();
+  const allowed = new Set(catalog.map((r) => r.id));
+  const invalid = roleIds.filter((id) => !allowed.has(id));
+  if (invalid.length === 0) return;
+  throw new ValidationError(
+    invalid.map((id) => ({
+      field: "roleIds",
+      message: `Unknown or inactive role id "${id}"`,
+    }))
+  );
+}
+
+export type EndPersonFacilityAffiliationInput = {
+  facilityId: number;
+  personFacilityId: number;
+  classificationCode: ClassificationCode;
+  scope: ScopeContext;
+  endedByUserId: number;
+};
+
+export class EndPersonFacilityAffiliationUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: EndPersonFacilityAffiliationInput): Promise<{
+    personFacilityId: number;
+    endedAt: string;
+  }> {
+    assertFacilityScoped(input.scope, input.facilityId);
+
+    const row = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!row || row.endedAt) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (row.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (!row.classificationCodes.includes(input.classificationCode)) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+
+    const ended = await this.deps.repository.endAffiliation({
+      personFacilityId: input.personFacilityId,
+      endedByUserId: input.endedByUserId,
+      endedAt: new Date(),
+    });
+    if (!ended) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+
+    return {
+      personFacilityId: input.personFacilityId,
+      endedAt: ended.endedAt.toISOString(),
+    };
+  }
+}
+
+export class ReplacePersonFacilityRolesUseCase {
+  constructor(private readonly deps: ReplaceRolesDependencies) {}
+
+  async execute(input: ReplacePersonFacilityRolesInput): Promise<PersonFacilityProjectionDto> {
+    assertFacilityScoped(input.scope, input.facilityId);
+
+    const roleIds = normalizeRoleIds(input.roleIds);
+    await assertRoleIdsInCatalog(this.deps.roleCatalogRepository, roleIds);
+
+    const row = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!row || row.endedAt) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (row.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    if (!row.classificationCodes.includes(input.classificationCode)) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+
+    await this.deps.repository.replaceRoleAssignments({
+      personFacilityId: input.personFacilityId,
+      roleIds,
+    });
+
+    const updated = await this.deps.repository.findActiveById(input.personFacilityId);
+    if (!updated) {
+      throw new ResourceNotFoundError("person_facility", String(input.personFacilityId));
+    }
+    return withPrimaryDisplay(updated, this.deps.loadPrimaryRegistrationDisplays);
+  }
+}

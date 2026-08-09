@@ -10,7 +10,7 @@ import {
   OperationNotAllowedError,
 } from "../../../../shared/errors";
 
-function adminUnsuspendParams(userId: string, unsuspendedBy = "admin-123") {
+function adminUnsuspendParams(userId: number, unsuspendedBy = 1) {
   return {
     userId,
     unsuspendedBy,
@@ -26,7 +26,7 @@ describe("UnsuspendUserUseCase", () => {
   let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
 
   const suspendedUser = {
-    id: "user-123",
+    id: 123,
     status: "SUSPENDED",
   };
 
@@ -45,13 +45,13 @@ describe("UnsuspendUserUseCase", () => {
   });
 
   it("should unsuspend user and invalidate auth cache", async () => {
-    await useCase.execute(adminUnsuspendParams("user-123"));
+    await useCase.execute(adminUnsuspendParams(123));
 
-    expect(mockUserRepository.unsuspend).toHaveBeenCalledWith("user-123");
-    expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
+    expect(mockUserRepository.unsuspend).toHaveBeenCalledWith(123);
+    expect(mockAuthCache.invalidate).toHaveBeenCalledWith(123);
     expect(mockAuditLog.logUserStatusChange).toHaveBeenCalledWith({
-      userId: "admin-123",
-      targetUserId: "user-123",
+      userId: 1,
+      targetUserId: 123,
       oldStatus: "SUSPENDED",
       newStatus: "ACTIVE",
     });
@@ -61,7 +61,7 @@ describe("UnsuspendUserUseCase", () => {
     mockUserRepository.findById = mock(async () => null);
 
     await expect(
-      useCase.execute(adminUnsuspendParams("missing"))
+      useCase.execute(adminUnsuspendParams(999))
     ).rejects.toThrow(UserNotFoundError);
 
     expect(mockUserRepository.unsuspend).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe("UnsuspendUserUseCase", () => {
     })) as any;
 
     await expect(
-      useCase.execute(adminUnsuspendParams("user-123"))
+      useCase.execute(adminUnsuspendParams(123))
     ).rejects.toThrow(OperationNotAllowedError);
 
     expect(mockUserRepository.unsuspend).not.toHaveBeenCalled();

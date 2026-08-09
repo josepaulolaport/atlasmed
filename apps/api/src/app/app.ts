@@ -6,10 +6,9 @@ import { healthRoute } from "../infrastructure/health/health.route";
 import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
 import { facility } from "../modules/facility";
+import { person } from "../modules/person";
 import { fieldSuggestions } from "../modules/field-suggestions";
 import { catalog } from "../modules/catalog";
-import { professional } from "../modules/professional";
-import { registryIngestion } from "../modules/registry-ingestion";
 import { searchSync } from "../modules/search-sync";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
@@ -81,6 +80,17 @@ const app = new Elysia()
       };
     }
 
+    // Elysia unknown route — not an internal failure
+    if (code === "NOT_FOUND") {
+      set.status = 404;
+      return {
+        error: {
+          code: "NOT_FOUND",
+          message: "Route not found",
+        },
+      };
+    }
+
     // Unhandled — observability plugin logs this as a 500
     set.status = 500;
     return {
@@ -133,10 +143,9 @@ const app = new Elysia()
       .use(access)
       .use(avatarUser)
       .use(facility)
+      .use(person)
       .use(fieldSuggestions)
       .use(catalog)
-      .use(professional)
-      .use(registryIngestion)
       .use(searchSync)
       .use(territory)
       .use(maps)

@@ -14,7 +14,7 @@ describe("ValidateInviteUseCase", () => {
         email: "invited@example.com",
         phoneNumber: null,
         expiresAt: new Date(Date.now() + 60_000),
-        role: { id: "role-1", name: "USER" },
+        role: { id: 1, name: "USER" },
       })) as any,
     });
 

@@ -1,3 +1,5 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// Which side of the territory hierarchy a user works on — a manager zone
 /// needs a [manager], a rep patch needs a [rep]. Mirrors the real API's
 /// `role.name` (`MANAGER` / `REP`), simplified to just the two roles this
@@ -15,7 +17,7 @@ enum UserRole {
 /// (see `UserAvatar`) rather than fetched images, so nothing here points
 /// at a real image URL.
 class AppUser {
-  final String id;
+  final int id;
   final String name;
   final UserRole role;
 
@@ -27,7 +29,7 @@ class AppUser {
   /// per-user sector (it's a separate many-to-many assignment), so
   /// sector-scoping there happens via the `verticalId` query param instead
   /// of this field.
-  final String? verticalId;
+  final int? verticalId;
   final bool isActive;
 
   const AppUser({
@@ -55,7 +57,7 @@ class AppUser {
             ?.toUpperCase();
 
     return AppUser(
-      id: json['id'] as String,
+      id: readCrmId(json['id'], 'id'),
       name: combinedName.isNotEmpty
           ? combinedName
           : (username?.isNotEmpty ?? false)

@@ -9,7 +9,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 Future<void> showAddressEditSuggestionSheet(
   BuildContext context, {
   required WidgetRef ref,
-  required String facilityId,
+  required int facilityId,
   required String? neighborhood,
   required String? streetAddress,
   required String? streetNumber,

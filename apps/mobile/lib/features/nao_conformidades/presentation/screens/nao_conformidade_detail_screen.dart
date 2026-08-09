@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/prov
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Detail for one field-change suggestion.
 ///
@@ -19,7 +20,7 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
     this.canReview = true,
   });
 
-  final String suggestionId;
+  final int suggestionId;
 
   /// When false, pending suggestions are view-only (no decision bar).
   final bool canReview;
@@ -410,8 +411,8 @@ class _TargetCard extends StatelessWidget {
   final NaoConformidadeSuggestion suggestion;
 
   void _openClinic(BuildContext context) {
-    if (suggestion.targetId.isEmpty) return;
-    context.push('/explore/clinic/${suggestion.targetId}');
+    if (suggestion.targetId <= 0) return;
+    ClinicDetailRoute(id: suggestion.targetId).push(context);
   }
 
   @override

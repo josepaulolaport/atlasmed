@@ -89,7 +89,7 @@ jobs:
         run: bun run api:typecheck
 
       - name: Typecheck CNES worker
-        run: bun run workers:cnes:typecheck
+        run: bun run workers:typecheck
 
       - name: Build web
         env:
@@ -174,13 +174,9 @@ jobs:
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
           STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
-          CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
-          CNES_FTP_MODE: ${{ vars.CNES_FTP_MODE || 'mock' }}
-          CNES_LOAD_MODE: ${{ vars.CNES_LOAD_MODE || 'dev' }}
-          CNES_LOAD_CONCURRENCY: ${{ vars.CNES_LOAD_CONCURRENCY || '4' }}
         run: |
           for attempt in 1 2; do
-            if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --recreate --yes; then
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker atlasmed-web --recreate --yes; then
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then

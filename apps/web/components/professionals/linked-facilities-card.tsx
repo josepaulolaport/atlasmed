@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface LinkedFacilitiesCardProps {
   facilities: ProfessionalFacilitySummary[];
-  professionalId?: string;
+  professionalId?: string | number;
 }
 
 export function LinkedFacilitiesCard({

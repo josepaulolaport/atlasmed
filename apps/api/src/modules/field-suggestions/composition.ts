@@ -16,7 +16,7 @@ import { DrizzleFieldSuggestionRepository } from "./infrastructure/repositories/
 
 const fieldSuggestionRepository = new DrizzleFieldSuggestionRepository();
 
-async function handleFacilityLocationChanged(facilityId: string): Promise<void> {
+async function handleFacilityLocationChanged(facilityId: number): Promise<void> {
   await facilityGeocodingService.ensureCoordinatesPersisted(facilityId);
   await territoryMembershipService.assignFacilityById(facilityId);
 }

@@ -5,15 +5,15 @@ import type { AnyDatabase } from "@atlasmed/database";
 import type { InteractionContextPort } from "../../../application/interfaces/interaction-context.port";
 
 export class DrizzleInteractionContextPort implements InteractionContextPort {
-  async findById(interactionId: string) {
+  async findById(interactionId: number) {
     return this.load(db, interactionId, false);
   }
 
-  async lockAndGetOrderable(interactionId: string, database: AnyDatabase = db) {
+  async lockAndGetOrderable(interactionId: number, database: AnyDatabase = db) {
     return this.load(database, interactionId, true);
   }
 
-  private async load(database: AnyDatabase, interactionId: string, lock: boolean) {
+  private async load(database: AnyDatabase, interactionId: number, lock: boolean) {
     if (lock) {
       const [owner] = await database
         .select({ ownerUserId: calendar.ownerUserId })
@@ -22,7 +22,7 @@ export class DrizzleInteractionContextPort implements InteractionContextPort {
         .where(eq(interactions.id, interactionId))
         .limit(1);
       if (!owner) return null;
-      await database.execute(sql`select pg_advisory_xact_lock(hashtext(${owner.ownerUserId}))`);
+      await database.execute(sql`select pg_advisory_xact_lock(hashtext(${String(owner.ownerUserId)}))`);
     }
     const query = database
       .select({

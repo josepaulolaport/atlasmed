@@ -13,7 +13,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 class CadastroReviewDetailScreen extends ConsumerWidget {
   const CadastroReviewDetailScreen({super.key, required this.submissionId});
 
-  final String submissionId;
+  final int submissionId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -152,7 +152,7 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
   ) {
     if (submission.files.isNotEmpty) {
       final files = submission.files
-          .where((f) => f.fileAssetId.isNotEmpty)
+          .where((f) => f.fileAssetId > 0)
           .toList(growable: false);
       return [
         for (var i = 0; i < files.length; i++)
@@ -448,7 +448,8 @@ class _ClinicSnapshotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final taxLabel = submission.taxIdType == FacilityTaxIdType.pf
+    final taxLabel =
+        submission.legalDocumentType == FacilityLegalDocumentType.cpf
         ? 'CPF'
         : 'CNPJ';
 
@@ -482,7 +483,7 @@ class _ClinicSnapshotCard extends StatelessWidget {
           _InfoRow(
             icon: Icons.badge_outlined,
             label: taxLabel,
-            value: submission.taxId ?? '—',
+            value: submission.legalDocument ?? '—',
           ),
           _InfoRow(
             icon: Icons.location_on_outlined,

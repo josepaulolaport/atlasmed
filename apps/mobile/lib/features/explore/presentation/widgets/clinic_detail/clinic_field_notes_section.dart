@@ -1,87 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/atlas_button.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 /// "Notas de campo" — private, facility-scoped notes only the current user sees.
-class ClinicFieldNotesSection extends StatelessWidget {
-  const ClinicFieldNotesSection({
-    super.key,
-    required this.facilityId,
-    required this.notes,
-    required this.canAdd,
-    required this.onCreate,
-  });
+class ClinicFieldNotesSection extends ConsumerWidget {
+  const ClinicFieldNotesSection({super.key, required this.facilityId});
 
-  final String facilityId;
-  final List<FacilityFieldNote>? notes;
-  final bool canAdd;
-  final Future<void> Function(String text) onCreate;
+  final int facilityId;
 
   @override
-  Widget build(BuildContext context) {
-    final loadedNotes = notes;
-    return Column(
-      children: [
-        const ClinicSectionHeader(title: 'Notas de campo'),
-        if (loadedNotes == null)
-          ClinicDetailCard(
-            child: AtlasShimmer(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 14,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(height: 12),
-                  Container(width: 220, height: 14, color: Colors.white),
-                ],
-              ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(facilityNotesProvider(facilityId));
+
+    return notesAsync.when(
+      loading: () => const ClinicDetailCard(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          )
-        else
-          _NotesBody(
-            facilityId: facilityId,
-            notes: loadedNotes,
-            canAdd: canAdd,
-            onCreate: onCreate,
           ),
-      ],
+        ),
+      ),
+      error: (err, _) => ClinicDetailCard(
+        child: Column(
+          children: [
+            const Text(
+              'Não foi possível carregar as notas.',
+              style: TextStyle(fontSize: 13, color: AppColors.gray400),
+            ),
+            TextButton(
+              onPressed: () =>
+                  ref.invalidate(facilityNotesProvider(facilityId)),
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
+      data: (notes) => _NotesBody(
+        facilityId: facilityId,
+        notes: notes,
+        canAdd: ref.watch(canMutateFacilityProvider),
+      ),
     );
   }
 }
 
-class _NotesBody extends StatefulWidget {
+class _NotesBody extends ConsumerStatefulWidget {
   const _NotesBody({
     required this.facilityId,
     required this.notes,
     required this.canAdd,
-    required this.onCreate,
   });
 
-  final String facilityId;
+  final int facilityId;
   final List<FacilityFieldNote> notes;
   final bool canAdd;
-  final Future<void> Function(String text) onCreate;
 
   @override
-  State<_NotesBody> createState() => _NotesBodyState();
+  ConsumerState<_NotesBody> createState() => _NotesBodyState();
 }
 
-class _NotesBodyState extends State<_NotesBody> {
+class _NotesBodyState extends ConsumerState<_NotesBody> {
   bool _saving = false;
 
-  bool get _useApi {
-    final id = widget.facilityId;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
-  }
+  bool get _useApi => widget.facilityId > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +96,13 @@ class _NotesBodyState extends State<_NotesBody> {
         children: [
           for (final (i, note) in notes.indexed) ...[
             if (i > 0) const SizedBox(height: 10),
-            _NoteRow(index: i + 1, note: note),
+            _NoteRow(
+              index: i + 1,
+              note: note,
+              canMutate: widget.canAdd,
+              onEdit: () => _editNote(note),
+              onDelete: () => _deleteNote(note),
+            ),
           ],
           if (widget.canAdd) ...[
             const SizedBox(height: 14),
@@ -125,7 +124,62 @@ class _NotesBodyState extends State<_NotesBody> {
   }
 
   Future<void> _addNote() async {
-    final text = await showModalBottomSheet<String>(
+    final text = await _showNoteSheet();
+    if (text == null || text.isEmpty || !mounted) return;
+    await _persist(
+      action: () => ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .createNote(text),
+      successMessage: 'Nota salva',
+      failureMessage: 'Falha ao salvar nota',
+    );
+  }
+
+  Future<void> _editNote(FacilityFieldNote note) async {
+    final text = await _showNoteSheet(initial: note.text);
+    if (text == null || text.isEmpty || !mounted) return;
+    await _persist(
+      action: () => ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .updateNote(note.id, text),
+      successMessage: 'Nota atualizada',
+      failureMessage: 'Falha ao atualizar nota',
+    );
+  }
+
+  Future<void> _deleteNote(FacilityFieldNote note) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir nota?'),
+        content: const Text('Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB42318),
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _persist(
+      action: () => ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .deleteNote(note.id),
+      successMessage: 'Nota excluída',
+      failureMessage: 'Falha ao excluir nota',
+    );
+  }
+
+  Future<String?> _showNoteSheet({String? initial}) {
+    return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
@@ -133,17 +187,19 @@ class _NotesBodyState extends State<_NotesBody> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const _AddFieldNoteSheet(),
+      builder: (_) => _AddFieldNoteSheet(initialText: initial),
     );
+  }
 
-    if (text == null || text.isEmpty || !mounted) return;
-
+  Future<void> _persist({
+    required Future<void> Function() action,
+    required String successMessage,
+    required String failureMessage,
+  }) async {
     if (!_useApi) {
-      // Mock facilities stay local-only for the session via provider invalidate
-      // isn't needed — mock provider returns static mock data.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nota salva localmente (clínica de demonstração)'),
+          content: Text('Estabelecimento inválido.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -152,11 +208,14 @@ class _NotesBodyState extends State<_NotesBody> {
 
     setState(() => _saving = true);
     try {
-      await widget.onCreate(text);
+      await action();
+      if (!mounted) return;
+      ref.invalidate(facilityNotesProvider(widget.facilityId));
+      await ref.read(facilityNotesProvider(widget.facilityId).future);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nota salva'),
+        SnackBar(
+          content: Text(successMessage),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -166,8 +225,8 @@ class _NotesBodyState extends State<_NotesBody> {
         SnackBar(
           content: Text(
             e is FacilityNotesException
-                ? (e.message ?? 'Falha ao salvar nota')
-                : 'Falha ao salvar nota',
+                ? (e.message ?? failureMessage)
+                : failureMessage,
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -181,7 +240,9 @@ class _NotesBodyState extends State<_NotesBody> {
 /// Owns its [TextEditingController] so dismiss-while-empty cannot race
 /// InheritedWidget teardown (`_dependents.isEmpty`).
 class _AddFieldNoteSheet extends StatefulWidget {
-  const _AddFieldNoteSheet();
+  const _AddFieldNoteSheet({this.initialText});
+
+  final String? initialText;
 
   @override
   State<_AddFieldNoteSheet> createState() => _AddFieldNoteSheetState();
@@ -193,7 +254,7 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _controller = TextEditingController(text: widget.initialText ?? '');
   }
 
   @override
@@ -215,9 +276,9 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Nova nota de campo',
-            style: TextStyle(
+          Text(
+            widget.initialText == null ? 'Nova nota de campo' : 'Editar nota',
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.gray900,
@@ -269,10 +330,19 @@ class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
 }
 
 class _NoteRow extends StatelessWidget {
-  const _NoteRow({required this.index, required this.note});
+  const _NoteRow({
+    required this.index,
+    required this.note,
+    required this.canMutate,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final int index;
   final FacilityFieldNote note;
+  final bool canMutate;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -305,6 +375,23 @@ class _NoteRow extends StatelessWidget {
             style: const TextStyle(fontSize: 13, color: AppColors.gray700),
           ),
         ),
+        if (canMutate)
+          PopupMenuButton<String>(
+            padding: EdgeInsets.zero,
+            icon: const Icon(
+              Icons.more_vert_rounded,
+              size: 18,
+              color: AppColors.gray400,
+            ),
+            onSelected: (value) {
+              if (value == 'edit') onEdit();
+              if (value == 'delete') onDelete();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'edit', child: Text('Editar')),
+              PopupMenuItem(value: 'delete', child: Text('Excluir')),
+            ],
+          ),
       ],
     );
   }

@@ -28,7 +28,7 @@ class PurchaseBucketFacilitiesScreen extends ConsumerStatefulWidget {
   });
 
   final String bucket;
-  final String? verticalId;
+  final int? verticalId;
 
   @override
   ConsumerState<PurchaseBucketFacilitiesScreen> createState() =>

@@ -13,7 +13,7 @@ interface Dependencies {
 export class LogoutUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(params: { sessionId: string; userId: string; ipAddress?: string }) {
+  async execute(params: { sessionId: number; userId: number; ipAddress?: string }) {
     await this.deps.sessionRepository.revoke(params.sessionId);
     await this.deps.sessionCache.invalidate(params.sessionId);
     await this.deps.authCache.invalidate(params.userId);

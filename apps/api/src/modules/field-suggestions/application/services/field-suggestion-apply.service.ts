@@ -7,6 +7,10 @@ import type {
   AddressParts,
   FacilityGeocodingService,
 } from "../../../facility/application/services/facility-geocoding.service";
+import {
+  normalizeLegalDocument,
+  validateLegalDocument,
+} from "../../../facility/application/utils/facility-tax-id.utils";
 import type { FieldSuggestionFieldKey } from "../constants/field-keys";
 
 function asNonEmptyString(value: unknown, field: string): string {
@@ -58,7 +62,7 @@ export class FieldSuggestionApplyService {
     private readonly deps: {
       facilityRepository: FacilityRepository;
       facilityGeocodingService: FacilityGeocodingService;
-      onFacilityLocationChanged?: (facilityId: string) => Promise<void>;
+      onFacilityLocationChanged?: (facilityId: number) => Promise<void>;
     }
   ) {}
 
@@ -71,14 +75,16 @@ export class FieldSuggestionApplyService {
       case "websiteUrl":
       case "responsibleName":
       case "openingHours":
-      case "cnpj":
-      case "cpf":
+      case "legalDocument":
         return asNonEmptyString(proposedValue, "proposedValue");
-      case "taxIdType": {
+      case "legalDocumentType": {
         const value = asNonEmptyString(proposedValue, "proposedValue");
-        if (value !== "PJ" && value !== "PF") {
+        if (value !== "CNPJ" && value !== "CPF") {
           throw new ValidationError([
-            { field: "proposedValue", message: "taxIdType must be PJ or PF" },
+            {
+              field: "proposedValue",
+              message: "legalDocumentType must be CNPJ or CPF",
+            },
           ]);
         }
         return value;
@@ -89,7 +95,7 @@ export class FieldSuggestionApplyService {
   }
 
   async applyFieldChange(input: {
-    facilityId: string;
+    facilityId: number;
     fieldKey: FieldSuggestionFieldKey;
     proposedValue: unknown;
   }): Promise<{ geocoded: boolean }> {
@@ -109,16 +115,47 @@ export class FieldSuggestionApplyService {
         ...address,
         lat: coords.lat,
         lng: coords.lng,
-        manuallyEditedAt: new Date(),
       });
 
       await this.deps.onFacilityLocationChanged?.(input.facilityId);
       return { geocoded: true };
     }
 
-    const updates: Parameters<FacilityRepository["applyApprovedFieldUpdates"]>[1] = {
-      manuallyEditedAt: new Date(),
-    };
+    if (
+      input.fieldKey === "legalDocument" ||
+      input.fieldKey === "legalDocumentType"
+    ) {
+      const facility = await this.deps.facilityRepository.findById(input.facilityId);
+      if (!facility) {
+        throw new ValidationError([
+          { field: "facilityId", message: "Facility not found" },
+        ]);
+      }
+
+      const result = validateLegalDocument({
+        legalDocumentType:
+          input.fieldKey === "legalDocumentType"
+            ? (validated as "CNPJ" | "CPF")
+            : facility.legalDocumentType,
+        legalDocument:
+          input.fieldKey === "legalDocument"
+            ? (validated as string)
+            : facility.legalDocument,
+        typeField: "proposedValue",
+        documentField: "proposedValue",
+      });
+      if (!result.ok) {
+        throw new ValidationError(result.issues);
+      }
+
+      await this.deps.facilityRepository.applyApprovedFieldUpdates(input.facilityId, {
+        legalDocumentType: result.legalDocumentType,
+        legalDocument: normalizeLegalDocument(result.legalDocument),
+      });
+      return { geocoded: false };
+    }
+
+    const updates: Parameters<FacilityRepository["applyApprovedFieldUpdates"]>[1] = {};
 
     switch (input.fieldKey) {
       case "displayName":
@@ -141,15 +178,6 @@ export class FieldSuggestionApplyService {
         break;
       case "openingHours":
         updates.openingHours = validated as string;
-        break;
-      case "taxIdType":
-        updates.taxIdType = validated as "PJ" | "PF";
-        break;
-      case "cnpj":
-        updates.cnpj = validated as string;
-        break;
-      case "cpf":
-        updates.cpf = validated as string;
         break;
     }
 

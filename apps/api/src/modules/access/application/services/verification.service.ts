@@ -25,7 +25,7 @@ export class VerificationService {
   constructor(private readonly deps: Dependencies) {}
 
   async createVerificationToken(params: {
-    userId: string;
+    userId: number;
     type: VerificationTokenType;
     newValue?: string;
   }): Promise<string> {
@@ -51,7 +51,7 @@ export class VerificationService {
   async verifyToken(params: {
     token: string;
     type: VerificationTokenType;
-    userId: string;
+    userId: number;
   }): Promise<{ valid: boolean; newValue?: string }> {
     const tokenHash = hashToken(params.token);
 
@@ -73,7 +73,7 @@ export class VerificationService {
     };
   }
 
-  async verifyEmail(params: { userId: string; token: string }): Promise<void> {
+  async verifyEmail(params: { userId: number; token: string }): Promise<void> {
     const result = await this.verifyToken({
       token: params.token,
       type: "EMAIL_VERIFICATION",
@@ -96,7 +96,7 @@ export class VerificationService {
     }
   }
 
-  async verifyPhone(params: { userId: string; token: string }): Promise<void> {
+  async verifyPhone(params: { userId: number; token: string }): Promise<void> {
     const result = await this.verifyToken({
       token: params.token,
       type: "PHONE_VERIFICATION",
@@ -120,7 +120,7 @@ export class VerificationService {
   }
 
   async changeEmail(params: {
-    userId: string;
+    userId: number;
     newEmail: string;
     token: string;
   }): Promise<void> {
@@ -142,13 +142,13 @@ export class VerificationService {
       severity: "WARNING",
       action: "change_email",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       details: { newEmail: params.newEmail },
     });
   }
 
   async changePhone(params: {
-    userId: string;
+    userId: number;
     newPhone: string;
     token: string;
   }): Promise<void> {
@@ -170,12 +170,12 @@ export class VerificationService {
       severity: "WARNING",
       action: "change_phone",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       details: { newPhone: params.newPhone },
     });
   }
 
-  async requestEmailVerification(params: { userId: string }): Promise<void> {
+  async requestEmailVerification(params: { userId: number }): Promise<void> {
     const user = await this.deps.userRepository.findEmailVerificationState(params.userId);
 
     if (!user) {
@@ -199,7 +199,7 @@ export class VerificationService {
     });
   }
 
-  async requestPhoneVerification(params: { userId: string }): Promise<void> {
+  async requestPhoneVerification(params: { userId: number }): Promise<void> {
     const user = await this.deps.userRepository.findPhoneVerificationState(params.userId);
 
     if (!user?.phoneNumber) {
@@ -221,7 +221,7 @@ export class VerificationService {
     });
   }
 
-  async requestEmailChange(params: { userId: string; newEmail: string }): Promise<void> {
+  async requestEmailChange(params: { userId: number; newEmail: string }): Promise<void> {
     const existingUser = await this.deps.userRepository.findByEmail(params.newEmail);
 
     if (existingUser && existingUser.id !== params.userId) {
@@ -242,7 +242,7 @@ export class VerificationService {
     });
   }
 
-  async requestPhoneChange(params: { userId: string; newPhone: string }): Promise<void> {
+  async requestPhoneChange(params: { userId: number; newPhone: string }): Promise<void> {
     const existingUser = await this.deps.userRepository.findByPhone(params.newPhone);
 
     if (existingUser && existingUser.id !== params.userId) {

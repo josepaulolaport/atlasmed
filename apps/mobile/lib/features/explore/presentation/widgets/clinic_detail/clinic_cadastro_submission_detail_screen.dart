@@ -13,7 +13,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
     required this.submission,
   });
 
-  final String facilityId;
+  final int facilityId;
   final CadastroRequirementSubmission submission;
 
   @override
@@ -30,7 +30,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
     final submittedAt =
         submission.submittedAt ?? submission.createdAt ?? DateTime.now();
     final files = submission.files
-        .where((f) => f.fileAssetId.isNotEmpty)
+        .where((f) => f.fileAssetId > 0)
         .toList(growable: false);
     final pages = [
       for (var i = 0; i < files.length; i++)

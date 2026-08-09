@@ -4,22 +4,22 @@ import type {
 } from "@atlasmed/database";
 
 export interface FieldSuggestionRecord {
-  id: string;
+  id: number;
   kind: FieldSuggestionKind;
   status: FieldSuggestionStatus;
-  facilityId: string;
+  facilityId: number;
   facilityName: string;
-  professionalId: string | null;
+  personId: number | null;
   fieldKey: string | null;
   currentValue: unknown;
   proposedValue: unknown;
   reason: string | null;
-  submittedByUserId: string;
+  submittedByUserId: number;
   submittedByName: string;
   submittedByRole: string;
   submittedAt: Date;
   resolvedAt: Date | null;
-  resolvedByUserId: string | null;
+  resolvedByUserId: number | null;
   resolvedByName: string | null;
   resolutionNote: string | null;
   createdAt: Date;
@@ -27,38 +27,37 @@ export interface FieldSuggestionRecord {
 }
 
 export interface CreateFieldSuggestionInput {
-  id: string;
   kind: FieldSuggestionKind;
-  facilityId: string;
+  facilityId: number;
   fieldKey: string | null;
   currentValue: unknown;
   proposedValue: unknown;
   reason: string | null;
-  submittedByUserId: string;
+  submittedByUserId: number;
 }
 
 export interface FieldSuggestionRepository {
   createWithSupersede(input: CreateFieldSuggestionInput): Promise<{
     suggestion: FieldSuggestionRecord;
-    supersededIds: string[];
+    supersededIds: number[];
   }>;
 
-  findById(id: string): Promise<FieldSuggestionRecord | null>;
+  findById(id: number): Promise<FieldSuggestionRecord | null>;
 
   findAll(input: {
     page: number;
     limit: number;
     status?: FieldSuggestionStatus;
-    facilityId?: string;
-    facilityIds?: string[];
-    submittedByUserId?: string;
+    facilityId?: number;
+    facilityIds?: number[];
+    submittedByUserId?: number;
   }): Promise<{ suggestions: FieldSuggestionRecord[]; total: number }>;
 
   resolve(
-    id: string,
+    id: number,
     input: {
       status: "APPROVED" | "REJECTED";
-      resolvedByUserId: string;
+      resolvedByUserId: number;
       resolutionNote?: string | null;
     }
   ): Promise<FieldSuggestionRecord | null>;

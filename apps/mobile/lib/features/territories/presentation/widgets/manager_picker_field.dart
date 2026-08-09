@@ -7,9 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 class ManagerPickerField extends ConsumerStatefulWidget {
-  final String? managerTerritoryId;
-  final String? verticalId;
-  final ValueChanged<String?> onChanged;
+  final int? managerTerritoryId;
+  final int? verticalId;
+  final ValueChanged<int?> onChanged;
 
   const ManagerPickerField({
     super.key,
@@ -25,7 +25,7 @@ class ManagerPickerField extends ConsumerStatefulWidget {
 class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
   AppUser? _manager;
   String? _zoneName;
-  String? _resolvedForZoneId;
+  int? _resolvedForZoneId;
 
   @override
   void initState() {

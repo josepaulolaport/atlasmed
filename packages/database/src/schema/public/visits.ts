@@ -1,5 +1,7 @@
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { createId } from "@paralleldrive/cuid2";
+import { index, pgTable, text, timestamp,
+  integer,
+  bigint,
+} from "drizzle-orm/pg-core";
 import { facilities } from "./facilities";
 import { users } from "./users";
 
@@ -7,13 +9,11 @@ import { users } from "./users";
 export const visits = pgTable(
   "visits",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "restrict" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: bigint("user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "restrict" }),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "restrict" }),
     visitedAt: timestamp("visited_at").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

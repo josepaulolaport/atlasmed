@@ -36,7 +36,7 @@ class InteractionNotifier extends StateNotifier<InteractionState> {
   }
 
   final CalendarRepositoryContract _repository;
-  final String interactionId;
+  final int interactionId;
   final Map<String, String> _commandKeys = {};
 
   Future<void> load() async {
@@ -122,10 +122,7 @@ String interactionErrorMessage(Object error) {
 }
 
 final interactionProvider = StateNotifierProvider.autoDispose
-    .family<InteractionNotifier, InteractionState, String>((
-      ref,
-      interactionId,
-    ) {
+    .family<InteractionNotifier, InteractionState, int>((ref, interactionId) {
       return InteractionNotifier(
         ref.watch(calendarRepositoryProvider),
         interactionId,

@@ -73,13 +73,13 @@ void main() {
         body: jsonEncode({
           'data': [
             {
-              'id': 'order-1',
-              'legacyId': 14,
+              'id': 1,
+              'idAvulsaEmultec': 14,
               'status': 'SHIPPED',
               'type': 'STANDARD',
               'orderedAt': '2026-01-02T10:00:00.000Z',
               'createdAt': '2026-01-01T10:00:00.000Z',
-              'facility': {'id': 'facility-1', 'name': 'Clínica Um'},
+              'facility': {'id': 10, 'name': 'Clínica Um'},
               'professional': null,
               'seller': null,
               'itemCount': 2,
@@ -104,14 +104,14 @@ void main() {
         statusCode: 200,
         headers: const {},
         body: jsonEncode({
-          'id': 'order-1',
-          'legacyId': null,
+          'id': 1,
+          'idAvulsaEmultec': null,
           'status': 'DELIVERED',
           'type': 'STANDARD',
           'orderedAt': null,
           'createdAt': '2026-01-01T10:00:00.000Z',
           'updatedAt': '2026-01-02T10:00:00.000Z',
-          'facility': {'id': 'facility-1', 'name': 'Clínica Um'},
+          'facility': {'id': 10, 'name': 'Clínica Um'},
           'professional': null,
           'seller': null,
           'freight': 5,
@@ -120,16 +120,12 @@ void main() {
           'total': 105,
           'items': [
             {
-              'id': 'item-1',
+              'id': 100,
               'quantity': 2,
               'unitPrice': 50,
               'lineTotal': 100,
               'writtenOff': false,
-              'product': {
-                'id': 'product-1',
-                'name': 'Produto Um',
-                'code': 'P-1',
-              },
+              'product': {'id': 20, 'name': 'Produto Um', 'code': 'P-1'},
             },
           ],
         }),
@@ -138,7 +134,7 @@ void main() {
     final detail = await OrdersRepository(
       baseUrl: 'https://api.atlasmed.test',
       client: detailClient,
-    ).getOrder('order-1');
+    ).getOrder(1);
     expect(detail.items.single.product!.name, 'Produto Um');
     expect(detail.total, 105);
   });

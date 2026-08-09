@@ -14,14 +14,14 @@ class _Repository implements CalendarRepositoryContract {
   final List<String> keys = [];
 
   @override
-  Future<InteractionDetail> getInteraction(String id) async {
+  Future<InteractionDetail> getInteraction(int id) async {
     getCalls++;
     return detail;
   }
 
   @override
   Future<InteractionDetail> startInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
   }) async {
@@ -34,7 +34,7 @@ class _Repository implements CalendarRepositoryContract {
 
   @override
   Future<InteractionDetail> completeInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
@@ -44,14 +44,14 @@ class _Repository implements CalendarRepositoryContract {
   Future<List<CalendarAvailabilityInterval>> getAvailability({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async => const [];
 
   @override
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async => const [];
 }
 
@@ -59,8 +59,8 @@ InteractionDetail _detail({
   InteractionStatus status = InteractionStatus.scheduled,
   int version = 1,
 }) => InteractionDetail(
-  id: 'interaction-1',
-  calendarId: 'calendar-1',
+  id: 1,
+  calendarId: 1,
   recurrenceKey: '2026-08-03T09:00',
   title: 'Visita comercial',
   modality: CalendarModality.inPerson,
@@ -68,11 +68,8 @@ InteractionDetail _detail({
   occurrenceStartsAt: DateTime.utc(2026, 8, 3, 12),
   occurrenceEndsAt: DateTime.utc(2026, 8, 3, 13),
   timeZone: 'America/Sao_Paulo',
-  facility: const InteractionFacility(
-    id: 'facility-1',
-    displayName: 'Clínica Central',
-  ),
-  agent: const InteractionAgent(id: 'agent-1', displayName: 'Ana'),
+  facility: const InteractionFacility(id: 1, displayName: 'Clínica Central'),
+  agent: const InteractionAgent(id: 1, displayName: 'Ana'),
   linkedOrders: const [],
   version: version,
   canMutate: true,
@@ -81,7 +78,7 @@ InteractionDetail _detail({
 void main() {
   test('opening only loads detail and never starts automatically', () async {
     final repository = _Repository(detail: _detail());
-    final notifier = InteractionNotifier(repository, 'interaction-1');
+    final notifier = InteractionNotifier(repository, 1);
 
     await Future<void>.delayed(Duration.zero);
 
@@ -98,7 +95,7 @@ void main() {
       detail: _detail(),
       startError: const CalendarNetworkException('offline'),
     );
-    final notifier = InteractionNotifier(repository, 'interaction-1');
+    final notifier = InteractionNotifier(repository, 1);
     await Future<void>.delayed(Duration.zero);
 
     expect(await notifier.start(), isFalse);

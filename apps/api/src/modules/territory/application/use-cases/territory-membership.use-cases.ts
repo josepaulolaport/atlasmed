@@ -6,11 +6,13 @@ import {
   OperationNotAllowedError,
   ResourceNotFoundError,
 } from "../../../../shared/errors";
+import { isManagerZoneType } from "../constants/territory-roles.constants";
 
 interface Dependencies {
   territoryRepository: TerritoryRepository;
   membershipService: TerritoryMembershipService;
   clinicWriter: ClinicMembershipWriter;
+  onFacilityChanged?: (facilityId: number) => Promise<void>;
 }
 
 export class TerritoryMembershipUseCases {
@@ -27,13 +29,13 @@ export class TerritoryMembershipUseCases {
     scope: ScopeContext;
     page?: number;
     limit?: number;
-    managerZoneId?: string;
+    managerZoneId?: number;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
 
     const oversightZoneIds = input.scope.oversightZoneIds ?? [];
-    let managerZoneIds: string[] | undefined;
+    let managerZoneIds: number[] | undefined;
     let global = false;
 
     if (input.scope.isGlobal) {
@@ -76,7 +78,6 @@ export class TerritoryMembershipUseCases {
         managerZoneId: clinic.managerZoneId,
         managerZoneName: clinic.managerZoneName ?? undefined,
         territoryId: clinic.managerZoneId,
-        territoryAssignmentStatus: "unassigned" as const,
       })),
       pagination: {
         page,
@@ -88,8 +89,8 @@ export class TerritoryMembershipUseCases {
   }
 
   async adminOverrideClinicTerritory(input: {
-    facilityId: string;
-    territoryId: string;
+    facilityId: number;
+    territoryId: number;
     reason?: string;
   }) {
     const territory = await this.deps.territoryRepository.findById(input.territoryId);
@@ -98,10 +99,10 @@ export class TerritoryMembershipUseCases {
     }
 
     const type = territory.territoryType;
-    if (!type?.assignsClinics) {
+    if (!type || !isManagerZoneType(type)) {
       throw new OperationNotAllowedError(
         "override_clinic_territory",
-        "Clinics can only be assigned to territory types that allow clinic assignment"
+        "Clinics can only be assigned to manager zone territories"
       );
     }
 
@@ -110,15 +111,12 @@ export class TerritoryMembershipUseCases {
       territory.verticalId,
       input.territoryId,
     );
-    await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
-      territoryAssignmentStatus: "assigned",
-      territoryAssignmentSource: "manual",
-    });
+    await this.deps.onFacilityChanged?.(input.facilityId);
 
     return { success: true };
   }
 
-  async unlockClinicGeo(input: { facilityId: string }) {
+  async unlockClinicGeo(input: { facilityId: number }) {
     const clinics = await this.deps.clinicWriter.findClinicsForMembership({
       facilityIds: [input.facilityId],
     });
@@ -127,15 +125,7 @@ export class TerritoryMembershipUseCases {
       throw new ResourceNotFoundError("Clinic", input.facilityId);
     }
 
-    await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
-      territoryAssignmentStatus: clinic.territoryAssignmentStatus ?? "unassigned",
-      territoryAssignmentSource: "geo",
-    });
-
-    await this.deps.membershipService.assignClinicByGeo({
-      ...clinic,
-      territoryAssignmentSource: "geo",
-    });
+    await this.deps.membershipService.assignClinicByGeo(clinic);
 
     return { success: true };
   }

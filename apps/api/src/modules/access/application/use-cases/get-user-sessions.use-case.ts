@@ -2,12 +2,12 @@ import type { SessionRepository } from "../interfaces/session.repository.interfa
 import { sessionsMatchSameDevice } from "../../../../shared/utils/device-fingerprint";
 
 interface GetUserSessionsInput {
-  userId: string;
-  currentSessionId: string;
+  userId: number;
+  currentSessionId: number;
 }
 
 interface SessionOutput {
-  id: string;
+  id: number;
   deviceType: string | null;
   browserName: string | null;
   browserVersion: string | null;

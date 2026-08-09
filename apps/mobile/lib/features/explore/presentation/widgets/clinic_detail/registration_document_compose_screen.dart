@@ -18,8 +18,8 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// is submitted for review; `false`/`null` when they leave without sending.
 Future<bool?> composeRegistrationDocument(
   BuildContext context, {
-  required String facilityId,
-  required String requirementId,
+  required int facilityId,
+  required int requirementId,
   required String documentTitle,
 }) {
   return Navigator.of(context).push<bool>(
@@ -45,14 +45,14 @@ class _ComposeItem {
   }) : phase = _ItemPhase.queued,
        progress = 0.05;
 
-  final String id;
+  final int id;
   final String fileName;
   final String mimeType;
   final String localPath;
   final bool isPdf;
   _ItemPhase phase;
   double progress;
-  String? fileAssetId;
+  int? fileAssetId;
 
   bool get isBusy =>
       phase == _ItemPhase.queued ||
@@ -85,8 +85,8 @@ class RegistrationDocumentComposeScreen extends ConsumerStatefulWidget {
     required this.documentTitle,
   });
 
-  final String facilityId;
-  final String requirementId;
+  final int facilityId;
+  final int requirementId;
   final String documentTitle;
 
   @override
@@ -102,7 +102,7 @@ class _RegistrationDocumentComposeScreenState
   bool _uploading = false;
   bool _pickingLocked = false;
   bool _submitting = false;
-  String? _documentId;
+  int? _documentId;
   Timer? _pollTimer;
   int _idSeq = 0;
 
@@ -216,7 +216,7 @@ class _RegistrationDocumentComposeScreenState
     });
 
     try {
-      String? completedFileId;
+      int? completedFileId;
       String? completedStatus;
       final uploaded = await ref
           .read(facilityCadastroControllerProvider(widget.facilityId))
@@ -242,7 +242,7 @@ class _RegistrationDocumentComposeScreenState
             },
           );
       final nextDocumentId = uploaded.recordId;
-      if (nextDocumentId != null && nextDocumentId.isNotEmpty) {
+      if (nextDocumentId != null && nextDocumentId > 0) {
         _documentId = nextDocumentId;
       }
 
@@ -297,7 +297,7 @@ class _RegistrationDocumentComposeScreenState
     final isPdf =
         mimeType.contains('pdf') || fileName.toLowerCase().endsWith('.pdf');
     return _ComposeItem(
-      id: 'c-${_idSeq++}',
+      id: _idSeq++,
       fileName: fileName,
       mimeType: mimeType,
       localPath: localPath,

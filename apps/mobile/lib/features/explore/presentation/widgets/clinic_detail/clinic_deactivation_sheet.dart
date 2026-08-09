@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 Future<void> requestClinicDeactivation(
   BuildContext context, {
   required WidgetRef ref,
-  required String clinicId,
+  required int clinicId,
   required String clinicName,
   required FacilityCommercialStatus currentStatus,
 }) async {

@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_repository.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agenda_provider.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/screens/interaction_screen.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
@@ -36,14 +37,14 @@ class _InteractionRepository implements CalendarRepositoryContract {
   String? correctionReason;
 
   @override
-  Future<InteractionDetail> getInteraction(String id) async {
+  Future<InteractionDetail> getInteraction(int id) async {
     gets++;
     return detail;
   }
 
   @override
   Future<InteractionDetail> startInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
   }) async {
@@ -54,7 +55,7 @@ class _InteractionRepository implements CalendarRepositoryContract {
 
   @override
   Future<InteractionDetail> completeInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
@@ -69,27 +70,27 @@ class _InteractionRepository implements CalendarRepositoryContract {
   Future<List<CalendarAvailabilityInterval>> getAvailability({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async => const [];
 
   @override
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async => const [];
 }
 
 class _MutationRepository implements CalendarMutationRepositoryContract {
   int cancellations = 0;
-  String? calendarId;
+  int? calendarId;
   String? recurrenceKey;
   CalendarCancellationCommand? command;
   String? idempotencyKey;
 
   @override
   Future<void> cancelCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
@@ -103,7 +104,7 @@ class _MutationRepository implements CalendarMutationRepositoryContract {
 
   @override
   Future<void> cancelCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
   }) async {}
@@ -116,14 +117,14 @@ class _MutationRepository implements CalendarMutationRepositoryContract {
 
   @override
   Future<void> updateCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarUpdateCommand command,
     required String idempotencyKey,
   }) async {}
 
   @override
   Future<void> updateCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarOccurrenceUpdateCommand command,
     required String idempotencyKey,
@@ -131,7 +132,7 @@ class _MutationRepository implements CalendarMutationRepositoryContract {
 }
 
 class _NotesRepository extends FacilityNotesRepository {
-  _NotesRepository() : super('facility-1');
+  _NotesRepository() : super(1);
   int creates = 0;
   int loads = 0;
 
@@ -140,7 +141,7 @@ class _NotesRepository extends FacilityNotesRepository {
     loads++;
     return [
       FacilityFieldNote(
-        id: 'note-1',
+        id: 1,
         text: 'Usar estacionamento lateral.',
         createdAt: DateTime.utc(2026, 8, 2),
       ),
@@ -151,7 +152,7 @@ class _NotesRepository extends FacilityNotesRepository {
   Future<FacilityFieldNote> createNote(String note) async {
     creates++;
     return FacilityFieldNote(
-      id: 'note-2',
+      id: 2,
       text: note,
       createdAt: DateTime.utc(2026, 8, 3),
     );
@@ -166,8 +167,8 @@ InteractionDetail _detail({
   int? overrideVersion,
   CalendarRecurrence recurrence = CalendarRecurrence.none,
 }) => InteractionDetail(
-  id: 'interaction-1',
-  calendarId: 'calendar-1',
+  id: 1,
+  calendarId: 1,
   recurrenceKey: '2026-08-03T09:00',
   title: 'Visita comercial',
   modality: CalendarModality.inPerson,
@@ -176,15 +177,15 @@ InteractionDetail _detail({
   occurrenceEndsAt: DateTime.utc(2026, 8, 3, 13),
   timeZone: 'America/Sao_Paulo',
   facility: const InteractionFacility(
-    id: 'facility-1',
+    id: 1,
     displayName: 'Clínica Central',
     city: 'São Paulo',
     state: 'SP',
   ),
-  agent: const InteractionAgent(id: 'agent-1', displayName: 'Ana Souza'),
+  agent: const InteractionAgent(id: 1, displayName: 'Ana Souza'),
   linkedOrders: [
     InteractionLinkedOrder(
-      id: 'order-1',
+      id: 1,
       status: 'PENDING',
       type: 'SALE',
       orderedAt: DateTime.utc(2026, 8, 3, 12, 30),
@@ -217,7 +218,7 @@ Widget _app(
   child: MaterialApp(
     theme: AppTheme.light,
     home: InteractionScreen(
-      interactionId: 'interaction-1',
+      interactionId: 1,
       onNewOrder: onNewOrder,
       onReschedule: onReschedule,
       onCancel: onCancel,
@@ -228,6 +229,17 @@ Widget _app(
 void main() {
   setUpAll(() {
     BaseRepository.storage = const _MemoryCacheStorage();
+    // ignore: invalid_use_of_protected_member — test-only reset to avoid leaking a pending Timer across tests.
+    SessionEnvironment.instance.timer?.cancel();
+    // ignore: invalid_use_of_protected_member
+    SessionEnvironment.instance.timer = null;
+  });
+
+  tearDown(() {
+    // ignore: invalid_use_of_protected_member
+    SessionEnvironment.instance.timer?.cancel();
+    // ignore: invalid_use_of_protected_member
+    SessionEnvironment.instance.timer = null;
   });
 
   testWidgets('opening shows context and does not auto-start', (tester) async {
@@ -382,11 +394,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(mutations.cancellations, 1);
-      expect(mutations.calendarId, 'calendar-1');
+      expect(mutations.calendarId, 1);
       expect(mutations.recurrenceKey, '2026-08-03T09:00');
       expect(mutations.command?.expectedVersion, 0);
       expect(mutations.command?.reason, 'Clínica solicitou reagendamento.');
-      expect(mutations.idempotencyKey, 'cancel-calendar-1-2026-08-03T09:00-v0');
+      expect(mutations.idempotencyKey, 'cancel-1-2026-08-03T09:00-v0');
     },
   );
 
@@ -423,7 +435,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(mutations.command?.expectedVersion, 2);
-    expect(mutations.idempotencyKey, 'cancel-calendar-1-2026-08-03T09:00-v2');
+    expect(mutations.idempotencyKey, 'cancel-1-2026-08-03T09:00-v2');
   });
 
   testWidgets('pull to refresh reloads interaction and facility notes', (

@@ -21,7 +21,7 @@ class ClinicVisitsRepository extends Repository<List<ClinicVisit>>
         name: 'ClinicVisitsRepository',
       );
 
-  final String facilityId;
+  final int facilityId;
   final RepositoryHttpClient? _client;
 
   @override

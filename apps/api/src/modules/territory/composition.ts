@@ -1,10 +1,9 @@
 import { DrizzleTerritoryRepository } from "./infrastructure/repositories/drizzle/drizzle-territory.repository";
 import { DrizzleTerritoryTypeRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-type.repository";
 import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
-import { DrizzleTerritoryApprovalRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-approval.repository";
 import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
-import { DrizzleFacilityConsultantAssignmentRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
+import { DrizzleFacilityVerticalRepAssignmentRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-vertical-rep-assignment.repository";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
 import { TerritoryContainmentService } from "./application/services/territory-containment.service";
@@ -12,17 +11,15 @@ import { TerritoryCrudUseCases } from "./application/use-cases/territory-crud.us
 import { TerritoryTypeUseCases } from "./application/use-cases/territory-type.use-cases";
 import { TerritoryBoundaryUseCases } from "./application/use-cases/territory-boundary.use-cases";
 import { TerritoryMembershipUseCases } from "./application/use-cases/territory-membership.use-cases";
-import { TerritoryApprovalUseCases } from "./application/use-cases/territory-approval.use-cases";
 import { territoryMembershipQueue } from "../../infrastructure/jobs/territory-membership.queue";
+import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
-import { auditLogAdapter } from "../access/infrastructure/adapters/audit-log.adapter";
 import { isManagerZoneType } from "./application/constants/territory-roles.constants";
 
 export const territoryRepositories = {
   territory: new DrizzleTerritoryRepository(),
   territoryType: new DrizzleTerritoryTypeRepository(),
   spatial: new DrizzleTerritorySpatialRepository(),
-  approval: new DrizzleTerritoryApprovalRepository(),
 };
 
 export const facilityMembershipWriter = new DrizzleClinicMembershipWriter();
@@ -35,6 +32,9 @@ const territoryMembershipService = new TerritoryMembershipService({
   spatialRepository: territoryRepositories.spatial,
   territoryRepository: territoryRepositories.territory,
   clinicWriter: facilityMembershipWriter,
+  onClinicMembershipChanged: async (facilityId) => {
+    await upsertFacilitySearchDocument(facilityId);
+  },
 });
 
 const territoryContainmentService = new TerritoryContainmentService({
@@ -43,14 +43,14 @@ const territoryContainmentService = new TerritoryContainmentService({
   spatialRepository: territoryRepositories.spatial,
 });
 
-async function enqueueMembershipRecompute(territoryId?: string): Promise<void> {
+async function enqueueMembershipRecompute(territoryId?: number): Promise<void> {
   await territoryMembershipQueue.enqueue({
     territoryId,
     reason: territoryId ? "boundary_change" : "manual_recompute",
   });
 }
 
-async function onTerritoryBoundaryChanged(territoryId: string): Promise<void> {
+async function onTerritoryBoundaryChanged(territoryId: number): Promise<void> {
   // Spec 0006: clinic membership follows manager zones only. Patch boundary
   // changes do not rewrite manager_zone_id (impact/deassign flow handles owners).
   const territory = await territoryRepositories.territory.findById(territoryId);
@@ -64,18 +64,18 @@ async function onTerritoryBoundaryChanged(territoryId: string): Promise<void> {
   await invalidateScopeForTerritories([territoryId]);
 }
 
-async function onManagerTerritoryChanged(managerTerritoryId: string): Promise<void> {
+async function onManagerTerritoryChanged(managerTerritoryId: number): Promise<void> {
   await invalidateScopeForTerritories([managerTerritoryId]);
 }
 
-async function enqueueClinicMembershipUpdate(facilityId: string): Promise<void> {
+async function enqueueClinicMembershipUpdate(facilityId: number): Promise<void> {
   await territoryMembershipQueue.enqueue({
     facilityIds: [facilityId],
     reason: "clinic_update",
   });
 }
 
-async function invalidateScopeForTerritories(territoryIds: string[]): Promise<void> {
+async function invalidateScopeForTerritories(territoryIds: number[]): Promise<void> {
   const userIds =
     await territoryHierarchyPort.findUsersAssignedToRelatedTerritories(territoryIds);
   await scopeCacheService.invalidateMany(userIds);
@@ -111,8 +111,8 @@ const territoryCrud = new TerritoryCrudUseCases({
 
 const territoryTypeCrud = new TerritoryTypeUseCases(territoryRepositories.territoryType);
 
-const consultantAssignmentRepository =
-  new DrizzleFacilityConsultantAssignmentRepository();
+const repAssignmentRepository =
+  new DrizzleFacilityVerticalRepAssignmentRepository();
 
 function createBoundaryUseCases() {
   return new TerritoryBoundaryUseCases({
@@ -120,7 +120,7 @@ function createBoundaryUseCases() {
     territoryTypeRepository: territoryRepositories.territoryType,
     spatialRepository: territoryRepositories.spatial,
     containmentService: territoryContainmentService,
-    consultantAssignmentRepository,
+    repAssignmentRepository,
     onBoundaryChanged: onTerritoryBoundaryChanged,
     onManagerTerritoryChanged: onManagerTerritoryChanged,
   });
@@ -153,57 +153,27 @@ export const territoryUseCases = {
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
   listUnassignedFacilities: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
   adminOverrideClinicTerritory: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
   unlockClinicGeo: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
-    }),
-  submitApproval: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
-      clinicWriter: facilityMembershipWriter,
-      invalidateScopeForTerritories,
-      enqueueMembershipRecompute,
-      auditLog: auditLogAdapter,
-    }),
-  listApprovalRequests: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
-      clinicWriter: facilityMembershipWriter,
-    }),
-  approveRequest: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
-      clinicWriter: facilityMembershipWriter,
-      invalidateScopeForTerritories,
-      enqueueMembershipRecompute,
-      auditLog: auditLogAdapter,
-    }),
-  rejectRequest: () =>
-    new TerritoryApprovalUseCases({
-      approvalRepository: territoryRepositories.approval,
-      territoryRepository: territoryRepositories.territory,
-      territoryCrud,
-      clinicWriter: facilityMembershipWriter,
+      onFacilityChanged: upsertFacilitySearchDocument,
     }),
 };

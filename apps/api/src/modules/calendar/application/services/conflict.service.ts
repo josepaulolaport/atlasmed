@@ -10,7 +10,7 @@ import {
 export type { CalendarOccurrenceOverride } from "./recurrence.service";
 
 export interface CalendarConflictEntry {
-  id: string;
+  id: number | string;
   rule: CalendarRecurrenceRule;
   cancelledOccurrenceKeys?: readonly string[];
   overrides?: Readonly<Record<string, CalendarOccurrenceOverride>>;
@@ -22,8 +22,8 @@ export interface CalendarConflictRange {
 }
 
 export interface CalendarConflict {
-  candidateId: string;
-  existingId: string;
+  candidateId: number | string;
+  existingId: number | string;
   candidateOccurrenceKey: string;
   existingOccurrenceKey: string;
   candidateStartsAt: Date;
@@ -359,7 +359,7 @@ function compareConflicts(left: CalendarConflict, right: CalendarConflict): numb
     pairStart(left).getTime() - pairStart(right).getTime() ||
     left.candidateStartsAt.getTime() - right.candidateStartsAt.getTime() ||
     left.existingStartsAt.getTime() - right.existingStartsAt.getTime() ||
-    left.existingId.localeCompare(right.existingId) ||
+    String(left.existingId).localeCompare(String(right.existingId)) ||
     left.candidateOccurrenceKey.localeCompare(right.candidateOccurrenceKey) ||
     left.existingOccurrenceKey.localeCompare(right.existingOccurrenceKey)
   );

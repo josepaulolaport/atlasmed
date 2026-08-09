@@ -11,7 +11,7 @@ describe("InviteService", () => {
   beforeEach(() => {
     mockInviteRepository = createMockInviteRepository({
       create: mock(async (params) => ({
-        id: "invite-123",
+        id: 123,
         email: params.email,
         phoneNumber: params.phoneNumber,
         tokenHash: params.tokenHash,
@@ -41,8 +41,8 @@ describe("InviteService", () => {
     it("should create an invite with email", async () => {
       const params = {
         email: "user@example.com",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       };
 
       const result = await inviteService.createInvite(params);
@@ -55,8 +55,8 @@ describe("InviteService", () => {
     it("should create an invite with phoneNumber", async () => {
       const params = {
         phoneNumber: "+1234567890",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       };
 
       const result = await inviteService.createInvite(params);
@@ -68,8 +68,8 @@ describe("InviteService", () => {
     it("should generate a short invite code", async () => {
       const result = await inviteService.createInvite({
         email: "user@example.com",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       expect(result.token).toBeString();
@@ -80,8 +80,8 @@ describe("InviteService", () => {
     it("should store HASHED token only", async () => {
       const result = await inviteService.createInvite({
         email: "user@example.com",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       const createCall = (mockInviteRepository.create as any).mock.calls[0][0];
@@ -93,8 +93,8 @@ describe("InviteService", () => {
       const beforeCreate = Date.now();
       await inviteService.createInvite({
         email: "user@example.com",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
       const afterCreate = Date.now();
 
@@ -109,12 +109,12 @@ describe("InviteService", () => {
     });
 
     it("should include roleId in invite", async () => {
-      const roleId = "role-789";
+      const roleId = 2;
 
       await inviteService.createInvite({
         email: "user@example.com",
         roleId,
-        invitedByUserId: "admin-456",
+        invitedByUserId: 456,
       });
 
       const createCall = (mockInviteRepository.create as any).mock.calls[0][0];
@@ -122,11 +122,11 @@ describe("InviteService", () => {
     });
 
     it("should include invitedByUserId in invite", async () => {
-      const invitedByUserId = "admin-999";
+      const invitedByUserId = 3;
 
       await inviteService.createInvite({
         email: "user@example.com",
-        roleId: "role-123",
+        roleId: 1,
         invitedByUserId,
       });
 
@@ -137,14 +137,14 @@ describe("InviteService", () => {
     it("should generate unique tokens for different invites", async () => {
       const result1 = await inviteService.createInvite({
         email: "user1@example.com",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       const result2 = await inviteService.createInvite({
         email: "user2@example.com",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       expect(result1.token).not.toBe(result2.token);
@@ -153,8 +153,8 @@ describe("InviteService", () => {
     it("should return invite and token", async () => {
       const result = await inviteService.createInvite({
         email: "user@example.com",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       expect(result).toHaveProperty("invite");
@@ -168,8 +168,8 @@ describe("InviteService", () => {
       await inviteService.createInvite({
         email: undefined,
         phoneNumber: "+1234567890",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       const createCall = (mockInviteRepository.create as any).mock.calls[0][0];
@@ -181,8 +181,8 @@ describe("InviteService", () => {
       await inviteService.createInvite({
         email: "user@example.com",
         phoneNumber: undefined,
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       const createCall = (mockInviteRepository.create as any).mock.calls[0][0];
@@ -194,8 +194,8 @@ describe("InviteService", () => {
       await inviteService.createInvite({
         email: "user@example.com",
         phoneNumber: "+1234567890",
-        roleId: "role-123",
-        invitedByUserId: "admin-456",
+        roleId: 1,
+        invitedByUserId: 456,
       });
 
       const createCall = (mockInviteRepository.create as any).mock.calls[0][0];

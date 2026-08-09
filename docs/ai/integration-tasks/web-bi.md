@@ -5,16 +5,16 @@ Use when a task adds or modifies a BI dashboard card, KPI, manager view, or admi
 ## Load
 
 **Always:**
-- `AGENTS.md`
-- `apps/web/AGENTS.md`
+- `AGENTS.md` (§ `apps/web`)
+- `apps/web/README.md` (when needed)
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
 | Backend metric doesn't exist yet | `docs/ai/integration-tasks/api-web.md` (escalate to cross-boundary) |
-| authorization / security | `packages/access/AGENTS.md` |
-| performance (heavy query) | `packages/observability/AGENTS.md` |
+| authorization / security | `AGENTS.md` § `packages/access`, `docs/architecture/features/access-auth.md` |
+| performance (heavy query) | `AGENTS.md` § `packages/observability` |
 | Product KPI definition | `docs/product/overview.md` (bi-kpis doc doesn't exist yet) |
 
 ## Work order
@@ -22,7 +22,7 @@ Use when a task adds or modifies a BI dashboard card, KPI, manager view, or admi
 1. Identify the KPI definition (product owner or existing product doc).
 2. Confirm the data source. Does the API already expose the metric?
 3. If yes: fetch, display, done. If no: escalate to `api-web` and add the endpoint first.
-4. Reuse existing dashboard layout patterns from `apps/web/AGENTS.md` — don't invent a new grid.
+4. Reuse existing dashboard layout patterns from `AGENTS.md` § `apps/web` — don't invent a new grid.
 5. Add loading, empty, and error states.
 6. Ensure manager/admin visibility rules are respected.
 7. Verify the card renders correctly with real data.
@@ -36,5 +36,5 @@ Use when a task adds or modifies a BI dashboard card, KPI, manager view, or admi
 
 ## Docs to update after
 
-- `apps/web/AGENTS.md` — if a dashboard pattern shifted.
+- Root `AGENTS.md` § `apps/web` — if a dashboard pattern shifted.
 - TODO `docs/product/bi-kpis.md` — if the KPI definition itself changed.

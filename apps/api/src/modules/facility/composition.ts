@@ -1,8 +1,5 @@
 import { DrizzleFacilityRepository } from "./infrastructure/repositories/drizzle/drizzle-facility.repository";
-import { DrizzleFacilityProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
-import { DrizzleFacilityRepresentativeRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
-import { DrizzleUserRepresentativeRelationshipRepository } from "./infrastructure/repositories/drizzle/drizzle-user-representative-relationship.repository";
-import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
+import { DrizzleFacilityVerticalRepAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-vertical-rep-assignment.repository";
 import { DrizzleFacilityNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-note.repository";
 import { DrizzleFacilityPhotoRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-photo.repository";
 import { DrizzleConformityRepository } from "./infrastructure/repositories/drizzle/drizzle-conformity.repository";
@@ -16,25 +13,16 @@ import {
   DeleteFacilityUseCase,
   GetFacilityUseCase,
   ListFacilitiesUseCase,
-  ListFacilityServicesUseCase,
+  ListClinicalFocusesUseCase,
   UpdateFacilityUseCase,
 } from "./application/use-cases/facility.use-cases";
 import { ListMapFacilityPointsUseCase } from "./application/use-cases/list-map-facility-points.use-case";
 import {
-  ConfirmProfessionalAtFacilityUseCase,
-  EndFacilityProfessionalUseCase,
-  GetFacilityProfessionalContextUseCase,
-  ListFacilityProfessionalsUseCase,
-  ManuallyAssociateProfessionalUseCase,
-  UpdateFacilityProfessionalRoleUseCase,
-} from "./application/use-cases/facility-professional.use-cases";
-import {
-  AssignFacilityConsultantUseCase,
-  ConfirmRegistryProfessionalUseCase,
-  ConfirmRegistryRepresentativeUseCase,
-  ListFacilityConsultantAssignmentsUseCase,
-  UnassignFacilityConsultantUseCase,
-} from "./application/use-cases/facility-registry.use-cases";
+  AssignFacilityVerticalRepUseCase,
+  DeactivateFacilityVerticalUseCase,
+  ListFacilityVerticalRepAssignmentsUseCase,
+  UnassignFacilityVerticalRepUseCase,
+} from "./application/use-cases/facility-vertical-rep.use-cases";
 import {
   CreateFacilityConformityRecordUseCase,
   ListConformityRequirementsUseCase,
@@ -70,13 +58,10 @@ import {
   CreateFacilityVisitUseCase,
 } from "./application/use-cases/visit.use-cases";
 import {
-  CreateFacilityRepresentativeUseCase,
-  ListFacilityRepresentativesUseCase,
-  UpdateFacilityRepresentativeUseCase,
-} from "./application/use-cases/facility-representative.use-cases";
-import {
   CreateFacilityNoteUseCase,
+  DeleteFacilityNoteUseCase,
   ListFacilityNotesUseCase,
+  UpdateFacilityNoteUseCase,
 } from "./application/use-cases/facility-note.use-cases";
 import {
   DownloadFacilityPhotoUseCase,
@@ -90,20 +75,13 @@ import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
 import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
+import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
 import { searchService } from "../../infrastructure/search/search.service";
-import { DrizzleRegistryReadRepository } from "../registry-ingestion/infrastructure/repositories/drizzle/drizzle-registry-read.repository";
-import { professionalRepositories } from "../professional/composition";
-
-const registryReadRepository = new DrizzleRegistryReadRepository();
 
 export const facilityRepositories = {
   facility: new DrizzleFacilityRepository(),
   purchaseRecurrence: new DrizzleFacilityPurchaseRecurrenceRepository(),
-  association: new DrizzleFacilityProfessionalRepository(),
-  representative: new DrizzleFacilityRepresentativeRepository(),
-  userRepresentativeRelationship:
-    new DrizzleUserRepresentativeRelationshipRepository(),
-  consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
+  verticalRepAssignment: new DrizzleFacilityVerticalRepAssignmentRepository(),
   note: new DrizzleFacilityNoteRepository(),
   photo: new DrizzleFacilityPhotoRepository(),
   conformity: new DrizzleConformityRepository(),
@@ -139,7 +117,7 @@ export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
 );
 
 export const facilityAssociationPort = new DrizzleFacilityAssociationPort(
-  facilityRepositories.consultantAssignment,
+  facilityRepositories.verticalRepAssignment,
 );
 
 export const facilityGeocodingService = new FacilityGeocodingService({
@@ -147,9 +125,13 @@ export const facilityGeocodingService = new FacilityGeocodingService({
   geocodingPort,
 });
 
-async function handleFacilityLocationChanged(facilityId: string): Promise<void> {
+async function handleFacilityLocationChanged(facilityId: number): Promise<void> {
   await facilityGeocodingService.ensureCoordinatesPersisted(facilityId);
   await territoryMembershipService.assignFacilityById(facilityId);
+}
+
+async function handleFacilityChanged(facilityId: number): Promise<void> {
+  await upsertFacilitySearchDocument(facilityId);
 }
 
 export const purchaseRecurrenceService = new PurchaseRecurrenceService(
@@ -162,6 +144,7 @@ const facilityMembershipDeps = {
   facilityGeocodingService,
   purchaseRecurrenceService,
   onFacilityLocationChanged: handleFacilityLocationChanged,
+  onFacilityChanged: handleFacilityChanged,
 };
 
 export const facilityUseCases = {
@@ -170,79 +153,26 @@ export const facilityUseCases = {
     new ListMapFacilityPointsUseCase({
       facilityRepository: facilityRepositories.facility,
     }),
-  listFacilityServices: () =>
-    new ListFacilityServicesUseCase(facilityMembershipDeps),
+  listClinicalFocuses: () =>
+    new ListClinicalFocusesUseCase(facilityMembershipDeps),
   getFacility: () => new GetFacilityUseCase(facilityMembershipDeps),
   createFacility: () => new CreateFacilityUseCase(facilityMembershipDeps),
   updateFacility: () => new UpdateFacilityUseCase(facilityMembershipDeps),
   deleteFacility: () => new DeleteFacilityUseCase(facilityMembershipDeps),
-  listFacilityProfessionals: () =>
-    new ListFacilityProfessionalsUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      userProfessionalRelationshipRepository:
-        professionalRepositories.userProfessionalRelationship,
-    }),
-  confirmProfessionalAtFacility: () =>
-    new ConfirmProfessionalAtFacilityUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-    }),
-  manuallyAssociateProfessional: () =>
-    new ManuallyAssociateProfessionalUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-    }),
-  endFacilityProfessional: () =>
-    new EndFacilityProfessionalUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-    }),
-  getFacilityProfessionalContext: () =>
-    new GetFacilityProfessionalContextUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      professionalRepository: professionalRepositories.professional,
-      userProfessionalRelationshipRepository:
-        professionalRepositories.userProfessionalRelationship,
-    }),
-  updateFacilityProfessionalRole: () =>
-    new UpdateFacilityProfessionalRoleUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      userProfessionalRelationshipRepository:
-        professionalRepositories.userProfessionalRelationship,
-    }),
-  confirmRegistryProfessional: () =>
-    new ConfirmRegistryProfessionalUseCase({
-      facilityProfessionalRepository: facilityRepositories.association,
-      facilityRepository: facilityRepositories.facility,
-      registryReadRepository,
-    }),
-  confirmRegistryRepresentative: () =>
-    new ConfirmRegistryRepresentativeUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      facilityRepository: facilityRepositories.facility,
-      registryReadRepository,
-    }),
-  listFacilityRepresentatives: () =>
-    new ListFacilityRepresentativesUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      userRepresentativeRelationshipRepository:
-        facilityRepositories.userRepresentativeRelationship,
-    }),
-  createFacilityRepresentative: () =>
-    new CreateFacilityRepresentativeUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      userRepresentativeRelationshipRepository:
-        facilityRepositories.userRepresentativeRelationship,
-    }),
-  updateFacilityRepresentative: () =>
-    new UpdateFacilityRepresentativeUseCase({
-      facilityRepresentativeRepository: facilityRepositories.representative,
-      userRepresentativeRelationshipRepository:
-        facilityRepositories.userRepresentativeRelationship,
-    }),
   listFacilityNotes: () =>
     new ListFacilityNotesUseCase({
       facilityNoteRepository: facilityRepositories.note,
     }),
   createFacilityNote: () =>
     new CreateFacilityNoteUseCase({
+      facilityNoteRepository: facilityRepositories.note,
+    }),
+  updateFacilityNote: () =>
+    new UpdateFacilityNoteUseCase({
+      facilityNoteRepository: facilityRepositories.note,
+    }),
+  deleteFacilityNote: () =>
+    new DeleteFacilityNoteUseCase({
       facilityNoteRepository: facilityRepositories.note,
     }),
   listFacilityPhotos: () =>
@@ -262,13 +192,53 @@ export const facilityUseCases = {
       facilityPhotoRepository: facilityRepositories.photo,
       storage: facilityPhotoStorage,
     }),
-  listConsultantAssignments: () =>
-    new ListFacilityConsultantAssignmentsUseCase({
-      consultantAssignmentRepository: facilityRepositories.consultantAssignment,
+  listVerticalRepAssignments: () =>
+    new ListFacilityVerticalRepAssignmentsUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
     }),
-  assignConsultant: () =>
-    new AssignFacilityConsultantUseCase({
-      consultantAssignmentRepository: facilityRepositories.consultantAssignment,
+  assignVerticalRep: () =>
+    new AssignFacilityVerticalRepUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+      assertVerticalActive: async (verticalId) => {
+        const { businessVerticals } = await import("@atlasmed/database");
+        const { eq } = await import("drizzle-orm");
+        const { db } = await import("../../infrastructure/database/db");
+        const { ValidationError } = await import("../../shared/errors");
+        const [row] = await db
+          .select({ id: businessVerticals.id, isActive: businessVerticals.isActive })
+          .from(businessVerticals)
+          .where(eq(businessVerticals.id, verticalId))
+          .limit(1);
+        if (!row || !row.isActive) {
+          throw new ValidationError([
+            { field: "verticalId", message: "vertical is inactive or missing" },
+          ]);
+        }
+      },
+      assertAssigneeHasVertical: async ({ userId, verticalId }) => {
+        const { userVerticalAssignments } = await import("@atlasmed/database");
+        const { and, eq } = await import("drizzle-orm");
+        const { db } = await import("../../infrastructure/database/db");
+        const { ValidationError } = await import("../../shared/errors");
+        const [row] = await db
+          .select({ id: userVerticalAssignments.id })
+          .from(userVerticalAssignments)
+          .where(
+            and(
+              eq(userVerticalAssignments.userId, userId),
+              eq(userVerticalAssignments.verticalId, verticalId),
+            ),
+          )
+          .limit(1);
+        if (!row) {
+          throw new ValidationError([
+            {
+              field: "userId",
+              message: "assignee must have user_vertical_assignments for this vertical",
+            },
+          ]);
+        }
+      },
       assertAssigneeCoversFacility: async ({ userId, facilityId }) => {
         const { territoryRepositories } = await import("../territory/composition");
         const { OperationNotAllowedError } = await import("../../shared/errors");
@@ -279,28 +249,40 @@ export const facilityUseCases = {
           );
         if (!covers) {
           throw new OperationNotAllowedError(
-            "assign_consultant",
+            "assign_vertical_rep",
             "Representative must have a territory patch covering this clinic",
           );
         }
       },
-      onConsultantAssignmentChanged: async (userIds) => {
-        // Lazy import avoids access ↔ facility composition cycle at module load.
+      onRepAssignmentChanged: async (userIds) => {
         const { accessScopeServices } = await import("../access/composition");
         await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
           userIds,
         );
       },
+      onFacilityChanged: handleFacilityChanged,
     }),
-  unassignConsultant: () =>
-    new UnassignFacilityConsultantUseCase({
-      consultantAssignmentRepository: facilityRepositories.consultantAssignment,
-      onConsultantAssignmentChanged: async (userIds) => {
+  unassignVerticalRep: () =>
+    new UnassignFacilityVerticalRepUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+      onRepAssignmentChanged: async (userIds) => {
         const { accessScopeServices } = await import("../access/composition");
         await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
           userIds,
         );
       },
+      onFacilityChanged: handleFacilityChanged,
+    }),
+  deactivateFacilityVertical: () =>
+    new DeactivateFacilityVerticalUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+      onRepAssignmentChanged: async (userIds) => {
+        const { accessScopeServices } = await import("../access/composition");
+        await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
+          userIds,
+        );
+      },
+      onFacilityChanged: handleFacilityChanged,
     }),
   listConformityRequirements: () =>
     new ListConformityRequirementsUseCase({

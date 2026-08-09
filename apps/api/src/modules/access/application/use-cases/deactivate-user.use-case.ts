@@ -31,8 +31,8 @@ export class DeactivateUserUseCase {
   }
 
   async execute(params: {
-    userId: string;
-    deactivatedBy: string;
+    userId: number;
+    deactivatedBy: number;
     actorRole: Role;
     scope: ScopeContext;
     reason?: string;

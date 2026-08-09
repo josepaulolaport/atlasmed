@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
@@ -21,9 +22,6 @@ enum TerritoryPickerMode {
 
   /// REP invite — free patches under a manager zone.
   repFreePatches,
-
-  /// Legacy — patches scoped to a manager user id.
-  patchesForManagerUser,
 }
 
 /// Full-screen map picker for invite / assignment flows.
@@ -32,21 +30,18 @@ enum TerritoryPickerMode {
 /// - [pickRepParentZone]
 /// - [pickManagerEmptyZones]
 /// - [pickForZone]
-/// - [pickForManager]
 class TerritoryPickerScreen extends ConsumerStatefulWidget {
   const TerritoryPickerScreen._({
     required this.mode,
     this.verticalId,
-    this.managerId,
     this.managerZoneId,
     this.initiallySelectedIds = const {},
   });
 
   final TerritoryPickerMode mode;
-  final String? verticalId;
-  final String? managerId;
-  final String? managerZoneId;
-  final Set<String> initiallySelectedIds;
+  final int? verticalId;
+  final int? managerZoneId;
+  final Set<int> initiallySelectedIds;
 
   bool get allowOccupied => mode == TerritoryPickerMode.repParentZone;
 
@@ -56,14 +51,13 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
     TerritoryPickerMode.repParentZone => 'Zona do gerente',
     TerritoryPickerMode.managerEmptyZones => 'Zonas vazias',
     TerritoryPickerMode.repFreePatches => 'Áreas livres',
-    TerritoryPickerMode.patchesForManagerUser => 'Selecionar territórios',
   };
 
   /// REP invite — pick one parent manager zone.
   static Future<TerritoryOption?> pickRepParentZone(
     BuildContext context, {
-    required String verticalId,
-    String? initiallySelectedId,
+    required int verticalId,
+    int? initiallySelectedId,
   }) async {
     final picked = await Navigator.of(context).push<List<TerritoryOption>>(
       MaterialPageRoute(
@@ -82,8 +76,8 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
   /// MANAGER invite — pick empty zones (multi).
   static Future<List<TerritoryOption>?> pickManagerEmptyZones(
     BuildContext context, {
-    required String verticalId,
-    Set<String> initiallySelectedIds = const {},
+    required int verticalId,
+    Set<int> initiallySelectedIds = const {},
   }) {
     return Navigator.of(context).push<List<TerritoryOption>>(
       MaterialPageRoute(
@@ -97,38 +91,12 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
     );
   }
 
-  /// @Deprecated — use [pickRepParentZone] or [pickManagerEmptyZones].
-  static Future<List<TerritoryOption>?> pickForVertical(
-    BuildContext context, {
-    required String verticalId,
-    Set<String> initiallySelectedIds = const {},
-    bool allowOccupied = false,
-  }) {
-    if (allowOccupied) {
-      return Navigator.of(context).push<List<TerritoryOption>>(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (_) => TerritoryPickerScreen._(
-            mode: TerritoryPickerMode.repParentZone,
-            verticalId: verticalId,
-            initiallySelectedIds: initiallySelectedIds,
-          ),
-        ),
-      );
-    }
-    return pickManagerEmptyZones(
-      context,
-      verticalId: verticalId,
-      initiallySelectedIds: initiallySelectedIds,
-    );
-  }
-
   /// REP invite — patches under [managerZoneId].
   static Future<List<TerritoryOption>?> pickForZone(
     BuildContext context, {
-    required String managerZoneId,
-    String? verticalId,
-    Set<String> initiallySelectedIds = const {},
+    required int managerZoneId,
+    int? verticalId,
+    Set<int> initiallySelectedIds = const {},
   }) {
     return Navigator.of(context).push<List<TerritoryOption>>(
       MaterialPageRoute(
@@ -136,26 +104,6 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
         builder: (_) => TerritoryPickerScreen._(
           mode: TerritoryPickerMode.repFreePatches,
           managerZoneId: managerZoneId,
-          verticalId: verticalId,
-          initiallySelectedIds: initiallySelectedIds,
-        ),
-      ),
-    );
-  }
-
-  /// Legacy REP picker — patches valid for [managerId].
-  static Future<List<TerritoryOption>?> pickForManager(
-    BuildContext context, {
-    required String managerId,
-    String? verticalId,
-    Set<String> initiallySelectedIds = const {},
-  }) {
-    return Navigator.of(context).push<List<TerritoryOption>>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => TerritoryPickerScreen._(
-          mode: TerritoryPickerMode.patchesForManagerUser,
-          managerId: managerId,
           verticalId: verticalId,
           initiallySelectedIds: initiallySelectedIds,
         ),
@@ -189,16 +137,14 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
   bool _suppressNextMapTapDeselect = false;
   bool _mapReady = false;
   double _zoom = 11;
-  late final Set<String> _selectedIds = {...widget.initiallySelectedIds};
+  late final Set<int> _selectedIds = {...widget.initiallySelectedIds};
 
   List<TerritoryOption> _territories = const [];
   ManagerTerritoryScope? _managerScope;
   Object? _loadError;
   bool _loading = true;
 
-  bool get _isRepScoped =>
-      widget.mode == TerritoryPickerMode.repFreePatches ||
-      widget.mode == TerritoryPickerMode.patchesForManagerUser;
+  bool get _isRepScoped => widget.mode == TerritoryPickerMode.repFreePatches;
 
   /// Free patches under a manager zone — hide occupied for invite UX.
   bool get _freeOnlyMode => widget.mode == TerritoryPickerMode.repFreePatches;
@@ -225,7 +171,6 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
   Future<void> _loadTerritories() async {
     try {
       final repo = ref.read(usersRepositoryProvider);
-      final managerId = widget.managerId;
       final managerZoneId = widget.managerZoneId;
       late final List<TerritoryOption> list;
       ManagerTerritoryScope? scope;
@@ -245,7 +190,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
           }
         }
         scope = ManagerTerritoryScope(
-          managerId: '',
+          managerId: 0,
           managerName: zone?.name ?? '',
           managerTerritoryId: managerZoneId,
           managerTerritoryName: zone?.name,
@@ -253,12 +198,6 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
           managerZoneBoundary: zone?.boundary,
           territories: list,
         );
-      } else if (managerId != null) {
-        scope = await repo.getTerritoriesForManager(
-          managerId,
-          verticalId: widget.verticalId,
-        );
-        list = scope.territories;
       } else {
         list = await repo.getTerritoryOptions(verticalId: widget.verticalId);
       }
@@ -473,7 +412,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
 
     return MapWidget(
       key: ValueKey(
-        'mapa-selecao-${widget.managerId ?? 'sector'}-${widget.verticalId}',
+        'mapa-selecao-${widget.managerZoneId ?? 'sector'}-${widget.verticalId}',
       ),
       styleUri: MapboxStyles.STANDARD,
       viewport: _viewportApplied
@@ -518,7 +457,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
     final kind = annotation.customData?['kind'] as String?;
     // Parent zone outline (patch mode) and occupied patches not selectable.
     if (kind == 'managerZone' || kind == 'occupied') return;
-    final territoryId = annotation.customData?['territoryId'] as String?;
+    final territoryId = readCrmIdLoose(annotation.customData?['territoryId']);
     final territory = _find(territoryId);
     if (territory == null || !_isSelectable(territory)) return;
     _suppressNextMapTapDeselect = true;
@@ -536,7 +475,7 @@ class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
     // Multi-select tags are recreated on toggle; skip per-frame updates.
   }
 
-  TerritoryOption? _find(String? id) {
+  TerritoryOption? _find(int? id) {
     if (id == null) return null;
     for (final t in _territories) {
       if (t.id == id) return t;
@@ -846,7 +785,7 @@ class _FreePatchList extends StatelessWidget {
   });
 
   final List<TerritoryOption> territories;
-  final Set<String> selectedIds;
+  final Set<int> selectedIds;
   final Future<void> Function(TerritoryOption territory) onToggle;
 
   @override

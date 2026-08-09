@@ -29,14 +29,14 @@ describe("SessionCacheService", () => {
 
   describe("getById", () => {
     test("should return null when session does not exist", async () => {
-      const result = await cache.getById("session-123");
+      const result = await cache.getById(1);
       expect(result).toBeNull();
     });
 
     test("should return cached session", async () => {
       const session = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date().toISOString(),
         revokedAt: null,
@@ -48,13 +48,13 @@ describe("SessionCacheService", () => {
 
       mockRedis.get = mock(() => Promise.resolve(JSON.stringify(session)));
 
-      const result = await cache.getById("session-123");
+      const result = await cache.getById(1);
       expect(result).toEqual(session);
     });
 
     test("should handle Redis errors gracefully", async () => {
       mockRedis.get = mock(() => Promise.reject(new Error("Redis error")));
-      const result = await cache.getById("session-123");
+      const result = await cache.getById(1);
       expect(result).toBeNull();
     });
   });
@@ -67,8 +67,8 @@ describe("SessionCacheService", () => {
 
     test("should return session when token exists", async () => {
       const session = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date().toISOString(),
         revokedAt: null,
@@ -82,7 +82,7 @@ describe("SessionCacheService", () => {
       mockRedis.get = mock(() => {
         callCount++;
         if (callCount === 1) {
-          return Promise.resolve("session-123");
+          return Promise.resolve("1");
         }
         return Promise.resolve(JSON.stringify(session));
       });
@@ -95,8 +95,8 @@ describe("SessionCacheService", () => {
   describe("set", () => {
     test("should cache session with TTL", async () => {
       const session = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date(Date.now() + 86400000).toISOString(),
         revokedAt: null,
@@ -113,8 +113,8 @@ describe("SessionCacheService", () => {
 
     test("should not cache expired session", async () => {
       const session = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date(Date.now() - 1000).toISOString(),
         revokedAt: null,
@@ -133,8 +133,8 @@ describe("SessionCacheService", () => {
   describe("invalidate", () => {
     test("should delete session from cache", async () => {
       const session = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date().toISOString(),
         revokedAt: null,
@@ -146,14 +146,14 @@ describe("SessionCacheService", () => {
 
       mockRedis.get = mock(() => Promise.resolve(JSON.stringify(session)));
 
-      await cache.invalidate("session-123");
+      await cache.invalidate(1);
 
       expect(mockRedis.setex).toHaveBeenCalled();
       expect(mockRedis.pipeline).toHaveBeenCalled();
     });
 
     test("should set revoked marker even when session is missing from cache", async () => {
-      await cache.invalidate("session-123");
+      await cache.invalidate(1);
 
       expect(mockRedis.setex).toHaveBeenCalled();
       expect(mockRedis.pipeline).not.toHaveBeenCalled();
@@ -161,8 +161,8 @@ describe("SessionCacheService", () => {
 
     test("should throw after Redis retries are exhausted", async () => {
       const session = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date(Date.now() + 86400000).toISOString(),
         revokedAt: null,
@@ -175,13 +175,13 @@ describe("SessionCacheService", () => {
       mockRedis.get = mock(() => Promise.resolve(JSON.stringify(session)));
       mockRedis.del = mock(() => Promise.reject(new Error("Redis error")));
 
-      await expect(cache.invalidate("session-123")).rejects.toBeInstanceOf(
+      await expect(cache.invalidate(1)).rejects.toBeInstanceOf(
         RedisCacheError
       );
     });
 
     test("should handle missing session gracefully", async () => {
-      await cache.invalidate("session-123");
+      await cache.invalidate(1);
       expect(mockRedis.pipeline).not.toHaveBeenCalled();
     });
   });
@@ -190,11 +190,11 @@ describe("SessionCacheService", () => {
     test("should report recently validated sessions", async () => {
       mockRedis.exists = mock(() => Promise.resolve(1));
 
-      await expect(cache.isRecentlyValidated("session-123")).resolves.toBe(true);
+      await expect(cache.isRecentlyValidated(1)).resolves.toBe(true);
     });
 
     test("should mark session as validated", async () => {
-      await cache.markValidated("session-123");
+      await cache.markValidated(1);
 
       expect(mockRedis.setex).toHaveBeenCalled();
     });
@@ -202,25 +202,25 @@ describe("SessionCacheService", () => {
     test("should report revoked marker", async () => {
       mockRedis.exists = mock(() => Promise.resolve(1));
 
-      await expect(cache.isMarkedRevoked("session-123")).resolves.toBe(true);
+      await expect(cache.isMarkedRevoked(1)).resolves.toBe(true);
     });
 
     test("should clear the revoked marker", async () => {
-      await cache.clearRevoked("session-123");
+      await cache.clearRevoked(1);
 
-      expect(mockRedis.del).toHaveBeenCalledWith("session:revoked:session-123");
+      expect(mockRedis.del).toHaveBeenCalledWith("session:revoked:1");
     });
   });
 
   describe("invalidateByUserId", () => {
     test("should invalidate all user sessions", async () => {
       mockRedis.smembers = mock(() =>
-        Promise.resolve(["session-1", "session-2"])
+        Promise.resolve(["1", "2"])
       );
 
       const session = {
-        id: "session-1",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date().toISOString(),
         revokedAt: null,
@@ -232,23 +232,23 @@ describe("SessionCacheService", () => {
 
       mockRedis.get = mock(() => Promise.resolve(JSON.stringify(session)));
 
-      await cache.invalidateByUserId("user-123");
+      await cache.invalidateByUserId(123);
 
       expect(mockRedis.smembers).toHaveBeenCalled();
     });
 
     test("should exclude session when specified", async () => {
       mockRedis.smembers = mock(() =>
-        Promise.resolve(["session-1", "session-2"])
+        Promise.resolve(["1", "2"])
       );
 
-      await cache.invalidateByUserId("user-123", "session-1");
+      await cache.invalidateByUserId(123, 1);
 
       expect(mockRedis.smembers).toHaveBeenCalled();
     });
 
     test("should handle empty session list", async () => {
-      await cache.invalidateByUserId("user-123");
+      await cache.invalidateByUserId(123);
       expect(mockRedis.pipeline).not.toHaveBeenCalled();
     });
   });
@@ -256,8 +256,8 @@ describe("SessionCacheService", () => {
   describe("updateLastSeen", () => {
     test("should update session last seen time", async () => {
       const session = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hash",
         expiresAt: new Date(Date.now() + 86400000).toISOString(),
         revokedAt: null,
@@ -269,13 +269,13 @@ describe("SessionCacheService", () => {
 
       mockRedis.get = mock(() => Promise.resolve(JSON.stringify(session)));
 
-      await cache.updateLastSeen("session-123");
+      await cache.updateLastSeen(1);
 
       expect(mockRedis.get).toHaveBeenCalled();
     });
 
     test("should handle missing session gracefully", async () => {
-      await cache.updateLastSeen("session-123");
+      await cache.updateLastSeen(1);
       expect(mockRedis.pipeline).not.toHaveBeenCalled();
     });
   });

@@ -7,11 +7,9 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// "Histórico de visitas" — stats row, sentiment filter pills and a rich
 /// visit timeline (attendees, sample given, linked order, summary).
 ///
-/// Mock-only in V1: the real `clinicVisitsRepositoryProvider` (visitedAt/type/summary)
-/// still backs "Nova visita" registration elsewhere on the screen; this
-/// section renders `EstablishmentDetailSections.visitTimeline`, which will
-/// be replaced by real, richer visit data once the backend model is
-/// extended (Phase 2 — see Spec 0005).
+/// Renders `EstablishmentDetailSections.visitTimeline` when present.
+/// "Nova visita" still uses `clinicVisitsRepositoryProvider` elsewhere.
+/// Richer visit history lands with backend model extension (Phase 2).
 class ClinicVisitHistorySection extends StatefulWidget {
   const ClinicVisitHistorySection({
     super.key,

@@ -4,7 +4,7 @@ import { db } from "../../../../../infrastructure/database/db";
 import type { RoleRepository } from "../../../application/interfaces/role.repository.interface";
 
 export class DrizzleRoleRepository implements RoleRepository {
-  async findById(roleId: string) {
+  async findById(roleId: number) {
     const [row] = await db
       .select({
         id: roles.id,

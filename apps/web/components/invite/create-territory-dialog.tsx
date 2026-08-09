@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { isApprovalRequest } from "@/components/territory/territory-utils";
 import type { Territory, TerritoryType } from "@/types/territory";
 
 const createTerritorySchema = z.object({
@@ -121,13 +120,6 @@ export function CreateTerritoryDialog({
         verticalId: resolvedVerticalId,
         territoryTypeId,
       });
-
-      if (isApprovalRequest(result)) {
-        setError(
-          "Território criado e aguardando aprovação. Você pode usá-lo assim que for aprovado."
-        );
-        return;
-      }
 
       onTerritoryCreated(result);
       onOpenChange(false);

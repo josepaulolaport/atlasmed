@@ -18,7 +18,7 @@ import {
 
 const PROTECTED_TABLES = [
   "facilities",
-  "professionals",
+  "persons",
   "territories",
   "users",
   "facility_vertical_profiles",

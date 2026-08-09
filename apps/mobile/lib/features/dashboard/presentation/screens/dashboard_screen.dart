@@ -9,7 +9,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Desempenho / Dashboard — purchase-status donut + territory card.
 ///
@@ -49,7 +49,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     await _triggerFetch();
   }
 
-  void _onVerticalChanged(String? id) {
+  void _onVerticalChanged(int? id) {
     // [ref.listen] below kicks the fetch when selection changes.
     ref.read(dashboardSelectedVerticalIdProvider.notifier).state = id;
   }
@@ -62,7 +62,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       dashboardRepositoryProvider(selectedVerticalId),
     );
 
-    ref.listen<String?>(dashboardSelectedVerticalIdProvider, (prev, next) {
+    ref.listen<int?>(dashboardSelectedVerticalIdProvider, (prev, next) {
       if (next != prev) _triggerFetch();
     });
 
@@ -115,11 +115,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           final verticalId = ref.read(
                             dashboardSelectedVerticalIdProvider,
                           );
-                          final uri = Uri(
-                            path: '/dashboard/facilities/$bucket',
-                            queryParameters: {'verticalId': ?verticalId},
-                          );
-                          context.push(uri.toString());
+                          PurchaseBucketFacilitiesRoute(
+                            bucket: bucket,
+                            verticalId: verticalId,
+                          ).push(context);
                         },
                       ),
                       const SizedBox(height: 12),

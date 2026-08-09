@@ -323,6 +323,230 @@
       "when": 1785874452823,
       "tag": "0045_polite_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1786069065289,
+      "tag": "0046_crm_bigint_identity_cutover",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1786073938190,
+      "tag": "0047_slice_a_facility_territory_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1786074495071,
+      "tag": "0048_drop_invite_legacy_territory_cols",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1786074729430,
+      "tag": "0049_drop_territory_approval_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1786075647995,
+      "tag": "0050_slice_b_non_person_hygiene",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1786077575060,
+      "tag": "0051_slice_c_person_hard_cut",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1786078021703,
+      "tag": "0052_slice_d_onupdate_dup_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1786078712386,
+      "tag": "0053_seed_person_facility_classifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1786082017476,
+      "tag": "0054_seed_person_facility_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1786083966703,
+      "tag": "0055_drop_facility_types_and_unit_catalogs",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1786083985874,
+      "tag": "0056_reshape_unit_catalogs_occupation_shaped",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1786084838388,
+      "tag": "0057_rename_product_potential_definitions",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1786114255767,
+      "tag": "0058_seed_crm_registration_council",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1786117779101,
+      "tag": "0059_facility_vertical_rep_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1786119605415,
+      "tag": "0060_admin_geography_boundary_gist",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1786217347819,
+      "tag": "0061_drop_deactivation_reasons_legacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1786217354736,
+      "tag": "0062_reshape_deactivation_reasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1786218125328,
+      "tag": "0063_drop_person_facility_role_classif_code_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1786218141207,
+      "tag": "0064_reshape_person_facility_role_classif_id_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1786218141823,
+      "tag": "0065_seed_person_facility_role_classif_id_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1786219746377,
+      "tag": "0066_drop_person_facility_roles_code_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1786219754236,
+      "tag": "0067_person_facility_roles_dynamic_no_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1786221462768,
+      "tag": "0068_drop_registration_councils_code_pk",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1786221472303,
+      "tag": "0069_councils_abbrev_cnes_id_fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1786222800539,
+      "tag": "0070_drop_catalog_sort_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1786224394248,
+      "tag": "0071_drop_registration_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1786228627817,
+      "tag": "0072_ibge_geo_districts",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1786236265912,
+      "tag": "0073_drop_permissions_access_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1786237257931,
+      "tag": "0074_drop_facilities_legal_document_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1786249413571,
+      "tag": "0075_emultec_ids_and_cnpj_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1786250245483,
+      "tag": "0076_cnes_professional_id_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1786252265488,
+      "tag": "0077_emultec_order_import_ops",
+      "breakpoints": true
     }
   ]
 }

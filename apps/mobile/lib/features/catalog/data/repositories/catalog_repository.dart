@@ -93,7 +93,7 @@ class CatalogRepository {
           .map((v) => v.brasindiceUpdatedAt)
           .reduce((a, b) => a.isAfter(b) ? a : b);
       return CatalogFamily(
-        id: entry.key,
+        id: first.id,
         name: entry.key,
         manufacturer: first.manufacturer,
         countryOfOrigin: first.countryOfOrigin,
@@ -108,7 +108,7 @@ class CatalogRepository {
   /// itself plus every competitor equivalence registered for it — scoped
   /// to exactly one product, distinct from [getFullPriceIndex].
   Future<ComparisonGroup> getComparison(
-    String variantId, {
+    int variantId, {
     ComparisonSortColumn sortBy = ComparisonSortColumn.icms20,
   }) async {
     final response = await _get(
@@ -274,9 +274,7 @@ class CatalogRepository {
 
   /// Competitor products not yet linked to [variantId] — backs the "add
   /// existing competitor" step of the picker.
-  Future<List<CompetitorProduct>> getUnlinkedCompetitors(
-    String variantId,
-  ) async {
+  Future<List<CompetitorProduct>> getUnlinkedCompetitors(int variantId) async {
     final response = await _get(
       _uri('/products/$variantId/competitors/unlinked'),
     );
@@ -289,7 +287,7 @@ class CatalogRepository {
 
   /// Adds [competitorId] to [variantId]'s equivalence set via
   /// `POST /products/:variantId/competitors`.
-  Future<void> linkCompetitor(String variantId, String competitorId) async {
+  Future<void> linkCompetitor(int variantId, int competitorId) async {
     final response = await _send(
       _uri('/products/$variantId/competitors'),
       RepositoryHttpMethod.post,
@@ -301,7 +299,7 @@ class CatalogRepository {
   /// Removes [competitorId] from [variantId]'s equivalence set via
   /// `DELETE /products/:variantId/competitors/:competitorId`. The
   /// competitor product itself still exists and can be relinked.
-  Future<void> unlinkCompetitor(String variantId, String competitorId) async {
+  Future<void> unlinkCompetitor(int variantId, int competitorId) async {
     final response = await _send(
       _uri('/products/$variantId/competitors/$competitorId'),
       RepositoryHttpMethod.delete,

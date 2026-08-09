@@ -16,7 +16,7 @@ const globalScope = createGlobalScopeContext();
 
 function facilityStub() {
   return {
-    id: "fac-1",
+    id: 1,
     name: "Clinic",
     neighborhood: null,
     city: "São Paulo",
@@ -25,21 +25,21 @@ function facilityStub() {
     streetNumber: "1000",
     addressComplement: null,
     postalCode: null,
+    stateId: 1,
+    municipalityId: 1,
     phone: "1100000000",
     whatsapp: null,
     email: null,
     website: null,
     responsibleName: null,
     openingHours: null,
-    taxIdType: null,
-    cnpj: null,
-    cpf: null,
+    legalDocumentType: "CNPJ",
+    legalDocument: null,
     lat: null,
     lng: null,
     territoryId: null,
     territoryName: null,
     territoryAssignmentStatus: "unassigned" as const,
-    territoryAssignmentSource: "geo" as const,
     commercialStatus: null,
     purchaseStatus: null,
     conformityStatus: "INCOMPLETE" as const,
@@ -47,18 +47,13 @@ function facilityStub() {
     consultantSince: null,
     managerName: null,
     imageUrl: null,
-    sourceProvider: null,
-    externalSourceId: null,
-    sourceContentHash: null,
-    sourceFirstSeenAt: null,
-    sourceLastSeenAt: null,
-    sourcePresent: false,
-    sourceTracked: false,
-    manuallyEditedAt: null,
+    cnesCode: null,
+    unitTypeId: null,
+    unitSubtypeId: null,
     deactivatedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    services: [],
+    clinicalFocuses: [],
   };
 }
 
@@ -80,8 +75,8 @@ describe("CreateFacilityFieldSuggestionUseCase", () => {
 
     await expect(
       useCase.execute({
-        facilityId: "fac-1",
-        userId: "u1",
+        facilityId: 1,
+        userId: 1,
         scope: globalScope,
         kind: "FIELD_CHANGE",
         fieldKey: "commercialStatus",
@@ -93,19 +88,19 @@ describe("CreateFacilityFieldSuggestionUseCase", () => {
   it("supersedes via repository and returns serialized suggestion", async () => {
     const createdAt = new Date("2026-07-22T12:00:00.000Z");
     const fieldSuggestionRepository = {
-      createWithSupersede: mock(async (input: { id: string }) => ({
+      createWithSupersede: mock(async (input: { id: number }) => ({
         suggestion: {
           id: input.id,
           kind: "FIELD_CHANGE" as const,
           status: "PENDING" as const,
-          facilityId: "fac-1",
+          facilityId: 1,
           facilityName: "Clinic",
-          professionalId: null,
+          personId: null,
           fieldKey: "phoneNumber",
           currentValue: "1100000000",
           proposedValue: "11999990000",
           reason: null,
-          submittedByUserId: "u1",
+          submittedByUserId: 1,
           submittedByName: "Rep",
           submittedByRole: "REP",
           submittedAt: createdAt,
@@ -116,7 +111,7 @@ describe("CreateFacilityFieldSuggestionUseCase", () => {
           createdAt,
           updatedAt: createdAt,
         },
-        supersededIds: ["old-1"],
+        supersededIds: [99],
       })),
     } as unknown as FieldSuggestionRepository;
 
@@ -131,8 +126,8 @@ describe("CreateFacilityFieldSuggestionUseCase", () => {
     });
 
     const result = await useCase.execute({
-      facilityId: "fac-1",
-      userId: "u1",
+      facilityId: 1,
+      userId: 1,
       scope: globalScope,
       kind: "FIELD_CHANGE",
       fieldKey: "phoneNumber",
@@ -151,9 +146,9 @@ describe("ApproveFieldSuggestionUseCase", () => {
       facilityRepository: {} as FacilityRepository,
       fieldSuggestionRepository: {
         findById: mock(async () => ({
-          id: "s1",
+          id: 1,
           status: "APPROVED",
-          facilityId: "fac-1",
+          facilityId: 1,
         })),
       } as unknown as FieldSuggestionRepository,
       applyService: {} as FieldSuggestionApplyService,
@@ -161,8 +156,8 @@ describe("ApproveFieldSuggestionUseCase", () => {
 
     await expect(
       useCase.execute({
-        suggestionId: "s1",
-        userId: "mgr-1",
+        suggestionId: 1,
+        userId: 2,
         scope: globalScope,
       })
     ).rejects.toBeInstanceOf(OperationNotAllowedError);

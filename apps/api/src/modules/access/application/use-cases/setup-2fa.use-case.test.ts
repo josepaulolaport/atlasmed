@@ -12,7 +12,7 @@ describe("Setup2FAUseCase", () => {
   };
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     twoFactorEnabled: false,
   };
@@ -33,12 +33,12 @@ describe("Setup2FAUseCase", () => {
   });
 
   it("should return secret and otpauth URL", async () => {
-    const result = await useCase.execute({ userId: "user-123" });
+    const result = await useCase.execute({ userId: 123 });
 
     expect(result.secret).toBe("BASE32SECRET");
     expect(result.otpauthUrl).toContain("otpauth://");
     expect(mockTwoFactorService.storePendingSetup).toHaveBeenCalledWith(
-      "user-123",
+      123,
       "BASE32SECRET"
     );
   });
@@ -51,7 +51,7 @@ describe("Setup2FAUseCase", () => {
       twoFactorService: mockTwoFactorService as any,
     });
 
-    await expect(useCase.execute({ userId: "user-123" })).rejects.toThrow(
+    await expect(useCase.execute({ userId: 123 })).rejects.toThrow(
       OperationNotAllowedError
     );
   });
@@ -64,6 +64,6 @@ describe("Setup2FAUseCase", () => {
       twoFactorService: mockTwoFactorService as any,
     });
 
-    await expect(useCase.execute({ userId: "missing" })).rejects.toThrow(UserNotFoundError);
+    await expect(useCase.execute({ userId: 999 })).rejects.toThrow(UserNotFoundError);
   });
 });

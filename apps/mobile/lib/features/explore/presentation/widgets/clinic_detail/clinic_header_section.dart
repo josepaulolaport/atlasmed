@@ -8,15 +8,15 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_service_chips.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/facility_status_chips.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
 /// and full address. Rendered above the scrollable section list, not inside
@@ -25,17 +25,19 @@ class ClinicHeaderSection extends ConsumerWidget {
   const ClinicHeaderSection({
     super.key,
     required this.detail,
+    required this.sections,
     required this.photos,
   });
 
-  final Facility? detail;
+  final Facility detail;
   final PhotoGallerySummary? photos;
+
+  /// Nullable while the mocked sections provider is still loading — the
+  /// header degrades gracefully to identity + address only in that case.
+  final EstablishmentDetailSections? sections;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail = this.detail;
-    if (detail == null) return const ClinicHeaderSkeleton();
-
     final top = MediaQuery.of(context).padding.top;
     final uploading = ref
         .watch(facilityPhotoUploadProvider(detail.id))
@@ -62,15 +64,17 @@ class ClinicHeaderSection extends ConsumerWidget {
         );
       }
     });
-
-    final clinicServices = FacilityServiceLabels.resolveDisplayServices(
-      services: detail.services,
-      verticalProfiles: detail.verticalProfiles,
+    final orderedFocuses = ClinicalFocusLabels.prioritize(
+      detail.clinicalFocuses,
     );
-    final orderedServices = FacilityServiceLabels.prioritize(clinicServices);
-    // Identity / contact / address / PF-PJ prefer the live facility DTO.
+    final specialties = orderedFocuses.isEmpty
+        ? sections?.specialtiesLabel
+        : null;
+    // Identity / contact / address / CPF-CNPJ prefer the live facility DTO.
     final fullAddress = detail.address?.formattedAddress;
-    final taxIdType = parseFacilityTaxIdType(detail.registration?.taxIdType);
+    final legalDocumentType = parseFacilityLegalDocumentType(
+      detail.registration?.legalDocumentType,
+    );
     final phone = _nonEmpty(detail.contact?.phone);
     final whatsapp = _nonEmpty(detail.contact?.whatsapp);
     final email = _nonEmpty(detail.contact?.email);
@@ -94,7 +98,7 @@ class ClinicHeaderSection extends ConsumerWidget {
                   children: [
                     _Avatar(
                       name: detail.name,
-                      taxIdType: taxIdType,
+                      legalDocumentType: legalDocumentType,
                       imageUrl:
                           photos?.profileImageUrl ??
                           (photos?.imageUrls.isNotEmpty == true
@@ -119,10 +123,22 @@ class ClinicHeaderSection extends ConsumerWidget {
                               letterSpacing: -0.3,
                             ),
                           ),
-                          if (taxIdType != null) ...[
+                          if (specialties != null) ...[
                             const SizedBox(height: 3),
                             Text(
-                              'Estabelecimento ${taxIdType.label}',
+                              specialties,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xCCFFFFFF),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          if (legalDocumentType != null) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              'Estabelecimento ${legalDocumentType.label}',
                               style: const TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w500,
@@ -138,9 +154,9 @@ class ClinicHeaderSection extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (orderedServices.isNotEmpty)
+                if (orderedFocuses.isNotEmpty)
                   ClinicServiceChips(
-                    services: orderedServices,
+                    focuses: orderedFocuses,
                     maxVisible: 4,
                     onNavy: true,
                   )
@@ -150,9 +166,10 @@ class ClinicHeaderSection extends ConsumerWidget {
                 Builder(
                   builder: (context) {
                     final chips = buildFacilityStatusChips(
-                      commercialStatus: detail.commercial?.commercialStatus,
-                      purchaseRecurrence: detail.purchaseRecurrence,
                       verticalProfiles: detail.verticalProfiles,
+                      verticalId: ref.watch(
+                        clinicDetailActiveLinhaIdProvider(detail.id),
+                      ),
                       onNavy: true,
                     );
                     if (chips.isEmpty) {
@@ -242,12 +259,8 @@ class ClinicHeaderSection extends ConsumerWidget {
     WidgetRef ref,
     PhotoGallerySummary? photos,
   ) async {
-    final detail = this.detail;
-    if (detail == null) return;
     final hasPhotos = photos != null && photos.count > 0;
-    final isMock =
-        detail.id.startsWith('near-') || detail.id.endsWith(':empty');
-    final canUpload = !isMock && ref.read(canMutateFacilityProvider);
+    final canUpload = ref.read(canMutateFacilityProvider);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -300,8 +313,6 @@ class ClinicHeaderSection extends ConsumerWidget {
   }
 
   void _openViewer(BuildContext context, PhotoGallerySummary photos) {
-    final detail = this.detail;
-    if (detail == null) return;
     openClinicPhotoViewer(context, facilityName: detail.name, photos: photos);
   }
 
@@ -311,76 +322,10 @@ class ClinicHeaderSection extends ConsumerWidget {
   }
 }
 
-class ClinicHeaderSkeleton extends StatelessWidget {
-  const ClinicHeaderSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(28, top + 8, 28, 22),
-      color: AppColors.navyBright,
-      child: const AtlasShimmer(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _HeaderSkeletonBlock(width: 72, height: 72, round: true),
-                SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _HeaderSkeletonBlock(width: 210, height: 20),
-                      SizedBox(height: 9),
-                      _HeaderSkeletonBlock(width: 120, height: 12),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            _HeaderSkeletonBlock(width: 260, height: 24),
-            SizedBox(height: 10),
-            _HeaderSkeletonBlock(width: 220, height: 22),
-            SizedBox(height: 14),
-            _HeaderSkeletonBlock(width: 280, height: 13),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderSkeletonBlock extends StatelessWidget {
-  const _HeaderSkeletonBlock({
-    required this.width,
-    required this.height,
-    this.round = false,
-  });
-
-  final double width;
-  final double height;
-  final bool round;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: width,
-    height: height,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      shape: round ? BoxShape.circle : BoxShape.rectangle,
-      borderRadius: round ? null : BorderRadius.circular(8),
-    ),
-  );
-}
-
 class _Avatar extends StatelessWidget {
   const _Avatar({
     required this.name,
-    this.taxIdType,
+    this.legalDocumentType,
     this.imageUrl,
     this.blurhash,
     this.uploading = false,
@@ -388,7 +333,7 @@ class _Avatar extends StatelessWidget {
   });
 
   final String name;
-  final FacilityTaxIdType? taxIdType;
+  final FacilityLegalDocumentType? legalDocumentType;
   final String? imageUrl;
   final String? blurhash;
   final bool uploading;
@@ -444,7 +389,7 @@ class _Avatar extends StatelessWidget {
                     : _Initials(name: name),
               ),
             ),
-            if (taxIdType != null)
+            if (legalDocumentType != null)
               Positioned(
                 bottom: -2,
                 right: -2,
@@ -458,7 +403,7 @@ class _Avatar extends StatelessWidget {
                   ),
                   child: Center(
                     child: Icon(
-                      taxIdType!.icon,
+                      legalDocumentType!.icon,
                       size: 11,
                       color: AppColors.navyBright,
                     ),

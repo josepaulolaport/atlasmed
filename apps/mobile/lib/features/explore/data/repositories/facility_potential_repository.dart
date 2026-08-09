@@ -27,8 +27,8 @@ class FacilityPotentialRepository extends Repository<FacilityPotentialsPage>
          name: 'FacilityPotentialRepository',
        );
 
-  final String facilityId;
-  final String verticalId;
+  final int facilityId;
+  final int verticalId;
   final RepositoryHttpClient? _injectedClient;
 
   @override
@@ -45,7 +45,7 @@ class FacilityPotentialRepository extends Repository<FacilityPotentialsPage>
   }
 
   Future<FacilityPotentialsPage> patchValues(
-    List<({String definitionId, double? quantity})> values,
+    List<({int definitionId, double? quantity})> values,
   ) async {
     final response = await client.call(
       request: RepositoryHttpRequest(

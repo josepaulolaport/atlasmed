@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 
 class Professional {
-  final String id;
+  final int id;
   final String name;
   final String initials;
   final String specialty;
@@ -132,7 +132,7 @@ class Professional {
   });
 
   Professional copyWith({
-    String? id,
+    int? id,
     String? name,
     String? initials,
     double? hue,
@@ -247,7 +247,7 @@ class PrescribingItem {
 }
 
 class ProfessionalClinic {
-  final String id;
+  final int id;
   final String name;
   final String role;
   final String days;

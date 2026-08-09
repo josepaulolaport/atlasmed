@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
@@ -15,34 +16,19 @@ class FacilityNotesException implements Exception {
   String toString() => message ?? 'FacilityNotesException';
 }
 
-/// Private facility field notes (`GET/POST /facilities/:id/notes`).
+/// Private facility field notes (`GET/POST/PATCH/DELETE /facilities/:id/notes`).
 class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
     with SessionEnvironmentMixin<List<FacilityFieldNote>> {
-  FacilityNotesRepository(
-    this.facilityId, {
-    this.ownerUserId,
-    RepositoryHttpClient? client,
-    String? baseUrl,
-  }) : _client = client,
-       _actorEndpoint = Uri.parse(
-         '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/notes',
-       ),
-       super(
-         endpoint:
-             Uri.parse(
-               '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/notes',
-             ).replace(
-               queryParameters: ownerUserId == null || ownerUserId.isEmpty
-                   ? null
-                   : {'ownerUserId': ownerUserId},
-             ),
-         resolveOnCreate: false,
-         name: 'FacilityNotesRepository',
-       );
+  FacilityNotesRepository(this.facilityId, {RepositoryHttpClient? client})
+    : _client = client,
+      super(
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/notes',
+        ),
+        name: 'FacilityNotesRepository',
+      );
 
-  final String facilityId;
-  final String? ownerUserId;
-  final Uri _actorEndpoint;
+  final int facilityId;
   final RepositoryHttpClient? _client;
 
   @override
@@ -57,24 +43,17 @@ class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
   }
 
   Future<List<FacilityFieldNote>> loadNotes() async {
-    final response = await client.call(
-      request: RepositoryHttpRequest(url: endpoint),
-    );
-    if (!successfulCondition(response.statusCode, response.body)) {
-      final shouldThrow = await onErrorStatusCode(response.statusCode);
-      if (shouldThrow) {
-        throw FacilityNotesException(
-          'Falha ao carregar notas (${response.statusCode})',
-        );
-      }
+    final result = await currentValueOrResolve();
+    if (result == null) {
+      throw const FacilityNotesException();
     }
-    return fromJson(response.body);
+    return result;
   }
 
   Future<FacilityFieldNote> createNote(String note) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: _actorEndpoint,
+        url: endpoint,
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
         body: {'note': note},
@@ -90,12 +69,60 @@ class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
       }
     }
 
-    return _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
+    final created = _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
+    await refresh();
+    return created;
+  }
+
+  /// `PATCH /facilities/:id/notes/:noteId`
+  Future<FacilityFieldNote> updateNote(int noteId, String note) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'note': note},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityNotesException(
+          'Falha ao atualizar nota (${response.statusCode})',
+        );
+      }
+    }
+
+    final updated = _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
+    await refresh();
+    return updated;
+  }
+
+  /// `DELETE /facilities/:id/notes/:noteId`
+  Future<void> deleteNote(int noteId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.delete,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityNotesException(
+          'Falha ao excluir nota (${response.statusCode})',
+        );
+      }
+    }
+
+    await refresh();
   }
 
   FacilityFieldNote _fromApi(Map<String, dynamic> map) {
     return FacilityFieldNote(
-      id: map['id'] as String,
+      id: readCrmId(map['id'], 'id'),
       text: map['note'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
     );

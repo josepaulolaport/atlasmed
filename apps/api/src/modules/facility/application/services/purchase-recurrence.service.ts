@@ -74,8 +74,8 @@ export class PurchaseRecurrenceService {
   }
 
   async recalculateFacility(
-    facilityId: string,
-    verticalId: string,
+    facilityId: number,
+    verticalId: number,
     today: string,
   ): Promise<PurchaseRecurrenceSnapshot> {
     const saved = await this.repository.withLockedProfile(
@@ -95,8 +95,8 @@ export class PurchaseRecurrenceService {
   }
 
   async updateFacility(
-    facilityId: string,
-    verticalId: string,
+    facilityId: number,
+    verticalId: number,
     input: {
       fields: FacilityUpdateFields;
       configuration: ManualPurchaseConfiguration;
@@ -121,8 +121,8 @@ export class PurchaseRecurrenceService {
   }
 
   async configurePurchaseRecurrence(
-    facilityId: string,
-    verticalId: string,
+    facilityId: number,
+    verticalId: number,
     command: PurchaseRecurrenceCommand,
     scope: ScopeContext,
     today: string,
@@ -146,7 +146,7 @@ export class PurchaseRecurrenceService {
   }
 
   async recalculateAllProfiles(
-    facilityId: string,
+    facilityId: number,
     today: string,
   ): Promise<{ changed: boolean } | null> {
     return this.repository.recalculateAllProfiles(facilityId, today);

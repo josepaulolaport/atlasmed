@@ -42,7 +42,7 @@ export const acceptInviteRoute = new Elysia({
           firstName: t.Optional(t.String()),
           lastName: t.Optional(t.String()),
           role: t.Object({
-            id: t.String(),
+            id: t.Number(),
             name: t.String(),
           }),
           expiresAt: t.String(),
@@ -68,7 +68,7 @@ export const acceptInviteRoute = new Elysia({
     });
 
     const responseUser: {
-      id: string;
+      id: number;
       email: string;
       username: string;
       firstName?: string;
@@ -110,7 +110,7 @@ export const acceptInviteRoute = new Elysia({
     response: {
       200: t.Object({
         user: t.Object({
-          id: t.String(),
+          id: t.Number(),
           email: t.String(),
           username: t.String(),
           firstName: t.Optional(t.String()),

@@ -20,7 +20,7 @@ class RepresentativeDetailScreen extends ConsumerStatefulWidget {
 
   final AdministrativeProfessional professional;
   final String facilityName;
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   ConsumerState<RepresentativeDetailScreen> createState() =>
@@ -31,11 +31,11 @@ class _RepresentativeDetailScreenState
     extends ConsumerState<RepresentativeDetailScreen> {
   late AdministrativeProfessional _professional = widget.professional;
   bool _savingRelationship = false;
+  bool _ending = false;
 
   bool get _useApi {
     final id = widget.facilityId;
-    if (id == null || id.isEmpty) return false;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
+    return id != null && id > 0;
   }
 
   @override
@@ -57,6 +57,12 @@ class _RepresentativeDetailScreenState
           foregroundColor: AppColors.gray900,
           title: const Text('Perfil do profissional'),
           actions: [
+            if (canEdit && _useApi)
+              IconButton(
+                tooltip: 'Encerrar vínculo',
+                onPressed: _ending ? null : _endAffiliation,
+                icon: const Icon(Icons.link_off_rounded),
+              ),
             if (canEdit)
               TextButton(onPressed: _edit, child: const Text('Editar')),
           ],
@@ -193,6 +199,64 @@ class _RepresentativeDetailScreenState
     );
     if (updated == null || !mounted) return;
     setState(() => _professional = updated);
+  }
+
+  Future<void> _endAffiliation() async {
+    final facilityId = widget.facilityId;
+    if (facilityId == null || facilityId <= 0) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Encerrar vínculo?'),
+        content: Text(
+          '${_professional.name} deixará de aparecer como contato desta clínica. '
+          'O cadastro da pessoa permanece.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB42318),
+            ),
+            child: const Text('Encerrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _ending = true);
+    final repo = FacilityRepresentativesRepository(facilityId);
+    try {
+      await repo.endAffiliation(_professional.id);
+    } on FacilityRepresentativesException catch (e) {
+      if (!mounted) return;
+      setState(() => _ending = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Falha ao encerrar vínculo'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    } finally {
+      repo.dispose();
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${_professional.name} desvinculado da clínica'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    // List screen removes by personFacilityId when result is int.
+    Navigator.of(context).pop<Object>(_professional.id);
   }
 
   Future<void> _setRelationship(int? level) async {

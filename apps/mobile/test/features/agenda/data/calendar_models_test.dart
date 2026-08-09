@@ -3,33 +3,64 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('CalendarOccurrence', () {
+    test('parses live API list DTO where id is the occurrence key string', () {
+      final occurrence = CalendarOccurrence.fromJson({
+        'id': '1:2026-08-17T12:00[America/Sao_Paulo]',
+        'calendarId': 1,
+        'recurrenceKey': '2026-08-17T12:00[America/Sao_Paulo]',
+        'ownerUserId': 6,
+        'kind': 'PERSONAL_BLOCK',
+        'title': 'Alomoco',
+        'startsAt': '2026-08-17T15:00:00.000Z',
+        'endsAt': '2026-08-17T16:00:00.000Z',
+        'timeZone': 'America/Sao_Paulo',
+        'durationMinutes': 60,
+        'recurrence': 'DAILY',
+        'version': 1,
+        'calendarVersion': 1,
+        'owner': {'id': 6, 'name': 'Admin Local'},
+        'facility': null,
+        'canMutate': true,
+      });
+
+      expect(occurrence.occurrenceId, '1:2026-08-17T12:00[America/Sao_Paulo]');
+      expect(occurrence.calendarId, 1);
+      expect(occurrence.recurrenceKey, '2026-08-17T12:00[America/Sao_Paulo]');
+      expect(occurrence.kind, CalendarEventKind.personalBlock);
+      expect(occurrence.owner.id, 6);
+      expect(occurrence.owner.name, 'Admin Local');
+      expect(occurrence.facility, isNull);
+      expect(occurrence.canMutate, isTrue);
+    });
+
     test(
       'parses the canonical Calendar API list DTO without invented local fields',
       () {
         final occurrence = CalendarOccurrence.fromJson({
-          'id': 'calendar-1:2026-08-03T09:00[America/Sao_Paulo]',
-          'calendarId': 'calendar-1',
-          'ownerUserId': 'user-1',
+          'id': 1,
+          'occurrenceId': '1:2026-08-03T09:00[America/Sao_Paulo]',
+          'calendarId': 1,
+          'ownerUserId': 1,
           'kind': 'INTERACTION',
           'title': 'Visita de acompanhamento',
           'startsAt': '2026-08-03T12:00:00.000Z',
           'endsAt': '2026-08-03T13:00:00.000Z',
           'interaction': {
-            'id': 'interaction-1',
-            'facilityId': 'facility-1',
-            'agentUserId': 'user-1',
+            'id': 1,
+            'facilityId': 1,
+            'agentUserId': 1,
             'modality': 'IN_PERSON',
             'status': 'SCHEDULED',
           },
-          'owner': {'id': 'user-1', 'displayName': 'Ana Souza'},
-          'facility': {'id': 'facility-1', 'displayName': 'Clínica Central'},
+          'owner': {'id': 1, 'displayName': 'Ana Souza'},
+          'facility': {'id': 1, 'displayName': 'Clínica Central'},
         });
         final localStart = DateTime.parse('2026-08-03T12:00:00.000Z').toLocal();
         final localEnd = DateTime.parse('2026-08-03T13:00:00.000Z').toLocal();
 
         expect(occurrence.kind, CalendarEventKind.interaction);
-        expect(occurrence.occurrenceId, contains('calendar-1:'));
-        expect(occurrence.owner.id, 'user-1');
+        expect(occurrence.occurrenceId, contains('1:'));
+        expect(occurrence.owner.id, 1);
         expect(occurrence.owner.name, 'Ana Souza');
         expect(occurrence.facility?.name, 'Clínica Central');
         expect(occurrence.modality, CalendarModality.inPerson);
@@ -47,8 +78,8 @@ void main() {
           '${localEnd.hour.toString().padLeft(2, '0')}:${localEnd.minute.toString().padLeft(2, '0')}',
         );
         expect(occurrence.recurrence, CalendarRecurrence.none);
-        expect(occurrence.interaction?.facilityId, 'facility-1');
-        expect(occurrence.interaction?.agentUserId, 'user-1');
+        expect(occurrence.interaction?.facilityId, 1);
+        expect(occurrence.interaction?.agentUserId, 1);
         expect(occurrence.interaction?.status, InteractionStatus.scheduled);
         expect(occurrence.canMutate, isFalse);
       },
@@ -58,9 +89,9 @@ void main() {
       'parses enriched recurrence bounds, versions and mutation metadata',
       () {
         final occurrence = CalendarOccurrence.fromJson({
-          'id': 'calendar-1:key-1',
-          'calendarId': 'calendar-1',
-          'occurrenceId': 'calendar-1:key-1',
+          'id': 1,
+          'calendarId': 1,
+          'occurrenceId': '1:key-1',
           'recurrenceKey': 'key-1',
           'kind': 'INTERACTION',
           'title': 'Interação de acompanhamento',
@@ -74,12 +105,12 @@ void main() {
           'version': 4,
           'overrideVersion': 2,
           'canMutate': true,
-          'owner': {'id': 'rep-1', 'displayName': 'Ana Souza'},
-          'facility': {'id': 'facility-1', 'name': 'Clínica Central'},
+          'owner': {'id': 1, 'displayName': 'Ana Souza'},
+          'facility': {'id': 1, 'name': 'Clínica Central'},
           'interaction': {
-            'id': 'interaction-1',
-            'facilityId': 'facility-1',
-            'agentUserId': 'rep-1',
+            'id': 1,
+            'facilityId': 1,
+            'agentUserId': 1,
             'modality': 'REMOTE',
             'status': 'SCHEDULED',
           },
@@ -99,16 +130,17 @@ void main() {
 
     test('falls back to canonical ids when display enrichment is absent', () {
       final occurrence = CalendarOccurrence.fromJson({
-        'id': 'occurrence-2',
-        'calendarId': 'calendar-2',
-        'ownerUserId': 'user-2',
+        'id': 2,
+        'occurrenceId': 'occurrence-2',
+        'calendarId': 2,
+        'ownerUserId': 2,
         'kind': 'PERSONAL_BLOCK',
         'title': 'Indisponível',
         'startsAt': '2026-08-04T17:00:00.000Z',
         'endsAt': '2026-08-04T17:30:00.000Z',
       });
 
-      expect(occurrence.owner.id, 'user-2');
+      expect(occurrence.owner.id, 2);
       expect(occurrence.owner.name, 'Usuário');
       expect(occurrence.facility, isNull);
       expect(occurrence.recurrenceKey, 'occurrence-2');
@@ -116,12 +148,13 @@ void main() {
 
     test('parses redacted manager personal block without private context', () {
       final occurrence = CalendarOccurrence.fromJson({
-        'id': 'calendar-2',
-        'occurrenceId': 'calendar-2:2026-08-04T14:00[America/Sao_Paulo]',
+        'id': 2,
+        'calendarId': 2,
+        'occurrenceId': '2:2026-08-04T14:00[America/Sao_Paulo]',
         'recurrenceKey': '2026-08-04T14:00[America/Sao_Paulo]',
         'kind': 'PERSONAL_BLOCK',
         'title': 'Indisponível',
-        'owner': {'id': 'user-2', 'name': 'Bruno Lima'},
+        'owner': {'id': 2, 'name': 'Bruno Lima'},
         'facility': null,
         'modality': null,
         'startsAt': '2026-08-04T17:00:00.000Z',
@@ -146,15 +179,15 @@ void main() {
     'maps recurring interaction detail calendar DTO to an occurrence editor snapshot',
     () {
       final detail = InteractionDetail.fromJson({
-        'id': 'interaction-1',
-        'calendarId': 'calendar-1',
+        'id': 1,
+        'calendarId': 1,
         'recurrenceKey': '2026-08-03T09:00[America/Sao_Paulo]',
         'modality': 'REMOTE',
         'status': 'SCHEDULED',
         'version': 5,
         'canMutate': true,
         'calendar': {
-          'id': 'calendar-1',
+          'id': 1,
           'title': 'Acompanhamento semanal',
           'version': 8,
           'recurrence': 'WEEKLY',
@@ -169,12 +202,12 @@ void main() {
           'overrideVersion': 2,
         },
         'facility': {
-          'id': 'facility-1',
+          'id': 1,
           'displayName': 'Clínica Central',
           'city': 'São Paulo',
           'state': 'SP',
         },
-        'agent': {'id': 'rep-1', 'displayName': 'Ana Souza'},
+        'agent': {'id': 1, 'displayName': 'Ana Souza'},
         'linkedOrders': <Map<String, dynamic>>[],
       });
 
@@ -204,30 +237,34 @@ void main() {
   );
 
   test('groups and sorts occurrences by local day and local start time', () {
-    CalendarOccurrence occurrence(String id, String localDate, String time) =>
-        CalendarOccurrence.fromJson({
-          'id': id,
-          'occurrenceId': '$id:$localDate-$time',
-          'recurrenceKey': '$localDate-${time.replaceAll(':', '')}',
-          'kind': 'PERSONAL_BLOCK',
-          'title': id,
-          'owner': {'id': 'user-1', 'name': 'Ana'},
-          'facility': null,
-          'modality': null,
-          'startsAt': '${localDate}T$time:00.000Z',
-          'endsAt': '${localDate}T$time:30.000Z',
-          'localDate': localDate,
-          'localStartsAt': time,
-          'localEndsAt': time,
-          'recurrence': 'NONE',
-          'interaction': null,
-          'canMutate': true,
-        });
+    CalendarOccurrence occurrence(
+      int id,
+      String title,
+      String localDate,
+      String time,
+    ) => CalendarOccurrence.fromJson({
+      'id': id,
+      'occurrenceId': '$id:$localDate-$time',
+      'recurrenceKey': '$localDate-${time.replaceAll(':', '')}',
+      'kind': 'PERSONAL_BLOCK',
+      'title': title,
+      'owner': {'id': 1, 'name': 'Ana'},
+      'facility': null,
+      'modality': null,
+      'startsAt': '${localDate}T$time:00.000Z',
+      'endsAt': '${localDate}T$time:30.000Z',
+      'localDate': localDate,
+      'localStartsAt': time,
+      'localEndsAt': time,
+      'recurrence': 'NONE',
+      'interaction': null,
+      'canMutate': true,
+    });
 
     final sections = groupCalendarOccurrences([
-      occurrence('late', '2026-08-04', '16:00'),
-      occurrence('second', '2026-08-03', '11:00'),
-      occurrence('first', '2026-08-03', '08:30'),
+      occurrence(3, 'late', '2026-08-04', '16:00'),
+      occurrence(2, 'second', '2026-08-03', '11:00'),
+      occurrence(1, 'first', '2026-08-03', '08:30'),
     ]);
 
     expect(sections.map((section) => section.date), [

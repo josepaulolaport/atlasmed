@@ -177,9 +177,9 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
         run: bun run db:migrate
       - name: Typecheck
-        run: bun run workers:cnes:typecheck
+        run: bun run workers:typecheck
       - name: Test
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
-        run: bun --cwd apps/workers/cnes-ingestion test --test-name-pattern='^((?!Integration Tests).)*$'
+        run: bun --cwd apps/workers/temporal test --test-name-pattern='^((?!Integration Tests).)*$'

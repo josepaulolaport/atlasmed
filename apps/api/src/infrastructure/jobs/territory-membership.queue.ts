@@ -3,8 +3,8 @@ import { ConfigurationError } from "../../shared/errors";
 import type { Worker } from "bullmq";
 
 export interface TerritoryMembershipJob {
-  territoryId?: string;
-  facilityIds?: string[];
+  territoryId?: number;
+  facilityIds?: number[];
   reason: "boundary_change" | "manual_recompute" | "clinic_update";
 }
 

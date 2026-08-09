@@ -1,24 +1,25 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 
 /// Confirmed CRM doctor at a facility (roster context).
 ///
-/// Maps from [FacilityProfessionalItemDTO] — the facility-scoped
-/// professional association API response.
+/// Maps from flat [FacilityProfessionalItemDTO]
+/// (`/facilities/:id/healthcare-professionals`).
+///
+/// [id] is [personId] (cart/checkout / associate by person).
+/// [personFacilityId] is the affiliation row id for PATCH / roles paths.
 class ProfessionalRoster {
   const ProfessionalRoster({
     required this.id,
     required this.name,
     required this.initials,
     required this.hue,
+    this.personFacilityId,
     this.specialty,
     this.crm,
     this.phone,
     this.email,
-    this.isPartner = false,
-    this.isPrescriber = false,
-    this.isBuyer = false,
-    this.isDecisionMaker = false,
-    this.roleBadge,
+    this.roleIds = const [],
     this.education,
     this.birthdayLabel,
     this.favoriteTeam,
@@ -27,79 +28,74 @@ class ProfessionalRoster {
     this.relationshipScore,
   });
 
-  final String id;
+  /// Person id — used by cart/checkout (`personId`) and associate.
+  final int id;
+
+  /// `person_facilities.id` for PATCH `/healthcare-professionals/:id`
+  /// and PUT `…/roles`.
+  final int? personFacilityId;
+
   final String name;
   final String initials;
   final double hue;
   final String? specialty;
   final String? crm;
 
-  /// Essential contact fields — mirrors `professionals.phone`/`email`.
+  /// Essential contact fields.
   final String? phone;
   final String? email;
 
-  /// Facility-association role flags (`facility_professionals`).
-  final bool isPartner;
-  final bool isPrescriber;
-  final bool isBuyer;
-  final bool isDecisionMaker;
+  /// Projection `roleIds` (source of truth for facility roles).
+  final List<int> roleIds;
 
-  /// Small highlight badge, e.g. "DECISORA", "NOVA".
-  final String? roleBadge;
+  /// Catalog display names for [roleIds] (via session cache).
+  List<String> get roleChipLabels => PersonFacilityRoleCatalog.labelsFor(
+    roleIds,
+    PersonFacilityRoleCatalogCache.entries,
+  );
 
-  /// "Formação" — no backing field on `professionals` yet.
+  /// "Formação" — no backing field yet.
   final String? education;
 
-  /// "Aniversário" — mirrors `professionals.birthDate` once wired.
+  /// "Aniversário" — not on projection DTO yet.
   final String? birthdayLabel;
 
-  /// "Time" — mirrors `professionals.favoriteTeam` once wired.
+  /// "Time" — not on projection DTO yet.
   final String? favoriteTeam;
 
-  /// "Interesses" — mirrors `professionals.hobbies` once wired.
+  /// "Interesses" — not on projection DTO yet.
   final String? interests;
 
-  /// Most recent note from `professional_notes`, shown as an amber chip.
+  /// Most recent note — person notes API.
   final String? noteText;
 
-  /// Authenticated user's relationship with this professional (1–10),
-  /// from `user_professional_relationships`. Null = not yet assessed.
-  /// Drives Relacionamento stars in the UI.
+  /// Relationship score — person relationship API.
   final int? relationshipScore;
 
-  factory ProfessionalRoster.fromRosterItem(FacilityProfessionalItemDTO item) {
-    final professional = item.professional;
-    final association = item.association;
-    final name = professional.fullName?.trim().isNotEmpty == true
-        ? professional.fullName!.trim()
-        : '${professional.firstName} ${professional.lastName}'.trim();
-    final phone = professional.mobilePhone?.trim().isNotEmpty == true
-        ? professional.mobilePhone
-        : professional.landlinePhone;
-    final crm = _formatCrm(professional.crmNumber, professional.crmState);
+  factory ProfessionalRoster.fromRosterItem(
+    FacilityProfessionalItemDTO item, {
+    List<PersonFacilityRoleCatalogEntry>? catalog,
+  }) {
+    final name = item.displayName;
+    final ids = PersonFacilityRoleCatalog.sortedIds(item.roleIds);
+    final primary = item.primaryRegistrationDisplay?.trim();
     return ProfessionalRoster(
-      id: professional.id,
+      id: item.personId,
+      personFacilityId: item.personFacilityId,
       name: name,
       initials: initialsFromName(name),
       hue: hueFromName(name),
-      specialty: professional.specialty ?? association.specialtyLabel,
-      crm: crm,
-      phone: phone,
-      email: professional.email,
-      isPartner: association.isPartner,
-      isPrescriber: association.isPrescriber,
-      isBuyer: association.isBuyer,
-      isDecisionMaker: association.isDecisionMaker,
-      roleBadge: association.isDecisionMaker ? 'DECISOR' : null,
-      birthdayLabel: _formatBirthday(professional.birthDate),
-      favoriteTeam: professional.favoriteTeam,
-      interests: professional.hobbies,
-      relationshipScore: association.relationshipLevel,
+      specialty: item.roleTitle,
+      crm: primary != null && primary.isNotEmpty ? primary : null,
+      phone: item.phone,
+      email: item.email,
+      roleIds: ids,
     );
   }
 
   ProfessionalRoster copyWith({
-    String? id,
+    int? id,
+    int? personFacilityId,
     String? name,
     String? initials,
     double? hue,
@@ -107,12 +103,7 @@ class ProfessionalRoster {
     String? crm,
     String? phone,
     String? email,
-    bool? isPartner,
-    bool? isPrescriber,
-    bool? isBuyer,
-    bool? isDecisionMaker,
-    String? roleBadge,
-    bool clearRoleBadge = false,
+    List<int>? roleIds,
     String? education,
     String? birthdayLabel,
     String? favoriteTeam,
@@ -122,6 +113,7 @@ class ProfessionalRoster {
   }) {
     return ProfessionalRoster(
       id: id ?? this.id,
+      personFacilityId: personFacilityId ?? this.personFacilityId,
       name: name ?? this.name,
       initials: initials ?? this.initials,
       hue: hue ?? this.hue,
@@ -129,11 +121,7 @@ class ProfessionalRoster {
       crm: crm ?? this.crm,
       phone: phone ?? this.phone,
       email: email ?? this.email,
-      isPartner: isPartner ?? this.isPartner,
-      isPrescriber: isPrescriber ?? this.isPrescriber,
-      isBuyer: isBuyer ?? this.isBuyer,
-      isDecisionMaker: isDecisionMaker ?? this.isDecisionMaker,
-      roleBadge: clearRoleBadge ? null : (roleBadge ?? this.roleBadge),
+      roleIds: roleIds ?? this.roleIds,
       education: education ?? this.education,
       birthdayLabel: birthdayLabel ?? this.birthdayLabel,
       favoriteTeam: favoriteTeam ?? this.favoriteTeam,
@@ -155,30 +143,3 @@ String initialsFromName(String name) {
 }
 
 double hueFromName(String name) => (name.hashCode.abs() % 360).toDouble();
-
-String? _formatCrm(String? number, String? state) {
-  final n = number?.trim();
-  if (n == null || n.isEmpty) return null;
-  final s = state?.trim();
-  if (s == null || s.isEmpty) return 'CRM $n';
-  return 'CRM/$s $n';
-}
-
-String? _formatBirthday(DateTime? date) {
-  if (date == null) return null;
-  const months = [
-    'jan',
-    'fev',
-    'mar',
-    'abr',
-    'mai',
-    'jun',
-    'jul',
-    'ago',
-    'set',
-    'out',
-    'nov',
-    'dez',
-  ];
-  return '${date.day.toString().padLeft(2, '0')}/${months[date.month - 1]}';
-}

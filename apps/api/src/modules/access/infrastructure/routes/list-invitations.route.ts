@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { Role } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
@@ -15,10 +16,10 @@ export const listInvitationsRoute = new Elysia({
       const actor = await getUser();
       const result = await accessUseCases.getInvitations().execute({
         status: query.status,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         actorId: await getUserId(),
-        actorRole: actor.role.name as any,
+        actorRole: actor.role.name as Role,
         scope: await getScope(),
       });
 
@@ -40,8 +41,8 @@ export const listInvitationsRoute = new Elysia({
             t.Literal("REVOKED"),
           ])
         ),
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
       }),
     }
   );

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
@@ -64,18 +65,21 @@ class CadastroReviewRepository
     final requirement =
         item['requirement'] as Map<String, dynamic>? ?? const {};
     final facility = item['facility'] as Map<String, dynamic>? ?? const {};
-    final taxIdType = parseFacilityTaxIdType(facility['taxIdType'] as String?);
+    final legalDocumentType = parseFacilityLegalDocumentType(
+      facility['legalDocumentType'] as String?,
+    );
     final rawFiles = (item['files'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>();
     final files = rawFiles
         .map(CadastroReviewFile.fromJson)
-        .where((f) => f.fileAssetId.isNotEmpty)
+        .where((f) => f.fileAssetId > 0)
         .toList(growable: false);
     final first = files.isNotEmpty ? files.first : null;
     return CadastroReviewSubmission(
-      id: item['id'] as String,
+      id: readCrmId(item['id'], 'id'),
       facilityId:
-          item['facilityId'] as String? ?? facility['id'] as String? ?? '',
+          readCrmIdOrNull(item['facilityId'], 'facilityId') ??
+          readCrmId(facility['id'], 'id'),
       facilityName: facility['name'] as String? ?? 'Estabelecimento',
       documentTitle: requirement['name'] as String? ?? 'Documento',
       documentDescription: requirement['description'] as String? ?? '',
@@ -94,8 +98,8 @@ class CadastroReviewRepository
         if (raw is String && raw.trim().isNotEmpty) return raw.trim();
         return 'Representante';
       }(),
-      taxIdType: taxIdType,
-      taxId: facility['taxId'] as String?,
+      legalDocumentType: legalDocumentType,
+      legalDocument: facility['legalDocument'] as String?,
       address: facility['address'] as String?,
       city: facility['city'] as String?,
       phone: facility['phone'] as String?,
@@ -115,10 +119,7 @@ class CadastroReviewRepository
     return result;
   }
 
-  Future<void> approve({
-    required String facilityId,
-    required String recordId,
-  }) async {
+  Future<void> approve({required int facilityId, required int recordId}) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/documents/$recordId/review',
     );
@@ -136,8 +137,8 @@ class CadastroReviewRepository
   }
 
   Future<void> reject({
-    required String facilityId,
-    required String recordId,
+    required int facilityId,
+    required int recordId,
     required String reviewerNote,
   }) async {
     final uri = Uri.parse(

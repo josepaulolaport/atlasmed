@@ -13,13 +13,13 @@ import {
 import { OperationNotAllowedError } from "../../../../shared/errors";
 
 export interface ManagerZoneCandidate {
-  id: string;
+  id: number;
   code: string;
   name: string;
 }
 
 export interface RepPatchContainmentResolution {
-  managerTerritoryId: string;
+  managerTerritoryId: number;
   candidates: ManagerZoneCandidate[];
 }
 
@@ -64,7 +64,7 @@ export class TerritoryContainmentService {
 
   async resolveRepPatchManagerZone(
     geoJson: GeoJsonGeometry,
-    options?: { verticalId?: string }
+    options?: { verticalId?: number }
   ): Promise<RepPatchContainmentResolution> {
     const candidates = await this.deps.spatialRepository.findContainingManagerZones({
       geoJson,
@@ -94,7 +94,7 @@ export class TerritoryContainmentService {
   }
 
   async assertManagerZoneContainsChildPatches(
-    managerZoneId: string,
+    managerZoneId: number,
     geoJson: GeoJsonGeometry
   ): Promise<void> {
     const orphans = await this.deps.spatialRepository.findRepPatchesOutsideManagerZone({

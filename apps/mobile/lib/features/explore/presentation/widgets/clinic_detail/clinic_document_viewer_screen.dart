@@ -100,7 +100,7 @@ Future<void> openLocalAttachmentViewer(
   return context.pushTransparentRoute(
     ClinicDocumentViewerScreen(
       document: EstablishmentDocument(
-        id: 'local-preview',
+        id: 0,
         title: fileName,
         description: '',
         status: EstablishmentDocumentStatus.missing,

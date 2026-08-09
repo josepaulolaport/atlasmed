@@ -24,24 +24,19 @@ class ClinicAdminInfoSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
-    final hasTaxId =
-        (detail.registration?.cnpj?.trim().isNotEmpty ?? false) ||
-        (detail.registration?.cpf?.trim().isNotEmpty ?? false);
+    final hasLegalDocument =
+        detail.registration?.legalDocument?.trim().isNotEmpty ?? false;
     final taxIdentifier = displayTaxIdentifier(
-      taxIdType: detail.registration?.taxIdType,
-      cnpj: detail.registration?.cnpj,
-      cpf: detail.registration?.cpf,
+      legalDocumentType: detail.registration?.legalDocumentType,
+      legalDocument: detail.registration?.legalDocument,
     );
-    final taxIdType = parseFacilityTaxIdType(detail.registration?.taxIdType);
-    final taxTypeLabel = switch (taxIdType) {
-      FacilityTaxIdType.pf => 'Pessoa Física (PF)',
-      FacilityTaxIdType.pj => 'Pessoa Jurídica (PJ)',
+    final legalDocumentType = parseFacilityLegalDocumentType(
+      detail.registration?.legalDocumentType,
+    );
+    final taxTypeLabel = switch (legalDocumentType) {
+      FacilityLegalDocumentType.cpf => 'Pessoa Física (CPF)',
+      FacilityLegalDocumentType.cnpj => 'Pessoa Jurídica (CNPJ)',
       null => null,
-    };
-    final taxFieldKey = switch (taxIdentifier.label.toUpperCase()) {
-      'CNPJ' => 'cnpj',
-      'CPF' => 'cpf',
-      _ => null,
     };
 
     final suggestionTarget = EditSuggestionTarget(
@@ -68,19 +63,20 @@ class ClinicAdminInfoSection extends ConsumerWidget {
             onEdit: () {
               showTaxIdTypeSuggestionSheet(
                 context,
-                currentTaxIdType: detail.registration?.taxIdType,
+                currentLegalDocumentType:
+                    detail.registration?.legalDocumentType,
               );
             },
-            fieldKey: null,
+            fieldKey: 'legalDocumentType',
             editable: true,
           ),
           (
             label: taxIdentifier.label,
-            value: hasTaxId ? taxIdentifier.value : null,
+            value: hasLegalDocument ? taxIdentifier.value : null,
             icon: Icons.badge_outlined,
             onEdit: null,
-            fieldKey: taxFieldKey,
-            editable: taxFieldKey != null,
+            fieldKey: 'legalDocument',
+            editable: true,
           ),
           (
             label: 'Telefone',

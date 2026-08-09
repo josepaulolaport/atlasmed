@@ -1,5 +1,5 @@
 export function serializeAuthUser(user: {
-  id: string;
+  id: number;
   email: string | null;
   username: string;
   firstName?: string | null;
@@ -8,7 +8,7 @@ export function serializeAuthUser(user: {
   emailVerified?: boolean;
   phoneVerified?: boolean;
   role: {
-    id: string;
+    id: number;
     name: string;
     description?: string | null;
   };
@@ -31,7 +31,7 @@ export function serializeAuthUser(user: {
 }
 
 export function serializeUser(user: {
-  id: string;
+  id: number;
   email: string | null;
   username: string;
   phoneNumber?: string | null;
@@ -46,7 +46,7 @@ export function serializeUser(user: {
   emailVerifiedAt?: Date | null;
   phoneVerifiedAt?: Date | null;
   role: {
-    id: string;
+    id: number;
     name: string;
     description?: string | null;
   };

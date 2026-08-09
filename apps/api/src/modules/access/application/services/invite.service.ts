@@ -10,16 +10,14 @@ interface Dependencies {
 interface CreateInviteParams {
   email?: string | undefined;
   phoneNumber?: string | undefined;
-  roleId: string;
-  invitedByUserId: string;
+  roleId: number;
+  invitedByUserId: number;
   firstName?: string | undefined;
   lastName?: string | undefined;
   birthDate?: Date | undefined;
-  managerTerritoryId?: string | undefined;
-  repTerritoryId?: string | undefined;
   verticalAssignments?: Array<{
-    verticalId: string;
-    territoryIds: string[];
+    verticalId: number;
+    territoryIds: number[];
   }>;
 }
 
@@ -39,8 +37,6 @@ export class InviteService {
       firstName: params.firstName,
       lastName: params.lastName,
       birthDate: params.birthDate,
-      managerTerritoryId: params.managerTerritoryId,
-      repTerritoryId: params.repTerritoryId,
       verticalAssignments: params.verticalAssignments,
       expiresAt: new Date(
         Date.now() + environment.INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
@@ -63,7 +59,7 @@ export class InviteService {
     return { token, tokenHash, expiresAt };
   }
 
-  async rotateInviteToken(inviteId: string) {
+  async rotateInviteToken(inviteId: number) {
     const { token, tokenHash, expiresAt } = this.buildRotatedInviteCredentials();
 
     const invite = await this.deps.inviteRepository.regenerateToken(inviteId, {

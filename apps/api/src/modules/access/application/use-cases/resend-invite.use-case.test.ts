@@ -19,12 +19,12 @@ import {
 
 describe("ResendInviteUseCase", () => {
   const baseInvite = {
-    id: "invite-123",
+    id: 123,
     email: "user@example.com",
     phoneNumber: null,
     tokenHash: "old-hash",
-    roleId: "role-123",
-    invitedByUserId: "manager-1",
+    roleId: 1,
+    invitedByUserId: 1,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     status: "PENDING",
     resendCount: 0,
@@ -32,7 +32,7 @@ describe("ResendInviteUseCase", () => {
     revokedAt: null,
     createdAt: new Date(),
     acceptedAt: null,
-    role: { id: "role-123", name: "USER" },
+    role: { id: 1, name: "USER" },
   };
 
   let useCase: ResendInviteUseCase;
@@ -65,12 +65,12 @@ describe("ResendInviteUseCase", () => {
 
   it("should rotate token and audit resend for manager-owned invite", async () => {
     const result = await useCase.execute({
-      inviteId: "invite-123",
-      actorId: "manager-1",
+      inviteId: 123,
+      actorId: 1,
       actorRole: Role.MANAGER,
       scope: scopedManagerContext({
-        territoryIds: ["t-1"],
-        grantIds: [],
+        territoryIds: [1],
+
       }),
     });
 
@@ -82,8 +82,8 @@ describe("ResendInviteUseCase", () => {
   it("should allow admin to resend any invite", async () => {
     await expect(
       useCase.execute({
-        inviteId: "invite-123",
-        actorId: "admin-1",
+        inviteId: 123,
+        actorId: 1,
         actorRole: Role.ADMIN,
         scope: createGlobalScopeContext(),
       })
@@ -93,12 +93,12 @@ describe("ResendInviteUseCase", () => {
   it("should reject manager resending another manager invite", async () => {
     await expect(
       useCase.execute({
-        inviteId: "invite-123",
-        actorId: "manager-2",
+        inviteId: 123,
+        actorId: 2,
         actorRole: Role.MANAGER,
         scope: scopedManagerContext({
           territoryIds: [],
-          grantIds: [],
+
         }),
       })
     ).rejects.toThrow(InsufficientPermissionsError);
@@ -109,8 +109,8 @@ describe("ResendInviteUseCase", () => {
 
     await expect(
       useCase.execute({
-        inviteId: "missing",
-        actorId: "admin-1",
+        inviteId: 999,
+        actorId: 1,
         actorRole: Role.ADMIN,
         scope: createGlobalScopeContext(),
       })
@@ -125,8 +125,8 @@ describe("ResendInviteUseCase", () => {
 
     await expect(
       useCase.execute({
-        inviteId: "invite-123",
-        actorId: "admin-1",
+        inviteId: 123,
+        actorId: 1,
         actorRole: Role.ADMIN,
         scope: createGlobalScopeContext(),
       })
@@ -141,8 +141,8 @@ describe("ResendInviteUseCase", () => {
 
     await expect(
       useCase.execute({
-        inviteId: "invite-123",
-        actorId: "admin-1",
+        inviteId: 123,
+        actorId: 1,
         actorRole: Role.ADMIN,
         scope: createGlobalScopeContext(),
       })

@@ -5,13 +5,8 @@ import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as publicSchema from "./schema/public/index";
 import * as auditSchema from "./schema/audit/index";
-import * as registrySchema from "./schema/registry/index";
-import * as ingestionSchema from "./schema/ingestion/index";
 
-type Schema = typeof publicSchema &
-  typeof auditSchema &
-  typeof registrySchema &
-  typeof ingestionSchema;
+type Schema = typeof publicSchema & typeof auditSchema;
 
 export type Database = ReturnType<typeof createDatabase>;
 
@@ -27,6 +22,6 @@ export type AnyDatabase = Database | DatabaseTransaction;
 export function createDatabase(connectionString: string) {
   const client = postgres(connectionString);
   return drizzle(client, {
-    schema: { ...publicSchema, ...auditSchema, ...registrySchema, ...ingestionSchema },
+    schema: { ...publicSchema, ...auditSchema },
   });
 }

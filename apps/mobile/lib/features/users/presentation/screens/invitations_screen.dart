@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class InvitationsScreen extends ConsumerWidget {
   const InvitationsScreen({super.key});
@@ -91,7 +92,8 @@ class _InvitationRow extends ConsumerWidget {
     return Material(
       color: Colors.white,
       child: InkWell(
-        onTap: () => context.push('/users/invitations/${invitation.id}'),
+        onTap: () =>
+            InvitationDetailRoute(invitationId: invitation.id).push(context),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: const BoxDecoration(

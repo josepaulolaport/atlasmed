@@ -8,7 +8,6 @@ import type { UserRepository } from "../../application/interfaces/user.repositor
 import type { AuthCacheService } from "../cache/auth-cache.service";
 import type { SessionCacheService } from "../cache/session-cache.service";
 import type { ScopeService } from "../../application/services/scope.service";
-import type { AccessGrantService } from "../../application/services/access-grant.service";
 import type { Redis } from "ioredis";
 import { createMockScopeService } from "../../test-helpers/fixtures";
 
@@ -31,16 +30,15 @@ describe("Auth Plugin", () => {
   let mockAuthCacheService: AuthCacheService;
   let mockSessionCacheService: SessionCacheService;
   let mockScopeService: ScopeService;
-  let mockAccessGrantService: AccessGrantService;
   let mockRedis: Redis;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
     passwordHash: "$argon2id$test",
-    roleId: "role-123",
+    roleId: 1,
     firstName: "Test",
     lastName: "User",
     avatarUrl: null,
@@ -57,7 +55,7 @@ describe("Auth Plugin", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     role: {
-      id: "role-123",
+      id: 1,
       name: "REP",
       description: null,
       priority: 100,
@@ -67,8 +65,8 @@ describe("Auth Plugin", () => {
   };
 
   const mockSession = {
-    id: "session-123",
-    userId: "user-123",
+    id: 1,
+    userId: 123,
     refreshTokenHash: "hashed-token",
     ipAddress: "192.168.1.1",
     userAgent: "Mozilla/5.0",
@@ -101,7 +99,7 @@ describe("Auth Plugin", () => {
       findUserAuthStatus: mock(async () => ({
         status: "ACTIVE",
         tokenVersion: 1,
-        roleId: "role-123",
+        roleId: 1,
         roleName: "REP",
       })),
     } as any;
@@ -131,17 +129,13 @@ describe("Auth Plugin", () => {
     } as any;
 
     mockScopeService = createMockScopeService();
-
-    mockAccessGrantService = {
-      getActiveGrants: mock(async () => []),
-    } as any;
   });
 
   describe("Auth context injection", () => {
     it("should inject auth helper functions into route context", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -154,8 +148,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -182,8 +175,8 @@ describe("Auth Plugin", () => {
 
       expect(response.status).toBe(200);
       const body = await response.json() as any;
-      expect(body.userId).toBe("user-123");
-      expect(body.sessionId).toBe("session-123");
+      expect(body.userId).toBe(123);
+      expect(body.sessionId).toBe(1);
       expect(body.userEmail).toBe("user@example.com");
     });
 
@@ -195,8 +188,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -221,8 +213,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -245,7 +236,7 @@ describe("Auth Plugin", () => {
 
     it("should throw UnauthorizedError when session not found", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
+        sub: "123",
         sid: "non-existent-session",
         role: "REP",
         tokenVersion: 1,
@@ -264,8 +255,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -288,8 +278,8 @@ describe("Auth Plugin", () => {
 
     it("should throw UnauthorizedError for revoked session", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -312,8 +302,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -336,8 +325,8 @@ describe("Auth Plugin", () => {
 
     it("should throw UnauthorizedError for expired session", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -360,8 +349,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -384,16 +372,16 @@ describe("Auth Plugin", () => {
 
     it("should throw UnauthorizedError when cached session is stale but DB is revoked", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const cachedSession = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hashed-token",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         revokedAt: null,
@@ -402,13 +390,13 @@ describe("Auth Plugin", () => {
         lastSeenAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         user: {
-          id: "user-123",
+          id: 123,
           email: "user@example.com",
           username: "testuser",
           status: "ACTIVE",
           tokenVersion: 1,
           role: {
-            id: "role-123",
+            id: 1,
             name: "REP",
           },
         },
@@ -421,7 +409,7 @@ describe("Auth Plugin", () => {
       const mockSessionRepoWithStaleCache = {
         findById: mock(async () => mockSession),
         findSessionStatus: mock(async () => ({
-          userId: "user-123",
+          userId: 123,
           revokedAt: new Date(),
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         })),
@@ -435,8 +423,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -455,23 +442,23 @@ describe("Auth Plugin", () => {
       );
 
       expect(response.status).toBe(401);
-      expect(mockSessionRepoWithStaleCache.findSessionStatus).toHaveBeenCalledWith("session-123");
-      expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith("session-123");
+      expect(mockSessionRepoWithStaleCache.findSessionStatus).toHaveBeenCalledWith(1);
+      expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith(1);
       expect(mockSessionRepoWithStaleCache.findById).not.toHaveBeenCalled();
     });
 
     it("should throw UnauthorizedError when cached session is stale but DB is expired", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const cachedSession = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hashed-token",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         revokedAt: null,
@@ -480,13 +467,13 @@ describe("Auth Plugin", () => {
         lastSeenAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         user: {
-          id: "user-123",
+          id: 123,
           email: "user@example.com",
           username: "testuser",
           status: "ACTIVE",
           tokenVersion: 1,
           role: {
-            id: "role-123",
+            id: 1,
             name: "REP",
           },
         },
@@ -499,7 +486,7 @@ describe("Auth Plugin", () => {
       const mockSessionRepoWithStaleCache = {
         findById: mock(async () => mockSession),
         findSessionStatus: mock(async () => ({
-          userId: "user-123",
+          userId: 123,
           revokedAt: null,
           expiresAt: new Date(Date.now() - 1000),
         })),
@@ -513,8 +500,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -533,22 +519,22 @@ describe("Auth Plugin", () => {
       );
 
       expect(response.status).toBe(401);
-      expect(mockSessionRepoWithStaleCache.findSessionStatus).toHaveBeenCalledWith("session-123");
-      expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith("session-123");
+      expect(mockSessionRepoWithStaleCache.findSessionStatus).toHaveBeenCalledWith(1);
+      expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith(1);
     });
 
     it("should reject cached session when revoked marker is confirmed by DB", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const cachedSession = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hashed-token",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         revokedAt: null,
@@ -562,7 +548,7 @@ describe("Auth Plugin", () => {
       mockSessionCacheService.isMarkedRevoked = mock(async () => true);
 
       const findSessionStatus = mock(async () => ({
-        userId: "user-123",
+        userId: 123,
         revokedAt: new Date(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       }));
@@ -580,8 +566,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -600,23 +585,23 @@ describe("Auth Plugin", () => {
       );
 
       expect(response.status).toBe(401);
-      expect(findSessionStatus).toHaveBeenCalledWith("session-123");
-      expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith("session-123");
+      expect(findSessionStatus).toHaveBeenCalledWith(1);
+      expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith(1);
       expect(mockSessionCacheService.clearRevoked).not.toHaveBeenCalled();
     });
 
     it("should self-heal and allow request when revoked marker is stale but DB confirms session is healthy", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const cachedSession = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hashed-token",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         revokedAt: null,
@@ -630,7 +615,7 @@ describe("Auth Plugin", () => {
       mockSessionCacheService.isMarkedRevoked = mock(async () => true);
 
       const findSessionStatus = mock(async () => ({
-        userId: "user-123",
+        userId: 123,
         revokedAt: null,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       }));
@@ -648,8 +633,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -668,23 +652,23 @@ describe("Auth Plugin", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(findSessionStatus).toHaveBeenCalledWith("session-123");
-      expect(mockSessionCacheService.clearRevoked).toHaveBeenCalledWith("session-123");
+      expect(findSessionStatus).toHaveBeenCalledWith(1);
+      expect(mockSessionCacheService.clearRevoked).toHaveBeenCalledWith(1);
       expect(mockSessionCacheService.invalidate).not.toHaveBeenCalled();
     });
 
     it("should skip session DB revalidation when recently validated", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const cachedSession = {
-        id: "session-123",
-        userId: "user-123",
+        id: 1,
+        userId: 123,
         refreshTokenHash: "hashed-token",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         revokedAt: null,
@@ -699,7 +683,7 @@ describe("Auth Plugin", () => {
       mockSessionCacheService.isRecentlyValidated = mock(async () => true);
 
       const findSessionStatus = mock(async () => ({
-        userId: "user-123",
+        userId: 123,
         revokedAt: null,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       }));
@@ -717,8 +701,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -742,16 +725,16 @@ describe("Auth Plugin", () => {
 
     it("should return 403 when auth cache has stale active status but DB user is suspended", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       mockAuthCacheService.get = mock(async () => ({
-        userId: "user-123",
-        roleId: "role-123",
+        userId: 123,
+        roleId: 1,
         roleName: "REP",
         status: "ACTIVE",
         tokenVersion: 1,
@@ -761,7 +744,7 @@ describe("Auth Plugin", () => {
       mockUserRepository.findUserAuthStatus = mock(async () => ({
         status: "SUSPENDED",
         tokenVersion: 1,
-        roleId: "role-123",
+        roleId: 1,
         roleName: "REP",
       }));
 
@@ -772,8 +755,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -794,10 +776,10 @@ describe("Auth Plugin", () => {
       expect(response.status).toBe(403);
       const body = await response.json() as { error: { code: string } };
       expect(body.error.code).toBe("ACCOUNT_SUSPENDED");
-      expect(mockUserRepository.findUserAuthStatus).toHaveBeenCalledWith("user-123");
-      expect(mockAuthCacheService.set).toHaveBeenCalledWith("user-123", {
-        userId: "user-123",
-        roleId: "role-123",
+      expect(mockUserRepository.findUserAuthStatus).toHaveBeenCalledWith(123);
+      expect(mockAuthCacheService.set).toHaveBeenCalledWith(123, {
+        userId: 123,
+        roleId: 1,
         roleName: "REP",
         status: "SUSPENDED",
         tokenVersion: 1,
@@ -806,8 +788,8 @@ describe("Auth Plugin", () => {
 
     it("should throw UnauthorizedError for token version mismatch", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -829,8 +811,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -853,8 +834,8 @@ describe("Auth Plugin", () => {
 
     it("should return 403 for suspended user", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -886,8 +867,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -912,8 +892,8 @@ describe("Auth Plugin", () => {
 
     it("should return 403 for inactive user", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -945,8 +925,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -971,8 +950,8 @@ describe("Auth Plugin", () => {
 
     it("should return 403 for pending user", async () => {
       const accessToken = await tokenService.signAccessToken({
-        sub: "user-123",
-        sid: "session-123",
+        sub: "123",
+        sid: "1",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -1004,8 +983,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -1038,8 +1016,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()

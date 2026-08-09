@@ -41,7 +41,8 @@ export const listProfessionalsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
   search: z.string().min(1).optional(),
-  facilityId: z.string().trim().min(1).optional(),
+  // Query string → coerce at HTTP edge only
+  facilityId: z.coerce.number().int().positive().optional(),
 });
 
 const professionalPersonFieldsSchema = {
@@ -71,7 +72,7 @@ const professionalPersonFieldsSchema = {
 export const createDoctorSchema = z.object({
   ...professionalPersonFieldsSchema,
   specialty: z.string().trim().max(200).optional(),
-  facilityIds: z.array(z.string().trim().min(1)).optional().default([]),
+  facilityIds: z.array(z.number().int().positive()).optional().default([]),
 });
 
 export const createProfessionalSchema = createDoctorSchema;
@@ -101,7 +102,7 @@ export const updateDoctorSchema = z.object({
   languages: professionalPersonFieldsSchema.languages.nullable().optional(),
   hobbies: professionalPersonFieldsSchema.hobbies.nullable().optional(),
   notes: professionalPersonFieldsSchema.notes.nullable().optional(),
-  facilityIds: z.array(z.string().trim().min(1)).min(1).optional(),
+  facilityIds: z.array(z.number().int().positive()).min(1).optional(),
 });
 
 export const updateProfessionalSchema = updateDoctorSchema;
@@ -130,12 +131,12 @@ export type CreateDoctorInput = CreateProfessionalInput;
 export type UpdateDoctorInput = UpdateProfessionalInput;
 
 export interface ProfessionalFacilitySummary {
-  id: string;
+  id: number;
   name: string;
 }
 
 export interface ProfessionalProfile {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   fullName?: string;
@@ -158,16 +159,16 @@ export interface ProfessionalProfile {
   languages?: string;
   hobbies?: string;
   notes?: string;
-  facilityIds: string[];
+  facilityIds: number[];
   facilities: ProfessionalFacilitySummary[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface FacilityProfessionalRole {
-  facilityProfessionalId: string;
-  facilityId: string;
-  professionalId: string;
+  facilityProfessionalId: number;
+  facilityId: number;
+  professionalId: number;
   occupationCode: string;
   isPartner: boolean;
   isPrescriber: boolean;

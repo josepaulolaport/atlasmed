@@ -2,6 +2,7 @@ import { Role } from "@atlasmed/access";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import { OperationNotAllowedError } from "../../../../shared/errors";
+import { isManagerZoneType, isRepPatchType } from "../constants/territory-roles.constants";
 
 interface Dependencies {
   territoryRepository: TerritoryRepository;
@@ -12,9 +13,9 @@ export class TerritoryAssignmentPolicyService {
   constructor(private readonly deps: Dependencies) {}
 
   async validateAssignment(params: {
-    targetUserId: string;
+    targetUserId: number;
     targetRole: Role;
-    territoryId: string;
+    territoryId: number;
   }): Promise<void> {
     const territory = await this.deps.territoryRepository.findById(params.territoryId);
     if (!territory || !territory.isActive) {
@@ -38,17 +39,17 @@ export class TerritoryAssignmentPolicyService {
       );
     }
 
-    if (params.targetRole === Role.REP && !type.assignableToUsers) {
+    if (params.targetRole === Role.REP && !isRepPatchType(type)) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "This territory type cannot be assigned to field reps"
+        "Representatives can only be assigned to patch territories"
       );
     }
 
-    if (params.targetRole === Role.MANAGER && !type.assignableToManagers) {
+    if (params.targetRole === Role.MANAGER && !isManagerZoneType(type)) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "This territory type cannot be assigned to managers"
+        "Managers can only be assigned to manager zone territories"
       );
     }
 

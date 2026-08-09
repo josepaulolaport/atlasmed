@@ -20,7 +20,7 @@ class PurchaseRecurrenceForm extends StatefulWidget {
   final PurchaseRecurrenceSnapshot? initialValue;
 
   /// Linha comercial for multi-profile clinics (API `verticalId`).
-  final String? verticalId;
+  final int? verticalId;
 
   @override
   State<PurchaseRecurrenceForm> createState() => _PurchaseRecurrenceFormState();

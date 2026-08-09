@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 CalendarOccurrence _occurrence({
-  required String id,
+  required int id,
   required String date,
   required String time,
   required String title,
@@ -28,10 +28,8 @@ CalendarOccurrence _occurrence({
       ? CalendarEventKind.personalBlock
       : CalendarEventKind.interaction,
   title: title,
-  owner: const CalendarIdentity(id: 'user-1', name: 'Ana Souza'),
-  facility: facility == null
-      ? null
-      : CalendarIdentity(id: 'facility-1', name: facility),
+  owner: const CalendarIdentity(id: 1, name: 'Ana Souza'),
+  facility: facility == null ? null : CalendarIdentity(id: 1, name: facility),
   modality: modality,
   startsAt: DateTime.parse('${date}T$time:00.000Z'),
   endsAt: DateTime.parse('${date}T10:00:00.000Z'),
@@ -41,7 +39,7 @@ CalendarOccurrence _occurrence({
   recurrence: CalendarRecurrence.none,
   interaction: status == null
       ? null
-      : CalendarInteractionContext(id: 'interaction-1', status: status),
+      : CalendarInteractionContext(id: 1, status: status),
   canMutate: canMutate,
 );
 
@@ -54,7 +52,7 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
   Future<List<CalendarOccurrence>> listCalendar({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async {
     queries.add(AgendaQuery(from: from, to: to, ownerUserId: ownerUserId));
     return const [];
@@ -64,39 +62,39 @@ class _QueryRecordingRepository implements CalendarRepositoryContract {
   Future<List<CalendarAvailabilityInterval>> getAvailability({
     required DateTime from,
     required DateTime to,
-    String? ownerUserId,
+    int? ownerUserId,
   }) async => const [];
 
   @override
-  Future<InteractionDetail> getInteraction(String id) =>
+  Future<InteractionDetail> getInteraction(int id) =>
       throw UnimplementedError();
 
   @override
   Future<InteractionDetail> startInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
   }) => throw UnimplementedError();
 
   @override
   Future<InteractionDetail> completeInteraction(
-    String id, {
+    int id, {
     required int expectedVersion,
     required String idempotencyKey,
     String? correctionReason,
   }) => throw UnimplementedError();
 }
 
-User _user(String id, String name, UserRoleName role) => User(
+User _user(int id, String name, UserRoleName role) => User(
   id: id,
   email: '$id@atlasmed.test',
-  username: id,
+  username: '$id',
   firstName: name,
   status: UserStatus.active,
   emailVerified: true,
   phoneVerified: true,
   twoFactorEnabled: false,
-  role: UserRole(id: 'role-${role.name}', name: role),
+  role: UserRole(id: 1, name: role),
   createdAt: DateTime(2026),
   updatedAt: DateTime(2026),
 );
@@ -111,13 +109,13 @@ void main() {
           now: DateTime(2026, 8, 3),
           occurrences: [
             _occurrence(
-              id: 'second',
+              id: 2,
               date: '2026-08-03',
               time: '11:00',
               title: 'Reunião interna',
             ),
             _occurrence(
-              id: 'first',
+              id: 1,
               date: '2026-08-03',
               time: '08:30',
               title: 'Visita de acompanhamento',
@@ -126,7 +124,7 @@ void main() {
               status: InteractionStatus.scheduled,
             ),
             _occurrence(
-              id: 'third',
+              id: 3,
               date: '2026-08-04',
               time: '14:00',
               title: 'Contato remoto',
@@ -161,8 +159,8 @@ void main() {
     tester,
   ) async {
     final repository = _QueryRecordingRepository();
-    final manager = _user('manager-1', 'Marina', UserRoleName.manager);
-    final rep = _user('rep-2', 'Bruno', UserRoleName.rep);
+    final manager = _user(1, 'Marina', UserRoleName.manager);
+    final rep = _user(2, 'Bruno', UserRoleName.rep);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -181,15 +179,15 @@ void main() {
     await tester.tap(find.text('Bruno').last);
     await tester.pumpAndSettle();
 
-    expect(repository.queries.last.ownerUserId, 'rep-2');
+    expect(repository.queries.last.ownerUserId, 2);
   });
 
   testWidgets('manager filters interactions by status and modality', (
     tester,
   ) async {
     final repository = _QueryRecordingRepository();
-    final manager = _user('manager-1', 'Marina', UserRoleName.manager);
-    final rep = _user('rep-2', 'Bruno', UserRoleName.rep);
+    final manager = _user(1, 'Marina', UserRoleName.manager);
+    final rep = _user(2, 'Bruno', UserRoleName.rep);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -200,7 +198,7 @@ void main() {
           agendaProvider.overrideWith(
             (ref, query) async => [
               _occurrence(
-                id: 'scheduled-remote',
+                id: 1,
                 date: '2026-08-03',
                 time: '09:00',
                 title: 'Interação remota',
@@ -209,7 +207,7 @@ void main() {
                 status: InteractionStatus.scheduled,
               ),
               _occurrence(
-                id: 'completed-in-person',
+                id: 2,
                 date: '2026-08-03',
                 time: '11:00',
                 title: 'Interação concluída',
@@ -248,7 +246,7 @@ void main() {
         AgendaScreen.content(
           occurrences: [
             _occurrence(
-              id: 'managed',
+              id: 1,
               date: '2026-08-03',
               time: '09:00',
               title: 'Indisponível',
@@ -273,7 +271,7 @@ void main() {
     tester,
   ) async {
     final repository = _QueryRecordingRepository();
-    final rep = _user('rep-1', 'Ana', UserRoleName.rep);
+    final rep = _user(1, 'Ana', UserRoleName.rep);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -297,7 +295,7 @@ void main() {
         AgendaScreen.content(
           occurrences: [
             _occurrence(
-              id: 'south',
+              id: 2,
               date: '2026-08-03',
               time: '09:00',
               title: 'Visita de acompanhamento',
@@ -305,7 +303,7 @@ void main() {
               status: InteractionStatus.scheduled,
             ),
             _occurrence(
-              id: 'north',
+              id: 3,
               date: '2026-08-03',
               time: '11:00',
               title: 'Retorno comercial',

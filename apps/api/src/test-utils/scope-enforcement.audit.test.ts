@@ -19,7 +19,6 @@ function collectScopedUseCaseFiles(): string[] {
   const patterns = [
     new Glob("modules/**/*.use-case.ts"),
     new Glob("modules/**/*.use-cases.ts"),
-    new Glob("modules/**/registry-read.service.ts"),
   ];
 
   const files = new Set<string>();

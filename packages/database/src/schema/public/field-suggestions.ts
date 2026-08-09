@@ -4,14 +4,16 @@ import {
   timestamp,
   jsonb,
   index,
+  integer,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import {
   fieldSuggestionKindEnum,
   fieldSuggestionStatusEnum,
 } from "./enums";
-import { facilities, professionals } from "./facilities";
+import { facilities } from "./facilities";
+import { persons } from "./persons";
 import { users } from "./users";
 
 /**
@@ -21,16 +23,13 @@ import { users } from "./users";
 export const fieldSuggestions = pgTable(
   "field_suggestions",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     kind: fieldSuggestionKindEnum("kind").notNull(),
     status: fieldSuggestionStatusEnum("status").notNull().default("PENDING"),
-    facilityId: text("facility_id")
-      .notNull()
-      .references(() => facilities.id, { onDelete: "cascade" }),
-    /** Reserved for a later doctor-target increment; unused in v1. */
-    professionalId: text("professional_id").references(() => professionals.id, {
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    /** Optional person target (doctor suggestions). */
+    personId: bigint("person_id", { mode: "number" }).references(() => persons.id, {
       onDelete: "set null",
     }),
     /** Required for FIELD_CHANGE; null for DEACTIVATION. */
@@ -38,17 +37,16 @@ export const fieldSuggestions = pgTable(
     currentValue: jsonb("current_value").notNull().default({}),
     proposedValue: jsonb("proposed_value"),
     reason: text("reason"),
-    submittedByUserId: text("submitted_by_user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    submittedByUserId: bigint("submitted_by_user_id", { mode: "number" })
+      .notNull().references(() => users.id, { onDelete: "cascade" }),
     submittedAt: timestamp("submitted_at").notNull().defaultNow(),
     resolvedAt: timestamp("resolved_at"),
-    resolvedByUserId: text("resolved_by_user_id").references(() => users.id, {
+    resolvedByUserId: bigint("resolved_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     resolutionNote: text("resolution_note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("field_suggestions_status_submitted_at_idx").on(
@@ -78,9 +76,9 @@ export const fieldSuggestionsRelations = relations(fieldSuggestions, ({ one }) =
     fields: [fieldSuggestions.facilityId],
     references: [facilities.id],
   }),
-  professional: one(professionals, {
-    fields: [fieldSuggestions.professionalId],
-    references: [professionals.id],
+  person: one(persons, {
+    fields: [fieldSuggestions.personId],
+    references: [persons.id],
   }),
   submittedBy: one(users, {
     fields: [fieldSuggestions.submittedByUserId],

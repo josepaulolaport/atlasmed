@@ -63,7 +63,7 @@ export class UnauthorizedError extends AppError {
 }
 
 export class RefreshTokenReuseDetectedError extends AppError {
-  constructor(context?: { userId?: string; sessionId?: string }) {
+  constructor(context?: { userId?: number; sessionId?: number }) {
     super(
       'REFRESH_TOKEN_REUSE_DETECTED',
       401,
@@ -181,7 +181,7 @@ export class ResourceNotFoundError extends AppError {
 }
 
 export class UserNotFoundError extends AppError {
-  constructor(identifier: string) {
+  constructor(identifier: number) {
     super(
       'USER_NOT_FOUND',
       404,
@@ -192,7 +192,7 @@ export class UserNotFoundError extends AppError {
 }
 
 export class SessionNotFoundError extends AppError {
-  constructor(sessionId: string) {
+  constructor(sessionId: number) {
     super(
       'SESSION_NOT_FOUND',
       404,
@@ -203,7 +203,7 @@ export class SessionNotFoundError extends AppError {
 }
 
 export class InviteNotFoundError extends AppError {
-  constructor(identifier: string) {
+  constructor(identifier: number) {
     super(
       'INVITE_NOT_FOUND',
       404,
@@ -214,7 +214,7 @@ export class InviteNotFoundError extends AppError {
 }
 
 export class RoleNotFoundError extends AppError {
-  constructor(roleId: string) {
+  constructor(roleId: number) {
     super(
       'ROLE_NOT_FOUND',
       404,
@@ -262,7 +262,7 @@ export class UsernameAlreadyExistsError extends AppError {
 }
 
 export class InviteAlreadyUsedError extends AppError {
-  constructor(inviteId: string) {
+  constructor(inviteId: number) {
     super(
       'INVITE_ALREADY_USED',
       409,
@@ -284,7 +284,7 @@ export class CalendarConflictError extends AppError {
 }
 
 export class CalendarVersionConflictError extends AppError {
-  constructor(calendarId: string, expectedVersion: number) {
+  constructor(calendarId: number, expectedVersion: number) {
     super(
       "CALENDAR_VERSION_CONFLICT",
       409,

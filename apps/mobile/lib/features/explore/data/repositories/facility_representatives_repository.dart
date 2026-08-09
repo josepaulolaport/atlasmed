@@ -4,7 +4,9 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
@@ -17,7 +19,9 @@ class FacilityRepresentativesException implements Exception {
   String toString() => message ?? 'FacilityRepresentativesException';
 }
 
-/// Paginated CRM administrative professionals for a facility.
+/// Administrative contacts for a facility.
+///
+/// Source: `GET|POST|PATCH /api/v1/facilities/:id/administrative-contacts`
 class FacilityRepresentativesRepository
     extends Repository<PaginatedFacilityRepresentatives>
     with SessionEnvironmentMixin<PaginatedFacilityRepresentatives> {
@@ -31,22 +35,21 @@ class FacilityRepresentativesRepository
        super(
          endpoint: buildEndpoint(
            baseUrl: AppConfig.apiBaseUrl,
-           path: '/api/v1/facilities/$facilityId/representatives',
-           queryParameters: {
-             'page': '$page',
-             'limit': '$limit',
-             if (search != null && search.trim().isNotEmpty)
-               'search': search.trim(),
-           },
+           path: '/api/v1/facilities/$facilityId/administrative-contacts',
+           queryParameters: const {},
          ),
          name: 'FacilityRepresentativesRepository',
        );
 
-  final String facilityId;
+  final int facilityId;
   final int page;
   final int limit;
   final String? search;
   final RepositoryHttpClient? _client;
+
+  String get _contactsPath =>
+      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
+      '/administrative-contacts';
 
   @override
   RepositoryHttpClient get client => _client ?? super.client;
@@ -60,98 +63,192 @@ class FacilityRepresentativesRepository
     if (result == null) {
       throw const FacilityRepresentativesException();
     }
+    // Warm id→name catalog cache so roleChipLabels resolve.
+    final catalogRepo = PersonFacilityRolesCatalogRepository(client: _client);
+    try {
+      await catalogRepo.listActive();
+    } catch (_) {
+      // Labels stay empty until a roles sheet loads catalog.
+    } finally {
+      catalogRepo.dispose();
+    }
+    var items = result.items
+        .map((item) => item.toDomain())
+        .toList(growable: false);
+    final q = search?.trim();
+    if (q != null && q.isNotEmpty) {
+      final lower = q.toLowerCase();
+      items = items
+          .where((p) => p.name.toLowerCase().contains(lower))
+          .toList(growable: false);
+    }
     return FacilityRosterPage(
-      items: result.items
-          .map((item) => item.toDomain())
-          .toList(growable: false),
-      pagination: result.pagination,
+      items: items,
+      pagination: Pagination(
+        page: 1,
+        limit: items.length,
+        total: items.length,
+        totalPages: 1,
+      ),
     );
   }
 
   Future<AdministrativeProfessional> create({
-    required String representativeName,
+    required String firstName,
+    required String lastName,
     String? roleTitle,
     String? email,
-    String? phone,
-    bool isPartner = false,
-    bool isAdministrator = false,
-    bool isDecisionMaker = false,
-    bool isBuyer = false,
-    bool isBiller = false,
-    bool isSecretary = false,
+    String? mobilePhone,
+    List<int>? roleIds,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/representatives',
-        ),
+        url: Uri.parse(_contactsPath),
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
         body: {
-          'representativeName': representativeName,
+          'firstName': firstName,
+          'lastName': lastName,
           if (roleTitle != null && roleTitle.isNotEmpty) 'roleTitle': roleTitle,
           if (email != null && email.isNotEmpty) 'email': email,
-          if (phone != null && phone.isNotEmpty) 'phone': phone,
-          'isPartner': isPartner,
-          'isAdministrator': isAdministrator,
-          'isDecisionMaker': isDecisionMaker,
-          'isBuyer': isBuyer,
-          'isBiller': isBiller,
-          'isSecretary': isSecretary,
+          if (mobilePhone != null && mobilePhone.isNotEmpty)
+            'mobilePhone': mobilePhone,
         },
       ),
     );
 
-    return _parseMutationResponse(response, 'criar');
+    var api = _parseMutationApi(response, 'criar');
+    final ids = PersonFacilityRoleCatalog.sortedIds(roleIds ?? const []);
+    if (ids.isNotEmpty) {
+      try {
+        api = await _putAdminRoles(
+          personFacilityId: api.personFacilityId,
+          roleIds: ids,
+        );
+      } on FacilityRepresentativesException {
+        throw const FacilityRepresentativesException(
+          'Contato criado, mas falhou ao salvar papéis — edite os papéis e tente de novo',
+        );
+      }
+    }
+    return api.toDomain();
   }
 
+  /// [representativeId] is `personFacilityId` (domain [AdministrativeProfessional.id]).
   Future<AdministrativeProfessional> updateRepresentative({
-    required String representativeId,
-    String? representativeName,
+    required int representativeId,
+    String? firstName,
+    String? lastName,
     String? roleTitle,
     String? email,
-    String? phone,
-    bool? isPartner,
-    bool? isAdministrator,
-    bool? isDecisionMaker,
-    bool? isBuyer,
-    bool? isBiller,
-    bool? isSecretary,
+    String? mobilePhone,
+    List<int>? roleIds,
     int? relationshipLevel,
     bool clearRelationshipLevel = false,
   }) async {
-    final body = <String, Object?>{
-      'representativeName': ?representativeName,
-      'roleTitle': ?roleTitle,
-      'email': ?email,
-      'phone': ?phone,
-      'isPartner': ?isPartner,
-      'isAdministrator': ?isAdministrator,
-      'isDecisionMaker': ?isDecisionMaker,
-      'isBuyer': ?isBuyer,
-      'isBiller': ?isBiller,
-      'isSecretary': ?isSecretary,
-      if (clearRelationshipLevel)
-        'relationshipLevel': null
-      else
-        'relationshipLevel': ?relationshipLevel,
-    };
+    // Relationship score has no administrative-contacts field.
+    // Former user_representative_relationships PATCH is gone — fail closed
+    // so UI (representative_detail_screen) reverts optimistic local state.
+    final rolesProvided = roleIds != null;
+    final onlyRelationship =
+        firstName == null &&
+        lastName == null &&
+        roleTitle == null &&
+        email == null &&
+        mobilePhone == null &&
+        !rolesProvided &&
+        (relationshipLevel != null || clearRelationshipLevel);
+    if (onlyRelationship) {
+      throw const FacilityRepresentativesException(
+        'Relacionamento de contato administrativo ainda não disponível',
+      );
+    }
 
+    final onlyRoles =
+        firstName == null &&
+        lastName == null &&
+        roleTitle == null &&
+        email == null &&
+        mobilePhone == null &&
+        rolesProvided;
+    FacilityRepresentativeApi api;
+    if (onlyRoles) {
+      api = await _putAdminRoles(
+        personFacilityId: representativeId,
+        roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
+      );
+    } else {
+      // ignore_for_file: use_null_aware_elements — value-nullable map entries, not key-nullable.
+      final body = <String, Object?>{
+        if (firstName != null) 'firstName': firstName,
+        if (lastName != null) 'lastName': lastName,
+        if (roleTitle != null) 'roleTitle': roleTitle,
+        if (email != null) 'email': email,
+        if (mobilePhone != null) 'mobilePhone': mobilePhone,
+      };
+
+      final response = await client.call(
+        request: RepositoryHttpRequest(
+          url: Uri.parse('$_contactsPath/$representativeId'),
+          method: RepositoryHttpMethod.patch,
+          headers: const {'Content-Type': 'application/json'},
+          body: body,
+        ),
+      );
+
+      api = _parseMutationApi(response, 'atualizar');
+      if (roleIds != null) {
+        try {
+          api = await _putAdminRoles(
+            personFacilityId: representativeId,
+            roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
+          );
+        } on FacilityRepresentativesException {
+          throw const FacilityRepresentativesException(
+            'Dados salvos, mas falhou ao salvar papéis — edite os papéis e tente de novo',
+          );
+        }
+      }
+    }
+
+    return api.toDomain();
+  }
+
+  Future<FacilityRepresentativeApi> _putAdminRoles({
+    required int personFacilityId,
+    required List<int> roleIds,
+  }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/representatives/$representativeId',
-        ),
-        method: RepositoryHttpMethod.patch,
+        url: Uri.parse('$_contactsPath/$personFacilityId/roles'),
+        method: RepositoryHttpMethod.put,
         headers: const {'Content-Type': 'application/json'},
-        body: body,
+        body: {'roleIds': roleIds},
+      ),
+    );
+    return _parseMutationApi(response, 'salvar papéis de');
+  }
+
+  /// `DELETE …/administrative-contacts/:personFacilityId` — soft-end affiliation.
+  Future<void> endAffiliation(int personFacilityId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_contactsPath/$personFacilityId'),
+        method: RepositoryHttpMethod.delete,
       ),
     );
 
-    return _parseMutationResponse(response, 'atualizar');
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityRepresentativesException(
+          'Falha ao encerrar vínculo (${response.statusCode})',
+        );
+      }
+    }
   }
 
-  AdministrativeProfessional _parseMutationResponse(
+  FacilityRepresentativeApi _parseMutationApi(
     RepositoryHttpResponse response,
     String action,
   ) {
@@ -162,6 +259,6 @@ class FacilityRepresentativesRepository
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    return FacilityRepresentativeApi.fromMap(map).toDomain();
+    return FacilityRepresentativeApi.fromMap(map);
   }
 }

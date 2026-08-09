@@ -15,7 +15,7 @@ export const invitationDetailRoute = new Elysia({
     async ({ params, getUser }: any) => {
       const actor = await getUser();
       return accessUseCases.getInvitationById().execute({
-        inviteId: params.id,
+        inviteId: Number(params.id),
         actorRole: actor.role.name as Role,
       });
     },
@@ -35,7 +35,7 @@ export const invitationDetailRoute = new Elysia({
       const parsed = updateInvitationSchema.parse(body);
 
       return accessUseCases.updateInvitation().execute({
-        inviteId: params.id,
+        inviteId: Number(params.id),
         actorUserId: actor.id,
         actorRole: actor.role.name as Role,
         email: parsed.email,

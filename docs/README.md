@@ -4,14 +4,15 @@ This directory is the source of truth for Atlasmed product, architecture, featur
 
 ## Index
 
-- `current-state.md` documents what exists in the repository today.
-- `implementation/completed.md` lists implementation work already completed in the repository.
-- `product/overview.md` describes the product vision, users, and core capabilities.
-- `architecture/current.md` documents the current implementation architecture.
-- `architecture/target.md` documents the target architecture for the full platform.
-- `features/` documents feature areas at a product and system level.
-- `specs/` contains spec-driven development requirements, designs, and task plans.
-- `adr/` contains architecture decision records.
+- `product/overview.md` — product vision, users, and core capabilities.
+- `architecture/current.md` — current implementation architecture (what exists today).
+- `architecture/target.md` — target architecture for the full platform.
+- `architecture/features/` — feature areas at a product and system level.
+- `architecture/adr/` — architecture decision records.
+- `specs/` — spec-driven development requirements, designs, and task plans.
+- `ai/` — AI context routing and integration-task guides.
+
+Root `AGENTS.md` is the canonical AI instruction file for the monorepo.
 
 ## Documentation Rules
 
@@ -20,3 +21,4 @@ This directory is the source of truth for Atlasmed product, architecture, featur
 - Feature docs explain behavior and domain language.
 - Specs use requirements, design, and task plans before implementation starts.
 - ADRs record decisions that constrain implementation.
+- Do not document unbuilt redesigns as current truth.

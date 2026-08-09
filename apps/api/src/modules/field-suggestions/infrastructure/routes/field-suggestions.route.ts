@@ -67,6 +67,7 @@ const createFacilityFieldSuggestionRoute = new Elysia()
         tags: ["FieldSuggestions"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         kind: t.Union([t.Literal("FIELD_CHANGE"), t.Literal("DEACTIVATION")]),
         fieldKey: t.Optional(t.String()),
@@ -90,8 +91,8 @@ const listFacilityFieldSuggestionsRoute = new Elysia()
         scope,
         userId,
         facilityId: params.id,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         status: query.status as
           | "PENDING"
           | "APPROVED"
@@ -107,10 +108,11 @@ const listFacilityFieldSuggestionsRoute = new Elysia()
         tags: ["FieldSuggestions"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       query: t.Object({
         mine: t.Optional(t.String()),
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
         status: t.Optional(t.String()),
       }),
     }
@@ -134,8 +136,8 @@ const listFieldSuggestionsRoute = new Elysia()
       return fieldSuggestionUseCases.listFieldSuggestions().execute({
         scope,
         userId,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         status,
         facilityId: query.facilityId,
       });
@@ -147,10 +149,10 @@ const listFieldSuggestionsRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
         status: t.Optional(t.String()),
-        facilityId: t.Optional(t.String()),
+        facilityId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -177,6 +179,7 @@ const getFieldSuggestionRoute = new Elysia()
         tags: ["FieldSuggestions"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -205,6 +208,7 @@ const approveFieldSuggestionRoute = new Elysia()
         tags: ["FieldSuggestions"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         resolutionNote: t.Optional(t.String()),
       }),
@@ -236,6 +240,7 @@ const rejectFieldSuggestionRoute = new Elysia()
         tags: ["FieldSuggestions"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         resolutionNote: t.Optional(t.String()),
       }),

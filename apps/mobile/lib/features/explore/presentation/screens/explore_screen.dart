@@ -3,12 +3,11 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
@@ -16,7 +15,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clin
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/doctor_list_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_query_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_services_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinical_focuses_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/explore_paged_results.dart';
@@ -30,6 +29,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_to
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -56,7 +56,7 @@ class ExploreResultsList extends ConsumerWidget {
   final bool isLoadingMore;
   final VoidCallback onLoadMore;
   final double bottomInset;
-  final String? preferredVerticalId;
+  final int? preferredVerticalId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,21 +91,19 @@ class ExploreResultsList extends ConsumerWidget {
               onTap: () {
                 seedClinicDetailShellFromEntry(ref, clinic);
                 final verticalId = preferredVerticalId;
-                if (verticalId != null && verticalId.isNotEmpty) {
-                  context.push(
-                    Uri(
-                      path: '/explore/clinic/${clinic.id}',
-                      queryParameters: {'verticalId': verticalId},
-                    ).toString(),
-                  );
+                if (verticalId != null && verticalId > 0) {
+                  ClinicDetailRoute(
+                    id: clinic.id,
+                    verticalId: verticalId,
+                  ).push(context);
                   return;
                 }
-                context.push('/explore/clinic/${clinic.id}');
+                ClinicDetailRoute(id: clinic.id).push(context);
               },
             ),
             (doctor) => DoctorRow(
               doctor: doctor,
-              onTap: () => context.push('/explore/doctor/${doctor.id}'),
+              onTap: () => DoctorDetailRoute(id: doctor.id).push(context),
             ),
           );
         },
@@ -191,9 +189,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         .total;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    if (isClinic && (state.filters['serviceCodes']?.isNotEmpty ?? false)) {
+    if (isClinic && (state.filters['clinicalFocusIds']?.isNotEmpty ?? false)) {
       unawaited(
-        ref.read(facilityServicesRepositoryProvider).currentValueOrResolve(),
+        ref.read(clinicalFocusesRepositoryProvider).currentValueOrResolve(),
       );
     }
 
@@ -387,21 +385,21 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           ),
         );
       }
-      final serviceCatalog = ref
-          .watch(facilityServicesRepositoryProvider)
+      final focusCatalog = ref
+          .watch(clinicalFocusesRepositoryProvider)
           .currentValue;
-      final serviceLabels = {
-        for (final option in serviceCatalog ?? const [])
-          option.serviceCode: option.label,
+      final focusLabels = {
+        for (final option in focusCatalog ?? const [])
+          option.id.toString(): option.label,
       };
-      for (final code in (state.filters['serviceCodes'] ?? [])) {
+      for (final id in (state.filters['clinicalFocusIds'] ?? [])) {
         chips.add(
           FilterChipData(
-            label: serviceLabels[code] ?? code,
+            label: focusLabels[id] ?? id,
             onRemove: () {
               final next = Map<String, List<String>>.from(state.filters);
-              next['serviceCodes'] = (next['serviceCodes'] ?? [])
-                  .where((x) => x != code)
+              next['clinicalFocusIds'] = (next['clinicalFocusIds'] ?? [])
+                  .where((x) => x != id)
                   .toList();
               notifier.applyFilters(
                 filters: next,
@@ -426,7 +424,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       for (final s in (state.filters['specialties'] ?? [])) {
         chips.add(
           FilterChipData(
-            label: FacilityServiceLabels.formatName(s),
+            label: ClinicalFocusLabels.formatName(s),
             onRemove: () {
               final next = Map<String, List<String>>.from(state.filters);
               next['specialties'] = (next['specialties'] ?? [])

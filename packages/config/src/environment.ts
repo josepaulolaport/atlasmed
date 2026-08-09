@@ -93,36 +93,16 @@ const EnvironmentSchema = Type.Object({
   SIEM_WEBHOOK_SECRET: Type.Optional(Type.String({ minLength: 8 })),
   AUDIT_LOG_RETENTION_DAYS: Type.Number({ default: 90, minimum: 1 }),
 
-  REGISTRY_SOURCE: Type.Union([Type.Literal("mock"), Type.Literal("temporal")], {
-    default: "temporal",
-  }),
-  REGISTRY_MOCK_FIXTURE: Type.String({ default: "snapshot-v1.json" }),
   TEMPORAL_ADDRESS: Type.String({ default: "localhost:7233", minLength: 1 }),
   TEMPORAL_NAMESPACE: Type.String({ default: "default", minLength: 1 }),
-  TEMPORAL_TASK_QUEUE: Type.String({ default: "cnes-ingestion", minLength: 1 }),
+  TEMPORAL_TASK_QUEUE: Type.String({ default: "atlasmed-workflows", minLength: 1 }),
 
-  CNES_FTP_MODE: Type.Union([Type.Literal("mock"), Type.Literal("ftp")], { default: "mock" }),
-  CNES_FTP_HOST: OptionalString(),
-  CNES_FTP_USER: OptionalString(),
-  CNES_FTP_PASSWORD: OptionalString(),
-  CNES_FTP_BASE_PATH: Type.String({ default: "/cnes", minLength: 1 }),
-  CNES_ARCHIVE_BACKEND: Type.Union(
-    [Type.Literal("local"), Type.Literal("minio"), Type.Literal("s3")],
-    { default: "local" },
-  ),
-  CNES_ARCHIVE_LOCAL_PATH: Type.String({ default: "/tmp/atlasmed-cnes-archive", minLength: 1 }),
-  CNES_ARCHIVE_S3_BUCKET: OptionalString(),
-  CNES_ARCHIVE_S3_REGION: Type.String({ default: "us-east-1", minLength: 1 }),
-  CNES_ARCHIVE_S3_ENDPOINT: OptionalString(),
-  CNES_ARCHIVE_S3_ACCESS_KEY_ID: OptionalString(),
-  CNES_ARCHIVE_S3_SECRET_ACCESS_KEY: OptionalString(),
-  CNES_LOAD_MODE: Type.Union([Type.Literal("ftp"), Type.Literal("dev")], { default: "dev" }),
-  CNES_EXTRACT_DIR: Type.String({ default: "/tmp/cnes-extract", minLength: 1 }),
-  CNES_PYTHON_BIN: Type.String({ default: "python3", minLength: 1 }),
-  CNES_IMPORT_SCRIPT: OptionalString(),
-  CNES_VALIDATION_ROW_TOLERANCE_PCT: Type.Number({ default: 15, minimum: 0 }),
-  CNES_DEV_LOAD_SOURCE_SCHEMA: Type.String({ default: "mcp_test", minLength: 1 }),
-  CNES_LOAD_CONCURRENCY: Type.Number({ default: 4, minimum: 1 }),
+  /** Emultec MySQL (order/product import). Optional until import workers run. */
+  EMULTEC_MYSQL_HOST: OptionalString(),
+  EMULTEC_MYSQL_PORT: Type.Number({ default: 3306, minimum: 1, maximum: 65535 }),
+  EMULTEC_MYSQL_USER: OptionalString(),
+  EMULTEC_MYSQL_PASSWORD: OptionalString(),
+  EMULTEC_MYSQL_DATABASE: Type.String({ default: "atlasmed", minLength: 1 }),
 
   NEXT_PUBLIC_API_URL: Type.String({ default: "http://localhost:3000/api/v1", pattern: URL_PATTERN }),
   NEXT_PUBLIC_HEALTH_URL: Type.String({ default: "http://localhost:3000", pattern: URL_PATTERN }),
@@ -188,22 +168,11 @@ function normalizeEnvironment(env: EnvInput) {
     TWO_FACTOR_ENABLED: booleanFromEnv(env.TWO_FACTOR_ENABLED, false),
     SIEM_EXPORT_ENABLED: booleanFromEnv(env.SIEM_EXPORT_ENABLED, false),
     AUDIT_LOG_RETENTION_DAYS: numberFromEnv(env.AUDIT_LOG_RETENTION_DAYS, 90),
-    REGISTRY_SOURCE: env.REGISTRY_SOURCE === "mock" ? "mock" : "temporal",
-    REGISTRY_MOCK_FIXTURE: env.REGISTRY_MOCK_FIXTURE ?? "snapshot-v1.json",
     TEMPORAL_ADDRESS: env.TEMPORAL_ADDRESS ?? "localhost:7233",
     TEMPORAL_NAMESPACE: env.TEMPORAL_NAMESPACE ?? "default",
-    TEMPORAL_TASK_QUEUE: env.TEMPORAL_TASK_QUEUE ?? "cnes-ingestion",
-    CNES_FTP_MODE: env.CNES_FTP_MODE === "ftp" ? "ftp" : "mock",
-    CNES_FTP_BASE_PATH: env.CNES_FTP_BASE_PATH ?? "/cnes",
-    CNES_ARCHIVE_BACKEND: env.CNES_ARCHIVE_BACKEND ?? "local",
-    CNES_ARCHIVE_LOCAL_PATH: env.CNES_ARCHIVE_LOCAL_PATH ?? "/tmp/atlasmed-cnes-archive",
-    CNES_ARCHIVE_S3_REGION: env.CNES_ARCHIVE_S3_REGION ?? "us-east-1",
-    CNES_LOAD_MODE: env.CNES_LOAD_MODE === "ftp" ? "ftp" : "dev",
-    CNES_EXTRACT_DIR: env.CNES_EXTRACT_DIR ?? "/tmp/cnes-extract",
-    CNES_PYTHON_BIN: env.CNES_PYTHON_BIN ?? "python3",
-    CNES_VALIDATION_ROW_TOLERANCE_PCT: numberFromEnv(env.CNES_VALIDATION_ROW_TOLERANCE_PCT, 15),
-    CNES_DEV_LOAD_SOURCE_SCHEMA: env.CNES_DEV_LOAD_SOURCE_SCHEMA ?? "mcp_test",
-    CNES_LOAD_CONCURRENCY: numberFromEnv(env.CNES_LOAD_CONCURRENCY, 4),
+    TEMPORAL_TASK_QUEUE: env.TEMPORAL_TASK_QUEUE ?? "atlasmed-workflows",
+    EMULTEC_MYSQL_PORT: numberFromEnv(env.EMULTEC_MYSQL_PORT, 3306),
+    EMULTEC_MYSQL_DATABASE: env.EMULTEC_MYSQL_DATABASE ?? "atlasmed",
     NEXT_PUBLIC_API_URL: env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1",
     NEXT_PUBLIC_HEALTH_URL: env.NEXT_PUBLIC_HEALTH_URL ?? "http://localhost:3000",
     NEXT_PUBLIC_MAP_PROVIDER: env.NEXT_PUBLIC_MAP_PROVIDER ?? "leaflet",
@@ -283,13 +252,6 @@ function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
     issues.push("/TWO_FACTOR_ENCRYPTION_KEY: required when TWO_FACTOR_ENABLED=true");
   }
 
-  if (env.CNES_FTP_MODE === "ftp" && !env.CNES_FTP_HOST) {
-    issues.push("/CNES_FTP_HOST: required when CNES_FTP_MODE=ftp");
-  }
-
-  if (env.CNES_ARCHIVE_BACKEND === "s3" && !env.CNES_ARCHIVE_S3_BUCKET) {
-    issues.push("/CNES_ARCHIVE_S3_BUCKET: required when CNES_ARCHIVE_BACKEND=s3");
-  }
 
   return issues;
 }

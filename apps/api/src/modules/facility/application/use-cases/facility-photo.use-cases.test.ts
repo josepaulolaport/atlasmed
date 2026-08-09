@@ -24,9 +24,9 @@ const globalScope: ScopeContext = {
   isOperationallyActive: true,
 };
 
-function facility(overrides: Partial<{ id: string; imageUrl: string | null }> = {}) {
+function facility(overrides: Partial<{ id: number; imageUrl: string | null }> = {}) {
   return {
-    id: overrides.id ?? "facility-1",
+    id: overrides.id ?? 1,
     imageUrl: overrides.imageUrl ?? null,
   } as Awaited<ReturnType<FacilityRepository["findById"]>>;
 }
@@ -35,13 +35,13 @@ describe("Facility photo use cases", () => {
   it("lists photos and profile imageUrl", async () => {
     const findByFacility = mock(async () => [
       {
-        id: "photo-1",
-        facilityId: "facility-1",
+        id: 1,
+        facilityId: 1,
         storageKey: "facilities/facility-1/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg",
         url: "/api/v1/facilities/photos/facilities/facility-1/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg",
         contentType: "image/jpeg",
         blurhash: null,
-        uploadedByUserId: "user-1",
+        uploadedByUserId: 1,
         createdAt: now,
         updatedAt: now,
       },
@@ -64,25 +64,25 @@ describe("Facility photo use cases", () => {
         upload: async () => undefined,
         delete: async () => undefined,
       },
-    }).execute({ facilityId: "facility-1", scope: globalScope });
+    }).execute({ facilityId: 1, scope: globalScope });
 
-    expect(findByFacility).toHaveBeenCalledWith("facility-1");
+    expect(findByFacility).toHaveBeenCalledWith(1);
     expect(result.data).toHaveLength(1);
-    expect(result.data[0]?.id).toBe("photo-1");
+    expect(result.data[0]?.id).toBe(1);
     expect(result.imageUrl).toContain("/api/v1/facilities/photos/");
   });
 
   it("uploads a photo and sets imageUrl when missing", async () => {
     const upload = mock(async () => undefined);
     const create = mock(async (input: {
-      facilityId: string;
+      facilityId: number;
       storageKey: string;
       url: string;
       contentType: string;
       blurhash?: string | null;
-      uploadedByUserId: string;
+      uploadedByUserId: number;
     }) => ({
-      id: "photo-2",
+      id: 2,
       ...input,
       blurhash: input.blurhash ?? null,
       createdAt: now,
@@ -110,8 +110,8 @@ describe("Facility photo use cases", () => {
         delete: async () => undefined,
       },
     }).execute({
-      facilityId: "facility-1",
-      userId: "user-1",
+      facilityId: 1,
+      userId: 1,
       scope: globalScope,
       file,
     });
@@ -120,7 +120,7 @@ describe("Facility photo use cases", () => {
     expect(create).toHaveBeenCalled();
     expect(update).toHaveBeenCalled();
     expect(result.contentType).toBe("image/png");
-    expect(result.url).toMatch(/^\/api\/v1\/facilities\/photos\/facilities\/facility-1\//);
+    expect(result.url).toMatch(/^\/api\/v1\/facilities\/photos\/facilities\/1\//);
   });
 
   it("downloads a photo by storage key", async () => {
@@ -136,13 +136,13 @@ describe("Facility photo use cases", () => {
         },
         findById: async () => null,
         findByStorageKey: async () => ({
-          id: "photo-1",
-          facilityId: "facility-1",
+          id: 1,
+          facilityId: 1,
           storageKey: key,
           url: `/api/v1/facilities/photos/${key}`,
           contentType: "image/jpeg",
           blurhash: null,
-          uploadedByUserId: "user-1",
+          uploadedByUserId: 1,
           createdAt: now,
           updatedAt: now,
         }),
@@ -202,12 +202,12 @@ describe("Facility photo use cases", () => {
           delete: async () => undefined,
         },
       }).execute({
-        facilityId: "facility-out",
+        facilityId: 999,
         scope: {
           ...globalScope,
           isGlobal: false,
-          facilityIds: ["facility-1"],
-          clinicIds: ["facility-1"],
+          facilityIds: [1],
+          clinicIds: [1],
         },
       })
     ).rejects.toMatchObject({ statusCode: 403 });

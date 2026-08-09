@@ -122,8 +122,8 @@ export class Verify2FALoginUseCase {
     });
 
     const accessToken = await this.deps.tokenService.signAccessToken({
-      sub: user.id,
-      sid: session.id,
+      sub: String(user.id),
+      sid: String(session.id),
       role: user.role.name as any,
       tokenVersion: user.tokenVersion,
       iat: Math.floor(Date.now() / 1000),

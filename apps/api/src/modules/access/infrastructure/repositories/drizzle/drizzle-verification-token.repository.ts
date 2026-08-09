@@ -10,7 +10,7 @@ import type {
 
 export class DrizzleVerificationTokenRepository implements VerificationTokenRepository {
   async deleteUnusedByUserAndType(
-    userId: string,
+    userId: number,
     type: CreateVerificationTokenParams["type"],
   ): Promise<void> {
     await db
@@ -55,7 +55,7 @@ export class DrizzleVerificationTokenRepository implements VerificationTokenRepo
     return row ?? null;
   }
 
-  async markVerified(id: string): Promise<void> {
+  async markVerified(id: number): Promise<void> {
     await db
       .update(verificationTokens)
       .set({ verifiedAt: new Date(), updatedAt: new Date() })

@@ -16,7 +16,6 @@
       "version": "1.0.0",
       "dependencies": {
         "@atlasmed/access": "workspace:*",
-        "@atlasmed/cnes-ingestion": "workspace:*",
         "@atlasmed/config": "workspace:*",
         "@atlasmed/database": "workspace:*",
         "@atlasmed/facility-insights": "workspace:*",
@@ -112,11 +111,10 @@
         "typescript": "^5",
       },
     },
-    "apps/workers/cnes-ingestion": {
-      "name": "@atlasmed/cnes-ingestion-worker",
+    "apps/workers/temporal": {
+      "name": "@atlasmed/temporal-worker",
       "version": "0.0.0",
       "dependencies": {
-        "@atlasmed/cnes-ingestion": "workspace:*",
         "@atlasmed/config": "workspace:*",
         "@atlasmed/database": "workspace:*",
         "@atlasmed/facility-insights": "workspace:*",
@@ -143,19 +141,6 @@
         "@casl/ability": "^7.0.0",
         "jose": "^6.2.3",
         "zod": "^4.4.3",
-      },
-    },
-    "packages/cnes-ingestion": {
-      "name": "@atlasmed/cnes-ingestion",
-      "version": "0.0.0",
-      "dependencies": {
-        "@atlasmed/config": "workspace:*",
-        "@aws-sdk/client-s3": "^3.888.0",
-        "basic-ftp": "^5.0.5",
-      },
-      "devDependencies": {
-        "@types/bun": "1.3.14",
-        "typescript": "^5.9.3",
       },
     },
     "packages/config": {
@@ -237,10 +222,6 @@
 
     "@atlasmed/api": ["@atlasmed/api@workspace:apps/api"],
 
-    "@atlasmed/cnes-ingestion": ["@atlasmed/cnes-ingestion@workspace:packages/cnes-ingestion"],
-
-    "@atlasmed/cnes-ingestion-worker": ["@atlasmed/cnes-ingestion-worker@workspace:apps/workers/cnes-ingestion"],
-
     "@atlasmed/config": ["@atlasmed/config@workspace:packages/config"],
 
     "@atlasmed/database": ["@atlasmed/database@workspace:packages/database"],
@@ -252,6 +233,8 @@
     "@atlasmed/mobile": ["@atlasmed/mobile@workspace:apps/mobile"],
 
     "@atlasmed/observability": ["@atlasmed/observability@workspace:packages/observability"],
+
+    "@atlasmed/temporal-worker": ["@atlasmed/temporal-worker@workspace:apps/workers/temporal"],
 
     "@atlasmed/web": ["@atlasmed/web@workspace:apps/web"],
 
@@ -1210,8 +1193,6 @@
     "balanced-match": ["balanced-match@1.0.2", "", {}, "sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw=="],
 
     "baseline-browser-mapping": ["baseline-browser-mapping@2.10.31", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-MujYO3eP72uvmSE0i4wltsodRfIpZATP3jvzRNRGGxgzId7aVocVJJV3nf01qnzzKFGxQVC9bpWxl5cjxTr/7Q=="],
-
-    "basic-ftp": ["basic-ftp@5.3.1", "", {}, "sha512-bopVNp6ugyA150DDuZfPFdt1KZ5a94ZDiwX4hMgZDzF+GttD80lEy8kj98kbyhLXnPvhtIo93mdnLIjpCAeeOw=="],
 
     "better-result": ["better-result@2.9.2", "", {}, "sha512-WIFoBPCdnTOdk9inkE1ZRvCZ4P0CpSkAiLlchC65N7n9DcjZ3NhqkBOlafzpOVnO8ixyi37kicmSJ3ENhPZl7Q=="],
 

@@ -43,8 +43,11 @@ function buildUserAssignmentsTestRoute(actor: RouteTestUser) {
         return { message: "User territory assigned successfully" };
       },
       {
+        params: t.Object({
+          id: t.Number({ minimum: 1 }),
+        }),
         body: t.Object({
-          territoryId: t.String(),
+          territoryId: t.Number({ minimum: 1 }),
         }),
       },
     )
@@ -64,11 +67,17 @@ function buildUserAssignmentsTestRoute(actor: RouteTestUser) {
 
         return { message: "User territory revoked successfully" };
       },
+      {
+        params: t.Object({
+          id: t.Number({ minimum: 1 }),
+          territoryId: t.Number({ minimum: 1 }),
+        }),
+      },
     );
 }
 
 describe("userAssignmentsRoute", () => {
-  const targetUserId = "target-user-123";
+  const targetUserId = 2;
 
   beforeEach(() => {
     setRouteTestActor(adminRouteTestUser);
@@ -102,7 +111,7 @@ describe("userAssignmentsRoute", () => {
       );
 
       expect(response.status).toBe(200);
-      const body = await parseJsonResponse<{ userId: string }>(response);
+      const body = await parseJsonResponse<{ userId: number }>(response);
       expect(body.userId).toBe(targetUserId);
       expect(
         routeTestContext.mocks.getUserAssignmentsExecute,
@@ -138,7 +147,7 @@ describe("userAssignmentsRoute", () => {
         new Request(`http://localhost/users/${targetUserId}/territories`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ territoryId: "territory-a" }),
+          body: JSON.stringify({ territoryId: 1 }),
         }),
       );
 
@@ -155,7 +164,7 @@ describe("userAssignmentsRoute", () => {
         new Request(`http://localhost/users/${targetUserId}/territories`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ territoryId: "territory-a" }),
+          body: JSON.stringify({ territoryId: 1 }),
         }),
       );
 
@@ -168,7 +177,7 @@ describe("userAssignmentsRoute", () => {
       const app = createApp();
       const response = await app.handle(
         new Request(
-          `http://localhost/users/${targetUserId}/territories/territory-a`,
+          `http://localhost/users/${targetUserId}/territories/1`,
           { method: "DELETE" },
         ),
       );
@@ -178,7 +187,7 @@ describe("userAssignmentsRoute", () => {
         routeTestContext.mocks.revokeUserTerritoryExecute,
       ).toHaveBeenCalledWith({
         targetUserId,
-        territoryId: "territory-a",
+        territoryId: 1,
         revokedBy: adminRouteTestUser.id,
         actorRole: "ADMIN",
       });
@@ -189,7 +198,7 @@ describe("userAssignmentsRoute", () => {
       const app = createApp(managerRouteTestUser);
       const response = await app.handle(
         new Request(
-          `http://localhost/users/${targetUserId}/territories/territory-a`,
+          `http://localhost/users/${targetUserId}/territories/1`,
           { method: "DELETE" },
         ),
       );

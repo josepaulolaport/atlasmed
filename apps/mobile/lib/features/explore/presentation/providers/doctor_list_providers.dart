@@ -21,7 +21,7 @@ class DoctorsQuery {
   final int page;
   final int limit;
   final String? searchQuery;
-  final String? facilityId;
+  final int? facilityId;
   final double? latitude;
   final double? longitude;
   final double? radiusKm;

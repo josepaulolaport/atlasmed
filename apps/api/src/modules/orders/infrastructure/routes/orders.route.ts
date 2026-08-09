@@ -31,156 +31,149 @@ function parseStatuses(status: string | undefined): OrderStatus[] | undefined {
   return values as OrderStatus[];
 }
 
-function idempotencyKey(headers: Headers) {
-  const value = headers.get("idempotency-key")?.trim();
-  if (!value) {
-    throw new ValidationError([
-      { field: "idempotency-key", message: "Idempotency-Key header is required" },
-    ]);
-  }
-  return value;
-}
+const listOrdersRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) => new Elysia()
+  .use(authPlugin)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/orders",
+    async ({ query, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
+      return useCases.listOrders().execute({
+        page: query.page,
+        limit: query.limit,
+        statuses: parseStatuses(query.status),
+        facilityId: query.facilityId,
+        verticalId: query.verticalId,
+        includeItemPreviews: query.includeItemPreviews === "true",
+        actor: { userId, roleName: authContext.roleName },
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "List orders",
+        tags: ["Orders"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
+        facilityId: t.Optional(t.Number({ minimum: 1 })),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
+        includeItemPreviews: t.Optional(t.String({
+          description: "When true, each order includes up to 2 item preview lines",
+        })),
+        status: t.Optional(t.String({
+          description: "Comma-separated statuses: PENDING,APPROVED,INVOICED",
+        })),
+      }),
+    }
+  );
 
-export function createOrdersRoutes(
-  useCases: OrdersHttpUseCases = ordersUseCases,
-  authPlugin: any = auth,
-) {
-  const listOrdersRoute = new Elysia()
-    .use(authPlugin)
-    .use(requirePermission("read", "FACILITY"))
-    .get(
-      "/orders",
-      async ({ query, getScope, getUserId, getAuthContext }) => {
-        const [scope, userId, authContext] = await Promise.all([
-          getScope(),
-          getUserId(),
-          getAuthContext(),
-        ]);
-        return useCases.listOrders().execute({
-          page: query.page ? Number(query.page) : undefined,
-          limit: query.limit ? Number(query.limit) : undefined,
-          statuses: parseStatuses(query.status),
-          facilityId: query.facilityId,
-          interactionId: query.interactionId,
-          verticalId: query.verticalId,
-          includeItemPreviews: query.includeItemPreviews === "true",
-          actor: { userId, roleName: authContext.roleName },
-          scope,
-        });
+const getOrderRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) => new Elysia()
+  .use(authPlugin)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/orders/:id",
+    async ({ params, query, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
+      const order = await useCases.getOrder().execute({
+        orderId: params.id,
+        scope,
+        actor: { userId, roleName: authContext.roleName },
+        verticalId: query.verticalId,
+      });
+      if (!order) throw new ResourceNotFoundError("Order", params.id);
+      return order;
+    },
+    {
+      detail: {
+        summary: "Get order by id",
+        tags: ["Orders"],
+        security: [{ bearerAuth: [] }],
       },
-      {
-        detail: {
-          summary: "List orders",
-          tags: ["Orders"],
-          security: [{ bearerAuth: [] }],
-        },
-        query: t.Object({
-          page: t.Optional(t.String()),
-          limit: t.Optional(t.String()),
-          facilityId: t.Optional(t.String()),
-          interactionId: t.Optional(t.String()),
-          verticalId: t.Optional(t.String()),
-          includeItemPreviews: t.Optional(t.String({
-            description: "When true, each order includes up to 2 item preview lines",
-          })),
-          status: t.Optional(t.String({
-            description: "Comma-separated statuses: PENDING,APPROVED,INVOICED",
-          })),
-        }),
-      },
-    );
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      query: t.Object({
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
+      }),
+    }
+  );
 
-  const getOrderRoute = new Elysia()
-    .use(authPlugin)
-    .use(requirePermission("read", "FACILITY"))
-    .get(
-      "/orders/:id",
-      async ({ params, query, getScope, getUserId, getAuthContext }) => {
-        const [scope, userId, authContext] = await Promise.all([
-          getScope(),
-          getUserId(),
-          getAuthContext(),
-        ]);
-        const order = await useCases.getOrder().execute({
-          orderId: params.id,
-          scope,
-          actor: { userId, roleName: authContext.roleName },
-          verticalId: query.verticalId,
-        });
-        if (!order) throw new ResourceNotFoundError("Order", params.id);
-        return order;
+const createOrderRoute = (useCases: OrdersHttpUseCases, authPlugin: any = auth) => new Elysia()
+  .use(authPlugin)
+  .use(requirePermission("update", "FACILITY"))
+  .post(
+    "/orders",
+    async ({ body, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
+      return useCases.createOrder().execute({
+        facilityId: body.facilityId,
+        verticalId: body.verticalId,
+        personId: body.personId ?? null,
+        status: body.status,
+        type: body.type,
+        notes: body.notes,
+        freight: body.freight,
+        orderedAt: body.orderedAt,
+        items: body.items.map((item: { productId: number; quantity: number; unitPrice: number }) => ({
+          ...item,
+          productId: item.productId,
+        })),
+        scope,
+        actor: { userId, roleName: authContext.roleName },
+      });
+    },
+    {
+      detail: {
+        summary: "Create order",
+        tags: ["Orders"],
+        security: [{ bearerAuth: [] }],
       },
-      {
-        detail: {
-          summary: "Get order by id",
-          tags: ["Orders"],
-          security: [{ bearerAuth: [] }],
-        },
-        query: t.Object({ verticalId: t.Optional(t.String()) }),
-      },
-    );
-
-  const createOrderRoute = new Elysia()
-    .use(authPlugin)
-    .use(requirePermission("update", "FACILITY"))
-    .post(
-      "/orders",
-      async ({ body, request, getScope, getUserId, getAuthContext }) => {
-        const [scope, userId, authContext] = await Promise.all([
-          getScope(),
-          getUserId(),
-          getAuthContext(),
-        ]);
-        return useCases.createOrder().execute({
-          idempotencyKey: idempotencyKey(request.headers),
-          facilityId: body.facilityId,
-          interactionId: body.interactionId,
-          verticalId: body.verticalId,
-          professionalId: body.professionalId,
-          status: body.status,
-          type: body.type,
-          notes: body.notes,
-          freight: body.freight,
-          orderedAt: body.orderedAt,
-          items: body.items,
-          scope,
-          actor: { userId, roleName: authContext.roleName },
-        });
-      },
-      {
-        detail: {
-          summary: "Create order",
-          tags: ["Orders"],
-          security: [{ bearerAuth: [] }],
-        },
-        body: t.Object({
-          facilityId: t.String(),
-          interactionId: t.Optional(t.String()),
-          verticalId: t.Optional(t.String()),
-          professionalId: t.Optional(t.Nullable(t.String())),
-          status: t.Optional(t.Union([t.Literal("DRAFT"), t.Literal("PENDING")])),
-          type: t.Optional(t.Union([
+      body: t.Object({
+        facilityId: t.Number({ minimum: 1 }),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
+        personId: t.Optional(t.Nullable(t.Number({ minimum: 1 }))),
+        status: t.Optional(t.Union([t.Literal("DRAFT"), t.Literal("PENDING")])),
+        type: t.Optional(
+          t.Union([
             t.Literal("SALE"),
             t.Literal("CONSIGNMENT"),
             t.Literal("DONATION"),
             t.Literal("OTHER"),
-          ])),
-          notes: t.Optional(t.Nullable(t.String())),
-          freight: t.Optional(t.Number()),
-          orderedAt: t.Optional(t.String()),
-          items: t.Array(t.Object({
-            productId: t.String(),
+          ])
+        ),
+        notes: t.Optional(t.Nullable(t.String())),
+        freight: t.Optional(t.Number()),
+        orderedAt: t.Optional(t.String()),
+        items: t.Array(
+          t.Object({
+            productId: t.Number({ minimum: 1 }),
             quantity: t.Number(),
             unitPrice: t.Optional(t.Number()),
-          }), { minItems: 1 }),
-        }),
-      },
-    );
+          }),
+          { minItems: 1 }
+        ),
+      }),
+    }
+  );
 
+export function createOrdersRoutes(useCases: OrdersHttpUseCases = ordersUseCases, authPlugin: any = auth) {
   return new Elysia()
-    .use(listOrdersRoute)
-    .use(createOrderRoute)
-    .use(getOrderRoute);
+    .use(listOrdersRoute(useCases, authPlugin))
+    .use(createOrderRoute(useCases, authPlugin))
+    .use(getOrderRoute(useCases, authPlugin));
 }
 
 export const ordersRoute = createOrdersRoutes();

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
@@ -23,12 +24,18 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   FacilityAssociateRepository(this.facilityId, {RepositoryHttpClient? client})
     : _client = client,
       super(
-        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals'),
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/healthcare-professionals',
+        ),
         name: 'FacilityAssociateRepository',
       );
 
-  final String facilityId;
+  final int facilityId;
   final RepositoryHttpClient? _client;
+
+  String get _healthcarePath =>
+      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
+      '/healthcare-professionals';
 
   @override
   RepositoryHttpClient get client => _client ?? super.client;
@@ -37,6 +44,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   PaginatedProfessionals fromJson(String json) =>
       PaginatedProfessionals.fromJson(json);
 
+  /// Global Explorar search — `GET /healthcare-professionals`.
   Future<List<ProfessionalRoster>> searchDoctors({
     String? search,
     int limit = 40,
@@ -56,15 +64,14 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
   }
 
-  Future<void> associateDoctor(String professionalId) async {
+  /// Link an existing person as healthcare professional at this facility.
+  Future<void> associateDoctor(int personId) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId/associate',
-        ),
+        url: Uri.parse(_healthcarePath),
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
+        body: {'personId': personId},
       ),
     );
 
@@ -78,34 +85,40 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
   }
 
-  Future<ProfessionalRoster> createAndAssociateDoctor({
-    required String firstName,
-    required String lastName,
-    String? specialty,
-    String? crmNumber,
-    String? crmState,
-    String? phone,
-    String? email,
-    bool isPrescriber = false,
-    bool isBuyer = false,
-    bool isDecisionMaker = false,
+  /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
+  Future<ProfessionalRoster> updateDoctorRoles(
+    ProfessionalRoster doctor, {
+    required List<int> roleIds,
+    List<PersonFacilityRoleCatalogEntry>? catalog,
+  }) async {
+    final personFacilityId = doctor.personFacilityId;
+    if (personFacilityId == null) {
+      throw const FacilityAssociateException(
+        'personFacilityId é obrigatório para salvar papéis',
+      );
+    }
+
+    final dto = await _putHealthcareRoles(
+      personFacilityId: personFacilityId,
+      roleIds: PersonFacilityRoleCatalog.sortedIds(roleIds),
+    );
+    final fromApi = ProfessionalRoster.fromRosterItem(dto, catalog: catalog);
+    return doctor.copyWith(
+      personFacilityId: fromApi.personFacilityId,
+      roleIds: fromApi.roleIds,
+    );
+  }
+
+  Future<FacilityProfessionalItemDTO> _putHealthcareRoles({
+    required int personFacilityId,
+    required List<int> roleIds,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals'),
-        method: RepositoryHttpMethod.post,
+        url: Uri.parse('$_healthcarePath/$personFacilityId/roles'),
+        method: RepositoryHttpMethod.put,
         headers: const {'Content-Type': 'application/json'},
-        body: {
-          'firstName': firstName,
-          'lastName': lastName,
-          if (specialty != null && specialty.isNotEmpty)
-            'primarySpecialtyLabel': specialty,
-          if (crmNumber != null && crmNumber.isNotEmpty) 'crmNumber': crmNumber,
-          if (crmState != null && crmState.isNotEmpty) 'crmState': crmState,
-          if (phone != null && phone.isNotEmpty) 'mobilePhone': phone,
-          if (email != null && email.isNotEmpty) 'email': email,
-          'facilityIds': [facilityId],
-        },
+        body: {'roleIds': roleIds},
       ),
     );
 
@@ -113,115 +126,57 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
       final shouldThrow = await onErrorStatusCode(response.statusCode);
       if (shouldThrow) {
         throw FacilityAssociateException(
-          'Falha ao criar médico (${response.statusCode})',
+          'Falha ao salvar papéis (${response.statusCode})',
         );
       }
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final dto = ProfessionalDTO.fromMap(map);
+    return FacilityProfessionalItemDTO.fromMap(map);
+  }
 
-    final needsRolePatch = isPrescriber || isBuyer || isDecisionMaker;
-    if (needsRolePatch) {
-      await _patchRoles(
-        dto.id,
-        isPrescriber: isPrescriber,
-        isBuyer: isBuyer,
-        isDecisionMaker: isDecisionMaker,
+  /// `DELETE …/healthcare-professionals/:personFacilityId` — soft-end affiliation.
+  Future<void> endDoctorAffiliation(ProfessionalRoster doctor) async {
+    final personFacilityId = doctor.personFacilityId;
+    if (personFacilityId == null) {
+      throw const FacilityAssociateException(
+        'personFacilityId é obrigatório para encerrar vínculo',
       );
     }
 
-    final name = dto.displayName;
-    return ProfessionalRoster(
-      id: dto.id,
-      name: name,
-      initials: initialsFromName(name),
-      hue: hueFromName(name),
-      specialty: specialty ?? dto.specialty,
-      crm: dto.crm.isEmpty ? null : dto.crm,
-      phone: phone ?? dto.phone,
-      email: email ?? dto.email,
-      isPrescriber: isPrescriber,
-      isBuyer: isBuyer,
-      isDecisionMaker: isDecisionMaker,
-      roleBadge: isDecisionMaker ? 'DECISOR' : null,
-    );
-  }
-
-  Future<void> _patchRoles(
-    String professionalId, {
-    bool isPartner = false,
-    required bool isPrescriber,
-    required bool isBuyer,
-    required bool isDecisionMaker,
-    bool throwOnError = false,
-  }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId',
-        ),
-        method: RepositoryHttpMethod.patch,
-        headers: const {'Content-Type': 'application/json'},
-        body: {
-          'isPartner': isPartner,
-          'isPrescriber': isPrescriber,
-          'isBuyer': isBuyer,
-          'isDecisionMaker': isDecisionMaker,
-        },
+        url: Uri.parse('$_healthcarePath/$personFacilityId'),
+        method: RepositoryHttpMethod.delete,
       ),
     );
 
     if (!successfulCondition(response.statusCode, response.body)) {
-      if (throwOnError) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
         throw FacilityAssociateException(
-          'Falha ao salvar papel (${response.statusCode})',
+          'Falha ao encerrar vínculo (${response.statusCode})',
         );
       }
-      // Association already exists; role flags are best-effort on create.
-      await onErrorStatusCode(response.statusCode);
     }
   }
 
-  /// Updates facility-scoped role flags for an associated doctor.
-  Future<ProfessionalRoster> updateDoctorRoles(
-    ProfessionalRoster doctor, {
-    required bool isPartner,
-    required bool isPrescriber,
-    required bool isBuyer,
-    required bool isDecisionMaker,
-  }) async {
-    await _patchRoles(
-      doctor.id,
-      isPartner: isPartner,
-      isPrescriber: isPrescriber,
-      isBuyer: isBuyer,
-      isDecisionMaker: isDecisionMaker,
-      throwOnError: true,
-    );
+  String get _relationshipPath => '${AppConfig.apiBaseUrl}/api/v1/persons';
 
-    return doctor.copyWith(
-      isPartner: isPartner,
-      isPrescriber: isPrescriber,
-      isBuyer: isBuyer,
-      isDecisionMaker: isDecisionMaker,
-      roleBadge: isDecisionMaker ? 'DECISOR' : null,
-      clearRoleBadge: !isDecisionMaker,
-    );
-  }
-
-  /// User×professional relationship (1–10). Null clears the score.
+  /// `PATCH /persons/:personId/relationship`.
   Future<int?> updateRelationshipLevel(
-    String professionalId, {
+    int personId, {
     int? relationshipLevel,
   }) async {
+    if (relationshipLevel == null) {
+      throw const FacilityAssociateException(
+        'Nível de relacionamento é obrigatório',
+      );
+    }
+
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId',
-        ),
+        url: Uri.parse('$_relationshipPath/$personId/relationship'),
         method: RepositoryHttpMethod.patch,
         headers: const {'Content-Type': 'application/json'},
         body: {'relationshipLevel': relationshipLevel},
@@ -229,40 +184,37 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     );
 
     if (!successfulCondition(response.statusCode, response.body)) {
-      throw FacilityAssociateException(
-        'Falha ao salvar relacionamento (${response.statusCode})',
-      );
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao salvar relacionamento (${response.statusCode})',
+        );
+      }
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final value = map['relationshipLevel'];
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return null;
+    final level = map['relationshipLevel'];
+    if (level is num) return level.toInt();
+    return relationshipLevel;
   }
 
-  /// Current association context including the caller's relationship score.
-  Future<int?> fetchRelationshipLevel(String professionalId) async {
+  /// `GET /persons/:personId/relationship`.
+  Future<int?> fetchRelationshipLevel(int personId) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
-        url: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
-          '/professionals/$professionalId',
-        ),
+        url: Uri.parse('$_relationshipPath/$personId/relationship'),
         method: RepositoryHttpMethod.get,
       ),
     );
 
     if (!successfulCondition(response.statusCode, response.body)) {
+      await onErrorStatusCode(response.statusCode);
       return null;
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;
-    final association = map['association'];
-    if (association is! Map) return null;
-    final value = association['relationshipLevel'];
-    if (value is int) return value;
-    if (value is num) return value.toInt();
+    final level = map['relationshipLevel'];
+    if (level is num) return level.toInt();
     return null;
   }
 
@@ -274,12 +226,11 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
       initials: initialsFromName(name),
       hue: hueFromName(name),
       specialty: d.specialty,
-      crm: d.crm.isEmpty ? null : d.crm,
     );
   }
 }
 
-/// Split a full name into first/last for `POST /professionals`.
+/// Split a full name into first/last for person projection create.
 ({String firstName, String lastName}) splitPersonName(String fullName) {
   final parts = fullName.trim().split(RegExp(r'\s+'));
   if (parts.isEmpty || parts.first.isEmpty) {
@@ -289,23 +240,4 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     return (firstName: parts.first, lastName: '-');
   }
   return (firstName: parts.first, lastName: parts.sublist(1).join(' '));
-}
-
-/// Best-effort CRM parse from free text like `CRM/SP 74.127`.
-({String? number, String? state}) parseCrmField(String? raw) {
-  if (raw == null) return (number: null, state: null);
-  final trimmed = raw.trim();
-  if (trimmed.isEmpty) return (number: null, state: null);
-
-  final stateMatch = RegExp(
-    r'(?:CRM[/\-\s]?)?([A-Z]{2})\b',
-    caseSensitive: false,
-  ).firstMatch(trimmed);
-  final state = stateMatch?.group(1)?.toUpperCase();
-
-  final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-  if (digits.isEmpty) {
-    return (number: trimmed, state: state);
-  }
-  return (number: digits, state: state);
 }

@@ -8,10 +8,10 @@ import type {
 } from "@atlasmed/database";
 
 export interface CadastroSubmissionRecord {
-  id: string;
-  facilityId: string;
-  verticalId: string | null;
-  submittedByUserId: string | null;
+  id: number;
+  facilityId: number;
+  verticalId: number | null;
+  submittedByUserId: number | null;
   status: CadastroSubmissionStatus;
   version: number;
   submittedAt: Date | null;
@@ -20,9 +20,9 @@ export interface CadastroSubmissionRecord {
 }
 
 export interface SubmissionDocumentRecord {
-  id: string;
-  submissionId: string;
-  requirementId: string;
+  id: number;
+  submissionId: number;
+  requirementId: number;
   title: string;
   status: CadastroDocumentStatus;
   version: number;
@@ -30,11 +30,11 @@ export interface SubmissionDocumentRecord {
   createdAt: Date;
   updatedAt: Date;
   requirement?: {
-    id: string;
+    id: number;
     slug: string;
     name: string;
     description: string | null;
-    appliesToTaxIdType: "PF" | "PJ" | null;
+    appliesToLegalDocumentType: "CNPJ" | "CPF" | null;
     allowedMimeTypes: string[];
     maxFiles: number;
     maxFileSizeBytes: number;
@@ -44,8 +44,8 @@ export interface SubmissionDocumentRecord {
 }
 
 export interface FileAssetRecord {
-  id: string;
-  facilityId: string;
+  id: number;
+  facilityId: number;
   storageProvider: string;
   bucket: string;
   objectKey: string;
@@ -69,9 +69,9 @@ export interface FileAssetRecord {
 }
 
 export interface DocumentFileRecord {
-  id: string;
-  submissionDocumentId: string;
-  fileAssetId: string;
+  id: number;
+  submissionDocumentId: number;
+  fileAssetId: number;
   position: number;
   role: CadastroDocumentFileRole;
   createdAt: Date;
@@ -79,8 +79,8 @@ export interface DocumentFileRecord {
 }
 
 export interface UploadSessionRecord {
-  id: string;
-  fileAssetId: string;
+  id: number;
+  fileAssetId: number;
   storageUploadId: string;
   status: CadastroUploadSessionStatus;
   partSize: number;
@@ -90,38 +90,38 @@ export interface UploadSessionRecord {
 }
 
 export interface CadastroSubmissionRepository {
-  findDraftByFacility(facilityId: string): Promise<CadastroSubmissionRecord | null>;
-  findById(id: string): Promise<CadastroSubmissionRecord | null>;
-  findLatestByFacility(facilityId: string): Promise<CadastroSubmissionRecord | null>;
+  findDraftByFacility(facilityId: number): Promise<CadastroSubmissionRecord | null>;
+  findById(id: number): Promise<CadastroSubmissionRecord | null>;
+  findLatestByFacility(facilityId: number): Promise<CadastroSubmissionRecord | null>;
   createSubmission(input: {
-    facilityId: string;
-    verticalId: string;
-    submittedByUserId?: string | null;
+    facilityId: number;
+    verticalId: number;
+    submittedByUserId?: number | null;
     version: number;
   }): Promise<CadastroSubmissionRecord>;
   updateSubmissionStatus(input: {
-    id: string;
+    id: number;
     status: CadastroSubmissionStatus;
     submittedAt?: Date | null;
-    submittedByUserId?: string | null;
+    submittedByUserId?: number | null;
   }): Promise<CadastroSubmissionRecord>;
-  deleteSubmission(id: string): Promise<void>;
+  deleteSubmission(id: number): Promise<void>;
   listSubmissions(input: {
     status?: CadastroSubmissionStatus[];
     page: number;
     limit: number;
   }): Promise<{ items: CadastroSubmissionRecord[]; total: number }>;
 
-  findDocumentById(id: string): Promise<SubmissionDocumentRecord | null>;
-  findDocumentsBySubmission(submissionId: string): Promise<SubmissionDocumentRecord[]>;
+  findDocumentById(id: number): Promise<SubmissionDocumentRecord | null>;
+  findDocumentsBySubmission(submissionId: number): Promise<SubmissionDocumentRecord[]>;
   findDocumentBySubmissionAndRequirement(
-    submissionId: string,
-    requirementId: string
+    submissionId: number,
+    requirementId: number
   ): Promise<SubmissionDocumentRecord | null>;
   /** Documents for a facility+requirement, newest package first. */
   listDocumentsForFacilityRequirement(input: {
-    facilityId: string;
-    requirementId: string;
+    facilityId: number;
+    requirementId: number;
     excludeDraft?: boolean;
   }): Promise<
     Array<{
@@ -143,20 +143,20 @@ export interface CadastroSubmissionRepository {
     total: number;
   }>;
   createDocument(input: {
-    submissionId: string;
-    requirementId: string;
+    submissionId: number;
+    requirementId: number;
     title: string;
   }): Promise<SubmissionDocumentRecord>;
   updateDocumentStatus(input: {
-    id: string;
+    id: number;
     status: CadastroDocumentStatus;
     reviewComment?: string | null;
     version?: number;
   }): Promise<SubmissionDocumentRecord>;
 
   createFileAsset(input: {
-    id?: string;
-    facilityId: string;
+    id?: number;
+    facilityId: number;
     bucket: string;
     objectKey: string;
     originalFilename: string;
@@ -165,10 +165,10 @@ export interface CadastroSubmissionRepository {
     sha256?: string | null;
     status?: CadastroFileAssetStatus;
   }): Promise<FileAssetRecord>;
-  findFileAssetById(id: string): Promise<FileAssetRecord | null>;
-  deleteFileAsset(id: string): Promise<void>;
+  findFileAssetById(id: number): Promise<FileAssetRecord | null>;
+  deleteFileAsset(id: number): Promise<void>;
   updateFileAsset(input: {
-    id: string;
+    id: number;
     status?: CadastroFileAssetStatus;
     sha256?: string | null;
     detectedMimeType?: string | null;
@@ -183,58 +183,58 @@ export interface CadastroSubmissionRepository {
     processedAt?: Date | null;
   }): Promise<FileAssetRecord>;
 
-  listDocumentFiles(documentId: string): Promise<DocumentFileRecord[]>;
+  listDocumentFiles(documentId: number): Promise<DocumentFileRecord[]>;
   findDocumentFileByFileAssetId(
-    fileAssetId: string
+    fileAssetId: number
   ): Promise<DocumentFileRecord | null>;
   createDocumentFile(input: {
-    submissionDocumentId: string;
-    fileAssetId: string;
+    submissionDocumentId: number;
+    fileAssetId: number;
     position: number;
     role: CadastroDocumentFileRole;
   }): Promise<DocumentFileRecord>;
   /** Removes the document↔file link, then the file asset row. */
-  deleteDocumentFileByFileAssetId(fileAssetId: string): Promise<void>;
+  deleteDocumentFileByFileAssetId(fileAssetId: number): Promise<void>;
   reorderDocumentFiles(input: {
-    submissionDocumentId: string;
-    ordered: Array<{ fileAssetId: string; position: number; role: CadastroDocumentFileRole }>;
+    submissionDocumentId: number;
+    ordered: Array<{ fileAssetId: number; position: number; role: CadastroDocumentFileRole }>;
   }): Promise<DocumentFileRecord[]>;
-  sumDocumentFileSizes(documentId: string): Promise<number>;
-  countDocumentFiles(documentId: string): Promise<number>;
+  sumDocumentFileSizes(documentId: number): Promise<number>;
+  countDocumentFiles(documentId: number): Promise<number>;
   /** Next free 1-based position (max existing + 1). Safe after mid-list deletes. */
-  nextDocumentFilePosition(documentId: string): Promise<number>;
+  nextDocumentFilePosition(documentId: number): Promise<number>;
 
   createUploadSession(input: {
-    fileAssetId: string;
+    fileAssetId: number;
     storageUploadId: string;
     partSize: number;
     expiresAt: Date;
   }): Promise<UploadSessionRecord>;
-  findUploadSessionById(id: string): Promise<UploadSessionRecord | null>;
+  findUploadSessionById(id: number): Promise<UploadSessionRecord | null>;
   updateUploadSession(input: {
-    id: string;
+    id: number;
     status: CadastroUploadSessionStatus;
     completedAt?: Date | null;
   }): Promise<UploadSessionRecord>;
   upsertUploadPart(input: {
-    uploadSessionId: string;
+    uploadSessionId: number;
     partNumber: number;
     etag: string;
     sizeBytes?: number;
   }): Promise<void>;
 
   createReviewDecision(input: {
-    submissionDocumentId: string;
-    reviewerId: string;
+    submissionDocumentId: number;
+    reviewerId: number;
     decision: CadastroReviewDecision;
     reasonCode?: string | null;
     comment?: string | null;
     documentVersion: number;
-    flaggedFileAssetIds?: string[];
+    flaggedFileAssetIds?: number[];
   }): Promise<void>;
 
   createProcessingEvent(input: {
-    fileAssetId: string;
+    fileAssetId: number;
     processingStep: string;
     status: "STARTED" | "SUCCEEDED" | "FAILED";
     errorCode?: string | null;

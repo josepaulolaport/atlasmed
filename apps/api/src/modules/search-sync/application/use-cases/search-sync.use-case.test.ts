@@ -7,7 +7,7 @@ import {
 
 describe("search sync use cases", () => {
   test("starts full search rebuilds without accepting selective ids", async () => {
-    const started: Array<"facilities" | "professionals"> = [];
+    const started: Array<"facilities" | "persons"> = [];
     const useCase = new StartSearchSyncUseCase({
       start: async (entity) => {
         started.push(entity);
@@ -16,6 +16,11 @@ describe("search sync use cases", () => {
       startOrdersBackfill: async () => ({
         workflowId: "purchase-recurrence-backfill",
         runId: "run-orders",
+        existing: false,
+      }),
+      startEmultecOrderImport: async () => ({
+        workflowId: "emultec-order-import-hybrid",
+        runId: "run-emultec",
         existing: false,
       }),
     });
@@ -39,6 +44,11 @@ describe("search sync use cases", () => {
         ordersBackfillStarts += 1;
         return { workflowId: "purchase-recurrence-backfill", runId: "run-orders", existing: false };
       },
+      startEmultecOrderImport: async () => ({
+        workflowId: "unexpected-emultec",
+        runId: "unexpected",
+        existing: false,
+      }),
     });
 
     await expect(useCase.execute(parseSearchSyncRequest({ entity: "orders" }))).resolves.toEqual({
@@ -49,6 +59,35 @@ describe("search sync use cases", () => {
     expect(ordersBackfillStarts).toBe(1);
   });
 
+  test("starts Emultec HYBRID import for emultec-orders", async () => {
+    let emultecStarts = 0;
+    const useCase = new StartSearchSyncUseCase({
+      start: async () => ({ workflowId: "unexpected", runId: "unexpected", existing: false }),
+      startOrdersBackfill: async () => ({
+        workflowId: "unexpected-orders",
+        runId: "unexpected",
+        existing: false,
+      }),
+      startEmultecOrderImport: async () => {
+        emultecStarts += 1;
+        return {
+          workflowId: "emultec-order-import-hybrid",
+          runId: "run-emultec",
+          existing: false,
+        };
+      },
+    });
+
+    await expect(
+      useCase.execute(parseSearchSyncRequest({ entity: "emultec-orders" }))
+    ).resolves.toEqual({
+      workflowId: "emultec-order-import-hybrid",
+      runId: "run-emultec",
+      existing: false,
+    });
+    expect(emultecStarts).toBe(1);
+  });
+
   test("returns the Temporal status for a workflow id", async () => {
     const useCase = new GetSearchSyncStatusUseCase({
       describe: async (workflowId) => ({ workflowId, runId: "run-2", status: "RUNNING" }),
@@ -56,6 +95,11 @@ describe("search sync use cases", () => {
 
     await expect(useCase.execute("search-sync-facilities-full")).resolves.toEqual({
       workflowId: "search-sync-facilities-full",
+      runId: "run-2",
+      status: "RUNNING",
+    });
+    await expect(useCase.execute("emultec-order-import-hybrid")).resolves.toEqual({
+      workflowId: "emultec-order-import-hybrid",
       runId: "run-2",
       status: "RUNNING",
     });

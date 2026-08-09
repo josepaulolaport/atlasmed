@@ -1,8 +1,10 @@
 import {
   pgTable,
   text,
+  boolean,
   timestamp,
-  primaryKey,
+  bigint,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -11,99 +13,73 @@ import { relations } from "drizzle-orm";
  * Seeded separately from CNES CSV import — schema only here.
  */
 
-export const services = pgTable("services", {
-  serviceCode: text("service_code").primaryKey(),
-  serviceName: text("service_name").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const serviceClassifications = pgTable(
-  "service_classifications",
+/** CBO occupation catalog (ADR 0004 remake — empty until post-overhaul load). */
+export const occupations = pgTable(
+  "occupations",
   {
-    serviceCode: text("service_code")
-      .notNull()
-      .references(() => services.serviceCode, { onDelete: "restrict" }),
-    classificationCode: text("classification_code").notNull(),
-    classificationName: text("classification_name").notNull(),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    cnesId: text("cnes_id").notNull(),
+    name: text("name").notNull(),
+    isHealthOccupation: boolean("is_health_occupation"),
+    isRegulated: boolean("is_regulated"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
-  (t) => [
-    primaryKey({
-      name: "service_classifications_pkey",
-      columns: [t.serviceCode, t.classificationCode],
-    }),
-  ]
+  (t) => [unique("occupations_cnes_id_key").on(t.cnesId)]
 );
 
-export const occupations = pgTable("occupations", {
-  occupationCode: text("occupation_code").primaryKey(),
-  occupationName: text("occupation_name").notNull(),
-  professionalClassification: text("professional_classification"),
-  isHealthOccupation: text("is_health_occupation"),
-  isRegulated: text("is_regulated"),
-  referenceYear: text("reference_year"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+/**
+ * CNES TP_UNIDADE catalog (occupation-shaped: bigint id + external cnes_id).
+ * Empty until post-overhaul load — Slice E dropped text-PK shape / facility_types axis.
+ */
+export const unitTypes = pgTable(
+  "unit_types",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    cnesId: text("cnes_id").notNull(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [unique("unit_types_cnes_id_key").on(t.cnesId)]
+);
 
-export const facilityTypes = pgTable("facility_types", {
-  facilityTypeCode: text("facility_type_code").primaryKey(),
-  facilityTypeName: text("facility_type_name").notNull(),
-  conceptDescription: text("concept_description"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const unitTypes = pgTable("unit_types", {
-  unitTypeCode: text("unit_type_code").primaryKey(),
-  unitTypeName: text("unit_type_name").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
+/**
+ * CNES unit subtypes scoped by parent unit type.
+ * UNIQUE (unit_type_id, cnes_id) — codes are not globally unique.
+ */
 export const unitSubtypes = pgTable(
   "unit_subtypes",
   {
-    unitTypeCode: text("unit_type_code")
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    unitTypeId: bigint("unit_type_id", { mode: "number" })
       .notNull()
-      .references(() => unitTypes.unitTypeCode, { onDelete: "restrict" }),
-    subtypeCode: text("subtype_code").notNull(),
-    subtypeName: text("subtype_name").notNull(),
+      .references(() => unitTypes.id, { onDelete: "restrict" }),
+    cnesId: text("cnes_id").notNull(),
+    name: text("name").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
-  (t) => [
-    primaryKey({
-      name: "unit_subtypes_pkey",
-      columns: [t.unitTypeCode, t.subtypeCode],
-    }),
-  ]
+  (t) => [unique("unit_subtypes_unit_type_id_cnes_id_key").on(t.unitTypeId, t.cnesId)]
 );
 
-export const deactivationReasons = pgTable("deactivation_reasons", {
-  deactivationCode: text("deactivation_code").primaryKey(),
-  deactivationReason: text("deactivation_reason").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+/**
+ * CNES motivo desativação catalog (occupation-shaped: bigint id + external cnes_id).
+ * Empty until post-overhaul load.
+ */
+export const deactivationReasons = pgTable(
+  "deactivation_reasons",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    cnesId: text("cnes_id").notNull(),
+    description: text("description").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => [unique("deactivation_reasons_cnes_id_key").on(t.cnesId)]
+);
 
 // --- Relations ---
-
-export const servicesRelations = relations(services, ({ many }) => ({
-  classifications: many(serviceClassifications),
-}));
-
-export const serviceClassificationsRelations = relations(
-  serviceClassifications,
-  ({ one }) => ({
-    service: one(services, {
-      fields: [serviceClassifications.serviceCode],
-      references: [services.serviceCode],
-    }),
-  })
-);
 
 export const unitTypesRelations = relations(unitTypes, ({ many }) => ({
   subtypes: many(unitSubtypes),
@@ -111,7 +87,7 @@ export const unitTypesRelations = relations(unitTypes, ({ many }) => ({
 
 export const unitSubtypesRelations = relations(unitSubtypes, ({ one }) => ({
   unitType: one(unitTypes, {
-    fields: [unitSubtypes.unitTypeCode],
-    references: [unitTypes.unitTypeCode],
+    fields: [unitSubtypes.unitTypeId],
+    references: [unitTypes.id],
   }),
 }));

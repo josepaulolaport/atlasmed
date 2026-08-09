@@ -70,21 +70,21 @@ describe("Pending2FALoginService", () => {
 
   it("stores and consumes pending login atomically", async () => {
     const pendingToken = await service.store({
-      userId: "user-123",
+      userId: 123,
       ipAddress: "10.0.0.1",
     });
 
     const pending = await service.get(pendingToken);
-    expect(pending.userId).toBe("user-123");
+    expect(pending.userId).toBe(123);
 
     const consumed = await service.consume(pendingToken);
-    expect(consumed.userId).toBe("user-123");
+    expect(consumed.userId).toBe(123);
 
     await expect(service.get(pendingToken)).rejects.toThrow(TokenInvalidError);
   });
 
   it("invalidates pending token after max failed attempts", async () => {
-    const pendingToken = await service.store({ userId: "user-123" });
+    const pendingToken = await service.store({ userId: 123 });
 
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const remaining = await service.recordFailedAttempt(pendingToken);
@@ -97,7 +97,7 @@ describe("Pending2FALoginService", () => {
   });
 
   it("acquireVerificationLock allows only one winner", async () => {
-    const pendingToken = await service.store({ userId: "user-123" });
+    const pendingToken = await service.store({ userId: 123 });
 
     expect(await service.acquireVerificationLock(pendingToken)).toBe(true);
     expect(await service.acquireVerificationLock(pendingToken)).toBe(false);

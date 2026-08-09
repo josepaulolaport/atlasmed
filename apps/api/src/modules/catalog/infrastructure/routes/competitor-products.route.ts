@@ -10,8 +10,8 @@ const listCompetitorProductsRoute = new Elysia()
     "/competitor-products",
     async ({ query }) =>
       catalogUseCases.listCompetitorProducts().execute({
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         search: query.search,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
       }),
@@ -22,8 +22,8 @@ const listCompetitorProductsRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1 })),
         search: t.Optional(t.String()),
         isActive: t.Optional(t.String()),
       }),
@@ -36,13 +36,16 @@ const getCompetitorProductRoute = new Elysia()
   .get(
     "/competitor-products/:id",
     async ({ params }) =>
-      catalogUseCases.getCompetitorProduct().execute({ competitorProductId: params.id }),
+      catalogUseCases.getCompetitorProduct().execute({
+        competitorProductId: params.id,
+      }),
     {
       detail: {
         summary: "Get competitor product",
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     }
   );
 
@@ -81,13 +84,17 @@ const updateCompetitorProductRoute = new Elysia()
     async ({ params, body }) =>
       catalogUseCases
         .updateCompetitorProduct()
-        .execute({ competitorProductId: params.id, ...body }),
+        .execute({
+          competitorProductId: params.id,
+          ...body,
+        }),
     {
       detail: {
         summary: "Update competitor product",
         tags: ["Catalog"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         code: t.Optional(t.Nullable(t.String())),
         name: t.Optional(t.String()),

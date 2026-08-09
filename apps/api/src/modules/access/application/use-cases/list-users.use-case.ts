@@ -11,7 +11,7 @@ interface ListUsersInput {
   status?: string;
   role?: string;
   search?: string;
-  verticalId?: string;
+  verticalId?: number;
   sortBy?: ListUsersSortBy;
   sortDir?: ListUsersSortDir;
   scope: ScopeContext;
@@ -22,7 +22,7 @@ interface ListUsersDependencies {
 }
 
 export function serializeUser(user: {
-  id: string;
+  id: number;
   email: string | null;
   username: string;
   phoneNumber?: string | null;
@@ -40,7 +40,7 @@ export function serializeUser(user: {
   suspendedAt?: Date | null;
   deactivatedAt?: Date | null;
   role: {
-    id: string;
+    id: number;
     name: string;
     description?: string | null;
   };

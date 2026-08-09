@@ -23,12 +23,12 @@ interface UpdateAvatarDependencies {
 }
 
 interface UploadAvatarInput {
-  userId: string;
+  userId: number;
   file: File;
 }
 
 interface RemoveAvatarInput {
-  userId: string;
+  userId: number;
 }
 
 export class UpdateAvatarUseCase {
@@ -73,7 +73,7 @@ export class UpdateAvatarUseCase {
     return updatedUser;
   }
 
-  private async findUser(userId: string): Promise<UserRecord> {
+  private async findUser(userId: number): Promise<UserRecord> {
     const user = await this.dependencies.userRepository.findById(userId);
     if (!user) throw new UserNotFoundError(userId);
     return user;

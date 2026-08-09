@@ -3,16 +3,16 @@ import { eq, desc, sql } from "drizzle-orm";
 import { db as defaultDb } from "../../../../../infrastructure/database/db";
 
 export interface VisitRecord {
-  id: string;
-  userId: string;
-  facilityId: string;
+  id: number;
+  userId: number;
+  facilityId: number;
   visitedAt: Date;
   createdAt: Date;
 }
 
 export type CreateVisitInput = {
-  userId: string;
-  facilityId: string;
+  userId: number;
+  facilityId: number;
   visitedAt: Date;
 };
 
@@ -20,8 +20,8 @@ export class DrizzleVisitRepository {
   constructor(private readonly db: Database = defaultDb) {}
 
   async findByFacilityAndUser(
-    facilityId: string,
-    userId: string,
+    facilityId: number,
+    userId: number,
     options?: { page?: number; limit?: number },
   ): Promise<VisitRecord[]> {
     const page = options?.page ?? 1;
@@ -49,8 +49,8 @@ export class DrizzleVisitRepository {
   }
 
   async countByFacilityAndUser(
-    facilityId: string,
-    userId: string,
+    facilityId: number,
+    userId: number,
   ): Promise<number> {
     const result = await this.db
       .select({ count: sql<number>`count(*)` })

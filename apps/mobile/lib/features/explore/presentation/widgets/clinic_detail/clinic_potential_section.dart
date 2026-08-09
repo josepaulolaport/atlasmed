@@ -1,42 +1,46 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_potential_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_potential_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Potencial & share — per-Linha potential fields + AtlasMed qty + penetration.
-class ClinicPotentialSection extends StatelessWidget {
+class ClinicPotentialSection extends ConsumerWidget {
   const ClinicPotentialSection({
     super.key,
-    required this.verticalId,
-    required this.page,
+    required this.facilityId,
     required this.canEdit,
-    required this.onSave,
   });
 
-  final String? verticalId;
-  final FacilityPotentialsPage? page;
+  final int facilityId;
   final bool canEdit;
-  final Future<void> Function(
-    List<({String definitionId, double? quantity})> values,
-  )
-  onSave;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
+    final async = ref.watch(clinicDetailPotentialsProvider(facilityId));
+    final hasFields = async.asData?.value?.items.isNotEmpty ?? false;
+    final editVerticalId = canEdit && hasFields ? verticalId : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ClinicSectionHeader(
           title: 'Potencial & share',
-          trailing: !canEdit || verticalId == null
+          trailing: editVerticalId == null
               ? null
               : TextButton(
-                  onPressed: page == null
-                      ? null
-                      : () => _openEditor(context, page!),
+                  onPressed: () => _openEditor(
+                    context,
+                    ref,
+                    facilityId: facilityId,
+                    verticalId: editVerticalId,
+                  ),
                   child: const Text(
                     'Editar potencial',
                     style: TextStyle(
@@ -54,42 +58,61 @@ class ClinicPotentialSection extends StatelessWidget {
               style: TextStyle(fontSize: 13, color: AppColors.gray400),
             ),
           )
-        else if (page == null)
-          ClinicDetailCard(
-            child: AtlasShimmer(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height: 14,
-                    color: Colors.white,
+        else
+          async.when(
+            loading: () => const ClinicDetailCard(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  const SizedBox(height: 12),
-                  Container(width: 180, height: 14, color: Colors.white),
+                ),
+              ),
+            ),
+            error: (err, _) => ClinicDetailCard(
+              child: Column(
+                children: [
+                  Text(
+                    'Não foi possível carregar potencial.',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.gray500,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.invalidate(
+                      clinicDetailPotentialsProvider(facilityId),
+                    ),
+                    child: const Text('Tentar de novo'),
+                  ),
                 ],
               ),
             ),
-          )
-        else if (page!.items.isEmpty)
-          const ClinicDetailCard(
-            child: Text(
-              'Nenhum campo de potencial configurado para esta linha.',
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
-            ),
-          )
-        else
-          ClinicDetailCard(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-            child: Column(
-              children: [
-                for (var i = 0; i < page!.items.length; i++) ...[
-                  if (i > 0)
-                    const Divider(height: 20, color: AppColors.gray100),
-                  _PotentialRow(item: page!.items[i]),
-                ],
-              ],
-            ),
+            data: (page) {
+              if (page == null || page.items.isEmpty) {
+                return const ClinicDetailCard(
+                  child: Text(
+                    'Nenhum campo de potencial configurado para esta linha.',
+                    style: TextStyle(fontSize: 13, color: AppColors.gray400),
+                  ),
+                );
+              }
+              return ClinicDetailCard(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < page.items.length; i++) ...[
+                      if (i > 0)
+                        const Divider(height: 20, color: AppColors.gray100),
+                      _PotentialRow(item: page.items[i]),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
       ],
     );
@@ -97,13 +120,36 @@ class ClinicPotentialSection extends StatelessWidget {
 
   Future<void> _openEditor(
     BuildContext context,
-    FacilityPotentialsPage page,
-  ) async {
-    await showModalBottomSheet<void>(
+    WidgetRef ref, {
+    required int facilityId,
+    required int verticalId,
+  }) async {
+    final page = await ref.read(
+      facilityPotentialsProvider((
+        facilityId: facilityId,
+        verticalId: verticalId,
+      )).future,
+    );
+    if (!context.mounted) return;
+    if (page.items.isEmpty) return;
+    final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _EditPotentialSheet(items: page.items, onSave: onSave),
+      builder: (ctx) => _EditPotentialSheet(
+        facilityId: facilityId,
+        verticalId: verticalId,
+        items: page.items,
+      ),
     );
+    if (saved == true) {
+      ref.invalidate(clinicDetailPotentialsProvider(facilityId));
+      ref.invalidate(
+        facilityPotentialsProvider((
+          facilityId: facilityId,
+          verticalId: verticalId,
+        )),
+      );
+    }
   }
 }
 
@@ -195,20 +241,22 @@ String _fmtQty(double? value) {
 }
 
 class _EditPotentialSheet extends StatefulWidget {
-  const _EditPotentialSheet({required this.items, required this.onSave});
+  const _EditPotentialSheet({
+    required this.facilityId,
+    required this.verticalId,
+    required this.items,
+  });
 
+  final int facilityId;
+  final int verticalId;
   final List<FacilityPotentialItem> items;
-  final Future<void> Function(
-    List<({String definitionId, double? quantity})> values,
-  )
-  onSave;
 
   @override
   State<_EditPotentialSheet> createState() => _EditPotentialSheetState();
 }
 
 class _EditPotentialSheetState extends State<_EditPotentialSheet> {
-  late final Map<String, TextEditingController> _controllers;
+  late final Map<int, TextEditingController> _controllers;
   bool _saving = false;
   String? _error;
 
@@ -238,7 +286,7 @@ class _EditPotentialSheetState extends State<_EditPotentialSheet> {
       _saving = true;
       _error = null;
     });
-    final values = <({String definitionId, double? quantity})>[];
+    final values = <({int definitionId, double? quantity})>[];
     for (final item in widget.items) {
       final raw = _controllers[item.definitionId]!.text.trim().replaceAll(
         ',',
@@ -259,9 +307,13 @@ class _EditPotentialSheetState extends State<_EditPotentialSheet> {
       values.add((definitionId: item.definitionId, quantity: parsed));
     }
 
+    final repo = FacilityPotentialRepository(
+      facilityId: widget.facilityId,
+      verticalId: widget.verticalId,
+    );
     try {
-      await widget.onSave(values);
-      if (mounted) Navigator.of(context).pop();
+      await repo.patchValues(values);
+      if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -269,6 +321,8 @@ class _EditPotentialSheetState extends State<_EditPotentialSheet> {
           _saving = false;
         });
       }
+    } finally {
+      repo.dispose();
     }
   }
 

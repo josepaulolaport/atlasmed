@@ -55,10 +55,9 @@ services:
       - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
       - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
-      - REGISTRY_SOURCE=temporal
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
       - TEMPORAL_NAMESPACE=default
-      - TEMPORAL_TASK_QUEUE=cnes-ingestion
+      - TEMPORAL_TASK_QUEUE=atlasmed-workflows
       - OTEL_SERVICE_NAME=atlasmed-api
     depends_on:
       - atlasmed-redis
@@ -105,10 +104,9 @@ services:
       - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
       - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
-      - REGISTRY_SOURCE=temporal
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
       - TEMPORAL_NAMESPACE=default
-      - TEMPORAL_TASK_QUEUE=cnes-ingestion
+      - TEMPORAL_TASK_QUEUE=atlasmed-workflows
       - OTEL_SERVICE_NAME=atlasmed-api-worker
     depends_on:
       - atlasmed-redis
@@ -116,13 +114,13 @@ services:
       - atlasmed-minio
       - atlasmed-temporal
 
-  atlasmed-cnes-worker:
+  atlasmed-temporal-worker:
     platform: linux/arm64
     x-machines: oracle-luis
-    image: atlasmed/cnes-worker:prod
+    image: atlasmed/temporal-worker:prod
     build:
       context: ..
-      dockerfile: deploy/docker/cnes-worker.Dockerfile
+      dockerfile: deploy/docker/temporal-worker.Dockerfile
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
@@ -130,17 +128,13 @@ services:
       - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
       - TEMPORAL_NAMESPACE=default
-      - TEMPORAL_TASK_QUEUE=cnes-ingestion
-      - CNES_FTP_MODE=${CNES_FTP_MODE:-mock}
-      - CNES_LOAD_MODE=${CNES_LOAD_MODE:-dev}
-      - CNES_ARCHIVE_BACKEND=s3
-      - CNES_ARCHIVE_S3_BUCKET=${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}
-      - CNES_ARCHIVE_S3_REGION=${STORAGE_REGION:-us-east-1}
-      - CNES_ARCHIVE_S3_ENDPOINT=http://atlasmed-minio:9000
-      - CNES_ARCHIVE_S3_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - CNES_ARCHIVE_S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - CNES_EXTRACT_DIR=/tmp/cnes-extract
-      - CNES_LOAD_CONCURRENCY=${CNES_LOAD_CONCURRENCY:-4}
+      - TEMPORAL_TASK_QUEUE=atlasmed-workflows
+      - STORAGE_ENDPOINT=http://atlasmed-minio:9000
+      - STORAGE_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - OTEL_SERVICE_NAME=atlasmed-temporal-worker
     depends_on:
       - atlasmed-temporal
       - atlasmed-minio

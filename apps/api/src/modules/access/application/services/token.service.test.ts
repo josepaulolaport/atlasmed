@@ -37,8 +37,8 @@ describe("TokenService", () => {
   describe("signAccessToken", () => {
     it("should sign a valid JWT with correct payload", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -52,8 +52,8 @@ describe("TokenService", () => {
 
     it("should include sub in JWT payload", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -62,13 +62,13 @@ describe("TokenService", () => {
       const token = await tokenService.signAccessToken(payload);
       const verified = await tokenService.verifyAccessToken(token);
 
-      expect(verified.sub).toBe("user-123");
+      expect(verified.sub).toBe("123");
     });
 
     it("should include sid in JWT payload", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -77,13 +77,13 @@ describe("TokenService", () => {
       const token = await tokenService.signAccessToken(payload);
       const verified = await tokenService.verifyAccessToken(token);
 
-      expect(verified.sid).toBe("session-456");
+      expect(verified.sid).toBe("2");
     });
 
     it("should set expiration from configured JWT_EXPIRATION", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -101,8 +101,8 @@ describe("TokenService", () => {
 
     it("should use HS256 algorithm", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -119,8 +119,8 @@ describe("TokenService", () => {
   describe("verifyAccessToken", () => {
     it("should verify a valid JWT", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -129,8 +129,8 @@ describe("TokenService", () => {
       const token = await tokenService.signAccessToken(payload);
       const verified = await tokenService.verifyAccessToken(token);
 
-      expect(verified.sub).toBe("user-123");
-      expect(verified.sid).toBe("session-456");
+      expect(verified.sub).toBe("123");
+      expect(verified.sid).toBe("2");
     });
 
     it("should reject invalid JWT", async () => {
@@ -147,8 +147,8 @@ describe("TokenService", () => {
 
     it("should reject JWT with tampered payload", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
@@ -165,8 +165,8 @@ describe("TokenService", () => {
 
     it("should return payload with correct type", async () => {
       const payload: AccessTokenPayload = {
-        sub: "user-123",
-        sid: "session-456",
+        sub: "123",
+        sid: "2",
         role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),

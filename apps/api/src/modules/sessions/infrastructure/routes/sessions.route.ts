@@ -31,13 +31,13 @@ export const sessionsRoute = new Elysia({
   .use(loginRateLimit)
   .post(
     "/",
-    async ({ body, request, cookie, set }) => {
+    async ({ body, request, server, cookie, set }) => {
       const parsed = loginSchema.parse(body);
 
       const result = await accessUseCases.login().execute({
         identifier: parsed.identifier,
         password: parsed.password,
-        ipAddress: getClientIp(request),
+        ipAddress: getClientIp({ request, server }),
         userAgent: request.headers.get("user-agent") || undefined,
         acceptLanguage: request.headers.get("accept-language") || undefined,
       });
@@ -87,7 +87,7 @@ export const sessionsRoute = new Elysia({
             refreshToken: t.String({ description: "Refresh token" }),
           }),
           user: t.Object({
-            id: t.String(),
+            id: t.Number(),
             email: t.String(),
             username: t.String(),
             firstName: t.Optional(t.String()),
@@ -96,7 +96,7 @@ export const sessionsRoute = new Elysia({
             emailVerified: t.Boolean(),
             phoneVerified: t.Boolean(),
             role: t.Object({
-              id: t.String(),
+              id: t.Number(),
               name: t.String(),
               description: t.Optional(t.String()),
             }),
@@ -119,7 +119,7 @@ export const sessionsRoute = new Elysia({
   .use(refreshRateLimit)
   .put(
     "/",
-    async ({ body, request, cookie }) => {
+    async ({ body, request, server, cookie }) => {
       // Accept refresh token from cookie (web) or body (mobile/dev)
       const bodyData = body as { refreshToken?: string } | undefined;
       const cookieToken = cookie[REFRESH_TOKEN_COOKIE_NAME]?.value;
@@ -135,7 +135,7 @@ export const sessionsRoute = new Elysia({
 
       const result = await accessUseCases.refreshSession().execute({
         refreshToken,
-        ipAddress: getClientIp(request),
+        ipAddress: getClientIp({ request, server }),
         userAgent: request.headers.get("user-agent") || undefined,
         acceptLanguage: request.headers.get("accept-language") || undefined,
       });
@@ -173,7 +173,7 @@ export const sessionsRoute = new Elysia({
             refreshToken: t.String({ description: "New refresh token" }),
           }),
           user: t.Object({
-            id: t.String(),
+            id: t.Number(),
             email: t.String(),
             username: t.String(),
             firstName: t.Optional(t.String()),
@@ -182,7 +182,7 @@ export const sessionsRoute = new Elysia({
             emailVerified: t.Boolean(),
             phoneVerified: t.Boolean(),
             role: t.Object({
-              id: t.String(),
+              id: t.Number(),
               name: t.String(),
               description: t.Optional(t.String()),
             }),
@@ -205,14 +205,14 @@ export const sessionsRoute = new Elysia({
   // DELETE / (logout current session)
   .delete(
     "/",
-    async ({ getUserId, getSessionId, cookie, request }: any) => {
+    async ({ getUserId, getSessionId, cookie, request, server }) => {
       const userId = await getUserId();
       const sessionId = await getSessionId();
 
       await accessUseCases.logout().execute({
         sessionId,
         userId,
-        ipAddress: getClientIp(request),
+        ipAddress: getClientIp({ request, server }),
       });
 
       cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(getRefreshCookieRemoveOptions());
@@ -244,7 +244,7 @@ export const sessionsRoute = new Elysia({
   // GET / (list sessions)
   .get(
     "/",
-    async ({ getUserId, getSessionId }: any) => {
+    async ({ getUserId, getSessionId }) => {
       const userId = await getUserId();
       const currentSessionId = await getSessionId();
 
@@ -268,7 +268,7 @@ export const sessionsRoute = new Elysia({
   // DELETE /:id (revoke specific session)
   .delete(
     "/:id",
-    async ({ getUserId, getSessionId, params, status }: any) => {
+    async ({ getUserId, getSessionId, params, status }) => {
       const userId = await getUserId();
       const currentSessionId = await getSessionId();
 
@@ -316,7 +316,7 @@ export const sessionsRoute = new Elysia({
         security: [{ bearerAuth: [] }],
       },
       params: t.Object({
-        id: t.String({ description: "Session ID" }),
+        id: t.Number({ minimum: 1, description: "Session ID" }),
       }),
     },
   )
@@ -324,7 +324,7 @@ export const sessionsRoute = new Elysia({
   // POST /revoke-others
   .post(
     "/revoke-others",
-    async ({ getUserId, getSessionId }: any) => {
+    async ({ getUserId, getSessionId }) => {
       const userId = await getUserId();
       const currentSessionId = await getSessionId();
 

@@ -73,7 +73,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     text: widget.existing != null ? brlNumber(widget.existing!.price20) : null,
   );
 
-  late final Set<String> _selectedVerticalIds = {
+  late final Set<int> _selectedVerticalIds = {
     ...widget.existing?.verticalIds ?? [],
   };
 
@@ -134,7 +134,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       parseBrlNumber(_price18.text) != null &&
       parseBrlNumber(_price20.text) != null;
 
-  void _toggleSector(String verticalId) {
+  void _toggleSector(int verticalId) {
     setState(() {
       if (_selectedVerticalIds.contains(verticalId)) {
         _selectedVerticalIds.remove(verticalId);
@@ -189,7 +189,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
   }
 
   CatalogVariant _blankVariant() => CatalogVariant(
-    id: '',
+    id: 0,
     code: '',
     name: '',
     familyName: '',

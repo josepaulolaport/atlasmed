@@ -1,19 +1,20 @@
 import {
   pgTable,
   text,
-  integer,
   numeric,
   boolean,
   timestamp,
   jsonb,
   index,
   unique,
+  bigint,
+  char,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
-import { facilities, professionals } from "./facilities";
+import { facilities } from "./facilities";
+import { persons } from "./persons";
 import { products } from "./catalog";
 import { interactions } from "./calendar";
 import { users } from "./users";
@@ -21,48 +22,44 @@ import { users } from "./users";
 export const orders = pgTable(
   "orders",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    legacyId: integer("legacy_id"),
-    facilityId: text("facility_id").notNull().references(() => facilities.id),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    /** Emultec avulsa (order header) id. */
+    idAvulsaEmultec: bigint("id_avulsa_emultec", { mode: "number" }),
+    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id),
     /** Commercial vertical for this order (one vertical per order). */
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "restrict" }),
-    sellerId: text("seller_id").references(() => users.id),
-    professionalId: text("professional_id").references(() => professionals.id),
-    interactionId: text("interaction_id").references(() => interactions.id, {
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
+    sellerId: bigint("seller_id", { mode: "number" }).references(() => users.id),
+    personId: bigint("person_id", { mode: "number" }).references(() => persons.id),
+    interactionId: bigint("interaction_id", { mode: "number" }).references(() => interactions.id, {
       onDelete: "restrict",
     }),
     status: orderStatusEnum("status").notNull().default("DRAFT"),
     type: orderTypeEnum("type").notNull().default("SALE"),
-    surgeryType: text("surgery_type"),
-    surgerySubtype: text("surgery_subtype"),
     orderedAt: timestamp("ordered_at").notNull(),
     notes: text("notes"),
     freight: numeric("freight", { precision: 10, scale: 2 }).notNull().default("0"),
     grossWeight: numeric("gross_weight", { precision: 10, scale: 3 }).notNull().default("0"),
     netWeight: numeric("net_weight", { precision: 10, scale: 3 }).notNull().default("0"),
-    currency: text("currency").notNull().default("BRL"),
-    usdExchangeRate: numeric("usd_exchange_rate", { precision: 10, scale: 4 }),
-    finalizedById: text("finalized_by_id").references(() => users.id),
+    currency: char("currency", { length: 3 }).notNull().default("BRL"),
+    finalizedById: bigint("finalized_by_id", { mode: "number" }).references(() => users.id),
     finalizedAt: timestamp("finalized_at"),
-    rejectedById: text("rejected_by_id").references(() => users.id),
+    rejectedById: bigint("rejected_by_id", { mode: "number" }).references(() => users.id),
     rejectionReason: text("rejection_reason"),
-    noBillingById: text("no_billing_by_id").references(() => users.id),
+    noBillingById: bigint("no_billing_by_id", { mode: "number" }).references(() => users.id),
     noBillingAt: timestamp("no_billing_at"),
     noBillingNotes: text("no_billing_notes"),
-    expenseAuthorizedById: text("expense_authorized_by_id").references(() => users.id),
+    expenseAuthorizedById: bigint("expense_authorized_by_id", { mode: "number" }).references(() => users.id),
     expenseAuthorizedAt: timestamp("expense_authorized_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("orders_facility_id_idx").on(t.facilityId),
     index("orders_vertical_id_idx").on(t.verticalId),
     index("orders_status_idx").on(t.status),
-    index("orders_legacy_id_idx").on(t.legacyId),
     index("orders_ordered_at_idx").on(t.orderedAt),
-    index("orders_professional_id_idx").on(t.professionalId),
+    index("orders_person_id_idx").on(t.personId),
     index("orders_interaction_id_idx").on(t.interactionId),
     index("orders_seller_id_idx").on(t.sellerId),
     index("orders_valid_purchase_facility_ordered_at_idx")
@@ -72,20 +69,20 @@ export const orders = pgTable(
       .on(t.facilityId, t.verticalId, t.orderedAt.desc())
       .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
     index("orders_updated_at_facility_id_idx").on(t.updatedAt, t.facilityId),
-    unique("orders_legacy_id_key").on(t.legacyId),
+    unique("orders_id_avulsa_emultec_key").on(t.idAvulsaEmultec),
   ]
 );
 
 export const orderCommandReceipts = pgTable(
   "order_command_receipts",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    actorUserId: text("actor_user_id")
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    actorUserId: bigint("actor_user_id", { mode: "number" })
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     commandKey: text("command_key").notNull(),
     requestFingerprint: text("request_fingerprint").notNull(),
-    orderId: text("order_id")
+    orderId: bigint("order_id", { mode: "number" })
       .notNull()
       .references(() => orders.id, { onDelete: "restrict" }),
     result: jsonb("result").$type<unknown>().notNull(),
@@ -103,25 +100,26 @@ export const orderCommandReceipts = pgTable(
 export const orderItems = pgTable(
   "order_items",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    legacyId: integer("legacy_id"),
-    orderId: text("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-    productId: text("product_id").references(() => products.id),
-    legacyProductId: integer("legacy_product_id"),
-    lineNumber: integer("line_number"),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    /** Emultec avulsa item (line) id. */
+    idAvulsaItemEmultec: bigint("id_avulsa_item_emultec", { mode: "number" }),
+    orderId: bigint("order_id", { mode: "number" }).notNull().references(() => orders.id, { onDelete: "cascade" }),
+    productId: bigint("product_id", { mode: "number" }).references(() => products.id),
+    /** Denormalized Emultec product id on the line (may differ from products.id_produto_emultec historically). */
+    idProdutoEmultec: bigint("id_produto_emultec", { mode: "number" }),
     quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull().default("0"),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
     usdPrice: numeric("usd_price", { precision: 12, scale: 4 }).notNull().default("0"),
     batchNumber: text("batch_number"),
     writtenOff: boolean("written_off").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("order_items_batch_number_idx").on(t.batchNumber),
     index("order_items_order_id_idx").on(t.orderId),
     index("order_items_product_id_idx").on(t.productId),
-    unique("order_items_legacy_id_key").on(t.legacyId),
+    unique("order_items_id_avulsa_item_emultec_key").on(t.idAvulsaItemEmultec),
   ]
 );
 

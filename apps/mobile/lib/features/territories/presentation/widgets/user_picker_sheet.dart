@@ -11,7 +11,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// Sentinel result of [UserPickerSheet.pickAssignee] meaning "explicitly
 /// clear the current assignee" — distinct from a `null` `Future` result,
 /// which means "the sheet was dismissed, leave things as they are".
-const clearAssignee = '__clear_assignee__';
+const kClearAssigneeId = 0;
 
 /// Draggable modal bottom sheet with a search field + avatar/name rows.
 /// Used in two shapes (see the static helpers): picking a rep/manager to
@@ -20,12 +20,12 @@ const clearAssignee = '__clear_assignee__';
 class UserPickerSheet extends ConsumerStatefulWidget {
   final String title;
   final UserRole role;
-  final String? verticalId;
+  final int? verticalId;
 
   /// The currently-selected id, used to show a checkmark and the "remove"
   /// button. A user id in the [pickAssignee] shape, a zone territory id
   /// in the [pickManagerForPatch] shape.
-  final String? currentSelectionId;
+  final int? currentSelectionId;
 
   /// When set, candidates come from `getAssignableManagers(verticalId)`
   /// instead of `searchUsers`, and results resolve to a zone id.
@@ -41,15 +41,15 @@ class UserPickerSheet extends ConsumerStatefulWidget {
   });
 
   /// Picks a rep/manager to assign to a territory. Returns the picked
-  /// user's id, [clearAssignee] if the user tapped "Remover responsável",
+  /// user's id, [kClearAssigneeId] if the user tapped "Remover responsável",
   /// or `null` if the sheet was dismissed without a choice.
-  static Future<String?> pickAssignee(
+  static Future<int?> pickAssignee(
     BuildContext context, {
     required UserRole role,
-    String? verticalId,
-    String? currentUserId,
+    int? verticalId,
+    int? currentUserId,
   }) {
-    return showModalBottomSheet<String>(
+    return showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -66,12 +66,12 @@ class UserPickerSheet extends ConsumerStatefulWidget {
 
   /// Picks which manager a rep patch reports to. Returns the manager's
   /// zone territory id (`managerTerritoryId`), or `null` if dismissed.
-  static Future<String?> pickManagerForPatch(
+  static Future<int?> pickManagerForPatch(
     BuildContext context, {
-    String? currentManagerTerritoryId,
-    String? verticalId,
+    int? currentManagerTerritoryId,
+    int? verticalId,
   }) {
-    return showModalBottomSheet<String>(
+    return showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -168,9 +168,9 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pop(widget.pickingManagerZone ? null : clearAssignee),
+                      onPressed: () => Navigator.of(context).pop(
+                        widget.pickingManagerZone ? null : kClearAssigneeId,
+                      ),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.redDark,
                         padding: EdgeInsets.zero,

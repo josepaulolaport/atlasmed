@@ -3,8 +3,8 @@ import { calendar, interactionEvents, interactions, type AnyDatabase } from "@at
 import { DrizzleCalendarRepository, mapCalendarEvent } from "./drizzle-calendar.repository";
 
 const historicalRow = {
-  id: "calendar-historical",
-  ownerUserId: "rep-1",
+  id: 100,
+  ownerUserId: 1,
   kind: "PERSONAL_BLOCK",
   title: "Histórico",
   anchorLocalDate: "2026-08-03",
@@ -42,11 +42,11 @@ function repositoryDatabase(input: { eventRows?: Array<Record<string, unknown>> 
               if (selectedTable === interactions) {
                 return Promise.resolve([
                   {
-                    id: "interaction-1",
-                    calendarId: "calendar-1",
+                    id: 10,
+                    calendarId: 1,
                     recurrenceKey: "2026-08-03T09:00[UTC]",
-                    facilityId: "facility-1",
-                    agentUserId: "rep-1",
+                    facilityId: 1,
+                    agentUserId: 1,
                     modality: "REMOTE",
                     status: "SCHEDULED",
                     actualStartedAt: null,
@@ -109,14 +109,14 @@ describe("DrizzleCalendarRepository.replaceUntouchedInteractions", () => {
     const repository = new DrizzleCalendarRepository(database);
 
     const replaced = await repository.replaceUntouchedInteractions({
-      calendarId: "calendar-1",
+      calendarId: 1,
       recurrenceKeyMap: [{ oldRecurrenceKey: "2026-08-03T09:00[UTC]", newRecurrenceKey: "2026-08-03T10:00[UTC]" }],
     });
 
     expect(replaced).toBe(true);
     expect(deletedTables).not.toContain(interactionEvents);
     expect(updatedRecurrenceKeys).toEqual([
-      "__calendar_rekey__0__interaction-1",
+      "__calendar_rekey__0__10",
       "2026-08-03T10:00[UTC]",
     ]);
   });
@@ -126,24 +126,24 @@ describe("DrizzleCalendarRepository.replaceUntouchedInteractions", () => {
     const repository = new DrizzleCalendarRepository(database);
 
     await repository.replaceUntouchedInteractions({
-      calendarId: "calendar-1",
+      calendarId: 1,
       recurrenceKeyMap: [{ oldRecurrenceKey: "2026-08-03T09:00[UTC]", newRecurrenceKey: "2026-08-05T10:00[UTC]" }],
     });
 
     expect(updatedRecurrenceKeys).toEqual([
-      "__calendar_rekey__0__interaction-1",
+      "__calendar_rekey__0__10",
       "2026-08-05T10:00[UTC]",
     ]);
   });
 
   it("rejects rekeying when any append-only lifecycle event exists without deleting it", async () => {
     const { database, deletedTables, updatedRecurrenceKeys } = repositoryDatabase({
-      eventRows: [{ interactionId: "interaction-1", previousStatus: null, newStatus: "SCHEDULED" }],
+      eventRows: [{ interactionId: 10, previousStatus: null, newStatus: "SCHEDULED" }],
     });
     const repository = new DrizzleCalendarRepository(database);
 
     const replaced = await repository.replaceUntouchedInteractions({
-      calendarId: "calendar-1",
+      calendarId: 1,
       recurrenceKeyMap: [{ oldRecurrenceKey: "2026-08-03T09:00[UTC]", newRecurrenceKey: "2026-08-03T10:00[UTC]" }],
     });
 

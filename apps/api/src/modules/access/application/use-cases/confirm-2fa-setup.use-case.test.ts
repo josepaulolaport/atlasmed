@@ -22,7 +22,7 @@ describe("Confirm2FASetupUseCase", () => {
   let mockRevokeAllByUserId: ReturnType<typeof mock>;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     twoFactorEnabled: false,
   };
 
@@ -55,21 +55,21 @@ describe("Confirm2FASetupUseCase", () => {
 
   it("should enable 2FA with valid code", async () => {
     const result = await useCase.execute({
-      userId: "user-123",
+      userId: 123,
       code: "123456",
-      sessionId: "session-current",
+      sessionId: 1,
     });
 
     expect(result.success).toBe(true);
     expect(mockAuditLog.log2FAEnable).toHaveBeenCalledTimes(1);
-    expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
+    expect(mockAuthCache.invalidate).toHaveBeenCalledWith(123);
     expect(mockRevokeAllByUserId).toHaveBeenCalledWith(
-      "user-123",
-      "session-current"
+      123,
+      1
     );
     expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith(
-      "user-123",
-      "session-current"
+      123,
+      1
     );
   });
 
@@ -77,7 +77,7 @@ describe("Confirm2FASetupUseCase", () => {
     mockTwoFactorService.verifyTotp = mock(async () => false);
 
     await expect(
-      useCase.execute({ userId: "user-123", code: "000000" })
+      useCase.execute({ userId: 123, code: "000000" })
     ).rejects.toThrow(InvalidCredentialsError);
   });
 
@@ -85,7 +85,7 @@ describe("Confirm2FASetupUseCase", () => {
     mockTwoFactorService.getPendingSetup = mock(async () => null);
 
     await expect(
-      useCase.execute({ userId: "user-123", code: "123456" })
+      useCase.execute({ userId: 123, code: "123456" })
     ).rejects.toThrow(ValidationError);
   });
 
@@ -104,7 +104,7 @@ describe("Confirm2FASetupUseCase", () => {
     });
 
     await expect(
-      useCase.execute({ userId: "user-123", code: "123456" })
+      useCase.execute({ userId: 123, code: "123456" })
     ).rejects.toThrow(OperationNotAllowedError);
   });
 
@@ -123,7 +123,7 @@ describe("Confirm2FASetupUseCase", () => {
     });
 
     await expect(
-      useCase.execute({ userId: "missing", code: "123456" })
+      useCase.execute({ userId: 999, code: "123456" })
     ).rejects.toThrow(UserNotFoundError);
   });
 });

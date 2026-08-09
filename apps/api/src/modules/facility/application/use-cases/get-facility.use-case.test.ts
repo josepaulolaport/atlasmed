@@ -9,20 +9,20 @@ import type {
 
 const now = new Date("2026-01-01T00:00:00.000Z");
 
-const ortopediaId = "vertical-orto";
-const dermatologiaId = "vertical-derm";
+const ortopediaId = 10;
+const dermatologiaId = 20;
 
 function baseScope(overrides: Partial<ScopeContext> = {}): ScopeContext {
   return {
     isGlobal: false,
-    assignedTerritoryIds: ["territory-1"],
-    effectiveTerritoryIds: ["territory-1"],
-    analyticsEffectiveTerritoryIds: ["territory-1"],
-    territoryIds: ["territory-1"],
-    facilityIds: ["facility-1"],
-    analyticsFacilityIds: ["facility-1"],
-    clinicIds: ["facility-1"],
-    analyticsClinicIds: ["facility-1"],
+    assignedTerritoryIds: [1],
+    effectiveTerritoryIds: [1],
+    analyticsEffectiveTerritoryIds: [1],
+    territoryIds: [1],
+    facilityIds: [1],
+    analyticsFacilityIds: [1],
+    clinicIds: [1],
+    analyticsClinicIds: [1],
     managedUserIds: [],
     isOperationallyActive: true,
     assignedVerticalIds: [ortopediaId, dermatologiaId],
@@ -32,7 +32,7 @@ function baseScope(overrides: Partial<ScopeContext> = {}): ScopeContext {
 
 function ortoOnlyFacility(): FacilityRecord {
   return {
-    id: "facility-1",
+    id: 1,
     name: "CLINICA ORTOPEDICA SERGIO CORDEIRO CENTRO",
     neighborhood: null,
     city: null,
@@ -41,6 +41,8 @@ function ortoOnlyFacility(): FacilityRecord {
     streetNumber: null,
     addressComplement: null,
     postalCode: null,
+    stateId: 1,
+    municipalityId: 1,
     phone: null,
     whatsapp: null,
     email: null,
@@ -48,39 +50,23 @@ function ortoOnlyFacility(): FacilityRecord {
     billingEmail: null,
     responsibleName: null,
     openingHours: null,
-    taxIdType: "PJ",
-    cnpj: null,
-    cpf: null,
+    legalDocumentType: "CNPJ",
+    legalDocument: null,
     lat: -22.9,
     lng: -43.1,
-    territoryId: "territory-1",
+    territoryId: 1,
     territoryName: null,
     territoryAssignmentStatus: "assigned",
-    territoryAssignmentSource: "manual",
     commercialStatus: null,
     purchaseStatus: null,
-    observedPurchaseIntervalDays: null,
-    purchaseIntervalDays: 30,
-    purchaseIntervalSource: "DEFAULT",
-    manualPurchaseProfile: null,
-    manualPurchaseIntervalDays: null,
-    lastValidPurchaseDate: null,
-    purchaseRecurrenceSampleSize: 0,
-    purchaseFunnelStage: "NEVER_PURCHASED",
-    nextPurchaseFunnelTransitionDate: null,
     conformityStatus: "INCOMPLETE",
-    sourceProvider: null,
-    externalSourceId: null,
-    sourceContentHash: null,
-    sourceFirstSeenAt: null,
-    sourceLastSeenAt: null,
-    sourcePresent: true,
-    sourceTracked: false,
-    manuallyEditedAt: null,
+    cnesCode: null,
+    unitTypeId: null,
+    unitSubtypeId: null,
     deactivatedAt: null,
     createdAt: now,
     updatedAt: now,
-    services: [],
+    clinicalFocuses: [],
     consultantName: null,
     consultantSince: null,
     managerName: null,
@@ -94,7 +80,7 @@ function ortoOnlyFacility(): FacilityRecord {
         isActive: true,
         commercialStatus: "UNREGISTERED",
         purchaseStatus: "NON_BUYER",
-        territoryId: "territory-1",
+        territoryId: 1,
       },
     ],
   };
@@ -105,24 +91,16 @@ function repoWith(facility: FacilityRecord | null): FacilityRepository {
     findAll: async () => ({ facilities: [], total: 0 }),
     findAllByIds: async () => [],
     findById: async () => facility,
-    listServiceCatalog: async () => [],
-    findByExternalId: async () => null,
-    findSourceTrackedByProvider: async () => [],
+    listClinicalFocusCatalog: async () => [],
     create: async () => facility ?? ortoOnlyFacility(),
     update: async () => facility ?? ortoOnlyFacility(),
     softDelete: async () => {},
     reactivate: async () => facility ?? ortoOnlyFacility(),
-    markSourceAbsent: async () => {},
-    upsertFromSource: async () => ({
-      facility: facility ?? ortoOnlyFacility(),
-      created: true,
-      updated: false,
-    }),
     findIdsByTerritoryIds: async () => [],
     listMapPoints: async () => [],
     applyApprovedFieldUpdates: async () => facility ?? ortoOnlyFacility(),
     findActiveFacilityIdsByVerticalIds: async (verticalIds) =>
-      verticalIds.includes(ortopediaId) ? ["facility-1"] : [],
+      verticalIds.includes(ortopediaId) ? [1] : [],
     findVerticalProfilesByFacilityIds: async () => new Map(),
     updateVerticalProfileCommercialStatus: async () => {},
     ensureVerticalProfile: async () => ({
@@ -143,14 +121,14 @@ describe("GetFacilityUseCase", () => {
     });
 
     const result = await useCase.execute({
-      facilityId: "facility-1",
+      facilityId: 1,
       scope: baseScope(),
       role: Role.REP,
       verticalId: dermatologiaId,
     });
 
     expect(result).not.toBeNull();
-    expect(result?.id).toBe("facility-1");
+    expect(result?.id).toBe(1);
     expect(result?.verticalProfiles?.map((p) => p.verticalId)).toEqual([
       ortopediaId,
     ]);
@@ -162,7 +140,7 @@ describe("GetFacilityUseCase", () => {
     });
 
     const result = await useCase.execute({
-      facilityId: "facility-1",
+      facilityId: 1,
       scope: baseScope({ assignedVerticalIds: [dermatologiaId] }),
       role: Role.REP,
       verticalId: dermatologiaId,

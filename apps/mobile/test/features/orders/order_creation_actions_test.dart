@@ -31,9 +31,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: ClinicOrdersSection(orders: [], facilityId: 'facility-1'),
-        ),
+        home: Scaffold(body: ClinicOrdersSection(orders: [], facilityId: 1)),
       ),
     );
 
@@ -43,16 +41,15 @@ void main() {
 
   testWidgets('order detail has no repeat-order action', (tester) async {
     final detail = ApiOrderDetail(
-      id: 'order-1',
-      legacyId: 1,
+      id: 1,
+      idAvulsaEmultec: 1,
       verticalId: null,
-      interactionId: null,
       status: 'DELIVERED',
       type: 'STANDARD',
       orderedAt: DateTime.utc(2026, 1, 2),
       createdAt: DateTime.utc(2026, 1, 1),
       updatedAt: DateTime.utc(2026, 1, 3),
-      facility: const ApiOrderIdentity(id: 'facility-1', name: 'Clínica Um'),
+      facility: const ApiOrderIdentity(id: 1, name: 'Clínica Um'),
       professional: null,
       seller: null,
       itemCount: 0,
@@ -69,12 +66,12 @@ void main() {
         overrides: [
           orderDetailProvider.overrideWith((ref, orderId) async => detail),
         ],
-        child: const MaterialApp(home: OrderDetailScreen(orderId: 'order-1')),
+        child: const MaterialApp(home: OrderDetailScreen(orderId: 1)),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PED-1'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
     expect(find.text('Repetir pedido'), findsNothing);
   });
 }

@@ -29,7 +29,7 @@ describe("Verify2FALoginUseCase", () => {
   let mockMetrics: ReturnType<typeof createMockMetricsService>;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     status: "ACTIVE",
@@ -37,14 +37,14 @@ describe("Verify2FALoginUseCase", () => {
     twoFactorEnabled: true,
     twoFactorSecret: "encrypted-secret",
     role: {
-      id: "role-123",
+      id: 1,
       name: "USER",
     },
   };
 
   const mockSession = {
-    id: "session-123",
-    userId: "user-123",
+    id: 1,
+    userId: 123,
     refreshToken: "refresh-token",
     refreshTokenHash: "refresh-hash",
     expiresAt: new Date(Date.now() + 86400000),
@@ -65,12 +65,12 @@ describe("Verify2FALoginUseCase", () => {
     mockSessionCache = createMockSessionCache();
     mockPending2faLoginService = {
       get: mock(async () => ({
-        userId: "user-123",
+        userId: 123,
         ipAddress: "192.168.1.1",
         userAgent: "Mozilla/5.0",
       })),
       consume: mock(async () => ({
-        userId: "user-123",
+        userId: 123,
         ipAddress: "192.168.1.1",
         userAgent: "Mozilla/5.0",
       })),
@@ -105,7 +105,7 @@ describe("Verify2FALoginUseCase", () => {
 
     expect(result.accessToken).toBeString();
     expect(result.refreshToken).toBe("refresh-token");
-    expect(result.user.id).toBe("user-123");
+    expect(result.user.id).toBe(123);
     expect(mockSessionService.create).toHaveBeenCalledTimes(1);
     expect(mockSessionCache.set).toHaveBeenCalledTimes(1);
     expect(mockAuditLog.logUserLogin).toHaveBeenCalledTimes(1);

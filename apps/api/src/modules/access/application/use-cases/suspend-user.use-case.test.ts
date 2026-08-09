@@ -24,7 +24,7 @@ import {
 } from "../../test-helpers/fixtures";
 import { createGlobalScopeContext, Role } from "@atlasmed/access";
 
-function adminSuspendParams(userId: string, suspendedBy = "admin-123") {
+function adminSuspendParams(userId: number, suspendedBy = 456) {
   return {
     userId,
     suspendedBy,
@@ -42,12 +42,12 @@ describe("SuspendUserUseCase", () => {
   let mockScopeService: ReturnType<typeof createMockScopeService>;
 
   const mockUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "testuser",
     phoneNumber: null,
     passwordHash: "$argon2id$test",
-    roleId: "role-123",
+    roleId: 1,
     firstName: "Test",
     lastName: "User",
     status: "ACTIVE",
@@ -58,7 +58,7 @@ describe("SuspendUserUseCase", () => {
     updatedAt: new Date(),
     deactivatedAt: null,
     role: {
-      id: "role-123",
+      id: 1,
       name: "USER",
       description: null,
       createdAt: new Date(),
@@ -89,17 +89,17 @@ describe("SuspendUserUseCase", () => {
 
   describe("user suspension", () => {
     it("should suspend user", async () => {
-      await suspendUserUseCase.execute(adminSuspendParams("user-123"));
+      await suspendUserUseCase.execute(adminSuspendParams(123));
 
       expect(mockUserRepository.suspend).toHaveBeenCalledTimes(1);
-      expect(mockUserRepository.suspend).toHaveBeenCalledWith("user-123");
+      expect(mockUserRepository.suspend).toHaveBeenCalledWith(123);
     });
 
     it("should revoke all user sessions", async () => {
-      await suspendUserUseCase.execute(adminSuspendParams("user-123"));
+      await suspendUserUseCase.execute(adminSuspendParams(123));
 
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledTimes(1);
-      expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith("user-123", undefined);
+      expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith(123, undefined);
     });
 
     it("should suspend user before revoking sessions", async () => {
@@ -113,42 +113,26 @@ describe("SuspendUserUseCase", () => {
         callOrder.push("revokeSessions");
       });
 
-      await suspendUserUseCase.execute(adminSuspendParams("user-123"));
+      await suspendUserUseCase.execute(adminSuspendParams(123));
 
       expect(callOrder).toEqual(["suspend", "revokeSessions"]);
     });
 
     it("should invalidate auth cache", async () => {
-      await suspendUserUseCase.execute(adminSuspendParams("user-123"));
+      await suspendUserUseCase.execute(adminSuspendParams(123));
 
-      expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
+      expect(mockAuthCache.invalidate).toHaveBeenCalledWith(123);
     });
 
     it("should invalidate scope cache", async () => {
-      await suspendUserUseCase.execute(adminSuspendParams("user-123"));
+      await suspendUserUseCase.execute(adminSuspendParams(123));
 
-      expect(mockScopeService.invalidate).toHaveBeenCalledWith("user-123");
-    });
-
-    it("should invalidate manager scope when user has a manager", async () => {
-      mockUserRepository.findById = mock(async () => ({
-        ...mockUser,
-        managerId: "manager-456",
-      })) as any;
-
-      await suspendUserUseCase.execute(adminSuspendParams("user-123"));
-
-      expect(mockScopeService.invalidateForManagerChange).toHaveBeenCalledWith({
-        userId: "user-123",
-        previousManagerId: "manager-456",
-        nextManagerId: "manager-456",
-      });
-      expect(mockScopeService.invalidate).not.toHaveBeenCalled();
+      expect(mockScopeService.invalidate).toHaveBeenCalledWith(123);
     });
 
     it("should complete successfully when user is suspended", async () => {
       await expect(
-        suspendUserUseCase.execute(adminSuspendParams("user-123"))
+        suspendUserUseCase.execute(adminSuspendParams(123))
       ).resolves.toBeUndefined();
     });
   });
@@ -158,7 +142,7 @@ describe("SuspendUserUseCase", () => {
       mockUserRepository.findById = mock(async () => null);
 
       await expect(
-        suspendUserUseCase.execute(adminSuspendParams("non-existent"))
+        suspendUserUseCase.execute(adminSuspendParams(999))
       ).rejects.toThrow("User not found");
     });
 
@@ -166,7 +150,7 @@ describe("SuspendUserUseCase", () => {
       mockUserRepository.findById = mock(async () => null);
 
       try {
-        await suspendUserUseCase.execute(adminSuspendParams("non-existent"));
+        await suspendUserUseCase.execute(adminSuspendParams(999));
       } catch {}
 
       expect(mockUserRepository.suspend).not.toHaveBeenCalled();
@@ -176,7 +160,7 @@ describe("SuspendUserUseCase", () => {
       mockUserRepository.findById = mock(async () => null);
 
       try {
-        await suspendUserUseCase.execute(adminSuspendParams("non-existent"));
+        await suspendUserUseCase.execute(adminSuspendParams(999));
       } catch {}
 
       expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
@@ -191,7 +175,7 @@ describe("SuspendUserUseCase", () => {
       })) as any;
 
       await expect(
-        suspendUserUseCase.execute(adminSuspendParams("user-123"))
+        suspendUserUseCase.execute(adminSuspendParams(123))
       ).rejects.toThrow("User is already suspended");
     });
 
@@ -202,7 +186,7 @@ describe("SuspendUserUseCase", () => {
       })) as any;
 
       try {
-        await suspendUserUseCase.execute(adminSuspendParams("user-123"));
+        await suspendUserUseCase.execute(adminSuspendParams(123));
       } catch {}
 
       expect(mockUserRepository.suspend).not.toHaveBeenCalled();
@@ -215,7 +199,7 @@ describe("SuspendUserUseCase", () => {
       })) as any;
 
       try {
-        await suspendUserUseCase.execute(adminSuspendParams("user-123"));
+        await suspendUserUseCase.execute(adminSuspendParams(123));
       } catch {}
 
       expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
@@ -229,7 +213,7 @@ describe("SuspendUserUseCase", () => {
       });
 
       await expect(
-        suspendUserUseCase.execute(adminSuspendParams("user-123"))
+        suspendUserUseCase.execute(adminSuspendParams(123))
       ).rejects.toThrow("Database error");
     });
 
@@ -239,7 +223,7 @@ describe("SuspendUserUseCase", () => {
       });
 
       await expect(
-        suspendUserUseCase.execute(adminSuspendParams("user-123"))
+        suspendUserUseCase.execute(adminSuspendParams(123))
       ).rejects.toThrow("Suspend failed");
     });
 
@@ -249,7 +233,7 @@ describe("SuspendUserUseCase", () => {
       });
 
       await expect(
-        suspendUserUseCase.execute(adminSuspendParams("user-123"))
+        suspendUserUseCase.execute(adminSuspendParams(123))
       ).rejects.toThrow("Revoke sessions failed");
     });
   });

@@ -4,13 +4,11 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/business_ve
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Optional Linha filter. `null` = all assigned (backend scopes via token).
-final dashboardSelectedVerticalIdProvider = StateProvider<String?>(
-  (ref) => null,
-);
+final dashboardSelectedVerticalIdProvider = StateProvider<int?>((ref) => null);
 
 /// Repository keyed by optional filter (`null` / empty = union).
 final dashboardRepositoryProvider = Provider.autoDispose
-    .family<DashboardRepository, String?>((ref, verticalId) {
+    .family<DashboardRepository, int?>((ref, verticalId) {
       final repo = DashboardRepository(verticalId: verticalId);
       ref.onDispose(repo.dispose);
       return repo;

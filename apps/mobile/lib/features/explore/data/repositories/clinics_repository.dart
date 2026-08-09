@@ -24,7 +24,7 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     this.commercialStatus,
     this.purchaseBucket,
     this.productIds,
-    this.serviceCodes,
+    this.clinicalFocusIds,
     this.purchaseFunnelStages = const [],
     this.purchaseProfile,
     this.purchaseIntervalMinDays,
@@ -50,8 +50,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
                'purchaseBucket': purchaseBucket.trim(),
              if (productIds != null && productIds.trim().isNotEmpty)
                'productIds': productIds.trim(),
-             if (serviceCodes != null && serviceCodes.trim().isNotEmpty)
-               'serviceCodes': serviceCodes.trim(),
+             if (clinicalFocusIds != null && clinicalFocusIds.trim().isNotEmpty)
+               'clinicalFocusIds': clinicalFocusIds.trim(),
              if (purchaseFunnelStages.isNotEmpty)
                'purchaseFunnelStage': purchaseFunnelStages
                    .map((stage) => stage.apiValue)
@@ -62,8 +62,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
                'purchaseIntervalMinDays': purchaseIntervalMinDays.toString(),
              if (purchaseIntervalMaxDays != null)
                'purchaseIntervalMaxDays': purchaseIntervalMaxDays.toString(),
-             if (verticalId != null && verticalId.trim().isNotEmpty)
-               'verticalId': verticalId.trim(),
+             if (verticalId != null && verticalId > 0)
+               'verticalId': verticalId.toString(),
              if (sort != null) 'sort': sort.apiValue,
              if (order != null) 'order': order.name,
            },
@@ -81,14 +81,14 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
   final String? commercialStatus;
   final String? purchaseBucket;
   final String? productIds;
-  final String? serviceCodes;
+  final String? clinicalFocusIds;
   final List<PurchaseFunnelStage> purchaseFunnelStages;
   final PurchaseProfile? purchaseProfile;
   final int? purchaseIntervalMinDays;
   final int? purchaseIntervalMaxDays;
   final FacilitySort? sort;
   final SortOrder? order;
-  final String? verticalId;
+  final int? verticalId;
 
   /// Build the endpoint URI for this repository.
   /// Calls the shared [buildEndpoint] from [query_builder.dart].
@@ -103,14 +103,14 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
     String? commercialStatus,
     String? purchaseBucket,
     String? productIds,
-    String? serviceCodes,
+    String? clinicalFocusIds,
     List<PurchaseFunnelStage> purchaseFunnelStages = const [],
     PurchaseProfile? purchaseProfile,
     int? purchaseIntervalMinDays,
     int? purchaseIntervalMaxDays,
     FacilitySort? sort,
     SortOrder? order,
-    String? verticalId,
+    int? verticalId,
   }) {
     return buildEndpoint(
       baseUrl: baseUrl,
@@ -129,8 +129,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
           'purchaseBucket': purchaseBucket.trim(),
         if (productIds != null && productIds.trim().isNotEmpty)
           'productIds': productIds.trim(),
-        if (serviceCodes != null && serviceCodes.trim().isNotEmpty)
-          'serviceCodes': serviceCodes.trim(),
+        if (clinicalFocusIds != null && clinicalFocusIds.trim().isNotEmpty)
+          'clinicalFocusIds': clinicalFocusIds.trim(),
         if (purchaseFunnelStages.isNotEmpty)
           'purchaseFunnelStage': purchaseFunnelStages
               .map((stage) => stage.apiValue)
@@ -141,8 +141,8 @@ class ClinicsRepository extends Repository<PaginatedFacilities>
           'purchaseIntervalMinDays': purchaseIntervalMinDays.toString(),
         if (purchaseIntervalMaxDays != null)
           'purchaseIntervalMaxDays': purchaseIntervalMaxDays.toString(),
-        if (verticalId != null && verticalId.trim().isNotEmpty)
-          'verticalId': verticalId.trim(),
+        if (verticalId != null && verticalId > 0)
+          'verticalId': verticalId.toString(),
         if (sort != null) 'sort': sort.apiValue,
         if (order != null) 'order': order.name,
       },
@@ -175,13 +175,13 @@ class FacilityPurchaseRecurrenceRepository extends Repository<FacilityDTO>
   FacilityDTO fromJson(String json) => FacilityDTO.fromJson(json);
 
   RepositoryHttpRequest buildPatchRequest(
-    String facilityId,
+    int facilityId,
     PurchaseRecurrenceCommand command,
   ) => makePatchRequest(_baseUrl, facilityId, command);
 
   static RepositoryHttpRequest makePatchRequest(
     String baseUrl,
-    String facilityId,
+    int facilityId,
     PurchaseRecurrenceCommand command,
   ) {
     command.validate();
@@ -194,7 +194,7 @@ class FacilityPurchaseRecurrenceRepository extends Repository<FacilityDTO>
   }
 
   Future<FacilityDTO> updatePurchaseRecurrence(
-    String facilityId,
+    int facilityId,
     PurchaseRecurrenceCommand command,
   ) async {
     _pendingRequest = buildPatchRequest(facilityId, command);

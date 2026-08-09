@@ -12,7 +12,7 @@ describe("ActivateUserUseCase", () => {
     const activate = mock(async () => {});
     const userRepository = createMockUserRepository({
       findById: mock(async () => ({
-        id: "user-1",
+        id: 1,
         status: "INACTIVE",
       })) as any,
       activate,
@@ -24,9 +24,9 @@ describe("ActivateUserUseCase", () => {
       auditLog: createMockAuditLogService(),
     });
 
-    await useCase.execute({ userId: "user-1", activatedBy: "admin-1" });
+    await useCase.execute({ userId: 1, activatedBy: 1 });
 
-    expect(activate).toHaveBeenCalledWith("user-1");
+    expect(activate).toHaveBeenCalledWith(1);
   });
 
   it("should throw when user not found", async () => {
@@ -39,21 +39,21 @@ describe("ActivateUserUseCase", () => {
     });
 
     await expect(
-      useCase.execute({ userId: "missing", activatedBy: "admin-1" })
+      useCase.execute({ userId: 999, activatedBy: 1 })
     ).rejects.toThrow(UserNotFoundError);
   });
 
   it("should throw when already active", async () => {
     const useCase = new ActivateUserUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => ({ id: "user-1", status: "ACTIVE" })) as any,
+        findById: mock(async () => ({ id: 1, status: "ACTIVE" })) as any,
       }),
       authCache: createMockAuthCache(),
       auditLog: createMockAuditLogService(),
     });
 
     await expect(
-      useCase.execute({ userId: "user-1", activatedBy: "admin-1" })
+      useCase.execute({ userId: 1, activatedBy: 1 })
     ).rejects.toThrow(OperationNotAllowedError);
   });
 });

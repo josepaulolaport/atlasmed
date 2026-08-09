@@ -9,22 +9,20 @@ import {
   numeric,
   date,
   unique,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import { businessVerticals } from "./business-verticals";
 import { facilities } from "./facilities";
 
 export const products = pgTable(
   "products",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     code: text("code").notNull().unique(),
     name: text("name").notNull(),
-    // Enrichment columns (from legacy system)
-    legacyId: integer("legacy_id"),
-    legacySupplierId: integer("legacy_supplier_id"),
-    legacyCreatedAt: timestamp("legacy_created_at"),
+    /** Emultec product id. */
+    idProdutoEmultec: bigint("id_produto_emultec", { mode: "number" }),
     description: text("description"),
     barcode: text("barcode"),
     commercialCode: text("commercial_code"),
@@ -51,7 +49,7 @@ export const products = pgTable(
     brasindiceUpdatedAt: date("brasindice_updated_at").notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     index("products_is_active_idx").on(t.isActive),
@@ -59,18 +57,17 @@ export const products = pgTable(
     uniqueIndex("products_simpro_code_unique").on(t.simproCode),
     uniqueIndex("products_brasindice_code_unique").on(t.brasindiceCode),
     uniqueIndex("products_tiss_code_unique").on(t.tissCode),
-    unique("products_legacy_id_key").on(t.legacyId),
+    unique("products_id_produto_emultec_key").on(t.idProdutoEmultec),
   ]
 );
 
 export const productVerticals = pgTable(
   "product_verticals",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    productId: bigint("product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -83,15 +80,14 @@ export const productVerticals = pgTable(
 export const competitorProducts = pgTable(
   "competitor_products",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     code: text("code"),
     name: text("name").notNull(),
     manufacturer: text("manufacturer"),
     brand: text("brand"),
     isActive: boolean("is_active").notNull().default(true),
-    legacyId: integer("legacy_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
     countryOfOrigin: text("country_of_origin"),
     price17: numeric("price_17", { precision: 12, scale: 2 }),
     price18: numeric("price_18", { precision: 12, scale: 2 }),
@@ -101,20 +97,17 @@ export const competitorProducts = pgTable(
   (t) => [
     index("competitor_products_is_active_idx").on(t.isActive),
     index("competitor_products_manufacturer_idx").on(t.manufacturer),
-    unique("competitor_products_legacy_id_key").on(t.legacyId),
   ]
 );
 
 export const competitorProductVerticals = pgTable(
   "competitor_product_verticals",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    competitorProductId: text("competitor_product_id")
-      .notNull()
-      .references(() => competitorProducts.id, { onDelete: "cascade" }),
-    verticalId: text("vertical_id")
-      .notNull()
-      .references(() => businessVerticals.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    competitorProductId: bigint("competitor_product_id", { mode: "number" })
+      .notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
+    verticalId: bigint("vertical_id", { mode: "number" })
+      .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -130,9 +123,9 @@ export const competitorProductVerticals = pgTable(
 export const productEquivalences = pgTable(
   "product_equivalences",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-    competitorProductId: text("competitor_product_id").notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    productId: bigint("product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "cascade" }),
+    competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
     notes: text("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -184,15 +177,12 @@ export const productEquivalencesRelations = relations(productEquivalences, ({ on
 export const facilityCompetitorProductStandards = pgTable(
   "facility_competitor_product_standards",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    competitorProductId: text("competitor_product_id").notNull().references(() => competitorProducts.id, { onDelete: "restrict" }),
-    standardizedQuantity: integer("standardized_quantity"),
-    source: text("source").notNull().default("crm"),
-    sourceFirstSeenAt: timestamp("source_first_seen_at"),
-    sourceLastSeenAt: timestamp("source_last_seen_at"),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => competitorProducts.id, { onDelete: "restrict" }),
+    standardizedQuantity: bigint("standardized_quantity", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("facility_competitor_product_standards_pair_uidx").on(t.facilityId, t.competitorProductId),

@@ -18,38 +18,17 @@ import type {
   TerritoryRepository,
 } from "../../../application/interfaces/territory.repository.interface";
 import type { TerritoryTypeRecord } from "../../../application/interfaces/territory-type.repository.interface";
+import { REP_PATCH_TYPE_SLUG } from "../../../application/constants/territory-roles.constants";
 
-function mapType(record: {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  canHaveBoundary: boolean;
-  assignsClinics: boolean;
-  assignableToUsers: boolean;
-  assignableToManagers: boolean;
-  blockSiblingOverlap: boolean;
-  sortOrder: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}): TerritoryTypeRecord {
+function mapType(record: typeof territoryTypes.$inferSelect): TerritoryTypeRecord {
   return record;
 }
 
-function mapTerritory(territory: {
-  id: string;
-  name: string;
-  slug: string;
-  code: string;
-  verticalId: string;
-  territoryTypeId: string;
-  territoryType?: Parameters<typeof mapType>[0];
-  managerTerritoryId: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}): TerritoryRecord {
+function mapTerritory(
+  territory: typeof territories.$inferSelect & {
+    territoryType?: typeof territoryTypes.$inferSelect;
+  }
+): TerritoryRecord {
   return {
     id: territory.id,
     name: territory.name,
@@ -78,7 +57,7 @@ function fromJoinedRow(row: TerritoryJoinedRow): TerritoryRecord {
 }
 
 export class DrizzleTerritoryRepository implements TerritoryRepository {
-  private async findOneWithType(id: string): Promise<TerritoryRecord | null> {
+  private async findOneWithType(id: number): Promise<TerritoryRecord | null> {
     const rows = await db
       .select({ territories, territoryTypes })
       .from(territories)
@@ -87,11 +66,11 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
-  async findById(id: string): Promise<TerritoryRecord | null> {
+  async findById(id: number): Promise<TerritoryRecord | null> {
     return this.findOneWithType(id);
   }
 
-  async findBySlug(slug: string, verticalId?: string): Promise<TerritoryRecord | null> {
+  async findBySlug(slug: string, verticalId?: number): Promise<TerritoryRecord | null> {
     const conditions = [eq(territories.slug, slug.toLowerCase())];
     if (verticalId) {
       conditions.push(eq(territories.verticalId, verticalId));
@@ -104,7 +83,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
-  async findByCode(code: string, verticalId?: string): Promise<TerritoryRecord | null> {
+  async findByCode(code: string, verticalId?: number): Promise<TerritoryRecord | null> {
     const conditions = [eq(territories.code, code)];
     if (verticalId) {
       conditions.push(eq(territories.verticalId, verticalId));
@@ -117,7 +96,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
-  async findByIds(ids: string[]): Promise<TerritoryRecord[]> {
+  async findByIds(ids: number[]): Promise<TerritoryRecord[]> {
     if (ids.length === 0) {
       return [];
     }
@@ -129,7 +108,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows.map(fromJoinedRow);
   }
 
-  async findAllActive(verticalId?: string): Promise<TerritoryRecord[]> {
+  async findAllActive(verticalId?: number): Promise<TerritoryRecord[]> {
     const conditions = [eq(territories.isActive, true)];
     if (verticalId) {
       conditions.push(eq(territories.verticalId, verticalId));
@@ -143,7 +122,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows.map(fromJoinedRow);
   }
 
-  async findActiveByTypeSlug(typeSlug: string, verticalId?: string): Promise<TerritoryRecord[]> {
+  async findActiveByTypeSlug(typeSlug: string, verticalId?: number): Promise<TerritoryRecord[]> {
     const conditions = [
       eq(territories.isActive, true),
       eq(territoryTypes.slug, typeSlug),
@@ -160,7 +139,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows.map(fromJoinedRow);
   }
 
-  async countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number> {
+  async countRepPatchesByManagerZone(managerTerritoryId: number): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)` })
       .from(territories)
@@ -169,13 +148,13 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         and(
           eq(territories.managerTerritoryId, managerTerritoryId),
           eq(territories.isActive, true),
-          eq(territoryTypes.assignsClinics, true)
+          eq(territoryTypes.slug, REP_PATCH_TYPE_SLUG)
         )
       );
     return Number(result?.count ?? 0);
   }
 
-  async countClinics(territoryId: string): Promise<number> {
+  async countClinics(territoryId: number): Promise<number> {
     const [result] = await db
       .select({
         count: sql<number>`count(DISTINCT ${facilities.id})`,
@@ -193,7 +172,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return Number(result?.count ?? 0);
   }
 
-  async countAssignedUsers(territoryId: string): Promise<number> {
+  async countAssignedUsers(territoryId: number): Promise<number> {
     const [[uta], [staged]] = await Promise.all([
       db
         .select({ count: sql<number>`count(*)` })
@@ -233,10 +212,10 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
   }
 
   async update(
-    id: string,
+    id: number,
     data: {
       name?: string;
-      managerTerritoryId?: string | null;
+      managerTerritoryId?: number | null;
       isActive?: boolean;
     }
   ): Promise<TerritoryRecord> {
@@ -247,7 +226,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return (await this.findOneWithType(id))!;
   }
 
-  async findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]> {
+  async findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: number[]): Promise<number[]> {
     if (managerTerritoryIds.length === 0) {
       return [];
     }
@@ -260,7 +239,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         and(
           eq(territories.isActive, true),
           inArray(territories.managerTerritoryId, managerTerritoryIds),
-          eq(territoryTypes.assignsClinics, true)
+          eq(territoryTypes.slug, REP_PATCH_TYPE_SLUG)
         )
       );
 
@@ -268,10 +247,10 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
   }
 
   async findConflictingAssignments(params: {
-    territoryId: string;
-    excludeUserId: string;
+    territoryId: number;
+    excludeUserId: number;
     roles: Role[];
-  }): Promise<Array<{ userId: string }>> {
+  }): Promise<Array<{ userId: number }>> {
     return db
       .select({ userId: userTerritoryAssignments.userId })
       .from(userTerritoryAssignments)

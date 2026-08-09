@@ -2,15 +2,12 @@
  * Composition Root for Access Module
  *
  * Authorization invariants (do not bypass):
- * 1. Routes: CASL via requirePermission() after auth plugin (role + AccessGrants).
+ * 1. Routes: CASL via requirePermission() after auth plugin (role abilities only).
  * 2. Mutations/lists: ScopeContext from getScope() — use `facilityIds` for operational
  *    visibility and `analyticsFacilityIds` for manager analytics roll-ups.
- * 3. AccessGrants (Permission table): exceptional overrides merged into CASL and scope (territory/clinic ids).
- * 4. facilityIds = territory clinics (TerritoryScopePort) ∪ active consultant
- *    assignments (FacilityAssociationPort).
- * 5. Session validity: JWT + session row + tokenVersion; caches revalidate from DB periodically.
- *
- * domain/ is intentionally empty until domain entities are justified.
+ * 3. facilityIds = territory clinics (TerritoryScopePort) ∪ active
+ *    facility_vertical_rep_assignments (FacilityAssociationPort).
+ * 4. Session validity: JWT + session row + tokenVersion; caches revalidate from DB periodically.
  */
 
 import { redis } from "../../infrastructure/cache/redis.client";
@@ -48,6 +45,7 @@ import { RevokeInviteUseCase } from "./application/use-cases/revoke-invite.use-c
 import { ResendInviteUseCase } from "./application/use-cases/resend-invite.use-case";
 import { RequestPasswordResetUseCase } from "./application/use-cases/request-password-reset.use-case";
 import { ResetPasswordUseCase } from "./application/use-cases/reset-password.use-case";
+import { VerifyPasswordResetTokenUseCase } from "./application/use-cases/verify-password-reset-token.use-case";
 import { DeactivateUserUseCase } from "./application/use-cases/deactivate-user.use-case";
 import { ActivateUserUseCase } from "./application/use-cases/activate-user.use-case";
 import { SuspendUserUseCase } from "./application/use-cases/suspend-user.use-case";
@@ -82,13 +80,11 @@ import { Setup2FAUseCase } from "./application/use-cases/setup-2fa.use-case";
 import { Confirm2FASetupUseCase } from "./application/use-cases/confirm-2fa-setup.use-case";
 import { Verify2FALoginUseCase } from "./application/use-cases/verify-2fa-login.use-case";
 import { Disable2FAUseCase } from "./application/use-cases/disable-2fa.use-case";
-import { GetCapabilitiesUseCase } from "./application/use-cases/get-capabilities.use-case";
 import { VerificationService } from "./application/services/verification.service";
 import { TwoFactorService } from "./application/services/two-factor.service";
 import { Pending2FALoginService } from "./application/services/pending-2fa-login.service";
 
 import { DrizzleScopeRepository } from "./infrastructure/repositories/drizzle/drizzle-scope.repository";
-import { DrizzleAccessGrantRepository } from "./infrastructure/repositories/drizzle/drizzle-access-grant.repository";
 import {
   facilityAssociationPort,
   facilityTerritoryScopePort,
@@ -100,10 +96,6 @@ import {
   territoryUseCases,
 } from "../territory/composition";
 import { ScopeService } from "./application/services/scope.service";
-import { AccessGrantService } from "./application/services/access-grant.service";
-import { AccessGrantCacheService } from "./infrastructure/cache/access-grant-cache.service";
-import { GrantPermissionUseCase } from "./application/use-cases/grant-permission.use-case";
-import { RevokePermissionUseCase } from "./application/use-cases/revoke-permission.use-case";
 import { createAuthPlugin } from "./infrastructure/plugins/auth.plugin";
 import { auditLogAdapter } from "./infrastructure/adapters/audit-log.adapter";
 import { metricsAdapter } from "./infrastructure/adapters/metrics.adapter";
@@ -124,20 +116,11 @@ export const accessRepositories = {
   role: new DrizzleRoleRepository(),
   verificationToken: new DrizzleVerificationTokenRepository(),
   scope: new DrizzleScopeRepository(),
-  accessGrant: new DrizzleAccessGrantRepository(),
 };
 
 const territoryScopePort = facilityTerritoryScopePort;
 const hierarchyPort = territoryHierarchyPort;
 const associationPort = facilityAssociationPort;
-
-export const accessGrantCache = new AccessGrantCacheService();
-
-export const accessGrantService = new AccessGrantService({
-  accessGrantRepository: accessRepositories.accessGrant,
-  accessGrantCache,
-  auditLog: accessInfrastructure.auditLog,
-});
 
 export const accessScopeServices = {
   territoryScopePort,
@@ -148,7 +131,6 @@ export const accessScopeServices = {
     territoryScopePort,
     territoryHierarchyPort: hierarchyPort,
     facilityAssociationPort: associationPort,
-    accessGrantService,
   }),
 };
 
@@ -305,6 +287,11 @@ export const accessUseCases = {
       metrics: accessInfrastructure.metrics,
     }),
 
+  verifyPasswordResetToken: () =>
+    new VerifyPasswordResetTokenUseCase({
+      passwordResetRepository: accessRepositories.passwordReset,
+    }),
+
   changePassword: () =>
     new ChangePasswordUseCase({
       userRepository: accessRepositories.user,
@@ -351,12 +338,6 @@ export const accessUseCases = {
       sessionCache: accessCaches.session,
       passwordService: accessServices.password,
       auditLog: accessInfrastructure.auditLog,
-    }),
-
-  getCapabilities: () =>
-    new GetCapabilitiesUseCase({
-      userRepository: accessRepositories.user,
-      accessGrantService,
     }),
 
   deactivateUser: () =>
@@ -519,17 +500,6 @@ export const accessUseCases = {
     new UpdateUserPreferencesUseCase({
       userRepository: accessRepositories.user,
     }),
-
-  grantPermission: () =>
-    new GrantPermissionUseCase({
-      accessGrantService,
-      userRepository: accessRepositories.user,
-    }),
-
-  revokePermission: () =>
-    new RevokePermissionUseCase({
-      accessGrantService,
-    }),
 };
 
 // Plugins
@@ -540,14 +510,13 @@ export const auth = createAuthPlugin({
   authCacheService: accessCaches.auth,
   sessionCacheService: accessCaches.session,
   scopeService: accessScopeServices.scope,
-  accessGrantService,
   redis,
 });
 
 /**
  * Example usage in routes:
  *
- * import { accessUseCases, auth } from "../../composition";
+ * import { accessUseCases, auth } from "../access/composition";
  *
  * const loginUseCase = accessUseCases.login();
  * const result = await loginUseCase.execute({ email, password });

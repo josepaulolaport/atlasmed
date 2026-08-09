@@ -71,14 +71,14 @@ export class DrizzlePasswordResetRepository implements PasswordResetRepository {
     };
   }
 
-  async markAsUsed(id: string): Promise<void> {
+  async markAsUsed(id: number): Promise<void> {
     await db
       .update(passwordResets)
       .set({ usedAt: new Date(), updatedAt: new Date() })
       .where(eq(passwordResets.id, id));
   }
 
-  async invalidateUnusedForUser(userId: string): Promise<void> {
+  async invalidateUnusedForUser(userId: number): Promise<void> {
     await db
       .update(passwordResets)
       .set({ usedAt: new Date(), updatedAt: new Date() })

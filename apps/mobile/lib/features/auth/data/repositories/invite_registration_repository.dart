@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/auth/data/person_name_match.dart';
@@ -20,7 +21,7 @@ class InviteValidation {
   final String? phoneNumber;
   final String? firstName;
   final String? lastName;
-  final String roleId;
+  final int roleId;
   final String roleName;
   final DateTime expiresAt;
 
@@ -43,7 +44,7 @@ class InviteValidation {
       phoneNumber: json['phoneNumber'] as String?,
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
-      roleId: role['id'] as String,
+      roleId: readCrmId(role['id'], 'id'),
       roleName: role['name'] as String,
       expiresAt: DateTime.parse(json['expiresAt'] as String),
     );

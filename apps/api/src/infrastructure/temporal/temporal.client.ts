@@ -1,6 +1,5 @@
 import { Connection, Client, WorkflowExecutionAlreadyStartedError } from "@temporalio/client";
 import { environment } from "../../app/config/environment";
-import { workflowIdForReference } from "@atlasmed/cnes-ingestion";
 
 let connectionPromise: Promise<Connection> | null = null;
 let clientPromise: Promise<Client> | null = null;
@@ -29,46 +28,7 @@ export async function getTemporalClient(): Promise<Client> {
   return clientPromise;
 }
 
-export async function startCnesIngestionWorkflow(input: {
-  ingestionRunId: string;
-  ano?: number;
-  mes?: number;
-}): Promise<{ workflowId: string }> {
-  const client = await getTemporalClient();
-  const ano = input.ano ?? new Date().getFullYear();
-  const mes = input.mes ?? new Date().getMonth() + 1;
-  const workflowId = workflowIdForReference(ano, mes);
-
-  try {
-    await client.workflow.start("cnesMonthlyIngestionWorkflow", {
-      taskQueue: environment.TEMPORAL_TASK_QUEUE,
-      workflowId,
-      args: [
-        {
-          ingestionRunId: input.ingestionRunId,
-          ano: input.ano,
-          mes: input.mes,
-        },
-      ],
-    });
-  } catch (error) {
-    if (error instanceof WorkflowExecutionAlreadyStartedError) {
-      return { workflowId };
-    }
-    throw error;
-  }
-
-  return { workflowId };
-}
-
-export async function describeCnesIngestionWorkflow(workflowId: string) {
-  const client = await getTemporalClient();
-  const handle = client.workflow.getHandle(workflowId);
-  return handle.describe();
-}
-
-
-export type SearchSyncEntity = "facilities" | "professionals";
+export type SearchSyncEntity = "facilities" | "persons";
 type StartWorkflowResult = { workflowId: string; runId: string; existing: boolean };
 
 type SearchSyncWorkflowDescriptionHandle = {
@@ -154,10 +114,46 @@ export async function startPurchaseRecurrenceBackfillWorkflow(): Promise<StartWo
   return startPurchaseRecurrenceBackfillWorkflowWithClient(await getTemporalClient());
 }
 
+export function emultecOrderImportWorkflowId(): string {
+  return "emultec-order-import-hybrid";
+}
+
+export async function startEmultecOrderImportWorkflow(): Promise<StartWorkflowResult> {
+  const client = await getTemporalClient();
+  const workflowId = emultecOrderImportWorkflowId();
+
+  try {
+    const handle = await client.workflow.start("emultecOrderImportWorkflow", {
+      taskQueue: environment.TEMPORAL_TASK_QUEUE,
+      workflowId,
+      args: [
+        {
+          mode: "HYBRID" as const,
+          reconcileDays: 30,
+          pageSize: 200,
+          triggerPurchaseRecurrence: true,
+        },
+      ],
+    });
+    return { workflowId, runId: handle.firstExecutionRunId, existing: false };
+  } catch (error) {
+    if (error instanceof WorkflowExecutionAlreadyStartedError) {
+      const description = await client.workflow.getHandle(workflowId).describe();
+      return { workflowId, runId: description.runId, existing: true };
+    }
+    throw error;
+  }
+}
+
 export function isFullSearchSyncWorkflowId(workflowId: string): boolean {
   return workflowId === fullSearchSyncWorkflowId("facilities")
-    || workflowId === fullSearchSyncWorkflowId("professionals")
-    || workflowId === purchaseRecurrenceBackfillWorkflowId();
+    || workflowId === fullSearchSyncWorkflowId("persons")
+    || workflowId === purchaseRecurrenceBackfillWorkflowId()
+    || workflowId === emultecOrderImportWorkflowId()
+    || workflowId === "emultec-order-import-every-10m"
+    || workflowId === "emultec-order-import-backfill"
+    || workflowId === "emultec-order-import-reconcile"
+    || workflowId === "emultec-order-import-incremental";
 }
 
 export async function describeSearchSyncWorkflow(workflowId: string): Promise<{
@@ -170,12 +166,12 @@ export async function describeSearchSyncWorkflow(workflowId: string): Promise<{
   return { workflowId, runId: description.runId, status: description.status.name };
 }
 
-export function cadastroFileUploadedWorkflowId(fileAssetId: string): string {
+export function cadastroFileUploadedWorkflowId(fileAssetId: number): string {
   return `cadastro-file-${fileAssetId}`;
 }
 
 export async function startCadastroFileUploadedWorkflow(input: {
-  fileAssetId: string;
+  fileAssetId: number;
   bucket: string;
   objectKey: string;
 }): Promise<{ workflowId: string }> {
@@ -203,5 +199,3 @@ export async function startCadastroFileUploadedWorkflow(input: {
 
   return { workflowId };
 }
-
-export { workflowIdForReference };

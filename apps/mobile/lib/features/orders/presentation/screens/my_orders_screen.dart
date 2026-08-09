@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
@@ -9,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_w
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class MyOrdersScreen extends ConsumerStatefulWidget {
   const MyOrdersScreen({super.key});
@@ -124,8 +124,9 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                                       ),
                                       child: _OrderCard(
                                         order: order,
-                                        onTap: () =>
-                                            context.push('/orders/${order.id}'),
+                                        onTap: () => OrderDetailRoute(
+                                          id: order.id,
+                                        ).push(context),
                                       ),
                                     ),
                                   )

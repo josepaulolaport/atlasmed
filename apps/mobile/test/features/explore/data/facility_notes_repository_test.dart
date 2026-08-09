@@ -45,44 +45,64 @@ RepositoryHttpResponse _response(int status, Object body) =>
     );
 
 void main() {
-  BaseRepository.storage = const _MemoryCacheStorage();
-
-  test('manager note read sends ownerUserId query', () async {
-    final client = _RecordingClient([_response(200, const <Object>[])]);
-    final repository = FacilityNotesRepository(
-      'facility-1',
-      ownerUserId: 'agent-1',
-      client: client,
-      baseUrl: 'https://api.atlasmed.test',
-    );
-
-    await repository.loadNotes();
-
-    expect(
-      client.requests.single.url.toString(),
-      'https://api.atlasmed.test/api/v1/facilities/facility-1/notes?ownerUserId=agent-1',
-    );
+  setUp(() {
+    BaseRepository.storage = const _MemoryCacheStorage();
   });
 
-  test('note POST remains actor-owned and omits ownerUserId', () async {
+  test('note read uses numeric facility id in URL', () {
+    final repository = FacilityNotesRepository(42);
+
+    expect(repository.facilityId, 42);
+    expect(repository.endpoint.path, '/api/v1/facilities/42/notes');
+    expect(repository.endpoint.queryParameters, isEmpty);
+  });
+
+  test('note POST sends actor-owned body without extra query params', () async {
     final client = _RecordingClient([
       _response(201, {
-        'id': 'note-1',
+        'id': 1,
         'note': 'Retornar em setembro.',
         'createdAt': '2026-08-03T12:00:00.000Z',
       }),
     ]);
-    final repository = FacilityNotesRepository(
-      'facility-1',
-      ownerUserId: 'agent-1',
-      client: client,
-      baseUrl: 'https://api.atlasmed.test',
-    );
+    final repository = FacilityNotesRepository(1, client: client);
 
     await repository.createNote('Retornar em setembro.');
 
     expect(client.requests.first.method, RepositoryHttpMethod.post);
     expect(client.requests.first.url.queryParameters, isEmpty);
     expect(client.requests.first.body, {'note': 'Retornar em setembro.'});
+  });
+
+  test('updateNote PATCHes note path', () async {
+    final client = _RecordingClient([
+      _response(200, {
+        'id': 1,
+        'note': 'Editada',
+        'createdAt': '2026-08-03T12:00:00.000Z',
+        'updatedAt': '2026-08-04T12:00:00.000Z',
+      }),
+      _response(200, []),
+    ]);
+    final repository = FacilityNotesRepository(1, client: client);
+
+    await repository.updateNote(1, 'Editada');
+
+    expect(client.requests.first.method, RepositoryHttpMethod.patch);
+    expect(client.requests.first.url.path, '/api/v1/facilities/1/notes/1');
+    expect(client.requests.first.body, {'note': 'Editada'});
+  });
+
+  test('deleteNote DELETEs note path', () async {
+    final client = _RecordingClient([
+      _response(200, {'id': 1, 'deleted': true}),
+      _response(200, []),
+    ]);
+    final repository = FacilityNotesRepository(1, client: client);
+
+    await repository.deleteNote(1);
+
+    expect(client.requests.first.method, RepositoryHttpMethod.delete);
+    expect(client.requests.first.url.path, '/api/v1/facilities/1/notes/1');
   });
 }

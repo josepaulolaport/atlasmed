@@ -34,9 +34,9 @@ export function createEmptyScopeContext(): ScopeContext {
 
 export function canMutateUser(
   scope: ScopeContext,
-  actorId: string,
+  actorId: number,
   actorRole: Role,
-  target: { id: string; managerId?: string | null }
+  target: { id: number; managerId?: number | null }
 ): boolean {
   if (actorId === target.id) {
     return false;

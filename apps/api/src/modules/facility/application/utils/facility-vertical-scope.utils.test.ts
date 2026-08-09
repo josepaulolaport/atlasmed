@@ -2,17 +2,17 @@ import { describe, expect, it } from "bun:test";
 import { applyVerticalProfileContext } from "./facility-vertical-scope.utils";
 
 const ortho = {
-  verticalId: "v-orto",
+  verticalId: 1,
   verticalCode: "ORTOPEDIA",
   verticalName: "Ortopedia",
   isActive: true,
-  commercialStatus: "UNREGISTERED" as const,
-  purchaseStatus: null,
+  commercialStatus: "REGISTERED" as const,
+  purchaseStatus: "REGULAR_BUYER" as const,
   territoryId: null,
 };
 
 const derm = {
-  verticalId: "v-derm",
+  verticalId: 2,
   verticalCode: "DERMATOLOGIA",
   verticalName: "Dermatologia",
   isActive: true,
@@ -22,108 +22,37 @@ const derm = {
 };
 
 describe("applyVerticalProfileContext", () => {
-  it("exposes shared commercialStatus when multi-vertical profiles agree", () => {
+  it("exposes all profiles in scope without projecting commercial fields", () => {
     const result = applyVerticalProfileContext(
-      {
-        commercialStatus: null,
-        purchaseStatus: null,
-        verticalProfiles: [ortho, derm],
-      },
+      { verticalProfiles: [ortho, derm] },
       [ortho.verticalId, derm.verticalId],
     );
 
-    expect(result.commercialStatus).toBe("UNREGISTERED");
     expect(result.verticalProfiles).toHaveLength(2);
     expect(result.hasProfileContext).toBe(true);
+    expect("commercialStatus" in result).toBe(false);
+    expect("purchaseStatus" in result).toBe(false);
+    expect("purchaseRecurrence" in result).toBe(false);
   });
 
-  it("omits commercialStatus when multi-vertical profiles disagree", () => {
+  it("can expose assigned profiles while filter verticalIds are narrower", () => {
     const result = applyVerticalProfileContext(
-      {
-        commercialStatus: null,
-        purchaseStatus: null,
-        verticalProfiles: [
-          ortho,
-          { ...derm, commercialStatus: "REGISTERED" },
-        ],
-      },
-      [ortho.verticalId, derm.verticalId],
-    );
-
-    expect(result.commercialStatus).toBeUndefined();
-    expect(result.verticalProfiles).toHaveLength(2);
-  });
-
-  it("omits top-level purchaseRecurrence when funnel stages disagree", () => {
-    const recurrence = {
-      observedPurchaseIntervalDays: null,
-      purchaseIntervalDays: 30,
-      purchaseIntervalSource: "DEFAULT" as const,
-      manualPurchaseProfile: null,
-      manualPurchaseIntervalDays: null,
-      lastValidPurchaseDate: null,
-      purchaseRecurrenceSampleSize: 0,
-      nextPurchaseFunnelTransitionDate: null,
-    };
-    const result = applyVerticalProfileContext(
-      {
-        commercialStatus: null,
-        purchaseStatus: null,
-        verticalProfiles: [
-          {
-            ...ortho,
-            purchaseRecurrence: {
-              ...recurrence,
-              purchaseFunnelStage: "PURCHASE_WINDOW",
-            },
-          },
-          {
-            ...derm,
-            purchaseRecurrence: {
-              ...recurrence,
-              purchaseFunnelStage: "NEVER_PURCHASED",
-            },
-          },
-        ],
-      },
-      [ortho.verticalId, derm.verticalId],
-    );
-
-    expect(result.purchaseRecurrence).toBeUndefined();
-    expect(result.verticalProfiles?.[0]?.purchaseRecurrence?.purchaseFunnelStage)
-      .toBe("PURCHASE_WINDOW");
-  });
-
-  it("scopes commercial/funnel to one Linha but can expose all assigned profiles", () => {
-    const result = applyVerticalProfileContext(
-      {
-        commercialStatus: null,
-        purchaseStatus: null,
-        verticalProfiles: [
-          {
-            ...ortho,
-            commercialStatus: "REGISTERED",
-            purchaseRecurrence: {
-              observedPurchaseIntervalDays: null,
-              purchaseIntervalDays: 30,
-              purchaseIntervalSource: "DEFAULT",
-              manualPurchaseProfile: null,
-              manualPurchaseIntervalDays: null,
-              lastValidPurchaseDate: null,
-              purchaseRecurrenceSampleSize: 0,
-              purchaseFunnelStage: "PURCHASE_WINDOW",
-              nextPurchaseFunnelTransitionDate: null,
-            },
-          },
-          derm,
-        ],
-      },
+      { verticalProfiles: [ortho, derm] },
       [ortho.verticalId],
       { exposeProfileVerticalIds: [ortho.verticalId, derm.verticalId] },
     );
 
-    expect(result.commercialStatus).toBe("REGISTERED");
-    expect(result.purchaseRecurrence?.purchaseFunnelStage).toBe("PURCHASE_WINDOW");
     expect(result.verticalProfiles).toHaveLength(2);
+    expect(result.verticalProfiles?.map((p) => p.verticalId)).toEqual([1, 2]);
+  });
+
+  it("returns empty exposure when no profiles match expose ids", () => {
+    const result = applyVerticalProfileContext(
+      { verticalProfiles: [ortho] },
+      [derm.verticalId],
+    );
+
+    expect(result.verticalProfiles).toBeUndefined();
+    expect(result.hasProfileContext).toBe(true);
   });
 });

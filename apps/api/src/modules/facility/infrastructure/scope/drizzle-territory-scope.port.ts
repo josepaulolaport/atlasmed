@@ -4,11 +4,11 @@ import type { FacilityRepository } from "../../application/interfaces/facility.r
 export class DrizzleTerritoryScopePort implements TerritoryScopePort {
   constructor(private readonly facilityRepository: FacilityRepository) {}
 
-  async getFacilityIdsForTerritories(territoryIds: string[]): Promise<string[]> {
+  async getFacilityIdsForTerritories(territoryIds: number[]): Promise<number[]> {
     return this.facilityRepository.findIdsByTerritoryIds(territoryIds);
   }
 
-  async getFacilityIdsForVerticals(verticalIds: string[]): Promise<string[]> {
+  async getFacilityIdsForVerticals(verticalIds: number[]): Promise<number[]> {
     return this.facilityRepository.findActiveFacilityIdsByVerticalIds(verticalIds);
   }
 }

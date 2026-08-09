@@ -12,19 +12,17 @@ class ProfessionalNotesException implements Exception {
 
 class ProfessionalNotesRepository extends Repository<List<ProfessionalNote>>
     with SessionEnvironmentMixin<List<ProfessionalNote>> {
-  ProfessionalNotesRepository(
-    this.professionalId, {
-    RepositoryHttpClient? client,
-  }) : _client = client,
-       super(
-         endpoint: Uri.parse(
-           '${AppConfig.apiBaseUrl}/api/v1/professionals/$professionalId/notes',
-         ),
-         resolveOnCreate: true,
-         name: 'ProfessionalNotesRepository',
-       );
+  ProfessionalNotesRepository(this.personId, {RepositoryHttpClient? client})
+    : _client = client,
+      super(
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/persons/$personId/notes',
+        ),
+        resolveOnCreate: true,
+        name: 'ProfessionalNotesRepository',
+      );
 
-  final String professionalId;
+  final int personId;
   final RepositoryHttpClient? _client;
 
   @override
@@ -60,5 +58,49 @@ class ProfessionalNotesRepository extends Repository<List<ProfessionalNote>>
     );
     await refresh();
     return created;
+  }
+
+  /// `PATCH /persons/:id/notes/:noteId`
+  Future<ProfessionalNote> updateNote(int noteId, String note) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'note': note},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw const ProfessionalNotesException();
+      }
+    }
+
+    final updated = ProfessionalNote.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+    await refresh();
+    return updated;
+  }
+
+  /// `DELETE /persons/:id/notes/:noteId`
+  Future<void> deleteNote(int noteId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${endpoint.toString()}/$noteId'),
+        method: RepositoryHttpMethod.delete,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw const ProfessionalNotesException();
+      }
+    }
+
+    await refresh();
   }
 }

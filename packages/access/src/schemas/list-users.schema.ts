@@ -9,7 +9,8 @@ export const listUsersQuerySchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "PENDING"]).optional(),
   role: z.string().min(1).optional(),
   search: z.string().min(1).optional(),
-  verticalId: z.string().min(1).optional(),
+  // Query string → coerce at HTTP edge only
+  verticalId: z.coerce.number().int().positive().optional(),
   sortBy: listUsersSortBySchema.optional(),
   sortDir: listUsersSortDirSchema.optional(),
 });

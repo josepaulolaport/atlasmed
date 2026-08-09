@@ -2,20 +2,22 @@ import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:equatable/equatable.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 /// Territory-derived manager for a vertical (zone UTA).
 class AssignmentManagerRef extends Equatable {
   const AssignmentManagerRef({required this.id, required this.name});
 
-  final String id;
+  final int id;
   final String name;
 
   factory AssignmentManagerRef.fromJson(Map<String, dynamic> json) {
     return AssignmentManagerRef(
-      id: json['id'] as String,
+      id: readCrmId(json['id'], 'id'),
       name: (json['name'] as String?)?.trim().isNotEmpty == true
           ? json['name'] as String
-          : (json['username'] as String? ?? json['id'] as String),
+          : (json['username'] as String? ??
+                readCrmId(json['id'], 'id').toString()),
     );
   }
 
@@ -34,7 +36,7 @@ class InviteNewPatchDraft extends Equatable {
   });
 
   final String name;
-  final String managerZoneId;
+  final int managerZoneId;
   final Map<String, dynamic> boundary;
   final MapCoordinate? centroid;
   final TerritoryGeometry? geometry;
@@ -69,11 +71,11 @@ class InviteVerticalAssignment extends Equatable {
     this.newPatch,
   });
 
-  final String verticalId;
+  final int verticalId;
   final String verticalName;
 
   /// Selected manager zone for REP invite (parent of patches).
-  final String? managerZoneId;
+  final int? managerZoneId;
   final String? managerZoneName;
 
   /// Display-only summary (joined names). Prefer [managers] when present.
@@ -89,7 +91,7 @@ class InviteVerticalAssignment extends Equatable {
   /// Draft patch to create on invite submit (REP only).
   final InviteNewPatchDraft? newPatch;
 
-  List<String> get territoryIds =>
+  List<int> get territoryIds =>
       territories.map((t) => t.id).toList(growable: false);
 
   bool get hasTerritorySelection => territories.isNotEmpty || newPatch != null;
@@ -103,7 +105,7 @@ class InviteVerticalAssignment extends Equatable {
   }
 
   InviteVerticalAssignment copyWith({
-    String? managerZoneId,
+    int? managerZoneId,
     String? managerZoneName,
     String? managerDisplayName,
     List<AssignmentManagerRef>? managers,

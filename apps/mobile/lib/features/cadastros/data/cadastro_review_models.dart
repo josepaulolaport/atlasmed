@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 /// One file attached to an ops-queue Cadastro submission.
 class CadastroReviewFile {
@@ -10,7 +11,7 @@ class CadastroReviewFile {
     this.position = 1,
   });
 
-  final String fileAssetId;
+  final int fileAssetId;
   final String fileName;
   final String? contentType;
   final String? remoteUrl;
@@ -19,7 +20,9 @@ class CadastroReviewFile {
   factory CadastroReviewFile.fromJson(Map<String, dynamic> json) {
     return CadastroReviewFile(
       fileAssetId:
-          json['fileAssetId'] as String? ?? json['id'] as String? ?? '',
+          readCrmIdOrNull(json['fileAssetId'], 'fileAssetId') ??
+          readCrmIdOrNull(json['id'], 'id') ??
+          0,
       fileName:
           json['fileName'] as String? ??
           json['originalFilename'] as String? ??
@@ -45,8 +48,8 @@ class CadastroReviewSubmission {
     required this.status,
     required this.submittedAt,
     required this.submittedByName,
-    this.taxIdType,
-    this.taxId,
+    this.legalDocumentType,
+    this.legalDocument,
     this.specialtyLabel,
     this.address,
     this.city,
@@ -62,8 +65,8 @@ class CadastroReviewSubmission {
     this.reviewedByName,
   });
 
-  final String id;
-  final String facilityId;
+  final int id;
+  final int facilityId;
   final String facilityName;
 
   /// Document requirement being reviewed (e.g. "Alvará de funcionamento").
@@ -80,8 +83,8 @@ class CadastroReviewSubmission {
   final String submittedByName;
 
   // Clinic snapshot shown on the review detail screen.
-  final FacilityTaxIdType? taxIdType;
-  final String? taxId;
+  final FacilityLegalDocumentType? legalDocumentType;
+  final String? legalDocument;
   final String? specialtyLabel;
   final String? address;
   final String? city;
@@ -153,8 +156,8 @@ class CadastroReviewSubmission {
       status: status ?? this.status,
       submittedAt: submittedAt,
       submittedByName: submittedByName,
-      taxIdType: taxIdType,
-      taxId: taxId,
+      legalDocumentType: legalDocumentType,
+      legalDocument: legalDocument,
       specialtyLabel: specialtyLabel,
       address: address,
       city: city,

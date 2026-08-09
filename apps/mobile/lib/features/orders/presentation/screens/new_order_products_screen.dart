@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
@@ -11,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/providers/order
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/product_order_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class NewOrderProductsScreen extends ConsumerStatefulWidget {
   const NewOrderProductsScreen({
@@ -20,8 +20,8 @@ class NewOrderProductsScreen extends ConsumerStatefulWidget {
     this.facilityName,
   });
 
-  final String? interactionId;
-  final String? facilityId;
+  final int? interactionId;
+  final int? facilityId;
   final String? facilityName;
 
   @override
@@ -141,7 +141,7 @@ class _NewOrderProductsScreenState
                   CartBadge(
                     totalQty: cart.totalQty,
                     totalValue: cart.subtotal,
-                    onTap: () => context.push('/orders/new/cart'),
+                    onTap: () => const NewOrderCartRoute().push(context),
                   ),
                 ],
               ),
@@ -197,7 +197,7 @@ class _NewOrderProductsScreenState
                   heroTag: 'new-order-products-cta',
                   backgroundColor: AppColors.navyDeep,
                   foregroundColor: Colors.white,
-                  onPressed: () => context.push('/orders/new/cart'),
+                  onPressed: () => const NewOrderCartRoute().push(context),
                   label: Text('Ver carrinho · ${cart.totalQty} itens →'),
                 ),
               ),

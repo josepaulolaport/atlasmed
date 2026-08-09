@@ -29,9 +29,9 @@ describe("PasswordResetService", () => {
 
   describe("createPasswordReset", () => {
     it("should invalidate prior unused tokens before creating a new one", async () => {
-      const userId = "user-123";
+      const userId = 123;
       const mockPasswordReset = {
-        id: "reset-123",
+        id: 123,
         userId,
         tokenHash: "hash-123",
         expiresAt: new Date(),
@@ -47,9 +47,9 @@ describe("PasswordResetService", () => {
     });
 
     it("should create a password reset with token", async () => {
-      const userId = "user-123";
+      const userId = 123;
       const mockPasswordReset = {
-        id: "reset-123",
+        id: 123,
         userId,
         tokenHash: "hash-123",
         expiresAt: new Date(),
@@ -61,13 +61,12 @@ describe("PasswordResetService", () => {
       const result = await service.createPasswordReset({ userId });
 
       expect(result.passwordReset).toEqual(mockPasswordReset as any);
-      expect(result.token).toBeTruthy();
-      expect(typeof result.token).toBe("string");
+      expect(result.token).toMatch(/^\d{6}$/);
       expect(mockRepository.create).toHaveBeenCalled();
     });
 
     it("should set expiration to 1 hour from now", async () => {
-      const userId = "user-123";
+      const userId = 123;
       const beforeCreate = Date.now();
 
       await service.createPasswordReset({ userId });
@@ -87,8 +86,8 @@ describe("PasswordResetService", () => {
       const tokenHash = hashToken(token);
 
       const mockPasswordReset = {
-        id: "reset-123",
-        userId: "user-123",
+        id: 123,
+        userId: 123,
         tokenHash,
         expiresAt: new Date(Date.now() + 1000 * 60 * 60),
         usedAt: null,
@@ -115,8 +114,8 @@ describe("PasswordResetService", () => {
       const tokenHash = hashToken(token);
 
       const mockPasswordReset = {
-        id: "reset-123",
-        userId: "user-123",
+        id: 123,
+        userId: 123,
         tokenHash,
         expiresAt: new Date(Date.now() + 1000 * 60 * 60),
         usedAt: new Date(),
@@ -134,8 +133,8 @@ describe("PasswordResetService", () => {
       const tokenHash = hashToken(token);
 
       const mockPasswordReset = {
-        id: "reset-123",
-        userId: "user-123",
+        id: 123,
+        userId: 123,
         tokenHash,
         expiresAt: new Date(Date.now() - 1000),
         usedAt: null,

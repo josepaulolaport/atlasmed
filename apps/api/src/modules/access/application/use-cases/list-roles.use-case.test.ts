@@ -9,7 +9,7 @@ describe("ListRolesUseCase", () => {
       findAll: mock(() =>
         Promise.resolve([
           {
-            id: "role-1",
+            id: 1,
             name: "USER",
             description: "Standard user",
             priority: 10,
@@ -24,7 +24,7 @@ describe("ListRolesUseCase", () => {
     expect(result).toEqual({
       roles: [
         {
-          id: "role-1",
+          id: 1,
           name: "USER",
           description: "Standard user",
         },

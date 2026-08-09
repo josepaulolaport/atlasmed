@@ -11,7 +11,7 @@ class AgendaQuery extends Equatable {
 
   final DateTime from;
   final DateTime to;
-  final String? ownerUserId;
+  final int? ownerUserId;
 
   @override
   List<Object?> get props => [from, to, ownerUserId];

@@ -3,7 +3,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-typedef FacilityPotentialArgs = ({String facilityId, String verticalId});
+typedef FacilityPotentialArgs = ({int facilityId, int verticalId});
 
 final facilityPotentialsProvider = FutureProvider.autoDispose
     .family<FacilityPotentialsPage, FacilityPotentialArgs>((ref, args) async {
@@ -17,11 +17,11 @@ final facilityPotentialsProvider = FutureProvider.autoDispose
 
 /// Resolves active Linha then loads potentials for the clinic.
 final clinicDetailPotentialsProvider = FutureProvider.autoDispose
-    .family<FacilityPotentialsPage?, String>((ref, facilityId) async {
+    .family<FacilityPotentialsPage?, int>((ref, facilityId) async {
       final verticalId = ref.watch(
         clinicDetailActiveLinhaIdProvider(facilityId),
       );
-      if (verticalId == null || verticalId.isEmpty) return null;
+      if (verticalId == null || (verticalId <= 0)) return null;
       return ref.watch(
         facilityPotentialsProvider((
           facilityId: facilityId,

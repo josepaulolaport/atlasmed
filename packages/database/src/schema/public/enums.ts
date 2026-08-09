@@ -74,13 +74,7 @@ export const purchaseFunnelStageEnum = pgEnum(
   PURCHASE_FUNNEL_STAGES,
 );
 
-export const contactTypeEnum = pgEnum("contact_type", [
-  "PROFESSIONAL",
-  "DECISOR",
-  "COMPRADOR",
-]);
-
-/** User×professional relationship strength on a 1–10 scale. */
+/** User×person relationship strength on a 1–10 scale. */
 export const RELATIONSHIP_LEVEL_MIN = 1;
 export const RELATIONSHIP_LEVEL_MAX = 10;
 
@@ -91,12 +85,6 @@ export const healthcareProviderTypeEnum = pgEnum("healthcare_provider_type", [
   "OTHER",
 ]);
 
-export const healthcareProviderShareSourceEnum = pgEnum("healthcare_provider_share_source", [
-  "MANUAL",
-  "REGISTRY",
-  "IMPORT",
-]);
-
 export const verificationTokenTypeEnum = pgEnum("verification_token_type", [
   "EMAIL_VERIFICATION",
   "PHONE_VERIFICATION",
@@ -104,35 +92,14 @@ export const verificationTokenTypeEnum = pgEnum("verification_token_type", [
   "PHONE_CHANGE",
 ]);
 
-export const territoryAssignmentStatusEnum = pgEnum("territory_assignment_status", [
-  "assigned",
-  "unassigned",
-  "ambiguous",
-]);
-
-export const territoryAssignmentSourceEnum = pgEnum("territory_assignment_source", [
-  "geo",
-  "manual",
-]);
-
-export const territoryApprovalTypeEnum = pgEnum("territory_approval_type", [
-  "deactivate_territory",
-  "clinic_territory_change",
-]);
-
-export const territoryApprovalStatusEnum = pgEnum("territory_approval_status", [
-  "pending",
-  "approved",
-  "rejected",
-  "superseded",
-]);
-
 /**
- * Legal entity type for a facility's tax registration.
- * PJ = Pessoa Jurídica (company, identified by CNPJ).
- * PF = Pessoa Física (individual practitioner, identified by CPF).
+ * Document kind for a facility's legal identifier.
+ * CNPJ = company (14 digits). CPF = individual practitioner (11 digits).
  */
-export const facilityTaxIdTypeEnum = pgEnum("facility_tax_id_type", ["PJ", "PF"]);
+export const facilityLegalDocumentTypeEnum = pgEnum("facility_legal_document_type", [
+  "CNPJ",
+  "CPF",
+]);
 
 export const orderStatusEnum = pgEnum("order_status", [
   "DRAFT",

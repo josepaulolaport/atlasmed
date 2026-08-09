@@ -184,25 +184,24 @@ class SessionEnvironment extends Repository<Session?>
     }
   }
 
-  /// Send password reset code to email.
+  /// Send password reset code to email/WhatsApp (`POST /access/password-reset/request`).
+  ///
+  /// Always succeeds on 200 — API does not reveal whether the identifier exists.
   Future<Either<PasswordResetError, void>> requestPasswordReset(
     String email,
   ) async {
     try {
       final response = await client.call(
         request: RepositoryHttpRequest(
-          url: Uri.parse('$_baseUrl/auth/forgot-password'),
+          url: Uri.parse('$_baseUrl/api/v1/access/password-reset/request'),
           method: .post,
-          body: {'email': email},
+          body: {'identifier': email.trim()},
+          headers: const {'Content-Type': 'application/json'},
         ),
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         return const Right(null);
-      }
-
-      if (response.statusCode == 404) {
-        return const Left(.emailNotFound);
       }
 
       throw StateError(
@@ -213,7 +212,7 @@ class SessionEnvironment extends Repository<Session?>
     }
   }
 
-  /// Verify the 6-digit reset code.
+  /// Verify the 6-digit reset code (`POST /access/password-reset/verify`).
   Future<Either<PasswordResetError, bool>> verifyResetCode(
     String email,
     String code,
@@ -221,9 +220,10 @@ class SessionEnvironment extends Repository<Session?>
     try {
       final response = await client.call(
         request: RepositoryHttpRequest(
-          url: Uri.parse('$_baseUrl/auth/verify-reset-code'),
+          url: Uri.parse('$_baseUrl/api/v1/access/password-reset/verify'),
           method: .post,
-          body: {'email': email, 'code': code},
+          body: {'token': code.trim()},
+          headers: const {'Content-Type': 'application/json'},
         ),
       );
 
@@ -231,7 +231,9 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(true);
       }
 
-      if (response.statusCode == 400 || response.statusCode == 404) {
+      if (response.statusCode == 401 ||
+          response.statusCode == 400 ||
+          response.statusCode == 422) {
         return const Right(false);
       }
 
@@ -243,7 +245,7 @@ class SessionEnvironment extends Repository<Session?>
     }
   }
 
-  /// Reset password with the verified code.
+  /// Reset password with the verified code (`POST /access/password-reset/confirm`).
   Future<Either<PasswordResetError, void>> resetPassword({
     required String email,
     required String code,
@@ -252,14 +254,22 @@ class SessionEnvironment extends Repository<Session?>
     try {
       final response = await client.call(
         request: RepositoryHttpRequest(
-          url: Uri.parse('$_baseUrl/auth/reset-password'),
+          url: Uri.parse('$_baseUrl/api/v1/access/password-reset/confirm'),
           method: .post,
-          body: {'email': email, 'code': code, 'password': newPassword},
+          body: {'token': code.trim(), 'newPassword': newPassword},
+          headers: const {'Content-Type': 'application/json'},
         ),
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         return const Right(null);
+      }
+
+      if (response.statusCode == 401) {
+        return const Left(.invalidCode);
+      }
+      if (response.statusCode == 422) {
+        return const Left(.expiredCode);
       }
 
       throw StateError(

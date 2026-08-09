@@ -13,7 +13,7 @@ export const changePasswordRoute = new Elysia({
   .use(passwordChangeRateLimit)
   .patch(
     "/password",
-    async ({ getUserId, getSessionId, body, request }: any) => {
+    async ({ getUserId, getSessionId, body, request, server }) => {
       const userId = await getUserId();
       const sessionId = await getSessionId();
       const parsed = changePasswordSchema.parse(body);
@@ -24,7 +24,7 @@ export const changePasswordRoute = new Elysia({
         newPassword: parsed.newPassword,
         revokeOtherSessions: parsed.revokeOtherSessions,
         sessionId,
-        ipAddress: getClientIp(request),
+        ipAddress: getClientIp({ request, server }),
         userAgent: request.headers.get("user-agent") || undefined,
       });
     },

@@ -1,3 +1,5 @@
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// A single line in a Tabela Brasíndice/Simpro comparison — either the
 /// AtlasMed variant itself ([isOwn] = true, one per table) or a competitor's
 /// equivalent product pulled from `product_equivalences`.
@@ -14,7 +16,7 @@ class ComparisonRow {
     required this.isOwn,
   });
 
-  final String id;
+  final int id;
   final String label;
   final String manufacturer;
   final String countryOfOrigin;
@@ -32,7 +34,7 @@ class ComparisonRow {
     };
 
     return ComparisonRow(
-      id: json['id'] as String,
+      id: readCrmId(json['id'], 'id'),
       label: json['label'] as String,
       manufacturer: json['manufacturer'] as String? ?? '',
       countryOfOrigin: json['countryOfOrigin'] as String? ?? '',
@@ -56,13 +58,13 @@ class ComparisonGroup {
     required this.rows,
   });
 
-  final String variantId;
+  final int variantId;
   final String variantLabel;
   final List<ComparisonRow> rows;
 
   factory ComparisonGroup.fromJson(Map<String, dynamic> json) {
     return ComparisonGroup(
-      variantId: json['productId'] as String,
+      variantId: readCrmId(json['productId'], 'productId'),
       variantLabel: json['productLabel'] as String,
       rows: (json['rows'] as List<dynamic>)
           .map((row) => ComparisonRow.fromJson(row as Map<String, dynamic>))

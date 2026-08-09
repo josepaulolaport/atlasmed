@@ -19,7 +19,14 @@ export const searchSyncRoutes = new Elysia()
         tags: ["Search Sync"],
         security: [{ bearerAuth: [] }],
       },
-      body: t.Object({ entity: t.Union([t.Literal("facilities"), t.Literal("professionals"), t.Literal("orders")]) }),
+      body: t.Object({
+        entity: t.Union([
+          t.Literal("facilities"),
+          t.Literal("persons"),
+          t.Literal("orders"),
+          t.Literal("emultec-orders"),
+        ]),
+      }),
     }
   )
   .get(

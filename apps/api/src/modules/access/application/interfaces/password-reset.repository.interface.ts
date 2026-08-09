@@ -1,6 +1,6 @@
 export interface PasswordResetRecord {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   tokenHash: string;
   expiresAt: Date;
   usedAt: Date | null;
@@ -9,18 +9,18 @@ export interface PasswordResetRecord {
 
 export interface PasswordResetWithUserRecord extends PasswordResetRecord {
   user: {
-    id: string;
+    id: number;
     email: string | null;
     username: string;
     phoneNumber: string | null;
     passwordHash: string;
     passwordHistory: string[];
-    role: { id: string; name: string };
+    role: { id: number; name: string };
   };
 }
 
 export interface CreatePasswordResetParams {
-  userId: string;
+  userId: number;
 
   tokenHash: string;
 
@@ -36,9 +36,9 @@ export interface PasswordResetRepository {
 
   findByToken(params: FindPasswordResetByTokenParams): Promise<PasswordResetWithUserRecord | null>;
 
-  markAsUsed(id: string): Promise<void>;
+  markAsUsed(id: number): Promise<void>;
 
-  invalidateUnusedForUser(userId: string): Promise<void>;
+  invalidateUnusedForUser(userId: number): Promise<void>;
 
   deleteExpired(): Promise<void>;
 }

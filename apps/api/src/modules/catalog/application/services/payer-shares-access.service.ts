@@ -9,7 +9,7 @@ export const PAYER_SHARES_VERTICAL_CODE = "ORTOPEDIA";
  * ADMIN/OPS follow the same assignedVerticalIds rule.
  */
 export async function assertPayerSharesOrtopediaAccess(input: {
-  facilityId: string;
+  facilityId: number;
   scope: ScopeContext;
   facilityVerticalAccess: FacilityVerticalAccessRepository;
 }): Promise<void> {

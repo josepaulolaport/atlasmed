@@ -2,7 +2,7 @@ import type { ConformityRepository } from "../interfaces/conformity.repository.i
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import type { CadastroSubmissionRepository } from "../interfaces/cadastro-submission.repository.interface";
 import { ResourceNotFoundError } from "../../../../shared/errors";
-import { resolveFacilityTaxIdType } from "../utils/facility-tax-id.utils";
+import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 
 interface Dependencies {
   facilityRepository: FacilityRepository;
@@ -24,8 +24,8 @@ export class FacilityCadastroCompletionService {
   constructor(private readonly deps: Dependencies) {}
 
   async evaluateAndApply(
-    facilityId: string,
-    verticalId: string,
+    facilityId: number,
+    verticalId: number,
   ): Promise<{
     complete: boolean;
     conformityStatus: "INCOMPLETE" | "COMPLETE";
@@ -49,7 +49,7 @@ export class FacilityCadastroCompletionService {
     const currentCommercialStatus = profile?.commercialStatus ?? null;
 
     const requirements = await this.deps.conformityRepository.findActiveRequirements({
-      taxIdType: resolveFacilityTaxIdType(facility),
+      legalDocumentType: resolveFacilityLegalDocumentType(facility),
     });
 
     let docsComplete = false;

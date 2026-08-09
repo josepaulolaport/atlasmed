@@ -1,36 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/facility_service_labels.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinical_focus_labels.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// Compact CNES service chips for clinic surfaces (header / body).
+/// Compact clinical focus chips for clinic surfaces (header / body).
 class ClinicServiceChips extends StatelessWidget {
   const ClinicServiceChips({
     super.key,
-    required this.services,
+    required this.focuses,
     this.maxVisible = 6,
     this.onNavy = false,
   }) : emptyLabel = null;
 
   const ClinicServiceChips.empty({super.key, this.onNavy = false})
-    : services = const [],
+    : focuses = const [],
       maxVisible = 0,
-      emptyLabel = 'Sem especialidade';
+      emptyLabel = 'Sem foco clínico';
 
-  final List<ClinicService> services;
+  final List<ClinicalFocus> focuses;
   final int maxVisible;
   final bool onNavy;
   final String? emptyLabel;
 
   @override
   Widget build(BuildContext context) {
-    if (services.isEmpty) {
+    if (focuses.isEmpty) {
       return Wrap(
         spacing: 6,
         runSpacing: 6,
         children: [
           _Chip(
-            label: emptyLabel ?? 'Sem especialidade',
+            label: emptyLabel ?? 'Sem foco clínico',
             onNavy: onNavy,
             muted: true,
           ),
@@ -38,7 +38,7 @@ class ClinicServiceChips extends StatelessWidget {
       );
     }
 
-    final ordered = FacilityServiceLabels.prioritize(services);
+    final ordered = ClinicalFocusLabels.prioritize(focuses);
     final visible = ordered.take(maxVisible).toList(growable: false);
     final overflow = ordered.length - visible.length;
 
@@ -46,9 +46,9 @@ class ClinicServiceChips extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: [
-        for (final service in visible)
+        for (final focus in visible)
           _Chip(
-            label: FacilityServiceLabels.formatName(service.serviceName),
+            label: ClinicalFocusLabels.formatName(focus.name),
             onNavy: onNavy,
           ),
         if (overflow > 0) _Chip(label: '+$overflow', onNavy: onNavy),

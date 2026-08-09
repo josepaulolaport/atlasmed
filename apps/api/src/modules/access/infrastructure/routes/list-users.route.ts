@@ -3,6 +3,10 @@ import { Role } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
+const userIdParams = t.Object({
+  id: t.Number({ minimum: 1 }),
+});
+
 export const listUsersRoute = new Elysia({
   detail: {
     tags: ["Users"],
@@ -17,8 +21,8 @@ export const listUsersRoute = new Elysia({
       const result = await accessUseCases.listUsers().execute({
         status: query.status,
         role: query.role,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
+        page: query.page,
+        limit: query.limit,
         search: query.search,
         verticalId: query.verticalId,
         sortBy: query.sortBy,
@@ -46,10 +50,12 @@ export const listUsersRoute = new Elysia({
           ])
         ),
         role: t.Optional(t.String({ description: "Filter by role name (e.g. MANAGER, REP)" })),
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        page: t.Optional(t.Number({ minimum: 1 })),
+        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
         search: t.Optional(t.String()),
-        verticalId: t.Optional(t.String({ description: "Filter to users assigned to this business vertical" })),
+        verticalId: t.Optional(
+          t.Number({ minimum: 1, description: "Filter to users assigned to this business vertical" }),
+        ),
         sortBy: t.Optional(
           t.Union([
             t.Literal("name"),
@@ -78,5 +84,6 @@ export const listUsersRoute = new Elysia({
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
+      params: userIdParams,
     }
   );

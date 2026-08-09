@@ -23,8 +23,8 @@ export class SessionSecurityService {
 
   async validateSessionSecurity(
     params: SessionSecurityCheck & {
-      userId: string;
-      sessionId: string;
+      userId: number;
+      sessionId: number;
     }
   ): Promise<{ valid: boolean; reason?: string; suspicious: boolean }> {
     const issues: string[] = [];
@@ -180,8 +180,8 @@ export class SessionSecurityService {
   }
 
   async detectSessionHijacking(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     currentIpAddress?: string;
     currentUserAgent?: string;
     sessionIpAddress?: string;

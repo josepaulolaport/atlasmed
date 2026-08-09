@@ -8,11 +8,11 @@ import { ValidationError } from "../../../../shared/errors";
  * 3. Else require explicit verticalId.
  */
 export async function resolveCadastroVerticalId(input: {
-  facilityId: string;
-  assignedVerticalIds: string[];
+  facilityId: number;
+  assignedVerticalIds: number[];
   facilityRepository: FacilityRepository;
-  verticalId?: string;
-}): Promise<string> {
+  verticalId?: number;
+}): Promise<number> {
   const profilesByFacility = await input.facilityRepository.findVerticalProfilesByFacilityIds(
     [input.facilityId],
   );

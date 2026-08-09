@@ -1,16 +1,16 @@
 import type { FacilityAssociationPort } from "../../../access/application/interfaces/scope.repository.interface";
-import type { FacilityConsultantAssignmentRepository } from "../../application/interfaces/facility-consultant-assignment.repository.interface";
+import type { FacilityVerticalRepAssignmentRepository } from "../../application/interfaces/facility-vertical-rep-assignment.repository.interface";
 
 export class DrizzleFacilityAssociationPort implements FacilityAssociationPort {
   constructor(
-    private readonly consultantAssignmentRepository: FacilityConsultantAssignmentRepository,
+    private readonly repAssignmentRepository: FacilityVerticalRepAssignmentRepository,
   ) {}
 
   async getAssociatedFacilityIds(
-    userId: string,
-    verticalIds?: string[],
-  ): Promise<string[]> {
-    return this.consultantAssignmentRepository.findActiveFacilityIdsByUserId(
+    userId: number,
+    verticalIds?: number[],
+  ): Promise<number[]> {
+    return this.repAssignmentRepository.findActiveFacilityIdsByUserId(
       userId,
       verticalIds,
     );

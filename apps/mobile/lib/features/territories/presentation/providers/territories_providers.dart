@@ -21,21 +21,16 @@ final businessVerticalsProvider = FutureProvider<List<BusinessVertical>>((ref) {
   return ref.watch(territoryRepositoryProvider).getVerticals();
 });
 
-@Deprecated('Use businessVerticalsProvider')
-final sectorsProvider = businessVerticalsProvider;
-
 final selectedTerritoryKindProvider = StateProvider<TerritoryKind>((ref) {
   return TerritoryKind.managerZone;
 });
 
-final selectedTerritoryVerticalIdProvider = StateProvider<String?>((ref) {
+final selectedTerritoryVerticalIdProvider = StateProvider<int?>((ref) {
   return null;
 });
 
 /// Spec 0006: when viewing patches, show only one rep's shapes (not all overlaps).
-final selectedGeographyRepUserIdProvider = StateProvider<String?>(
-  (ref) => null,
-);
+final selectedGeographyRepUserIdProvider = StateProvider<int?>((ref) => null);
 
 final territoriesProvider = FutureProvider<List<Territory>>((ref) async {
   final repository = ref.watch(territoryRepositoryProvider);
@@ -61,11 +56,8 @@ final managerZonesUnderlayProvider = FutureProvider<List<Territory>>((
   );
 });
 
-final selectedTerritoryIdProvider = StateProvider<String?>((ref) => null);
+final selectedTerritoryIdProvider = StateProvider<int?>((ref) => null);
 
-final territoryByIdProvider = FutureProvider.family<Territory?, String>((
-  ref,
-  id,
-) {
+final territoryByIdProvider = FutureProvider.family<Territory?, int>((ref, id) {
   return ref.watch(territoryRepositoryProvider).getTerritoryById(id);
 });

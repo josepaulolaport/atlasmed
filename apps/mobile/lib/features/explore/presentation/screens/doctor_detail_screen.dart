@@ -5,7 +5,6 @@ import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.dart';
@@ -18,20 +17,22 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/prof
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_profile_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/professional_registrations_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/quick_actions.dart';
 import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 // ======================================================================
 // DoctorDetailScreen — full doctor profile with multiple sections
 // ======================================================================
 
 class DoctorDetailScreen extends ConsumerWidget {
-  final String doctorId;
+  final int doctorId;
 
   /// When set (facility roster navigation), relationship can be edited.
-  final String? facilityId;
+  final int? facilityId;
 
   const DoctorDetailScreen({
     super.key,
@@ -177,8 +178,8 @@ class DoctorDetailScreen extends ConsumerWidget {
 class _DoctorDetailContent extends ConsumerWidget {
   final Professional detail;
   final DoctorDetailRepository repository;
-  final String doctorId;
-  final String? facilityId;
+  final int doctorId;
+  final int? facilityId;
   const _DoctorDetailContent({
     required this.detail,
     required this.repository,
@@ -304,10 +305,7 @@ class _DoctorDetailContent extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (facilityId != null &&
-                      facilityId!.isNotEmpty &&
-                      !facilityId!.startsWith('near-') &&
-                      !facilityId!.endsWith(':empty')) ...[
+                  if (facilityId != null && facilityId! > 0) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: _DoctorRelationshipCard(
@@ -327,6 +325,11 @@ class _DoctorDetailContent extends ConsumerWidget {
                   _DoctorPersonalCard(
                     detail: detail,
                     onEditField: (field) => _editField(context, ref, field),
+                  ),
+                  const SizedBox(height: 16),
+                  ProfessionalRegistrationsSection(
+                    personId: doctorId,
+                    onChanged: () => repository.refresh(),
                   ),
                   const SizedBox(height: 16),
                   if (detail.prescribing.isNotEmpty) ...[
@@ -349,7 +352,15 @@ class _DoctorDetailContent extends ConsumerWidget {
                         detail: detail,
                         notes: notes,
                         onAddNote: () =>
-                            _showAddNoteSheet(context, ref, repository),
+                            _showNoteSheet(context, ref, repository),
+                        onEditNote: (note) => _showNoteSheet(
+                          context,
+                          ref,
+                          repository,
+                          existing: note,
+                        ),
+                        onDeleteNote: (note) =>
+                            _confirmDeleteNote(context, repository, note),
                       );
                     },
                   ),
@@ -370,8 +381,8 @@ class _DoctorRelationshipCard extends StatefulWidget {
     required this.professionalId,
   });
 
-  final String facilityId;
-  final String professionalId;
+  final int facilityId;
+  final int professionalId;
 
   @override
   State<_DoctorRelationshipCard> createState() =>
@@ -495,26 +506,81 @@ class _DoctorRelationshipCardState extends State<_DoctorRelationshipCard> {
   }
 }
 
-Future<void> _showAddNoteSheet(
+Future<void> _showNoteSheet(
   BuildContext context,
   WidgetRef ref,
-  ProfessionalNotesRepository repository,
-) async {
+  ProfessionalNotesRepository repository, {
+  ProfessionalNote? existing,
+}) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
-    builder: (_) => _AddDoctorNoteSheet(repository: repository, ref: ref),
+    builder: (_) => _AddDoctorNoteSheet(
+      repository: repository,
+      ref: ref,
+      existing: existing,
+    ),
   );
+}
+
+Future<void> _confirmDeleteNote(
+  BuildContext context,
+  ProfessionalNotesRepository repository,
+  ProfessionalNote note,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Excluir nota?'),
+      content: const Text('Esta ação não pode ser desfeita.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
+          child: const Text('Excluir'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+
+  try {
+    await repository.deleteNote(note.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Nota excluída'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Não foi possível excluir a nota.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 }
 
 /// Owns its controllers so dismissing an empty sheet cannot race
 /// InheritedWidget teardown (`_dependents.isEmpty`).
 class _AddDoctorNoteSheet extends StatefulWidget {
-  const _AddDoctorNoteSheet({required this.repository, required this.ref});
+  const _AddDoctorNoteSheet({
+    required this.repository,
+    required this.ref,
+    this.existing,
+  });
 
   final ProfessionalNotesRepository repository;
   final WidgetRef ref;
+  final ProfessionalNote? existing;
 
   @override
   State<_AddDoctorNoteSheet> createState() => _AddDoctorNoteSheetState();
@@ -526,10 +592,12 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
   var _isSaving = false;
   String? _errorMessage;
 
+  bool get _isEdit => widget.existing != null;
+
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _controller = TextEditingController(text: widget.existing?.note ?? '');
   }
 
   @override
@@ -545,7 +613,13 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
       _errorMessage = null;
     });
     try {
-      await widget.repository.createNote(_controller.text.trim());
+      final text = _controller.text.trim();
+      final existing = widget.existing;
+      if (existing != null) {
+        await widget.repository.updateNote(existing.id, text);
+      } else {
+        await widget.repository.createNote(text);
+      }
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (!mounted) return;
@@ -571,9 +645,9 @@ class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Adicionar nota',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            Text(
+              _isEdit ? 'Editar nota' : 'Adicionar nota',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -741,14 +815,16 @@ class _DoctorHeader extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          detail.crm,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.78),
+                        if (detail.crm.trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            detail.crm,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.78),
+                            ),
                           ),
-                        ),
+                        ],
                         if (detail.residency != null) ...[
                           const SizedBox(height: 2),
                           Text(
@@ -1268,7 +1344,7 @@ class _ProfessionalClinics extends StatelessWidget {
                       ].join(' · ');
                       return InkWell(
                         onTap: () {
-                          context.push('/explore/clinic/${c.id}');
+                          ClinicDetailRoute(id: c.id).push(context);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1611,11 +1687,15 @@ class _DoctorNotes extends StatelessWidget {
   final Professional detail;
   final List<ProfessionalNote>? notes;
   final VoidCallback onAddNote;
+  final ValueChanged<ProfessionalNote> onEditNote;
+  final ValueChanged<ProfessionalNote> onDeleteNote;
 
   const _DoctorNotes({
     required this.detail,
     required this.notes,
     required this.onAddNote,
+    required this.onEditNote,
+    required this.onDeleteNote,
   });
 
   @override
@@ -1703,6 +1783,28 @@ class _DoctorNotes extends StatelessWidget {
                                   height: 1.45,
                                 ),
                               ),
+                            ),
+                            PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(
+                                Icons.more_vert_rounded,
+                                size: 18,
+                                color: AppColors.gray400,
+                              ),
+                              onSelected: (value) {
+                                if (value == 'edit') onEditNote(item);
+                                if (value == 'delete') onDeleteNote(item);
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Editar'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Excluir'),
+                                ),
+                              ],
                             ),
                           ],
                         ),

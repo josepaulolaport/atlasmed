@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/mock/mock_products_data.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/products_product_card.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Revamped Produtos list (`/produtos`) — one card per family. Concentrations
 /// are chosen on the detail screen.
@@ -39,7 +39,7 @@ class _ProductsHomeScreenState extends ConsumerState<ProductsHomeScreen> {
   }
 
   void _openFamily(MockProductFamily family) {
-    context.push('/products/${family.id}');
+    ProductDetailRoute(familyId: family.id).push(context);
   }
 
   @override

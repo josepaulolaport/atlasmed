@@ -19,7 +19,7 @@ final ordersPageProvider = FutureProvider.family<OrdersPage, List<String>?>((
   return ref.watch(ordersRepositoryProvider).listOrders(statuses: statuses);
 });
 
-final orderDetailProvider = FutureProvider.family<ApiOrderDetail, String>((
+final orderDetailProvider = FutureProvider.family<ApiOrderDetail, int>((
   ref,
   orderId,
 ) {
@@ -55,7 +55,7 @@ final meusOrdersProvider =
     });
 
 OrderDetail orderDetailForApi(ApiOrderDetail order) => OrderDetail(
-  id: order.displayId,
+  id: order.id,
   placedAt: _formatDate(order.orderedAt ?? order.createdAt),
   clinic: order.facility.name,
   clinicAddress: '',
@@ -92,7 +92,7 @@ class CartState {
   final List<CartItem> items;
   final SelectableClinic? clinic;
   final SelectableDoctor? doctor;
-  final String? interactionId;
+  final int? interactionId;
   final bool isClinicLocked;
 
   const CartState({
@@ -127,7 +127,7 @@ class CartState {
     List<CartItem>? items,
     SelectableClinic? clinic,
     SelectableDoctor? doctor,
-    String? interactionId,
+    int? interactionId,
     bool? isClinicLocked,
     bool clearClinic = false,
     bool clearDoctor = false,
@@ -152,7 +152,7 @@ class CartNotifier extends StateNotifier<CartState> {
   CartNotifier() : super(const CartState());
 
   void addItem({
-    required String productId,
+    required int productId,
     required String productName,
     required String productSubtitle,
     required int qty,
@@ -188,13 +188,13 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
-  void removeItem(String productId) {
+  void removeItem(int productId) {
     state = state.copyWith(
       items: state.items.where((i) => i.productId != productId).toList(),
     );
   }
 
-  void updateQty(String productId, int qty) {
+  void updateQty(int productId, int qty) {
     if (qty <= 0) {
       removeItem(productId);
       return;
@@ -211,7 +211,7 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 
   void setInteractionContext({
-    required String interactionId,
+    required int interactionId,
     required SelectableClinic clinic,
   }) {
     state = state.copyWith(

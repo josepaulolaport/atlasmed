@@ -8,7 +8,7 @@ void main() {
       final payers = List.generate(
         6,
         (i) => PayerShare(
-          id: 'p$i',
+          id: i + 1,
           name: 'P$i',
           sharePercent: (20 - i).toDouble(),
         ),
@@ -23,7 +23,7 @@ void main() {
       final payers = List.generate(
         7,
         (i) => PayerShare(
-          id: 'p$i',
+          id: i + 1,
           name: 'P$i',
           sharePercent: (30 - i).toDouble(),
           isPackage: i == 6,
@@ -40,14 +40,14 @@ void main() {
     test('forces OTHER into Outros even if large share', () {
       final payers = [
         const PayerShare(
-          id: 'other',
+          id: 99,
           name: 'Outros',
           sharePercent: 40,
           type: 'OTHER',
           isPackage: true,
         ),
-        const PayerShare(id: 'a', name: 'Unimed', sharePercent: 35),
-        const PayerShare(id: 'b', name: 'Amil', sharePercent: 25),
+        const PayerShare(id: 1, name: 'Unimed', sharePercent: 35),
+        const PayerShare(id: 2, name: 'Amil', sharePercent: 25),
       ];
       final slices = buildPayerDisplaySlices(payers);
       expect(slices, hasLength(3));
@@ -55,15 +55,15 @@ void main() {
       final bucket = slices.firstWhere((s) => s.isBucket);
       expect(bucket.sharePercent, 40);
       expect(bucket.hasPackage, isTrue);
-      expect(bucket.members.single.id, 'other');
+      expect(bucket.members.single.id, 99);
     });
   });
 
   group('packageMixPercents', () {
     test('sums package vs non-package', () {
       final mix = packageMixPercents(const [
-        PayerShare(id: '1', name: 'A', sharePercent: 30, isPackage: true),
-        PayerShare(id: '2', name: 'B', sharePercent: 70, isPackage: false),
+        PayerShare(id: 1, name: 'A', sharePercent: 30, isPackage: true),
+        PayerShare(id: 2, name: 'B', sharePercent: 70, isPackage: false),
       ]);
       expect(mix.packagePercent, 30);
       expect(mix.nonPackagePercent, 70);

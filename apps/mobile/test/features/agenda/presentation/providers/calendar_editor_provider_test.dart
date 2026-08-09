@@ -22,14 +22,14 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
 
   @override
   Future<void> updateCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarUpdateCommand command,
     required String idempotencyKey,
   }) async {}
 
   @override
   Future<void> updateCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarOccurrenceUpdateCommand command,
     required String idempotencyKey,
@@ -39,14 +39,14 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
 
   @override
   Future<void> cancelCalendar({
-    required String calendarId,
+    required int calendarId,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
   }) async {}
 
   @override
   Future<void> cancelCalendarOccurrence({
-    required String calendarId,
+    required int calendarId,
     required String recurrenceKey,
     required CalendarCancellationCommand command,
     required String idempotencyKey,
@@ -55,23 +55,27 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
   }
 }
 
-CalendarOccurrence _occurrence({int version = 8, int? overrideVersion}) =>
-    CalendarOccurrence.fromJson({
-      'id': 'calendar-1:key-1',
-      'calendarId': 'calendar-1',
-      'recurrenceKey': 'key-1',
-      'ownerUserId': 'rep-1',
-      'kind': 'PERSONAL_BLOCK',
-      'title': 'Bloqueio',
-      'startsAt': '2026-08-03T12:00:00.000Z',
-      'endsAt': '2026-08-03T13:00:00.000Z',
-      'timeZone': 'America/Sao_Paulo',
-      'durationMinutes': 60,
-      'recurrence': 'WEEKLY',
-      'version': version,
-      'overrideVersion': ?overrideVersion,
-      'canMutate': true,
-    });
+CalendarOccurrence _occurrence({
+  int version = 8,
+  int? overrideVersion,
+}) => CalendarOccurrence.fromJson({
+  'id': 1,
+  'occurrenceId': '1:key-1',
+  'calendarId': 1,
+  'recurrenceKey': 'key-1',
+  'ownerUserId': 1,
+  'kind': 'PERSONAL_BLOCK',
+  'title': 'Bloqueio',
+  'startsAt': '2026-08-03T12:00:00.000Z',
+  'endsAt': '2026-08-03T13:00:00.000Z',
+  'timeZone': 'America/Sao_Paulo',
+  'durationMinutes': 60,
+  'recurrence': 'WEEKLY',
+  'version': version,
+  // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
+  if (overrideVersion != null) 'overrideVersion': overrideVersion,
+  'canMutate': true,
+});
 
 void main() {
   test(
@@ -125,7 +129,7 @@ void main() {
         repository: repository,
         target: const CalendarEditorTarget.creating(
           prefill: CalendarEditorPrefill(
-            facilityId: 'facility-1',
+            facilityId: 1,
             facilityName: 'Clínica Central',
             kind: CalendarEventKind.interaction,
           ),
@@ -142,7 +146,7 @@ void main() {
 
       final command = notifier.state.draft.toCreateCommand();
 
-      expect(command.startsAt, '2026-08-03T09:30:00.000+00:00');
+      expect(command.startsAt, '2026-08-03T09:30:00.000-03:00');
       expect(command.recurrence, CalendarRecurrence.monthly);
       expect(command.recurrenceCount, 6);
       expect(command.recurrenceUntil, isNull);
@@ -155,10 +159,11 @@ void main() {
     'series update does not overwrite recurrence when list DTO omitted it',
     () {
       final occurrence = CalendarOccurrence.fromJson({
-        'id': 'calendar-1:key-1',
-        'calendarId': 'calendar-1',
+        'id': 1,
+        'occurrenceId': '1:key-1',
+        'calendarId': 1,
         'recurrenceKey': 'key-1',
-        'ownerUserId': 'rep-1',
+        'ownerUserId': 1,
         'kind': 'PERSONAL_BLOCK',
         'title': 'Bloqueio',
         'startsAt': '2026-08-03T12:00:00.000Z',
@@ -185,10 +190,11 @@ void main() {
     'explicit recurrence change is included after list DTO omitted recurrence',
     () {
       final occurrence = CalendarOccurrence.fromJson({
-        'id': 'calendar-1:key-1',
-        'calendarId': 'calendar-1',
+        'id': 1,
+        'occurrenceId': '1:key-1',
+        'calendarId': 1,
         'recurrenceKey': 'key-1',
-        'ownerUserId': 'rep-1',
+        'ownerUserId': 1,
         'kind': 'PERSONAL_BLOCK',
         'title': 'Bloqueio',
         'startsAt': '2026-08-03T12:00:00.000Z',
@@ -282,7 +288,7 @@ void main() {
         repository: repository,
         target: const CalendarEditorTarget.creating(
           prefill: CalendarEditorPrefill(
-            facilityId: 'facility-1',
+            facilityId: 1,
             facilityName: 'Clínica Central',
             kind: CalendarEventKind.interaction,
           ),
@@ -325,7 +331,7 @@ void main() {
       repository: repository,
       target: const CalendarEditorTarget.creating(
         prefill: CalendarEditorPrefill(
-          facilityId: 'facility-1',
+          facilityId: 1,
           facilityName: 'Clínica Central',
           kind: CalendarEventKind.interaction,
         ),

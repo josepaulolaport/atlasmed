@@ -3,7 +3,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_vi
 
 /// Provides a [ClinicVisitsRepository] for a given facility [id].
 final clinicVisitsRepositoryProvider = Provider.autoDispose
-    .family<ClinicVisitsRepository, String>((ref, facilityId) {
+    .family<ClinicVisitsRepository, int>((ref, facilityId) {
       final repository = ClinicVisitsRepository(facilityId);
       ref.onDispose(repository.dispose);
       return repository;

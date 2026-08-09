@@ -67,9 +67,9 @@ export interface ListFacilitiesQuery {
   commercialStatus?: FacilityCommercialStatus;
   /** Purchase-status bucket from Desempenho donut drill-down. */
   purchaseBucket?: FacilityPurchaseBucket;
-  productIds?: string[];
-  /** CNES/Atlas specialty codes — AND semantics (clinic must have all). */
-  serviceCodes?: string[];
+  productIds?: number[];
+  /** Clinical focus IDs — AND semantics (clinic must have all). */
+  clinicalFocusIds?: number[];
   purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
   purchaseProfile?: FacilityPurchaseProfileFilter;
   purchaseIntervalMinDays?: number;
@@ -89,10 +89,16 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
   const longitude = query.longitude === undefined ? undefined : Number(query.longitude);
   const radiusKm = query.radiusKm === undefined ? undefined : Number(query.radiusKm);
   const productIds = typeof query.productIds === "string"
-    ? query.productIds.split(",").map((id) => id.trim()).filter(Boolean)
+    ? query.productIds
+        .split(",")
+        .map((id) => Number.parseInt(id.trim(), 10))
+        .filter((id) => Number.isInteger(id) && id > 0)
     : undefined;
-  const serviceCodes = typeof query.serviceCodes === "string"
-    ? query.serviceCodes.split(",").map((id) => id.trim()).filter(Boolean)
+  const clinicalFocusIds = typeof query.clinicalFocusIds === "string"
+    ? query.clinicalFocusIds
+        .split(",")
+        .map((id) => Number.parseInt(id.trim(), 10))
+        .filter((id) => Number.isInteger(id) && id > 0)
     : undefined;
   const purchaseFunnelStages = typeof query.purchaseFunnelStage === "string"
     ? query.purchaseFunnelStage.split(",").map((stage) => stage.trim()).filter(Boolean)
@@ -126,7 +132,12 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     });
   }
   if (query.productIds !== undefined && (!productIds || productIds.length === 0)) issues.push({ field: "productIds", message: "productIds must be a comma-separated list of product IDs" });
-  if (query.serviceCodes !== undefined && (!serviceCodes || serviceCodes.length === 0)) issues.push({ field: "serviceCodes", message: "serviceCodes must be a comma-separated list of CNES service codes" });
+  if (query.clinicalFocusIds !== undefined && (!clinicalFocusIds || clinicalFocusIds.length === 0)) {
+    issues.push({
+      field: "clinicalFocusIds",
+      message: "clinicalFocusIds must be a comma-separated list of positive integers",
+    });
+  }
   if (query.purchaseFunnelStage !== undefined && (!purchaseFunnelStages?.length || purchaseFunnelStages.some((stage) => !PURCHASE_FUNNEL_STAGES.includes(stage as FacilityPurchaseFunnelStage)))) issues.push({ field: "purchaseFunnelStage", message: "purchaseFunnelStage is invalid" });
   if (purchaseProfile !== undefined && (typeof purchaseProfile !== "string" || !PURCHASE_PROFILES.includes(purchaseProfile as FacilityPurchaseProfileFilter))) issues.push({ field: "purchaseProfile", message: "purchaseProfile is invalid" });
   if (purchaseIntervalMinDays !== undefined && (!Number.isInteger(purchaseIntervalMinDays) || purchaseIntervalMinDays < 1 || purchaseIntervalMinDays > 3650)) issues.push({ field: "purchaseIntervalMinDays", message: "purchaseIntervalMinDays must be an integer between 1 and 3650" });
@@ -145,7 +156,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     commercialStatus: commercialStatus as FacilityCommercialStatus | undefined,
     purchaseBucket: purchaseBucket as FacilityPurchaseBucket | undefined,
     productIds,
-    serviceCodes,
+    clinicalFocusIds,
     purchaseFunnelStages: purchaseFunnelStages as FacilityPurchaseFunnelStage[] | undefined,
     purchaseProfile: purchaseProfile as FacilityPurchaseProfileFilter | undefined,
     purchaseIntervalMinDays,

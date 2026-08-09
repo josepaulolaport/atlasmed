@@ -5,15 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('maps list enrichment fields into ProfessionalEntry', () {
     final dto = ProfessionalDTO.fromMap({
-      'id': 'professional-1',
+      'id': 1,
       'firstName': 'Ana',
       'lastName': 'Silva',
-      'facilityIds': ['facility-1'],
-      'displayFacility': {'id': 'facility-1', 'name': 'Clínica Central'},
+      'facilityIds': [1],
+      'displayFacility': {'id': 1, 'name': 'Clínica Central'},
       'relationshipLevel': 10,
       'isPriority': true,
-      'crmNumber': '12345',
-      'crmState': 'SP',
     });
 
     final entry = ProfessionalEntry.fromDTO(dto);
@@ -22,6 +20,6 @@ void main() {
     expect(entry.displayFacilityName, 'Clínica Central');
     expect(entry.relationshipLevel, 10);
     expect(entry.isPriority, isTrue);
-    expect(entry.crm, 'CRM-SP 12345');
+    expect(entry.crm, isNull);
   });
 }

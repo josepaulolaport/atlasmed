@@ -7,18 +7,18 @@ import { environment } from "../../app/config/environment";
 import type { AuditEventSeverity } from "@atlasmed/database";
 
 export interface AuditLogEntry {
-  userId?: string | undefined;
+  userId?: number | undefined;
   eventType: string;
   severity?: AuditEventSeverity | undefined;
   actor?: string | undefined;
-  actorId?: string | undefined;
+  actorId?: number | undefined;
   resource?: string | undefined;
   resourceId?: string | undefined;
   action: string;
   details?: Record<string, unknown> | undefined;
   ipAddress?: string | undefined;
   userAgent?: string | undefined;
-  sessionId?: string | undefined;
+  sessionId?: number | undefined;
   outcome?: string | undefined;
   errorMessage?: string | undefined;
   metadata?: Record<string, unknown> | undefined;
@@ -89,7 +89,7 @@ export class AuditLogService {
     reason: string;
     ipAddress?: string;
     userAgent?: string;
-    userId?: string;
+    userId?: number;
   }): Promise<void> {
     await this.log({
       userId: params.userId,
@@ -97,7 +97,7 @@ export class AuditLogService {
       severity: "WARNING",
       action: "login",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
       outcome: "FAILURE",
@@ -110,8 +110,8 @@ export class AuditLogService {
 
   /** @deprecated Use the automatic audit middleware instead. */
   async logUserLogin(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string;
     userAgent?: string;
     success: boolean;
@@ -123,7 +123,7 @@ export class AuditLogService {
       severity: params.success ? "INFO" : "WARNING",
       action: "login",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       sessionId: params.sessionId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
@@ -133,8 +133,8 @@ export class AuditLogService {
   }
 
   async logUserLogout(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string;
   }): Promise<void> {
     await this.log({
@@ -142,14 +142,14 @@ export class AuditLogService {
       eventType: "USER_LOGOUT",
       action: "logout",
       resource: "session",
-      resourceId: params.sessionId,
+      resourceId: String(params.sessionId),
       sessionId: params.sessionId,
       ipAddress: params.ipAddress,
     });
   }
 
   async logPasswordChange(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
     userAgent?: string;
     method: "reset" | "change";
@@ -160,7 +160,7 @@ export class AuditLogService {
       severity: "WARNING",
       action: params.method === "reset" ? "password_reset" : "password_change",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
       metadata: { method: params.method },
@@ -168,7 +168,7 @@ export class AuditLogService {
   }
 
   async logPasswordResetRequest(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void> {
@@ -178,15 +178,15 @@ export class AuditLogService {
       severity: "WARNING",
       action: "request_password_reset",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
     });
   }
 
   async logRevokeInvite(params: {
-    revokedByUserId: string;
-    inviteId: string;
+    revokedByUserId: number;
+    inviteId: number;
     email?: string;
     phoneNumber?: string;
   }): Promise<void> {
@@ -196,7 +196,7 @@ export class AuditLogService {
       severity: "WARNING",
       action: "revoke_invite",
       resource: "invitation",
-      resourceId: params.inviteId,
+      resourceId: String(params.inviteId),
       actorId: params.revokedByUserId,
       details: {
         email: params.email,
@@ -206,18 +206,18 @@ export class AuditLogService {
   }
 
   async logInviteUser(params: {
-    invitedByUserId: string;
-    inviteId: string;
+    invitedByUserId: number;
+    inviteId: number;
     email?: string;
     phoneNumber?: string;
-    roleId: string;
+    roleId: number;
   }): Promise<void> {
     await this.log({
       userId: params.invitedByUserId,
       eventType: "USER_INVITE",
       action: "create_invite",
       resource: "invitation",
-      resourceId: params.inviteId,
+      resourceId: String(params.inviteId),
       actorId: params.invitedByUserId,
       details: {
         email: params.email,
@@ -228,8 +228,8 @@ export class AuditLogService {
   }
 
   async logResendInvite(params: {
-    resentByUserId: string;
-    inviteId: string;
+    resentByUserId: number;
+    inviteId: number;
     email?: string;
     phoneNumber?: string;
     resendCount: number;
@@ -239,7 +239,7 @@ export class AuditLogService {
       eventType: "USER_INVITE",
       action: "resend_invite",
       resource: "invitation",
-      resourceId: params.inviteId,
+      resourceId: String(params.inviteId),
       actorId: params.resentByUserId,
       details: {
         email: params.email,
@@ -250,8 +250,8 @@ export class AuditLogService {
   }
 
   async logAcceptInvite(params: {
-    userId: string;
-    inviteId: string;
+    userId: number;
+    inviteId: number;
     username: string;
   }): Promise<void> {
     await this.log({
@@ -259,13 +259,13 @@ export class AuditLogService {
       eventType: "USER_ACCEPT_INVITE",
       action: "accept_invite",
       resource: "invitation",
-      resourceId: params.inviteId,
+      resourceId: String(params.inviteId),
       details: { username: params.username },
     });
   }
 
   async logUserRegister(params: {
-    userId: string;
+    userId: number;
     username: string;
     email: string;
   }): Promise<void> {
@@ -274,14 +274,14 @@ export class AuditLogService {
       eventType: "USER_REGISTER",
       action: "register",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       details: { username: params.username, email: params.email },
     });
   }
 
   async logUserStatusChange(params: {
-    userId: string;
-    targetUserId: string;
+    userId: number;
+    targetUserId: number;
     oldStatus: string;
     newStatus: string;
     reason?: string;
@@ -297,7 +297,7 @@ export class AuditLogService {
       severity: params.newStatus === "SUSPENDED" ? "WARNING" : "INFO",
       action: `change_status_${params.newStatus.toLowerCase()}`,
       resource: "user",
-      resourceId: params.targetUserId,
+      resourceId: String(params.targetUserId),
       actorId: params.userId,
       details: {
         oldStatus: params.oldStatus,
@@ -308,10 +308,10 @@ export class AuditLogService {
   }
 
   async logRoleChange(params: {
-    userId: string;
-    targetUserId: string;
-    oldRoleId: string;
-    newRoleId: string;
+    userId: number;
+    targetUserId: number;
+    oldRoleId: number;
+    newRoleId: number;
   }): Promise<void> {
     await this.log({
       userId: params.userId,
@@ -319,7 +319,7 @@ export class AuditLogService {
       severity: "WARNING",
       action: "change_role",
       resource: "user",
-      resourceId: params.targetUserId,
+      resourceId: String(params.targetUserId),
       actorId: params.userId,
       details: {
         oldRoleId: params.oldRoleId,
@@ -329,25 +329,25 @@ export class AuditLogService {
   }
 
   async logSessionRevoke(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     reason?: string;
-    revokedByUserId?: string;
+    revokedByUserId?: number;
   }): Promise<void> {
     await this.log({
       userId: params.userId,
       eventType: "SESSION_REVOKE",
       action: "revoke_session",
       resource: "session",
-      resourceId: params.sessionId,
+      resourceId: String(params.sessionId),
       actorId: params.revokedByUserId,
       details: { reason: params.reason },
     });
   }
 
   async logSuspiciousActivity(params: {
-    userId?: string;
-    sessionId?: string;
+    userId?: number;
+    sessionId?: number;
     reason: string;
     ipAddress?: string;
     userAgent?: string;
@@ -370,7 +370,7 @@ export class AuditLogService {
   }
 
   async logEmailVerification(params: {
-    userId: string;
+    userId: number;
     email: string;
   }): Promise<void> {
     await this.log({
@@ -378,13 +378,13 @@ export class AuditLogService {
       eventType: "EMAIL_VERIFY",
       action: "verify_email",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       details: { email: params.email },
     });
   }
 
   async logPhoneVerification(params: {
-    userId: string;
+    userId: number;
     phoneNumber: string;
   }): Promise<void> {
     await this.log({
@@ -392,14 +392,14 @@ export class AuditLogService {
       eventType: "PHONE_VERIFY",
       action: "verify_phone",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       details: { phoneNumber: params.phoneNumber },
     });
   }
 
   async logSessionCreate(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void> {
@@ -408,7 +408,7 @@ export class AuditLogService {
       eventType: "SESSION_CREATE",
       action: "create_session",
       resource: "session",
-      resourceId: params.sessionId,
+      resourceId: String(params.sessionId),
       sessionId: params.sessionId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
@@ -416,7 +416,7 @@ export class AuditLogService {
   }
 
   async log2FARequired(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void> {
@@ -426,7 +426,7 @@ export class AuditLogService {
       severity: "INFO",
       action: "2fa_required",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
       outcome: "PENDING",
@@ -434,7 +434,7 @@ export class AuditLogService {
   }
 
   async log2FAEnable(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
   }): Promise<void> {
     await this.log({
@@ -443,13 +443,13 @@ export class AuditLogService {
       severity: "WARNING",
       action: "enable_2fa",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       ipAddress: params.ipAddress,
     });
   }
 
   async log2FADisable(params: {
-    userId: string;
+    userId: number;
     ipAddress?: string;
   }): Promise<void> {
     await this.log({
@@ -458,33 +458,33 @@ export class AuditLogService {
       severity: "WARNING",
       action: "disable_2fa",
       resource: "user",
-      resourceId: params.userId,
+      resourceId: String(params.userId),
       ipAddress: params.ipAddress,
     });
   }
 
   async logDataAccess(params: {
-    userId: string;
+    userId: number;
     resource: string;
     resourceId: string;
     action: string;
-    sessionId?: string;
+    sessionId?: number;
   }): Promise<void> {
     await this.log({
       userId: params.userId,
       eventType: "DATA_ACCESS",
       action: params.action,
       resource: params.resource,
-      resourceId: params.resourceId,
+      resourceId: String(params.resourceId),
       sessionId: params.sessionId,
     });
   }
 
   async logDataExport(params: {
-    userId: string;
+    userId: number;
     resource: string;
     count: number;
-    sessionId?: string;
+    sessionId?: number;
   }): Promise<void> {
     await this.log({
       userId: params.userId,
@@ -509,7 +509,7 @@ export class AuditLogService {
   }
 
   async getAuditLogs(params: {
-    userId?: string;
+    userId?: number;
     eventType?: string;
     severity?: AuditEventSeverity;
     startDate?: Date;

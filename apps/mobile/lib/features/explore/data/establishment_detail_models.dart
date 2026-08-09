@@ -2,9 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 /// One page of a facility roster (doctors or administrative professionals).
 class FacilityRosterPage<T> {
@@ -27,7 +29,7 @@ class EstablishmentLocation {
   final String? formattedAddress;
 }
 
-/// CRM row from `facility_representatives`.
+/// CRM administrative contact at a facility (person-facility projection).
 class AdministrativeProfessional {
   const AdministrativeProfessional({
     required this.id,
@@ -36,16 +38,11 @@ class AdministrativeProfessional {
     this.email,
     this.phone,
     this.contactType = 'PROFESSIONAL',
-    this.isPartner = false,
-    this.isAdministrator = false,
-    this.isDecisionMaker = false,
-    this.isBuyer = false,
-    this.isBiller = false,
-    this.isSecretary = false,
+    this.roleIds = const [],
     this.relationshipScore,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String? roleTitle;
   final String? email;
@@ -54,15 +51,9 @@ class AdministrativeProfessional {
   /// Legacy single label — prefer [roleChipLabels] for UI.
   final String contactType;
 
-  final bool isPartner;
-  final bool isAdministrator;
-  final bool isDecisionMaker;
-  final bool isBuyer;
-  final bool isBiller;
-  final bool isSecretary;
+  final List<int> roleIds;
 
-  /// Authenticated user's relationship (1–10) from
-  /// `user_representative_relationships`. Null = not yet assessed.
+  /// Authenticated user's relationship (1–10). Null = not yet assessed.
   final int? relationshipScore;
 
   String get contactTypeLabel {
@@ -76,29 +67,20 @@ class AdministrativeProfessional {
     }
   }
 
-  /// Multi-select role chips for list/profile UI.
-  List<String> get roleChipLabels => [
-    if (isPartner) 'Sócio',
-    if (isAdministrator) 'Administrador',
-    if (isDecisionMaker) 'Decisor',
-    if (isBuyer) 'Comprador',
-    if (isBiller) 'Faturista',
-    if (isSecretary) 'Secretária',
-  ];
+  /// Multi-select role chips for list/profile UI (via catalog cache).
+  List<String> get roleChipLabels => PersonFacilityRoleCatalog.labelsFor(
+    roleIds,
+    PersonFacilityRoleCatalogCache.entries,
+  );
 
   AdministrativeProfessional copyWith({
-    String? id,
+    int? id,
     String? name,
     String? roleTitle,
     String? email,
     String? phone,
     String? contactType,
-    bool? isPartner,
-    bool? isAdministrator,
-    bool? isDecisionMaker,
-    bool? isBuyer,
-    bool? isBiller,
-    bool? isSecretary,
+    List<int>? roleIds,
     int? relationshipScore,
     bool clearRelationshipScore = false,
   }) {
@@ -109,12 +91,7 @@ class AdministrativeProfessional {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       contactType: contactType ?? this.contactType,
-      isPartner: isPartner ?? this.isPartner,
-      isAdministrator: isAdministrator ?? this.isAdministrator,
-      isDecisionMaker: isDecisionMaker ?? this.isDecisionMaker,
-      isBuyer: isBuyer ?? this.isBuyer,
-      isBiller: isBiller ?? this.isBiller,
-      isSecretary: isSecretary ?? this.isSecretary,
+      roleIds: roleIds ?? this.roleIds,
       relationshipScore: clearRelationshipScore
           ? null
           : (relationshipScore ?? this.relationshipScore),
@@ -132,7 +109,7 @@ class PayerShare {
     this.type,
   });
 
-  final String id;
+  final int id;
   final String name;
   final double sharePercent;
 
@@ -158,7 +135,7 @@ class FacilityOrderSummary {
     this.items = const [],
   });
 
-  final String id;
+  final int id;
   final String displayId;
   final String status;
 
@@ -202,7 +179,7 @@ class FacilityOrderItemSummary {
 class NearbyVerticalBadge {
   const NearbyVerticalBadge({required this.id, required this.name});
 
-  final String id;
+  final int id;
   final String name;
 }
 
@@ -224,7 +201,7 @@ class NearbyEstablishment {
     this.verticals = const [],
   });
 
-  final String id;
+  final int id;
   final String name;
   final double latitude;
   final double longitude;
@@ -246,6 +223,38 @@ class NearbyEstablishment {
   final String? streetAddress;
   final String? streetNumber;
   final String? addressComplement;
+
+  NearbyEstablishment copyWith({
+    int? id,
+    String? name,
+    double? latitude,
+    double? longitude,
+    double? distanceKm,
+    String? specialtyLabel,
+    ClinicStatus? status,
+    String? purchaseBucket,
+    String? neighborhood,
+    String? streetAddress,
+    String? streetNumber,
+    String? addressComplement,
+    List<NearbyVerticalBadge>? verticals,
+  }) {
+    return NearbyEstablishment(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      distanceKm: distanceKm ?? this.distanceKm,
+      specialtyLabel: specialtyLabel ?? this.specialtyLabel,
+      status: status ?? this.status,
+      purchaseBucket: purchaseBucket ?? this.purchaseBucket,
+      neighborhood: neighborhood ?? this.neighborhood,
+      streetAddress: streetAddress ?? this.streetAddress,
+      streetNumber: streetNumber ?? this.streetNumber,
+      addressComplement: addressComplement ?? this.addressComplement,
+      verticals: verticals ?? this.verticals,
+    );
+  }
 
   /// Short single-line address for compact cards, e.g.
   /// "Rua Augusta, 320 — Consolação". Falls back gracefully when parts
@@ -367,26 +376,24 @@ extension FacilityConformityStatusX on FacilityConformityStatus {
   }
 }
 
-/// Mirrors `facility_tax_id_type` on `facilities`: PJ | PF.
-enum FacilityTaxIdType { pj, pf }
+/// Mirrors `facility_legal_document_type` on `facilities`: CNPJ | CPF.
+enum FacilityLegalDocumentType { cnpj, cpf }
 
-extension FacilityTaxIdTypeX on FacilityTaxIdType {
-  String get label => this == FacilityTaxIdType.pj ? 'PJ' : 'PF';
+extension FacilityLegalDocumentTypeX on FacilityLegalDocumentType {
+  String get label => this == FacilityLegalDocumentType.cnpj ? 'CNPJ' : 'CPF';
 
-  IconData get icon => this == FacilityTaxIdType.pj
+  IconData get icon => this == FacilityLegalDocumentType.cnpj
       ? Icons.apartment_rounded
       : Icons.person_rounded;
 }
 
-/// Maps API `taxIdType` (`PJ` / `PF`, or legacy CNPJ/CPF labels) to the enum.
-FacilityTaxIdType? parseFacilityTaxIdType(String? raw) {
+/// Maps API `legalDocumentType` (`CNPJ` / `CPF`) to the enum.
+FacilityLegalDocumentType? parseFacilityLegalDocumentType(String? raw) {
   switch (raw?.trim().toUpperCase()) {
-    case 'PJ':
     case 'CNPJ':
-      return FacilityTaxIdType.pj;
-    case 'PF':
+      return FacilityLegalDocumentType.cnpj;
     case 'CPF':
-      return FacilityTaxIdType.pf;
+      return FacilityLegalDocumentType.cpf;
     default:
       return null;
   }
@@ -513,7 +520,7 @@ class FacilityFieldNote {
     required this.createdAt,
   });
 
-  final String id;
+  final int id;
   final String text;
   final DateTime createdAt;
 }
@@ -575,7 +582,7 @@ class VisitTimelineEntry {
     this.consultantInitials,
   });
 
-  final String id;
+  final int id;
   final DateTime date;
 
   /// e.g. "Reunião agendada", "Passagem rápida, recepção", "Fechamento de pedido".
@@ -603,17 +610,14 @@ class VisitStats {
   final String? periodLabel;
 }
 
-/// CNES service offered at the facility.
-class FacilityServiceChip {
-  const FacilityServiceChip({
-    required this.serviceCode,
-    required this.classificationCode,
-  });
+/// Clinical focus offered at the facility.
+class ClinicalFocusChip {
+  const ClinicalFocusChip({required this.id, required this.name});
 
-  final String serviceCode;
-  final String classificationCode;
+  final int id;
+  final String name;
 
-  String get label => '$serviceCode · $classificationCode';
+  String get label => name;
 }
 
 // ── Registration documents ("Cadastro") ───────────────────────
@@ -689,6 +693,9 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
       this == EstablishmentDocumentStatus.rejected;
 }
 
+/// Synthetic checklist row id for billing email (not a CRM requirement id).
+const int kBillingEmailEstablishmentDocumentId = 9001;
+
 /// Kind of Cadastro checklist row — file upload vs billing email text field.
 enum EstablishmentDocumentKind { file, billingEmail }
 
@@ -703,7 +710,7 @@ class CadastroDocumentFile {
     this.contentType,
   });
 
-  final String fileAssetId;
+  final int fileAssetId;
   final int position;
   final String role;
   final String? fileName;
@@ -766,7 +773,7 @@ class CadastroDocumentFile {
   bool get isPdf => _looksLikePdf(fileName: fileName, mimeType: contentType);
 
   CadastroDocumentFile copyWith({
-    String? fileAssetId,
+    int? fileAssetId,
     int? position,
     String? role,
     String? fileName,
@@ -801,9 +808,9 @@ class CadastroRequirementSubmission {
     this.files = const [],
   });
 
-  final String documentId;
-  final String submissionId;
-  final String requirementId;
+  final int documentId;
+  final int submissionId;
+  final int requirementId;
   final String title;
   final String status;
   final int version;
@@ -838,9 +845,9 @@ class CadastroRequirementSubmission {
     final rawFiles = (json['files'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>();
     return CadastroRequirementSubmission(
-      documentId: json['documentId'] as String? ?? '',
-      submissionId: json['submissionId'] as String? ?? '',
-      requirementId: json['requirementId'] as String? ?? '',
+      documentId: readCrmId(json['documentId'], 'documentId'),
+      submissionId: readCrmId(json['submissionId'], 'submissionId'),
+      requirementId: readCrmId(json['requirementId'], 'requirementId'),
       title: json['title'] as String? ?? 'Envio',
       status: json['status'] as String? ?? '',
       version: (json['version'] as num?)?.toInt() ?? 1,
@@ -854,10 +861,13 @@ class CadastroRequirementSubmission {
           : null,
       fileCount: (json['fileCount'] as num?)?.toInt() ?? rawFiles.length,
       files: rawFiles
-          .map(
-            (f) => CadastroDocumentFile(
-              fileAssetId:
-                  f['fileAssetId'] as String? ?? f['id'] as String? ?? '',
+          .map((f) {
+            final fileAssetId =
+                readCrmIdOrNull(f['fileAssetId'], 'fileAssetId') ??
+                readCrmIdOrNull(f['id'], 'id');
+            if (fileAssetId == null) return null;
+            return CadastroDocumentFile(
+              fileAssetId: fileAssetId,
               position: (f['position'] as num?)?.toInt() ?? 1,
               role: f['role'] as String? ?? 'PAGE',
               fileName:
@@ -865,9 +875,9 @@ class CadastroRequirementSubmission {
               status: f['status'] as String?,
               contentType:
                   f['contentType'] as String? ?? f['mimeType'] as String?,
-            ),
-          )
-          .where((f) => f.fileAssetId.isNotEmpty)
+            );
+          })
+          .whereType<CadastroDocumentFile>()
           .toList(growable: false),
     );
   }
@@ -883,8 +893,8 @@ class CadastroApprovedSummary {
     this.fileCount = 0,
   });
 
-  final String documentId;
-  final String submissionId;
+  final int documentId;
+  final int submissionId;
   final int version;
   final DateTime? submittedAt;
   final String? reviewComment;
@@ -892,8 +902,8 @@ class CadastroApprovedSummary {
 
   factory CadastroApprovedSummary.fromJson(Map<String, dynamic> json) {
     return CadastroApprovedSummary(
-      documentId: json['documentId'] as String? ?? '',
-      submissionId: json['submissionId'] as String? ?? '',
+      documentId: readCrmId(json['documentId'], 'documentId'),
+      submissionId: readCrmId(json['submissionId'], 'submissionId'),
       version: (json['version'] as num?)?.toInt() ?? 1,
       submittedAt: json['submittedAt'] != null
           ? DateTime.tryParse(json['submittedAt'] as String)
@@ -929,7 +939,7 @@ class EstablishmentDocument {
     this.billingEmail,
   });
 
-  final String id;
+  final int id;
   final String title;
 
   /// One-line explanation of what the document is / why it's required.
@@ -938,10 +948,10 @@ class EstablishmentDocument {
   final EstablishmentDocumentKind kind;
 
   /// API conformity requirement id (file rows only).
-  final String? requirementId;
+  final int? requirementId;
 
   /// Logical submission document id (multi-file model).
-  final String? recordId;
+  final int? recordId;
 
   /// Raw API document status (DRAFT, READY, UNDER_REVIEW, …).
   final String? documentStatus;
@@ -1023,8 +1033,8 @@ class EstablishmentDocument {
     String? description,
     EstablishmentDocumentStatus? status,
     EstablishmentDocumentKind? kind,
-    String? requirementId,
-    String? recordId,
+    int? requirementId,
+    int? recordId,
     String? documentStatus,
     String? latestSubmittedStatus,
     DateTime? latestSubmittedAt,
@@ -1088,7 +1098,7 @@ bool _looksLikePdf({String? fileName, String? mimeType}) {
 class EstablishmentDetailSections {
   const EstablishmentDetailSections({
     this.location,
-    this.services = const [],
+    this.clinicalFocuses = const [],
     this.consultantName,
     this.consultantSince,
     this.managerName,
@@ -1102,7 +1112,7 @@ class EstablishmentDetailSections {
     this.orders = const [],
     this.nearbyEstablishments = const [],
     this.statusSignals,
-    this.taxIdType,
+    this.legalDocumentType,
     this.photos,
     this.products = const [],
     this.fieldNotes = const [],
@@ -1115,7 +1125,7 @@ class EstablishmentDetailSections {
   });
 
   final EstablishmentLocation? location;
-  final List<FacilityServiceChip> services;
+  final List<ClinicalFocusChip> clinicalFocuses;
   final String? consultantName;
   final DateTime? consultantSince;
 
@@ -1134,7 +1144,7 @@ class EstablishmentDetailSections {
   final List<FacilityOrderSummary> orders;
   final List<NearbyEstablishment> nearbyEstablishments;
   final FacilityStatusSignals? statusSignals;
-  final FacilityTaxIdType? taxIdType;
+  final FacilityLegalDocumentType? legalDocumentType;
   final PhotoGallerySummary? photos;
   final List<ProductUsage> products;
   final List<FacilityFieldNote> fieldNotes;

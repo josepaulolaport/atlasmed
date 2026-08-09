@@ -6,7 +6,7 @@ import type { FacilityVerticalAccessRepository } from "../../../application/inte
 export class DrizzleFacilityVerticalAccessRepository
   implements FacilityVerticalAccessRepository
 {
-  async findVerticalIdByCode(code: string): Promise<string | null> {
+  async findVerticalIdByCode(code: string): Promise<number | null> {
     const [row] = await db
       .select({ id: businessVerticals.id })
       .from(businessVerticals)
@@ -16,8 +16,8 @@ export class DrizzleFacilityVerticalAccessRepository
   }
 
   async hasActiveVerticalProfile(
-    facilityId: string,
-    verticalId: string
+    facilityId: number,
+    verticalId: number
   ): Promise<boolean> {
     const [row] = await db
       .select({ id: facilityVerticalProfiles.id })

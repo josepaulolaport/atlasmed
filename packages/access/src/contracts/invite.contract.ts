@@ -3,7 +3,7 @@ import type { InvitationStatus as InviteStatus } from "@atlasmed/database";
 import type { RoleContract } from "./role.contract";
 
 export interface InviteContract {
-  id: string;
+  id: number;
 
   email?: string;
 

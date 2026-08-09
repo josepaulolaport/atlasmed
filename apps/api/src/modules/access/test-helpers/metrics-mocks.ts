@@ -18,8 +18,8 @@ export function createMockMetricsService(
     recordAuditLogFailure: noop(),
     recordSessionRevoked: noop(),
     recordSuspiciousActivity: noop(),
-    recordScopeClinicResolutionStub: noop(),
     recordSiemExportBatch: noop(),
+    recordSearchMeiliFallback: noop(),
     ...overrides,
   };
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
+import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterListPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
@@ -32,7 +32,7 @@ class AdministrativeProfessionalsListScreen extends ConsumerStatefulWidget {
   final String facilityName;
 
   /// When set, load a larger page after first frame.
-  final String? facilityId;
+  final int? facilityId;
 
   @override
   ConsumerState<AdministrativeProfessionalsListScreen> createState() =>
@@ -58,25 +58,21 @@ class _AdministrativeProfessionalsListScreenState
 
   Future<void> _hydrateFullList({bool force = false}) async {
     final facilityId = widget.facilityId;
-    if (facilityId == null || facilityId.isEmpty) return;
+    if (facilityId == null || (facilityId <= 0)) return;
 
-    List<AdministrativeProfessional> next;
-    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-      next = const [];
-    } else {
-      final repo = FacilityRepresentativesRepository(
-        facilityId,
-        page: 1,
-        limit: facilityRosterListPageSize,
-      );
-      try {
-        final page = await repo.loadPage();
-        next = page.items;
-      } catch (_) {
-        return;
-      } finally {
-        repo.dispose();
-      }
+    final repo = FacilityRepresentativesRepository(
+      facilityId,
+      page: 1,
+      limit: facilityRosterListPageSize,
+    );
+    final List<AdministrativeProfessional> next;
+    try {
+      final page = await repo.loadPage();
+      next = page.items;
+    } catch (_) {
+      return;
+    } finally {
+      repo.dispose();
     }
 
     if (!mounted) return;
@@ -96,7 +92,7 @@ class _AdministrativeProfessionalsListScreenState
       ];
     });
     final facilityId = widget.facilityId;
-    if (facilityId != null && facilityId.isNotEmpty) {
+    if (facilityId != null && (facilityId > 0)) {
       await ref
           .read(facilityAdministratorsRosterProvider(facilityId).notifier)
           .retry();
@@ -114,16 +110,14 @@ class _AdministrativeProfessionalsListScreenState
     }
   }
 
-  Map<String, List<String>> get _filterSections => {
-    _typeSection: const [
-      'Sócio',
-      'Administrador',
-      'Decisor',
-      'Comprador',
-      'Faturista',
-      'Secretária',
-    ],
-  };
+  Map<String, List<String>> get _filterSections {
+    final names = <String>{};
+    for (final p in _professionals) {
+      names.addAll(p.roleChipLabels);
+    }
+    final sorted = names.toList()..sort();
+    return {if (sorted.isNotEmpty) _typeSection: sorted};
+  }
 
   int get _filterCount =>
       _filters.values.fold<int>(0, (sum, list) => sum + list.length);
@@ -243,25 +237,47 @@ class _AdministrativeProfessionalsListScreenState
                     itemBuilder: (_, i) => _AdminProfessionalRow(
                       professional: filtered[i],
                       onTap: () async {
-                        final updated = await Navigator.of(context)
-                            .push<AdministrativeProfessional>(
-                              MaterialPageRoute(
-                                builder: (_) => RepresentativeDetailScreen(
-                                  professional: filtered[i],
-                                  facilityName: widget.facilityName,
-                                  facilityId: widget.facilityId,
-                                ),
-                              ),
-                            );
-                        if (updated == null || !mounted) return;
+                        final result = await Navigator.of(context).push<Object>(
+                          MaterialPageRoute(
+                            builder: (_) => RepresentativeDetailScreen(
+                              professional: filtered[i],
+                              facilityName: widget.facilityName,
+                              facilityId: widget.facilityId,
+                            ),
+                          ),
+                        );
+                        if (!mounted || result == null) return;
+
+                        // Detail pops int personFacilityId after soft-end.
+                        if (result is int) {
+                          setState(() {
+                            _professionals = [
+                              for (final p in _professionals)
+                                if (p.id != result) p,
+                            ];
+                          });
+                          final facilityId = widget.facilityId;
+                          if (facilityId != null && facilityId > 0) {
+                            ref
+                                .read(
+                                  facilityAdministratorsRosterProvider(
+                                    facilityId,
+                                  ).notifier,
+                                )
+                                .removeWhere((p) => p.id == result);
+                          }
+                          return;
+                        }
+
+                        if (result is! AdministrativeProfessional) return;
                         setState(() {
                           _professionals = [
                             for (final p in _professionals)
-                              if (p.id == updated.id) updated else p,
+                              if (p.id == result.id) result else p,
                           ];
                         });
                         final facilityId = widget.facilityId;
-                        if (facilityId != null && facilityId.isNotEmpty) {
+                        if (facilityId != null && (facilityId > 0)) {
                           await ref
                               .read(
                                 facilityAdministratorsRosterProvider(

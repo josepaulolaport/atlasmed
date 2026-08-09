@@ -9,7 +9,7 @@ import {
 
 describe("FieldSuggestionApplyService", () => {
   const facilityRepository = {
-    applyApprovedFieldUpdates: mock(async () => ({ id: "f1" })),
+    applyApprovedFieldUpdates: mock(async () => ({ id: 1 })),
   } as unknown as FacilityRepository;
 
   const facilityGeocodingService = {
@@ -26,7 +26,7 @@ describe("FieldSuggestionApplyService", () => {
 
   it("applies phone without geocoding", async () => {
     const result = await service.applyFieldChange({
-      facilityId: "f1",
+      facilityId: 1,
       fieldKey: "phoneNumber",
       proposedValue: "11999990000",
     });
@@ -42,7 +42,7 @@ describe("FieldSuggestionApplyService", () => {
     onFacilityLocationChanged.mockClear();
 
     const result = await service.applyFieldChange({
-      facilityId: "f1",
+      facilityId: 1,
       fieldKey: "address",
       proposedValue: {
         streetAddress: "Av. Paulista",
@@ -54,9 +54,9 @@ describe("FieldSuggestionApplyService", () => {
 
     expect(result).toEqual({ geocoded: true });
     expect(facilityGeocodingService.geocodeAddress).toHaveBeenCalled();
-    expect(onFacilityLocationChanged).toHaveBeenCalledWith("f1");
+    expect(onFacilityLocationChanged).toHaveBeenCalledWith(1);
     expect(facilityRepository.applyApprovedFieldUpdates).toHaveBeenCalledWith(
-      "f1",
+      1,
       expect.objectContaining({
         streetAddress: "Av. Paulista",
         lat: -23.55,
@@ -72,7 +72,7 @@ describe("FieldSuggestionApplyService", () => {
 
     await expect(
       service.applyFieldChange({
-        facilityId: "f1",
+        facilityId: 1,
         fieldKey: "address",
         proposedValue: { streetAddress: "Rua X", city: "São Paulo" },
       })

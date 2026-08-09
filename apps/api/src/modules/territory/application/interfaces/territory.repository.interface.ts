@@ -2,14 +2,14 @@ import type { Role } from "@atlasmed/access";
 import type { TerritoryTypeRecord } from "./territory-type.repository.interface";
 
 export interface TerritoryRecord {
-  id: string;
+  id: number;
   name: string;
   slug: string;
   code: string;
-  verticalId: string;
-  territoryTypeId: string;
+  verticalId: number;
+  territoryTypeId: number;
   territoryType?: TerritoryTypeRecord;
-  managerTerritoryId: string | null;
+  managerTerritoryId: number | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -23,42 +23,42 @@ export interface CreateTerritoryInput {
   name: string;
   slug: string;
   code?: string;
-  verticalId: string;
-  territoryTypeId: string;
-  managerTerritoryId?: string | null;
+  verticalId: number;
+  territoryTypeId: number;
+  managerTerritoryId?: number | null;
 }
 
 export interface TerritoryRepository {
-  findById(id: string): Promise<TerritoryRecord | null>;
+  findById(id: number): Promise<TerritoryRecord | null>;
 
-  findBySlug(slug: string, verticalId?: string): Promise<TerritoryRecord | null>;
+  findBySlug(slug: string, verticalId?: number): Promise<TerritoryRecord | null>;
 
-  findByCode(code: string, verticalId?: string): Promise<TerritoryRecord | null>;
+  findByCode(code: string, verticalId?: number): Promise<TerritoryRecord | null>;
 
-  findAllActive(verticalId?: string): Promise<TerritoryRecord[]>;
+  findAllActive(verticalId?: number): Promise<TerritoryRecord[]>;
 
-  findActiveByTypeSlug(typeSlug: string, verticalId?: string): Promise<TerritoryRecord[]>;
+  findActiveByTypeSlug(typeSlug: string, verticalId?: number): Promise<TerritoryRecord[]>;
 
-  countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number>;
+  countRepPatchesByManagerZone(managerTerritoryId: number): Promise<number>;
 
-  countClinics(territoryId: string): Promise<number>;
+  countClinics(territoryId: number): Promise<number>;
 
-  countAssignedUsers(territoryId: string): Promise<number>;
+  countAssignedUsers(territoryId: number): Promise<number>;
 
   create(input: CreateTerritoryInput): Promise<TerritoryRecord>;
 
   update(
-    id: string,
+    id: number,
     data: {
       name?: string;
-      managerTerritoryId?: string | null;
+      managerTerritoryId?: number | null;
       isActive?: boolean;
     }
   ): Promise<TerritoryRecord>;
 
-  findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]>;
+  findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: number[]): Promise<number[]>;
 
-  findByIds(ids: string[]): Promise<TerritoryRecord[]>;
+  findByIds(ids: number[]): Promise<TerritoryRecord[]>;
 
   /**
    * Finds other users (excluding `excludeUserId`) whose role is in `roles`
@@ -66,8 +66,8 @@ export interface TerritoryRepository {
    * "one user per role-group per territory" assignment conflicts.
    */
   findConflictingAssignments(params: {
-    territoryId: string;
-    excludeUserId: string;
+    territoryId: number;
+    excludeUserId: number;
     roles: Role[];
-  }): Promise<Array<{ userId: string }>>;
+  }): Promise<Array<{ userId: number }>>;
 }

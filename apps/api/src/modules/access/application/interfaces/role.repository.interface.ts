@@ -1,18 +1,18 @@
 export interface RoleRecord {
-  id: string;
+  id: number;
   name: string;
   priority: number;
 }
 
 export interface RoleListItem {
-  id: string;
+  id: number;
   name: string;
   description: string | null;
   priority: number;
 }
 
 export interface RoleRepository {
-  findById(roleId: string): Promise<RoleRecord | null>;
+  findById(roleId: number): Promise<RoleRecord | null>;
 
   findAll(): Promise<RoleListItem[]>;
 }

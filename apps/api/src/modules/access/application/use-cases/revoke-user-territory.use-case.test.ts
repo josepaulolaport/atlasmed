@@ -19,9 +19,9 @@ import {
 } from "../../../../shared/errors";
 
 describe("RevokeUserTerritoryUseCase", () => {
-  const fieldUser = { id: "user-field", role: { name: Role.REP } };
-  const managerUser = { id: "user-manager", role: { name: Role.MANAGER } };
-  const opsUser = { id: "user-ops", role: { name: Role.OPS } };
+  const fieldUser = { id: 2, role: { name: Role.REP } };
+  const managerUser = { id: 3, role: { name: Role.MANAGER } };
+  const opsUser = { id: 4, role: { name: Role.OPS } };
 
   let useCase: RevokeUserTerritoryUseCase;
   let userRepository: ReturnType<typeof createMockUserRepository>;
@@ -30,7 +30,7 @@ describe("RevokeUserTerritoryUseCase", () => {
 
   beforeEach(() => {
     userRepository = createMockUserRepository({
-      findById: mock(async (id: string) => {
+      findById: mock(async (id: number) => {
         if (id === fieldUser.id) return fieldUser;
         if (id === managerUser.id) return managerUser;
         if (id === opsUser.id) return opsUser;
@@ -51,14 +51,14 @@ describe("RevokeUserTerritoryUseCase", () => {
   it("revokes territory for USER target when actor is ADMIN", async () => {
     await useCase.execute({
       targetUserId: fieldUser.id,
-      territoryId: "territory-a",
-      revokedBy: "admin-1",
+      territoryId: 1,
+      revokedBy: 1,
       actorRole: Role.ADMIN,
     });
 
     expect(scopeRepository.revokeTerritory).toHaveBeenCalledWith({
       userId: fieldUser.id,
-      territoryId: "territory-a",
+      territoryId: 1,
     });
     expect(scopeService.invalidateForTerritoryAssignmentChange).toHaveBeenCalledWith(
       fieldUser.id
@@ -68,14 +68,14 @@ describe("RevokeUserTerritoryUseCase", () => {
   it("revokes territory for MANAGER target when actor is ADMIN", async () => {
     await useCase.execute({
       targetUserId: managerUser.id,
-      territoryId: "territory-a",
-      revokedBy: "admin-1",
+      territoryId: 1,
+      revokedBy: 1,
       actorRole: Role.ADMIN,
     });
 
     expect(scopeRepository.revokeTerritory).toHaveBeenCalledWith({
       userId: managerUser.id,
-      territoryId: "territory-a",
+      territoryId: 1,
     });
     expect(scopeService.invalidateForTerritoryAssignmentChange).toHaveBeenCalledWith(
       managerUser.id
@@ -86,8 +86,8 @@ describe("RevokeUserTerritoryUseCase", () => {
     await expect(
       useCase.execute({
         targetUserId: opsUser.id,
-        territoryId: "territory-a",
-        revokedBy: "admin-1",
+        territoryId: 1,
+        revokedBy: 1,
         actorRole: Role.ADMIN,
       })
     ).rejects.toThrow(OperationNotAllowedError);
@@ -97,8 +97,8 @@ describe("RevokeUserTerritoryUseCase", () => {
     await expect(
       useCase.execute({
         targetUserId: fieldUser.id,
-        territoryId: "territory-a",
-        revokedBy: "manager-1",
+        territoryId: 1,
+        revokedBy: 1,
         actorRole: Role.MANAGER,
       })
     ).rejects.toThrow(InsufficientPermissionsError);
@@ -109,9 +109,9 @@ describe("RevokeUserTerritoryUseCase", () => {
 
     await expect(
       useCase.execute({
-        targetUserId: "missing",
-        territoryId: "territory-a",
-        revokedBy: "admin-1",
+        targetUserId: 999,
+        territoryId: 1,
+        revokedBy: 1,
         actorRole: Role.ADMIN,
       })
     ).rejects.toThrow(UserNotFoundError);

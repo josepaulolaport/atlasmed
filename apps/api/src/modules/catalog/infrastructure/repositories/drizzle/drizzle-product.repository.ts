@@ -7,7 +7,7 @@ import type {
 } from "../../../application/interfaces/product.repository.interface";
 
 function mapProduct(row: {
-  id: string;
+  id: number;
   code: string;
   name: string;
   description: string | null;
@@ -30,7 +30,7 @@ function mapProduct(row: {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}, verticalIds: string[]): ProductRecord {
+}, verticalIds: number[]): ProductRecord {
   return {
     id: row.id,
     code: row.code,
@@ -85,13 +85,13 @@ const productColumns = {
   updatedAt: products.updatedAt,
 };
 
-async function fetchVerticalIds(productIds: string[]): Promise<Map<string, string[]>> {
+async function fetchVerticalIds(productIds: number[]): Promise<Map<number, number[]>> {
   if (productIds.length === 0) return new Map();
   const rows = await db
     .select({ productId: productVerticals.productId, verticalId: productVerticals.verticalId })
     .from(productVerticals)
     .where(inArray(productVerticals.productId, productIds));
-  const map = new Map<string, string[]>();
+  const map = new Map<number, number[]>();
   for (const row of rows) {
     const existing = map.get(row.productId) ?? [];
     existing.push(row.verticalId);
@@ -104,7 +104,7 @@ export class DrizzleProductRepository implements ProductRepository {
   async findAll(params: {
     page: number;
     limit: number;
-    verticalIds: string[];
+    verticalIds: number[];
     search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }> {
@@ -144,14 +144,14 @@ export class DrizzleProductRepository implements ProductRepository {
     };
   }
 
-  async findById(id: string): Promise<ProductRecord | null> {
+  async findById(id: number): Promise<ProductRecord | null> {
     const rows = await db.select(productColumns).from(products).where(eq(products.id, id));
     if (!rows[0]) return null;
     const verticalMap = await fetchVerticalIds([id]);
     return mapProduct(rows[0], verticalMap.get(id) ?? []);
   }
 
-  async findAllActive(params: { verticalIds: string[] }): Promise<ProductRecord[]> {
+  async findAllActive(params: { verticalIds: number[] }): Promise<ProductRecord[]> {
     if (params.verticalIds.length === 0) return [];
 
     const rows = await db
@@ -177,7 +177,7 @@ export class DrizzleProductRepository implements ProductRepository {
   async create(data: {
     code: string;
     name: string;
-    verticalIds: string[];
+    verticalIds: number[];
     pictureUrl?: string | null;
     simproCode: string;
     brasindiceCode: string;
@@ -224,11 +224,11 @@ export class DrizzleProductRepository implements ProductRepository {
   }
 
   async update(
-    id: string,
+    id: number,
     data: {
       code?: string;
       name?: string;
-      verticalIds?: string[];
+      verticalIds?: number[];
       pictureUrl?: string | null;
       simproCode?: string;
       brasindiceCode?: string;

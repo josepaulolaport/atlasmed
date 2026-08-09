@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
 
 /// DTO from `GET/PUT /facilities/:id/healthcare-provider-shares`.
 class FacilityPayerShareApi {
@@ -21,9 +22,12 @@ class FacilityPayerShareApi {
         (map['healthcareProvider'] as Map?)?.cast<String, dynamic>() ??
         const {};
     return FacilityPayerShareApi(
-      id: readString(map['id']),
-      facilityId: readString(map['facilityId']),
-      healthcareProviderId: readString(map['healthcareProviderId']),
+      id: readCrmId(map['id'], 'id'),
+      facilityId: readCrmId(map['facilityId'], 'facilityId'),
+      healthcareProviderId: readCrmId(
+        map['healthcareProviderId'],
+        'healthcareProviderId',
+      ),
       sharePercent: readNullableDouble(map['sharePercent']) ?? 0,
       providerName: readString(provider['name']),
       isPackage: map['isPackage'] == true,
@@ -33,9 +37,9 @@ class FacilityPayerShareApi {
     );
   }
 
-  final String id;
-  final String facilityId;
-  final String healthcareProviderId;
+  final int id;
+  final int facilityId;
+  final int healthcareProviderId;
   final double sharePercent;
   final String providerName;
   final bool isPackage;
@@ -46,7 +50,9 @@ class FacilityPayerShareApi {
   PayerShare toDomain() {
     return PayerShare(
       id: healthcareProviderId,
-      name: providerName.isEmpty ? healthcareProviderId : providerName,
+      name: providerName.isEmpty
+          ? healthcareProviderId.toString()
+          : providerName,
       sharePercent: sharePercent,
       isPackage: isPackage,
       type: providerType,
@@ -87,14 +93,14 @@ class HealthcareProviderApi {
 
   factory HealthcareProviderApi.fromMap(Map<String, dynamic> map) {
     return HealthcareProviderApi(
-      id: readString(map['id']),
+      id: readCrmId(map['id'], 'id'),
       name: readString(map['name']),
       type: readString(map['type']),
       isActive: map['isActive'] != false,
     );
   }
 
-  final String id;
+  final int id;
   final String name;
   final String type;
   final bool isActive;

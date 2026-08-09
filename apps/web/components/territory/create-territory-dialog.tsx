@@ -25,7 +25,6 @@ import { getApiErrorMessage } from "@/lib/api/errors";
 import { isValidGeoJsonPolygon, normalizeTerritoryBoundary, parseGeoJsonPolygon } from "@/lib/territory/geojson";
 import { slugifyTerritoryIdentifier } from "@/lib/territory/territory-identifier";
 import { toast } from "@/hooks/use-toast";
-import { isApprovalRequest } from "@/components/territory/territory-utils";
 import type { GeoJsonPolygon, TerritoryType } from "@/types/territory";
 
 interface CreateTerritoryDialogProps {
@@ -143,27 +142,19 @@ export function CreateTerritoryDialog({
         boundary: boundary ?? undefined,
       });
 
-      if (isApprovalRequest(result)) {
+      const resolution = result.boundaryResolution;
+      if (resolution?.mode === "rep_patch") {
         toast({
-          title: "Submitted for approval",
-          description: "Your territory creation request is pending admin review.",
+          title: "Territory created",
+          description: `Rep patch linked to manager zone ${resolution.managerTerritoryId}.`,
           variant: "success",
         });
       } else {
-        const resolution = result.boundaryResolution;
-        if (resolution?.mode === "rep_patch") {
-          toast({
-            title: "Territory created",
-            description: `Rep patch linked to manager zone ${resolution.managerTerritoryId}.`,
-            variant: "success",
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: `Territory ${result.slug} created with boundary.`,
-            variant: "success",
-          });
-        }
+        toast({
+          title: "Success",
+          description: `Territory ${result.slug} created with boundary.`,
+          variant: "success",
+        });
       }
 
       handleOpenChange(false);

@@ -11,7 +11,7 @@ interface Dependencies {
 export class RecordVisitUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { userId: string; facilityId: string; visitedAt?: Date; scope: ScopeContext }) {
+  async execute(input: { userId: number; facilityId: number; visitedAt?: Date; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const visit = await this.deps.visitRepository.create({
       userId: input.userId,
@@ -31,7 +31,7 @@ export class RecordVisitUseCase {
 export class GetWeeklyVisitSummaryUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { userId: string; scope: ScopeContext }) {
+  async execute(input: { userId: number; scope: ScopeContext }) {
     const { start, end } = getMondayToMondayWeek(
       this.deps.now?.() ?? new Date(),
       this.deps.timeZone ?? DEFAULT_APPLICATION_TIMEZONE

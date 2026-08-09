@@ -15,7 +15,7 @@ interface GetUserByIdDependencies {
 export class GetUserByIdUseCase {
   constructor(private readonly deps: GetUserByIdDependencies) {}
 
-  async execute(params: { targetUserId: string; actorRole: Role }) {
+  async execute(params: { targetUserId: number; actorRole: Role }) {
     if (params.actorRole !== Role.ADMIN) {
       throw new InsufficientPermissionsError(["user:read"], [`role:${params.actorRole}`]);
     }

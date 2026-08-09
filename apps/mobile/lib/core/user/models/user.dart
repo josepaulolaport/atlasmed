@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'user_role_name.dart';
 import 'user_status.dart';
@@ -6,12 +7,12 @@ import 'user_status.dart';
 class UserRole extends Equatable {
   const UserRole({required this.id, required this.name, this.description});
 
-  final String id;
+  final int id;
   final UserRoleName name;
   final String? description;
 
   factory UserRole.fromJson(Map<String, dynamic> json) => UserRole(
-    id: json['id'] as String,
+    id: readCrmId(json['id'], 'id'),
     name: UserRoleName.values.firstWhere(
       (e) => e.name.toUpperCase() == (json['name'] as String).toUpperCase(),
       orElse: () => UserRoleName.rep,
@@ -54,7 +55,7 @@ class User extends Equatable {
     this.birthDate,
   });
 
-  final String id;
+  final int id;
   final String email;
   final String username;
   final String? phoneNumber;
@@ -156,7 +157,7 @@ class User extends Equatable {
         : json;
 
     return User(
-      id: userJson['id'] as String,
+      id: readCrmId(userJson['id'], 'id'),
       email: userJson['email'] as String,
       username: userJson['username'] as String,
       phoneNumber: userJson['phoneNumber'] as String?,

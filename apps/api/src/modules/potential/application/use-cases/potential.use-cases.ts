@@ -12,7 +12,7 @@ import type { PotentialRepository } from "../interfaces/potential.repository.int
 const ROLLING_DAYS = 90;
 const MONTHS_IN_WINDOW = 3;
 
-function assertVerticalAccess(scope: ScopeContext, verticalId: string) {
+function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
   const assigned = scope.assignedVerticalIds ?? [];
   if (scope.isGlobal && assigned.length === 0) return;
   if (!assigned.includes(verticalId)) {
@@ -34,8 +34,8 @@ export class ListFacilityPotentialsUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
   async execute(input: {
-    facilityId: string;
-    verticalId: string;
+    facilityId: number;
+    verticalId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
@@ -74,7 +74,6 @@ export class ListFacilityPotentialsUseCase {
           definitionId: def.id,
           key: def.key,
           label: def.label,
-          sortOrder: def.sortOrder,
           potentialQuantity,
           atlasmedMonthlyAvgQty,
           /** Fraction 0–1+ (e.g. 0.3 = 30%). Null when potential missing. */
@@ -89,11 +88,11 @@ export class PatchFacilityPotentialsUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
   async execute(input: {
-    facilityId: string;
-    verticalId: string;
-    userId: string;
+    facilityId: number;
+    verticalId: number;
+    userId: number;
     scope: ScopeContext;
-    values: Array<{ definitionId: string; quantity: number | null }>;
+    values: Array<{ definitionId: number; quantity: number | null }>;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
@@ -149,7 +148,7 @@ export class PatchFacilityPotentialsUseCase {
 export class ListPotentialDefinitionsUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
-  async execute(input: { verticalId: string; scope: ScopeContext }) {
+  async execute(input: { verticalId: number; scope: ScopeContext }) {
     assertVerticalAccess(input.scope, input.verticalId);
     const definitions = await this.deps.potentialRepository.listDefinitions({
       verticalId: input.verticalId,
@@ -160,7 +159,6 @@ export class ListPotentialDefinitionsUseCase {
         verticalId: d.verticalId,
         key: d.key,
         label: d.label,
-        sortOrder: d.sortOrder,
       })),
     };
   }
@@ -170,10 +168,9 @@ export class CreatePotentialDefinitionUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
   async execute(input: {
-    verticalId: string;
+    verticalId: number;
     key?: string;
     label: string;
-    sortOrder?: number;
     scope: ScopeContext;
   }) {
     assertVerticalAccess(input.scope, input.verticalId);
@@ -189,14 +186,12 @@ export class CreatePotentialDefinitionUseCase {
         verticalId: input.verticalId,
         key,
         label: input.label.trim(),
-        sortOrder: input.sortOrder ?? 0,
       });
       return {
         id: created.id,
         verticalId: created.verticalId,
         key: created.key,
         label: created.label,
-        sortOrder: created.sortOrder,
       };
     } catch {
       throw new ValidationError([
@@ -210,9 +205,8 @@ export class UpdatePotentialDefinitionUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
   async execute(input: {
-    id: string;
+    id: number;
     label?: string;
-    sortOrder?: number;
     scope: ScopeContext;
   }) {
     const existing = await this.deps.potentialRepository.findDefinitionById(input.id);
@@ -223,7 +217,6 @@ export class UpdatePotentialDefinitionUseCase {
     const updated = await this.deps.potentialRepository.updateDefinition({
       id: input.id,
       label: input.label?.trim(),
-      sortOrder: input.sortOrder,
     });
     if (!updated) throw new ResourceNotFoundError("PotentialDefinition", input.id);
     return {
@@ -231,7 +224,6 @@ export class UpdatePotentialDefinitionUseCase {
       verticalId: updated.verticalId,
       key: updated.key,
       label: updated.label,
-      sortOrder: updated.sortOrder,
     };
   }
 }
@@ -239,7 +231,7 @@ export class UpdatePotentialDefinitionUseCase {
 export class SoftDeletePotentialDefinitionUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
-  async execute(input: { id: string; scope: ScopeContext }) {
+  async execute(input: { id: number; scope: ScopeContext }) {
     const existing = await this.deps.potentialRepository.findDefinitionById(input.id);
     if (!existing || existing.deletedAt) {
       throw new ResourceNotFoundError("PotentialDefinition", input.id);
@@ -254,8 +246,8 @@ export class LinkProductPotentialUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
   async execute(input: {
-    productId: string;
-    definitionId: string;
+    productId: number;
+    definitionId: number;
     scope: ScopeContext;
   }) {
     const definition = await this.deps.potentialRepository.findDefinitionById(
@@ -288,7 +280,7 @@ export class LinkProductPotentialUseCase {
 export class UnlinkProductPotentialUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
-  async execute(input: { productId: string; scope: ScopeContext }) {
+  async execute(input: { productId: number; scope: ScopeContext }) {
     const link = await this.deps.potentialRepository.findLinkByProductId(
       input.productId,
     );
@@ -310,7 +302,7 @@ export class UnlinkProductPotentialUseCase {
 export class ListDefinitionProductsUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
-  async execute(input: { definitionId: string; scope: ScopeContext }) {
+  async execute(input: { definitionId: number; scope: ScopeContext }) {
     const definition = await this.deps.potentialRepository.findDefinitionById(
       input.definitionId,
     );

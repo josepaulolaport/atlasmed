@@ -54,7 +54,7 @@ class CatalogRepository extends Repository<String>
     );
   }
 
-  Future<CatalogProduct> getProduct(String id) async {
+  Future<CatalogProduct> getProduct(int id) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: Uri.parse('$_baseUrl/api/v1/products/$id'),

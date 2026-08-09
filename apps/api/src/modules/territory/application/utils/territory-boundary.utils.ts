@@ -36,7 +36,7 @@ export function normalizeTerritoryBoundary(geoJson: GeoJsonGeometry): GeoJsonGeo
  * type is exempt: real-world shapes there can legitimately be multi-part.
  */
 export function assertSinglePolygonForEditableTerritory(
-  type: { slug: string; assignsClinics: boolean },
+  type: { slug: string },
   boundary: GeoJsonGeometry,
   operation: string
 ): void {

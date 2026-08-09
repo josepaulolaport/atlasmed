@@ -49,7 +49,7 @@
 >
 > **v22 note:** Médicos roster switches from `GET /facilities/:id/professionals?view=confirmed` to `view=all`. Imported CNES links are `source_active` with `confirmed_at` null everywhere in current demo data (0 confirmed rows), so `confirmed` left the strip empty while Explorar/Meili still listed the same doctors via `activeFacilityIds`. `view=all` matches that association set (source-active **or** confirmed). Decision v1 #3 and F-003 are superseded.
 >
-> **v23 note:** Facility DTO exposes `consultantSince` (`facility_consultant_assignments.started_at` of the active assignment). Equipe responsável prefers live `consultantName`/`consultantSince` from `GET /facilities/:id` over mock sections. Per-field edit pencils / suggestion sheet → PATCH remain deferred (UI stay mock-local).
+> **v23 note:** Facility DTO exposes `consultantSince` (`facility_vertical_rep_assignments.started_at` of the active assignment for the resolved vertical; ADR 0005). Equipe responsável prefers live `consultantName`/`consultantSince` from `GET /facilities/:id` over mock sections. Per-field edit pencils / suggestion sheet → PATCH remain deferred (UI stay mock-local).
 >
 > **v23b note:** `managerName` on the facility DTO is derived from the active consultor's `users.manager_id` (join to manager user). There is no `facility_manager_assignments` table and no `managerSince` — the card shows "gerente responsável" without tenure.
 >
@@ -70,8 +70,8 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 | UI (pt-BR) | API / DB |
 |------------|----------|
 | Clínica / estabelecimento | `facilities` |
-| Profissionais administrativos | `public.facility_representatives` |
-| Médicos | `public.facility_professionals` + `public.professionals` (CRM, `view=all`) |
+| Profissionais administrativos | `GET/POST/PATCH …/facilities/:id/administrative-contacts` → `persons` + `person_facilities` + classification `ADMINISTRATIVE_CONTACT` + role assignments |
+| Médicos | `GET/POST/PATCH …/facilities/:id/healthcare-professionals` → `persons` + `person_facilities` + classification `HEALTHCARE_PROFESSIONAL` (+ healthcare profile / specialties as returned) |
 | Convênios | `healthcare_providers` + `facility_healthcare_provider_shares` |
 | Pedidos | `orders` + `order_items` |
 | Estabelecimentos próximos | `GET /facilities` geo query scoped to establishment coordinates |
@@ -80,8 +80,8 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 
 | # | Decision |
 |---|----------|
-| 1 | **Administrative professionals** come from `public.facility_representatives` only. Do **not** use registry read endpoints (`/registry/professionals`, `/registry/representatives`) on mobile for this screen. |
-| 3 | **Médicos** section shows CRM associations via `GET /facilities/:id/professionals?view=all` (source-active CNES **or** confirmed). **Superseded by v22** (was `view=confirmed`). |
+| 1 | **Administrative professionals** come from the administrative-contacts projection only (`ADMINISTRATIVE_CONTACT`). CNES registry READ endpoints are removed — do not call or reintroduce `/registry/*` for this screen. |
+| 3 | **Médicos** section shows CRM affiliations via `GET /facilities/:id/healthcare-professionals` (active `person_facilities` with healthcare classification). Historical `GET …/professionals?view=*` paths are **removed**. |
 | 4 | **Convênios** in v1 using existing catalog shares API (`GET /facilities/:id/healthcare-provider-shares`). |
 | 6 | Implementation order: **frontend with mocked data first**, then backend contract + wire-up. |
 
@@ -172,7 +172,7 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 |----------|---------|
 | `GET /facilities/:id/professionals` | CRM doctors at facility |
 | `GET /facilities/:id/healthcare-provider-shares` | Payer mix |
-| `GET /facilities/:id/consultant-assignments` | Rep assignment history |
+| `GET /facilities/:facilityId/verticals/:verticalId/rep-assignments` | Rep assignment history (ADR 0005) |
 | `GET /orders`, `GET /orders/:id` | Orders (no `facilityId` filter yet) |
 
 ### API — missing for this spec
@@ -227,7 +227,7 @@ WHEN `GET /facilities/:id` or list returns a facility with a stored `location` T
 - `phone`, `email`, `website`, `streetAddress`, `streetNumber`, `addressComplement`, `postalCode`, `neighborhood`, `city`, `state`
 - `commercialStatus` (enum exposed for status chip mapping)
 - `consultantName` (already on list; ensure on detail)
-- `consultantSince` (ISO date of active `facility_consultant_assignments.started_at`, omitted when none)
+- `consultantSince` (ISO date of active `facility_vertical_rep_assignments.started_at` for the resolved vertical, omitted when none)
 - `managerName` (active consultor's manager via `users.manager_id`; null when no consultor or no manager)
 - `services[]` (already on detail)
 
@@ -243,7 +243,7 @@ WHEN `GET /facilities/:id/representatives` is called by a user with read access 
 
 WHEN there are no active representatives THEN the mobile UI SHALL show an empty state (“Nenhum contato administrativo cadastrado”).
 
-**Explicit exclusion:** no reads from `registry.facility_representatives` or `/registry/representatives` on this screen. There is **no** global “associate from pool” search for administrativos — create in place via `POST /facilities/:id/representatives`.
+**Explicit exclusion:** do not read from a removed `registry` schema or `/registry/*` endpoints. There is **no** global “associate from pool” search for administrativos — create in place via `POST /facilities/:id/representatives`.
 
 **Create / edit:**
 - Mobile FAB / empty CTA opens **Criar perfil** directly (no empty associate search sheet).

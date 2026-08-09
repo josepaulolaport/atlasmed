@@ -181,8 +181,8 @@ export class RefreshSessionUseCase {
     await this.deps.sessionCache.updateAfterRefresh(cachedSession, tokenHash);
 
     const accessToken = await this.deps.tokenService.signAccessToken({
-      sub: updatedSession.userId,
-      sid: updatedSession.id,
+      sub: String(updatedSession.userId),
+      sid: String(updatedSession.id),
       role: updatedSession.user.role.name as any,
       tokenVersion: updatedSession.user.tokenVersion,
       iat: Math.floor(Date.now() / 1000),
@@ -198,8 +198,8 @@ export class RefreshSessionUseCase {
   }
 
   private async validateSessionSecurity(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string | undefined;
     userAgent?: string | undefined;
     acceptLanguage?: string | undefined;
@@ -283,8 +283,8 @@ export class RefreshSessionUseCase {
   }
 
   private async handleRefreshTokenReplay(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     sessionUpdatedAt: Date;
     ipAddress?: string | undefined;
     userAgent?: string | undefined;
@@ -304,8 +304,8 @@ export class RefreshSessionUseCase {
   }
 
   private async handleTrueRefreshTokenTheft(params: {
-    userId: string;
-    sessionId: string;
+    userId: number;
+    sessionId: number;
     ipAddress?: string | undefined;
     userAgent?: string | undefined;
   }): Promise<never> {

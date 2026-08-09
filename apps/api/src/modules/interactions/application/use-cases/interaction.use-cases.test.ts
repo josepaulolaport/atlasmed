@@ -22,10 +22,10 @@ function scope(overrides: Partial<ScopeContext> = {}): ScopeContext {
     effectiveTerritoryIds: [],
     analyticsEffectiveTerritoryIds: [],
     territoryIds: [],
-    facilityIds: ["facility-1"],
-    analyticsFacilityIds: ["facility-1"],
-    clinicIds: ["facility-1"],
-    analyticsClinicIds: ["facility-1"],
+    facilityIds: [1],
+    analyticsFacilityIds: [1],
+    clinicIds: [1],
+    analyticsClinicIds: [1],
     managedUserIds: [],
     isOperationallyActive: true,
     ...overrides,
@@ -34,11 +34,11 @@ function scope(overrides: Partial<ScopeContext> = {}): ScopeContext {
 
 function interaction(overrides: Partial<InteractionDetailRecord> = {}): InteractionDetailRecord {
   return {
-    id: "interaction-1",
-    calendarId: "calendar-1",
+    id: 10,
+    calendarId: 1,
     recurrenceKey: "2026-08-03T09:00[America/Sao_Paulo]",
-    facilityId: "facility-1",
-    agentUserId: "rep-1",
+    facilityId: 1,
+    agentUserId: 1,
     modality: "IN_PERSON",
     status: "SCHEDULED",
     actualStartedAt: null,
@@ -51,7 +51,7 @@ function interaction(overrides: Partial<InteractionDetailRecord> = {}): Interact
     createdAt: now,
     updatedAt: now,
     calendar: {
-      ownerUserId: "rep-1",
+      ownerUserId: 1,
       title: "Visita",
       anchorLocalDate: "2026-08-03",
       anchorLocalTime: "09:00",
@@ -64,8 +64,8 @@ function interaction(overrides: Partial<InteractionDetailRecord> = {}): Interact
       version: 3,
     },
     occurrenceOverride: null,
-    facility: { id: "facility-1", displayName: "Clínica Central", city: "São Paulo", state: "SP" },
-    agent: { id: "rep-1", firstName: "Ana", lastName: "Silva" },
+    facility: { id: 1, displayName: "Clínica Central", city: "São Paulo", state: "SP" },
+    agent: { id: 1, firstName: "Ana", lastName: "Silva" },
     linkedOrders: [],
     ...overrides,
   };
@@ -95,7 +95,7 @@ class FakeInteractionRepository implements InteractionRepository {
     return { interaction: this.record, replayed: false };
   }
 
-  async complete(input: { expectedVersion: number; idempotencyKey: string; completedAt: Date; actorUserId: string; correctionReason?: string; scheduledStartsAt?: Date; persistEffectiveMissed?: boolean }) {
+  async complete(input: { expectedVersion: number; idempotencyKey: string; completedAt: Date; actorUserId: number; correctionReason?: string; scheduledStartsAt?: Date; persistEffectiveMissed?: boolean }) {
     const replay = this.receipts.get(`complete:${input.idempotencyKey}`);
     if (replay) return { interaction: replay, replayed: true };
     if (!this.record || this.record.version !== input.expectedVersion || (!["IN_PROGRESS", "NOT_COMPLETED"].includes(this.record.status) && !(input.persistEffectiveMissed && this.record.status === "SCHEDULED"))) return null;
@@ -104,7 +104,7 @@ class FakeInteractionRepository implements InteractionRepository {
       this.events.push({ previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED", source: "SYSTEM", actorUserId: null });
     }
     const corrected = previousStatus === "NOT_COMPLETED";
-    const visitId = this.record.visitId ?? `visit-${this.visits + 1}`;
+    const visitId = this.record.visitId ?? 100 + this.visits;
     if (!this.record.visitId) this.visits += 1;
     const actualStartedAt = corrected
       ? input.scheduledStartsAt ?? new Date(input.completedAt.getTime() - 1)
@@ -140,8 +140,8 @@ class FakeInteractionRepository implements InteractionRepository {
 
 function executeGet(repository: InteractionRepository, roleName: Role, actorScope: ScopeContext, clock = () => now) {
   return new GetInteractionUseCase({ repository, now: clock }).execute({
-    id: "interaction-1",
-    actor: { userId: roleName === "MANAGER" ? "manager-1" : "rep-1", roleName },
+    id: 10,
+    actor: { userId: roleName === "MANAGER" ? 2 : 1, roleName },
     scope: actorScope,
   });
 }
@@ -151,8 +151,8 @@ describe("GetInteractionUseCase", () => {
     const result = await executeGet(new FakeInteractionRepository(), "REP", scope(), () => new Date("2026-08-03T12:00:00.000Z"));
 
     expect(result).toEqual(expect.objectContaining({
-      id: "interaction-1",
-      calendarId: "calendar-1",
+      id: 10,
+      calendarId: 1,
       calendarVersion: 3,
       recurrenceKey: "2026-08-03T09:00[America/Sao_Paulo]",
       status: "SCHEDULED",
@@ -163,7 +163,7 @@ describe("GetInteractionUseCase", () => {
         endsAt: "2026-08-03T13:00:00.000Z",
         timeZone: "America/Sao_Paulo",
       },
-      facility: { id: "facility-1", displayName: "Clínica Central", city: "São Paulo", state: "SP" },
+      facility: { id: 1, displayName: "Clínica Central", city: "São Paulo", state: "SP" },
       linkedOrders: [],
     }));
   });
@@ -173,7 +173,7 @@ describe("GetInteractionUseCase", () => {
     repository.record = interaction({ calendar: { ...interaction().calendar, recurrence: "WEEKLY", recurrenceUntil: "2026-09-30", recurrenceCount: null } });
     const result = await executeGet(repository, "REP", scope());
     expect(result.calendar).toEqual({
-      id: "calendar-1",
+      id: 1,
       title: "Visita",
       version: 3,
       recurrence: "WEEKLY",
@@ -185,7 +185,7 @@ describe("GetInteractionUseCase", () => {
   test("derives missed when the effective occurrence ends exactly at now", async () => {
     const repository = new FakeInteractionRepository();
     const result = await new GetInteractionUseCase({ repository, now: () => new Date("2026-08-03T13:00:00.000Z") }).execute({
-      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+      id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
     });
     expect(result.status).toBe("NOT_COMPLETED");
   });
@@ -193,7 +193,7 @@ describe("GetInteractionUseCase", () => {
   test("derives missed and cancelled effective states without persisting on read", async () => {
     const overdue = new FakeInteractionRepository();
     const overdueResult = await new GetInteractionUseCase({ repository: overdue, now: () => new Date("2026-08-03T13:00:00.001Z") }).execute({
-      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+      id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
     });
     expect(overdueResult).toEqual(expect.objectContaining({ status: "NOT_COMPLETED", canMutate: true }));
     expect(overdue.record?.status).toBe("SCHEDULED");
@@ -201,7 +201,7 @@ describe("GetInteractionUseCase", () => {
     const cancelledSeries = new FakeInteractionRepository();
     cancelledSeries.record = interaction({ calendar: { ...interaction().calendar, status: "CANCELLED", version: 4 } });
     expect(await new GetInteractionUseCase({ repository: cancelledSeries, now: () => now }).execute({
-      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+      id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
     })).toEqual(expect.objectContaining({ status: "CANCELLED", canMutate: false, calendarVersion: 4 }));
 
     const cancelledOverride = new FakeInteractionRepository();
@@ -209,12 +209,12 @@ describe("GetInteractionUseCase", () => {
       startsAt: new Date("2026-08-03T12:00:00.000Z"), endsAt: new Date("2026-08-03T13:00:00.000Z"), status: "CANCELLED", version: 2,
     } });
     expect(await new GetInteractionUseCase({ repository: cancelledOverride, now: () => now }).execute({
-      id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" }, scope: scope(),
+      id: 10, actor: { userId: 1, roleName: "REP" }, scope: scope(),
     })).toEqual(expect.objectContaining({ status: "CANCELLED", canMutate: false, overrideVersion: 2 }));
   });
 
   test("allows a manager to read only a managed agent in facility scope", async () => {
-    const result = await executeGet(new FakeInteractionRepository(), "MANAGER", scope({ managedUserIds: ["rep-1"] }));
+    const result = await executeGet(new FakeInteractionRepository(), "MANAGER", scope({ managedUserIds: [1] }));
     expect(result.canMutate).toBe(false);
   });
 
@@ -225,7 +225,7 @@ describe("GetInteractionUseCase", () => {
 });
 
 function ownerInput() {
-  return { id: "interaction-1", actor: { userId: "rep-1", roleName: "REP" as const }, scope: scope(), expectedVersion: 1, idempotencyKey: "cmd-1" };
+  return { id: 10, actor: { userId: 1, roleName: "REP" as const }, scope: scope(), expectedVersion: 1, idempotencyKey: "cmd-1" };
 }
 
 describe("StartInteractionUseCase", () => {
@@ -257,7 +257,7 @@ describe("StartInteractionUseCase", () => {
   test("rejects manager mutation, invalid transitions, and stale versions with typed errors", async () => {
     const repository = new FakeInteractionRepository();
     const useCase = new StartInteractionUseCase({ repository, now: () => now });
-    await expect(useCase.execute({ ...ownerInput(), actor: { userId: "manager-1", roleName: "MANAGER" }, scope: scope({ managedUserIds: ["rep-1"] }) })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(useCase.execute({ ...ownerInput(), actor: { userId: 2, roleName: "MANAGER" }, scope: scope({ managedUserIds: [1] }) })).rejects.toMatchObject({ code: "FORBIDDEN" });
     repository.record = interaction({ status: "IN_PROGRESS" });
     await expect(useCase.execute(ownerInput())).rejects.toBeInstanceOf(InteractionTransitionError);
     repository.record = interaction({ version: 2 });
@@ -272,7 +272,7 @@ describe("CompleteInteractionUseCase", () => {
     const useCase = new CompleteInteractionUseCase({ repository, now: () => new Date("2026-08-03T12:15:00.000Z") });
     const first = await useCase.execute(ownerInput());
     const retry = await useCase.execute(ownerInput());
-    expect(first).toEqual(expect.objectContaining({ status: "COMPLETED", visitId: "visit-1" }));
+    expect(first).toEqual(expect.objectContaining({ status: "COMPLETED", visitId: 100 }));
     expect(retry).toEqual(first);
     expect(repository.visits).toBe(1);
     expect(repository.events).toHaveLength(1);
@@ -287,7 +287,7 @@ describe("CompleteInteractionUseCase", () => {
     expect(result).toEqual(expect.objectContaining({
       status: "COMPLETED",
       correctionReason: "Cliente confirmou visita",
-      correctedByUserId: "rep-1",
+      correctedByUserId: 1,
       actualStartedAt: "2026-08-03T12:00:00.000Z",
       actualEndedAt: "2026-08-03T14:00:00.000Z",
     }));
@@ -311,7 +311,7 @@ describe("CompleteInteractionUseCase", () => {
       ...ownerInput(), correctionReason: "  Visita confirmada  ",
     });
 
-    expect(result).toEqual(expect.objectContaining({ status: "COMPLETED", visitId: "visit-1", correctionReason: "Visita confirmada" }));
+    expect(result).toEqual(expect.objectContaining({ status: "COMPLETED", visitId: 100, correctionReason: "Visita confirmada" }));
     expect(repository.events).toEqual([
       { previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED", source: "SYSTEM", actorUserId: null },
       { previousStatus: "NOT_COMPLETED", newStatus: "COMPLETED", reason: "Visita confirmada" },
@@ -328,7 +328,7 @@ describe("CompleteInteractionUseCase", () => {
 describe("MarkOverdueInteractionsUseCase", () => {
   test("marks only ended scheduled interactions and leaves in-progress interactions untouched", async () => {
     const scheduled = new FakeInteractionRepository();
-    const useCase = new MarkOverdueInteractionsUseCase({ repository: scheduled, systemActorUserId: "system", now: () => new Date("2026-08-03T13:01:00.000Z") });
+    const useCase = new MarkOverdueInteractionsUseCase({ repository: scheduled, systemActorUserId: null, now: () => new Date("2026-08-03T13:01:00.000Z") });
     expect(await useCase.execute({ limit: 25 })).toBe(1);
     expect(scheduled.record?.status).toBe("NOT_COMPLETED");
     expect(scheduled.events).toEqual([{ previousStatus: "SCHEDULED", newStatus: "NOT_COMPLETED" }]);
@@ -339,7 +339,7 @@ describe("MarkOverdueInteractionsUseCase", () => {
 
     const inProgress = new FakeInteractionRepository();
     inProgress.record = interaction({ status: "IN_PROGRESS" });
-    expect(await new MarkOverdueInteractionsUseCase({ repository: inProgress, systemActorUserId: "system" }).execute({ now: new Date("2026-08-03T20:00:00.000Z") })).toBe(0);
+    expect(await new MarkOverdueInteractionsUseCase({ repository: inProgress, systemActorUserId: null }).execute({ now: new Date("2026-08-03T20:00:00.000Z") })).toBe(0);
     expect(inProgress.record.status).toBe("IN_PROGRESS");
   });
 });

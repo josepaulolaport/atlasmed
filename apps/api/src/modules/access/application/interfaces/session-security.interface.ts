@@ -10,8 +10,8 @@ export interface SessionSecurityCheck {
 export interface ISessionSecurityService {
   validateSessionSecurity(
     params: SessionSecurityCheck & {
-      userId: string;
-      sessionId: string;
+      userId: number;
+      sessionId: number;
     }
   ): Promise<{ valid: boolean; reason?: string; suspicious: boolean }>;
 }

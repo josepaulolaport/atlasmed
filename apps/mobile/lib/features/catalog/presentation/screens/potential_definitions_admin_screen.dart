@@ -20,12 +20,12 @@ class _PotentialDefinitionsAdminScreenState
   final _repo = PotentialDefinitionsRepository();
   final _catalog = CatalogRepository();
 
-  String? _verticalId;
+  int? _verticalId;
   List<PotentialDefinition> _defs = const [];
   bool _loading = true;
   String? _error;
 
-  Future<void> _selectVertical(String id) async {
+  Future<void> _selectVertical(int id) async {
     setState(() => _verticalId = id);
     await _load();
   }
@@ -225,7 +225,7 @@ class _PotentialDefinitionsAdminScreenState
                 }
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: DropdownButtonFormField<String>(
+                  child: DropdownButtonFormField<int>(
                     initialValue: selected,
                     decoration: const InputDecoration(
                       labelText: 'Linha comercial',
@@ -361,7 +361,7 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
             if (v.verticalIds.contains(widget.definition.verticalId)) v,
       ];
       if (!mounted) return;
-      final picked = await showModalBottomSheet<String>(
+      final picked = await showModalBottomSheet<int>(
         context: context,
         isScrollControlled: true,
         builder: (ctx) => SafeArea(

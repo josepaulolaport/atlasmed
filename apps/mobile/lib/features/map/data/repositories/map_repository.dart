@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_assignments_repository.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/unexpected_status_code_exception.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
@@ -85,7 +87,7 @@ class MapRepository extends Repository<MapData>
     return _combineBoundaries(boundaries);
   }
 
-  Future<TerritoryGeometry?> _fetchBoundary(String territoryId) async {
+  Future<TerritoryGeometry?> _fetchBoundary(int territoryId) async {
     final url = Uri.parse('$_baseUrl/api/v1/territories/$territoryId/boundary');
     final request = RepositoryHttpRequest(url: url);
     final response = await client.call(request: request);
@@ -187,14 +189,16 @@ class MapRepository extends Repository<MapData>
 
     final request = RepositoryHttpRequest(url: url);
     final response = await client.call(request: request);
-    if (response.statusCode != 200) return const [];
+    if (response.statusCode != 200) {
+      throw UnexpectedStatusCodeException(sent: request, received: response);
+    }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final data = decoded['data'] as List<dynamic>? ?? [];
     return data.map((item) {
       final map = item as Map<String, dynamic>;
       return MapFacility(
-        id: map['id'] as String? ?? '',
+        id: readCrmId(map['id'], 'id'),
         name: map['name'] as String? ?? '',
         coordinate: MapCoordinate(
           longitude: (map['longitude'] as num?)?.toDouble() ?? 0,

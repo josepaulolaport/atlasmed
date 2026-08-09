@@ -8,9 +8,8 @@ export const FIELD_SUGGESTION_FIELD_KEYS = [
   "websiteUrl",
   "responsibleName",
   "openingHours",
-  "taxIdType",
-  "cnpj",
-  "cpf",
+  "legalDocumentType",
+  "legalDocument",
   "address",
 ] as const;
 
@@ -24,9 +23,8 @@ export const FIELD_KEY_LABELS_PT: Record<FieldSuggestionFieldKey, string> = {
   websiteUrl: "Site",
   responsibleName: "Responsável",
   openingHours: "Horário de funcionamento",
-  taxIdType: "Tipo de documento",
-  cnpj: "CNPJ",
-  cpf: "CPF",
+  legalDocumentType: "Tipo de documento",
+  legalDocument: "Documento legal",
   address: "Endereço",
 };
 
@@ -55,12 +53,10 @@ export function snapshotCurrentValue(
       return facility.responsibleName;
     case "openingHours":
       return facility.openingHours;
-    case "taxIdType":
-      return facility.taxIdType;
-    case "cnpj":
-      return facility.cnpj;
-    case "cpf":
-      return facility.cpf;
+    case "legalDocumentType":
+      return facility.legalDocumentType;
+    case "legalDocument":
+      return facility.legalDocument;
     case "address":
       return {
         neighborhood: facility.neighborhood,

@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 enum CalendarEventKind { interaction, personalBlock }
 
 enum CalendarModality { inPerson, remote }
@@ -48,7 +50,7 @@ String calendarRecurrenceToApi(CalendarRecurrence value) =>
 class CalendarEditorPrefill extends Equatable {
   const CalendarEditorPrefill({this.facilityId, this.facilityName, this.kind});
 
-  final String? facilityId;
+  final int? facilityId;
   final String? facilityName;
   final CalendarEventKind? kind;
 
@@ -94,7 +96,7 @@ class CalendarCreateCommand extends Equatable {
 
   final CalendarEventKind kind;
   final String title;
-  final String? facilityId;
+  final int? facilityId;
   final CalendarModality? modality;
   final String startsAt;
   final String timeZone;
@@ -222,15 +224,15 @@ class CalendarCancellationCommand extends Equatable {
 class CalendarIdentity extends Equatable {
   const CalendarIdentity({required this.id, required this.name});
 
-  final String id;
+  final int id;
   final String name;
 
   factory CalendarIdentity.fromJson(
     Map<String, dynamic> json, {
-    required String fallbackId,
+    required int fallbackId,
     required String fallbackName,
   }) => CalendarIdentity(
-    id: (json['id'] as String?) ?? fallbackId,
+    id: json['id'] == null ? fallbackId : readCrmId(json['id'], 'id'),
     name:
         (json['name'] as String?) ??
         (json['displayName'] as String?) ??
@@ -250,17 +252,17 @@ class CalendarInteractionContext extends Equatable {
     this.modality,
   });
 
-  final String id;
-  final String? facilityId;
-  final String? agentUserId;
+  final int id;
+  final int? facilityId;
+  final int? agentUserId;
   final CalendarModality? modality;
   final InteractionStatus status;
 
   factory CalendarInteractionContext.fromJson(Map<String, dynamic> json) =>
       CalendarInteractionContext(
-        id: json['id'] as String,
-        facilityId: json['facilityId'] as String?,
-        agentUserId: json['agentUserId'] as String?,
+        id: readCrmId(json['id'], 'id'),
+        facilityId: readCrmIdOrNull(json['facilityId'], 'facilityId'),
+        agentUserId: readCrmIdOrNull(json['agentUserId'], 'agentUserId'),
         modality: json['modality'] == null
             ? null
             : _enumFromApi(CalendarModality.values, json['modality']),
@@ -279,14 +281,14 @@ class InteractionFacility extends Equatable {
     this.state,
   });
 
-  final String id;
+  final int id;
   final String displayName;
   final String? city;
   final String? state;
 
   factory InteractionFacility.fromJson(Map<String, dynamic> json) =>
       InteractionFacility(
-        id: json['id'] as String,
+        id: readCrmId(json['id'], 'id'),
         displayName:
             (json['displayName'] as String?) ??
             (json['name'] as String?) ??
@@ -307,12 +309,12 @@ class InteractionFacility extends Equatable {
 class InteractionAgent extends Equatable {
   const InteractionAgent({required this.id, required this.displayName});
 
-  final String id;
+  final int id;
   final String displayName;
 
   factory InteractionAgent.fromJson(Map<String, dynamic> json) =>
       InteractionAgent(
-        id: json['id'] as String,
+        id: readCrmId(json['id'], 'id'),
         displayName:
             (json['displayName'] as String?) ??
             [json['firstName'], json['lastName']]
@@ -333,14 +335,14 @@ class InteractionLinkedOrder extends Equatable {
     required this.orderedAt,
   });
 
-  final String id;
+  final int id;
   final String status;
   final String type;
   final DateTime orderedAt;
 
   factory InteractionLinkedOrder.fromJson(Map<String, dynamic> json) =>
       InteractionLinkedOrder(
-        id: json['id'] as String,
+        id: readCrmId(json['id'], 'id'),
         status: json['status'] as String,
         type: json['type'] as String,
         orderedAt: DateTime.parse(json['orderedAt'] as String),
@@ -376,8 +378,8 @@ class InteractionDetail extends Equatable {
     this.correctionReason,
   });
 
-  final String id;
-  final String calendarId;
+  final int id;
+  final int calendarId;
   final String recurrenceKey;
   final String title;
   final CalendarModality modality;
@@ -403,8 +405,8 @@ class InteractionDetail extends Equatable {
     final occurrence = json['occurrence'] as Map<String, dynamic>;
     final calendar = json['calendar'] as Map<String, dynamic>;
     return InteractionDetail(
-      id: json['id'] as String,
-      calendarId: json['calendarId'] as String,
+      id: readCrmId(json['id'], 'id'),
+      calendarId: readCrmId(json['calendarId'], 'calendarId'),
       recurrenceKey: json['recurrenceKey'] as String,
       title: calendar['title'] as String? ?? 'Atendimento',
       modality: _enumFromApi(CalendarModality.values, json['modality']),
@@ -508,7 +510,7 @@ class CalendarOccurrence extends Equatable {
     this.recurrenceProvided = true,
   });
 
-  final String calendarId;
+  final int calendarId;
   final String occurrenceId;
   final String recurrenceKey;
   final CalendarEventKind kind;
@@ -580,19 +582,27 @@ class CalendarOccurrence extends Equatable {
     final endsAt = DateTime.parse(json['endsAt'] as String).toUtc();
     final localStart = startsAt.toLocal();
     final localEnd = endsAt.toLocal();
-    final occurrenceId =
-        (json['occurrenceId'] as String?) ?? json['id'] as String;
-    final calendarId = (json['calendarId'] as String?) ?? json['id'] as String;
+    // List DTO: `id` is occurrence key string (`{calendarId}:{recurrenceKey}`).
+    // Older fixtures may send numeric `id` + separate `occurrenceId`.
+    final occurrenceId = _readOccurrenceId(json['occurrenceId'] ?? json['id']);
+    final calendarId = json['calendarId'] != null
+        ? readCrmId(json['calendarId'], 'calendarId')
+        : readCrmId(json['id'], 'calendarId');
     final ownerUserId =
-        (json['ownerUserId'] as String?) ??
-        ((json['owner'] as Map<String, dynamic>?)?['id'] as String?) ??
-        '';
+        readCrmIdOrNull(json['ownerUserId'], 'ownerUserId') ??
+        readCrmIdOrNull(
+          (json['owner'] as Map<String, dynamic>?)?['id'],
+          'owner.id',
+        ) ??
+        0;
     final interactionJson = json['interaction'] as Map<String, dynamic>?;
     final interaction = interactionJson == null
         ? null
         : CalendarInteractionContext.fromJson(interactionJson);
     final facilityId =
-        (json['facilityId'] as String?) ?? interaction?.facilityId ?? '';
+        readCrmIdOrNull(json['facilityId'], 'facilityId') ??
+        interaction?.facilityId ??
+        0;
     final ownerJson =
         json['owner'] as Map<String, dynamic>? ??
         <String, dynamic>{'name': json['ownerName']};
@@ -705,7 +715,7 @@ class CalendarConflictInterval extends Equatable {
 
   final DateTime startsAt;
   final DateTime endsAt;
-  final String? id;
+  final int? id;
 
   @override
   List<Object?> get props => [startsAt, endsAt, id];
@@ -720,7 +730,7 @@ class CalendarConflict extends Equatable {
   factory CalendarConflict.fromJson(Map<String, dynamic> json) =>
       CalendarConflict(
         candidate: CalendarConflictInterval(
-          id: json['candidateId'] as String?,
+          id: readCrmIdOrNull(json['candidateId'], 'candidateId'),
           startsAt: DateTime.parse(
             (json['candidateStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),
@@ -729,7 +739,8 @@ class CalendarConflict extends Equatable {
           ).toUtc(),
         ),
         existing: CalendarConflictInterval(
-          id: (json['existingId'] ?? json['occurrenceId']) as String?,
+          // CRM calendar/override id only — never occurrence key strings.
+          id: readCrmIdOrNull(json['existingId'], 'existingId'),
           startsAt: DateTime.parse(
             (json['existingStartsAt'] ?? json['startsAt']) as String,
           ).toUtc(),
@@ -807,3 +818,12 @@ DateTime _dateOnly(DateTime value) =>
 
 String _formatTime(DateTime value) =>
     '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+
+/// Occurrence list identity — composite string from API, not a CRM bigint.
+String _readOccurrenceId(Object? value) {
+  if (value is String && value.isNotEmpty) return value;
+  if (value is num) return value.toInt().toString();
+  throw FormatException(
+    'Expected occurrence id string for id, got ${value.runtimeType}',
+  );
+}

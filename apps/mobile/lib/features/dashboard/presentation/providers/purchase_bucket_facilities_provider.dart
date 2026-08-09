@@ -13,7 +13,7 @@ class PurchaseBucketFacilitiesArgs {
   const PurchaseBucketFacilitiesArgs({required this.bucket, this.verticalId});
 
   final String bucket;
-  final String? verticalId;
+  final int? verticalId;
 
   @override
   bool operator ==(Object other) =>

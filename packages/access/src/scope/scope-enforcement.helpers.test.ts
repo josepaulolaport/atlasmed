@@ -6,31 +6,31 @@ import { ForbiddenError } from "../errors/forbidden.error";
 describe("assertResourceInScope", () => {
   it("allows global scope", () => {
     expect(() =>
-      assertResourceInScope(createGlobalScopeContext(), "facility", "facility-1")
+      assertResourceInScope(createGlobalScopeContext(), "facility", 1)
     ).not.toThrow();
   });
 
   it("denies facility outside scope", () => {
     const scope = {
       ...createEmptyScopeContext(),
-      facilityIds: ["facility-1"],
+      facilityIds: [1],
       isOperationallyActive: true,
     };
 
     expect(() =>
-      assertResourceInScope(scope, "facility", "facility-2")
+      assertResourceInScope(scope, "facility", 2)
     ).toThrow(ForbiddenError);
   });
 
   it("allows facility inside scope", () => {
     const scope = {
       ...createEmptyScopeContext(),
-      facilityIds: ["facility-1"],
+      facilityIds: [1],
       isOperationallyActive: true,
     };
 
     expect(() =>
-      assertResourceInScope(scope, "facility", "facility-1")
+      assertResourceInScope(scope, "facility", 1)
     ).not.toThrow();
   });
 });

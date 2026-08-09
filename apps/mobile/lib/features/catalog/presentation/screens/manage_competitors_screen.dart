@@ -18,7 +18,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// deletes the competitor product itself, since the same competitor can
 /// be equivalent to several AtlasMed variants at once.
 class ManageCompetitorsScreen extends ConsumerWidget {
-  final String variantId;
+  final int variantId;
   final String variantLabel;
 
   const ManageCompetitorsScreen({
@@ -239,7 +239,7 @@ class _CompetitorRow extends StatelessWidget {
 /// or register a brand-new one (which gets linked automatically once
 /// saved).
 class _AddCompetitorSheet extends ConsumerStatefulWidget {
-  final String variantId;
+  final int variantId;
   final List<CompetitorProduct> initialUnlinked;
 
   const _AddCompetitorSheet({

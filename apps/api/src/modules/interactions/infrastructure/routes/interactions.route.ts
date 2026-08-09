@@ -33,22 +33,27 @@ async function context(input: any) {
   return { scope, actor: { userId, roleName: authContext.roleName as Role } };
 }
 
+const interactionIdParams = t.Object({ id: t.Number({ minimum: 1 }) });
+
 export function createInteractionRoutes(useCases: InteractionHttpUseCases = interactionUseCases, authPlugin: any = auth) {
   // Security registry requires the production route to visibly declare `.use(auth)`;
   // injected tests supply an equivalent scoped auth plugin through authPlugin.
   const get = new Elysia().use(authPlugin).use(requirePermission("read", "INTERACTION", { resourceIdParam: "id" }))
     .get("/interactions/:id", async (ctx) => useCases.get().execute({ ...(await context(ctx)), id: ctx.params.id }), {
+      params: interactionIdParams,
       detail: { summary: "Get interaction workspace", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
   const start = new Elysia().use(authPlugin).use(requirePermission("update", "INTERACTION", { resourceIdParam: "id" }))
     .post("/interactions/:id/start", async (ctx) => useCases.start().execute({ ...(await context(ctx)), id: ctx.params.id,
       idempotencyKey: commandKey(ctx.request.headers), ...parse(commandSchema, ctx.body) }), {
+      params: interactionIdParams,
       body: t.Object({ expectedVersion: t.Number() }),
       detail: { summary: "Start interaction", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });
   const complete = new Elysia().use(authPlugin).use(requirePermission("update", "INTERACTION", { resourceIdParam: "id" }))
     .post("/interactions/:id/complete", async (ctx) => useCases.complete().execute({ ...(await context(ctx)), id: ctx.params.id,
       idempotencyKey: commandKey(ctx.request.headers), ...parse(completeSchema, ctx.body) }), {
+      params: interactionIdParams,
       body: t.Object({ expectedVersion: t.Number(), correctionReason: t.Optional(t.String()) }),
       detail: { summary: "Complete interaction", tags: ["Interactions"], security: [{ bearerAuth: [] }] },
     });

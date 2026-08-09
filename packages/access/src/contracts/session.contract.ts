@@ -1,9 +1,9 @@
 import type { AuthSessionType as SessionType, AuthSessionDeviceType as DeviceType } from "@atlasmed/database";
 
 export interface SessionContract {
-  id: string;
+  id: number;
 
-  userId: string;
+  userId: number;
 
   sessionType: SessionType;
 

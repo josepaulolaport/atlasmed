@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-enum DoctorClinicAction { editRoles, viewProfile }
+enum DoctorClinicAction { editRoles, viewProfile, endAffiliation }
 
-/// Small chooser: define clinic role vs open full doctor profile.
+/// Small chooser: define clinic role, open profile, or end affiliation.
 Future<DoctorClinicAction?> showDoctorClinicActionsSheet(
   BuildContext context, {
   required String doctorName,
@@ -65,6 +65,15 @@ Future<DoctorClinicAction?> showDoctorClinicActionsSheet(
                   sheetContext,
                 ).pop(DoctorClinicAction.viewProfile),
               ),
+              const SizedBox(height: 8),
+              _ActionTile(
+                icon: Icons.link_off_rounded,
+                label: 'Encerrar vínculo com a clínica',
+                destructive: true,
+                onTap: () => Navigator.of(
+                  sheetContext,
+                ).pop(DoctorClinicAction.endAffiliation),
+              ),
             ],
           ),
         ),
@@ -78,14 +87,17 @@ class _ActionTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.destructive = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
+    final accent = destructive ? const Color(0xFFB42318) : AppColors.navyBright;
     return Material(
       color: AppColors.surfaceTertiary,
       borderRadius: BorderRadius.circular(12),
@@ -96,22 +108,24 @@ class _ActionTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: AppColors.navyBright),
+              Icon(icon, size: 22, color: accent),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.gray900,
+                    color: destructive ? accent : AppColors.gray900,
                   ),
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: AppColors.gray400,
+                color: destructive
+                    ? accent.withValues(alpha: 0.55)
+                    : AppColors.gray400,
               ),
             ],
           ),

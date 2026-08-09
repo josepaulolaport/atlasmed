@@ -9,10 +9,8 @@ import type {
 } from "../infrastructure/repositories/drizzle-dashboard.repository";
 
 export type DashboardSummary = {
-  /** Narrowing filter when set; `null` = union of all assigned verticals. */
-  verticalId: string | null;
+  verticalId: number | null;
   purchaseStatus: PurchaseStatusBuckets & {
-    /** (active + inactive) / total * 100 */
     coveragePercent: number;
   };
   territory: {
@@ -29,12 +27,12 @@ export class GetDashboardSummaryUseCase {
   constructor(private readonly repo: DrizzleDashboardRepository) {}
 
   async execute(input: {
-    userId: string;
+    userId: number;
     role: string;
     scope: ScopeContext;
-    verticalId?: string | null;
+    verticalId?: number | null;
   }): Promise<DashboardSummary> {
-    const filterVerticalId = input.verticalId?.trim() || null;
+    const filterVerticalId = input.verticalId ?? null;
     const resolved = resolveVerticalIds({
       role: input.role,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
@@ -46,15 +44,13 @@ export class GetDashboardSummaryUseCase {
     }
 
     const isAdmin = input.role === Role.ADMIN;
-    const facilityIds: string[] | null = isAdmin
+    const facilityIds: number[] | null = isAdmin
       ? null
       : (input.scope.facilityIds ?? []);
 
     const [purchaseStatus, doctorCount, features] = await Promise.all([
       this.repo.countPurchaseBuckets({ verticalIds: resolved, facilityIds }),
       this.repo.countDoctors({ verticalIds: resolved, facilityIds }),
-      // Admins get Brazil overview stats only — no territory polygons on the
-      // Desempenho minimap (same rule as the live Mapa tab).
       isAdmin
         ? Promise.resolve([] as DashboardTerritoryFeature[])
         : this.repo.listAssignedTerritoryFeatures({
@@ -89,7 +85,6 @@ export class GetDashboardSummaryUseCase {
     }
 
     return {
-      // Echo explicit filter only; omit means token-scoped union.
       verticalId: filterVerticalId,
       purchaseStatus: {
         ...purchaseStatus,

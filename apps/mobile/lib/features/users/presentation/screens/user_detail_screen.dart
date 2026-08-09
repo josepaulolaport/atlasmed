@@ -6,7 +6,6 @@ import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_a
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/change_role_sheet.dart';
-import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manage_permissions_sheet.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_card.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manager_empty_zones_picker_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/rep_manager_zone_picker_screen.dart';
@@ -21,11 +20,12 @@ import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class UserDetailScreen extends ConsumerWidget {
   const UserDetailScreen({super.key, required this.userId});
 
-  final String userId;
+  final int userId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,18 +90,12 @@ class UserDetailScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (canAdmin) ...[
+            if (canAdmin)
               ListTile(
                 leading: const Icon(Icons.badge_outlined),
                 title: const Text('Alterar função'),
                 onTap: () => Navigator.pop(sheetContext, 'role'),
               ),
-              ListTile(
-                leading: const Icon(Icons.security_outlined),
-                title: const Text('Gerenciar permissões'),
-                onTap: () => Navigator.pop(sheetContext, 'permissions'),
-              ),
-            ],
             if (user.status.name == 'inactive')
               ListTile(
                 leading: const Icon(
@@ -147,25 +141,6 @@ class UserDetailScreen extends ConsumerWidget {
       await ChangeRoleSheet.show(context, user: user);
       ref.invalidate(userDetailProvider(userId));
       await ref.read(usersListProvider.notifier).refreshRow(userId);
-      return;
-    }
-
-    if (action == 'permissions') {
-      try {
-        final grants = await ref
-            .read(usersRepositoryProvider)
-            .getUserPermissions(userId);
-        if (!context.mounted) return;
-        await ManagePermissionsSheet.show(context, user: user, grants: grants);
-      } catch (_) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Não foi possível carregar as permissões.'),
-            ),
-          );
-        }
-      }
       return;
     }
 
@@ -347,7 +322,7 @@ class _IdentityCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.push('/users/${user.id}/edit'),
+                onPressed: () => UserEditRoute(id: user.id).push(context),
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: const Text('Editar informações'),
               ),
@@ -483,7 +458,7 @@ class _AssignmentsSection extends ConsumerWidget {
           trailing: canManage
               ? TextButton(
                   onPressed: () async {
-                    await context.push('/users/${user.id}/assignments');
+                    await UserAssignmentsRoute(id: user.id).push(context);
                     ref.invalidate(userAssignmentsProvider(user.id));
                   },
                   child: const Text('Gerenciar'),
@@ -545,7 +520,7 @@ class _VerticalAssignmentCard extends ConsumerStatefulWidget {
     required this.canManage,
   });
 
-  final String userId;
+  final int userId;
   final InviteVerticalAssignment assignment;
   final UserAssignments allAssignments;
   final bool showManager;
@@ -647,7 +622,7 @@ class _VerticalAssignmentCardState
     await _persist(assignment.copyWith(territories: picked));
   }
 
-  Future<void> _removeTerritory(String territoryId) async {
+  Future<void> _removeTerritory(int territoryId) async {
     if (!widget.canManage || _busy) return;
     await _persist(
       assignment.copyWith(

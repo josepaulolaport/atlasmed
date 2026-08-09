@@ -17,12 +17,12 @@ import type {
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
 import { assertPayerSharesOrtopediaAccess } from "../services/payer-shares-access.service";
 
-function productVisibleInVerticals(product: ProductRecord, verticalIds: string[]): boolean {
+function productVisibleInVerticals(product: ProductRecord, verticalIds: number[]): boolean {
   return product.verticalIds.some((id) => verticalIds.includes(id));
 }
 
 function serializeBusinessVertical(row: {
-  id: string;
+  id: number;
   code: string;
   name: string;
   isActive: boolean;
@@ -40,7 +40,7 @@ function serializeBusinessVertical(row: {
 }
 
 function serializeProduct(row: {
-  id: string;
+  id: number;
   code: string;
   name: string;
   description: string | null;
@@ -49,7 +49,7 @@ function serializeProduct(row: {
   productClassification: string | null;
   brand: string | null;
   unit: string | null;
-  verticalIds: string[];
+  verticalIds: number[];
   pictureUrl: string | null;
   simproCode: string;
   brasindiceCode: string;
@@ -94,7 +94,7 @@ function serializeProduct(row: {
 }
 
 function serializeProvider(row: {
-  id: string;
+  id: number;
   name: string;
   type: string;
   isActive: boolean;
@@ -143,7 +143,7 @@ export class UpdateBusinessVerticalUseCase {
   constructor(private readonly deps: { businessVerticalRepository: BusinessVerticalRepository }) {}
 
   async execute(input: {
-    verticalId: string;
+    verticalId: number;
     code?: string;
     name?: string;
     isActive?: boolean;
@@ -163,7 +163,7 @@ export class ListProductsUseCase {
   async execute(input: {
     page?: number;
     limit?: number;
-    verticalId?: string;
+    verticalId?: number;
     search?: string;
     isActive?: boolean;
     scope: ScopeContext;
@@ -203,10 +203,10 @@ export class GetProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
   async execute(input: {
-    productId: string;
+    productId: number;
     scope: ScopeContext;
     role: string;
-    verticalId?: string;
+    verticalId?: number;
   }) {
     const product = await this.deps.productRepository.findById(input.productId);
     if (!product) throw new ResourceNotFoundError("Product", input.productId);
@@ -230,7 +230,7 @@ export class CreateProductUseCase {
   async execute(input: {
     code: string;
     name: string;
-    verticalIds: string[];
+    verticalIds: number[];
     pictureUrl?: string | null;
     simproCode: string;
     brasindiceCode: string;
@@ -253,10 +253,10 @@ export class UpdateProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
   async execute(input: {
-    productId: string;
+    productId: number;
     code?: string;
     name?: string;
-    verticalIds?: string[];
+    verticalIds?: number[];
     pictureUrl?: string | null;
     simproCode?: string;
     brasindiceCode?: string;
@@ -329,7 +329,7 @@ export class UpdateHealthcareProviderUseCase {
   ) {}
 
   async execute(input: {
-    providerId: string;
+    providerId: number;
     name?: string;
     type?: HealthcareProviderType;
     isActive?: boolean;
@@ -344,15 +344,14 @@ export class UpdateHealthcareProviderUseCase {
 }
 
 function serializeFacilityShare(share: {
-  id: string;
-  facilityId: string;
-  healthcareProviderId: string;
+  id: number;
+  facilityId: number;
+  healthcareProviderId: number;
   sharePercent: number;
   isPackage: boolean;
-  source: "MANUAL" | "REGISTRY" | "IMPORT";
   createdAt: Date;
   updatedAt: Date;
-  healthcareProvider: { id: string; name: string; type: string };
+  healthcareProvider: { id: number; name: string; type: string };
 }) {
   return {
     id: share.id,
@@ -360,7 +359,6 @@ function serializeFacilityShare(share: {
     healthcareProviderId: share.healthcareProviderId,
     sharePercent: share.sharePercent,
     isPackage: share.isPackage,
-    source: share.source,
     healthcareProvider: share.healthcareProvider,
     createdAt: share.createdAt.toISOString(),
     updatedAt: share.updatedAt.toISOString(),
@@ -375,7 +373,7 @@ export class ListFacilityHealthcareProviderSharesUseCase {
     }
   ) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     await assertPayerSharesOrtopediaAccess({
       facilityId: input.facilityId,
@@ -399,8 +397,8 @@ export class CreateFacilityHealthcareProviderShareUseCase {
   ) {}
 
   async execute(input: {
-    facilityId: string;
-    healthcareProviderId: string;
+    facilityId: number;
+    healthcareProviderId: number;
     sharePercent: number;
     isPackage?: boolean;
     scope: ScopeContext;
@@ -444,7 +442,6 @@ export class CreateFacilityHealthcareProviderShareUseCase {
       healthcareProviderId: share.healthcareProviderId,
       sharePercent: share.sharePercent,
       isPackage: share.isPackage,
-      source: share.source,
       healthcareProvider: share.healthcareProvider,
       createdAt: share.createdAt.toISOString(),
     };
@@ -460,10 +457,10 @@ export class ReplaceFacilityHealthcareProviderSharesUseCase {
   ) {}
 
   async execute(input: {
-    facilityId: string;
+    facilityId: number;
     scope: ScopeContext;
     shares: Array<{
-      healthcareProviderId: string;
+      healthcareProviderId: number;
       sharePercent: number;
       isPackage?: boolean;
     }>;
@@ -476,13 +473,13 @@ export class ReplaceFacilityHealthcareProviderSharesUseCase {
     });
 
     const issues: Array<{ field: string; message: string }> = [];
-    const seen = new Set<string>();
+    const seen = new Set<number>();
 
     for (let index = 0; index < input.shares.length; index += 1) {
       const share = input.shares[index]!;
       const field = `shares[${index}]`;
 
-      if (!share.healthcareProviderId?.trim()) {
+      if (!(typeof share.healthcareProviderId === "number") || share.healthcareProviderId <= 0) {
         issues.push({ field: `${field}.healthcareProviderId`, message: "Required" });
         continue;
       }
@@ -567,7 +564,7 @@ function serializeCompetitorProduct(row: CompetitorProductRecord) {
 export type ComparisonSortColumn = "icms17" | "icms18" | "icms20";
 
 export interface ComparisonRow {
-  id: string;
+  id: number;
   label: string;
   manufacturer: string;
   countryOfOrigin: string;
@@ -653,7 +650,7 @@ export class GetCompetitorProductUseCase {
     private readonly deps: { competitorProductRepository: CompetitorProductRepository }
   ) {}
 
-  async execute(input: { competitorProductId: string }) {
+  async execute(input: { competitorProductId: number }) {
     const competitor = await this.deps.competitorProductRepository.findById(
       input.competitorProductId
     );
@@ -692,7 +689,7 @@ export class UpdateCompetitorProductUseCase {
   ) {}
 
   async execute(input: {
-    competitorProductId: string;
+    competitorProductId: number;
     code?: string | null;
     name?: string;
     manufacturer?: string;
@@ -722,11 +719,11 @@ export class GetProductComparisonUseCase {
   ) {}
 
   async execute(input: {
-    productId: string;
+    productId: number;
     sortBy?: ComparisonSortColumn;
     scope: ScopeContext;
     role: string;
-    verticalId?: string;
+    verticalId?: number;
   }) {
     const product = await this.deps.productRepository.findById(input.productId);
     if (!product) throw new ResourceNotFoundError("Product", input.productId);
@@ -765,7 +762,7 @@ export class ListUnlinkedCompetitorProductsUseCase {
     }
   ) {}
 
-  async execute(input: { productId: string }) {
+  async execute(input: { productId: number }) {
     const product = await this.deps.productRepository.findById(input.productId);
     if (!product) throw new ResourceNotFoundError("Product", input.productId);
 
@@ -786,8 +783,8 @@ export class LinkCompetitorProductUseCase {
   ) {}
 
   async execute(input: {
-    productId: string;
-    competitorProductId: string;
+    productId: number;
+    competitorProductId: number;
     notes?: string | null;
   }) {
     const product = await this.deps.productRepository.findById(input.productId);
@@ -828,7 +825,7 @@ export class UnlinkCompetitorProductUseCase {
     private readonly deps: { productEquivalenceRepository: ProductEquivalenceRepository }
   ) {}
 
-  async execute(input: { productId: string; competitorProductId: string }) {
+  async execute(input: { productId: number; competitorProductId: number }) {
     const unlinked = await this.deps.productEquivalenceRepository.unlink(
       input.productId,
       input.competitorProductId
@@ -854,7 +851,7 @@ export class GetPriceIndexUseCase {
     sortBy?: ComparisonSortColumn;
     scope: ScopeContext;
     role: string;
-    verticalId?: string;
+    verticalId?: number;
   }) {
     const verticalIds = resolveVerticalIds({
       role: input.role,

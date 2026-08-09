@@ -6,13 +6,13 @@ import 'package:atlasmed_mobile_app/core/user/repositories/avatar_repository.dar
 
 void main() {
   final user = User(
-    id: 'user-1',
+    id: 1,
     email: 'ana@example.com',
     username: 'ana',
     status: UserStatus.active,
     emailVerified: true,
     phoneVerified: false,
-    role: UserRole(id: 'role-1', name: UserRoleName.rep),
+    role: UserRole(id: 1, name: UserRoleName.rep),
     twoFactorEnabled: false,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),

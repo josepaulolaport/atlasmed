@@ -21,10 +21,7 @@ final doctorsQueryProvider = Provider<DoctorsQuery>((ref) {
   return buildDoctorsQuery(ref.watch(exploreProvider));
 });
 
-ClinicsQuery buildClinicsQuery(
-  ExploreState state, {
-  required String? verticalId,
-}) {
+ClinicsQuery buildClinicsQuery(ExploreState state, {int? verticalId}) {
   final sort = _facilitySort(state.sort, hasOrigin: state.origin != null);
   final purchaseBuckets = (state.filters['purchaseBucket'] ?? const [])
       .where(PurchaseBucketFilter.values.contains)
@@ -44,7 +41,7 @@ ClinicsQuery buildClinicsQuery(
     commercialStatus: _first(state.filters['status']),
     purchaseBucket: purchaseBuckets.length == 1 ? purchaseBuckets.first : null,
     productIds: _commaJoin(state.filters['products']),
-    serviceCodes: _commaJoin(state.filters['serviceCodes']),
+    clinicalFocusIds: _commaJoin(state.filters['clinicalFocusIds']),
     purchaseFunnelStages: funnelStages
         .map(purchaseFunnelStageFromApi)
         .whereType<PurchaseFunnelStage>()
@@ -74,6 +71,8 @@ DoctorsQuery buildDoctorsQuery(ExploreState state) {
     searchQuery: _nonEmpty(state.searchQuery),
     latitude: state.origin?.latitude,
     longitude: state.origin?.longitude,
+    radiusKm: state.radiusKm,
+    // Comma-joined specialties → API OR-matches normalized primary specialties.
     specialty: _commaJoin(state.filters['specialties']),
     sort: sort.sort,
     order: sort.order,

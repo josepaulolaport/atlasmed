@@ -9,8 +9,7 @@ import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dar
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 
 /// Real API-backed [UserRepository] — `GET /access/users` (search) and
-/// `GET /access/users/:id` (single lookup), both admin-only on the API
-/// side. Mirrors [MockUserRepository]'s behavior for a drop-in swap.
+/// `GET /access/users/:id` (single lookup), both admin-only on the API side.
 class HttpUserRepository implements UserRepository {
   HttpUserRepository({String? baseUrl})
     : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
@@ -24,7 +23,7 @@ class HttpUserRepository implements UserRepository {
       Uri.parse('$_baseUrl/api/v1/access$path').replace(queryParameters: query);
 
   @override
-  Future<AppUser?> getUserById(String id) async {
+  Future<AppUser?> getUserById(int id) async {
     final response = await _client.call(
       request: RepositoryHttpRequest(url: _accessUri('/users/$id')),
     );
@@ -39,7 +38,7 @@ class HttpUserRepository implements UserRepository {
   Future<List<AppUser>> searchUsers({
     required UserRole role,
     String query = '',
-    String? verticalId,
+    int? verticalId,
   }) async {
     final response = await _client.call(
       request: RepositoryHttpRequest(
@@ -47,7 +46,7 @@ class HttpUserRepository implements UserRepository {
           'role': role == UserRole.manager ? 'MANAGER' : 'REP',
           'limit': '50',
           if (query.trim().isNotEmpty) 'search': query.trim(),
-          'verticalId': ?verticalId,
+          if (verticalId != null) 'verticalId': verticalId.toString(),
         }),
       ),
     );

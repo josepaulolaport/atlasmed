@@ -88,7 +88,7 @@ class UsersListNotifier extends StateNotifier<UsersListState> {
   /// Re-fetches a single row after a mutation (activate/deactivate/role
   /// change) made from the detail screen, so the list reflects it without a
   /// full reload.
-  Future<void> refreshRow(String userId) async {
+  Future<void> refreshRow(int userId) async {
     final updated = await _repository.getUserById(userId);
     if (updated == null) return;
     state = state.copyWith(

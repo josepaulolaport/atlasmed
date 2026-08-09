@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
@@ -38,7 +39,7 @@ class FacilityCadastroChecklist {
     required this.facilityId,
     required this.documents,
     required this.pendingAction,
-    this.taxIdType,
+    this.legalDocumentType,
     this.billingEmail,
     this.commercialStatus,
     this.conformityStatus,
@@ -47,12 +48,12 @@ class FacilityCadastroChecklist {
     this.submissionVersion,
   });
 
-  final String facilityId;
-  final String? taxIdType;
+  final int facilityId;
+  final String? legalDocumentType;
   final String? billingEmail;
   final String? commercialStatus;
   final String? conformityStatus;
-  final String? submissionId;
+  final int? submissionId;
   final String? submissionStatus;
   final int? submissionVersion;
   final List<EstablishmentDocument> documents;
@@ -69,7 +70,7 @@ class FacilityCadastroChecklist {
   bool get isUnderReview => submissionStatus == 'UNDER_REVIEW';
 
   bool get canSubmitPackage {
-    if (submissionId == null || submissionId!.isEmpty) return false;
+    if (submissionId == null || submissionId! <= 0) return false;
     if (!isDraftPackage) return false;
     final files = fileDocuments;
     if (files.isEmpty) return false;
@@ -83,12 +84,12 @@ class FacilityCadastroChecklist {
   }
 
   bool get hasDraftToDelete =>
-      submissionId != null && submissionId!.isNotEmpty && isDraftPackage;
+      submissionId != null && submissionId! > 0 && isDraftPackage;
 
   bool get showPackageSubmitBar =>
       isDraftPackage &&
       submissionId != null &&
-      submissionId!.isNotEmpty &&
+      submissionId! > 0 &&
       fileDocuments.isNotEmpty;
 
   int get readyDocumentCount => fileDocuments
@@ -145,7 +146,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         name: 'FacilityCadastroRepository',
       );
 
-  final String facilityId;
+  final int facilityId;
   final RepositoryHttpClient? _client;
 
   @override
@@ -197,27 +198,35 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       final rawFiles = (item['files'] as List<dynamic>? ?? const [])
           .cast<Map<String, dynamic>>();
       final files = rawFiles
-          .map(
-            (f) => CadastroDocumentFile(
-              fileAssetId: f['fileAssetId'] as String? ?? '',
+          .map((f) {
+            final fileAssetId = readCrmIdOrNull(
+              f['fileAssetId'],
+              'fileAssetId',
+            );
+            if (fileAssetId == null) return null;
+            return CadastroDocumentFile(
+              fileAssetId: fileAssetId,
               position: (f['position'] as num?)?.toInt() ?? 1,
               role: f['role'] as String? ?? 'PAGE',
               fileName: f['fileName'] as String?,
               status: f['status'] as String?,
               contentType: f['contentType'] as String?,
-            ),
-          )
-          .where((f) => f.fileAssetId.isNotEmpty)
+            );
+          })
+          .whereType<CadastroDocumentFile>()
           .toList(growable: false);
       final firstFile = files.isNotEmpty ? files.first : null;
       final documentStatus = item['documentStatus'] as String?;
       final approvedRaw = item['currentApproved'] as Map<String, dynamic>?;
       final latestSubmittedAtRaw = item['latestSubmittedAt'] as String?;
+      final requirementId = readCrmId(item['requirementId'], 'requirementId');
       docs.add(
         EstablishmentDocument(
-          id: item['requirementId'] as String? ?? item['slug'] as String,
-          requirementId: item['requirementId'] as String?,
-          recordId: item['documentId'] as String? ?? record?['id'] as String?,
+          id: requirementId,
+          requirementId: requirementId,
+          recordId:
+              readCrmIdOrNull(item['documentId'], 'documentId') ??
+              readCrmIdOrNull(record?['id'], 'id'),
           documentStatus: documentStatus,
           latestSubmittedStatus: item['latestSubmittedStatus'] as String?,
           latestSubmittedAt: latestSubmittedAtRaw != null
@@ -254,7 +263,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     if (billing != null) {
       docs.add(
         EstablishmentDocument(
-          id: 'billing_email',
+          id: kBillingEmailEstablishmentDocumentId,
           title: billing['name'] as String? ?? 'Email Administrativo',
           description:
               billing['description'] as String? ??
@@ -270,12 +279,13 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
 
     final counts = map['counts'] as Map<String, dynamic>?;
     return FacilityCadastroChecklist(
-      facilityId: map['facilityId'] as String? ?? facilityId,
-      taxIdType: map['taxIdType'] as String?,
+      facilityId:
+          readCrmIdOrNull(map['facilityId'], 'facilityId') ?? facilityId,
+      legalDocumentType: map['legalDocumentType'] as String?,
       billingEmail: map['billingEmail'] as String?,
       commercialStatus: map['commercialStatus'] as String?,
       conformityStatus: map['conformityStatus'] as String?,
-      submissionId: map['submissionId'] as String?,
+      submissionId: readCrmIdOrNull(map['submissionId'], 'submissionId'),
       submissionStatus: map['submissionStatus'] as String?,
       submissionVersion: (map['submissionVersion'] as num?)?.toInt(),
       documents: docs,
@@ -306,7 +316,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     );
   }
 
-  Future<String> ensureDraftSubmission({String? verticalId}) async {
+  Future<int> ensureDraftSubmission({int? verticalId}) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions',
     );
@@ -314,20 +324,19 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       uri: uri,
       method: RepositoryHttpMethod.post,
       body: {
-        if (verticalId != null && verticalId.isNotEmpty)
-          'verticalId': verticalId,
+        if (verticalId != null && (verticalId > 0)) 'verticalId': verticalId,
       },
     );
-    final id = map['id'] as String?;
-    if (id == null || id.isEmpty) {
+    final id = readCrmIdOrNull(map['id'], 'id');
+    if (id == null || (id <= 0)) {
       throw const FacilityCadastroException('Falha ao criar rascunho.');
     }
     return id;
   }
 
-  Future<String> ensureDocument({
-    required String submissionId,
-    required String requirementId,
+  Future<int> ensureDocument({
+    required int submissionId,
+    required int requirementId,
   }) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions/$submissionId/documents',
@@ -337,8 +346,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       method: RepositoryHttpMethod.post,
       body: {'requirementId': requirementId},
     );
-    final id = map['id'] as String?;
-    if (id == null || id.isEmpty) {
+    final id = readCrmIdOrNull(map['id'], 'id');
+    if (id == null || (id <= 0)) {
       throw const FacilityCadastroException('Falha ao criar documento.');
     }
     return id;
@@ -366,8 +375,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     }
   }
 
-  Future<({String fileId, String status})> uploadFileToDocument({
-    required String documentId,
+  Future<({int fileId, String status})> uploadFileToDocument({
+    required int documentId,
     required FacilityCadastroFile file,
     String role = 'PAGE',
     int? position,
@@ -387,12 +396,13 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         'sizeBytes': file.bytes.length,
         'checksum': checksum,
         'role': role,
-        'position': ?position,
+        // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
+        if (position != null) 'position': position,
       },
     );
 
     final method = initiated['method'] as String? ?? 'PUT';
-    final fileId = initiated['fileId'] as String?;
+    final fileId = readCrmIdOrNull(initiated['fileId'], 'fileId');
     if (fileId == null) {
       throw const FacilityCadastroException('fileId ausente na resposta.');
     }
@@ -421,7 +431,10 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     }
 
     // MULTIPART
-    final uploadSessionId = initiated['uploadSessionId'] as String?;
+    final uploadSessionId = readCrmIdOrNull(
+      initiated['uploadSessionId'],
+      'uploadSessionId',
+    );
     final partSize =
         (initiated['partSizeBytes'] as num?)?.toInt() ?? 10 * 1024 * 1024;
     final totalParts = (initiated['totalParts'] as num?)?.toInt() ?? 1;
@@ -494,15 +507,15 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
   /// Uploads one or many files for a requirement into the draft submission.
   /// Each file starts processing as soon as its upload completes.
   Future<EstablishmentDocument> submitDocument({
-    required String requirementId,
+    required int requirementId,
     required List<FacilityCadastroFile> files,
-    String? verticalId,
+    int? verticalId,
     void Function(int index, int total)? onFileStarted,
     void Function(int index, int total, double progress)? onFileProgress,
     FutureOr<void> Function(
       int index,
       int total, {
-      String? fileId,
+      int? fileId,
       String? status,
     })?
     onFileCompleted,
@@ -555,14 +568,14 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     );
   }
 
-  Future<void> deleteDraft(String submissionId) async {
+  Future<void> deleteDraft(int submissionId) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions/$submissionId',
     );
     await _jsonCall(uri: uri, method: RepositoryHttpMethod.delete);
   }
 
-  Future<void> submitPackage(String submissionId) async {
+  Future<void> submitPackage(int submissionId) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions/$submissionId/submit',
     );
@@ -570,7 +583,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
   }
 
   Future<List<CadastroRequirementSubmission>> listRequirementSubmissions(
-    String requirementId,
+    int requirementId,
   ) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/requirements/$requirementId/submissions',
@@ -580,13 +593,13 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         .cast<Map<String, dynamic>>();
     return items
         .map(CadastroRequirementSubmission.fromJson)
-        .where((s) => s.documentId.isNotEmpty)
+        .where((s) => s.documentId > 0)
         .toList(growable: false);
   }
 
   Future<Map<String, dynamic>> submitRequirement({
-    required String requirementId,
-    String? documentId,
+    required int requirementId,
+    int? documentId,
   }) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/requirements/$requirementId/submit',
@@ -595,13 +608,12 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       uri: uri,
       method: RepositoryHttpMethod.post,
       body: {
-        if (documentId != null && documentId.isNotEmpty)
-          'documentId': documentId,
+        if (documentId != null && (documentId > 0)) 'documentId': documentId,
       },
     );
   }
 
-  Future<String> getFileSignedUrl(String fileAssetId) async {
+  Future<String> getFileSignedUrl(int fileAssetId) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/files/$fileAssetId/url',
     );

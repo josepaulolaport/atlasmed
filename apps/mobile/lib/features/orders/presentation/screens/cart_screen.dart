@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -60,7 +61,7 @@ class CartScreen extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: cart.items.isEmpty
                       ? null
-                      : () => context.push('/orders/new/checkout'),
+                      : () => const NewOrderCheckoutRoute().push(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _navy,
                     disabledBackgroundColor: _navy.withValues(alpha: 0.4),

@@ -4,9 +4,9 @@ import { ForbiddenError } from "../../../../shared/errors";
 
 export function assertCanMutateUser(params: {
   scope: ScopeContext;
-  actorId: string;
+  actorId: number;
   actorRole: Role;
-  target: { id: string; managerId?: string | null };
+  target: { id: number; managerId?: number | null };
   action: string;
 }): void {
   if (canMutateUser(params.scope, params.actorId, params.actorRole, params.target)) {

@@ -20,11 +20,11 @@ class InvitePatchesStep extends StatelessWidget {
 
   final String title;
   final String description;
-  final Map<String, InviteVerticalAssignment> verticalAssignments;
+  final Map<int, InviteVerticalAssignment> verticalAssignments;
   final void Function(InviteVerticalAssignment assignment) onPickTerritories;
   final void Function(InviteVerticalAssignment assignment) onDrawNewPatch;
   final void Function(InviteVerticalAssignment assignment) onClearNewPatch;
-  final void Function(InviteVerticalAssignment assignment, String territoryId)
+  final void Function(InviteVerticalAssignment assignment, int territoryId)
   onRemoveTerritory;
 
   @override
@@ -63,7 +63,7 @@ class _PatchBlock extends StatelessWidget {
   final VoidCallback onPickTerritories;
   final VoidCallback onDrawNewPatch;
   final VoidCallback onClearNewPatch;
-  final void Function(String territoryId) onRemoveTerritory;
+  final void Function(int territoryId) onRemoveTerritory;
 
   static const _previewHeight = 176.0;
 
@@ -152,7 +152,7 @@ class _PatchBlock extends StatelessWidget {
                       children: [
                         TerritoryMapCard(
                           assignment: TerritoryAssignment(
-                            territoryId: 'draft-${assignment.verticalId}',
+                            territoryId: -assignment.verticalId,
                             territoryName:
                                 'Nova área (rascunho): ${draft.name}',
                             assignedAt: DateTime.now(),

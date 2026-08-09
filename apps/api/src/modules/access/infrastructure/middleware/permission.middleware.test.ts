@@ -7,11 +7,11 @@ import { requirePermission } from "./permission.middleware";
 
 describe("PermissionMiddleware", () => {
   const mockAdminUser = {
-    id: "admin-123",
+    id: 1,
     email: "admin@example.com",
     username: "admin",
     role: {
-      id: "role-admin",
+      id: 1,
       name: "ADMIN" as const,
       description: null,
       createdAt: new Date(),
@@ -20,11 +20,11 @@ describe("PermissionMiddleware", () => {
   };
 
   const mockManagerUser = {
-    id: "manager-123",
+    id: 2,
     email: "manager@example.com",
     username: "manager",
     role: {
-      id: "role-manager",
+      id: 2,
       name: "MANAGER" as const,
       description: null,
       createdAt: new Date(),
@@ -33,11 +33,11 @@ describe("PermissionMiddleware", () => {
   };
 
   const mockRegularUser = {
-    id: "user-123",
+    id: 123,
     email: "user@example.com",
     username: "user",
     role: {
-      id: "role-user",
+      id: 3,
       name: "REP" as const,
       description: null,
       createdAt: new Date(),
@@ -271,44 +271,14 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "TERRITORY")).toBe(false);
     });
 
-    it("should not be able to read REGISTRY_INGESTION", () => {
-      const ability = defineAbilitiesFor("REP");
-
-      expect(ability.can("read", "REGISTRY_INGESTION")).toBe(false);
-    });
   });
 
-  describe("REGISTRY_INGESTION permissions", () => {
-    it("should allow ADMIN to manage REGISTRY_INGESTION", () => {
-      const ability = defineAbilitiesFor("ADMIN");
-
-      expect(ability.can("manage", "REGISTRY_INGESTION")).toBe(true);
-    });
-
-    it("should allow MANAGER to read REGISTRY_INGESTION", () => {
-      const ability = defineAbilitiesFor("MANAGER");
-
-      expect(ability.can("read", "REGISTRY_INGESTION")).toBe(true);
-    });
-
-    it("should deny MANAGER from managing REGISTRY_INGESTION", () => {
-      const ability = defineAbilitiesFor("MANAGER");
-
-      expect(ability.can("manage", "REGISTRY_INGESTION")).toBe(false);
-    });
-
-    it("should deny REP from reading REGISTRY_INGESTION", () => {
-      const ability = defineAbilitiesFor("REP");
-
-      expect(ability.can("read", "REGISTRY_INGESTION")).toBe(false);
-    });
-  });
 
   describe("Elysia scoped hook wiring", () => {
     function createTestApp(role: "ADMIN" | "MANAGER" | "REP") {
       const auth = new Elysia({ name: "auth-test" }).derive({ as: "scoped" }, async () => ({
         getUser: async () => ({
-          id: "user-test",
+          id: 99,
           role: { name: role },
         }),
       }));

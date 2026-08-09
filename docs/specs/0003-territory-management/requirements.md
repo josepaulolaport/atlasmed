@@ -54,7 +54,7 @@ Clinics get per-vertical geo membership via point-in-polygon on write/recompute 
 9. WHEN a manager assigns a user to a territory THEN the system SHALL grant access according to role and assignment rules. Multiple REPs MAY share one patch; managers remain exclusive per zone.
 10. WHEN scope is resolved THEN `effectiveTerritoryIds` SHALL include directly assigned territories and rep patches linked via `managerTerritoryId` for manager zone assignments. Grouping closure SHALL NOT expand scope.
 11. WHEN a territory assignment or `managerTerritoryId` changes THEN the system SHALL invalidate affected Redis scope caches.
-11b. WHEN role is REP THEN clinic `facilityIds` SHALL come only from active `facility_consultant_assignments` (patch UTA does not grant clinic list access).
+11b. WHEN role is REP THEN clinic `facilityIds` SHALL come only from active `facility_vertical_rep_assignments` (patch UTA does not grant clinic list access; ADR 0005).
 11c. WHEN role is OPS THEN clinic `facilityIds` SHALL be facilities with an active profile in the user’s verticals (no zone cover required).
 11d. WHEN role is MANAGER THEN clinic `facilityIds` SHALL be profile membership in oversight zones ∪ own consultant assigns, intersected with active profiles in resolved verticals.
 

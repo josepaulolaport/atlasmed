@@ -18,8 +18,8 @@ import {
 } from "../../../../shared/errors";
 
 describe("AssignUserTerritoryUseCase", () => {
-  const fieldUser = { id: "user-field", role: { name: Role.REP } };
-  const managerUser = { id: "user-manager", role: { name: Role.MANAGER } };
+  const fieldUser = { id: 2, role: { name: Role.REP } };
+  const managerUser = { id: 3, role: { name: Role.MANAGER } };
 
   let useCase: AssignUserTerritoryUseCase;
   let userRepository: ReturnType<typeof createMockUserRepository>;
@@ -29,7 +29,7 @@ describe("AssignUserTerritoryUseCase", () => {
 
   beforeEach(() => {
     userRepository = createMockUserRepository({
-      findById: mock(async (id: string) => {
+      findById: mock(async (id: number) => {
         if (id === fieldUser.id) return fieldUser;
         if (id === managerUser.id) return managerUser;
         return null;
@@ -53,16 +53,16 @@ describe("AssignUserTerritoryUseCase", () => {
   it("assigns territory for USER target when actor is ADMIN", async () => {
     await useCase.execute({
       targetUserId: fieldUser.id,
-      territoryId: "territory-a",
-      assignedBy: "admin-1",
+      territoryId: 1,
+      assignedBy: 1,
       actorRole: Role.ADMIN,
     });
 
     expect(territoryAssignmentPolicy.validateAssignment).toHaveBeenCalled();
     expect(scopeRepository.assignTerritory).toHaveBeenCalledWith({
       userId: fieldUser.id,
-      territoryId: "territory-a",
-      assignedBy: "admin-1",
+      territoryId: 1,
+      assignedBy: 1,
     });
     expect(scopeService.invalidateForTerritoryAssignmentChange).toHaveBeenCalledWith(
       fieldUser.id
@@ -72,15 +72,15 @@ describe("AssignUserTerritoryUseCase", () => {
   it("assigns territory for MANAGER target when actor is ADMIN", async () => {
     await useCase.execute({
       targetUserId: managerUser.id,
-      territoryId: "territory-a",
-      assignedBy: "admin-1",
+      territoryId: 1,
+      assignedBy: 1,
       actorRole: Role.ADMIN,
     });
 
     expect(scopeRepository.assignTerritory).toHaveBeenCalledWith({
       userId: managerUser.id,
-      territoryId: "territory-a",
-      assignedBy: "admin-1",
+      territoryId: 1,
+      assignedBy: 1,
     });
   });
 
@@ -88,8 +88,8 @@ describe("AssignUserTerritoryUseCase", () => {
     await expect(
       useCase.execute({
         targetUserId: fieldUser.id,
-        territoryId: "territory-a",
-        assignedBy: "manager-1",
+        territoryId: 1,
+        assignedBy: 1,
         actorRole: Role.MANAGER,
       })
     ).rejects.toThrow(InsufficientPermissionsError);
@@ -100,9 +100,9 @@ describe("AssignUserTerritoryUseCase", () => {
 
     await expect(
       useCase.execute({
-        targetUserId: "missing",
-        territoryId: "territory-a",
-        assignedBy: "admin-1",
+        targetUserId: 999,
+        territoryId: 1,
+        assignedBy: 1,
         actorRole: Role.ADMIN,
       })
     ).rejects.toThrow(UserNotFoundError);

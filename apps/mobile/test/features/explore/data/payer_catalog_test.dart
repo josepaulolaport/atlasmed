@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -7,8 +7,8 @@ void main() {
     'builds summary from displayed payers without inventing update date',
     () {
       const payers = [
-        PayerShare(id: '1', name: 'Particular', sharePercent: 35),
-        PayerShare(id: '2', name: 'Unimed', sharePercent: 65),
+        PayerShare(id: 1, name: 'Particular', sharePercent: 35),
+        PayerShare(id: 2, name: 'Unimed', sharePercent: 65),
       ];
 
       final summary = buildPayerMixSummary(payers);

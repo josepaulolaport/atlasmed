@@ -32,7 +32,7 @@ export const mapsRoute = new Elysia()
           query: query.q,
           country: query.country,
           proximity: query.proximity,
-          limit: query.limit ? Number(query.limit) : undefined,
+          limit: query.limit,
         });
       } catch (error) {
         handleMapboxError(error);
@@ -43,7 +43,7 @@ export const mapsRoute = new Elysia()
         q: t.String({ minLength: 1 }),
         country: t.Optional(t.String()),
         proximity: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        limit: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   )
@@ -54,7 +54,7 @@ export const mapsRoute = new Elysia()
         return await mapboxMapsUseCases.reverseGeocode({
           longitude: Number(query.longitude),
           latitude: Number(query.latitude),
-          limit: query.limit ? Number(query.limit) : undefined,
+          limit: query.limit,
         });
       } catch (error) {
         handleMapboxError(error);
@@ -64,7 +64,7 @@ export const mapsRoute = new Elysia()
       query: t.Object({
         longitude: t.String(),
         latitude: t.String(),
-        limit: t.Optional(t.String()),
+        limit: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   )
@@ -77,7 +77,7 @@ export const mapsRoute = new Elysia()
           sessionToken: query.session_token,
           country: query.country,
           proximity: query.proximity,
-          limit: query.limit ? Number(query.limit) : undefined,
+          limit: query.limit,
         });
       } catch (error) {
         handleMapboxError(error);
@@ -89,7 +89,7 @@ export const mapsRoute = new Elysia()
         session_token: t.String({ minLength: 1 }),
         country: t.Optional(t.String()),
         proximity: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        limit: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   )
@@ -106,6 +106,9 @@ export const mapsRoute = new Elysia()
       }
     },
     {
+      params: t.Object({
+        mapboxId: t.String({ minLength: 1, description: "Mapbox feature id (not a CRM id)" }),
+      }),
       query: t.Object({
         session_token: t.String({ minLength: 1 }),
       }),
@@ -318,7 +321,7 @@ export const mapsRoute = new Elysia()
           longitude: Number(query.longitude),
           latitude: Number(query.latitude),
           radius: query.radius ? Number(query.radius) : undefined,
-          limit: query.limit ? Number(query.limit) : undefined,
+          limit: query.limit,
           layers: query.layers,
         });
       } catch (error) {
@@ -331,7 +334,7 @@ export const mapsRoute = new Elysia()
         longitude: t.String(),
         latitude: t.String(),
         radius: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
+        limit: t.Optional(t.Number({ minimum: 1 })),
         layers: t.Optional(t.String()),
       }),
     }

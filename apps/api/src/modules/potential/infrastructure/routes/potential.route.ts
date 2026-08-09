@@ -1,7 +1,6 @@
 import { Elysia, t } from "elysia";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
-import { ValidationError } from "../../../../shared/errors";
 import { potentialUseCases } from "../../composition";
 
 const listFacilityPotentialsRoute = new Elysia()
@@ -10,11 +9,6 @@ const listFacilityPotentialsRoute = new Elysia()
   .get(
     "/facilities/:id/potentials",
     async ({ params, query, getScope }) => {
-      if (!query.verticalId?.trim()) {
-        throw new ValidationError([
-          { field: "verticalId", message: "verticalId is required" },
-        ]);
-      }
       const scope = await getScope();
       return potentialUseCases.listFacilityPotentials().execute({
         facilityId: params.id,
@@ -28,8 +22,9 @@ const listFacilityPotentialsRoute = new Elysia()
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       query: t.Object({
-        verticalId: t.String({ minLength: 1 }),
+        verticalId: t.Number({ minimum: 1 }),
       }),
     },
   );
@@ -55,11 +50,12 @@ const patchFacilityPotentialsRoute = new Elysia()
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
-        verticalId: t.String({ minLength: 1 }),
+        verticalId: t.Number({ minimum: 1 }),
         values: t.Array(
           t.Object({
-            definitionId: t.String({ minLength: 1 }),
+            definitionId: t.Number({ minimum: 1 }),
             quantity: t.Union([t.Number(), t.Null()]),
           }),
         ),
@@ -73,11 +69,6 @@ const listDefinitionsRoute = new Elysia()
   .get(
     "/potential-definitions",
     async ({ query, getScope }) => {
-      if (!query.verticalId?.trim()) {
-        throw new ValidationError([
-          { field: "verticalId", message: "verticalId is required" },
-        ]);
-      }
       const scope = await getScope();
       return potentialUseCases.listDefinitions().execute({
         verticalId: query.verticalId,
@@ -91,7 +82,7 @@ const listDefinitionsRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
-        verticalId: t.String({ minLength: 1 }),
+        verticalId: t.Number({ minimum: 1 }),
       }),
     },
   );
@@ -105,6 +96,7 @@ const createDefinitionRoute = new Elysia()
       const scope = await getScope();
       return potentialUseCases.createDefinition().execute({
         ...body,
+        verticalId: body.verticalId,
         scope,
       });
     },
@@ -115,10 +107,9 @@ const createDefinitionRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
-        verticalId: t.String({ minLength: 1 }),
+        verticalId: t.Number({ minimum: 1 }),
         key: t.Optional(t.String()),
         label: t.String({ minLength: 1 }),
-        sortOrder: t.Optional(t.Number()),
       }),
     },
   );
@@ -142,9 +133,9 @@ const updateDefinitionRoute = new Elysia()
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         label: t.Optional(t.String({ minLength: 1 })),
-        sortOrder: t.Optional(t.Number()),
       }),
     },
   );
@@ -167,6 +158,7 @@ const deleteDefinitionRoute = new Elysia()
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     },
   );
 
@@ -188,6 +180,7 @@ const listDefinitionProductsRoute = new Elysia()
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     },
   );
 
@@ -210,8 +203,9 @@ const linkProductRoute = new Elysia()
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
-        definitionId: t.String({ minLength: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
       }),
     },
   );
@@ -234,6 +228,7 @@ const unlinkProductRoute = new Elysia()
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
     },
   );
 

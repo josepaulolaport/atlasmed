@@ -28,28 +28,52 @@ import { Plus, Search, Users, MapPin, Pencil, Trash2 } from "lucide-react";
 function territoryStatusBadge(status?: Facility["territoryAssignmentStatus"]) {
   if (!status || status === "assigned") return null;
   return (
-    <Badge variant={status === "ambiguous" ? "secondary" : "outline"} className="ml-2 text-xs">
+    <Badge variant="outline" className="ml-2 text-xs">
       {status}
     </Badge>
   );
 }
 
-function purchaseStatusBadge(status?: Facility["purchaseStatus"]) {
+function purchaseStatusBadge(status?: string) {
   if (!status) return null;
-  
-  const variants: Record<string, { variant: "default" | "secondary" | "outline" | "destructive"; label: string }> = {
-    NAO_COMPRA: { variant: "outline", label: "Não compra" },
-    COMPRA: { variant: "default", label: "Compra" },
-    COMPRA_POUCO: { variant: "secondary", label: "Compra pouco" },
-    COMPRA_MUITO: { variant: "default", label: "Compra muito" },
+
+  const variants: Record<
+    string,
+    { variant: "default" | "secondary" | "outline" | "destructive"; label: string }
+  > = {
+    NON_BUYER: { variant: "outline", label: "Não compra" },
+    LOW_BUYER: { variant: "secondary", label: "Compra pouco" },
+    REGULAR_BUYER: { variant: "default", label: "Compra" },
+    HIGH_BUYER: { variant: "default", label: "Compra muito" },
   };
-  
+
   const config = variants[status];
   return config ? (
     <Badge variant={config.variant} className="text-xs">
       {config.label}
     </Badge>
   ) : null;
+}
+
+function facilityPurchaseStatusBadges(facility: Facility) {
+  const profiles = facility.verticalProfiles ?? [];
+  const withStatus = profiles.filter((p) => p.purchaseStatus);
+  if (withStatus.length === 0) return null;
+  if (withStatus.length === 1) {
+    return purchaseStatusBadge(withStatus[0]!.purchaseStatus);
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {withStatus.map((p) => (
+        <span key={p.verticalId} className="inline-flex items-center gap-1">
+          {purchaseStatusBadge(p.purchaseStatus)}
+          {p.verticalName ? (
+            <span className="text-[10px] text-zinc-500">{p.verticalName}</span>
+          ) : null}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function FacilitiesPage() {
@@ -66,7 +90,7 @@ export default function FacilitiesPage() {
   const [formAddress, setFormAddress] = useState("");
   const [formCity, setFormCity] = useState("");
   const [formStateCode, setFormStateCode] = useState("");
-  const [formCnpj, setFormCnpj] = useState("");
+  const [formLegalDocument, setFormLegalDocument] = useState("");
   const [formLat, setFormLat] = useState("");
   const [formLng, setFormLng] = useState("");
   const [saving, setSaving] = useState(false);
@@ -116,7 +140,7 @@ export default function FacilitiesPage() {
     setFormAddress("");
     setFormCity("");
     setFormStateCode("");
-    setFormCnpj("");
+    setFormLegalDocument("");
     setFormLat("");
     setFormLng("");
     setDialogOpen(true);
@@ -128,7 +152,7 @@ export default function FacilitiesPage() {
     setFormAddress(facility.address ?? "");
     setFormCity(facility.city ?? "");
     setFormStateCode(facility.stateCode ?? "");
-    setFormCnpj(facility.cnpj ?? "");
+    setFormLegalDocument(facility.legalDocument ?? "");
     setFormLat(facility.lat != null ? String(facility.lat) : "");
     setFormLng(facility.lng != null ? String(facility.lng) : "");
     setDialogOpen(true);
@@ -219,7 +243,7 @@ export default function FacilitiesPage() {
           address: formAddress.trim() || null,
           city: formCity.trim() || null,
           stateCode: formStateCode.trim() || null,
-          cnpj: formCnpj.trim() || null,
+          legalDocument: formLegalDocument.trim() || null,
           lat,
           lng,
         });
@@ -234,7 +258,7 @@ export default function FacilitiesPage() {
           address: formAddress.trim() || undefined,
           city: formCity.trim() || undefined,
           stateCode: formStateCode.trim() || undefined,
-          cnpj: formCnpj.trim() || undefined,
+          legalDocument: formLegalDocument.trim() || undefined,
           lat: lat ?? undefined,
           lng: lng ?? undefined,
         });
@@ -382,10 +406,12 @@ export default function FacilitiesPage() {
                   </div>
 
                   <div className="p-5 space-y-3">
-                    {facility.cnpj && (
+                    {facility.legalDocument && (
                       <div>
-                        <p className="text-xs text-zinc-500 mb-0.5">CNPJ</p>
-                        <p className="text-sm text-zinc-900">{facility.cnpj}</p>
+                        <p className="text-xs text-zinc-500 mb-0.5">
+                          {facility.legalDocumentType === "CPF" ? "CPF" : "CNPJ"}
+                        </p>
+                        <p className="text-sm text-zinc-900">{facility.legalDocument}</p>
                       </div>
                     )}
 
@@ -431,11 +457,9 @@ export default function FacilitiesPage() {
                       )}
                     </div>
 
-                    {facility.purchaseStatus && (
-                      <div className="pt-2">
-                        {purchaseStatusBadge(facility.purchaseStatus)}
-                      </div>
-                    )}
+                    {facility.verticalProfiles?.some((p) => p.purchaseStatus) ? (
+                      <div className="pt-2">{facilityPurchaseStatusBadges(facility)}</div>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -482,12 +506,12 @@ export default function FacilitiesPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="clinic-cnpj">CNPJ</Label>
+                <Label htmlFor="clinic-legal-document">Documento</Label>
                 <Input
-                  id="clinic-cnpj"
-                  value={formCnpj}
-                  onChange={(event) => setFormCnpj(event.target.value)}
-                  placeholder="00.000.000/0000-00"
+                  id="clinic-legal-document"
+                  value={formLegalDocument}
+                  onChange={(event) => setFormLegalDocument(event.target.value)}
+                  placeholder="CNPJ ou CPF"
                 />
               </div>
             </div>

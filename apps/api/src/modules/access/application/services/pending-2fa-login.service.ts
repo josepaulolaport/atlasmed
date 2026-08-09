@@ -7,7 +7,7 @@ const PENDING_LOGIN_TTL_SECONDS = 5 * 60;
 const MAX_TOTP_ATTEMPTS = 5;
 
 export interface Pending2FALoginData {
-  userId: string;
+  userId: number;
   ipAddress?: string;
   userAgent?: string;
   acceptLanguage?: string;

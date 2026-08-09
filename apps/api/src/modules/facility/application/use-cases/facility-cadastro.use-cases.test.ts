@@ -26,9 +26,10 @@ const globalScope: ScopeContext = {
 
 function facility(overrides: Record<string, unknown> = {}) {
   return {
-    id: "facility-1",
+    id: 1,
     name: "Clínica",
-    taxIdType: "PF",
+    legalDocumentType: "CPF",
+    legalDocument: null,
     billingEmail: null,
     conformityStatus: "INCOMPLETE",
     commercialStatus: null,
@@ -37,9 +38,9 @@ function facility(overrides: Record<string, unknown> = {}) {
 }
 
 function requirement(
-  id: string,
+  id: number,
   slug: string,
-  appliesToTaxIdType: "PF" | "PJ" | null
+  appliesToLegalDocumentType: "CNPJ" | "CPF" | null
 ) {
   return {
     id,
@@ -47,7 +48,7 @@ function requirement(
     name: slug,
     description: null,
     verticalId: null,
-    appliesToTaxIdType,
+    appliesToLegalDocumentType,
     isActive: true,
     allowedMimeTypes: ["image/jpeg", "image/png", "application/pdf"],
     maxFiles: 10,
@@ -60,16 +61,16 @@ function requirement(
 }
 
 describe("GetFacilityCadastroChecklistUseCase", () => {
-  it("filters requirements by PF tax id type", async () => {
+  it("filters requirements by CPF legal document type", async () => {
     const findActiveRequirements = mock(async () => [
-      requirement("r1", "identidade", "PF"),
-      requirement("r2", "crm", "PF"),
-      requirement("r3", "comprovante_endereco", "PF"),
+      requirement(1, "identidade", "CPF"),
+      requirement(2, "crm", "CPF"),
+      requirement(3, "comprovante_endereco", "CPF"),
     ]);
 
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
-        findById: async () => facility({ taxIdType: "PF" }),
+        findById: async () => facility({ legalDocumentType: "CPF" }),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements,
@@ -87,9 +88,9 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
-    }).execute({ facilityId: "facility-1", scope: globalScope });
+    }).execute({ facilityId: 1, scope: globalScope });
 
-    expect(findActiveRequirements).toHaveBeenCalledWith({ taxIdType: "PF" });
+    expect(findActiveRequirements).toHaveBeenCalledWith({ legalDocumentType: "CPF" });
     expect(result.documents.map((d) => d.slug)).toEqual([
       "identidade",
       "crm",
@@ -99,15 +100,15 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     expect(result.counts.pendingAction).toBe(4);
   });
 
-  it("filters requirements by PJ tax id type", async () => {
+  it("filters requirements by CNPJ legal document type", async () => {
     const findActiveRequirements = mock(async () => [
-      requirement("r4", "carta_cnpj", "PJ"),
-      requirement("r5", "licenca_sanitaria", "PJ"),
+      requirement(4, "carta_cnpj", "CNPJ"),
+      requirement(5, "licenca_sanitaria", "CNPJ"),
     ]);
 
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
-        findById: async () => facility({ taxIdType: "PJ" }),
+        findById: async () => facility({ legalDocumentType: "CNPJ" }),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements,
@@ -125,9 +126,9 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
-    }).execute({ facilityId: "facility-1", scope: globalScope });
+    }).execute({ facilityId: 1, scope: globalScope });
 
-    expect(findActiveRequirements).toHaveBeenCalledWith({ taxIdType: "PJ" });
+    expect(findActiveRequirements).toHaveBeenCalledWith({ legalDocumentType: "CNPJ" });
     expect(result.documents.map((d) => d.slug)).toEqual([
       "carta_cnpj",
       "licenca_sanitaria",
@@ -135,17 +136,17 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     expect(result.documents.some((d) => d.slug === "identidade")).toBe(false);
   });
 
-  it("orders PF requirements Identidade → CRM → Comprovante", async () => {
+  it("orders CPF requirements Identidade → CRM → Comprovante", async () => {
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
-        findById: async () => facility({ taxIdType: "PF" }),
+        findById: async () => facility({ legalDocumentType: "CPF" }),
       } as unknown as FacilityRepository,
       conformityRepository: {
         // Deliberately unsorted
         findActiveRequirements: async () => [
-          requirement("r3", "comprovante_endereco", "PF"),
-          requirement("r1", "identidade", "PF"),
-          requirement("r2", "crm", "PF"),
+          requirement(3, "comprovante_endereco", "CPF"),
+          requirement(1, "identidade", "CPF"),
+          requirement(2, "crm", "CPF"),
         ],
         findRecordsByFacility: async () => [],
       } as unknown as ConformityRepository,
@@ -161,7 +162,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
-    }).execute({ facilityId: "facility-1", scope: globalScope });
+    }).execute({ facilityId: 1, scope: globalScope });
 
     expect(result.documents.map((d) => d.slug)).toEqual([
       "identidade",
@@ -172,7 +173,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
   });
 });
 
-const verticalId = "vertical-1";
+const verticalId = 1;
 
 function verticalProfileRepositoryMocks(
   commercialStatus: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | null = null,
@@ -182,7 +183,7 @@ function verticalProfileRepositoryMocks(
     findVerticalProfilesByFacilityIds: mock(async () =>
       new Map([
         [
-          "facility-1",
+          1,
           [{ verticalId, commercialStatus, isActive: true }],
         ],
       ]),
@@ -199,7 +200,7 @@ describe("FacilityCadastroCompletionService", () => {
       facilityRepository: {
         findById: async () =>
           facility({
-            taxIdType: "PJ",
+            legalDocumentType: "CNPJ",
             billingEmail: "fin@ex.com",
             conformityStatus: "INCOMPLETE",
           }),
@@ -209,37 +210,37 @@ describe("FacilityCadastroCompletionService", () => {
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
-          requirement("r4", "carta_cnpj", "PJ"),
-          requirement("r5", "licenca_sanitaria", "PJ"),
+          requirement(4, "carta_cnpj", "CNPJ"),
+          requirement(5, "licenca_sanitaria", "CNPJ"),
         ],
         findRecordsByFacility: async () => [
           {
-            id: "rec-1",
-            facilityId: "facility-1",
-            requirementId: "r4",
+            id: 1,
+            facilityId: 1,
+            requirementId: 4,
             status: "VALIDATED",
-            requirement: { id: "r4", slug: "carta_cnpj", name: "Carta" },
+            requirement: { id: 4, slug: "carta_cnpj", name: "Carta" },
           },
           {
-            id: "rec-2",
-            facilityId: "facility-1",
-            requirementId: "r5",
+            id: 2,
+            facilityId: 1,
+            requirementId: 5,
             status: "VALIDATED",
-            requirement: { id: "r5", slug: "licenca", name: "Licença" },
+            requirement: { id: 5, slug: "licenca", name: "Licença" },
           },
         ],
       } as unknown as ConformityRepository,
     });
 
-    const result = await service.evaluateAndApply("facility-1", verticalId);
+    const result = await service.evaluateAndApply(1, verticalId);
     expect(result.complete).toBe(true);
     expect(result.conformityStatus).toBe("COMPLETE");
     expect(result.commercialStatus).toBe("REGISTERED");
-    expect(update).toHaveBeenCalledWith("facility-1", {
+    expect(update).toHaveBeenCalledWith(1, {
       conformityStatus: "COMPLETE",
     });
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
-      facilityId: "facility-1",
+      facilityId: 1,
       verticalId,
       commercialStatus: "REGISTERED",
     });
@@ -251,7 +252,7 @@ describe("FacilityCadastroCompletionService", () => {
       facilityRepository: {
         findById: async () =>
           facility({
-            taxIdType: "PJ",
+            legalDocumentType: "CNPJ",
             billingEmail: null,
             conformityStatus: "INCOMPLETE",
           }),
@@ -260,21 +261,21 @@ describe("FacilityCadastroCompletionService", () => {
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
-          requirement("r4", "carta_cnpj", "PJ"),
+          requirement(4, "carta_cnpj", "CNPJ"),
         ],
         findRecordsByFacility: async () => [
           {
-            id: "rec-1",
-            facilityId: "facility-1",
-            requirementId: "r4",
+            id: 1,
+            facilityId: 1,
+            requirementId: 4,
             status: "VALIDATED",
-            requirement: { id: "r4", slug: "carta_cnpj", name: "Carta" },
+            requirement: { id: 4, slug: "carta_cnpj", name: "Carta" },
           },
         ],
       } as unknown as ConformityRepository,
     });
 
-    const result = await service.evaluateAndApply("facility-1", verticalId);
+    const result = await service.evaluateAndApply(1, verticalId);
     expect(result.complete).toBe(false);
     expect(update).not.toHaveBeenCalled();
   });
@@ -286,7 +287,7 @@ describe("FacilityCadastroCompletionService", () => {
       facilityRepository: {
         findById: async () =>
           facility({
-            taxIdType: "PJ",
+            legalDocumentType: "CNPJ",
             billingEmail: "fin@ex.com",
             conformityStatus: "COMPLETE",
             commercialStatus: "REGISTERED",
@@ -297,8 +298,8 @@ describe("FacilityCadastroCompletionService", () => {
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
-          requirement("r4", "carta_cnpj", "PJ"),
-          requirement("r5", "licenca_sanitaria", "PJ"),
+          requirement(4, "carta_cnpj", "CNPJ"),
+          requirement(5, "licenca_sanitaria", "CNPJ"),
         ],
         findRecordsByFacility: async () => [],
       } as unknown as ConformityRepository,
@@ -306,9 +307,9 @@ describe("FacilityCadastroCompletionService", () => {
         listDocumentsForFacilityRequirement: async ({
           requirementId,
         }: {
-          requirementId: string;
+          requirementId: number;
         }) =>
-          requirementId === "r4"
+          requirementId === 4
             ? [
                 {
                   document: {
@@ -332,15 +333,15 @@ describe("FacilityCadastroCompletionService", () => {
       } as never,
     });
 
-    const result = await service.evaluateAndApply("facility-1", verticalId);
+    const result = await service.evaluateAndApply(1, verticalId);
     expect(result.complete).toBe(false);
     expect(result.conformityStatus).toBe("INCOMPLETE");
     expect(result.commercialStatus).toBe("SUSPENDED");
-    expect(update).toHaveBeenCalledWith("facility-1", {
+    expect(update).toHaveBeenCalledWith(1, {
       conformityStatus: "INCOMPLETE",
     });
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
-      facilityId: "facility-1",
+      facilityId: 1,
       verticalId,
       commercialStatus: "SUSPENDED",
     });
@@ -353,7 +354,7 @@ describe("FacilityCadastroCompletionService", () => {
       facilityRepository: {
         findById: async () =>
           facility({
-            taxIdType: "PJ",
+            legalDocumentType: "CNPJ",
             billingEmail: "fin@ex.com",
             conformityStatus: "INCOMPLETE",
           }),
@@ -363,8 +364,8 @@ describe("FacilityCadastroCompletionService", () => {
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
-          requirement("r4", "carta_cnpj", "PJ"),
-          requirement("r5", "licenca_sanitaria", "PJ"),
+          requirement(4, "carta_cnpj", "CNPJ"),
+          requirement(5, "licenca_sanitaria", "CNPJ"),
         ],
         findRecordsByFacility: async () => [],
       } as unknown as ConformityRepository,
@@ -372,7 +373,7 @@ describe("FacilityCadastroCompletionService", () => {
         listDocumentsForFacilityRequirement: async ({
           requirementId,
         }: {
-          requirementId: string;
+          requirementId: number;
         }) => [
           {
             document: {
@@ -386,13 +387,13 @@ describe("FacilityCadastroCompletionService", () => {
       } as never,
     });
 
-    const result = await service.evaluateAndApply("facility-1", verticalId);
+    const result = await service.evaluateAndApply(1, verticalId);
     expect(result.complete).toBe(true);
-    expect(update).toHaveBeenCalledWith("facility-1", {
+    expect(update).toHaveBeenCalledWith(1, {
       conformityStatus: "COMPLETE",
     });
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
-      facilityId: "facility-1",
+      facilityId: 1,
       verticalId,
       commercialStatus: "REGISTERED",
     });
@@ -407,9 +408,9 @@ describe("RejectFacilityCadastroRecordUseCase", () => {
       } as unknown as FacilityRepository,
       conformityRepository: {
         findRecordById: async () => ({
-          id: "rec-1",
-          facilityId: "facility-1",
-          requirementId: "r1",
+          id: 1,
+          facilityId: 1,
+          requirementId: 1,
           status: "SUBMITTED",
           submittedAt: now,
           validatedAt: null,
@@ -423,11 +424,11 @@ describe("RejectFacilityCadastroRecordUseCase", () => {
           createdAt: now,
           updatedAt: now,
           requirement: {
-            id: "r1",
+            id: 1,
             slug: "identidade",
             name: "Identidade",
             description: null,
-            appliesToTaxIdType: "PF",
+            appliesToLegalDocumentType: "CPF",
           },
         }),
         rejectRecord: async () => {
@@ -450,9 +451,9 @@ describe("RejectFacilityCadastroRecordUseCase", () => {
 
     await expect(
       useCase.execute({
-        facilityId: "facility-1",
-        recordId: "rec-1",
-        userId: "ops-1",
+        facilityId: 1,
+        recordId: 1,
+        userId: 1,
         scope: globalScope,
         reviewerNote: "   ",
       })

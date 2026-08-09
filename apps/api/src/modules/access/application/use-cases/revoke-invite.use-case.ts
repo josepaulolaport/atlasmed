@@ -12,8 +12,8 @@ export class RevokeInviteUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    inviteId: string;
-    revokedByUserId: string;
+    inviteId: number;
+    revokedByUserId: number;
     actorRole: Role;
   }) {
     const invite = await this.deps.inviteRepository.findById(params.inviteId);

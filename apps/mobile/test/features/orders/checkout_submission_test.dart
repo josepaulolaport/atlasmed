@@ -23,17 +23,16 @@ void main() {
 
   test('confirmation snapshot is the immutable created order DTO', () {
     final order = ApiOrderDetail(
-      id: 'order-real',
-      legacyId: 42,
+      id: 1,
+      idAvulsaEmultec: 42,
       verticalId: null,
-      interactionId: 'interaction-1',
       status: 'PENDING',
       type: 'SALE',
       orderedAt: DateTime.utc(2026, 8, 3, 12),
       createdAt: DateTime.utc(2026, 8, 3, 12),
       updatedAt: DateTime.utc(2026, 8, 3, 12),
-      facility: const ApiOrderIdentity(id: 'facility-1', name: 'Clínica Real'),
-      professional: const ApiOrderIdentity(id: 'doctor-1', name: 'Dra. Real'),
+      facility: const ApiOrderIdentity(id: 1, name: 'Clínica Real'),
+      professional: const ApiOrderIdentity(id: 2, name: 'Dra. Real'),
       seller: null,
       itemCount: 1,
       itemsTotal: 80,
@@ -43,16 +42,12 @@ void main() {
       notes: null,
       items: const [
         ApiOrderItem(
-          id: 'item-1',
+          id: 1,
           quantity: 2,
           unitPrice: 40,
           lineTotal: 80,
           writtenOff: false,
-          product: ApiOrderProduct(
-            id: 'product-1',
-            name: 'Produto Real',
-            code: 'PR-1',
-          ),
+          product: ApiOrderProduct(id: 1, name: 'Produto Real', code: 'PR-1'),
         ),
       ],
     );

@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/person_facility_roles_catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/person_facility_role_toggles.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Create or edit an administrative professional.
 ///
-/// Real [facilityId] → `POST` / `PATCH /facilities/:id/representatives`.
+/// Real [facilityId] → `POST` / `PATCH /facilities/:id/administrative-contacts`.
 Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
   BuildContext context, {
-  String? facilityId,
+  int? facilityId,
   AdministrativeProfessional? existing,
 }) {
   return showModalBottomSheet<AdministrativeProfessional>(
@@ -29,7 +33,7 @@ Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
 class _CreateAdminProfessionalSheet extends StatefulWidget {
   const _CreateAdminProfessionalSheet({this.facilityId, this.existing});
 
-  final String? facilityId;
+  final int? facilityId;
   final AdministrativeProfessional? existing;
 
   @override
@@ -43,20 +47,16 @@ class _CreateAdminProfessionalSheetState
   late final TextEditingController _roleCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _emailCtrl;
-  late bool _isPartner;
-  late bool _isAdministrator;
-  late bool _isDecisionMaker;
-  late bool _isBuyer;
-  late bool _isBiller;
-  late bool _isSecretary;
+  late Set<int> _selectedRoles;
+  List<PersonFacilityRoleCatalogEntry> _catalog = const [];
+  bool _loadingCatalog = true;
   bool _saving = false;
 
   bool get _isEdit => widget.existing != null;
 
   bool get _useApi {
     final id = widget.facilityId;
-    if (id == null || id.isEmpty) return false;
-    return !id.startsWith('near-') && !id.endsWith(':empty');
+    return id != null && id > 0;
   }
 
   @override
@@ -67,12 +67,28 @@ class _CreateAdminProfessionalSheetState
     _roleCtrl = TextEditingController(text: existing?.roleTitle ?? '');
     _phoneCtrl = TextEditingController(text: existing?.phone ?? '');
     _emailCtrl = TextEditingController(text: existing?.email ?? '');
-    _isPartner = existing?.isPartner ?? false;
-    _isAdministrator = existing?.isAdministrator ?? false;
-    _isDecisionMaker = existing?.isDecisionMaker ?? false;
-    _isBuyer = existing?.isBuyer ?? false;
-    _isBiller = existing?.isBiller ?? false;
-    _isSecretary = existing?.isSecretary ?? false;
+    _selectedRoles = {...?existing?.roleIds};
+    _loadCatalog();
+  }
+
+  Future<void> _loadCatalog() async {
+    final repo = PersonFacilityRolesCatalogRepository();
+    try {
+      final roles = await repo.listActive();
+      if (!mounted) return;
+      setState(() {
+        _catalog = roles;
+        _loadingCatalog = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _catalog = const [];
+        _loadingCatalog = false;
+      });
+    } finally {
+      repo.dispose();
+    }
   }
 
   @override
@@ -143,23 +159,27 @@ class _CreateAdminProfessionalSheetState
               ),
             ),
             const SizedBox(height: 4),
-            _roleToggle('Sócio', _isPartner, (v) => _isPartner = v),
-            _roleToggle(
-              'Administrador',
-              _isAdministrator,
-              (v) => _isAdministrator = v,
-            ),
-            _roleToggle(
-              'Decisor',
-              _isDecisionMaker,
-              (v) => _isDecisionMaker = v,
-            ),
-            _roleToggle('Comprador', _isBuyer, (v) => _isBuyer = v),
-            _roleToggle('Faturista', _isBiller, (v) => _isBiller = v),
-            _roleToggle('Secretária', _isSecretary, (v) => _isSecretary = v),
+            if (_loadingCatalog)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else
+              PersonFacilityRoleToggles(
+                catalog: _catalog,
+                selected: _selectedRoles,
+                enabled: !_saving,
+                onChanged: (next) => setState(() => _selectedRoles = next),
+              ),
             const SizedBox(height: 18),
             FilledButton(
-              onPressed: _saving ? null : _save,
+              onPressed: _saving || _loadingCatalog ? null : _save,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.navyBright,
                 minimumSize: const Size.fromHeight(48),
@@ -181,24 +201,6 @@ class _CreateAdminProfessionalSheetState
           ],
         ),
       ),
-    );
-  }
-
-  Widget _roleToggle(String label, bool value, ValueChanged<bool> onChanged) {
-    return SwitchListTile.adaptive(
-      contentPadding: EdgeInsets.zero,
-      dense: true,
-      title: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: AppColors.gray900,
-        ),
-      ),
-      value: value,
-      activeThumbColor: AppColors.navyBright,
-      onChanged: (next) => setState(() => onChanged(next)),
     );
   }
 
@@ -253,6 +255,7 @@ class _CreateAdminProfessionalSheetState
     final email = _emailCtrl.text.trim().isEmpty
         ? null
         : _emailCtrl.text.trim();
+    final roleIds = PersonFacilityRoleCatalog.sortedIds(_selectedRoles);
 
     try {
       if (!_useApi) {
@@ -260,54 +263,40 @@ class _CreateAdminProfessionalSheetState
         if (!mounted) return;
         Navigator.of(context).pop(
           AdministrativeProfessional(
-            id:
-                widget.existing?.id ??
-                'new-adm-${DateTime.now().millisecondsSinceEpoch}',
+            id: widget.existing?.id ?? -DateTime.now().millisecondsSinceEpoch,
             name: name,
             roleTitle: roleTitle,
             phone: phone,
             email: email,
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
+            roleIds: roleIds,
             relationshipScore: widget.existing?.relationshipScore,
           ),
         );
         return;
       }
 
+      final names = splitPersonName(name);
       final repo = FacilityRepresentativesRepository(widget.facilityId!);
       try {
         final AdministrativeProfessional saved;
         if (_isEdit) {
           saved = await repo.updateRepresentative(
             representativeId: widget.existing!.id,
-            representativeName: name,
+            firstName: names.firstName,
+            lastName: names.lastName,
             roleTitle: roleTitle ?? '',
-            phone: phone ?? '',
+            mobilePhone: phone ?? '',
             email: email ?? '',
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
+            roleIds: roleIds,
           );
         } else {
           saved = await repo.create(
-            representativeName: name,
+            firstName: names.firstName,
+            lastName: names.lastName,
             roleTitle: roleTitle,
-            phone: phone,
+            mobilePhone: phone,
             email: email,
-            isPartner: _isPartner,
-            isAdministrator: _isAdministrator,
-            isDecisionMaker: _isDecisionMaker,
-            isBuyer: _isBuyer,
-            isBiller: _isBiller,
-            isSecretary: _isSecretary,
+            roleIds: roleIds,
           );
         }
         if (!mounted) return;

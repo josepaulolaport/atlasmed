@@ -1,4 +1,3 @@
-import type { TerritoryAssignmentSource } from "@atlasmed/database";
 import type {
   ClinicAssignmentTerritoryMatch,
   TerritorySpatialRepository,
@@ -6,38 +5,28 @@ import type {
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 
 export interface ClinicMembershipTarget {
-  id: string;
+  id: number;
   lat: number | null;
   lng: number | null;
-  territoryId: string | null;
-  territoryAssignmentSource: TerritoryAssignmentSource;
-  territoryAssignmentStatus?: "assigned" | "unassigned" | "ambiguous";
+  managerZoneId: number | null;
 }
 
 export interface ClinicMembershipWriter {
   updateProfileTerritoryMemberships(
-    facilityId: string,
-    memberships: Array<{ verticalId: string; territoryId: string | null }>
+    facilityId: number,
+    memberships: Array<{ verticalId: number; managerZoneId: number | null }>
   ): Promise<void>;
 
-  updateTerritoryMembership(
-    facilityId: string,
-    data: {
-      territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
-      territoryAssignmentSource: TerritoryAssignmentSource;
-    }
-  ): Promise<void>;
-
-  /** Set one vertical profile's territory without clearing other verticals. */
+  /** Set one vertical profile's manager zone without clearing other verticals. */
   setProfileTerritory(
-    facilityId: string,
-    verticalId: string,
-    territoryId: string | null,
+    facilityId: number,
+    verticalId: number,
+    managerZoneId: number | null,
   ): Promise<void>;
 
   findClinicsForMembership(params?: {
-    facilityIds?: string[];
-    territoryIds?: string[];
+    facilityIds?: number[];
+    territoryIds?: number[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]>;
 
@@ -46,15 +35,15 @@ export interface ClinicMembershipWriter {
    * When managerZoneIds is omitted/empty and global is true, all zones.
    */
   findClinicsWithoutConsultant(params: {
-    managerZoneIds?: string[];
+    managerZoneIds?: number[];
     global: boolean;
   }): Promise<
     Array<{
-      id: string;
+      id: number;
       displayName: string;
       lat: number | null;
       lng: number | null;
-      managerZoneId: string;
+      managerZoneId: number;
       managerZoneName: string | null;
     }>
   >;
@@ -64,6 +53,8 @@ interface Dependencies {
   spatialRepository: TerritorySpatialRepository;
   territoryRepository: TerritoryRepository;
   clinicWriter: ClinicMembershipWriter;
+  /** Keep Meili `territoryIds` in sync after zone membership writes. */
+  onClinicMembershipChanged?: (facilityId: number) => Promise<void>;
 }
 
 export class TerritoryMembershipService {
@@ -71,18 +62,24 @@ export class TerritoryMembershipService {
 
   async assignClinicByGeo(
     clinic: ClinicMembershipTarget,
-    options?: { excludeTerritoryId?: string; force?: boolean }
-  ): Promise<void> {
-    if (clinic.territoryAssignmentSource === "manual" && !options?.force) {
-      return;
+    options?: {
+      excludeTerritoryId?: number;
+      force?: boolean;
+      /**
+       * When false, skip Meili upsert (bulk recompute / boundary jobs).
+       * Single-clinic paths keep default true. Follow bulk with Temporal
+       * facilities search sync if Meili territoryIds must catch up immediately.
+       */
+      notifySearch?: boolean;
     }
+  ): Promise<void> {
+    const notifySearch = options?.notifySearch !== false;
 
     if (clinic.lat === null || clinic.lng === null) {
       await this.deps.clinicWriter.updateProfileTerritoryMemberships(clinic.id, []);
-      await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-        territoryAssignmentStatus: "unassigned",
-        territoryAssignmentSource: "geo",
-      });
+      if (notifySearch) {
+        await this.deps.onClinicMembershipChanged?.(clinic.id);
+      }
       return;
     }
 
@@ -92,42 +89,42 @@ export class TerritoryMembershipService {
       { excludeTerritoryId: options?.excludeTerritoryId }
     );
 
-    const { singleMatches, hasAmbiguousMatch } = this.resolveVerticalMatches(matches);
+    const { singleMatches } = this.resolveVerticalMatches(matches);
     await this.deps.clinicWriter.updateProfileTerritoryMemberships(
       clinic.id,
       singleMatches.map((match) => ({
         verticalId: match.verticalId,
-        territoryId: match.id,
+        managerZoneId: match.id,
       }))
     );
-
-    await this.deps.clinicWriter.updateTerritoryMembership(clinic.id, {
-      territoryAssignmentStatus:
-        singleMatches.length > 0 ? "assigned" : hasAmbiguousMatch ? "ambiguous" : "unassigned",
-      territoryAssignmentSource: "geo",
-    });
+    if (notifySearch) {
+      await this.deps.onClinicMembershipChanged?.(clinic.id);
+    }
   }
 
   /**
    * Clears clinic membership for a territory that is about to be deleted.
    * Re-runs geo matching excluding this territory so clinics land on whatever
    * other active territory covers them (or become unassigned) instead of
-   * blocking deletion. Manually-pinned clinics are forced through too — a
-   * manual pin to a territory being deleted is no longer a valid override.
+   * blocking deletion.
    */
-  async disassociateClinicsForTerritory(territoryId: string): Promise<{ processed: number }> {
+  async disassociateClinicsForTerritory(territoryId: number): Promise<{ processed: number }> {
     const clinics = await this.deps.clinicWriter.findClinicsForMembership({
       territoryIds: [territoryId],
     });
 
     for (const clinic of clinics) {
-      await this.assignClinicByGeo(clinic, { excludeTerritoryId: territoryId, force: true });
+      await this.assignClinicByGeo(clinic, {
+        excludeTerritoryId: territoryId,
+        force: true,
+        notifySearch: false,
+      });
     }
 
     return { processed: clinics.length };
   }
 
-  async assignFacilityById(facilityId: string): Promise<void> {
+  async assignFacilityById(facilityId: number): Promise<void> {
     const clinics = await this.deps.clinicWriter.findClinicsForMembership({
       facilityIds: [facilityId],
     });
@@ -143,13 +140,14 @@ export class TerritoryMembershipService {
     let updated = 0;
 
     for (const clinic of clinics) {
-      const before = clinic.territoryId;
-      await this.assignClinicByGeo(clinic);
+      const before = clinic.managerZoneId;
+      // Bulk path: no per-clinic Meili round-trip (HTTP timeout risk).
+      await this.assignClinicByGeo(clinic, { notifySearch: false });
       const after = (
         await this.deps.clinicWriter.findClinicsForMembership({
           facilityIds: [clinic.id],
         })
-      )[0]?.territoryId;
+      )[0]?.managerZoneId;
       if (before !== after) {
         updated += 1;
       }
@@ -158,8 +156,8 @@ export class TerritoryMembershipService {
     return { processed: clinics.length, updated };
   }
 
-  async recomputeForTerritoryBoundary(territoryId: string): Promise<{ processed: number }> {
-    const clinicsById = new Map<string, ClinicMembershipTarget>();
+  async recomputeForTerritoryBoundary(territoryId: number): Promise<{ processed: number }> {
+    const clinicsById = new Map<number, ClinicMembershipTarget>();
 
     const assignedToTerritory = await this.deps.clinicWriter.findClinicsForMembership({
       territoryIds: [territoryId],
@@ -180,10 +178,7 @@ export class TerritoryMembershipService {
 
     let processed = 0;
     for (const clinic of clinicsById.values()) {
-      if (clinic.territoryAssignmentSource === "manual") {
-        continue;
-      }
-      await this.assignClinicByGeo(clinic);
+      await this.assignClinicByGeo(clinic, { notifySearch: false });
       processed += 1;
     }
 
@@ -194,7 +189,7 @@ export class TerritoryMembershipService {
     singleMatches: ClinicAssignmentTerritoryMatch[];
     hasAmbiguousMatch: boolean;
   } {
-    const matchesByVerticalId = new Map<string, ClinicAssignmentTerritoryMatch[]>();
+    const matchesByVerticalId = new Map<number, ClinicAssignmentTerritoryMatch[]>();
     for (const match of matches) {
       const verticalMatches = matchesByVerticalId.get(match.verticalId) ?? [];
       verticalMatches.push(match);

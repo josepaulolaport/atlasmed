@@ -15,11 +15,11 @@ import { territories, userTerritoryAssignments } from "@atlasmed/database";
 import { db } from "../infrastructure/database/db";
 
 type ConflictRow = {
-  territory_id: string;
+  territory_id: number;
   territory_name: string;
-  vertical_id: string;
-  manager_territory_id: string | null;
-  user_id: string;
+  vertical_id: number;
+  manager_territory_id: number | null;
+  user_id: number;
   created_at: Date;
   assignment_rank: number;
 };
@@ -67,7 +67,7 @@ async function run(apply: boolean) {
     return;
   }
 
-  const byPatch = new Map<string, ConflictRow[]>();
+  const byPatch = new Map<number, ConflictRow[]>();
   for (const row of conflicts) {
     const list = byPatch.get(row.territory_id) ?? [];
     list.push(row);
@@ -101,7 +101,7 @@ async function run(apply: boolean) {
       const [createdTerritory] = await db
         .insert(territories)
         .values({
-          name: `${original.name} (${extra.user_id.slice(0, 6)})`,
+          name: `${original.name} (${String(extra.user_id).slice(0, 6)})`,
           slug: `${original.slug}-${suffix}`,
           code: `${original.code}-${suffix}`.slice(0, 32),
           verticalId: original.verticalId,
@@ -148,9 +148,7 @@ async function run(apply: boolean) {
   console.log(`\nDone. Created ${created} patch clone(s).`);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
@@ -16,15 +18,17 @@ class MapFacilityPointsPage {
 
 class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     with SessionEnvironmentMixin<MapFacilityPointsPage> {
-  MapFacilityPointsRepository({String? baseUrl, this.verticalId})
+  MapFacilityPointsRepository({String? baseUrl, this.verticalId, super.tag})
     : super(
         endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
         name: 'MapFacilityPointsRepository',
+        // Never hydrate cross-user Hive cache before the first network fetch.
+        resolveOnCreate: false,
       );
 
-  final String? verticalId;
+  final int? verticalId;
 
-  static Uri _buildEndpoint(String baseUrl, String? verticalId) {
+  static Uri _buildEndpoint(String baseUrl, int? verticalId) {
     final base = Uri.parse(baseUrl);
     final basePath = base.path.endsWith('/')
         ? base.path.substring(0, base.path.length - 1)
@@ -32,8 +36,8 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     return base.replace(
       path: '$basePath/api/v1/map/facilities/points',
       queryParameters: {
-        if (verticalId != null && verticalId.trim().isNotEmpty)
-          'verticalId': verticalId.trim(),
+        if (verticalId != null && verticalId > 0)
+          'verticalId': verticalId.toString(),
       },
     );
   }
@@ -48,9 +52,22 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
   MapFacilityPointsPage fromJson(String json) {
     final decoded = jsonDecode(json);
     if (decoded is! Map<String, dynamic>) {
-      return const MapFacilityPointsPage(points: []);
+      throw const FormatException(
+        'Map facility points: expected a JSON object',
+      );
     }
-    final features = decoded['features'] as List<dynamic>? ?? const [];
+    // Error payloads must not look like "zero clinics in area".
+    if (decoded.containsKey('error') && !decoded.containsKey('features')) {
+      throw FormatException(
+        'Map facility points: API error ${decoded['error']}',
+      );
+    }
+    final features = decoded['features'];
+    if (features is! List) {
+      throw const FormatException(
+        'Map facility points: missing features array',
+      );
+    }
     final points = <NearbyEstablishment>[];
     for (final raw in features) {
       if (raw is! Map<String, dynamic>) continue;
@@ -64,7 +81,7 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
       if (coords is! List || coords.length < 2) continue;
       final lng = (coords[0] as num?)?.toDouble();
       final lat = (coords[1] as num?)?.toDouble();
-      final id = properties['facilityId']?.toString();
+      final id = readCrmIdLoose(properties['facilityId']);
       final name = properties['name']?.toString();
       if (lng == null || lat == null || id == null || name == null) continue;
       final rawBucket = properties['purchaseBucket']?.toString();
@@ -77,6 +94,7 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
           name: name,
           latitude: lat,
           longitude: lng,
+          // Points endpoint has no user origin — filled in map_provider.
           distanceKm: 0,
           purchaseBucket: purchaseBucket,
           status: _statusForBucket(purchaseBucket),
@@ -88,12 +106,28 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
 }
 
 Future<List<NearbyEstablishment>> fetchMapFacilityPoints({
-  String? verticalId,
+  int? verticalId,
+  String? cacheTag,
 }) async {
-  final repo = MapFacilityPointsRepository(verticalId: verticalId);
+  // Wait for session so SessionEnvironmentMixin.refresh does not short-circuit
+  // to a null session and leave Hive leftovers from the previous user.
+  final session = await SessionEnvironment.instance.currentValueOrResolve();
+  if (session == null) {
+    throw StateError('Map facility points: no active session');
+  }
+  final repo = MapFacilityPointsRepository(
+    verticalId: verticalId,
+    tag: cacheTag ?? 'tok-${session.token.hashCode}',
+  );
   try {
-    final page = await repo.currentValueOrResolve();
-    return page?.points ?? const [];
+    // Always hit the network — shared endpoint path must not reuse another
+    // user's FeatureCollection from Hive / in-memory currentValue.
+    await repo.clearCache();
+    final page = await repo.refresh();
+    if (page == null) {
+      throw StateError('Map facility points: refresh returned null');
+    }
+    return page.points;
   } finally {
     repo.dispose();
   }

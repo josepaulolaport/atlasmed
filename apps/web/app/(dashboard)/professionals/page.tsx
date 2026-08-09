@@ -105,7 +105,7 @@ export default function ProfessionalsPage() {
     setFormFirstName(professional.firstName);
     setFormLastName(professional.lastName);
     setFormSpecialty(professional.specialty ?? professional.primarySpecialtyLabel ?? "");
-    setFormFacilityIds(professional.facilityIds);
+    setFormFacilityIds(professional.facilityIds.map(String));
     setDialogOpen(true);
   };
 
@@ -143,7 +143,7 @@ export default function ProfessionalsPage() {
           firstName: formFirstName.trim(),
           lastName: formLastName.trim(),
           primarySpecialtyLabel: formSpecialty.trim() || undefined,
-          facilityIds: formFacilityIds,
+          facilityIds: formFacilityIds.map(Number),
         });
         toast({ title: "Sucesso", description: "Profissional criado" });
         setDialogOpen(false);
@@ -271,7 +271,7 @@ export default function ProfessionalsPage() {
                           </TableCell>
                           <TableCell>
                             {professional.facilityIds
-                              .map(facilityNameById)
+                              .map((id) => facilityNameById(String(id)))
                               .join(", ") || "—"}
                           </TableCell>
                           {canManage && (

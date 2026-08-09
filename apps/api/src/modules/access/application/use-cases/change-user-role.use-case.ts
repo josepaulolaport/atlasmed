@@ -28,9 +28,9 @@ export class ChangeUserRoleUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
-    newRoleId: string;
-    changedBy: string;
+    targetUserId: number;
+    newRoleId: number;
+    changedBy: number;
   }) {
     const target = await this.deps.userRepository.findById(params.targetUserId);
 

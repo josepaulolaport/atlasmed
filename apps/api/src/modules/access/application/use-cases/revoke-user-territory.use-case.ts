@@ -20,9 +20,9 @@ export class RevokeUserTerritoryUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
-    territoryId: string;
-    revokedBy: string;
+    targetUserId: number;
+    territoryId: number;
+    revokedBy: number;
     actorRole: Role;
   }) {
     if (params.actorRole !== Role.ADMIN) {
@@ -58,7 +58,7 @@ export class RevokeUserTerritoryUseCase {
       severity: "INFO",
       action: "revoke_territory",
       resource: "user",
-      resourceId: params.targetUserId,
+      resourceId: String(params.targetUserId),
       actorId: params.revokedBy,
       details: {
         targetUserId: params.targetUserId,

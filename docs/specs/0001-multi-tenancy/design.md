@@ -17,7 +17,7 @@ Add models such as:
 - Organization-scoped invitations.
 - Organization-scoped audit events.
 
-Healthcare records such as clinics, doctors, associations, visits, tasks, and territories should include tenant visibility rules. Public registry source identity should be separated from customer-owned CRM state where needed.
+Healthcare records such as clinics, doctors, associations, visits, tasks, and territories should include tenant visibility rules. Shared public reference data (for example CNES lookup catalogs) should stay separate from customer-owned CRM state where needed.
 
 ## API Direction
 
@@ -35,5 +35,5 @@ Healthcare records such as clinics, doctors, associations, visits, tasks, and te
 ## Testing Strategy
 
 - Unit tests for organization context resolution.
-- Integration tests for cross-tenant denial on users, clinics, doctors, registry suggestions, and future tasks.
+- Integration tests for cross-tenant denial on users, clinics, doctors, field suggestions, and future tasks.
 - Regression tests for invitations and session refresh preserving tenant context.

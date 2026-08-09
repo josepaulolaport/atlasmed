@@ -1,6 +1,6 @@
-import { createId } from "@paralleldrive/cuid2";
 import { relations, sql } from "drizzle-orm";
 import {
+  bigint,
   check,
   date,
   index,
@@ -55,8 +55,8 @@ export const interactionStatusEnum = pgEnum("interaction_status", [
 export const calendar = pgTable(
   "calendar",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    ownerUserId: text("owner_user_id")
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    ownerUserId: bigint("owner_user_id", { mode: "number" })
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     kind: calendarEventKindEnum("kind").notNull(),
@@ -72,13 +72,14 @@ export const calendar = pgTable(
     recurrenceCount: integer("recurrence_count"),
     status: calendarStatusEnum("status").notNull().default("ACTIVE"),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-    cancelledByUserId: text("cancelled_by_user_id").references(() => users.id, {
-      onDelete: "restrict",
-    }),
+    cancelledByUserId: bigint("cancelled_by_user_id", { mode: "number" }).references(
+      () => users.id,
+      { onDelete: "restrict" },
+    ),
     cancellationReason: text("cancellation_reason"),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     check("calendar_duration_minutes_positive_check", sql`${t.durationMinutes} > 0`),
@@ -118,8 +119,8 @@ export const calendar = pgTable(
 export const calendarOccurrenceOverrides = pgTable(
   "calendar_occurrence_overrides",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    calendarId: text("calendar_id")
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    calendarId: bigint("calendar_id", { mode: "number" })
       .notNull()
       .references(() => calendar.id, { onDelete: "restrict" }),
     recurrenceKey: text("recurrence_key").notNull(),
@@ -149,15 +150,15 @@ export const calendarOccurrenceOverrides = pgTable(
 export const interactions = pgTable(
   "interactions",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    calendarId: text("calendar_id")
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    calendarId: bigint("calendar_id", { mode: "number" })
       .notNull()
       .references(() => calendar.id, { onDelete: "restrict" }),
     recurrenceKey: text("recurrence_key").notNull(),
-    facilityId: text("facility_id")
+    facilityId: bigint("facility_id", { mode: "number" })
       .notNull()
       .references(() => facilities.id, { onDelete: "restrict" }),
-    agentUserId: text("agent_user_id")
+    agentUserId: bigint("agent_user_id", { mode: "number" })
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     modality: interactionModalityEnum("modality").notNull(),
@@ -165,19 +166,23 @@ export const interactions = pgTable(
     actualStartedAt: timestamp("actual_started_at", { withTimezone: true }),
     actualEndedAt: timestamp("actual_ended_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-    cancelledByUserId: text("cancelled_by_user_id").references(() => users.id, {
-      onDelete: "restrict",
-    }),
+    cancelledByUserId: bigint("cancelled_by_user_id", { mode: "number" }).references(
+      () => users.id,
+      { onDelete: "restrict" },
+    ),
     cancellationReason: text("cancellation_reason"),
     correctedAt: timestamp("corrected_at", { withTimezone: true }),
-    correctedByUserId: text("corrected_by_user_id").references(() => users.id, {
+    correctedByUserId: bigint("corrected_by_user_id", { mode: "number" }).references(
+      () => users.id,
+      { onDelete: "restrict" },
+    ),
+    correctionReason: text("correction_reason"),
+    visitId: bigint("visit_id", { mode: "number" }).references(() => visits.id, {
       onDelete: "restrict",
     }),
-    correctionReason: text("correction_reason"),
-    visitId: text("visit_id").references(() => visits.id, { onDelete: "restrict" }),
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     unique("interactions_calendar_id_recurrence_key_key").on(t.calendarId, t.recurrenceKey),
@@ -203,11 +208,13 @@ export const interactions = pgTable(
 export const interactionEvents = pgTable(
   "interaction_events",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    interactionId: text("interaction_id")
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    interactionId: bigint("interaction_id", { mode: "number" })
       .notNull()
       .references(() => interactions.id, { onDelete: "restrict" }),
-    actorUserId: text("actor_user_id").references(() => users.id, { onDelete: "restrict" }),
+    actorUserId: bigint("actor_user_id", { mode: "number" }).references(() => users.id, {
+      onDelete: "restrict",
+    }),
     source: interactionEventSourceEnum("source").notNull().default("USER"),
     previousStatus: interactionStatusEnum("previous_status"),
     newStatus: interactionStatusEnum("new_status").notNull(),
@@ -227,13 +234,13 @@ export const interactionEvents = pgTable(
 export const calendarCommandReceipts = pgTable(
   "calendar_command_receipts",
   {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    ownerUserId: text("owner_user_id")
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    ownerUserId: bigint("owner_user_id", { mode: "number" })
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     commandKey: text("command_key").notNull(),
     commandKind: text("command_kind").notNull(),
-    resourceId: text("resource_id"),
+    resourceId: bigint("resource_id", { mode: "number" }),
     requestFingerprint: text("request_fingerprint").notNull(),
     result: jsonb("result").$type<unknown>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

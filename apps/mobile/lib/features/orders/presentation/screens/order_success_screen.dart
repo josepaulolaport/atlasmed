@@ -1,22 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/interaction_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
-  const OrderSuccessScreen({
-    super.key,
-    required this.order,
-    this.interactionId,
-  });
-
-  final ApiOrderDetail order;
-  final String? interactionId;
+  const OrderSuccessScreen({super.key});
 
   @override
   ConsumerState<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
@@ -28,21 +20,16 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(cartProvider.notifier).clearCart();
-      ref.invalidate(ordersPageProvider(null));
-      final interactionId = widget.interactionId;
-      if (interactionId != null) {
-        ref.invalidate(interactionProvider(interactionId));
-      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final order = widget.order;
-    final destinationName = order.facility.name;
-    final doctorName = order.professional?.name;
-    final items = order.items;
-    final total = order.total;
+    final cart = ref.watch(cartProvider);
+    final destinationName = cart.clinic?.name ?? 'Clínica Santa Mônica';
+    final doctorName = cart.doctor?.name ?? 'Dra. Mariana Silva';
+    final items = cart.items;
+    final total = cart.subtotal;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -53,7 +40,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
                 children: [
-                  _HeroSection(orderId: order.displayId),
+                  _HeroSection(orderId: 2042),
                   const SizedBox(height: 16),
                   _InfoCard(
                     child: Row(
@@ -84,17 +71,14 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                                   color: AppColors.gray800,
                                 ),
                               ),
-                              if (doctorName != null &&
-                                  doctorName.isNotEmpty) ...[
-                                const SizedBox(height: 3),
-                                Text(
-                                  doctorName,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.gray500,
-                                  ),
+                              const SizedBox(height: 3),
+                              Text(
+                                doctorName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.gray500,
                                 ),
-                              ],
+                              ),
                             ],
                           ),
                         ),
@@ -117,7 +101,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                         const SizedBox(height: 14),
                         if (items.isEmpty)
                           const Text(
-                            'Os itens não foram retornados na confirmação do pedido.',
+                            'Seu carrinho foi limpo após a confirmação.',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.gray500,
@@ -164,6 +148,35 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.green50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.green50),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_outlined,
+                          size: 18,
+                          color: AppColors.green,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Previsão de entrega: 25 a 29 de abril de 2026',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.green600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -173,11 +186,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => widget.interactionId == null
-                      ? context.go('/orders')
-                      : context.go(
-                          '/agenda/interactions/${widget.interactionId}',
-                        ),
+                  onPressed: () => const OrdersRoute().go(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.navyDeep,
                     foregroundColor: Colors.white,
@@ -186,14 +195,9 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
-                    widget.interactionId == null
-                        ? 'Ver meus pedidos'
-                        : 'Voltar ao atendimento',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: const Text(
+                    'Ver meus pedidos',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -206,7 +210,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
 }
 
 class _HeroSection extends StatelessWidget {
-  final String orderId;
+  final int orderId;
   const _HeroSection({required this.orderId});
 
   @override
@@ -267,7 +271,7 @@ class _HeroSection extends StatelessWidget {
               border: Border.all(color: AppColors.gray200),
             ),
             child: Text(
-              orderId,
+              orderId.toString(),
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
@@ -301,27 +305,22 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-String _quantityLabel(double value) => value == value.roundToDouble()
-    ? value.toInt().toString()
-    : value.toStringAsFixed(2).replaceAll('.', ',');
-
 class _OrderItemRow extends StatelessWidget {
-  final ApiOrderItem item;
+  final CartItem item;
   const _OrderItemRow({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    final productName = item.product?.name ?? 'Produto';
     return Row(
       children: [
-        ProductIcon(name: productName, size: 28),
+        ProductIcon(name: item.productName, size: 28),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '$productName × ${_quantityLabel(item.quantity)}',
+                '${item.productName} × ${item.qty}',
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
@@ -329,19 +328,18 @@ class _OrderItemRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 2),
-              if (item.product?.code case final code?)
-                Text(
-                  code,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.gray500,
-                  ),
+              Text(
+                item.productSubtitle,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: AppColors.gray500,
                 ),
+              ),
             ],
           ),
         ),
         Text(
-          brl(item.lineTotal),
+          brl(item.unitPrice * item.qty),
           style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,

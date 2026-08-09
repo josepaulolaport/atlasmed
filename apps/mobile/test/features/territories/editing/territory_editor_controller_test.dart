@@ -21,32 +21,30 @@ import 'package:flutter_test/flutter_test.dart';
 MapCoordinate _c(double lng, double lat) =>
     MapCoordinate(longitude: lng, latitude: lat);
 
+const _verticalOncologiaId = 1;
+
 const _managerZoneType = TerritoryType(
-  id: 'type-1',
+  id: 1,
   slug: 'manager_zone',
   name: 'Zona de gerente',
-  assignsClinics: false,
-  assignableToManagers: true,
 );
 
 const _repPatchType = TerritoryType(
-  id: 'type-2',
+  id: 2,
   slug: 'patch',
   name: 'Área de representante',
-  assignsClinics: true,
-  assignableToManagers: false,
 );
 
-Territory _territory({required String id, required List<MapCoordinate> ring}) {
+Territory _territory({required int id, required List<MapCoordinate> ring}) {
   final geometry = TerritoryGeometry.polygon([
     [...ring, ring.first],
   ]);
   return Territory(
     id: id,
     name: 'Território $id',
-    slug: id,
-    code: id,
-    verticalId: 'vertical-oncologia',
+    slug: '$id',
+    code: '$id',
+    verticalId: _verticalOncologiaId,
     territoryType: _managerZoneType,
     boundary: geometry,
     centroid: ring.first,
@@ -59,15 +57,15 @@ class _FakeTerritoryRepository implements TerritoryRepository {
 
   final List<Territory> territories;
   TerritoryGeometry? lastSavedGeometry;
-  String? lastSavedId;
+  int? lastSavedId;
   TerritoryDraft? lastCreatedDraft;
-  String? lastDeletedId;
+  int? lastDeletedId;
 
   @override
   Future<List<BusinessVertical>> getVerticals() async => const [];
 
   @override
-  Future<Territory?> getTerritoryById(String id) async {
+  Future<Territory?> getTerritoryById(int id) async {
     for (final territory in territories) {
       if (territory.id == id) return territory;
     }
@@ -77,7 +75,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
-    String? verticalId,
+    int? verticalId,
   }) async {
     return territories
         .where(
@@ -90,7 +88,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<BoundaryImpactPreview> previewBoundaryImpact(
-    String id,
+    int id,
     TerritoryGeometry geometry,
   ) async {
     return const BoundaryImpactPreview(mode: 'none', clinics: []);
@@ -98,9 +96,9 @@ class _FakeTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<void> updateTerritoryGeometry(
-    String id,
+    int id,
     TerritoryGeometry geometry, {
-    List<String>? acceptedFacilityIds,
+    List<int>? acceptedFacilityIds,
   }) async {
     lastSavedId = id;
     lastSavedGeometry = geometry;
@@ -112,7 +110,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<List<UnassignedFacility>> listUnassignedFacilities({
-    String? managerZoneId,
+    int? managerZoneId,
     int page = 1,
     int limit = 50,
   }) async => const [];
@@ -125,7 +123,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   ) async {
     lastCreatedDraft = draft;
     final territory = Territory(
-      id: 'created-${territories.length}',
+      id: territories.length + 100,
       name: draft.name,
       slug: draft.name,
       code: draft.name,
@@ -142,13 +140,13 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<void> deleteTerritory(String id) async {
+  Future<void> deleteTerritory(int id) async {
     lastDeletedId = id;
     territories.removeWhere((t) => t.id == id);
   }
 
   @override
-  Future<void> assignUser(String territoryId, String? userId) async {
+  Future<void> assignUser(int territoryId, int? userId) async {
     final index = territories.indexWhere((t) => t.id == territoryId);
     if (index == -1) return;
     territories[index] = territories[index].copyWith(assignedUserId: userId);
@@ -156,10 +154,10 @@ class _FakeTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<void> updateTerritoryInfo(
-    String territoryId, {
+    int territoryId, {
     required String name,
     required bool isActive,
-    String? managerTerritoryId,
+    int? managerTerritoryId,
   }) async {
     final index = territories.indexWhere((t) => t.id == territoryId);
     if (index == -1) return;
@@ -172,7 +170,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<List<AssignableManager>> getAssignableManagers({
-    String? verticalId,
+    int? verticalId,
   }) async {
     return const [];
   }
@@ -187,8 +185,8 @@ void main() {
 
   setUp(() {
     repository = _FakeTerritoryRepository([
-      _territory(id: 'target', ring: square),
-      _territory(id: 'neighbor', ring: neighborSquare),
+      _territory(id: 1, ring: square),
+      _territory(id: 2, ring: neighborSquare),
     ]);
     container = ProviderContainer(
       overrides: [territoryRepositoryProvider.overrideWithValue(repository)],
@@ -202,14 +200,12 @@ void main() {
     // zero — keep one alive for the life of the test so repeated `read`s
     // all see the same controller instance.
     container.listen(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       (previous, next) {},
     );
     final controller = container.read(
       territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
+        TerritoryEditorTarget.existing(1),
       ).notifier,
     );
     await Future.doWhile(() async {
@@ -217,7 +213,7 @@ void main() {
       return container
           .read(
             territoryEditorControllerProvider(
-              TerritoryEditorTarget.existing('target'),
+              TerritoryEditorTarget.existing(1),
             ),
           )
           .loading;
@@ -230,14 +226,12 @@ void main() {
     () async {
       await loadController();
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
 
       expect(state.loadError, isNull);
-      expect(state.original?.id, 'target');
-      expect(state.neighbors.map((t) => t.id), ['neighbor']);
+      expect(state.original?.id, 1);
+      expect(state.neighbors.map((t) => t.id), [2]);
       expect(state.working, [
         [square],
       ]);
@@ -250,7 +244,7 @@ void main() {
     await loadController();
     final controller = container.read(
       territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
+        TerritoryEditorTarget.existing(1),
       ).notifier,
     );
     const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 0);
@@ -260,9 +254,7 @@ void main() {
     controller.endVertexDrag();
 
     var state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.working![0][0][0], _c(-1, -1));
     expect(state.isDirty, isTrue);
@@ -270,9 +262,7 @@ void main() {
 
     controller.undo();
     state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.working![0][0][0], _c(0, 0));
     expect(state.isDirty, isFalse);
@@ -284,7 +274,7 @@ void main() {
       await loadController();
       final controller = container.read(
         territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
+          TerritoryEditorTarget.existing(1),
         ).notifier,
       );
       const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 2);
@@ -294,9 +284,7 @@ void main() {
       controller.updateVertexDrag(vertexRef, _c(11, 11));
 
       var state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.validation.overlapsNeighbor, isTrue);
       expect(state.canSave, isFalse);
@@ -306,9 +294,7 @@ void main() {
       // neighbor's border.
       controller.endVertexDrag();
       state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.validation.overlapsNeighbor, isFalse);
       expect(
@@ -327,7 +313,7 @@ void main() {
       await loadController();
       final controller = container.read(
         territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
+          TerritoryEditorTarget.existing(1),
         ).notifier,
       );
       controller.setMode(EditorMode.select);
@@ -340,9 +326,7 @@ void main() {
       controller.endVertexDrag(); // auto-clips against the neighbor
 
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.selectedPart, isNull);
       expect(state.selectionAction, SelectionAction.none);
@@ -353,7 +337,7 @@ void main() {
     await loadController();
     final controller = container.read(
       territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
+        TerritoryEditorTarget.existing(1),
       ).notifier,
     );
 
@@ -365,9 +349,7 @@ void main() {
 
     expect(controller.finishDrawing(), isTrue);
     final state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.mode, EditorMode.select);
     // Merged into a single, larger part rather than appended separately.
@@ -381,7 +363,7 @@ void main() {
       await loadController();
       final controller = container.read(
         territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
+          TerritoryEditorTarget.existing(1),
         ).notifier,
       );
 
@@ -393,9 +375,7 @@ void main() {
 
       expect(controller.finishDrawing(), isTrue);
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.mode, EditorMode.select);
       expect(state.working!.length, 1);
@@ -410,7 +390,7 @@ void main() {
       await loadController();
       final controller = container.read(
         territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
+          TerritoryEditorTarget.existing(1),
         ).notifier,
       );
 
@@ -422,9 +402,7 @@ void main() {
 
       expect(controller.finishDrawing(), isFalse);
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.mode, EditorMode.addArea);
       expect(state.working, [
@@ -440,7 +418,7 @@ void main() {
     await loadController();
     final controller = container.read(
       territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
+        TerritoryEditorTarget.existing(1),
       ).notifier,
     );
 
@@ -455,9 +433,7 @@ void main() {
 
     expect(controller.finishDrawing(), isFalse);
     final state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('target'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.mode, EditorMode.removeArea);
     expect(state.working, [
@@ -473,11 +449,11 @@ void main() {
     final legacySquareB = [_c(5, 5), _c(7, 5), _c(7, 7), _c(5, 7)];
     final legacyRepository = _FakeTerritoryRepository([
       Territory(
-        id: 'legacy',
+        id: 3,
         name: 'Território legado',
-        slug: 'legacy',
-        code: 'legacy',
-        verticalId: 'vertical-oncologia',
+        slug: '3',
+        code: '3',
+        verticalId: _verticalOncologiaId,
         territoryType: _managerZoneType,
         boundary: TerritoryGeometry.multiPolygon([
           [
@@ -497,14 +473,12 @@ void main() {
     );
     addTearDown(legacyContainer.dispose);
     legacyContainer.listen(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('legacy'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(3)),
       (previous, next) {},
     );
     final controller = legacyContainer.read(
       territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('legacy'),
+        TerritoryEditorTarget.existing(3),
       ).notifier,
     );
     await Future.doWhile(() async {
@@ -512,16 +486,14 @@ void main() {
       return legacyContainer
           .read(
             territoryEditorControllerProvider(
-              TerritoryEditorTarget.existing('legacy'),
+              TerritoryEditorTarget.existing(3),
             ),
           )
           .loading;
     });
 
     var state = legacyContainer.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('legacy'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(3)),
     );
     expect(state.working!.length, 2);
     expect(state.validation.hasMultipleAreas, isTrue);
@@ -534,9 +506,7 @@ void main() {
     controller.endVertexDrag();
 
     state = legacyContainer.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing('legacy'),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(3)),
     );
     expect(state.isDirty, isTrue);
     expect(state.validation.hasMultipleAreas, isTrue);
@@ -549,7 +519,7 @@ void main() {
       await loadController();
       final controller = container.read(
         territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
+          TerritoryEditorTarget.existing(1),
         ).notifier,
       );
 
@@ -561,9 +531,7 @@ void main() {
 
       expect(controller.finishDrawing(), isFalse);
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.mode, EditorMode.removeArea);
       expect(state.working, [
@@ -580,7 +548,7 @@ void main() {
       await loadController();
       final controller = container.read(
         territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
+          TerritoryEditorTarget.existing(1),
         ).notifier,
       );
       const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 0);
@@ -590,13 +558,11 @@ void main() {
 
       final saved = await controller.save();
       expect(saved, isTrue);
-      expect(repository.lastSavedId, 'target');
+      expect(repository.lastSavedId, 1);
       expect(repository.lastSavedGeometry!.coordinates[0][0][0], _c(-1, -1));
 
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing('target'),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.isDirty, isFalse);
       expect(state.saved, isTrue);
@@ -649,7 +615,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-          verticalId: 'vertical-oncologia',
+          verticalId: _verticalOncologiaId,
         ),
       );
 
@@ -684,17 +650,14 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-          verticalId: 'vertical-oncologia',
+          verticalId: _verticalOncologiaId,
         ),
       );
 
       final state = container.read(
         territoryEditorControllerProvider(creatingTarget),
       );
-      expect(
-        state.neighbors.map((t) => t.id),
-        containsAll(['target', 'neighbor']),
-      );
+      expect(state.neighbors.map((t) => t.id), containsAll([1, 2]));
     });
 
     test('save() creates a new territory instead of updating one', () async {
@@ -703,7 +666,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-          verticalId: 'vertical-oncologia',
+          verticalId: _verticalOncologiaId,
         ),
       );
       controller.addDrawingPoint(_c(20, 20));

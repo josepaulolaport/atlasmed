@@ -15,8 +15,8 @@ import {
 describe("AppError.toClientJSON", () => {
   it("strips internal context from RefreshTokenReuseDetectedError", () => {
     const error = new RefreshTokenReuseDetectedError({
-      userId: "user-123",
-      sessionId: "session-456",
+      userId: 123,
+      sessionId: 456,
     });
 
     expect(error.toClientJSON()).toEqual({
@@ -47,7 +47,7 @@ describe("AppError.toClientJSON", () => {
   });
 
   it("strips identifiers from UserNotFoundError and ResourceNotFoundError", () => {
-    expect(new UserNotFoundError("user@test.com").toClientJSON()).toEqual({
+    expect(new UserNotFoundError(123).toClientJSON()).toEqual({
       code: "USER_NOT_FOUND",
       message: "User not found",
     });
@@ -112,13 +112,13 @@ describe("AppError.toClientJSON", () => {
 
   it("retains full context in toJSON for server logging", () => {
     const error = new RefreshTokenReuseDetectedError({
-      userId: "user-123",
-      sessionId: "session-456",
+      userId: 123,
+      sessionId: 456,
     });
 
     expect(error.toJSON().context).toEqual({
-      userId: "user-123",
-      sessionId: "session-456",
+      userId: 123,
+      sessionId: 456,
     });
   });
 });

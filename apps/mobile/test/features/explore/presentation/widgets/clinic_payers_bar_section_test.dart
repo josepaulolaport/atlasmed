@@ -6,8 +6,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 void main() {
   testWidgets('shows stacked bar and payer legend', (tester) async {
     const payers = [
-      PayerShare(id: '1', name: 'Unimed', sharePercent: 60),
-      PayerShare(id: '2', name: 'Particular', sharePercent: 40),
+      PayerShare(id: 1, name: 'Unimed', sharePercent: 60),
+      PayerShare(id: 2, name: 'Particular', sharePercent: 40),
     ];
 
     await tester.pumpWidget(
@@ -35,8 +35,8 @@ void main() {
 
   testWidgets('shows package mix labels', (tester) async {
     const payers = [
-      PayerShare(id: '1', name: 'Unimed', sharePercent: 60, isPackage: true),
-      PayerShare(id: '2', name: 'Particular', sharePercent: 40),
+      PayerShare(id: 1, name: 'Unimed', sharePercent: 60, isPackage: true),
+      PayerShare(id: 2, name: 'Particular', sharePercent: 40),
     ];
 
     await tester.pumpWidget(

@@ -3,12 +3,24 @@ import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityGeocodingService } from "../services/facility-geocoding.service";
 import type { PurchaseRecurrenceCommand, PurchaseRecurrenceService } from "../services/purchase-recurrence.service";
 import { ValidationError } from "../../../../shared/errors";
-import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
-import { buildMeiliFilter, eqFilter, geoRadiusFilter, gteFilter, inFilter, isNullFilter, lteFilter } from "../../../../infrastructure/search/meili-filter";
+import { logger } from "../../../../infrastructure/logging/logger";
+import {
+  buildMeiliFilter,
+  compactFacilityMeiliScopeFilter,
+  geoRadiusFilter,
+  gteFilter,
+  inFilter,
+  lteFilter,
+} from "../../../../infrastructure/search/meili-filter";
+import { reportSearchMeiliFallback } from "../../../../infrastructure/search/search-resilience";
 import { purchaseBucketToFunnelFilter } from "../list-facilities-query";
 import { serializeFacility } from "../mappers/facility.mapper";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
+import {
+  meiliFunnelStageFilter,
+  meiliPurchaseProfileFilter,
+} from "../utils/meili-funnel-filter.utils";
 
 export interface SearchService {
   isConfigured(): boolean;
@@ -17,11 +29,12 @@ export interface SearchService {
     query: string,
     options: { limit: number; offset: number; filter?: string; sort?: string[] }
   ): Promise<{ hits: T[]; estimatedTotalHits?: number }>;
+  deleteDocument?(indexName: string, id: string | number): Promise<unknown>;
 }
 
-export function orderSearchResultsById<T extends { id: string }>(
+export function orderSearchResultsById<T extends { id: number }>(
   records: T[],
-  ids: string[]
+  ids: number[]
 ): T[] {
   const recordsById = new Map(records.map((record) => [record.id, record]));
   return ids.flatMap((id) => {
@@ -30,11 +43,25 @@ export function orderSearchResultsById<T extends { id: string }>(
   });
 }
 
+/** Meili may still ship legacy UUID string ids — only CRM bigints hydrate. */
+export function parseMeiliFacilityIds(
+  hits: Array<{ id?: string | number }>,
+): number[] {
+  return hits.flatMap((hit) => {
+    const raw = hit.id;
+    if (typeof raw === "number" && Number.isFinite(raw)) return [raw];
+    if (typeof raw === "string" && /^\d+$/.test(raw)) return [Number(raw)];
+    return [];
+  });
+}
+
 interface Dependencies {
   facilityRepository: FacilityRepository;
   searchService?: SearchService;
   facilityGeocodingService?: FacilityGeocodingService;
-  onFacilityLocationChanged?: (facilityId: string) => Promise<void>;
+  onFacilityLocationChanged?: (facilityId: number) => Promise<void>;
+  /** Keep Meili facilities index in sync after create/update (best-effort). */
+  onFacilityChanged?: (facilityId: number) => Promise<void>;
   purchaseRecurrenceService?: PurchaseRecurrenceService;
 }
 
@@ -50,18 +77,18 @@ export class ListFacilitiesUseCase {
     radiusKm?: number;
     commercialStatus?: "UNREGISTERED" | "REGISTERED" | "SUSPENDED" | "CLOSED";
     purchaseBucket?: "active" | "inactive" | "neverBought";
-    productIds?: string[];
-    serviceCodes?: string[];
+    productIds?: number[];
+    clinicalFocusIds?: number[];
     purchaseFunnelStages?: ("NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE")[];
     purchaseProfile?: "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
     purchaseIntervalMinDays?: number;
     purchaseIntervalMaxDays?: number;
     sort?: "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
     order?: "asc" | "desc";
-    userId: string;
+    userId: number;
     scope: ScopeContext;
     role: string;
-    verticalId?: string;
+    verticalId?: number;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
@@ -75,18 +102,18 @@ export class ListFacilitiesUseCase {
     });
     const search = input.search?.trim();
 
-    if (!search) {
+    const listFromSql = async (searchTerm?: string) => {
       const { facilities, total } = await this.deps.facilityRepository.findAll({
         page,
         limit,
-        search: input.search,
+        search: searchTerm,
         latitude: input.latitude,
         longitude: input.longitude,
         radiusKm: input.radiusKm,
         commercialStatus: input.commercialStatus,
         purchaseBucket: input.purchaseBucket,
         productIds: input.productIds,
-        serviceCodes: input.serviceCodes,
+        clinicalFocusIds: input.clinicalFocusIds,
         purchaseFunnelStages: input.purchaseFunnelStages,
         purchaseProfile: input.purchaseProfile,
         purchaseIntervalMinDays: input.purchaseIntervalMinDays,
@@ -101,141 +128,151 @@ export class ListFacilitiesUseCase {
         data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
       };
+    };
+
+    if (!search) {
+      return listFromSql(input.search);
     }
 
     const searchService = this.deps.searchService;
     if (!searchService?.isConfigured()) {
-      throw new ServiceUnavailableError("Search");
+      return listFromSql(search);
     }
 
-    let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
     try {
       // commercialStatus remains canonical-Postgres-only; recurrence filters are indexed.
       const purchaseBucketFunnel = input.purchaseBucket
         ? purchaseBucketToFunnelFilter(input.purchaseBucket)
         : undefined;
       const purchaseBucketMeiliFilter = purchaseBucketFunnel
-        ? purchaseBucketFunnel.includeNull
-          ? {
-              expression: `(purchaseFunnelStage IN [${[...purchaseBucketFunnel.stages]
-                .sort()
-                .map((stage) => `'${stage}'`)
-                .join(", ")}] OR purchaseFunnelStage IS NULL)`,
-            }
-          : inFilter("purchaseFunnelStage", purchaseBucketFunnel.stages)
+        ? meiliFunnelStageFilter(
+            listScope.verticalIds,
+            purchaseBucketFunnel.stages,
+            { includeNull: purchaseBucketFunnel.includeNull },
+          )
         : undefined;
       const canonicalFilters = [
         input.radiusKm !== undefined && input.latitude !== undefined && input.longitude !== undefined
           ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
           : undefined,
-        // Explicit stage filter wins; otherwise Desempenho bucket.
         input.purchaseFunnelStages?.length
-          ? inFilter("purchaseFunnelStage", input.purchaseFunnelStages)
+          ? meiliFunnelStageFilter(listScope.verticalIds, input.purchaseFunnelStages)
           : purchaseBucketMeiliFilter,
-        input.purchaseProfile === "AUTOMATIC"
-          ? isNullFilter("manualPurchaseProfile")
-          : input.purchaseProfile
-            ? eqFilter("manualPurchaseProfile", input.purchaseProfile)
-            : undefined,
+        input.purchaseProfile
+          ? meiliPurchaseProfileFilter(listScope.verticalIds, input.purchaseProfile)
+          : undefined,
         input.purchaseIntervalMinDays !== undefined
-          ? gteFilter("purchaseIntervalDays", input.purchaseIntervalMinDays)
+          ? gteFilter("purchaseIntervalDaysMin", input.purchaseIntervalMinDays)
           : undefined,
         input.purchaseIntervalMaxDays !== undefined
-          ? lteFilter("purchaseIntervalDays", input.purchaseIntervalMaxDays)
+          ? lteFilter("purchaseIntervalDaysMin", input.purchaseIntervalMaxDays)
           : undefined,
       ];
       const verticalFilter =
         listScope.restrictToVerticalProfiles && listScope.verticalIds?.length
           ? inFilter("verticalIds", listScope.verticalIds)
           : undefined;
-      const scopeFilter = listScope.isGlobal
-        ? undefined
-        : input.scope.facilityIds.length > 0
-          ? inFilter("id", input.scope.facilityIds)
-          : eqFilter("id", "__none__");
+      const scopeFilter = compactFacilityMeiliScopeFilter({
+        isGlobal: listScope.isGlobal,
+        role: input.role,
+        userId: input.userId,
+        oversightZoneIds: input.scope.oversightZoneIds,
+        facilityIds: input.scope.facilityIds,
+      });
       const filterClauses = [...canonicalFilters, verticalFilter, scopeFilter];
       const filter = buildMeiliFilter(filterClauses);
       if (filterClauses.some(Boolean) && !filter) {
-        const { facilities, total } = await this.deps.facilityRepository.findAll({
-          page, limit, search, latitude: input.latitude, longitude: input.longitude,
-          radiusKm: input.radiusKm, commercialStatus: input.commercialStatus,
-          purchaseBucket: input.purchaseBucket,
-          productIds: input.productIds,
-          serviceCodes: input.serviceCodes,
-          purchaseFunnelStages: input.purchaseFunnelStages,
-          purchaseProfile: input.purchaseProfile, purchaseIntervalMinDays: input.purchaseIntervalMinDays,
-          purchaseIntervalMaxDays: input.purchaseIntervalMaxDays, sort, order,
-          userId: input.userId,
-          scope: listScope,
-        });
-        return {
-          data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
-          pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-        };
+        // Oversized id IN / filters — never drop scope; SQL is authority.
+        reportSearchMeiliFallback("facilities", "filter_too_large");
+        return listFromSql(search);
       }
       const searchSort = sort === "distance" && input.latitude !== undefined && input.longitude !== undefined
         ? [`_geoPoint(${input.latitude}, ${input.longitude}):${order}`]
         : sort === "purchaseFunnelStage"
           ? [`purchaseFunnelStageRank:${order}`, "name:asc", "id:asc"]
           : sort === "purchaseIntervalDays"
-            ? [`purchaseIntervalDays:${order}`, "name:asc", "id:asc"]
+            ? [`purchaseIntervalDaysMin:${order}`, "name:asc", "id:asc"]
             : sort === "lastPurchaseDate"
               ? ["hasLastValidPurchase:desc", `lastValidPurchaseSortAt:${order}`, "name:asc", "id:asc"]
               : sort === "name"
                 ? [`name:${order}`, "id:asc"]
                 : undefined;
-      result = await searchService.search<{ id: string }>("facilities", search, {
+      const result = await searchService.search<{ id: string | number }>("facilities", search, {
         limit,
         offset: (page - 1) * limit,
         ...(filter ? { filter } : {}),
         ...(searchSort ? { sort: searchSort } : {}),
       });
+
+      const ids = parseMeiliFacilityIds(result.hits);
+      // Empty or stale UUID index → SQL substring search (Postgres authority).
+      if (result.hits.length === 0) {
+        reportSearchMeiliFallback("facilities", "empty_hits");
+        return listFromSql(search);
+      }
+      if (ids.length === 0) {
+        reportSearchMeiliFallback("facilities", "unparseable_ids", {
+          hitCount: result.hits.length,
+        });
+        return listFromSql(search);
+      }
+
+      const facilities = orderSearchResultsById(
+        await this.deps.facilityRepository.findAllByIds({
+          ids,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          radiusKm: input.radiusKm,
+          commercialStatus: input.commercialStatus,
+          purchaseBucket: input.purchaseBucket,
+          productIds: input.productIds,
+          clinicalFocusIds: input.clinicalFocusIds,
+          purchaseFunnelStages: input.purchaseFunnelStages,
+          purchaseProfile: input.purchaseProfile,
+          purchaseIntervalMinDays: input.purchaseIntervalMinDays,
+          purchaseIntervalMaxDays: input.purchaseIntervalMaxDays,
+          sort: input.sort,
+          order: input.order,
+          userId: input.userId,
+          scope: listScope,
+        }),
+        ids
+      );
+      // Hydrate re-applies authority filters; any drop means Meili over-matched.
+      if (facilities.length < ids.length) {
+        reportSearchMeiliFallback("facilities", "hydrate_drop", {
+          meiliIds: ids.length,
+          hydrated: facilities.length,
+        });
+        return listFromSql(search);
+      }
+      const total = result.estimatedTotalHits ?? 0;
+
+      return {
+        data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+      };
     } catch (error) {
-      throw new ServiceUnavailableError("Search", error instanceof Error ? error : undefined);
+      reportSearchMeiliFallback("facilities", "meili_error");
+      logger.warn("search.meili_error", {
+        index: "facilities",
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return listFromSql(search);
     }
-
-    const ids = result.hits.map((hit) => hit.id);
-    const facilities = ids.length
-      ? orderSearchResultsById(
-          await this.deps.facilityRepository.findAllByIds({
-            ids,
-            latitude: input.latitude,
-            longitude: input.longitude,
-            radiusKm: input.radiusKm,
-            commercialStatus: input.commercialStatus,
-            purchaseBucket: input.purchaseBucket,
-            productIds: input.productIds,
-            serviceCodes: input.serviceCodes,
-            purchaseFunnelStages: input.purchaseFunnelStages,
-            purchaseProfile: input.purchaseProfile,
-            purchaseIntervalMinDays: input.purchaseIntervalMinDays,
-            purchaseIntervalMaxDays: input.purchaseIntervalMaxDays,
-            sort: input.sort,
-            order: input.order,
-            userId: input.userId,
-            scope: listScope,
-          }),
-          ids
-        )
-      : [];
-    const total = result.estimatedTotalHits ?? 0;
-
-    return {
-      data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-    };
   }
 }
 
-export class ListFacilityServicesUseCase {
+export class ListClinicalFocusesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute() {
-    const catalog = await this.deps.facilityRepository.listServiceCatalog();
+    const catalog = await this.deps.facilityRepository.listClinicalFocusCatalog();
     return {
       data: catalog.map((row) => ({
-        serviceCode: row.serviceCode,
-        serviceName: row.serviceName,
+        id: row.id,
+        name: row.name,
+        cnesCode: row.cnesCode ?? undefined,
       })),
     };
   }
@@ -244,7 +281,7 @@ export class ListFacilityServicesUseCase {
 export class GetFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext; role: string; verticalId?: string }) {
+  async execute(input: { facilityId: number; scope: ScopeContext; role: string; verticalId?: number }) {
     const listScope = buildFacilityListScope({
       scope: input.scope,
       role: input.role,
@@ -292,6 +329,10 @@ export class CreateFacilityUseCase {
 
   async execute(input: {
     name: string;
+    stateId: number;
+    municipalityId: number;
+    legalDocumentType: "CNPJ" | "CPF";
+    legalDocument?: string | null;
     lat?: number;
     lng?: number;
   }) {
@@ -304,6 +345,10 @@ export class CreateFacilityUseCase {
 
     const clinic = await this.deps.facilityRepository.create({
       name: input.name,
+      stateId: input.stateId,
+      municipalityId: input.municipalityId,
+      legalDocumentType: input.legalDocumentType,
+      legalDocument: input.legalDocument,
       lat: coordinates.lat,
       lng: coordinates.lng,
     });
@@ -311,6 +356,7 @@ export class CreateFacilityUseCase {
     if (coordinates.lat != null && coordinates.lng != null) {
       await this.deps.onFacilityLocationChanged?.(clinic.id);
     }
+    await this.deps.onFacilityChanged?.(clinic.id);
 
     const refreshed = await this.deps.facilityRepository.findById(clinic.id);
     return serializeFacility(refreshed ?? clinic);
@@ -321,14 +367,14 @@ export class UpdateFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
+    facilityId: number;
     scope: ScopeContext;
     name?: string;
     lat?: number | null;
     lng?: number | null;
     purchaseRecurrence?: PurchaseRecurrenceCommand;
     /** Required when updating purchaseRecurrence for multi-vertical clinics. */
-    verticalId?: string;
+    verticalId?: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -360,11 +406,12 @@ export class UpdateFacilityUseCase {
         input.facilityId,
         verticalId,
         {
-          fields: { name: input.name, manuallyEditedAt: new Date() },
+          fields: { name: input.name },
           configuration,
           today: new Date().toISOString().slice(0, 10),
         },
       );
+      await this.deps.onFacilityChanged?.(clinic.id);
       return serializeFacility(clinic, [verticalId]);
     }
 
@@ -386,12 +433,12 @@ export class UpdateFacilityUseCase {
       name: input.name,
       lat: coordinates.lat,
       lng: coordinates.lng,
-      manuallyEditedAt: new Date(),
     });
 
     if (locationChanged) {
       await this.deps.onFacilityLocationChanged?.(clinic.id);
     }
+    await this.deps.onFacilityChanged?.(clinic.id);
 
     const refreshed = await this.deps.facilityRepository.findById(clinic.id);
     return serializeFacility(refreshed ?? clinic);
@@ -401,7 +448,7 @@ export class UpdateFacilityUseCase {
 export class DeleteFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const existing = await this.deps.facilityRepository.findById(input.facilityId);
@@ -410,6 +457,20 @@ export class DeleteFacilityUseCase {
     }
 
     await this.deps.facilityRepository.softDelete(input.facilityId);
+
+    const searchService = this.deps.searchService;
+    if (searchService?.isConfigured() && searchService.deleteDocument) {
+      try {
+        await searchService.deleteDocument("facilities", String(input.facilityId));
+      } catch (error) {
+        // Soft-delete already committed; full rebuild eventually heals ghosts.
+        logger.warn("search.meili_delete_failed", {
+          index: "facilities",
+          facilityId: input.facilityId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     return true;
   }
 }

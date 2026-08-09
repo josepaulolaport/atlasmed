@@ -16,7 +16,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 /// by name. For the complete, unscoped price list see
 /// [CatalogPriceIndexScreen].
 class CatalogComparisonScreen extends ConsumerStatefulWidget {
-  final String variantId;
+  final int variantId;
   const CatalogComparisonScreen({super.key, required this.variantId});
 
   @override

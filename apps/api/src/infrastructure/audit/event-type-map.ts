@@ -40,13 +40,8 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "PATCH /api/v1/users/:id/deactivate": { eventType: "USER.DEACTIVATE", severity: "WARNING" },
   "PATCH /api/v1/users/:id/suspend": { eventType: "USER.SUSPEND", severity: "WARNING" },
   "PATCH /api/v1/users/:id/unsuspend": { eventType: "USER.UNSUSPEND" },
-  "PUT /api/v1/users/:id/manager": { eventType: "USER.MANAGER_ASSIGNED" },
-  "DELETE /api/v1/users/:id/manager": { eventType: "USER.MANAGER_REMOVED" },
   "PUT /api/v1/users/:id/territory": { eventType: "USER.TERRITORY_ASSIGNED" },
   "DELETE /api/v1/users/:id/territory/:territoryId": { eventType: "USER.TERRITORY_REVOKED" },
-  "PUT /api/v1/users/:id/permissions": { eventType: "USER.PERMISSION_GRANT", severity: "WARNING" },
-  "DELETE /api/v1/users/:id/permissions/:permissionId": { eventType: "USER.PERMISSION_REVOKE", severity: "WARNING" },
-
   // --- Invitations ---
   "POST /api/v1/invitations": { eventType: "USER.INVITE" },
   "POST /api/v1/invitations/:id/accept": { eventType: "USER.ACCEPT_INVITE" },
@@ -58,15 +53,6 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "PUT /api/v1/facilities/:id": { eventType: "FACILITY.UPDATED" },
   "PATCH /api/v1/facilities/:id": { eventType: "FACILITY.UPDATED" },
   "DELETE /api/v1/facilities/:id": { eventType: "FACILITY.DEACTIVATED", severity: "WARNING" },
-  "POST /api/v1/facilities/:id/professionals": { eventType: "FACILITY.PROFESSIONAL_LINKED" },
-  "PUT /api/v1/facilities/:id/professionals/:professionalId": { eventType: "FACILITY.PROFESSIONAL_UPDATED" },
-  "DELETE /api/v1/facilities/:id/professionals/:professionalId": { eventType: "FACILITY.PROFESSIONAL_UNLINKED" },
-
-  // --- Professionals ---
-  "POST /api/v1/professionals": { eventType: "PROFESSIONAL.CREATED" },
-  "PUT /api/v1/professionals/:id": { eventType: "PROFESSIONAL.UPDATED" },
-  "PATCH /api/v1/professionals/:id": { eventType: "PROFESSIONAL.UPDATED" },
-  "DELETE /api/v1/professionals/:id": { eventType: "PROFESSIONAL.DEACTIVATED", severity: "WARNING" },
 
   // --- Territories ---
   "POST /api/v1/territories": { eventType: "TERRITORY.CREATED" },
@@ -78,20 +64,6 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "POST /api/v1/territories/:id/approval/accept": { eventType: "TERRITORY.APPROVED" },
   "POST /api/v1/territories/:id/approval/reject": { eventType: "TERRITORY.REJECTED" },
 
-  // --- Calendar / Interactions ---
-  "POST /api/v1/calendar": { eventType: "CALENDAR.CREATED" },
-  "PATCH /api/v1/calendar/:id": { eventType: "CALENDAR.RESCHEDULED" },
-  "PATCH /api/v1/calendar/:id/occurrences/:recurrenceKey": { eventType: "CALENDAR.OCCURRENCE_RESCHEDULED" },
-  "DELETE /api/v1/calendar/:id": { eventType: "CALENDAR.CANCELLED", severity: "WARNING" },
-  "DELETE /api/v1/calendar/:id/occurrences/:recurrenceKey": { eventType: "CALENDAR.OCCURRENCE_CANCELLED", severity: "WARNING" },
-  "POST /api/v1/interactions/:id/start": { eventType: "INTERACTION.STARTED" },
-  "POST /api/v1/interactions/:id/complete": { eventType: "INTERACTION.COMPLETED" },
-
-  // --- Registry / Ingestion ---
-  "POST /api/v1/registry/ingestion": { eventType: "REGISTRY.INGESTION_STARTED" },
-  "POST /api/v1/registry/suggestions/:id/approve": { eventType: "REGISTRY.SUGGESTION_APPROVED" },
-  "POST /api/v1/registry/suggestions/:id/reject": { eventType: "REGISTRY.SUGGESTION_REJECTED" },
-
   // --- Field suggestions (Não Conformidades) ---
   "POST /api/v1/facilities/:id/field-suggestions": { eventType: "FIELD_SUGGESTION.CREATED" },
   "POST /api/v1/field-suggestions/:id/approve": { eventType: "FIELD_SUGGESTION.APPROVED" },
@@ -102,23 +74,30 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "PUT /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_UPDATED" },
   "PATCH /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_UPDATED" },
   "DELETE /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_DEACTIVATED", severity: "WARNING" },
+
+  // --- Interactions / calendar ---
+  "POST /api/v1/interactions/:id/start": { eventType: "INTERACTION.STARTED" },
+  "POST /api/v1/interactions/:id/complete": { eventType: "INTERACTION.COMPLETED" },
+  "PATCH /api/v1/calendar/:id/occurrences/:id": {
+    eventType: "CALENDAR.OCCURRENCE_RESCHEDULED",
+  },
+  "DELETE /api/v1/calendar/:id/occurrences/:id": {
+    eventType: "CALENDAR.OCCURRENCE_CANCELLED",
+    severity: "WARNING",
+  },
 };
 
-const INTERACTION_COMMAND_PATH_PATTERN = /(?<=\/interactions\/)[^/]+(?=\/(?:start|complete)$)/gi;
-const CALENDAR_OCCURRENCE_PATH_PATTERN = /(?<=\/calendar\/)[^/]+(?=\/occurrences\/)/gi;
-const RECURRENCE_KEY_PATH_PATTERN = /(?<=\/occurrences\/)[^/]+$/gi;
-const CUID_PATH_PARAM_PATTERN = /\/[0-9a-z]{20,}(?=\/|$)/gi;
+/** Numeric CRM ids and legacy cuid-shaped segments → :id */
+const PATH_PARAM_PATTERN = /\/(?:\d+|[0-9a-z]{20,})(?=\/|$)/gi;
 
 /**
  * Normalizes a concrete request path to its route template by replacing
- * cuid-shaped path segments with :id placeholders.
+ * numeric / legacy cuid path segments (and calendar occurrence keys) with :id.
  */
 function normalizePath(path: string): string {
   return path
-    .replace(INTERACTION_COMMAND_PATH_PATTERN, ":id")
-    .replace(CALENDAR_OCCURRENCE_PATH_PATTERN, ":id")
-    .replace(RECURRENCE_KEY_PATH_PATTERN, ":recurrenceKey")
-    .replace(CUID_PATH_PARAM_PATTERN, "/:id");
+    .replace(PATH_PARAM_PATTERN, "/:id")
+    .replace(/\/occurrences\/[^/]+/gi, "/occurrences/:id");
 }
 
 export function resolveAuditEvent(

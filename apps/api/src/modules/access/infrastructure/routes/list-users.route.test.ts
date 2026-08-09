@@ -20,13 +20,13 @@ function buildListUsersTestRoute(actor: RouteTestUser, scope: ScopeContext) {
     .use(createRouteTestAuthPlugin(actor, scope))
     .get(
       "/users",
-      async ({ query, getScope, getUser }: any) => {
+      async ({ query, getScope, getUser }) => {
         await assertRoutePermission(getUser, "read", "USER");
         const resolvedScope = await getScope();
         return routeTestContext.mocks.listUsersExecute({
           status: query.status,
-          page: query.page ? Number(query.page) : undefined,
-          limit: query.limit ? Number(query.limit) : undefined,
+          page: query.page,
+          limit: query.limit,
           search: query.search,
           scope: resolvedScope,
         });
@@ -41,8 +41,8 @@ function buildListUsersTestRoute(actor: RouteTestUser, scope: ScopeContext) {
               t.Literal("PENDING"),
             ])
           ),
-          page: t.Optional(t.String()),
-          limit: t.Optional(t.String()),
+          page: t.Optional(t.Number({ minimum: 1 })),
+          limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
           search: t.Optional(t.String()),
         }),
       }
@@ -80,7 +80,7 @@ describe("listUsersRoute", () => {
   });
 
   it("passes manager territory scope for MANAGER", async () => {
-    const managerScope = managerScopedContext(["territory-a"]);
+    const managerScope = managerScopedContext([1]);
     setRouteTestActor(managerRouteTestUser, managerScope);
     const app = createApp(managerRouteTestUser, managerScope);
     const response = await app.handle(new Request("http://localhost/users"));
@@ -90,7 +90,7 @@ describe("listUsersRoute", () => {
       expect.objectContaining({
         scope: expect.objectContaining({
           isGlobal: false,
-          territoryIds: ["territory-a"],
+          territoryIds: [1],
         }),
       })
     );

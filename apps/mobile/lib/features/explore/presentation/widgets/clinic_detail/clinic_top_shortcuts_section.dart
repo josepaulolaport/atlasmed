@@ -18,7 +18,7 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
     required this.detail,
   });
 
-  final String facilityId;
+  final int facilityId;
   final String facilityName;
   final Facility detail;
 
@@ -102,12 +102,11 @@ _ShortcutBadge _pendingCountBadge(int count, String completeLabel) =>
 
 int _adminInfoPendingCount(Facility detail) {
   bool empty(String? v) => v == null || v.trim().isEmpty;
-  final hasTaxId =
-      (detail.registration?.cnpj?.trim().isNotEmpty ?? false) ||
-      (detail.registration?.cpf?.trim().isNotEmpty ?? false);
+  final hasLegalDocument =
+      detail.registration?.legalDocument?.trim().isNotEmpty ?? false;
   final fields = <bool>[
-    empty(detail.registration?.taxIdType),
-    !hasTaxId,
+    empty(detail.registration?.legalDocumentType),
+    !hasLegalDocument,
     empty(detail.contact?.phone),
     empty(detail.contact?.whatsapp),
     empty(detail.contact?.email),

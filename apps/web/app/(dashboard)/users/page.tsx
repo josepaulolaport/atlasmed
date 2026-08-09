@@ -29,7 +29,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ManageAssignmentsDialog } from "@/components/users/manage-assignments-dialog";
 import { ChangeRoleDialog } from "@/components/users/change-role-dialog";
-import { ManagePermissionsDialog } from "@/components/users/manage-permissions-dialog";
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
@@ -43,8 +42,6 @@ export default function UsersPage() {
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
   const [roleUser, setRoleUser] = useState<User | null>(null);
   const [roleOpen, setRoleOpen] = useState(false);
-  const [permissionsUser, setPermissionsUser] = useState<User | null>(null);
-  const [permissionsOpen, setPermissionsOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const userIsAdmin = currentUser ? isAdmin(currentUser.role.name) : false;
@@ -158,14 +155,6 @@ export default function UsersPage() {
           if (!open) setRoleUser(null);
         }}
         onUpdated={() => setRefreshKey((k) => k + 1)}
-      />
-      <ManagePermissionsDialog
-        user={permissionsUser}
-        open={permissionsOpen}
-        onOpenChange={(open) => {
-          setPermissionsOpen(open);
-          if (!open) setPermissionsUser(null);
-        }}
       />
 
       <div className="px-6 py-8 border-b border-zinc-100">
@@ -327,19 +316,6 @@ export default function UsersPage() {
                                       className="text-base mr-2"
                                     />
                                     Alterar função
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setPermissionsUser(user);
-                                      setPermissionsOpen(true);
-                                    }}
-                                  >
-                                    <iconify-icon
-                                      icon="solar:shield-check-linear"
-                                      stroke-width="1.5"
-                                      className="text-base mr-2"
-                                    />
-                                    Gerenciar permissões
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {

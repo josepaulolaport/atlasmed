@@ -65,7 +65,7 @@ sectors  (id, slug, name, is_active)
 | Territory create/edit `sectorId` | Exists (mobile); web weak |
 | Product ↔ sector join | Exists |
 | Scope: REP/MANAGER intersect territories by user sectors | Exists (`ScopeResolver.applySectorFilter`) |
-| Direct facility assign | Exists as `facility_consultant_assignments` — **not vertical-scoped** |
+| Direct facility assign | `facility_vertical_rep_assignments` under `facility_vertical_profiles` — **vertical-scoped** (ADR 0005) |
 | Facility commercial fields | `commercialStatus` / `purchaseStatus` on **global** facility |
 | Explore / Map sector UI | **None** |
 | Active vertical request context | **None** |
@@ -92,7 +92,7 @@ sectors  (id, slug, name, is_active)
 |---|---|---|
 | Territory geometry is global; ownership is vertical-scoped | `territories.sector_id` + `user_territory_assignments` unique on `(user, territory)` only | **High** |
 | Facility commercial data per vertical | `primary_sector_id` + commercial enums on `facilities` | **High** |
-| Direct clinic assignment per vertical | `facility_consultant_assignments` has no sector | **High** |
+| Direct clinic assignment per vertical | Done — `facility_vertical_rep_assignments` parented by profile (ADR 0005) | **Done** |
 | Active vertical in every commercial API | Scope is user-global; no vertical header/path context | **High** |
 | Specialty ≠ vertical | Specialty mostly free text / CBO; no vertical↔specialty map | Medium |
 | Explore/map filter by vertical profile | Lists use facility scope only; no profile concept | **High** |
@@ -198,9 +198,9 @@ Goal: Ortopedia runs through a vertical-aware model; ADMIN can filter; REP/MANAG
 | # | Work item |
 |---|---|
 | P1.1 | Product↔vertical membership as catalog visibility path — **shipped**: list/get/price-index resolve caller verticals via `product_verticals` (`resolveVerticalIds`). |
-| P1.2 | Seed/configure Dermatologia + feature flag (**after** territory×vertical addendum — see design) — **catalog seed shipped** (`0027`); kill switch = `business_verticals.is_active`. Local configure: `bun run db:seed:dermatologia` (zone/patch clone + sample profiles/consultants; local DB only). |
+| P1.2 | Seed/configure Dermatologia + feature flag (**after** territory×vertical addendum — see design) — **catalog seed shipped** (`0027`); kill switch = `business_verticals.is_active`. |
 | P1.3 | Medical specialty catalog + M2M + vertical↔specialty (if needed for filtering) — deferred until Derm explore needs specialty×vertical filters |
-| P1.4 | Territory×vertical ownership — design accepted: [`vertical-ownership-design.md`](../../specs/0003-territory-management/vertical-ownership-design.md). Types `manager_zone`/`patch` seeded in `0028`. Local territories from real consultant books: `bun run db:seed:sp-territories` in `apps/api` (hulls; no invented assigns). |
+| P1.4 | Territory×vertical ownership — design accepted: [`vertical-ownership-design.md`](../../specs/0003-territory-management/vertical-ownership-design.md). Types `manager_zone`/`patch` seeded in `0028`. |
 | P1.5 | Orders store `vertical_id`; one vertical per order — **shipped** (`0029`/`0030` + list/get + `POST /orders` with profile/product vertical validation). Mobile `OrdersRepository.createOrder` ready; checkout still mock clinic/doctor pickers. |
 | P1.6 | Search indexes include `vertical_ids` — **shipped**: Meili facilities docs + filterable `verticalIds`; list search uses `verticalIds IN […]` (rebuild required). |
 | P1.7 | Vertical admin UX polish |
@@ -362,10 +362,10 @@ Still required for ship slice B (not territory redesign):
 | 6 | Competitors × vertical | **Defer** |
 | 7 | `facilities.territoryId` | **Full cutover** → profile `territory_id` only; drop column |
 | 8 | OPS | **Enforce everywhere** — assigned verticals only |
-| 9 | Access grants × vertical | **Defer** schema; document gap |
+| 9 | Access grants × vertical | **Removed** — AccessGrants/`permissions` table dropped; role + territory (+ vertical-rep) only |
 | 10 | Consolidated multi-vertical payload | **Never mix** commercial fields; client switches filter/header |
 | 11 | Vertical deactivate / CNES auto-profile | Soft `business_verticals.is_active` only; auto-suggest **deferred** |
-| 12 | CASL × vertical (P2.9) | Ability helpers + request vertical resolution; scope/query still enforce. Grants stay type-level until #9 |
+| 12 | CASL × vertical (P2.9) | Ability helpers + request vertical resolution; scope/query still enforce |
 
 **Deploy notes (when shipping code for the above):**
 

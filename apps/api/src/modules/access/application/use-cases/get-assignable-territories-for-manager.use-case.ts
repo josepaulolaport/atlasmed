@@ -21,8 +21,8 @@ export class GetAssignableTerritoriesForManagerUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    managerId: string;
-    verticalId: string;
+    managerId: number;
+    verticalId: number;
     actorRole: Role;
   }) {
     if (params.actorRole !== Role.ADMIN) {

@@ -109,10 +109,10 @@ class NaoConformidadeSuggestion {
     this.reviewedByName,
   });
 
-  final String id;
+  final int id;
   final NaoConformidadeKind kind;
   final NaoConformidadeTargetType targetType;
-  final String targetId;
+  final int targetId;
   final String targetName;
 
   /// Parent clinic name when [targetType] is doctor.
@@ -128,7 +128,7 @@ class NaoConformidadeSuggestion {
   final String? reason;
 
   /// Stable owner id — establishment screens only show matching rows.
-  final String? submittedByUserId;
+  final int? submittedByUserId;
   final String submittedByName;
   final NaoConformidadeSubmitterRole submittedByRole;
   final DateTime submittedAt;
@@ -155,11 +155,11 @@ class NaoConformidadeSuggestion {
   String get detailTitle =>
       isDeactivation ? 'Desativação do estabelecimento' : fieldLabel;
 
-  bool isOwnedBy({required String? userId, required String? displayName}) {
+  bool isOwnedBy({int? userId, required String? displayName}) {
     if (userId != null &&
-        userId.isNotEmpty &&
+        userId > 0 &&
         submittedByUserId != null &&
-        submittedByUserId!.isNotEmpty) {
+        submittedByUserId! > 0) {
       return submittedByUserId == userId;
     }
     if (displayName == null || displayName.trim().isEmpty) return false;

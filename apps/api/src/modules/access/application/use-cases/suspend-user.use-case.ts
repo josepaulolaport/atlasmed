@@ -31,8 +31,8 @@ export class SuspendUserUseCase {
   }
 
   async execute(params: {
-    userId: string;
-    suspendedBy: string;
+    userId: number;
+    suspendedBy: number;
     actorRole: Role;
     scope: ScopeContext;
     reason?: string;

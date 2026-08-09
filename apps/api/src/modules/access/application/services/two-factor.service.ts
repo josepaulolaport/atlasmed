@@ -71,11 +71,11 @@ export class TwoFactorService {
     return Buffer.from(hex, "hex");
   }
 
-  private getPendingSetupKey(userId: string): string {
+  private getPendingSetupKey(userId: number): string {
     return `${environment.REDIS_KEY_PREFIX}pending_2fa_setup:${userId}`;
   }
 
-  async storePendingSetup(userId: string, secret: string): Promise<void> {
+  async storePendingSetup(userId: number, secret: string): Promise<void> {
     await this.deps.redis.setex(
       this.getPendingSetupKey(userId),
       PENDING_SETUP_TTL_SECONDS,
@@ -83,11 +83,11 @@ export class TwoFactorService {
     );
   }
 
-  async getPendingSetup(userId: string): Promise<string | null> {
+  async getPendingSetup(userId: number): Promise<string | null> {
     return await this.deps.redis.get(this.getPendingSetupKey(userId));
   }
 
-  async clearPendingSetup(userId: string): Promise<void> {
+  async clearPendingSetup(userId: number): Promise<void> {
     await this.deps.redis.del(this.getPendingSetupKey(userId));
   }
 }

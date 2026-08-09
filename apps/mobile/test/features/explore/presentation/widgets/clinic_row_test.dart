@@ -15,13 +15,21 @@ void main() {
   }) {
     return FacilityEntry.fromDTO(
       api.FacilityDTO(
-        id: 'clinic-1',
+        id: 1,
         name: 'Clínica Central',
         professionalCount: 1,
         neighborhood: neighborhood,
         city: city,
         state: state,
-        commercialStatus: commercialStatus,
+        verticalProfiles: commercialStatus == null
+            ? const []
+            : [
+                api.FacilityVerticalProfileDTO(
+                  verticalId: 1,
+                  verticalName: 'Ortopedia',
+                  commercialStatus: commercialStatus,
+                ),
+              ],
       ),
     );
   }
@@ -34,13 +42,20 @@ void main() {
         home: Scaffold(
           body: ClinicRow(
             clinic: const FacilityEntry(
-              id: 'clinic-1',
+              id: 1,
               name: 'Clínica Central',
               city: '',
               neighborhood: '',
               distanceKm: 0,
               commercialStatus: 'REGISTERED',
               doctorCount: 1,
+              verticalProfiles: [
+                api.FacilityVerticalProfileDTO(
+                  verticalId: 1,
+                  verticalName: 'Ortopedia',
+                  commercialStatus: 'REGISTERED',
+                ),
+              ],
             ),
             onTap: () {},
           ),
@@ -71,7 +86,7 @@ void main() {
   ) async {
     final clinic = FacilityEntry.fromDTO(
       const api.FacilityDTO(
-        id: 'clinic-visited-today',
+        id: 2,
         name: 'Clínica visitada hoje',
         professionalCount: 1,
         lastVisitAt: '2026-07-27T14:00:00.000-03:00',
@@ -95,7 +110,7 @@ void main() {
   ) async {
     final clinic = FacilityEntry.fromDTO(
       api.FacilityDTO.fromMap(const {
-        'id': 'clinic-visited-before',
+        'id': 3,
         'name': 'Clínica visitada antes',
         'professionalCount': 1,
         'lastVisitAt': '2026-07-24T23:30:00.000-03:00',
@@ -119,7 +134,7 @@ void main() {
   ) async {
     final clinic = FacilityEntry.fromDTO(
       const api.FacilityDTO(
-        id: 'clinic-recurrence',
+        id: 4,
         name: 'Clínica Recorrente',
         professionalCount: 1,
       ),
@@ -139,6 +154,17 @@ void main() {
         sampleSize: 2,
         funnelStage: PurchaseFunnelStage.churn,
       ),
+      verticalProfiles: const [
+        api.FacilityVerticalProfileDTO(
+          verticalId: 1,
+          verticalName: 'Ortopedia',
+          purchaseRecurrence: PurchaseRecurrenceSnapshot(
+            intervalDays: 30,
+            sampleSize: 2,
+            funnelStage: PurchaseFunnelStage.churn,
+          ),
+        ),
+      ],
     );
 
     await tester.pumpWidget(
@@ -160,7 +186,7 @@ void main() {
         home: Scaffold(
           body: ClinicRow(
             clinic: const FacilityEntry(
-              id: 'clinic-without-recurrence',
+              id: 5,
               name: 'Clínica sem perfil',
               city: '',
               neighborhood: '',

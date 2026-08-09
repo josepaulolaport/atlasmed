@@ -137,7 +137,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
   }
 
   CompetitorProduct _blankCompetitor() => CompetitorProduct(
-    id: '',
+    id: 0,
     name: '',
     manufacturer: '',
     countryOfOrigin: '',

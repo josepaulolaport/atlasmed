@@ -380,7 +380,7 @@ export class FacilityGeocodingService {
    * Geocodes from address when coordinates are missing and persists them so
    * Mapbox is not called again on subsequent reads or territory assignment.
    */
-  async ensureCoordinatesPersisted(facilityId: string): Promise<ResolvedCoordinates | null> {
+  async ensureCoordinatesPersisted(facilityId: number): Promise<ResolvedCoordinates | null> {
     const clinic = await this.deps.facilityRepository.findById(facilityId);
     if (!clinic) {
       return null;

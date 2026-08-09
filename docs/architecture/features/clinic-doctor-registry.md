@@ -1,36 +1,68 @@
-# Feature: Facility, Professional, and Registry Ingestion
+# Feature: Facility and Person CRM
 
 ## Current State
 
-Atlasmed has early clinic and doctor domain support, including clinic records, doctor records, facility-professional associations, and external registry ingestion workflows.
+AtlasMed has clinic and person CRM support: facilities, unified `persons` with facility affiliations, healthcare vs administrative classifications, role assignments, private notes, relationship scores, Meilisearch indexes (`facilities` + `persons`), and purchase-recurrence snapshots. CNES registry warehouse ingest and `/registry/*` READ/confirm are **removed**.
+
+User-submitted field corrections and deactivation requests use `public.field_suggestions` (Não Conformidades) — see Spec 0007. That path is not a CNES registry suggestion queue.
+
+Person model design: [ADR 0004](../adr/0004-person-facility-model.md).
 
 ## Current Data Concepts
 
-- Facility (Pessoa Jurídica / CNPJ or Pessoa Física / CPF — discriminated by `taxIdType` enum).
-- Doctor (professional).
-- Doctor-clinic association.
-- Facility services (`facility_services`) — healthcare services offered by a facility, sourced from CNES `rlEstabServClass` and synced each ingestion cycle.
-- Ingestion run.
-- Ingestion suggestion.
+- **Facility** — Pessoa Jurídica (CNPJ) or Pessoa Física (CPF), discriminated by `legal_document_type` / `legal_document`. May carry `cnes_code`, `unit_type_id` / `unit_subtype_id` (CNES TP_UNIDADE catalogs), and other CRM fields.
+- **Person** — one external human (`persons`): identity (`first_name`, `last_name`, `cpf`, phones, email, …). Soft-delete via `deleted_at`.
+- **Healthcare profile** — optional `person_healthcare_profiles` (e.g. CNES professional id) + specialties M2M + professional registrations (CRM triple).
+- **Affiliation** — `person_facilities` (active when `ended_at` is null). Classifications via `person_facility_classification_assignments` → catalog `id` + stable `code` (`HEALTHCARE_PROFESSIONAL` / `ADMINISTRATIVE_CONTACT`, seeded). Roles via `person_facility_role_assignments` → admin-dynamic role catalog `id` + `name` (no machine `code`, no migration seed). Wire DTOs use `roleIds` / `classificationIds`.
+- **Person notes** / **facility notes** — private per-user notes (`person_notes`, `facility_notes`).
+- **User–person relationships** — private 1–10 relationship strength (`user_person_relationships`).
+- **Occupations** — CNES CBO catalog (`occupations`: `id` + `cnes_id` + `name`); affiliation occupations in `person_facility_occupations`.
+- **Field suggestions** — user-submitted Não Conformidades (`field_suggestions`, `person_id` when person-scoped).
 
-### Facility types
+### Facility legal document types
 
-A facility is typed by its tax registration:
-
-| `taxIdType` | Tax ID | Meaning |
+| `legalDocumentType` | Document | Meaning |
 |---|---|---|
-| `PJ` | CNPJ | Pessoa Jurídica — legal entity (clinic, hospital, lab) |
-| `PF` | CPF | Pessoa Física — individual practitioner operating as a service point |
+| `CNPJ` | 14 digits | Pessoa Jurídica — legal entity (clinic, hospital, lab) |
+| `CPF` | 11 digits | Pessoa Física — individual practitioner operating as a service point |
 
-The type is derived from the CNES registry at ingestion time and backfilled on existing rows from whichever tax ID column is populated.
+## API surfaces (as-built)
 
-### Facility services
+Facility-scoped projections (CASL `PERSON` + facility scope):
 
-`facility_services` stores the service/specialty codes associated with a facility (CNES table `rlEstabServClass`). Columns: `serviceCode`, `classificationCode`, `sourceProvider`. Populated and kept in sync by the `syncFacilityServicesActivity` step in the CNES monthly ingestion workflow. Services are returned on `GET /facilities/:id` but not on the list endpoint.
+| Method | Path |
+|---|---|
+| GET/POST | `/api/v1/facilities/:facilityId/healthcare-professionals` (DTO includes `primaryRegistrationDisplay`) |
+| GET/PATCH | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId` |
+| PUT | `/api/v1/facilities/:facilityId/healthcare-professionals/:personFacilityId/roles` |
+| GET/POST | `/api/v1/facilities/:facilityId/administrative-contacts` |
+| GET/PATCH | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId` |
+| PUT | `/api/v1/facilities/:facilityId/administrative-contacts/:personFacilityId/roles` |
+
+Person-scoped:
+
+| Method | Path |
+|---|---|
+| GET/PATCH | `/api/v1/persons/:personId` (GET embeds active `registrations[]`) |
+| GET/POST | `/api/v1/persons/:personId/notes` |
+| GET + PUT/PATCH | `/api/v1/persons/:personId/relationship` |
+| GET/POST | `/api/v1/persons/:personId/professional-registrations` |
+| PATCH/DELETE | `/api/v1/persons/:personId/professional-registrations/:registrationId` (DELETE = soft deactivate) |
+| GET | `/api/v1/person-professional-registration-councils` (`{ id, name, abbreviation }`) |
+| GET | `/api/v1/healthcare-professionals` (Explorar / Meili) |
+| GET | `/api/v1/healthcare-professionals/specialties` |
+| GET | `/api/v1/person-facility-roles` (dynamic role catalog `{ id, name, isActive }`) |
+
+Do not call removed registry endpoints (`/registry/*`) or deleted `/api/v1/professionals/*`.
+
+## Frontend surfaces (current)
+
+- **Web:** out of scope for person/professional CRM surfaces on this line of work (no rewire planned).
+- **Mobile:** Explore + establishment detail — Médicos via healthcare projection (associate existing only; no in-app create-doctor); administrativos via administrative-contacts projection; doctor detail/notes/relationship/roles/registrations on person paths. See Spec 0005.
 
 ## Recurring Purchase Profile and Funnel
 
-Facilities have a materialized recurring purchase profile used by the API and the Flutter **Explore** list and facility detail. This is the implemented client surface; the web facility UI does not expose this feature. [ADR 0002](../adr/0002-mobile-stack.md) remains **Proposed**, so the current production-facing implementation is still in the existing Flutter app.
+Facilities have a materialized recurring purchase profile used by the API and the Flutter **Explore** list and facility detail. The web facility UI does not expose this feature. [ADR 0002](../adr/0002-mobile-stack.md) remains **Proposed**, so the current production-facing mobile implementation is still Flutter.
 
 ### Vocabulary and rules
 
@@ -83,10 +115,25 @@ DATABASE_URL="$DATABASE_URL" bun run db:migrate
 Provision or update the stable hourly Temporal schedule after the worker is deployed:
 
 ```sh
-bun run --cwd apps/workers/cnes-ingestion schedule:purchase-recurrence
+bun run --cwd apps/workers/temporal schedule:purchase-recurrence
 ```
 
 The schedule runs `RECONCILE` at minute zero each hour with overlap policy `SKIP`. It reads an overlapping two-hour order-update window and due stage transitions. The `00:00 UTC` run additionally performs a complete active-facility sweep. The freshness objective is the next successful hourly reconciliation for external order changes and UTC date transitions.
+
+Emultec avulsa → CRM orders (whitelist products, seller/facility gates): see [`docs/ops/emultec-order-import.md`](../../ops/emultec-order-import.md). After worker deploy with Emultec env + Docker:
+
+```sh
+bun run --cwd apps/workers/temporal schedule:emultec-order-import
+```
+
+Manual / ops trigger (ADMIN `SEARCH_SYNC`):
+
+```http
+POST /sync
+{ "entity": "emultec-orders" }
+```
+
+Schedule runs every 10 minutes as paged **BACKFILL** (`BUFFER_ONE` catch-up; `pageSize` 200). Hard upsert failures go to `ops.emultec_order_import_dead_letters`; replay via API/CLI `HYBRID` / `DLQ_REPLAY` (schedule BACKFILL does not auto-replay DLQ).
 
 Start the initial purchase-recurrence backfill through the authorized endpoint:
 
@@ -110,7 +157,7 @@ Authorization: Bearer $ATLASMED_TOKEN
 { "entity": "facilities" }
 ```
 
-The returned workflow ID is normally `search-sync-facilities-full`; inspect it with `GET /sync/:workflowId`. The rebuild uses a temporary index and atomic swap.
+The returned workflow ID is normally `search-sync-facilities-full`; inspect it with `GET /sync/:workflowId`. The rebuild uses a temporary index and atomic swap. Person Explorar index uid is `persons`; full rebuild via `POST /sync` with `{"entity": "persons"}` (same authorized sync surface; `SearchSyncEntity` includes `facilities` | `persons` | `orders`).
 
 Use this aggregate to compare distributions before and after backfill or a rebuild:
 
@@ -145,29 +192,9 @@ A nonzero due-transition result after a successful hourly workflow indicates SQL
 
 For the architectural rationale, lifecycle, consistency model, concurrency, and rollback risks, see [ADR 0003](../adr/0003-materialized-facility-purchase-funnel.md).
 
-## Registry Ingestion Suggestions
+## Related specs
 
-Current suggestion types include:
-
-- Facility removal.
-- Facility reactivation.
-- Doctor-clinic association removal.
-
-## Relationship to Calendar and Interactions
-
-Facilities and professionals provide CRM context for commercial contacts, but contact does not imply physical presence. New scheduling and activity flows use the [Calendar and Commercial Interactions](calendar-interactions.md) domain.
-
-An interaction is linked to a facility and may be `IN_PERSON` or `REMOTE`. Facility notes remain scoped to the facility–user relationship, and orders may optionally link to an interaction.
-
-`visits` remains only as a compatibility ledger written when an interaction is completed. Registry and CRM documentation should not use visit as the generic term for every contact or follow-up.
-
-## Target Direction
-
-This domain should evolve into the healthcare CRM foundation. It should support profile quality, relationship and interaction history, territory-aware access, notes, follow-ups, data provenance, and governed workflows for accepting or rejecting external data changes.
-
-## Open Questions
-
-- Which external registries are authoritative per market?
-- Which fields are user-editable versus registry-controlled?
-- What data needs approval before becoming visible to field teams?
-- How should clinic/doctor data be tenant-scoped when multiple customers share public registry sources?
+- Spec 0002 — Facility and Professional CRM requirements (baseline; table names historically pre-person).
+- Spec 0005 — Mobile establishment detail (Médicos / administrativos UX).
+- Spec 0007 — Não Conformidades (`field_suggestions`).
+- ADR 0004 — Person + facility affiliation model.
