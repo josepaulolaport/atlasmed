@@ -136,18 +136,36 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
     since: string;
     until: string;
   }): Promise<number[]> {
-    const rows = await this.database.execute(sql<{ facility_id: number }>`
-      select distinct o.facility_id
-      from ${orders} o
-      inner join ${facilities} f on f.id = o.facility_id
-      where f.deactivated_at is null
-        and o.updated_at >= ${new Date(input.since)}
-        and o.updated_at < ${new Date(input.until)}
-        and (${input.cursor} is null or o.facility_id > ${input.cursor})
-      order by o.facility_id
-      limit ${input.limit}
-    `);
-    return Array.from(rows, (row) => (row as { facility_id: number }).facility_id);
+    // postgres.js rejects Date binds; cast ISO strings. Branch cursor so null
+    // params do not hit 42P18 (indeterminate JDBC/pg types).
+    const sinceIso = new Date(input.since).toISOString();
+    const untilIso = new Date(input.until).toISOString();
+    const rows =
+      input.cursor == null
+        ? await this.database.execute(sql<{ facility_id: number }>`
+            select distinct o.facility_id
+            from ${orders} o
+            inner join ${facilities} f on f.id = o.facility_id
+            where f.deactivated_at is null
+              and o.updated_at >= ${sinceIso}::timestamptz
+              and o.updated_at < ${untilIso}::timestamptz
+            order by o.facility_id
+            limit ${input.limit}
+          `)
+        : await this.database.execute(sql<{ facility_id: number }>`
+            select distinct o.facility_id
+            from ${orders} o
+            inner join ${facilities} f on f.id = o.facility_id
+            where f.deactivated_at is null
+              and o.updated_at >= ${sinceIso}::timestamptz
+              and o.updated_at < ${untilIso}::timestamptz
+              and o.facility_id > ${input.cursor}
+            order by o.facility_id
+            limit ${input.limit}
+          `);
+    return Array.from(rows, (row) =>
+      Number((row as { facility_id: number | string }).facility_id),
+    );
   }
 
   async listDueTransitionFacilityIds(input: {
