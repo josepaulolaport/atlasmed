@@ -8,7 +8,7 @@ import {
 } from "./ensure-emultec-order-import-schedule";
 
 describe("emultec order import schedule provisioning", () => {
-  test("defines 10m HYBRID schedule with BUFFER_ONE", () => {
+  test("defines 10m BACKFILL schedule with BUFFER_ONE", () => {
     expect(EMULTEC_ORDER_IMPORT_SCHEDULES).toEqual([
       expect.objectContaining({
         scheduleId: "emultec-order-import-every-10m",
@@ -16,8 +16,7 @@ describe("emultec order import schedule provisioning", () => {
       }),
     ]);
     expect(EMULTEC_ORDER_IMPORT_SCHEDULE_ARGS).toEqual({
-      mode: "HYBRID",
-      reconcileDays: 30,
+      mode: "BACKFILL",
       pageSize: 200,
       triggerPurchaseRecurrence: true,
     });

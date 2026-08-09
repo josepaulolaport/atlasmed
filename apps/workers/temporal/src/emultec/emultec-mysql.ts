@@ -8,6 +8,15 @@ export type EmultecMysqlConfig = {
   port: number;
 };
 
+/** True once EMULTEC_MYSQL_HOST/USER/PASSWORD are all set. Safe to call with no config present. */
+export function isEmultecMysqlConfigured(): boolean {
+  return Boolean(
+    environment.EMULTEC_MYSQL_HOST &&
+      environment.EMULTEC_MYSQL_USER &&
+      environment.EMULTEC_MYSQL_PASSWORD
+  );
+}
+
 export function requireEmultecMysqlConfig(): EmultecMysqlConfig {
   const host = environment.EMULTEC_MYSQL_HOST;
   const user = environment.EMULTEC_MYSQL_USER;

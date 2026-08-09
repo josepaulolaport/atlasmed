@@ -1,4 +1,5 @@
 import {
+  log,
   proxyActivities,
   startChild,
   ParentClosePolicy,
@@ -142,6 +143,27 @@ export async function emultecOrderImportWorkflow(
   const sinceDate =
     input.sinceDate ?? sinceDateFromDays(reconcileDays, nowIso);
   const workflowId = workflowInfo().workflowId;
+
+  const configured = await activities.isEmultecConfiguredActivity();
+  if (!configured) {
+    log.warn(
+      "emultec.order_import.not_configured — EMULTEC_MYSQL_HOST/USER/PASSWORD missing, skipping run"
+    );
+    return {
+      mode,
+      runId: 0,
+      pages: 0,
+      fetched: 0,
+      upserted: 0,
+      skipped: 0,
+      lastId: null,
+      watermarkBefore: 0,
+      watermarkAfter: 0,
+      skipReasons: {},
+      facilityIds: [],
+      purchaseRecurrenceWorkflowId: null,
+    };
+  }
 
   const watermarkBefore = await activities.getEmultecOrderWatermarkActivity();
   const afterIdDefault =

@@ -11,6 +11,7 @@ import {
   finishEmultecImportRunActivity as finishEmultecImportRunActivityImpl,
   getEmultecOrderWatermarkActivity as getEmultecOrderWatermarkActivityImpl,
   importEmultecOrdersPageActivity as importEmultecOrdersPageActivityImpl,
+  isEmultecConfiguredActivity as isEmultecConfiguredActivityImpl,
   startEmultecImportRunActivity as startEmultecImportRunActivityImpl,
 } from "./emultec-order-import.activities";
 
@@ -37,6 +38,11 @@ export const processCadastroFileUploadedActivity = wrapActivity(
 export const importEmultecOrdersPageActivity = wrapActivity(
   "importEmultecOrdersPage",
   importEmultecOrdersPageActivityImpl
+);
+
+export const isEmultecConfiguredActivity = wrapActivity(
+  "isEmultecConfigured",
+  isEmultecConfiguredActivityImpl
 );
 
 export const getEmultecOrderWatermarkActivity = wrapActivity(

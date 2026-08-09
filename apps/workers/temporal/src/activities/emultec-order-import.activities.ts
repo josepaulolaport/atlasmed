@@ -9,6 +9,11 @@ import {
   startEmultecImportRun,
   type EmultecImportRunStatus,
 } from "../emultec/emultec-order-import-ops";
+import { isEmultecMysqlConfigured } from "../emultec/emultec-mysql";
+
+export async function isEmultecConfiguredActivity(): Promise<boolean> {
+  return isEmultecMysqlConfigured();
+}
 
 export async function importEmultecOrdersPageActivity(
   input: ImportEmultecOrdersPageInput

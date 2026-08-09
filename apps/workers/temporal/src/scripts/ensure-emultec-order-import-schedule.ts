@@ -10,7 +10,7 @@ import { logger } from "../logger";
 
 export const LEGACY_EMULTEC_ORDER_IMPORT_SCHEDULE_ID = "emultec-order-import-daily";
 
-/** Every 10 minutes HYBRID Emultec import (DLQ + reconcile + incremental). */
+/** Every 10 minutes full BACKFILL Emultec import (paged by avulsa.id, no date window). */
 export const EMULTEC_ORDER_IMPORT_SCHEDULES = [
   {
     scheduleId: "emultec-order-import-every-10m",
@@ -19,8 +19,7 @@ export const EMULTEC_ORDER_IMPORT_SCHEDULES = [
 ] as const;
 
 export const EMULTEC_ORDER_IMPORT_SCHEDULE_ARGS = {
-  mode: "HYBRID" as const,
-  reconcileDays: 30,
+  mode: "BACKFILL" as const,
   pageSize: 200,
   triggerPurchaseRecurrence: true,
 };

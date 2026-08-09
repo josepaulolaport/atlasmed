@@ -43,7 +43,9 @@ bun run --cwd apps/workers/temporal schedule:emultec-order-import
 - Schedule id: `emultec-order-import-every-10m` (deletes legacy `emultec-order-import-daily` if present)
 - Interval: **every 10 minutes**
 - Overlap: **`BUFFER_ONE`** + `catchupWindow: 1h` (failed/missed tick → at most one catch-up)
-- Workflow args: `{ mode: "HYBRID", reconcileDays: 30, pageSize: 200, triggerPurchaseRecurrence: true }`
+- Workflow args: `{ mode: "BACKFILL", pageSize: 200, triggerPurchaseRecurrence: true }`
+- Paging: MySQL `id > afterId LIMIT 200` per activity (full history walk, not one giant query)
+- Note: schedule BACKFILL does **not** run DLQ replay; use API/CLI `HYBRID` or `DLQ_REPLAY` for hard dead letters
 
 ## Trigger via API
 
@@ -114,7 +116,7 @@ bun run --cwd apps/workers/temporal start:emultec-order-import
 
 ## After import — purchase funnel
 
-HYBRID starts child `purchaseRecurrenceWorkflow` RECONCILE when `upserted > 0`.
+Schedule BACKFILL (and HYBRID) start child `purchaseRecurrenceWorkflow` RECONCILE when `upserted > 0` (`triggerPurchaseRecurrence`).
 
 If funnel stale / CLI-only import:
 
