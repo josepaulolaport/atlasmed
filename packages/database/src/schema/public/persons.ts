@@ -63,7 +63,7 @@ export const personHealthcareProfiles = pgTable(
     personId: bigint("person_id", { mode: "number" })
       .primaryKey()
       .references(() => persons.id, { onDelete: "cascade" }),
-    cnesProfessionalId: bigint("cnes_professional_id", { mode: "number" }),
+    cnesProfessionalId: text("cnes_professional_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },

@@ -533,6 +533,13 @@
       "when": 1786249413571,
       "tag": "0075_emultec_ids_and_cnpj_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1786250245483,
+      "tag": "0076_cnes_professional_id_text",
+      "breakpoints": true
     }
   ]
 }

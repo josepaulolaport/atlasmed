@@ -1,0 +1,1 @@
+ALTER TABLE "person_healthcare_profiles" ALTER COLUMN "cnes_professional_id" SET DATA TYPE text;

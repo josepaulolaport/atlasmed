@@ -165,13 +165,13 @@ Indexes: `(last_name, first_name)`, phones/email as needed for search later.
 | Column | Type | Null | Keys | Notes |
 |---|---|---|---|---|
 | `person_id` | `bigint` | NO | **PK**, **FK → `persons.id`** ON DELETE CASCADE | |
-| `cnes_professional_id` | `bigint` | YES | **UNIQUE** WHERE NOT NULL | **Q7 = B, Q8 = A:** soft-deleted person still reserves CNES id |
+| `cnes_professional_id` | `text` | YES | **UNIQUE** WHERE NOT NULL | **Q7/Q14 revised → text;** **Q8 = A:** soft-deleted person still reserves CNES id |
 | `created_at` | `timestamp` | NO | | |
 | `updated_at` | `timestamp` | NO | | |
 
 Absent: primary occupation, free-text specialty, CRM triple.
 
-**Q14 = C:** keep `bigint` for schema now; **mandatory re-verify** against real CNES `CO_PROFISSIONAL_SUS` samples before first import. If non-numeric or leading zeros appear → migrate column to `text`/`varchar` before loading data.
+**Q14 revised:** column is `text` (migration `0076`) so `CO_PROFISSIONAL_SUS` can keep leading zeros / non-numeric forms.
 
 ---
 
@@ -537,13 +537,13 @@ Historical decision log. No open items.
 
 | ID | Question | Recommendation |
 |---|---|---|
-| **Q7** | ~~`cnes_professional_id` width~~ | **LOCKED: `bigint`** |
+| **Q7** | ~~`cnes_professional_id` width~~ | **REVISED: `text`** (was bigint) |
 | **Q8** | ~~Soft-delete vs CNES unique~~ | **LOCKED: A** — reserved while soft-deleted |
 | **Q9** | ~~Specialty `cnes_id`~~ | **LOCKED: A** — `bigint NOT NULL` + UNIQUE |
 | **Q10** | ~~One primary specialty~~ | **LOCKED: A** — partial unique |
 | **Q11** | ~~Drop free-text specialty labels~~ | **LOCKED: A** — catalog only; no `primary_specialty_label` / `specialty_label` |
 | **Q12** | ~~Specialty catalog table name~~ | **LOCKED: A** — `healthcare_specialties` |
-| **Q14** | ~~CNES id numeric vs text~~ | **LOCKED: C** — `bigint` now; re-verify before import |
+| **Q14** | ~~CNES id numeric vs text~~ | **REVISED: `text`** (migration `0076`) |
 
 ### Cross-cutting
 
