@@ -41,12 +41,12 @@ type Row = {
 
 const classificationIdsSql = sql<number[]>`coalesce(
   (
-    SELECT array_agg(a.classification_id ORDER BY c.code)
+    SELECT array_agg(a.classification_id::int ORDER BY c.code)
     FROM ${personFacilityClassificationAssignments} a
     INNER JOIN ${personFacilityClassifications} c ON c.id = a.classification_id
     WHERE a.person_facility_id = ${personFacilities.id}
   ),
-  '{}'::bigint[]
+  '{}'::int[]
 )`;
 
 const classificationCodesSql = sql<string[]>`coalesce(
@@ -61,13 +61,19 @@ const classificationCodesSql = sql<string[]>`coalesce(
 
 const roleIdsSql = sql<number[]>`coalesce(
   (
-    SELECT array_agg(a.role_id ORDER BY r.name, a.role_id)
+    SELECT array_agg(a.role_id::int ORDER BY r.name, a.role_id)
     FROM ${personFacilityRoleAssignments} a
     INNER JOIN ${personFacilityRoles} r ON r.id = a.role_id
     WHERE a.person_facility_id = ${personFacilities.id}
   ),
-  '{}'::bigint[]
+  '{}'::int[]
 )`;
+
+/** pg/drizzle may surface bigint[] members as strings — CRM DTO contract is number[]. */
+function asIdList(value: number[] | null | undefined): number[] {
+  if (!value?.length) return [];
+  return value.map((id) => Number(id));
+}
 
 function mapRow(row: Row): PersonFacilityProjectionRecord {
   return {
@@ -85,9 +91,9 @@ function mapRow(row: Row): PersonFacilityProjectionRecord {
     notes: row.notes,
     endedAt: row.endedAt,
     hasHealthcareProfile: row.hasHealthcareProfile,
-    classificationIds: row.classificationIds ?? [],
+    classificationIds: asIdList(row.classificationIds),
     classificationCodes: row.classificationCodes ?? [],
-    roleIds: row.roleIds ?? [],
+    roleIds: asIdList(row.roleIds),
   };
 }
 

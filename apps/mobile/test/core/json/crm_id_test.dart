@@ -14,10 +14,14 @@ void main() {
       expect(readCrmId(42.0), 42);
     });
 
-    test('rejects non-integral num, string, null, and non-numbers', () {
+    test('accepts digit-only string (pg bigint[] wire quirk)', () {
+      expect(readCrmId('1'), 1);
+      expect(readCrmId('42'), 42);
+    });
+
+    test('rejects non-integral num, decimal string, null, and non-numbers', () {
       expect(() => readCrmId(12.9), throwsA(isA<FormatException>()));
       expect(() => readCrmId(1.5), throwsA(isA<FormatException>()));
-      expect(() => readCrmId('1'), throwsA(isA<FormatException>()));
       expect(() => readCrmId('1.0'), throwsA(isA<FormatException>()));
       expect(() => readCrmId(null), throwsA(isA<FormatException>()));
       expect(() => readCrmId(<String, Object>{}), throwsA(isA<FormatException>()));
@@ -29,7 +33,8 @@ void main() {
     test('null → null; valid → int; invalid non-null → throws', () {
       expect(readCrmIdOrNull(null), isNull);
       expect(readCrmIdOrNull(7), 7);
-      expect(() => readCrmIdOrNull('7'), throwsA(isA<FormatException>()));
+      expect(readCrmIdOrNull('7'), 7);
+      expect(() => readCrmIdOrNull('7.5'), throwsA(isA<FormatException>()));
     });
   });
 
@@ -38,13 +43,17 @@ void main() {
       expect(readCrmIdList([1, 2, 3]), <int>[1, 2, 3]);
     });
 
+    test('accepts digit-string members', () {
+      expect(readCrmIdList([1, '2', 3]), <int>[1, 2, 3]);
+    });
+
     test('null → empty list', () {
       expect(readCrmIdList(null), isEmpty);
     });
 
     test('rejects non-list and invalid members', () {
       expect(() => readCrmIdList('1,2'), throwsA(isA<FormatException>()));
-      expect(() => readCrmIdList([1, '2']), throwsA(isA<FormatException>()));
+      expect(() => readCrmIdList([1, '2.5']), throwsA(isA<FormatException>()));
     });
   });
 

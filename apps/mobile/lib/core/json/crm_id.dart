@@ -1,17 +1,26 @@
 /// CRM entity ids are JSON numbers (DB bigint → API number).
 ///
 /// Decode at wire edges only; domain models keep [int].
-/// - [readCrmId] — strict API JSON (integral number only; no silent truncate).
-/// - [parseRouteCrmId] — leftover string path edges / tests (typed routes use codegen).
+/// - [readCrmId] — API JSON: [num] or digit-only [String] (pg bigint[] quirk).
+/// - [parseRouteCrmId] — GoRouter path segments (always String).
 /// - [readCrmIdLoose] — Mapbox/GeoJSON property edges (num or digit String).
 int readCrmId(Object? value, [String field = 'id']) {
   if (value is int) return value;
-  if (value is num && value.isFinite && value == value.truncate()) {
+  if (value is num) {
+    if (value != value.roundToDouble()) {
+      throw FormatException(
+        'Expected CRM id number for $field, got non-integral $value',
+      );
+    }
     return value.toInt();
   }
+  // postgres.js / drizzle sometimes emit bigint array members as strings.
+  if (value is String) {
+    final parsed = int.tryParse(value);
+    if (parsed != null) return parsed;
+  }
   throw FormatException(
-    'Expected CRM id integer for $field, '
-    'got $value (${value.runtimeType})',
+    'Expected CRM id number for $field, got ${value.runtimeType}',
   );
 }
 
@@ -33,7 +42,7 @@ int parseRouteCrmId(String value, [String field = 'id']) {
   final parsed = int.tryParse(value);
   if (parsed == null) {
     throw FormatException(
-      'Expected CRM id integer in route for $field, got "$value"',
+      'Expected CRM id number in route for $field, got $value',
     );
   }
   return parsed;
@@ -48,22 +57,28 @@ int? parseRouteCrmIdOrNull(String? value, [String field = 'id']) {
 ///
 /// Platform bridges often stringify ints as `"3.0"`; accept whole-number
 /// decimals there (not for GoRouter path segments — use [parseRouteCrmId]).
-/// Do not use for regular API JSON — use [readCrmId].
 int? readCrmIdLoose(Object? value) {
   if (value == null) return null;
   if (value is int) return value;
   if (value is num) {
-    if (!value.isFinite || value != value.truncate()) return null;
+    if (!value.isFinite || value != value.roundToDouble()) return null;
     return value.toInt();
   }
   if (value is String) {
-    final parsed = num.tryParse(value);
-    if (parsed == null ||
-        !parsed.isFinite ||
-        parsed != parsed.truncate()) {
-      return null;
+    final asInt = int.tryParse(value);
+    if (asInt != null) return asInt;
+    final asNum = num.tryParse(value);
+    if (asNum != null && asNum == asNum.roundToDouble()) {
+      return asNum.toInt();
     }
-    return parsed.toInt();
   }
   return null;
 }
+
+/// Negative ids are mock-only facilities (nearby stack / empty state).
+bool isMockFacilityId(int facilityId) => facilityId < 0;
+
+bool isMockNearbyFacilityId(int facilityId) => facilityId < 0;
+
+bool isMockEmptyFacilityId(int facilityId) => facilityId < 0;
+
