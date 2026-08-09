@@ -38,6 +38,7 @@ function repos(opts?: {
   createImpl?: PersonProfessionalRegistrationRepository["create"];
   updateImpl?: PersonProfessionalRegistrationRepository["update"];
   deactivateImpl?: PersonProfessionalRegistrationRepository["deactivate"];
+  onPersonSearchChanged?: (personId: number) => Promise<void>;
 }) {
   const registrationRepository: PersonProfessionalRegistrationRepository = {
     findActivePersonById: mock(async (id) => (id === 10 ? { id } : null)),
@@ -94,7 +95,11 @@ function repos(opts?: {
     ),
   };
 
-  return { registrationRepository, councilRepository };
+  return {
+    registrationRepository,
+    councilRepository,
+    onPersonSearchChanged: opts?.onPersonSearchChanged,
+  };
 }
 
 describe("ListPersonProfessionalRegistrationsUseCase", () => {
@@ -122,7 +127,8 @@ describe("ListPersonProfessionalRegistrationsUseCase", () => {
 
 describe("CreatePersonProfessionalRegistrationUseCase", () => {
   it("normalizes UF and creates", async () => {
-    const deps = repos();
+    const onPersonSearchChanged = mock(async () => {});
+    const deps = repos({ onPersonSearchChanged });
     const result = await new CreatePersonProfessionalRegistrationUseCase(
       deps
     ).execute({
@@ -140,10 +146,12 @@ describe("CreatePersonProfessionalRegistrationUseCase", () => {
       registrationNumber: "123456",
       isPrimary: true,
     });
+    expect(onPersonSearchChanged).toHaveBeenCalledWith(10);
   });
 
   it("rejects invalid UF", async () => {
-    const deps = repos();
+    const onPersonSearchChanged = mock(async () => {});
+    const deps = repos({ onPersonSearchChanged });
     await expect(
       new CreatePersonProfessionalRegistrationUseCase(deps).execute({
         personId: 10,
@@ -152,10 +160,13 @@ describe("CreatePersonProfessionalRegistrationUseCase", () => {
         registrationNumber: "1",
       })
     ).rejects.toBeInstanceOf(ValidationError);
+    expect(onPersonSearchChanged).not.toHaveBeenCalled();
   });
 
   it("maps unique violation to ValidationError", async () => {
+    const onPersonSearchChanged = mock(async () => {});
     const deps = repos({
+      onPersonSearchChanged,
       createImpl: mock(async () => {
         throw { code: "23505", constraint: "person_professional_registrations_council_state_number_key" };
       }),
@@ -168,12 +179,15 @@ describe("CreatePersonProfessionalRegistrationUseCase", () => {
         registrationNumber: "1",
       })
     ).rejects.toBeInstanceOf(ValidationError);
+    expect(onPersonSearchChanged).not.toHaveBeenCalled();
   });
 });
 
 describe("UpdatePersonProfessionalRegistrationUseCase", () => {
   it("404 when registration missing", async () => {
+    const onPersonSearchChanged = mock(async () => {});
     const deps = repos({
+      onPersonSearchChanged,
       updateImpl: mock(async () => null),
     });
     await expect(
@@ -183,16 +197,30 @@ describe("UpdatePersonProfessionalRegistrationUseCase", () => {
         isPrimary: true,
       })
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
+    expect(onPersonSearchChanged).not.toHaveBeenCalled();
+  });
+
+  it("calls search hook after successful update", async () => {
+    const onPersonSearchChanged = mock(async () => {});
+    const deps = repos({ onPersonSearchChanged });
+    await new UpdatePersonProfessionalRegistrationUseCase(deps).execute({
+      personId: 10,
+      registrationId: 1,
+      isPrimary: true,
+    });
+    expect(onPersonSearchChanged).toHaveBeenCalledWith(10);
   });
 });
 
 describe("DeactivatePersonProfessionalRegistrationUseCase", () => {
   it("soft-deactivates and clears primary", async () => {
-    const deps = repos();
+    const onPersonSearchChanged = mock(async () => {});
+    const deps = repos({ onPersonSearchChanged });
     const result = await new DeactivatePersonProfessionalRegistrationUseCase(
       deps
     ).execute({ personId: 10, registrationId: 1 });
     expect(result.isActive).toBe(false);
     expect(result.isPrimary).toBe(false);
+    expect(onPersonSearchChanged).toHaveBeenCalledWith(10);
   });
 });

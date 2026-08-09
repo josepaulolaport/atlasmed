@@ -1,3 +1,4 @@
+import { upsertPersonSearchDocument } from "../../infrastructure/search/person-search-index.service";
 import { searchService } from "../../infrastructure/search/search.service";
 import { DrizzleHealthcareProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-professional.repository";
 import { DrizzlePersonFacilityProjectionRepository } from "./infrastructure/repositories/drizzle/drizzle-person-facility-projection.repository";
@@ -56,6 +57,7 @@ const healthcareProfessionalRepository =
 const registrationDeps = {
   registrationRepository,
   councilRepository: registrationCouncilRepository,
+  onPersonSearchChanged: upsertPersonSearchDocument,
 };
 
 export const personUseCases = {

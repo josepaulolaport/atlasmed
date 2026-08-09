@@ -42,6 +42,7 @@ const BRAZIL_UF = new Set([
 type Dependencies = {
   registrationRepository: PersonProfessionalRegistrationRepository;
   councilRepository: PersonProfessionalRegistrationCouncilRepository;
+  onPersonSearchChanged?: (personId: number) => Promise<void>;
 };
 
 function serializeRegistration(row: PersonProfessionalRegistrationRecord) {
@@ -187,6 +188,7 @@ export class CreatePersonProfessionalRegistrationUseCase {
         registrationNumber,
         isPrimary: input.isPrimary === true,
       });
+      await this.deps.onPersonSearchChanged?.(input.personId);
       return serializeRegistration(created);
     } catch (error) {
       mapUniqueViolation(error);
@@ -242,6 +244,7 @@ export class UpdatePersonProfessionalRegistrationUseCase {
           input.registrationId
         );
       }
+      await this.deps.onPersonSearchChanged?.(input.personId);
       return serializeRegistration(updated);
     } catch (error) {
       if (error instanceof ResourceNotFoundError) throw error;
@@ -266,6 +269,7 @@ export class DeactivatePersonProfessionalRegistrationUseCase {
         input.registrationId
       );
     }
+    await this.deps.onPersonSearchChanged?.(input.personId);
     return serializeRegistration(deactivated);
   }
 }

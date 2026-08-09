@@ -466,7 +466,7 @@ Index uid = `persons`. Document id = `persons.id` (string). Documents only for p
 | `activeTerritoryIds` | `facility_vertical_profiles.manager_zone_id` for those facilities (active profiles) |
 | `registrationDisplays` | active `person_professional_registrations` as `CRM/SP 123456` (searchable; format sync with API `formatPrimaryRegistrationDisplay`) |
 
-After deploy: full `POST /sync` with `{"entity":"persons"}` so Meili reindexes displays. Person incremental upsert on registration write is a follow-up.
+Incremental: API `upsertPersonSearchDocument` after professional registration create/update/deactivate (full Q31 document rebuild for that person). Full `POST /sync` `{"entity":"persons"}` still for backfill and non-registration field drifts (name/specialty/associations).
 
 ### 6.5 Classification seed
 
