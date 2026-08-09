@@ -78,6 +78,7 @@ class ProfessionalRoster {
   }) {
     final name = item.displayName;
     final ids = PersonFacilityRoleCatalog.sortedIds(item.roleIds);
+    final primary = item.primaryRegistrationDisplay?.trim();
     return ProfessionalRoster(
       id: item.personId,
       personFacilityId: item.personFacilityId,
@@ -85,6 +86,7 @@ class ProfessionalRoster {
       initials: initialsFromName(name),
       hue: hueFromName(name),
       specialty: item.roleTitle,
+      crm: primary != null && primary.isNotEmpty ? primary : null,
       phone: item.phone,
       email: item.email,
       roleIds: ids,

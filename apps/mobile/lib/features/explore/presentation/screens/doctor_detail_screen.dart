@@ -17,6 +17,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/prof
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_profile_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/professional_registrations_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/quick_actions.dart';
 import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
@@ -324,6 +325,11 @@ class _DoctorDetailContent extends ConsumerWidget {
                   _DoctorPersonalCard(
                     detail: detail,
                     onEditField: (field) => _editField(context, ref, field),
+                  ),
+                  const SizedBox(height: 16),
+                  ProfessionalRegistrationsSection(
+                    personId: doctorId,
+                    onChanged: () => repository.refresh(),
                   ),
                   const SizedBox(height: 16),
                   if (detail.prescribing.isNotEmpty) ...[

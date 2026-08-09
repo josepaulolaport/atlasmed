@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
-
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_registration.dart';
 
 // ── ProfessionalFacilityRef ─────────────────────────────────
 
@@ -61,6 +61,12 @@ class ProfessionalDTO {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Preformatted primary (or first active) registration, e.g. `CRM/SP 123456`.
+  final String? primaryRegistrationDisplay;
+
+  /// Active registrations from `GET /persons/:id` (empty on list endpoints).
+  final List<ProfessionalRegistration> registrations;
+
   const ProfessionalDTO({
     required this.id,
     required this.firstName,
@@ -89,6 +95,8 @@ class ProfessionalDTO {
     this.distanceKm,
     this.createdAt,
     this.updatedAt,
+    this.primaryRegistrationDisplay,
+    this.registrations = const [],
   });
 
   factory ProfessionalDTO.fromMap(Map<String, dynamic> map) {
@@ -132,6 +140,12 @@ class ProfessionalDTO {
       distanceKm: readNullableDouble(map['distanceKm']),
       createdAt: readNullableDateTime(map['createdAt']),
       updatedAt: readNullableDateTime(map['updatedAt']),
+      primaryRegistrationDisplay: readNullableString(
+        map['primaryRegistrationDisplay'],
+      ),
+      registrations: readObjectList(map['registrations'])
+          .map(ProfessionalRegistration.fromMap)
+          .toList(growable: false),
     );
   }
 
@@ -147,8 +161,8 @@ class ProfessionalDTO {
     return '$firstName $lastName'.trim();
   }
 
-  /// Registrations removed from list/detail DTO until multi-reg UI.
-  String get crm => '';
+  /// Primary (or first active) registration display for list/header chips.
+  String get crm => primaryRegistrationDisplay?.trim() ?? '';
 
   String? get phone {
     final mobile = mobilePhone?.trim();
@@ -204,6 +218,7 @@ class FacilityProfessionalItemDTO {
   final bool hasHealthcareProfile;
   final List<int> classificationIds;
   final List<int> roleIds;
+  final String? primaryRegistrationDisplay;
 
   const FacilityProfessionalItemDTO({
     required this.personFacilityId,
@@ -221,6 +236,7 @@ class FacilityProfessionalItemDTO {
     this.hasHealthcareProfile = false,
     this.classificationIds = const [],
     this.roleIds = const [],
+    this.primaryRegistrationDisplay,
   });
 
   factory FacilityProfessionalItemDTO.fromMap(Map<String, dynamic> map) {
@@ -243,6 +259,9 @@ class FacilityProfessionalItemDTO {
         'classificationIds',
       ),
       roleIds: readCrmIdList(map['roleIds'], 'roleIds'),
+      primaryRegistrationDisplay: readNullableString(
+        map['primaryRegistrationDisplay'],
+      ),
     );
   }
 
