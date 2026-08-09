@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_doctor_profile_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Search + multi-select doctors to associate with a facility.
@@ -289,23 +288,6 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               children: [
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _saving ? null : _createProfile,
-                    icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                    label: const Text('Criar perfil de médico'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.navyBright,
-                      side: const BorderSide(color: AppColors.blue100),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
                   child: FilledButton(
                     onPressed: _selected.isEmpty || _saving ? null : _confirm,
                     style: FilledButton.styleFrom(
@@ -434,31 +416,11 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     );
   }
 
-  Future<void> _createProfile() async {
-    final created = await showCreateDoctorProfileSheet(
-      context,
-      facilityId: widget.facilityId,
-    );
-    if (created == null || !mounted) return;
-    setState(() {
-      _pool = [created, ..._pool.where((d) => d.id != created.id)];
-      _selected.add(created.id);
-      _query = '';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${created.name} criado e selecionado'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   Future<void> _confirm() async {
     final chosen = _pool.where((d) => _selected.contains(d.id)).toList();
     if (chosen.isEmpty || !_useApi) return;
 
-    // Create flow already POSTs healthcare-professionals. Associate only
-    // pool picks not yet linked (POST { personId }).
+    // Associate existing persons only (POST { personId }).
     setState(() => _saving = true);
     final repo = FacilityAssociateRepository(widget.facilityId!);
     try {

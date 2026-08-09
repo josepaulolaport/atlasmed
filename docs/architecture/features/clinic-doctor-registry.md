@@ -57,8 +57,8 @@ Do not call removed registry endpoints (`/registry/*`) or deleted `/api/v1/profe
 
 ## Frontend surfaces (current)
 
-- **Web:** facilities and related admin surfaces; person/professional web rewire **deferred** (wave M12).
-- **Mobile:** Explore + establishment detail — Médicos via healthcare projection; administrativos via administrative-contacts projection; doctor detail/notes/relationship/roles on person paths. See Spec 0005.
+- **Web:** out of scope for person/professional CRM surfaces on this line of work (no rewire planned).
+- **Mobile:** Explore + establishment detail — Médicos via healthcare projection (associate existing only; no in-app create-doctor); administrativos via administrative-contacts projection; doctor detail/notes/relationship/roles/registrations on person paths. See Spec 0005.
 
 ## Recurring Purchase Profile and Funnel
 

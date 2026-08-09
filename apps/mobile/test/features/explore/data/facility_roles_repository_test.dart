@@ -127,50 +127,6 @@ void main() {
     );
   });
 
-  test('createAndAssociateDoctor PUTs roles after create when ids set', () async {
-    final client = FakeClient([
-      RepositoryHttpResponse(
-        statusCode: 201,
-        headers: const {},
-        body: jsonEncode(
-          _projection(personFacilityId: 10, roleIds: const []),
-        ),
-      ),
-      RepositoryHttpResponse(
-        statusCode: 200,
-        headers: const {},
-        body: jsonEncode(
-          _projection(
-            personFacilityId: 10,
-            roleIds: [1, 2],
-          ),
-        ),
-      ),
-    ]);
-    final repo = FacilityAssociateRepository(1, client: client);
-
-    final doctor = await repo.createAndAssociateDoctor(
-      firstName: 'João',
-      lastName: 'Silva',
-      roleIds: [1, 2],
-      catalog: _testCatalog,
-    );
-
-    expect(client.requests, hasLength(2));
-    expect(client.requests[0].method, RepositoryHttpMethod.post);
-    expect(client.requests[0].body, {
-      'firstName': 'João',
-      'lastName': 'Silva',
-    });
-    expect(client.requests[1].method, RepositoryHttpMethod.put);
-    expect(client.requests[1].body, {
-      'roleIds': [1, 2],
-    });
-    expect(doctor.roleIds, [1, 2]);
-    expect(doctor.roleChipLabels, ['Prescritor', 'Comprador']);
-    expect(doctor.crm, isNull);
-  });
-
   test('admin create then PUT roles; update replaces roles', () async {
     final createClient = FakeClient([
       RepositoryHttpResponse(

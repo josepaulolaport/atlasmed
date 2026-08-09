@@ -85,65 +85,6 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
   }
 
-  Future<ProfessionalRoster> createAndAssociateDoctor({
-    required String firstName,
-    required String lastName,
-    String? specialty,
-    String? phone,
-    String? email,
-    List<int>? roleIds,
-    List<PersonFacilityRoleCatalogEntry>? catalog,
-  }) async {
-    // Specialty → roleTitle (affiliation label). Roles → PUT …/roles after.
-    // Professional registrations: multi-reg UI later (not on create).
-    final response = await client.call(
-      request: RepositoryHttpRequest(
-        url: Uri.parse(_healthcarePath),
-        method: RepositoryHttpMethod.post,
-        headers: const {'Content-Type': 'application/json'},
-        body: {
-          'firstName': firstName,
-          'lastName': lastName,
-          if (phone != null && phone.isNotEmpty) 'mobilePhone': phone,
-          if (email != null && email.isNotEmpty) 'email': email,
-          if (specialty != null && specialty.isNotEmpty) 'roleTitle': specialty,
-        },
-      ),
-    );
-
-    if (!successfulCondition(response.statusCode, response.body)) {
-      final shouldThrow = await onErrorStatusCode(response.statusCode);
-      if (shouldThrow) {
-        throw FacilityAssociateException(
-          'Falha ao criar médico (${response.statusCode})',
-        );
-      }
-    }
-
-    final map = jsonDecode(response.body) as Map<String, dynamic>;
-    var dto = FacilityProfessionalItemDTO.fromMap(map);
-    final ids = PersonFacilityRoleCatalog.sortedIds(roleIds ?? const []);
-    if (ids.isNotEmpty) {
-      try {
-        dto = await _putHealthcareRoles(
-          personFacilityId: dto.personFacilityId,
-          roleIds: ids,
-        );
-      } on FacilityAssociateException {
-        throw const FacilityAssociateException(
-          'Médico criado, mas falhou ao salvar papéis — edite os papéis e tente de novo',
-        );
-      }
-    }
-
-    final roster = ProfessionalRoster.fromRosterItem(dto, catalog: catalog);
-    return roster.copyWith(
-      specialty: specialty ?? roster.specialty,
-      phone: phone ?? roster.phone,
-      email: email ?? roster.email,
-    );
-  }
-
   /// `PUT …/healthcare-professionals/:personFacilityId/roles`.
   Future<ProfessionalRoster> updateDoctorRoles(
     ProfessionalRoster doctor, {
