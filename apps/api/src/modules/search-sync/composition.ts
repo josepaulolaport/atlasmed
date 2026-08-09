@@ -1,5 +1,6 @@
 import {
   describeSearchSyncWorkflow,
+  startEmultecOrderImportWorkflow,
   startFullSearchSyncWorkflow,
   startPurchaseRecurrenceBackfillWorkflow,
 } from "../../infrastructure/temporal/temporal.client";
@@ -12,6 +13,7 @@ export const searchSyncUseCases = {
   start: () => new StartSearchSyncUseCase({
     start: startFullSearchSyncWorkflow,
     startOrdersBackfill: startPurchaseRecurrenceBackfillWorkflow,
+    startEmultecOrderImport: startEmultecOrderImportWorkflow,
   }),
   status: () => new GetSearchSyncStatusUseCase({ describe: describeSearchSyncWorkflow }),
 };

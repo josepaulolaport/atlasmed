@@ -11,10 +11,16 @@ import {
 import { db } from "../infrastructure/db";
 import { logger } from "../logger";
 import {
+  fetchEmultecOrdersByIds,
   fetchEmultecOrdersPage,
   type EmultecOrderBundle,
   type EmultecOrderPageMode,
 } from "./fetch-emultec-orders";
+import {
+  listOpenEmultecDeadLetterIds,
+  recordEmultecDeadLetter,
+  resolveEmultecDeadLetter,
+} from "./emultec-order-import-ops";
 import { mapEmultecOrderStatus } from "./map-emultec-order-status";
 import { resolveEmultecFacility } from "./resolve-emultec-facility";
 
@@ -329,16 +335,38 @@ async function upsertOneOrder(
   return { outcome: "upserted", facilityId: facility.facilityId };
 }
 
+async function loadPageBundles(
+  input: ImportEmultecOrdersPageInput
+): Promise<{ page: EmultecOrderBundle[]; cursorLastId: number | null }> {
+  const afterId = input.afterId ?? 0;
+  const limit = Math.max(1, Math.min(input.limit, 500));
+
+  if (input.mode === "DLQ_REPLAY") {
+    const ids = await listOpenEmultecDeadLetterIds({ afterId, limit });
+    if (ids.length === 0) {
+      return { page: [], cursorLastId: afterId || null };
+    }
+    const page = await fetchEmultecOrdersByIds(ids);
+    return { page, cursorLastId: ids[ids.length - 1] ?? afterId };
+  }
+
+  const page = await fetchEmultecOrdersPage({
+    mode: input.mode,
+    afterId,
+    limit,
+    sinceDate: input.sinceDate,
+  });
+  return {
+    page,
+    cursorLastId: page.length > 0 ? page[page.length - 1]!.idAvulsa : afterId || null,
+  };
+}
+
 /** Import one page of Emultec avulsa → CRM orders/items (hard gates). */
 export async function importEmultecOrdersPage(
   input: ImportEmultecOrdersPageInput
 ): Promise<ImportEmultecOrdersPageResult> {
-  const page = await fetchEmultecOrdersPage({
-    mode: input.mode,
-    afterId: input.afterId,
-    limit: input.limit,
-    sinceDate: input.sinceDate,
-  });
+  const { page, cursorLastId } = await loadPageBundles(input);
 
   const skipReasons: Record<string, number> = {};
   const facilityIds: number[] = [];
@@ -347,7 +375,7 @@ export async function importEmultecOrdersPage(
       fetched: 0,
       upserted: 0,
       skipped: 0,
-      lastId: input.afterId ?? null,
+      lastId: cursorLastId,
       skipReasons,
       facilityIds,
     };
@@ -372,24 +400,30 @@ export async function importEmultecOrdersPage(
       if (result.outcome === "upserted") {
         upserted += 1;
         facilityIds.push(result.facilityId);
+        await resolveEmultecDeadLetter(bundle.idAvulsa);
       } else {
         skipped += 1;
       }
     } catch (error) {
       skipped += 1;
       bump(skipReasons, "error");
+      const detail = error instanceof Error ? error.message : String(error);
+      await recordEmultecDeadLetter({
+        idAvulsa: bundle.idAvulsa,
+        reason: "error",
+        detail,
+      });
       logger.error("emultec.order_import.failed", error, {
         idAvulsa: bundle.idAvulsa,
       });
     }
   }
 
-  const lastId = page[page.length - 1]!.idAvulsa;
   return {
     fetched: page.length,
     upserted,
     skipped,
-    lastId,
+    lastId: cursorLastId,
     skipReasons,
     facilityIds: [...new Set(facilityIds)],
   };

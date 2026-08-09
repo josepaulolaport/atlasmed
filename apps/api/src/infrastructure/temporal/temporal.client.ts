@@ -114,10 +114,46 @@ export async function startPurchaseRecurrenceBackfillWorkflow(): Promise<StartWo
   return startPurchaseRecurrenceBackfillWorkflowWithClient(await getTemporalClient());
 }
 
+export function emultecOrderImportWorkflowId(): string {
+  return "emultec-order-import-hybrid";
+}
+
+export async function startEmultecOrderImportWorkflow(): Promise<StartWorkflowResult> {
+  const client = await getTemporalClient();
+  const workflowId = emultecOrderImportWorkflowId();
+
+  try {
+    const handle = await client.workflow.start("emultecOrderImportWorkflow", {
+      taskQueue: environment.TEMPORAL_TASK_QUEUE,
+      workflowId,
+      args: [
+        {
+          mode: "HYBRID" as const,
+          reconcileDays: 30,
+          pageSize: 200,
+          triggerPurchaseRecurrence: true,
+        },
+      ],
+    });
+    return { workflowId, runId: handle.firstExecutionRunId, existing: false };
+  } catch (error) {
+    if (error instanceof WorkflowExecutionAlreadyStartedError) {
+      const description = await client.workflow.getHandle(workflowId).describe();
+      return { workflowId, runId: description.runId, existing: true };
+    }
+    throw error;
+  }
+}
+
 export function isFullSearchSyncWorkflowId(workflowId: string): boolean {
   return workflowId === fullSearchSyncWorkflowId("facilities")
     || workflowId === fullSearchSyncWorkflowId("persons")
-    || workflowId === purchaseRecurrenceBackfillWorkflowId();
+    || workflowId === purchaseRecurrenceBackfillWorkflowId()
+    || workflowId === emultecOrderImportWorkflowId()
+    || workflowId === "emultec-order-import-every-10m"
+    || workflowId === "emultec-order-import-backfill"
+    || workflowId === "emultec-order-import-reconcile"
+    || workflowId === "emultec-order-import-incremental";
 }
 
 export async function describeSearchSyncWorkflow(workflowId: string): Promise<{

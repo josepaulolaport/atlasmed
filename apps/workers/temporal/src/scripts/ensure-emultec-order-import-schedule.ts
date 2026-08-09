@@ -8,13 +8,13 @@ import {
 import { loadWorkerConfig } from "../config";
 import { logger } from "../logger";
 
-/** Daily HYBRID Emultec import (reconcile window + incremental watermark). */
+export const LEGACY_EMULTEC_ORDER_IMPORT_SCHEDULE_ID = "emultec-order-import-daily";
+
+/** Every 10 minutes HYBRID Emultec import (DLQ + reconcile + incremental). */
 export const EMULTEC_ORDER_IMPORT_SCHEDULES = [
   {
-    scheduleId: "emultec-order-import-daily",
-    workflowId: "emultec-order-import-daily",
-    /** 06:00 UTC — adjust in ops if needed. */
-    calendar: { hour: 6, minute: 0 },
+    scheduleId: "emultec-order-import-every-10m",
+    workflowId: "emultec-order-import-every-10m",
   },
 ] as const;
 
@@ -31,8 +31,13 @@ function scheduleOptions(
 ) {
   return {
     scheduleId: definition.scheduleId,
-    spec: { calendars: [definition.calendar] },
-    policies: { overlap: ScheduleOverlapPolicy.SKIP },
+    spec: {
+      intervals: [{ every: "10m" as const }],
+    },
+    policies: {
+      overlap: ScheduleOverlapPolicy.BUFFER_ONE,
+      catchupWindow: "1h" as const,
+    },
     action: {
       type: "startWorkflow" as const,
       workflowType: "emultecOrderImportWorkflow",
@@ -45,6 +50,19 @@ function scheduleOptions(
 
 function isMissingSchedule(error: unknown): boolean {
   return error instanceof ScheduleNotFoundError;
+}
+
+async function deleteLegacyDailySchedule(
+  schedules: Pick<ScheduleClient, "getHandle">
+): Promise<void> {
+  try {
+    await schedules.getHandle(LEGACY_EMULTEC_ORDER_IMPORT_SCHEDULE_ID).delete();
+    logger.info("emultec.order_import.legacy_schedule_deleted", {
+      scheduleId: LEGACY_EMULTEC_ORDER_IMPORT_SCHEDULE_ID,
+    });
+  } catch (error) {
+    if (!isMissingSchedule(error)) throw error;
+  }
 }
 
 export async function ensureEmultecOrderImportSchedules(
@@ -73,6 +91,8 @@ export async function ensureEmultecOrderImportSchedules(
       });
     }
   }
+
+  await deleteLegacyDailySchedule(schedules);
 }
 
 async function main(): Promise<void> {

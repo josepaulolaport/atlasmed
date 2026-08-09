@@ -126,6 +126,15 @@ Emultec avulsa → CRM orders (whitelist products, seller/facility gates): see [
 bun run --cwd apps/workers/temporal schedule:emultec-order-import
 ```
 
+Manual / ops trigger (ADMIN `SEARCH_SYNC`):
+
+```http
+POST /sync
+{ "entity": "emultec-orders" }
+```
+
+Schedule runs every 10 minutes (`BUFFER_ONE` catch-up). Hard upsert failures go to `ops.emultec_order_import_dead_letters` and are replayed on the next HYBRID.
+
 Start the initial purchase-recurrence backfill through the authorized endpoint:
 
 ```http

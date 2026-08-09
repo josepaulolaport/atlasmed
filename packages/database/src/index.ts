@@ -2,6 +2,7 @@ export { createDatabase, type Database, type AnyDatabase, type DatabaseTransacti
 
 export * from "./schema/public/index";
 export * from "./schema/audit/index";
+export * from "./schema/ops/index";
 export * from "./types/geometry";
 
 // Explicit enum value types for backward-compat

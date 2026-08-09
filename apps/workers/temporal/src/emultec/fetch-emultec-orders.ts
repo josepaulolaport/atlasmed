@@ -31,8 +31,12 @@ export type EmultecOrderBundle = {
   lines: EmultecOrderLine[];
 };
 
-/** Page-level modes (HYBRID is orchestrated above this). */
-export type EmultecOrderPageMode = "BACKFILL" | "INCREMENTAL" | "RECONCILE";
+/** Page-level modes (HYBRID / DLQ replay orchestrated above this). */
+export type EmultecOrderPageMode =
+  | "BACKFILL"
+  | "INCREMENTAL"
+  | "RECONCILE"
+  | "DLQ_REPLAY";
 
 export type FetchEmultecOrdersPageInput = {
   mode: EmultecOrderPageMode;
@@ -59,7 +63,7 @@ function assertSinceDate(sinceDate: string | undefined): string {
 
 /** Build id-page SQL (exported for unit tests). */
 export function buildEmultecOrderIdPageSql(input: {
-  mode: EmultecOrderPageMode;
+  mode: Exclude<EmultecOrderPageMode, "DLQ_REPLAY">;
   afterId: number;
   limit: number;
   sinceDate?: string;
@@ -89,6 +93,13 @@ export function buildEmultecOrderIdPageSql(input: {
 
   base.push("ORDER BY a.id", `LIMIT ${limit};`);
   return base.join(" ");
+}
+
+export async function fetchEmultecOrdersByIds(
+  avulsaIds: number[]
+): Promise<EmultecOrderBundle[]> {
+  const cfg = requireEmultecMysqlConfig();
+  return loadBundlesForIds(avulsaIds, cfg);
 }
 
 async function loadBundlesForIds(
@@ -195,6 +206,10 @@ async function loadBundlesForIds(
 export async function fetchEmultecOrdersPage(
   input: FetchEmultecOrdersPageInput
 ): Promise<EmultecOrderBundle[]> {
+  if (input.mode === "DLQ_REPLAY") {
+    throw new Error("DLQ_REPLAY uses listOpenEmultecDeadLetterIds + fetchEmultecOrdersByIds");
+  }
+
   const cfg = requireEmultecMysqlConfig();
   const afterId = input.afterId ?? 0;
   const limit = Math.max(1, Math.min(input.limit, 500));

@@ -8,8 +8,10 @@ import {
   recalculatePurchaseRecurrenceBatch as recalculatePurchaseRecurrenceBatchImpl,
 } from "./purchase-recurrence.activities";
 import {
+  finishEmultecImportRunActivity as finishEmultecImportRunActivityImpl,
   getEmultecOrderWatermarkActivity as getEmultecOrderWatermarkActivityImpl,
   importEmultecOrdersPageActivity as importEmultecOrdersPageActivityImpl,
+  startEmultecImportRunActivity as startEmultecImportRunActivityImpl,
 } from "./emultec-order-import.activities";
 
 export const recalculatePurchaseRecurrenceBatch = wrapActivity(
@@ -40,4 +42,14 @@ export const importEmultecOrdersPageActivity = wrapActivity(
 export const getEmultecOrderWatermarkActivity = wrapActivity(
   "getEmultecOrderWatermark",
   getEmultecOrderWatermarkActivityImpl
+);
+
+export const startEmultecImportRunActivity = wrapActivity(
+  "startEmultecImportRun",
+  startEmultecImportRunActivityImpl
+);
+
+export const finishEmultecImportRunActivity = wrapActivity(
+  "finishEmultecImportRun",
+  finishEmultecImportRunActivityImpl
 );

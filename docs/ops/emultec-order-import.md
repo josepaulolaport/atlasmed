@@ -11,7 +11,7 @@ Import whitelist EVISC / REVISCON / TRUVISC lines from Emultec MySQL (`avulsa` �
 | Temporal worker running | `@atlasmed/temporal-worker` on `TEMPORAL_TASK_QUEUE` |
 | `DATABASE_URL` | CRM Postgres |
 | `EMULTEC_MYSQL_HOST` / `USER` / `PASSWORD` | optional `PORT` (3306), `DATABASE` (`atlasmed`) |
-| Docker | worker host must run `docker run --rm mysql:8 …` against Emultec (no `mysql2` dep yet) |
+| Docker | worker host must run `docker run --rm mysql:8 …` against Emultec |
 | Products synced | `id_produto_emultec` for whitelist ids |
 | Sellers mapped | `users.id_vendedor_emultec` (manual) |
 | Facilities resolvable | CNES-eligible + stamp and/or unique CNPJ/CPF match |
@@ -22,129 +22,114 @@ Import whitelist EVISC / REVISCON / TRUVISC lines from Emultec MySQL (`avulsa` �
 
 ```sh
 cd apps/workers/temporal
-# DATABASE_URL + EMULTEC_MYSQL_* in env
 bun run sync:emultec-products
 ```
 
-Upserts 12 SKUs + `ORTOPEDIA` vertical link. Idempotent.
-
-### 2. Map sellers (manual)
+### 2. Map sellers / stamp facilities (manual)
 
 ```sql
-UPDATE users
-SET id_vendedor_emultec = $<emultec_vendedor_id>, updated_at = now()
+UPDATE users SET id_vendedor_emultec = $<id>, updated_at = now()
 WHERE id = $<user_id> AND deleted_at IS NULL;
 ```
 
-Unmapped `avulsa.Id_Vendedor` → order skipped (`seller_unmapped`).
+Stamp `facilities.id_cliente_emultec` only on exact unique CNES CNPJ/CPF match. Do not stamp PF→PJ buyer ids.
 
-### 3. Stamp facilities (manual, unique CNES match only)
-
-Set `facilities.id_cliente_emultec` only when Emultec client CNPJ/CPF digits match **exactly one** active CNES facility. **Do not** stamp PF→PJ buyer ids onto the facility (import still resolves via PJ CNPJ).
-
-### 4. Provision daily schedule (after deploy)
+### 3. Provision 10-minute schedule (after deploy)
 
 ```sh
 bun run --cwd apps/workers/temporal schedule:emultec-order-import
 ```
 
-- Schedule id: `emultec-order-import-daily`
-- Cron-like: **06:00 UTC** daily, overlap `SKIP`
-- Workflow: `emultecOrderImportWorkflow` with `{ mode: "HYBRID", reconcileDays: 30, pageSize: 200, triggerPurchaseRecurrence: true }`
+- Schedule id: `emultec-order-import-every-10m` (deletes legacy `emultec-order-import-daily` if present)
+- Interval: **every 10 minutes**
+- Overlap: **`BUFFER_ONE`** + `catchupWindow: 1h` (failed/missed tick → at most one catch-up)
+- Workflow args: `{ mode: "HYBRID", reconcileDays: 30, pageSize: 200, triggerPurchaseRecurrence: true }`
 
-## Modes
+## Trigger via API
 
-| Mode | Behavior |
-|---|---|
-| `BACKFILL` | Page all whitelist avulsa by `id > afterId` (default 0) |
-| `INCREMENTAL` | `id >` CRM `max(orders.id_avulsa_emultec)` |
-| `RECONCILE` | Whitelist avulsa with `Data` / `Finalizado_Data` / `Sem_Faturamento_Data` ≥ `since` |
-| `HYBRID` (default) | `RECONCILE` then `INCREMENTAL` |
-
-Facility resolve order (all require active + non-empty `cnes_code`):
-
-1. `facilities.id_cliente_emultec = avulsa.Id_Cliente`
-2. Else PF→PJ → unique facility on **PJ CNPJ**
-3. Else unique facility on client **CNPJ-14**
-4. Else unique facility on client **CPF-11** (ambiguous → skip)
-
-Status map: `FATURADO`→`INVOICED`, `APROVADO`→`APPROVED`, `SEM FATURAMENTO`→`NO_BILLING`, `REPROVADO`→`REJECTED`, else `PENDING`. Type always `SALE`. Vertical `ORTOPEDIA`.
-
-## Manual runs
-
-### CLI (direct DB + Docker mysql — no Temporal)
-
-Useful for local smoke / when Temporal is down:
-
-```sh
-cd apps/workers/temporal
-bun run import:emultec-orders -- --mode=HYBRID --reconcile-days=30 --limit=200
-bun run import:emultec-orders -- --mode=BACKFILL --after-id=0 --max-pages=5
-```
-
-Idempotent upserts. Safe to re-run.
-
-### Temporal one-shot
-
-```sh
-bun run --cwd apps/workers/temporal start:emultec-order-import
-bun run --cwd apps/workers/temporal start:emultec-order-import -- --mode=BACKFILL
-bun run --cwd apps/workers/temporal start:emultec-order-import -- --mode=HYBRID --reconcile-days=14
-```
-
-Stable workflow ids: `emultec-order-import-hybrid` | `-backfill` | `-reconcile` | `-incremental`. Repeat while running → returns existing execution.
-
-## After import — purchase funnel
-
-HYBRID Temporal workflow starts a child `purchaseRecurrenceWorkflow` (`RECONCILE`) when `upserted > 0`.
-
-If funnel looks stale, or CLI-only import was used:
+Requires `manage` on `SEARCH_SYNC` (ADMIN).
 
 ```http
 POST /sync
 Content-Type: application/json
 Authorization: Bearer $ATLASMED_TOKEN
 
-{ "entity": "orders" }
+{ "entity": "emultec-orders" }
 ```
 
-That starts purchase-recurrence **BACKFILL** (`purchase-recurrence-backfill`). Inspect with `GET /sync/purchase-recurrence-backfill`.
+→ `202` `{ workflowId, runId, existing }` with stable id `emultec-order-import-hybrid`.
 
-Hourly purchase-recurrence schedule (separate) also picks up `orders.updated_at` changes:
+Inspect:
+
+```http
+GET /sync/emultec-order-import-hybrid
+```
+
+Also allowed: `emultec-order-import-every-10m` and CLI Temporal ids (`-backfill` / `-reconcile` / `-incremental`).
+
+## Modes
+
+| Mode | Behavior |
+|---|---|
+| `BACKFILL` | Page all whitelist avulsa by `id > afterId` |
+| `INCREMENTAL` | `id >` CRM `max(orders.id_avulsa_emultec)` |
+| `RECONCILE` | Date window on `Data` / `Finalizado_Data` / `Sem_Faturamento_Data` |
+| `HYBRID` (default) | **DLQ replay** → RECONCILE → INCREMENTAL |
+
+Facility resolve: stamp → PF→PJ CNPJ → CNPJ-14 → CPF-11 (unique CNES only).
+
+## Digests and dead letters
+
+Each Temporal HYBRID/API run writes `ops.emultec_order_import_runs` (totals + `skip_reasons` JSON) and logs `emultec.order_import.run_digest`.
+
+Hard upsert exceptions only → `ops.emultec_order_import_dead_letters`. Gate skips (`seller_unmapped`, `facility_*`, …) are digest counts only. Successful upsert clears an open dead letter (`resolved_at`).
+
+```sql
+SELECT * FROM ops.emultec_order_import_runs ORDER BY started_at DESC LIMIT 20;
+
+SELECT * FROM ops.emultec_order_import_dead_letters
+WHERE resolved_at IS NULL
+ORDER BY last_failed_at DESC;
+```
+
+## Manual CLI (no Temporal)
 
 ```sh
-bun run --cwd apps/workers/temporal schedule:purchase-recurrence
+cd apps/workers/temporal
+bun run import:emultec-orders -- --mode=HYBRID --reconcile-days=30 --limit=200
+```
+
+### Temporal one-shot (alternative to API)
+
+```sh
+bun run --cwd apps/workers/temporal start:emultec-order-import
+```
+
+## After import — purchase funnel
+
+HYBRID starts child `purchaseRecurrenceWorkflow` RECONCILE when `upserted > 0`.
+
+If funnel stale / CLI-only import:
+
+```http
+POST /sync
+{ "entity": "orders" }
 ```
 
 ## Failure / recovery
 
 | Symptom | Action |
 |---|---|
-| Activity fails (MySQL/Docker/DB) | Temporal retries 3×; then fail. Re-run `start:emultec-order-import` or wait for next daily schedule. Upserts are idempotent. |
-| Many `seller_unmapped` | Map more `users.id_vendedor_emultec` (product choice may keep few REPs). |
-| Many `facility_no_match` | Add/fix CNES facilities + legal docs, or stamp `id_cliente_emultec` on unique matches. |
-| Mid-run kill (CLI) | Resume `BACKFILL`/`INCREMENTAL` with `--after-id=<lastId>` or rely on HYBRID watermark. |
-| Schedule overlap | `SKIP` — previous daily run still open → that tick skipped. |
-| Recurrence child failed | Orders remain; run `POST /sync` `{entity:"orders"}` or wait for hourly recurrence. |
-
-Per-order upsert exceptions are logged (`emultec.order_import.failed`) and counted under `skipReasons.error`; the page continues.
+| Activity fails | Temporal retries 3×; run marked `FAILED` in digest; next 10m schedule / BUFFER_ONE catch-up |
+| Hard upsert error | Dead-lettered; replayed at start of next HYBRID |
+| Many `seller_unmapped` / `facility_no_match` | Digest only — map sellers / fix facilities |
+| Mid-run kill (CLI) | Resume with `--after-id` or wait for HYBRID |
 
 ## Sanity SQL
 
 ```sql
-SELECT COUNT(*) AS orders,
-       COUNT(*) FILTER (WHERE status = 'INVOICED') AS invoiced,
-       COUNT(*) FILTER (WHERE status = 'NO_BILLING') AS no_billing
-FROM orders WHERE id_avulsa_emultec IS NOT NULL;
-
+SELECT COUNT(*) AS orders FROM orders WHERE id_avulsa_emultec IS NOT NULL;
 SELECT COUNT(*) FROM order_items WHERE id_avulsa_item_emultec IS NOT NULL;
-
 SELECT COUNT(*) FROM users WHERE id_vendedor_emultec IS NOT NULL AND deleted_at IS NULL;
 SELECT COUNT(*) FROM facilities WHERE id_cliente_emultec IS NOT NULL;
 ```
-
-## Out of scope (v1)
-
-- Creating facilities / persons / users from Emultec
-- Non-avulsa sources (cirurgia, consignado, …)
-- Import monitoring UI (use Temporal UI + structured logs)

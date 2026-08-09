@@ -36,6 +36,7 @@ export type EmultecOrderImportWorkflowInput = {
 
 export type EmultecOrderImportWorkflowResult = {
   mode: EmultecOrderImportMode;
+  runId: number;
   pages: number;
   fetched: number;
   upserted: number;
@@ -67,7 +68,7 @@ function sinceDateFromDays(days: number, nowIso: string): string {
 }
 
 async function runPhase(input: {
-  mode: "BACKFILL" | "INCREMENTAL" | "RECONCILE";
+  mode: "BACKFILL" | "INCREMENTAL" | "RECONCILE" | "DLQ_REPLAY";
   afterId: number;
   pageSize: number;
   maxPages: number;
@@ -103,10 +104,14 @@ async function runPhase(input: {
     skipped += page.skipped;
     mergeSkipReasons(skipReasons, page.skipReasons);
     for (const id of page.facilityIds) facilityIds.add(id);
-    if (page.fetched === 0 || page.lastId == null) break;
+    if (page.lastId == null) break;
+    const progressed = page.lastId > afterId;
     lastId = page.lastId;
     afterId = page.lastId;
-    if (page.fetched < input.pageSize) break;
+    // Empty fetch with no cursor move → done. Empty fetch that advanced (DLQ miss) → continue.
+    if (page.fetched === 0 && !progressed) break;
+    if (page.fetched > 0 && page.fetched < input.pageSize) break;
+    if (page.fetched === 0 && progressed) continue;
   }
 
   return {
@@ -123,8 +128,7 @@ async function runPhase(input: {
 /**
  * Emultec avulsa → CRM orders.
  *
- * HYBRID = RECONCILE (recent date window, catches status edits) then
- * INCREMENTAL (id > CRM watermark, catches new avulsa).
+ * HYBRID = DLQ replay → RECONCILE → INCREMENTAL.
  */
 export async function emultecOrderImportWorkflow(
   input: EmultecOrderImportWorkflowInput = {}
@@ -137,10 +141,17 @@ export async function emultecOrderImportWorkflow(
   const nowIso = startedAt.toISOString();
   const sinceDate =
     input.sinceDate ?? sinceDateFromDays(reconcileDays, nowIso);
+  const workflowId = workflowInfo().workflowId;
 
   const watermarkBefore = await activities.getEmultecOrderWatermarkActivity();
   const afterIdDefault =
     mode === "BACKFILL" ? (input.afterId ?? 0) : (input.afterId ?? watermarkBefore);
+
+  const runId = await activities.startEmultecImportRunActivity({
+    mode,
+    workflowId,
+    watermarkBefore,
+  });
 
   let pages = 0;
   let fetched = 0;
@@ -160,79 +171,118 @@ export async function emultecOrderImportWorkflow(
     if (phase.lastId != null) lastId = phase.lastId;
   };
 
-  if (mode === "HYBRID") {
-    absorb(
-      await runPhase({
-        mode: "RECONCILE",
-        afterId: 0,
-        pageSize,
-        maxPages,
-        sinceDate,
-      })
-    );
-    absorb(
-      await runPhase({
-        mode: "INCREMENTAL",
-        afterId: afterIdDefault,
-        pageSize,
-        maxPages,
-      })
-    );
-  } else if (mode === "RECONCILE") {
-    absorb(
-      await runPhase({
-        mode: "RECONCILE",
-        afterId: input.afterId ?? 0,
-        pageSize,
-        maxPages,
-        sinceDate,
-      })
-    );
-  } else {
-    absorb(
-      await runPhase({
-        mode: mode === "INCREMENTAL" ? "INCREMENTAL" : "BACKFILL",
-        afterId: afterIdDefault,
-        pageSize,
-        maxPages,
-      })
-    );
-  }
+  try {
+    if (mode === "HYBRID") {
+      absorb(
+        await runPhase({
+          mode: "DLQ_REPLAY",
+          afterId: 0,
+          pageSize,
+          maxPages,
+        })
+      );
+      absorb(
+        await runPhase({
+          mode: "RECONCILE",
+          afterId: 0,
+          pageSize,
+          maxPages,
+          sinceDate,
+        })
+      );
+      absorb(
+        await runPhase({
+          mode: "INCREMENTAL",
+          afterId: afterIdDefault,
+          pageSize,
+          maxPages,
+        })
+      );
+    } else if (mode === "RECONCILE") {
+      absorb(
+        await runPhase({
+          mode: "RECONCILE",
+          afterId: input.afterId ?? 0,
+          pageSize,
+          maxPages,
+          sinceDate,
+        })
+      );
+    } else {
+      absorb(
+        await runPhase({
+          mode: mode === "INCREMENTAL" ? "INCREMENTAL" : "BACKFILL",
+          afterId: afterIdDefault,
+          pageSize,
+          maxPages,
+        })
+      );
+    }
 
-  const watermarkAfter = await activities.getEmultecOrderWatermarkActivity();
+    const watermarkAfter = await activities.getEmultecOrderWatermarkActivity();
 
-  const triggerRecurrence =
-    input.triggerPurchaseRecurrence ?? mode === "HYBRID";
-  let purchaseRecurrenceWorkflowId: string | null = null;
-  if (triggerRecurrence && upserted > 0) {
-    purchaseRecurrenceWorkflowId = `purchase-recurrence-after-emultec-${workflowInfo().workflowId}`;
-    // Window around workflow start (deterministic); activities bump orders.updated_at on wall clock.
-    const since = new Date(startedAt.getTime() - 5 * 60_000).toISOString();
-    const until = new Date(startedAt.getTime() + 6 * 60 * 60_000).toISOString();
-    await startChild("purchaseRecurrenceWorkflow", {
-      workflowId: purchaseRecurrenceWorkflowId,
-      args: [
-        {
-          mode: "RECONCILE" as const,
-          since,
-          until,
-        },
-      ],
-      parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
+    const triggerRecurrence =
+      input.triggerPurchaseRecurrence ?? mode === "HYBRID";
+    let purchaseRecurrenceWorkflowId: string | null = null;
+    if (triggerRecurrence && upserted > 0) {
+      purchaseRecurrenceWorkflowId = `purchase-recurrence-after-emultec-${workflowId}`;
+      const since = new Date(startedAt.getTime() - 5 * 60_000).toISOString();
+      const until = new Date(startedAt.getTime() + 6 * 60 * 60_000).toISOString();
+      await startChild("purchaseRecurrenceWorkflow", {
+        workflowId: purchaseRecurrenceWorkflowId,
+        args: [
+          {
+            mode: "RECONCILE" as const,
+            since,
+            until,
+          },
+        ],
+        parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
+      });
+    }
+
+    await activities.finishEmultecImportRunActivity({
+      runId,
+      status: "SUCCEEDED",
+      fetched,
+      upserted,
+      skipped,
+      skipReasons,
+      watermarkAfter,
     });
-  }
 
-  return {
-    mode,
-    pages,
-    fetched,
-    upserted,
-    skipped,
-    lastId,
-    watermarkBefore,
-    watermarkAfter,
-    skipReasons,
-    facilityIds: [...facilityIds],
-    purchaseRecurrenceWorkflowId,
-  };
+    return {
+      mode,
+      runId,
+      pages,
+      fetched,
+      upserted,
+      skipped,
+      lastId,
+      watermarkBefore,
+      watermarkAfter,
+      skipReasons,
+      facilityIds: [...facilityIds],
+      purchaseRecurrenceWorkflowId,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    let watermarkAfter = watermarkBefore;
+    try {
+      watermarkAfter = await activities.getEmultecOrderWatermarkActivity();
+    } catch {
+      // ignore
+    }
+    await activities.finishEmultecImportRunActivity({
+      runId,
+      status: "FAILED",
+      fetched,
+      upserted,
+      skipped,
+      skipReasons,
+      watermarkAfter,
+      errorMessage: message,
+    });
+    throw error;
+  }
 }

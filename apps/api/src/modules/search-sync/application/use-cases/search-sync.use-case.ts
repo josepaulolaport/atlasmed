@@ -2,12 +2,12 @@ import { z } from "zod";
 import { isFullSearchSyncWorkflowId } from "../../../../infrastructure/temporal/temporal.client";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 
-export type SearchSyncEntity = "facilities" | "persons" | "orders";
-type SearchSyncTarget = Exclude<SearchSyncEntity, "orders">;
+export type SearchSyncEntity = "facilities" | "persons" | "orders" | "emultec-orders";
+type SearchSyncTarget = "facilities" | "persons";
 type StartResult = { workflowId: string; runId: string; existing: boolean };
 
 const searchSyncRequestSchema = z.object({
-  entity: z.enum(["facilities", "persons", "orders"]),
+  entity: z.enum(["facilities", "persons", "orders", "emultec-orders"]),
 }).strict();
 
 export function parseSearchSyncRequest(input: Record<string, unknown>): { entity: SearchSyncEntity } {
@@ -26,14 +26,19 @@ export function parseSearchSyncRequest(input: Record<string, unknown>): { entity
 type StartDependencies = {
   start: (entity: SearchSyncTarget) => Promise<StartResult>;
   startOrdersBackfill: () => Promise<StartResult>;
+  startEmultecOrderImport: () => Promise<StartResult>;
 };
 
 export class StartSearchSyncUseCase {
   constructor(private readonly deps: StartDependencies) {}
   execute(input: { entity: SearchSyncEntity }) {
-    return input.entity === "orders"
-      ? this.deps.startOrdersBackfill()
-      : this.deps.start(input.entity);
+    if (input.entity === "orders") {
+      return this.deps.startOrdersBackfill();
+    }
+    if (input.entity === "emultec-orders") {
+      return this.deps.startEmultecOrderImport();
+    }
+    return this.deps.start(input.entity);
   }
 }
 

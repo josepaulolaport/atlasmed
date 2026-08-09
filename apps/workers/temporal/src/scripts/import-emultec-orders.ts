@@ -7,7 +7,7 @@
  *   BACKFILL     — full id scan from --after-id (default 0)
  *   INCREMENTAL  — id > CRM watermark (or --after-id)
  *   RECONCILE    — date window on Data/Finalizado/Sem_Faturamento (--since or --reconcile-days)
- *   HYBRID       — RECONCILE then INCREMENTAL (default)
+ *   HYBRID       — DLQ replay → RECONCILE → INCREMENTAL (default)
  *
  * Usage:
  *   bun src/scripts/import-emultec-orders.ts --mode=HYBRID --reconcile-days=30 --limit=200
@@ -84,9 +84,12 @@ async function runPhase(input: {
         skipReasons: page.skipReasons,
       })
     );
-    if (page.fetched === 0 || page.lastId == null) break;
+    if (page.lastId == null) break;
+    const progressed = page.lastId > afterId;
     afterId = page.lastId;
-    if (page.fetched < input.limit) break;
+    if (page.fetched === 0 && !progressed) break;
+    if (page.fetched > 0 && page.fetched < input.limit) break;
+    if (page.fetched === 0 && progressed) continue;
   }
 
   return {
@@ -147,6 +150,14 @@ async function main() {
   };
 
   if (mode === "HYBRID") {
+    absorb(
+      await runPhase({
+        mode: "DLQ_REPLAY",
+        afterId: 0,
+        limit,
+        maxPages,
+      })
+    );
     absorb(
       await runPhase({
         mode: "RECONCILE",
