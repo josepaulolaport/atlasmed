@@ -512,6 +512,13 @@
       "when": 1786228627817,
       "tag": "0072_ibge_geo_districts",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1786236265912,
+      "tag": "0073_drop_permissions_access_grants",
+      "breakpoints": true
     }
   ]
 }

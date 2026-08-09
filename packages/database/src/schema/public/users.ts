@@ -182,31 +182,6 @@ export const invitations = pgTable(
   ]
 );
 
-export const permissions = pgTable(
-  "permissions",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
-    resource: text("resource").notNull(),
-    resourceId: text("resource_id"),
-    action: text("action").notNull(),
-    conditions: jsonb("conditions"),
-    grantedBy: bigint("granted_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
-    expiresAt: timestamp("expires_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  },
-  (t) => [
-    index("permissions_user_id_idx").on(t.userId),
-    index("permissions_resource_resource_id_idx").on(t.resource, t.resourceId),
-    index("permissions_user_id_resource_idx").on(t.userId, t.resource),
-    index("permissions_expires_at_idx").on(t.expiresAt),
-    unique("permissions_user_id_resource_resource_id_action_key")
-      .on(t.userId, t.resource, t.resourceId, t.action)
-      .nullsNotDistinct(),
-  ]
-);
-
 // --- Relations ---
 
 export const rolesRelations = relations(roles, ({ many }) => ({
@@ -220,7 +195,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   passwordResets: many(passwordResets),
   verificationTokens: many(verificationTokens),
   sentInvitations: many(invitations, { relationName: "InvitedByUser" }),
-  permissions: many(permissions),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -242,8 +216,4 @@ export const invitationsRelations = relations(invitations, ({ one }) => ({
     references: [users.id],
     relationName: "InvitedByUser",
   }),
-}));
-
-export const permissionsRelations = relations(permissions, ({ one }) => ({
-  user: one(users, { fields: [permissions.userId], references: [users.id] }),
 }));
