@@ -198,11 +198,9 @@ Routes import wired use-cases from `../composition`. Never instantiate a reposit
 
 3. **`ScopeContext` from `getScope()` for lists and mutations.** Every use-case receives `scope` and enforces territory/facility visibility.
 
-4. **`AccessGrants` (Permission table) merged into CASL and scope.** Exceptional overrides.
+4. **`facilityIds` require a real `TerritoryScopePort`.** Do not ship a resource-scoped route without a working port.
 
-5. **`facilityIds` require a real `TerritoryScopePort`.** Do not ship a resource-scoped route without a working port.
-
-6. **Session validity: JWT + session row + tokenVersion.** All three checked on every request.
+5. **Session validity: JWT + session row + tokenVersion.** All three checked on every request.
 
 ### Validation (two-layer)
 
@@ -366,7 +364,7 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 ## packages/access
 
-**Scope:** Authorization primitives — CASL abilities, roles, permission helpers, row-level visibility, territory-based access, `AccessGrants` overrides.
+**Scope:** Authorization primitives — CASL abilities, roles, permission helpers, row-level visibility, territory-based access.
 
 ### Rules
 

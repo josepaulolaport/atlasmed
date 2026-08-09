@@ -362,10 +362,10 @@ Still required for ship slice B (not territory redesign):
 | 6 | Competitors × vertical | **Defer** |
 | 7 | `facilities.territoryId` | **Full cutover** → profile `territory_id` only; drop column |
 | 8 | OPS | **Enforce everywhere** — assigned verticals only |
-| 9 | Access grants × vertical | **Defer** schema; document gap |
+| 9 | Access grants × vertical | **Removed** — AccessGrants/`permissions` table dropped; role + territory (+ vertical-rep) only |
 | 10 | Consolidated multi-vertical payload | **Never mix** commercial fields; client switches filter/header |
 | 11 | Vertical deactivate / CNES auto-profile | Soft `business_verticals.is_active` only; auto-suggest **deferred** |
-| 12 | CASL × vertical (P2.9) | Ability helpers + request vertical resolution; scope/query still enforce. Grants stay type-level until #9 |
+| 12 | CASL × vertical (P2.9) | Ability helpers + request vertical resolution; scope/query still enforce |
 
 **Deploy notes (when shipping code for the above):**
 

@@ -2,9 +2,11 @@
 
 ## Current State
 
-The access/auth area is mature relative to the rest of the platform. It includes authentication, refresh-token sessions, invitation-based registration, password reset, verification, 2FA, RBAC, instance-level grants, user assignments, audit logging, rate limiting, and security hardening.
+The access/auth area is mature relative to the rest of the platform. It includes authentication, refresh-token sessions, invitation-based registration, password reset, verification, 2FA, RBAC (role CASL + territory/vertical scope), user assignments, audit logging, rate limiting, and security hardening.
 
-Admin user management (list/detail/lifecycle, multi-vertical assignments, invites, grants) is exposed under `/api/v1/access` and consumed by the Flutter Usuários screens via HTTP repositories.
+AccessGrants / `permissions` table overrides were removed — authorization is role + territory (+ vertical-rep) only.
+
+Admin user management (list/detail/lifecycle, multi-vertical assignments, invites) is exposed under `/api/v1/access` and consumed by the Flutter Usuários screens via HTTP repositories.
 
 Business verticals (Ortopedia first) gate commercial facility visibility via `facility_vertical_profiles`. See [business-verticals.md](./business-verticals.md).
 
@@ -30,7 +32,6 @@ Business verticals (Ortopedia first) gate commercial facility visibility via `fa
 | `GET` | `/access/invitations` | Enriched with invitee names + staged vertical assignments |
 | `GET` | `/access/invitations/:id` | Invitation detail |
 | `PATCH` | `/access/invites/:id` | Edit pending invitation |
-| `GET` | `/access/users/:id/capabilities` | Grants include `grantedAt` |
 
 Self-service profile remains `PATCH /user` (name/avatar only).
 
@@ -78,9 +79,8 @@ Cadastro drafts persist `vertical_id`. Inference: one facility profile → use i
 
 ## Known Follow-Ups
 
-- Align grant `conditions` semantics between API, CASL helpers, and UI.
 - Finish Spec 0006 clinic-ownership design if ownership should diverge from consultant assignments.
-- Expand audit events for 2FA failure reasons and permission changes.
+- Expand audit events for 2FA failure reasons.
 - Add SSO/OIDC support for Google, Microsoft Entra ID, and Okta readiness.
 - Add 2FA recovery codes and admin reset workflow.
 - WhatsApp invite delivery requires Twilio env (email path uses Resend).
