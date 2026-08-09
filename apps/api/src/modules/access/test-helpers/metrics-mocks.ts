@@ -19,6 +19,7 @@ export function createMockMetricsService(
     recordSessionRevoked: noop(),
     recordSuspiciousActivity: noop(),
     recordSiemExportBatch: noop(),
+    recordSearchMeiliFallback: noop(),
     ...overrides,
   };
 }

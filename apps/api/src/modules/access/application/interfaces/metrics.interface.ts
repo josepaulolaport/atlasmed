@@ -8,4 +8,5 @@ export interface IMetrics {
   recordSessionRevoked(reason: string): void;
   recordSuspiciousActivity(type: string): void;
   recordSiemExportBatch(success: boolean): void;
+  recordSearchMeiliFallback(index: string, reason: string): void;
 }
