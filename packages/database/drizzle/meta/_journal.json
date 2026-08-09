@@ -526,6 +526,13 @@
       "when": 1786237257931,
       "tag": "0074_drop_facilities_legal_document_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1786249413571,
+      "tag": "0075_emultec_ids_and_cnpj_unique",
+      "breakpoints": true
     }
   ]
 }

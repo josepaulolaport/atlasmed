@@ -62,11 +62,16 @@ export const users = pgTable(
     deletedAt: timestamp("deleted_at"),
     metadata: jsonb("metadata"),
     roleId: bigint("role_id", { mode: "number" }).notNull().references(() => roles.id),
+    /** Emultec `vendedor.Id` — manual map for order import seller resolve. */
+    idVendedorEmultec: bigint("id_vendedor_emultec", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
     uniqueIndex("users_email_lower_uidx").on(sql`lower(${t.email})`),
+    uniqueIndex("users_id_vendedor_emultec_uidx")
+      .on(t.idVendedorEmultec)
+      .where(sql`${t.idVendedorEmultec} IS NOT NULL`),
     index("users_status_idx").on(t.status),
     index("users_deleted_at_idx").on(t.deletedAt),
   ]

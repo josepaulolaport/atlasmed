@@ -47,6 +47,8 @@ export const facilities = pgTable(
 
     // --- Registry provenance ---
     cnesCode: text("cnes_code"),
+    /** Emultec `clientes.Id` — facility↔client link for order import. */
+    idClienteEmultec: bigint("id_cliente_emultec", { mode: "number" }),
     // --- Legal document (digits only; type CNPJ=14 / CPF=11) ---
     /** Required on every insert — no DB default (CNPJ vs CPF must be explicit). */
     legalDocumentType: facilityLegalDocumentTypeEnum("legal_document_type").notNull(),
@@ -120,7 +122,19 @@ export const facilities = pgTable(
     uniqueIndex("facilities_cnes_code_uidx")
       .on(t.cnesCode)
       .where(sql`${t.cnesCode} IS NOT NULL AND ${t.deactivatedAt} IS NULL`),
-    /** Non-unique: multiple active facilities may share one CNPJ/CPF (branches). */
+    uniqueIndex("facilities_id_cliente_emultec_uidx")
+      .on(t.idClienteEmultec)
+      .where(sql`${t.idClienteEmultec} IS NOT NULL`),
+    /**
+     * CNPJ must be unique among active facilities (legal).
+     * CPF clinics may share the same CPF — no unique index for CPF.
+     */
+    uniqueIndex("facilities_active_legal_document_cnpj_uidx")
+      .on(t.legalDocument)
+      .where(
+        sql`${t.deactivatedAt} IS NULL AND ${t.legalDocument} IS NOT NULL AND ${t.legalDocumentType} = 'CNPJ'`
+      ),
+    /** Lookup by type+document (CPF non-unique; CNPJ covered by uidx above). */
     index("facilities_active_legal_document_idx")
       .on(t.legalDocumentType, t.legalDocument)
       .where(sql`${t.deactivatedAt} IS NULL AND ${t.legalDocument} IS NOT NULL`),
