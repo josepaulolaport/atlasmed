@@ -4,6 +4,7 @@ import {
   nullIfNullToken,
   requireEmultecMysqlConfig,
   runEmultecMysqlQuery,
+  type EmultecMysqlConfig,
 } from "./emultec-mysql";
 
 export type EmultecOrderLine = {
@@ -30,44 +31,72 @@ export type EmultecOrderBundle = {
   lines: EmultecOrderLine[];
 };
 
+/** Page-level modes (HYBRID is orchestrated above this). */
+export type EmultecOrderPageMode = "BACKFILL" | "INCREMENTAL" | "RECONCILE";
+
 export type FetchEmultecOrdersPageInput = {
-  /** Exclusive lower bound on avulsa.id (watermark). */
+  mode: EmultecOrderPageMode;
+  /** Exclusive lower bound on avulsa.id. */
   afterId?: number;
   limit: number;
+  /**
+   * RECONCILE only: YYYY-MM-DD inclusive.
+   * Matches avulsa.Data / Finalizado_Data / Sem_Faturamento_Data.
+   */
+  sinceDate?: string;
 };
 
 function whitelistSqlList(): string {
   return EMULTEC_PRODUCT_WHITELIST_IDS.join(",");
 }
 
-/**
- * Page of avulsa that have ≥1 whitelist product line, with those lines only.
- */
-export async function fetchEmultecOrdersPage(
-  input: FetchEmultecOrdersPageInput
-): Promise<EmultecOrderBundle[]> {
-  const cfg = requireEmultecMysqlConfig();
-  const afterId = input.afterId ?? 0;
-  const limit = Math.max(1, Math.min(input.limit, 500));
-  const ids = whitelistSqlList();
+function assertSinceDate(sinceDate: string | undefined): string {
+  if (!sinceDate || !/^\d{4}-\d{2}-\d{2}$/.test(sinceDate)) {
+    throw new Error("RECONCILE requires sinceDate as YYYY-MM-DD");
+  }
+  return sinceDate;
+}
 
-  const idSql = [
+/** Build id-page SQL (exported for unit tests). */
+export function buildEmultecOrderIdPageSql(input: {
+  mode: EmultecOrderPageMode;
+  afterId: number;
+  limit: number;
+  sinceDate?: string;
+}): string {
+  const ids = whitelistSqlList();
+  const afterId = input.afterId;
+  const limit = input.limit;
+  const base = [
     "SELECT DISTINCT a.id",
     "FROM avulsa a",
     "INNER JOIN avulsa_orcamento o ON o.Id_Avulsa = a.id",
     "INNER JOIN avulsa_orcamento_padrao p ON p.Id_Orc = o.id",
     `WHERE p.Id_Produto IN (${ids})`,
     `AND a.id > ${afterId}`,
-    "ORDER BY a.id",
-    `LIMIT ${limit};`,
-  ].join(" ");
+  ];
 
-  const idLines = await runEmultecMysqlQuery(idSql, cfg);
-  const avulsaIds = idLines
-    .map((line) => Number(line.split("\t")[0]))
-    .filter((n) => Number.isFinite(n));
+  if (input.mode === "RECONCILE") {
+    const since = assertSinceDate(input.sinceDate);
+    base.push(
+      "AND (",
+      `  a.Data >= '${since}'`,
+      `  OR a.Finalizado_Data >= '${since}'`,
+      `  OR a.Sem_Faturamento_Data >= '${since}'`,
+      ")"
+    );
+  }
+
+  base.push("ORDER BY a.id", `LIMIT ${limit};`);
+  return base.join(" ");
+}
+
+async function loadBundlesForIds(
+  avulsaIds: number[],
+  cfg: EmultecMysqlConfig
+): Promise<EmultecOrderBundle[]> {
   if (avulsaIds.length === 0) return [];
-
+  const ids = whitelistSqlList();
   const idList = avulsaIds.join(",");
 
   const headerSql = [
@@ -155,4 +184,32 @@ export async function fetchEmultecOrdersPage(
       lines: linesByAvulsa.get(idAvulsa) ?? [],
     } satisfies EmultecOrderBundle;
   });
+}
+
+/**
+ * Page of avulsa that have ≥1 whitelist product line, with those lines only.
+ *
+ * - BACKFILL / INCREMENTAL: `id > afterId` (caller sets watermark for incremental)
+ * - RECONCILE: same + date window on Data / Finalizado_Data / Sem_Faturamento_Data
+ */
+export async function fetchEmultecOrdersPage(
+  input: FetchEmultecOrdersPageInput
+): Promise<EmultecOrderBundle[]> {
+  const cfg = requireEmultecMysqlConfig();
+  const afterId = input.afterId ?? 0;
+  const limit = Math.max(1, Math.min(input.limit, 500));
+
+  const idSql = buildEmultecOrderIdPageSql({
+    mode: input.mode,
+    afterId,
+    limit,
+    sinceDate: input.sinceDate,
+  });
+
+  const idLines = await runEmultecMysqlQuery(idSql, cfg);
+  const avulsaIds = idLines
+    .map((line) => Number(line.split("\t")[0]))
+    .filter((n) => Number.isFinite(n));
+
+  return loadBundlesForIds(avulsaIds, cfg);
 }

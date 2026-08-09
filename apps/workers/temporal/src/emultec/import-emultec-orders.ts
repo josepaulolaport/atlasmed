@@ -13,6 +13,7 @@ import { logger } from "../logger";
 import {
   fetchEmultecOrdersPage,
   type EmultecOrderBundle,
+  type EmultecOrderPageMode,
 } from "./fetch-emultec-orders";
 import { mapEmultecOrderStatus } from "./map-emultec-order-status";
 import { resolveEmultecFacility } from "./resolve-emultec-facility";
@@ -20,8 +21,11 @@ import { resolveEmultecFacility } from "./resolve-emultec-facility";
 const ORTOPEDIA_CODE = "ORTOPEDIA";
 
 export type ImportEmultecOrdersPageInput = {
+  mode: EmultecOrderPageMode;
   afterId?: number;
   limit: number;
+  /** RECONCILE: YYYY-MM-DD */
+  sinceDate?: string;
 };
 
 export type ImportEmultecOrdersPageResult = {
@@ -30,7 +34,19 @@ export type ImportEmultecOrdersPageResult = {
   skipped: number;
   lastId: number | null;
   skipReasons: Record<string, number>;
+  /** Facilities touched by successful upserts (for purchase-recurrence). */
+  facilityIds: number[];
 };
+
+/** High-water mark = max imported Emultec avulsa id in CRM (0 if none). */
+export async function getEmultecOrderWatermark(): Promise<number> {
+  const [row] = await db
+    .select({
+      maxId: sql<number>`coalesce(max(${orders.idAvulsaEmultec}), 0)`,
+    })
+    .from(orders);
+  return Number(row?.maxId ?? 0);
+}
 
 async function resolveOrtopediaVerticalId(): Promise<number> {
   const [row] = await db
@@ -202,10 +218,10 @@ async function upsertOneOrder(
   verticalId: number,
   productMap: Map<number, number>,
   skipReasons: Record<string, number>
-): Promise<"upserted" | "skipped"> {
+): Promise<{ outcome: "upserted"; facilityId: number } | { outcome: "skipped" }> {
   if (bundle.lines.length === 0) {
     bump(skipReasons, "no_whitelist_lines");
-    return "skipped";
+    return { outcome: "skipped" };
   }
 
   const knownLines = bundle.lines.filter((line) =>
@@ -213,19 +229,19 @@ async function upsertOneOrder(
   );
   if (knownLines.length === 0) {
     bump(skipReasons, "products_unmapped");
-    return "skipped";
+    return { outcome: "skipped" };
   }
 
   const seller = await resolveSellerId(bundle.idVendedor);
   if (typeof seller === "object") {
     bump(skipReasons, seller.skip);
-    return "skipped";
+    return { outcome: "skipped" };
   }
 
   const facility = await findFacilityId(bundle);
   if ("skip" in facility) {
     bump(skipReasons, facility.skip);
-    return "skipped";
+    return { outcome: "skipped" };
   }
 
   const personId = await resolvePersonId(bundle);
@@ -310,7 +326,7 @@ async function upsertOneOrder(
     }
   }
 
-  return "upserted";
+  return { outcome: "upserted", facilityId: facility.facilityId };
 }
 
 /** Import one page of Emultec avulsa → CRM orders/items (hard gates). */
@@ -318,11 +334,14 @@ export async function importEmultecOrdersPage(
   input: ImportEmultecOrdersPageInput
 ): Promise<ImportEmultecOrdersPageResult> {
   const page = await fetchEmultecOrdersPage({
+    mode: input.mode,
     afterId: input.afterId,
     limit: input.limit,
+    sinceDate: input.sinceDate,
   });
 
   const skipReasons: Record<string, number> = {};
+  const facilityIds: number[] = [];
   if (page.length === 0) {
     return {
       fetched: 0,
@@ -330,6 +349,7 @@ export async function importEmultecOrdersPage(
       skipped: 0,
       lastId: input.afterId ?? null,
       skipReasons,
+      facilityIds,
     };
   }
 
@@ -343,14 +363,18 @@ export async function importEmultecOrdersPage(
   let skipped = 0;
   for (const bundle of page) {
     try {
-      const outcome = await upsertOneOrder(
+      const result = await upsertOneOrder(
         bundle,
         verticalId,
         productMap,
         skipReasons
       );
-      if (outcome === "upserted") upserted += 1;
-      else skipped += 1;
+      if (result.outcome === "upserted") {
+        upserted += 1;
+        facilityIds.push(result.facilityId);
+      } else {
+        skipped += 1;
+      }
     } catch (error) {
       skipped += 1;
       bump(skipReasons, "error");
@@ -367,5 +391,6 @@ export async function importEmultecOrdersPage(
     skipped,
     lastId,
     skipReasons,
+    facilityIds: [...new Set(facilityIds)],
   };
 }
