@@ -412,7 +412,7 @@ function ProfessionalsTab({
               </SelectTrigger>
               <SelectContent>
                 {allProfessionals.map((professional) => (
-                  <SelectItem key={professional.id} value={professional.id}>
+                  <SelectItem key={professional.id} value={String(professional.id)}>
                     {professional.lastName}, {professional.firstName}
                   </SelectItem>
                 ))}

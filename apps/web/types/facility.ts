@@ -67,7 +67,7 @@ export type {
 
 /** List item shape returned by GET /professionals */
 export interface Professional {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   fullName?: string;
@@ -75,7 +75,7 @@ export interface Professional {
   primarySpecialtyLabel?: string;
   crmNumber?: string;
   crmState?: string;
-  facilityIds: string[];
+  facilityIds: number[];
   createdAt: string;
   updatedAt: string;
 }

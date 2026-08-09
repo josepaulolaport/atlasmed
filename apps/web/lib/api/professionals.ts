@@ -7,7 +7,7 @@ import type {
 import type { PaginatedResponse } from "@/types/api";
 
 export interface ProfessionalListItem {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   fullName?: string;
@@ -15,7 +15,7 @@ export interface ProfessionalListItem {
   primarySpecialtyLabel?: string;
   crmNumber?: string;
   crmState?: string;
-  facilityIds: string[];
+  facilityIds: number[];
   createdAt: string;
   updatedAt: string;
 }
@@ -34,7 +34,7 @@ export const professionalsApi = {
     return response.data;
   },
 
-  getProfessional: async (id: string): Promise<ProfessionalProfile> => {
+  getProfessional: async (id: string | number): Promise<ProfessionalProfile> => {
     const response = await apiClient.get<ProfessionalProfile>(`/professionals/${id}`);
     return response.data;
   },
@@ -45,14 +45,14 @@ export const professionalsApi = {
   },
 
   updateProfessional: async (
-    id: string,
+    id: string | number,
     data: UpdateProfessionalInput
   ): Promise<ProfessionalProfile> => {
     const response = await apiClient.patch<ProfessionalProfile>(`/professionals/${id}`, data);
     return response.data;
   },
 
-  deleteProfessional: async (id: string): Promise<void> => {
+  deleteProfessional: async (id: string | number): Promise<void> => {
     await apiClient.delete(`/professionals/${id}`);
   },
 };
