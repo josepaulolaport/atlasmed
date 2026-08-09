@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
@@ -17,11 +18,16 @@ class MapFacilityPointsPage {
 
 class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     with SessionEnvironmentMixin<MapFacilityPointsPage> {
-  MapFacilityPointsRepository({String? baseUrl, this.verticalId})
-    : super(
-        endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
-        name: 'MapFacilityPointsRepository',
-      );
+  MapFacilityPointsRepository({
+    String? baseUrl,
+    this.verticalId,
+    super.tag,
+  }) : super(
+         endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
+         name: 'MapFacilityPointsRepository',
+         // Never hydrate cross-user Hive cache before the first network fetch.
+         resolveOnCreate: false,
+       );
 
   final int? verticalId;
 
@@ -104,12 +110,25 @@ class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
 
 Future<List<NearbyEstablishment>> fetchMapFacilityPoints({
   int? verticalId,
+  String? cacheTag,
 }) async {
-  final repo = MapFacilityPointsRepository(verticalId: verticalId);
+  // Wait for session so SessionEnvironmentMixin.refresh does not short-circuit
+  // to a null session and leave Hive leftovers from the previous user.
+  final session = await SessionEnvironment.instance.currentValueOrResolve();
+  if (session == null) {
+    throw StateError('Map facility points: no active session');
+  }
+  final repo = MapFacilityPointsRepository(
+    verticalId: verticalId,
+    tag: cacheTag ?? 'tok-${session.token.hashCode}',
+  );
   try {
-    final page = await repo.currentValueOrResolve();
+    // Always hit the network — shared endpoint path must not reuse another
+    // user's FeatureCollection from Hive / in-memory currentValue.
+    await repo.clearCache();
+    final page = await repo.refresh();
     if (page == null) {
-      throw StateError('Map facility points: resolve returned null');
+      throw StateError('Map facility points: refresh returned null');
     }
     return page.points;
   } finally {
