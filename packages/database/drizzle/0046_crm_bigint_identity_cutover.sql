@@ -93,12 +93,12 @@ DROP TABLE "registry"."states" CASCADE;--> statement-breakpoint
 DROP TABLE "ingestion"."cnes_diffs" CASCADE;--> statement-breakpoint
 DROP TABLE "ingestion"."cnes_runs" CASCADE;--> statement-breakpoint
 DROP TABLE "ingestion"."cnes_suggestions" CASCADE;--> statement-breakpoint
-ALTER TABLE "facilities" DROP CONSTRAINT "facilities_observed_purchase_interval_days_check";--> statement-breakpoint
-ALTER TABLE "facilities" DROP CONSTRAINT "facilities_purchase_interval_days_check";--> statement-breakpoint
-ALTER TABLE "facilities" DROP CONSTRAINT "facilities_manual_purchase_interval_days_check";--> statement-breakpoint
-ALTER TABLE "facilities" DROP CONSTRAINT "facilities_manual_purchase_profile_days_check";--> statement-breakpoint
-ALTER TABLE "facilities" DROP CONSTRAINT "facilities_purchase_recurrence_sample_size_check";--> statement-breakpoint
-ALTER TABLE "facilities" DROP CONSTRAINT "facilities_purchase_interval_source_check";--> statement-breakpoint
+ALTER TABLE "facilities" DROP CONSTRAINT IF EXISTS "facilities_observed_purchase_interval_days_check";--> statement-breakpoint
+ALTER TABLE "facilities" DROP CONSTRAINT IF EXISTS "facilities_purchase_interval_days_check";--> statement-breakpoint
+ALTER TABLE "facilities" DROP CONSTRAINT IF EXISTS "facilities_manual_purchase_interval_days_check";--> statement-breakpoint
+ALTER TABLE "facilities" DROP CONSTRAINT IF EXISTS "facilities_manual_purchase_profile_days_check";--> statement-breakpoint
+ALTER TABLE "facilities" DROP CONSTRAINT IF EXISTS "facilities_purchase_recurrence_sample_size_check";--> statement-breakpoint
+ALTER TABLE "facilities" DROP CONSTRAINT IF EXISTS "facilities_purchase_interval_source_check";--> statement-breakpoint
 ALTER TABLE "territory_approval_requests" ALTER COLUMN "type" SET DATA TYPE text;--> statement-breakpoint
 DROP TYPE "public"."territory_approval_type";--> statement-breakpoint
 CREATE TYPE "public"."territory_approval_type" AS ENUM('deactivate_territory');--> statement-breakpoint
@@ -121,120 +121,120 @@ DROP INDEX "professionals_source_provider_external_source_id_uidx";--> statement
 DROP INDEX "professionals_source_provider_cnes_professional_id_uidx";--> statement-breakpoint
 DROP INDEX "professionals_source_provider_source_present_idx";--> statement-breakpoint
 -- M11 hard cut: drop FKs, wipe rows, then cast text/cuid -> bigint identity
-ALTER TABLE "user_vertical_assignments" DROP CONSTRAINT "user_vertical_assignments_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "user_vertical_assignments" DROP CONSTRAINT "user_vertical_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "user_vertical_assignments" DROP CONSTRAINT "user_vertical_assignments_assigned_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "invitations" DROP CONSTRAINT "invitations_role_id_roles_id_fk";--> statement-breakpoint
-ALTER TABLE "invitations" DROP CONSTRAINT "invitations_invited_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "password_resets" DROP CONSTRAINT "password_resets_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "permissions" DROP CONSTRAINT "permissions_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "permissions" DROP CONSTRAINT "permissions_granted_by_users_id_fk";--> statement-breakpoint
-ALTER TABLE "sessions" DROP CONSTRAINT "sessions_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "users" DROP CONSTRAINT "users_role_id_roles_id_fk";--> statement-breakpoint
-ALTER TABLE "verification_tokens" DROP CONSTRAINT "verification_tokens_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "territories" DROP CONSTRAINT "territories_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "territories" DROP CONSTRAINT "territories_territory_type_id_territory_types_id_fk";--> statement-breakpoint
-ALTER TABLE "territory_approval_requests" DROP CONSTRAINT "territory_approval_requests_requester_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "territory_approval_requests" DROP CONSTRAINT "territory_approval_requests_reviewer_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "territory_approval_requests" DROP CONSTRAINT "territory_approval_requests_target_territory_id_territories_id_fk";--> statement-breakpoint
-ALTER TABLE "territory_approval_requests" DROP CONSTRAINT "territory_approval_requests_to_territory_id_territories_id_fk";--> statement-breakpoint
-ALTER TABLE "user_territory_assignments" DROP CONSTRAINT "user_territory_assignments_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "user_territory_assignments" DROP CONSTRAINT "user_territory_assignments_territory_id_territories_id_fk";--> statement-breakpoint
-ALTER TABLE "user_territory_assignments" DROP CONSTRAINT "user_territory_assignments_assigned_by_users_id_fk";--> statement-breakpoint
-ALTER TABLE "invitation_territory_assignments" DROP CONSTRAINT "invitation_territory_assignments_invitation_id_invitations_id_fk";--> statement-breakpoint
-ALTER TABLE "invitation_territory_assignments" DROP CONSTRAINT "invitation_territory_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "invitation_territory_assignments" DROP CONSTRAINT "invitation_territory_assignments_territory_id_territories_id_fk";--> statement-breakpoint
-ALTER TABLE "invitation_vertical_assignments" DROP CONSTRAINT "invitation_vertical_assignments_invitation_id_invitations_id_fk";--> statement-breakpoint
-ALTER TABLE "invitation_vertical_assignments" DROP CONSTRAINT "invitation_vertical_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "unit_subtypes" DROP CONSTRAINT "unit_subtypes_unit_type_code_unit_types_unit_type_code_fk";--> statement-breakpoint
-ALTER TABLE "conformity_records" DROP CONSTRAINT "conformity_records_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "conformity_records" DROP CONSTRAINT "conformity_records_requirement_id_conformity_requirements_id_fk";--> statement-breakpoint
-ALTER TABLE "conformity_records" DROP CONSTRAINT "conformity_records_validated_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "conformity_requirements" DROP CONSTRAINT "conformity_requirements_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT "facility_consultant_assignments_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT "facility_consultant_assignments_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT "facility_consultant_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT "facility_consultant_assignments_assigned_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_healthcare_provider_shares" DROP CONSTRAINT "facility_healthcare_provider_shares_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_healthcare_provider_shares" DROP CONSTRAINT "facility_healthcare_provider_shares_healthcare_provider_id_healthcare_providers_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_notes" DROP CONSTRAINT "facility_notes_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_notes" DROP CONSTRAINT "facility_notes_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_photos" DROP CONSTRAINT "facility_photos_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_photos" DROP CONSTRAINT "facility_photos_uploaded_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_professionals" DROP CONSTRAINT "facility_professionals_professional_id_professionals_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_professionals" DROP CONSTRAINT "facility_professionals_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_professionals" DROP CONSTRAINT "facility_professionals_confirmed_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_professionals" DROP CONSTRAINT "facility_professionals_ended_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_representatives" DROP CONSTRAINT "facility_representatives_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_representatives" DROP CONSTRAINT "facility_representatives_confirmed_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_vertical_profiles" DROP CONSTRAINT "facility_vertical_profiles_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_vertical_profiles" DROP CONSTRAINT "facility_vertical_profiles_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_vertical_profiles" DROP CONSTRAINT "facility_vertical_profiles_manager_zone_id_territories_id_fk";--> statement-breakpoint
-ALTER TABLE "professional_notes" DROP CONSTRAINT "professional_notes_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "professional_notes" DROP CONSTRAINT "professional_notes_professional_id_professionals_id_fk";--> statement-breakpoint
-ALTER TABLE "user_professional_relationships" DROP CONSTRAINT "user_professional_relationships_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "user_professional_relationships" DROP CONSTRAINT "user_professional_relationships_professional_id_professionals_id_fk";--> statement-breakpoint
-ALTER TABLE "user_representative_relationships" DROP CONSTRAINT "user_representative_relationships_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "user_representative_relationships" DROP CONSTRAINT "user_representative_relationships_representative_id_facility_representatives_id_fk";--> statement-breakpoint
-ALTER TABLE "cadastro_submissions" DROP CONSTRAINT "cadastro_submissions_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "cadastro_submissions" DROP CONSTRAINT "cadastro_submissions_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "cadastro_submissions" DROP CONSTRAINT "cadastro_submissions_submitted_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "document_files" DROP CONSTRAINT "document_files_submission_document_id_submission_documents_id_fk";--> statement-breakpoint
-ALTER TABLE "document_files" DROP CONSTRAINT "document_files_file_asset_id_file_assets_id_fk";--> statement-breakpoint
-ALTER TABLE "file_assets" DROP CONSTRAINT "file_assets_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "processing_events" DROP CONSTRAINT "processing_events_file_asset_id_file_assets_id_fk";--> statement-breakpoint
-ALTER TABLE "review_decisions" DROP CONSTRAINT "review_decisions_submission_document_id_submission_documents_id_fk";--> statement-breakpoint
-ALTER TABLE "review_decisions" DROP CONSTRAINT "review_decisions_reviewer_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "submission_documents" DROP CONSTRAINT "submission_documents_submission_id_cadastro_submissions_id_fk";--> statement-breakpoint
-ALTER TABLE "submission_documents" DROP CONSTRAINT "submission_documents_requirement_id_conformity_requirements_id_fk";--> statement-breakpoint
-ALTER TABLE "upload_parts" DROP CONSTRAINT "upload_parts_upload_session_id_upload_sessions_id_fk";--> statement-breakpoint
-ALTER TABLE "upload_sessions" DROP CONSTRAINT "upload_sessions_file_asset_id_file_assets_id_fk";--> statement-breakpoint
-ALTER TABLE "field_suggestions" DROP CONSTRAINT "field_suggestions_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "field_suggestions" DROP CONSTRAINT "field_suggestions_professional_id_professionals_id_fk";--> statement-breakpoint
-ALTER TABLE "field_suggestions" DROP CONSTRAINT "field_suggestions_submitted_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "field_suggestions" DROP CONSTRAINT "field_suggestions_resolved_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "competitor_product_verticals" DROP CONSTRAINT "competitor_product_verticals_competitor_product_id_competitor_products_id_fk";--> statement-breakpoint
-ALTER TABLE "competitor_product_verticals" DROP CONSTRAINT "competitor_product_verticals_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_competitor_product_standards" DROP CONSTRAINT "facility_competitor_product_standards_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_competitor_product_standards" DROP CONSTRAINT "facility_competitor_product_standards_competitor_product_id_competitor_products_id_fk";--> statement-breakpoint
-ALTER TABLE "product_equivalences" DROP CONSTRAINT "product_equivalences_product_id_products_id_fk";--> statement-breakpoint
-ALTER TABLE "product_equivalences" DROP CONSTRAINT "product_equivalences_competitor_product_id_competitor_products_id_fk";--> statement-breakpoint
-ALTER TABLE "product_verticals" DROP CONSTRAINT "product_verticals_product_id_products_id_fk";--> statement-breakpoint
-ALTER TABLE "product_verticals" DROP CONSTRAINT "product_verticals_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_potential_values" DROP CONSTRAINT "facility_potential_values_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_potential_values" DROP CONSTRAINT "facility_potential_values_definition_id_potential_metric_definitions_id_fk";--> statement-breakpoint
-ALTER TABLE "facility_potential_values" DROP CONSTRAINT "facility_potential_values_updated_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "potential_metric_definitions" DROP CONSTRAINT "potential_metric_definitions_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "product_potential_links" DROP CONSTRAINT "product_potential_links_product_id_products_id_fk";--> statement-breakpoint
-ALTER TABLE "product_potential_links" DROP CONSTRAINT "product_potential_links_definition_id_potential_metric_definitions_id_fk";--> statement-breakpoint
-ALTER TABLE "calendar" DROP CONSTRAINT "calendar_owner_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "calendar" DROP CONSTRAINT "calendar_cancelled_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "calendar_command_receipts" DROP CONSTRAINT "calendar_command_receipts_owner_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "calendar_occurrence_overrides" DROP CONSTRAINT "calendar_occurrence_overrides_calendar_id_calendar_id_fk";--> statement-breakpoint
-ALTER TABLE "interaction_events" DROP CONSTRAINT "interaction_events_interaction_id_interactions_id_fk";--> statement-breakpoint
-ALTER TABLE "interaction_events" DROP CONSTRAINT "interaction_events_actor_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "interactions" DROP CONSTRAINT "interactions_calendar_id_calendar_id_fk";--> statement-breakpoint
-ALTER TABLE "interactions" DROP CONSTRAINT "interactions_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "interactions" DROP CONSTRAINT "interactions_agent_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "interactions" DROP CONSTRAINT "interactions_cancelled_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "interactions" DROP CONSTRAINT "interactions_corrected_by_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "interactions" DROP CONSTRAINT "interactions_visit_id_visits_id_fk";--> statement-breakpoint
-ALTER TABLE "order_command_receipts" DROP CONSTRAINT "order_command_receipts_actor_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "order_command_receipts" DROP CONSTRAINT "order_command_receipts_order_id_orders_id_fk";--> statement-breakpoint
-ALTER TABLE "order_items" DROP CONSTRAINT "order_items_order_id_orders_id_fk";--> statement-breakpoint
-ALTER TABLE "order_items" DROP CONSTRAINT "order_items_product_id_products_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_vertical_id_business_verticals_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_seller_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_professional_id_professionals_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_interaction_id_interactions_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_finalized_by_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_rejected_by_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_no_billing_by_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "orders" DROP CONSTRAINT "orders_expense_authorized_by_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "visits" DROP CONSTRAINT "visits_user_id_users_id_fk";--> statement-breakpoint
-ALTER TABLE "visits" DROP CONSTRAINT "visits_facility_id_facilities_id_fk";--> statement-breakpoint
-ALTER TABLE "audit"."audit_logs" DROP CONSTRAINT "audit_logs_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "user_vertical_assignments" DROP CONSTRAINT IF EXISTS "user_vertical_assignments_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "user_vertical_assignments" DROP CONSTRAINT IF EXISTS "user_vertical_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "user_vertical_assignments" DROP CONSTRAINT IF EXISTS "user_vertical_assignments_assigned_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "invitations" DROP CONSTRAINT IF EXISTS "invitations_role_id_roles_id_fk";--> statement-breakpoint
+ALTER TABLE "invitations" DROP CONSTRAINT IF EXISTS "invitations_invited_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "password_resets" DROP CONSTRAINT IF EXISTS "password_resets_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "permissions" DROP CONSTRAINT IF EXISTS "permissions_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "permissions" DROP CONSTRAINT IF EXISTS "permissions_granted_by_users_id_fk";--> statement-breakpoint
+ALTER TABLE "sessions" DROP CONSTRAINT IF EXISTS "sessions_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "users_role_id_roles_id_fk";--> statement-breakpoint
+ALTER TABLE "verification_tokens" DROP CONSTRAINT IF EXISTS "verification_tokens_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "territories" DROP CONSTRAINT IF EXISTS "territories_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "territories" DROP CONSTRAINT IF EXISTS "territories_territory_type_id_territory_types_id_fk";--> statement-breakpoint
+ALTER TABLE "territory_approval_requests" DROP CONSTRAINT IF EXISTS "territory_approval_requests_requester_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "territory_approval_requests" DROP CONSTRAINT IF EXISTS "territory_approval_requests_reviewer_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "territory_approval_requests" DROP CONSTRAINT IF EXISTS "territory_approval_requests_target_territory_id_territories_id_fk";--> statement-breakpoint
+ALTER TABLE "territory_approval_requests" DROP CONSTRAINT IF EXISTS "territory_approval_requests_to_territory_id_territories_id_fk";--> statement-breakpoint
+ALTER TABLE "user_territory_assignments" DROP CONSTRAINT IF EXISTS "user_territory_assignments_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "user_territory_assignments" DROP CONSTRAINT IF EXISTS "user_territory_assignments_territory_id_territories_id_fk";--> statement-breakpoint
+ALTER TABLE "user_territory_assignments" DROP CONSTRAINT IF EXISTS "user_territory_assignments_assigned_by_users_id_fk";--> statement-breakpoint
+ALTER TABLE "invitation_territory_assignments" DROP CONSTRAINT IF EXISTS "invitation_territory_assignments_invitation_id_invitations_id_fk";--> statement-breakpoint
+ALTER TABLE "invitation_territory_assignments" DROP CONSTRAINT IF EXISTS "invitation_territory_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "invitation_territory_assignments" DROP CONSTRAINT IF EXISTS "invitation_territory_assignments_territory_id_territories_id_fk";--> statement-breakpoint
+ALTER TABLE "invitation_vertical_assignments" DROP CONSTRAINT IF EXISTS "invitation_vertical_assignments_invitation_id_invitations_id_fk";--> statement-breakpoint
+ALTER TABLE "invitation_vertical_assignments" DROP CONSTRAINT IF EXISTS "invitation_vertical_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "unit_subtypes" DROP CONSTRAINT IF EXISTS "unit_subtypes_unit_type_code_unit_types_unit_type_code_fk";--> statement-breakpoint
+ALTER TABLE "conformity_records" DROP CONSTRAINT IF EXISTS "conformity_records_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "conformity_records" DROP CONSTRAINT IF EXISTS "conformity_records_requirement_id_conformity_requirements_id_fk";--> statement-breakpoint
+ALTER TABLE "conformity_records" DROP CONSTRAINT IF EXISTS "conformity_records_validated_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "conformity_requirements" DROP CONSTRAINT IF EXISTS "conformity_requirements_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT IF EXISTS "facility_consultant_assignments_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT IF EXISTS "facility_consultant_assignments_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT IF EXISTS "facility_consultant_assignments_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_consultant_assignments" DROP CONSTRAINT IF EXISTS "facility_consultant_assignments_assigned_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_healthcare_provider_shares" DROP CONSTRAINT IF EXISTS "facility_healthcare_provider_shares_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_healthcare_provider_shares" DROP CONSTRAINT IF EXISTS "facility_healthcare_provider_shares_healthcare_provider_id_healthcare_providers_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_notes" DROP CONSTRAINT IF EXISTS "facility_notes_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_notes" DROP CONSTRAINT IF EXISTS "facility_notes_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_photos" DROP CONSTRAINT IF EXISTS "facility_photos_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_photos" DROP CONSTRAINT IF EXISTS "facility_photos_uploaded_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_professionals" DROP CONSTRAINT IF EXISTS "facility_professionals_professional_id_professionals_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_professionals" DROP CONSTRAINT IF EXISTS "facility_professionals_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_professionals" DROP CONSTRAINT IF EXISTS "facility_professionals_confirmed_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_professionals" DROP CONSTRAINT IF EXISTS "facility_professionals_ended_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_representatives" DROP CONSTRAINT IF EXISTS "facility_representatives_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_representatives" DROP CONSTRAINT IF EXISTS "facility_representatives_confirmed_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" DROP CONSTRAINT IF EXISTS "facility_vertical_profiles_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" DROP CONSTRAINT IF EXISTS "facility_vertical_profiles_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_vertical_profiles" DROP CONSTRAINT IF EXISTS "facility_vertical_profiles_manager_zone_id_territories_id_fk";--> statement-breakpoint
+ALTER TABLE "professional_notes" DROP CONSTRAINT IF EXISTS "professional_notes_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "professional_notes" DROP CONSTRAINT IF EXISTS "professional_notes_professional_id_professionals_id_fk";--> statement-breakpoint
+ALTER TABLE "user_professional_relationships" DROP CONSTRAINT IF EXISTS "user_professional_relationships_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "user_professional_relationships" DROP CONSTRAINT IF EXISTS "user_professional_relationships_professional_id_professionals_id_fk";--> statement-breakpoint
+ALTER TABLE "user_representative_relationships" DROP CONSTRAINT IF EXISTS "user_representative_relationships_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "user_representative_relationships" DROP CONSTRAINT IF EXISTS "user_representative_relationships_representative_id_facility_representatives_id_fk";--> statement-breakpoint
+ALTER TABLE "cadastro_submissions" DROP CONSTRAINT IF EXISTS "cadastro_submissions_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "cadastro_submissions" DROP CONSTRAINT IF EXISTS "cadastro_submissions_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "cadastro_submissions" DROP CONSTRAINT IF EXISTS "cadastro_submissions_submitted_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "document_files" DROP CONSTRAINT IF EXISTS "document_files_submission_document_id_submission_documents_id_fk";--> statement-breakpoint
+ALTER TABLE "document_files" DROP CONSTRAINT IF EXISTS "document_files_file_asset_id_file_assets_id_fk";--> statement-breakpoint
+ALTER TABLE "file_assets" DROP CONSTRAINT IF EXISTS "file_assets_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "processing_events" DROP CONSTRAINT IF EXISTS "processing_events_file_asset_id_file_assets_id_fk";--> statement-breakpoint
+ALTER TABLE "review_decisions" DROP CONSTRAINT IF EXISTS "review_decisions_submission_document_id_submission_documents_id_fk";--> statement-breakpoint
+ALTER TABLE "review_decisions" DROP CONSTRAINT IF EXISTS "review_decisions_reviewer_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "submission_documents" DROP CONSTRAINT IF EXISTS "submission_documents_submission_id_cadastro_submissions_id_fk";--> statement-breakpoint
+ALTER TABLE "submission_documents" DROP CONSTRAINT IF EXISTS "submission_documents_requirement_id_conformity_requirements_id_fk";--> statement-breakpoint
+ALTER TABLE "upload_parts" DROP CONSTRAINT IF EXISTS "upload_parts_upload_session_id_upload_sessions_id_fk";--> statement-breakpoint
+ALTER TABLE "upload_sessions" DROP CONSTRAINT IF EXISTS "upload_sessions_file_asset_id_file_assets_id_fk";--> statement-breakpoint
+ALTER TABLE "field_suggestions" DROP CONSTRAINT IF EXISTS "field_suggestions_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "field_suggestions" DROP CONSTRAINT IF EXISTS "field_suggestions_professional_id_professionals_id_fk";--> statement-breakpoint
+ALTER TABLE "field_suggestions" DROP CONSTRAINT IF EXISTS "field_suggestions_submitted_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "field_suggestions" DROP CONSTRAINT IF EXISTS "field_suggestions_resolved_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "competitor_product_verticals" DROP CONSTRAINT IF EXISTS "competitor_product_verticals_competitor_product_id_competitor_products_id_fk";--> statement-breakpoint
+ALTER TABLE "competitor_product_verticals" DROP CONSTRAINT IF EXISTS "competitor_product_verticals_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_competitor_product_standards" DROP CONSTRAINT IF EXISTS "facility_competitor_product_standards_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_competitor_product_standards" DROP CONSTRAINT IF EXISTS "facility_competitor_product_standards_competitor_product_id_competitor_products_id_fk";--> statement-breakpoint
+ALTER TABLE "product_equivalences" DROP CONSTRAINT IF EXISTS "product_equivalences_product_id_products_id_fk";--> statement-breakpoint
+ALTER TABLE "product_equivalences" DROP CONSTRAINT IF EXISTS "product_equivalences_competitor_product_id_competitor_products_id_fk";--> statement-breakpoint
+ALTER TABLE "product_verticals" DROP CONSTRAINT IF EXISTS "product_verticals_product_id_products_id_fk";--> statement-breakpoint
+ALTER TABLE "product_verticals" DROP CONSTRAINT IF EXISTS "product_verticals_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_potential_values" DROP CONSTRAINT IF EXISTS "facility_potential_values_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_potential_values" DROP CONSTRAINT IF EXISTS "facility_potential_values_definition_id_potential_metric_definitions_id_fk";--> statement-breakpoint
+ALTER TABLE "facility_potential_values" DROP CONSTRAINT IF EXISTS "facility_potential_values_updated_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "potential_metric_definitions" DROP CONSTRAINT IF EXISTS "potential_metric_definitions_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "product_potential_links" DROP CONSTRAINT IF EXISTS "product_potential_links_product_id_products_id_fk";--> statement-breakpoint
+ALTER TABLE "product_potential_links" DROP CONSTRAINT IF EXISTS "product_potential_links_definition_id_potential_metric_definitions_id_fk";--> statement-breakpoint
+ALTER TABLE "calendar" DROP CONSTRAINT IF EXISTS "calendar_owner_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "calendar" DROP CONSTRAINT IF EXISTS "calendar_cancelled_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "calendar_command_receipts" DROP CONSTRAINT IF EXISTS "calendar_command_receipts_owner_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "calendar_occurrence_overrides" DROP CONSTRAINT IF EXISTS "calendar_occurrence_overrides_calendar_id_calendar_id_fk";--> statement-breakpoint
+ALTER TABLE "interaction_events" DROP CONSTRAINT IF EXISTS "interaction_events_interaction_id_interactions_id_fk";--> statement-breakpoint
+ALTER TABLE "interaction_events" DROP CONSTRAINT IF EXISTS "interaction_events_actor_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "interactions" DROP CONSTRAINT IF EXISTS "interactions_calendar_id_calendar_id_fk";--> statement-breakpoint
+ALTER TABLE "interactions" DROP CONSTRAINT IF EXISTS "interactions_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "interactions" DROP CONSTRAINT IF EXISTS "interactions_agent_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "interactions" DROP CONSTRAINT IF EXISTS "interactions_cancelled_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "interactions" DROP CONSTRAINT IF EXISTS "interactions_corrected_by_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "interactions" DROP CONSTRAINT IF EXISTS "interactions_visit_id_visits_id_fk";--> statement-breakpoint
+ALTER TABLE "order_command_receipts" DROP CONSTRAINT IF EXISTS "order_command_receipts_actor_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "order_command_receipts" DROP CONSTRAINT IF EXISTS "order_command_receipts_order_id_orders_id_fk";--> statement-breakpoint
+ALTER TABLE "order_items" DROP CONSTRAINT IF EXISTS "order_items_order_id_orders_id_fk";--> statement-breakpoint
+ALTER TABLE "order_items" DROP CONSTRAINT IF EXISTS "order_items_product_id_products_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_vertical_id_business_verticals_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_seller_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_professional_id_professionals_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_interaction_id_interactions_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_finalized_by_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_rejected_by_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_no_billing_by_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_expense_authorized_by_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "visits" DROP CONSTRAINT IF EXISTS "visits_user_id_users_id_fk";--> statement-breakpoint
+ALTER TABLE "visits" DROP CONSTRAINT IF EXISTS "visits_facility_id_facilities_id_fk";--> statement-breakpoint
+ALTER TABLE "audit"."audit_logs" DROP CONSTRAINT IF EXISTS "audit_logs_user_id_users_id_fk";--> statement-breakpoint
 TRUNCATE TABLE "business_verticals", "user_vertical_assignments", "invitations", "password_resets", "permissions", "roles", "sessions", "users", "verification_tokens", "territories", "territory_approval_requests", "territory_types", "user_territory_assignments", "invitation_territory_assignments", "invitation_vertical_assignments", "deactivation_reasons", "facility_types", "occupations", "unit_subtypes", "unit_types", "clinical_focuses", "municipalities", "neighborhoods", "states", "conformity_records", "conformity_requirements", "facilities", "facility_clinical_focuses", "facility_consultant_assignments", "facility_healthcare_provider_shares", "facility_notes", "facility_photos", "facility_professionals", "facility_representatives", "facility_vertical_profiles", "healthcare_providers", "professional_notes", "professionals", "user_professional_relationships", "user_representative_relationships", "cadastro_submissions", "document_files", "file_assets", "processing_events", "review_decisions", "submission_documents", "upload_parts", "upload_sessions", "field_suggestions", "competitor_product_verticals", "competitor_products", "facility_competitor_product_standards", "product_equivalences", "product_verticals", "products", "facility_potential_values", "potential_metric_definitions", "product_potential_links", "calendar", "calendar_command_receipts", "calendar_occurrence_overrides", "interaction_events", "interactions", "order_command_receipts", "order_items", "orders", "visits", "audit"."audit_logs" CASCADE;--> statement-breakpoint
 ALTER TABLE "business_verticals" ALTER COLUMN "id" SET DATA TYPE bigint USING (0);--> statement-breakpoint
 ALTER TABLE "business_verticals" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (sequence name "business_verticals_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1);--> statement-breakpoint
