@@ -519,6 +519,13 @@
       "when": 1786236265912,
       "tag": "0073_drop_permissions_access_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1786237257931,
+      "tag": "0074_drop_facilities_legal_document_unique",
+      "breakpoints": true
     }
   ]
 }

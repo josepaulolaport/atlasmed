@@ -109,11 +109,11 @@ Each item: **Situation now** (as of triage close) · **Problem** · placement / 
 
 | | |
 |---|---|
-| **Situation now** | Have `legal_document` + `legal_document_type` (CNPJ/CPF), mod11 in app, active `cnes_code` unique, `state_id`/`municipality_id` NOT NULL FKs. Still have writable `facilities.city` / `facilities.state` **text** beside FKs. **No** unique on active `(legal_document_type, legal_document)`. No CHECK that mun belongs to state. |
-| **Problem** | Dual SoT for place names (text vs IBGE FKs) invites drift. Duplicate active tax docs possible. Mun/state mismatch possible. Display should JOIN `municipalities`/`states`, not denorm text. |
-| **Placement** | **P0** |
-| **Still to do** | Unique active legal doc; mun∈state; JOIN display; **DROP** city/state text. |
-| **Rejected** | Denorm sync P1; `source_*` rename for geo text. |
+| **Situation now** | Have `legal_document` + `legal_document_type` (CNPJ/CPF), mod11 in app, active `cnes_code` unique, `state_id`/`municipality_id` NOT NULL FKs. Non-unique partial index on active `(legal_document_type, legal_document)` — **shared CNPJ/CPF across facilities is intentional** (branches). Still have writable `facilities.city` / `facilities.state` **text** beside FKs. |
+| **Problem** | Dual SoT for place names (text vs IBGE FKs) invites drift. Mun/state mismatch possible. Display should JOIN `municipalities`/`states`, not denorm text. |
+| **Placement** | **P0** (geo integrity only; tax-doc uniqueness closed) |
+| **Still to do** | mun∈state; JOIN display; **DROP** city/state text. |
+| **Rejected** | Unique active legal doc (product 2026-08-08 — duplicates allowed); denorm sync P1; `source_*` rename for geo text. |
 | **Blast / Effort** | S / S–M |
 
 ### #5 — Canonical facility–vertical model

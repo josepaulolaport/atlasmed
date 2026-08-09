@@ -1,0 +1,2 @@
+DROP INDEX "facilities_active_legal_document_uidx";--> statement-breakpoint
+CREATE INDEX "facilities_active_legal_document_idx" ON "facilities" USING btree ("legal_document_type","legal_document") WHERE "facilities"."deactivated_at" IS NULL AND "facilities"."legal_document" IS NOT NULL;

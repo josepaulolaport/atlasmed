@@ -120,7 +120,8 @@ export const facilities = pgTable(
     uniqueIndex("facilities_cnes_code_uidx")
       .on(t.cnesCode)
       .where(sql`${t.cnesCode} IS NOT NULL AND ${t.deactivatedAt} IS NULL`),
-    uniqueIndex("facilities_active_legal_document_uidx")
+    /** Non-unique: multiple active facilities may share one CNPJ/CPF (branches). */
+    index("facilities_active_legal_document_idx")
       .on(t.legalDocumentType, t.legalDocument)
       .where(sql`${t.deactivatedAt} IS NULL AND ${t.legalDocument} IS NOT NULL`),
     index("facilities_deactivated_at_idx").on(t.deactivatedAt),
