@@ -6,6 +6,7 @@ import {
 } from "@atlasmed/database";
 import { db } from "../infrastructure/db";
 import {
+  EMULTEC_DLQ_MAX_ATTEMPTS,
   finishEmultecImportRun,
   listOpenEmultecDeadLetterIds,
   recordEmultecDeadLetter,
@@ -75,5 +76,31 @@ describe("emultec-order-import-ops (ops schema)", () => {
     await db
       .delete(emultecOrderImportRuns)
       .where(eq(emultecOrderImportRuns.id, runId));
+  });
+
+  test.skipIf(!hasDb)("excludes exhausted DLQ rows from replay list", async () => {
+    const idAvulsa = 9_000_001_001 + Math.floor(Math.random() * 1000);
+
+    for (let i = 0; i < EMULTEC_DLQ_MAX_ATTEMPTS; i += 1) {
+      await recordEmultecDeadLetter({
+        idAvulsa,
+        reason: "error",
+        detail: `attempt-${i + 1}`,
+      });
+    }
+
+    const [dl] = await db
+      .select()
+      .from(emultecOrderImportDeadLetters)
+      .where(eq(emultecOrderImportDeadLetters.idAvulsaEmultec, idAvulsa));
+    expect(dl?.attemptCount).toBe(EMULTEC_DLQ_MAX_ATTEMPTS);
+    expect(dl?.resolvedAt).toBeNull();
+
+    const open = await listOpenEmultecDeadLetterIds({ afterId: 0, limit: 200 });
+    expect(open).not.toContain(idAvulsa);
+
+    await db
+      .delete(emultecOrderImportDeadLetters)
+      .where(eq(emultecOrderImportDeadLetters.idAvulsaEmultec, idAvulsa));
   });
 });

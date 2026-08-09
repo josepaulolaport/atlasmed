@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import {
   emultecOrderImportDeadLetters,
   emultecOrderImportRuns,
@@ -7,6 +7,9 @@ import { db } from "../infrastructure/db";
 import { logger } from "../logger";
 
 export type EmultecImportRunStatus = "RUNNING" | "SUCCEEDED" | "FAILED";
+
+/** Open DLQ rows at/above this attempt count are not replayed (ops alert). */
+export const EMULTEC_DLQ_MAX_ATTEMPTS = 10;
 
 export async function startEmultecImportRun(input: {
   mode: string;
@@ -62,7 +65,11 @@ export async function finishEmultecImportRun(input: {
   });
 }
 
-/** Open dead-letter avulsa ids after cursor, ascending. */
+/**
+ * Open dead-letter avulsa ids after cursor, ascending.
+ * Exhausted rows (`attempt_count >= EMULTEC_DLQ_MAX_ATTEMPTS`) stay open for ops
+ * but are excluded from automatic HYBRID replay.
+ */
 export async function listOpenEmultecDeadLetterIds(input: {
   afterId: number;
   limit: number;
@@ -73,6 +80,7 @@ export async function listOpenEmultecDeadLetterIds(input: {
     .where(
       and(
         isNull(emultecOrderImportDeadLetters.resolvedAt),
+        lt(emultecOrderImportDeadLetters.attemptCount, EMULTEC_DLQ_MAX_ATTEMPTS),
         gt(emultecOrderImportDeadLetters.idAvulsaEmultec, input.afterId)
       )
     )
@@ -87,7 +95,7 @@ export async function recordEmultecDeadLetter(input: {
   detail?: string | null;
 }): Promise<void> {
   const now = new Date();
-  await db
+  const [row] = await db
     .insert(emultecOrderImportDeadLetters)
     .values({
       idAvulsaEmultec: input.idAvulsa,
@@ -107,7 +115,21 @@ export async function recordEmultecDeadLetter(input: {
         lastFailedAt: now,
         resolvedAt: null,
       },
+    })
+    .returning({
+      attemptCount: emultecOrderImportDeadLetters.attemptCount,
+      reason: emultecOrderImportDeadLetters.reason,
     });
+
+  if (row && row.attemptCount >= EMULTEC_DLQ_MAX_ATTEMPTS) {
+    logger.warn("emultec.order_import.dlq_exhausted", {
+      idAvulsa: input.idAvulsa,
+      attemptCount: row.attemptCount,
+      maxAttempts: EMULTEC_DLQ_MAX_ATTEMPTS,
+      reason: row.reason,
+      detail: input.detail ?? undefined,
+    });
+  }
 }
 
 export async function resolveEmultecDeadLetter(idAvulsa: number): Promise<void> {

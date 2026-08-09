@@ -84,11 +84,18 @@ Each Temporal HYBRID/API run writes `ops.emultec_order_import_runs` (totals + `s
 
 Hard upsert exceptions only → `ops.emultec_order_import_dead_letters`. Gate skips (`seller_unmapped`, `facility_*`, …) are digest counts only. Successful upsert clears an open dead letter (`resolved_at`).
 
+Replay stops after `attempt_count >= 10` (`EMULTEC_DLQ_MAX_ATTEMPTS`). Row stays open for ops; log `emultec.order_import.dlq_exhausted`.
+
 ```sql
 SELECT * FROM ops.emultec_order_import_runs ORDER BY started_at DESC LIMIT 20;
 
 SELECT * FROM ops.emultec_order_import_dead_letters
 WHERE resolved_at IS NULL
+ORDER BY last_failed_at DESC;
+
+-- Stuck / exhausted (no longer auto-replayed)
+SELECT * FROM ops.emultec_order_import_dead_letters
+WHERE resolved_at IS NULL AND attempt_count >= 10
 ORDER BY last_failed_at DESC;
 ```
 
