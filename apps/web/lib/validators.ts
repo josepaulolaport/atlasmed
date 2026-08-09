@@ -131,19 +131,6 @@ export const disable2FASchema = z.object({
   code: totpCodeSchema,
 });
 
-export const grantPermissionSchema = z.object({
-  resource: z.enum([
-    "REP",
-    "FACILITY",
-    "PROFESSIONAL",
-    "TERRITORY",
-    "INVITATION",
-  ]),
-  action: z.enum(["create", "read", "update", "delete", "manage"]),
-  resourceId: z.string().optional(),
-  expiresAt: z.string().datetime().optional(),
-});
-
 export const changeUserRoleSchema = z.object({
   roleId: z.string().min(1, "Role is required"),
 });

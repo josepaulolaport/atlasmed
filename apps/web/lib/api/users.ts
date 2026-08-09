@@ -152,39 +152,4 @@ export const usersApi = {
     );
     return response.data;
   },
-
-  getUserCapabilities: async (userId: string): Promise<{
-    role: string;
-    grants: import("@/types/auth").AccessGrant[];
-  }> => {
-    const response = await apiClient.get(`/access/users/${userId}/capabilities`);
-    return response.data;
-  },
-
-  grantPermission: async (
-    userId: string,
-    data: {
-      resource: string;
-      action: string;
-      resourceId?: string;
-      expiresAt?: string;
-    }
-  ): Promise<{ grant: import("@/types/auth").AccessGrant; message: string }> => {
-    const response = await apiClient.post(`/access/users/${userId}/permissions`, data);
-    return response.data;
-  },
-
-  revokePermission: async (
-    userId: string,
-    data: {
-      resource: string;
-      action: string;
-      resourceId?: string;
-    }
-  ): Promise<{ message: string }> => {
-    const response = await apiClient.delete(`/access/users/${userId}/permissions`, {
-      data,
-    });
-    return response.data;
-  },
 };

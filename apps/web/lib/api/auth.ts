@@ -8,7 +8,6 @@ import type {
   PasswordResetConfirm,
   User,
   Session,
-  CapabilitiesResponse,
 } from "@/types/auth";
 
 export const authApi = {
@@ -93,13 +92,6 @@ export const authApi = {
     revokeOtherSessions?: boolean;
   }): Promise<{ success: boolean }> => {
     const response = await apiClient.patch<{ success: boolean }>("/access/password", data);
-    return response.data;
-  },
-
-  getCapabilities: async (): Promise<CapabilitiesResponse> => {
-    const response = await apiClient.get<CapabilitiesResponse>(
-      "/access/me/capabilities"
-    );
     return response.data;
   },
 

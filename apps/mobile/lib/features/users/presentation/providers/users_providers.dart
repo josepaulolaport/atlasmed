@@ -1,6 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_repository_providers.dart';
@@ -27,11 +26,6 @@ final userDetailProvider = FutureProvider.autoDispose.family<User?, int>((
 final userAssignmentsProvider = FutureProvider.autoDispose
     .family<UserAssignments, int>((ref, userId) {
       return ref.watch(usersRepositoryProvider).getUserAssignments(userId);
-    });
-
-final userPermissionsProvider = FutureProvider.autoDispose
-    .family<List<PermissionGrant>, int>((ref, userId) {
-      return ref.watch(usersRepositoryProvider).getUserPermissions(userId);
     });
 
 final rolesProvider = FutureProvider.autoDispose<List<UserRole>>((ref) {

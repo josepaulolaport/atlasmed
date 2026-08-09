@@ -10,7 +10,6 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
@@ -160,31 +159,6 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<PermissionGrant>> getUserPermissions(int userId) async {
-    final response = await _get(_accessUri('/users/$userId/capabilities'));
-    _throwIfError(response);
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final grants = (decoded['grants'] as List<dynamic>? ?? const [])
-        .cast<Map<String, dynamic>>();
-    return grants
-        .map(
-          (g) => PermissionGrant(
-            id: readCrmId(g['id'], 'id'),
-            resource: g['resource'] as String,
-            action: g['action'] as String,
-            resourceId: readCrmIdOrNull(g['resourceId'], 'resourceId'),
-            grantedAt:
-                DateTime.tryParse(g['grantedAt'] as String? ?? '') ??
-                DateTime.now(),
-            expiresAt: g['expiresAt'] != null
-                ? DateTime.tryParse(g['expiresAt'] as String)
-                : null,
-          ),
-        )
-        .toList();
-  }
-
-  @override
   Future<void> activateUser(int userId) async {
     final response = await _send(
       _accessUri('/users/$userId/activate'),
@@ -268,46 +242,6 @@ class HttpUsersRepository implements UsersRepository {
     final response = await _send(
       _accessUri('/users/$userId/verticals/$verticalId'),
       method: RepositoryHttpMethod.delete,
-    );
-    _throwIfError(response);
-  }
-
-  @override
-  Future<void> grantPermission(
-    int userId, {
-    required String resource,
-    required String action,
-    int? resourceId,
-    DateTime? expiresAt,
-  }) async {
-    final response = await _send(
-      _accessUri('/users/$userId/permissions'),
-      method: RepositoryHttpMethod.post,
-      body: {
-        'resource': resource,
-        'action': action,
-        if (resourceId != null) 'resourceId': resourceId,
-        'expiresAt': ?expiresAt?.toIso8601String(),
-      },
-    );
-    _throwIfError(response);
-  }
-
-  @override
-  Future<void> revokePermission(
-    int userId, {
-    required String resource,
-    required String action,
-    int? resourceId,
-  }) async {
-    final response = await _send(
-      _accessUri('/users/$userId/permissions'),
-      method: RepositoryHttpMethod.delete,
-      body: {
-        'resource': resource,
-        'action': action,
-        if (resourceId != null) 'resourceId': resourceId,
-      },
     );
     _throwIfError(response);
   }

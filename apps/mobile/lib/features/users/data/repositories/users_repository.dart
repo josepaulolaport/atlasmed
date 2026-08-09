@@ -3,7 +3,6 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
@@ -50,10 +49,6 @@ abstract interface class UsersRepository {
     List<InviteVerticalAssignment> verticalAssignments,
   );
 
-  /// `GET /access/users/:id/capabilities` (grants slice only — role is
-  /// already on [User.role]).
-  Future<List<PermissionGrant>> getUserPermissions(int userId);
-
   /// `POST /access/users/:id/activate`
   Future<void> activateUser(int userId);
 
@@ -80,23 +75,6 @@ abstract interface class UsersRepository {
 
   /// `DELETE /access/users/:id/verticals/:verticalId`
   Future<void> revokeVertical(int userId, int verticalId);
-
-  /// `POST /access/users/:id/permissions`
-  Future<void> grantPermission(
-    int userId, {
-    required String resource,
-    required String action,
-    int? resourceId,
-    DateTime? expiresAt,
-  });
-
-  /// `DELETE /access/users/:id/permissions` — body uses resource/action/resourceId.
-  Future<void> revokePermission(
-    int userId, {
-    required String resource,
-    required String action,
-    int? resourceId,
-  });
 
   /// `GET /access/roles`
   Future<List<UserRole>> getRoles();

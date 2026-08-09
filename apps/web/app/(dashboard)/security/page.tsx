@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +17,6 @@ import {
   disable2FASchema,
   totpCodeSchema,
 } from "@/lib/validators";
-import type { AccessGrant } from "@/types/auth";
 import { z } from "zod";
 
 type ChangePasswordForm = z.infer<typeof changePasswordSchema>;
@@ -60,8 +59,6 @@ export default function SecurityPage() {
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [setupData, setSetupData] = useState<{ secret: string; otpauthUrl: string } | null>(null);
   const [showDisable2FA, setShowDisable2FA] = useState(false);
-  const [capabilities, setCapabilities] = useState<{ role: string; grants: AccessGrant[] } | null>(null);
-  const [capabilitiesLoading, setCapabilitiesLoading] = useState(true);
 
   const changePasswordForm = useForm<ChangePasswordForm>({
     resolver: zodResolver(changePasswordSchema),
@@ -75,14 +72,6 @@ export default function SecurityPage() {
   const disable2FAForm = useForm<Disable2FAForm>({
     resolver: zodResolver(disable2FASchema),
   });
-
-  useEffect(() => {
-    authApi
-      .getCapabilities()
-      .then(setCapabilities)
-      .catch(() => setCapabilities(null))
-      .finally(() => setCapabilitiesLoading(false));
-  }, []);
 
   const handleRequestEmailVerification = async () => {
     setEmailLoading(true);
@@ -617,54 +606,6 @@ export default function SecurityPage() {
               </div>
             )}
           </div>
-        </SectionCard>
-
-        <SectionCard title="Permissões de acesso" icon="solar:key-square-linear">
-          {capabilitiesLoading ? (
-            <p className="text-sm text-zinc-500">Carregando permissões...</p>
-          ) : capabilities ? (
-            <div className="space-y-3">
-              <p className="text-sm text-zinc-700">
-                Função:{" "}
-                <span className="font-medium text-zinc-900">
-                  {capabilities.role}
-                </span>
-              </p>
-              {capabilities.grants.length === 0 ? (
-                <p className="text-sm text-zinc-500">
-                  Nenhuma permissão adicional além da sua função.
-                </p>
-              ) : (
-                <ul className="space-y-2 text-sm">
-                  {capabilities.grants.map((grant) => (
-                    <li
-                      key={grant.id}
-                      className="rounded-md border border-zinc-200 bg-white px-3 py-2"
-                    >
-                      <span className="font-medium text-zinc-900">
-                        {grant.action}
-                      </span>{" "}
-                      em{" "}
-                      <span className="font-medium text-zinc-900">
-                        {grant.resource}
-                      </span>
-                      {grant.resourceId ? ` (${grant.resourceId})` : ""}
-                      {grant.expiresAt && (
-                        <span className="block text-xs text-zinc-500 mt-0.5">
-                          Expira em{" "}
-                          {new Date(grant.expiresAt).toLocaleDateString("pt-BR")}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-zinc-500">
-              Não foi possível carregar as permissões.
-            </p>
-          )}
         </SectionCard>
 
         <SectionCard
