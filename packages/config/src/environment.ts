@@ -97,6 +97,12 @@ const EnvironmentSchema = Type.Object({
   TEMPORAL_NAMESPACE: Type.String({ default: "default", minLength: 1 }),
   TEMPORAL_TASK_QUEUE: Type.String({ default: "atlasmed-workflows", minLength: 1 }),
 
+  /** Emultec MySQL (order/product import). Optional until import workers run. */
+  EMULTEC_MYSQL_HOST: OptionalString(),
+  EMULTEC_MYSQL_PORT: Type.Number({ default: 3306, minimum: 1, maximum: 65535 }),
+  EMULTEC_MYSQL_USER: OptionalString(),
+  EMULTEC_MYSQL_PASSWORD: OptionalString(),
+  EMULTEC_MYSQL_DATABASE: Type.String({ default: "atlasmed", minLength: 1 }),
 
   NEXT_PUBLIC_API_URL: Type.String({ default: "http://localhost:3000/api/v1", pattern: URL_PATTERN }),
   NEXT_PUBLIC_HEALTH_URL: Type.String({ default: "http://localhost:3000", pattern: URL_PATTERN }),
@@ -165,6 +171,8 @@ function normalizeEnvironment(env: EnvInput) {
     TEMPORAL_ADDRESS: env.TEMPORAL_ADDRESS ?? "localhost:7233",
     TEMPORAL_NAMESPACE: env.TEMPORAL_NAMESPACE ?? "default",
     TEMPORAL_TASK_QUEUE: env.TEMPORAL_TASK_QUEUE ?? "atlasmed-workflows",
+    EMULTEC_MYSQL_PORT: numberFromEnv(env.EMULTEC_MYSQL_PORT, 3306),
+    EMULTEC_MYSQL_DATABASE: env.EMULTEC_MYSQL_DATABASE ?? "atlasmed",
     NEXT_PUBLIC_API_URL: env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1",
     NEXT_PUBLIC_HEALTH_URL: env.NEXT_PUBLIC_HEALTH_URL ?? "http://localhost:3000",
     NEXT_PUBLIC_MAP_PROVIDER: env.NEXT_PUBLIC_MAP_PROVIDER ?? "leaflet",
