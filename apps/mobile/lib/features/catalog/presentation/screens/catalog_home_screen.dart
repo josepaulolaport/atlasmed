@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
@@ -15,6 +14,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/list_skeletons.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Entry point for the Catálogo de Produtos section, designed like a store
 /// catalog rather than a filing cabinet: a search box and a family filter
@@ -101,7 +101,7 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
         family: family,
         onViewComparison: () {
           Navigator.pop(sheetContext);
-          context.push('/catalog/comparison/${variant.id}');
+          CatalogComparisonRoute(variantId: variant.id).push(context);
         },
         onEdit: !isAdmin
             ? null
@@ -162,7 +162,7 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
             IconButton(
               tooltip: 'Campos de potencial',
               icon: const Icon(Icons.insights_outlined),
-              onPressed: () => context.push('/catalog/potential-definitions'),
+              onPressed: () => const CatalogPotentialDefinitionsRoute().push(context),
             ),
         ],
       ),

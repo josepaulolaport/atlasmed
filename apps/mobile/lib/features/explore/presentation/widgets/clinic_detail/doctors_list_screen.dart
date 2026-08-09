@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterListPageSize;
@@ -20,6 +19,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Full list of CRM doctors at an establishment — same table chrome as
 /// Explorar (search + filter + sort chips + [DoctorRow]).
@@ -410,10 +410,10 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
   void _openProfile(ProfessionalRoster doctor) {
     final facilityId = widget.facilityId;
-    final uri = facilityId == null || (facilityId <= 0)
-        ? '/explore/doctor/${doctor.id}'
-        : '/explore/doctor/${doctor.id}?facilityId=$facilityId';
-    context.push(uri);
+    DoctorDetailRoute(
+      id: doctor.id,
+      facilityId: facilityId != null && facilityId > 0 ? facilityId : null,
+    ).push(context);
   }
 
   Future<void> _editRoles(ProfessionalRoster doctor) async {

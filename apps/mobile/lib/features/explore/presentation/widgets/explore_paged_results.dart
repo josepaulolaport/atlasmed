@@ -9,7 +9,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class ExplorePageIndex {
   const ExplorePageIndex({required this.page, required this.offset});
@@ -214,16 +214,14 @@ class _ClinicPagedRow extends ConsumerWidget {
               verticalId: preferredVerticalId,
             );
             final verticalId = preferredVerticalId;
-            if (verticalId != null && (verticalId > 0)) {
-              context.push(
-                Uri(
-                  path: '/explore/clinic/${clinic.id}',
-                  queryParameters: {'verticalId': verticalId.toString()},
-                ).toString(),
-              );
+            if (verticalId != null && verticalId > 0) {
+              ClinicDetailRoute(
+                id: clinic.id,
+                verticalId: verticalId,
+              ).push(context);
               return;
             }
-            context.push('/explore/clinic/${clinic.id}');
+            ClinicDetailRoute(id: clinic.id).push(context);
           },
         );
       },
@@ -258,7 +256,7 @@ class _DoctorPagedRow extends ConsumerWidget {
         final doctor = ProfessionalEntry.fromDTO(data.items[position.offset]);
         return DoctorRow(
           doctor: doctor,
-          onTap: () => context.push('/explore/doctor/${doctor.id}'),
+          onTap: () => DoctorDetailRoute(id: doctor.id).push(context),
         );
       },
     );

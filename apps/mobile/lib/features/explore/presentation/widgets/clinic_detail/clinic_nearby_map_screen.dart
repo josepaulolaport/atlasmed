@@ -6,7 +6,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
@@ -20,6 +19,7 @@ import 'package:atlasmed_mobile_app/features/map/presentation/utils/nearby_stack
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 Color _nearbyStatusDotColor(NearbyEstablishment e) =>
     PurchaseBucketFilter.mapColor(
@@ -1671,7 +1671,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
 
   void _openEstablishment(int id) {
     if (id == widget.facilityId) return;
-    context.push('/explore/clinic/$id');
+    ClinicDetailRoute(id: id).push(context);
   }
 
   Point _point(EstablishmentLocation loc) =>

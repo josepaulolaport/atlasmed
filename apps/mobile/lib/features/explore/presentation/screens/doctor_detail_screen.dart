@@ -5,7 +5,6 @@ import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional.dart';
@@ -22,6 +21,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/quick_actions.dart';
 import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 // ======================================================================
 // DoctorDetailScreen — full doctor profile with multiple sections
@@ -1338,7 +1338,7 @@ class _ProfessionalClinics extends StatelessWidget {
                       ].join(' · ');
                       return InkWell(
                         onTap: () {
-                          context.push('/explore/clinic/${c.id}');
+                          ClinicDetailRoute(id: c.id).push(context);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),

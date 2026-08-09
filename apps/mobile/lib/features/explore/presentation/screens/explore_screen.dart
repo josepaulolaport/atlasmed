@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_entry.dart';
@@ -30,6 +29,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_to
 import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -91,21 +91,19 @@ class ExploreResultsList extends ConsumerWidget {
               onTap: () {
                 seedClinicDetailShellFromEntry(ref, clinic);
                 final verticalId = preferredVerticalId;
-                if (verticalId != null && (verticalId > 0)) {
-                  context.push(
-                    Uri(
-                      path: '/explore/clinic/${clinic.id}',
-                      queryParameters: {'verticalId': verticalId.toString()},
-                    ).toString(),
-                  );
+                if (verticalId != null && verticalId > 0) {
+                  ClinicDetailRoute(
+                    id: clinic.id,
+                    verticalId: verticalId,
+                  ).push(context);
                   return;
                 }
-                context.push('/explore/clinic/${clinic.id}');
+                ClinicDetailRoute(id: clinic.id).push(context);
               },
             ),
             (doctor) => DoctorRow(
               doctor: doctor,
-              onTap: () => context.push('/explore/doctor/${doctor.id}'),
+              onTap: () => DoctorDetailRoute(id: doctor.id).push(context),
             ),
           );
         },

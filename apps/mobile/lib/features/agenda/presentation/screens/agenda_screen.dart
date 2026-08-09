@@ -7,7 +7,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class AgendaScreen extends ConsumerStatefulWidget {
   const AgendaScreen({super.key, this.ownerPicker, this.onCreate})
@@ -102,7 +102,7 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
         widget.ownerPicker ?? (isManager ? _buildManagerFilters() : null);
     final createAction =
         widget.onCreate ??
-        (canCreate ? () => context.push('/agenda/new') : null);
+        (canCreate ? () => const AgendaNewRoute().push(context) : null);
     final agenda = ref.watch(agendaProvider(_query));
     return agenda.when(
       loading: () => _AgendaScaffold(
@@ -296,18 +296,19 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
 
   Future<void> _editOccurrence(CalendarOccurrence occurrence) async {
     if (!occurrence.recurrenceProvided) {
-      await context.push(
-        '/agenda/${occurrence.calendarId}/occurrences/${Uri.encodeComponent(occurrence.recurrenceKey)}/edit',
-        extra: occurrence,
-      );
+      await AgendaOccurrenceEditRoute(
+        id: occurrence.calendarId,
+        recurrenceKey: occurrence.recurrenceKey,
+        $extra: occurrence,
+      ).push(context);
       if (mounted) _refresh();
       return;
     }
     if (occurrence.recurrence == CalendarRecurrence.none) {
-      await context.push(
-        '/agenda/${occurrence.calendarId}/edit',
-        extra: occurrence,
-      );
+      await AgendaEditRoute(
+        id: occurrence.calendarId,
+        $extra: occurrence,
+      ).push(context);
     } else {
       final choice = await showModalBottomSheet<CalendarEditorMode>(
         context: context,
@@ -333,15 +334,16 @@ class _AgendaScreenState extends ConsumerState<AgendaScreen> {
       );
       if (!mounted || choice == null) return;
       if (choice == CalendarEditorMode.occurrence) {
-        await context.push(
-          '/agenda/${occurrence.calendarId}/occurrences/${Uri.encodeComponent(occurrence.recurrenceKey)}/edit',
-          extra: occurrence,
-        );
+        await AgendaOccurrenceEditRoute(
+          id: occurrence.calendarId,
+          recurrenceKey: occurrence.recurrenceKey,
+          $extra: occurrence,
+        ).push(context);
       } else {
-        await context.push(
-          '/agenda/${occurrence.calendarId}/edit',
-          extra: occurrence,
-        );
+        await AgendaEditRoute(
+          id: occurrence.calendarId,
+          $extra: occurrence,
+        ).push(context);
       }
     }
     if (mounted) _refresh();

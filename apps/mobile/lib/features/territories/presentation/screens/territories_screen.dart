@@ -23,9 +23,9 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/ve
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class TerritoriesScreen extends ConsumerWidget {
   const TerritoriesScreen({super.key});
@@ -122,13 +122,12 @@ class _NewTerritoryButton extends ConsumerWidget {
       ),
       onPressed: () {
         final verticalId = ref.read(selectedTerritoryVerticalIdProvider);
-        context.push(
-          '/territories/create',
-          extra: TerritoryEditorTarget.creating(
+        TerritoryCreateRoute(
+          $extra: TerritoryEditorTarget.creating(
             initialKind: createKind,
             initialVerticalId: verticalId,
           ),
-        );
+        ).push(context);
       },
     );
   }
@@ -552,7 +551,7 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
                 onEditInfo: () => _editInfo(selectedTerritory),
                 onAssign: () => _assignUser(selectedTerritory),
                 onEditArea: () =>
-                    context.push('/territories/${selectedTerritory.id}/edit'),
+                    TerritoryEditRoute(id: selectedTerritory.id).push(context),
                 onDelete: () => _confirmAndDelete(selectedTerritory),
                 onClose: _deselectTerritory,
               ),

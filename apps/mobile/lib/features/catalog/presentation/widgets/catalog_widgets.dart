@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 String formatDate(DateTime date) {
   final d = date.day.toString().padLeft(2, '0');
@@ -711,14 +711,14 @@ class CatalogTabBar extends StatelessWidget {
               child: _segment(
                 label: 'Produtos',
                 selected: active == CatalogTab.produtos,
-                onTap: () => context.go('/catalog'),
+                onTap: () => const CatalogHomeRoute().go(context),
               ),
             ),
             Expanded(
               child: _segment(
                 label: 'Tabela Brasíndice',
                 selected: active == CatalogTab.tabelaCompleta,
-                onTap: () => context.go('/catalog/price-index'),
+                onTap: () => const CatalogPriceIndexRoute().go(context),
               ),
             ),
           ],

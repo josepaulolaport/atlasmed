@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/prov
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Detail for one field-change suggestion.
 ///
@@ -411,7 +412,7 @@ class _TargetCard extends StatelessWidget {
 
   void _openClinic(BuildContext context) {
     if (suggestion.targetId <= 0) return;
-    context.push('/explore/clinic/${suggestion.targetId}');
+    ClinicDetailRoute(id: suggestion.targetId).push(context);
   }
 
   @override

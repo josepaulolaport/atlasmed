@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Read-only review of a sent invite. Pending invites can open the edit form.
 class InvitationDetailScreen extends ConsumerWidget {
@@ -84,7 +85,7 @@ class InvitationDetailScreen extends ConsumerWidget {
                 data: (invitation) => _InvitationDetailBody(
                   invitation: invitation,
                   onEdit: () =>
-                      context.push('/users/invitations/${invitation.id}/edit'),
+                      InvitationEditRoute(invitationId: invitation.id).push(context),
                 ),
               ),
             ),

@@ -21,6 +21,7 @@ import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class UserDetailScreen extends ConsumerWidget {
   const UserDetailScreen({super.key, required this.userId});
@@ -347,7 +348,7 @@ class _IdentityCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.push('/users/${user.id}/edit'),
+                onPressed: () => UserEditRoute(id: user.id).push(context),
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: const Text('Editar informações'),
               ),
@@ -483,7 +484,7 @@ class _AssignmentsSection extends ConsumerWidget {
           trailing: canManage
               ? TextButton(
                   onPressed: () async {
-                    await context.push('/users/${user.id}/assignments');
+                    await UserAssignmentsRoute(id: user.id).push(context);
                     ref.invalidate(userAssignmentsProvider(user.id));
                   },
                   child: const Text('Gerenciar'),

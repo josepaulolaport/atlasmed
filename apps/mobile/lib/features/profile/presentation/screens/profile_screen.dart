@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
@@ -13,6 +12,7 @@ import 'package:atlasmed_mobile_app/features/profile/presentation/providers/prof
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 // ======================================================================
 // ProfileScreen — representative's personal overview
@@ -333,7 +333,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _SectionHeader(
           title: 'Território',
           action: 'Abrir mapa',
-          onAction: () => context.go('/map'),
+          onAction: () => const MapRoute().go(context),
         ),
         const SizedBox(height: 8),
         if (managers.isNotEmpty) ...[

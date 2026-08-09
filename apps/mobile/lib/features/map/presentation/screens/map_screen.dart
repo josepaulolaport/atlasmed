@@ -23,9 +23,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Live map tab: in-scope clinic pins with Mapbox Supercluster.
 class MapScreen extends ConsumerStatefulWidget {
@@ -1514,16 +1514,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final verticalId = ref
         .read(effectiveFacilityVerticalIdProvider)
         .valueOrNull;
-    if (verticalId != null && (verticalId > 0)) {
-      context.push(
-        Uri(
-          path: '/explore/clinic/$id',
-          queryParameters: {'verticalId': verticalId.toString()},
-        ).toString(),
-      );
+    if (verticalId != null && verticalId > 0) {
+      ClinicDetailRoute(id: id, verticalId: verticalId).push(context);
       return;
     }
-    context.push('/explore/clinic/$id');
+    ClinicDetailRoute(id: id).push(context);
   }
 }
 

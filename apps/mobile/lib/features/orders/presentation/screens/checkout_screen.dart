@@ -9,6 +9,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_rep
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class CheckoutSubmissionController {
   CheckoutSubmissionController({String Function()? idempotencyKeyFactory})
@@ -486,17 +487,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           );
       _submission.recordCreatedOrder(order);
       if (!mounted) return;
-      context.push(
-        Uri(
-          path: '/orders/new/success',
-          queryParameters: {
-            'orderId': order.id,
-            if (cart.interactionId != null)
-              'interactionId': cart.interactionId!,
-          },
-        ).toString(),
-        extra: order,
-      );
+      NewOrderSuccessRoute($extra: order).push(context);
     } catch (_) {
       if (mounted) {
         setState(

@@ -5,8 +5,8 @@ import 'package:atlasmed_mobile_app/features/users/presentation/widgets/users_fi
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class UsersScreen extends ConsumerWidget {
   const UsersScreen({super.key});
@@ -22,7 +22,7 @@ class UsersScreen extends ConsumerWidget {
         actions: canManage
             ? [
                 IconButton(
-                  onPressed: () => context.push('/users/invitations'),
+                  onPressed: () => const InvitationsRoute().push(context),
                   icon: const Icon(
                     Icons.mail_outline_rounded,
                     color: AppColors.gray900,
@@ -45,7 +45,7 @@ class UsersScreen extends ConsumerWidget {
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.navyDeep,
-              onPressed: () => context.push('/users/invite'),
+              onPressed: () => const InviteUserRoute().push(context),
               icon: const Icon(
                 Icons.person_add_alt_1_rounded,
                 color: Colors.white,
@@ -184,7 +184,7 @@ class _UsersListState extends ConsumerState<_UsersList> {
                         final user = state.items[index];
                         return UserRow(
                           user: user,
-                          onTap: () => context.push('/users/${user.id}'),
+                          onTap: () => UserDetailRoute(id: user.id).push(context),
                         );
                       },
                     ),

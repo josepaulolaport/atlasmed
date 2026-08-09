@@ -1,8 +1,8 @@
 import 'package:atlasmed_mobile_app/features/agenda/data/calendar_models.dart';
 import 'package:atlasmed_mobile_app/features/agenda/presentation/widgets/agenda_item.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class AgendaDaySection extends StatelessWidget {
   const AgendaDaySection({
@@ -36,9 +36,9 @@ class AgendaDaySection extends StatelessWidget {
             AgendaItem(
               occurrence: group.items[index],
               onTap: group.items[index].interaction != null
-                  ? () => context.push(
-                      '/agenda/interactions/${group.items[index].interaction!.id}',
-                    )
+                  ? () => InteractionDetailRoute(
+                      id: group.items[index].interaction!.id,
+                    ).push(context)
                   : group.items[index].canMutate && onOccurrenceTap != null
                   ? () => onOccurrenceTap!(group.items[index])
                   : null,

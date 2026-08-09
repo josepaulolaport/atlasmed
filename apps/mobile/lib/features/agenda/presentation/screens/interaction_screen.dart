@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class InteractionNotesQuery extends Equatable {
   const InteractionNotesQuery({required this.facilityId});
@@ -77,26 +77,22 @@ class InteractionScreen extends ConsumerWidget {
               .complete(correctionReason: correctionReason),
           onNewOrder:
               onNewOrder ??
-              () => context.push(
-                Uri(
-                  path: '/orders/new',
-                  queryParameters: {
-                    'interactionId': '${detail.id}',
-                    'facilityId': '${detail.facility.id}',
-                    'facilityName': detail.facility.displayName,
-                  },
-                ).toString(),
-              ),
+              () => NewOrderRoute(
+                interactionId: detail.id,
+                facilityId: detail.facility.id,
+                facilityName: detail.facility.displayName,
+              ).push(context),
           onRefresh: () =>
               ref.read(interactionProvider(interactionId).notifier).load(),
           onReschedule:
               onReschedule ??
               () async {
                 final occurrence = CalendarOccurrence.fromInteraction(detail);
-                await context.push(
-                  '/agenda/${detail.calendarId}/occurrences/${Uri.encodeComponent(detail.recurrenceKey)}/edit',
-                  extra: occurrence,
-                );
+                await AgendaOccurrenceEditRoute(
+                  id: detail.calendarId,
+                  recurrenceKey: detail.recurrenceKey,
+                  $extra: occurrence,
+                ).push(context);
                 await ref
                     .read(interactionProvider(interactionId).notifier)
                     .load();
@@ -366,7 +362,7 @@ class _OrdersCard extends StatelessWidget {
                 title: Text('${order.id}'),
                 subtitle: Text(_orderStatusLabel(order.status)),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/orders/${order.id}'),
+                onTap: () => OrderDetailRoute(id: order.id).push(context),
               ),
             ),
       ],

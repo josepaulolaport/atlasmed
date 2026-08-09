@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class OrderSuccessScreen extends ConsumerStatefulWidget {
   const OrderSuccessScreen({super.key});
@@ -186,7 +186,7 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => context.go('/orders'),
+                  onPressed: () => const OrdersRoute().go(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.navyDeep,
                     foregroundColor: Colors.white,

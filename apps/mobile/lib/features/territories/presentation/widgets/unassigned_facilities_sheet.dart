@@ -3,7 +3,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/providers/
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// Spec 0006: manager list of clinics in zone(s) without a consultant.
 class UnassignedFacilitiesSheet extends ConsumerStatefulWidget {
@@ -160,7 +160,7 @@ class _UnassignedFacilitiesSheetState
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () {
                         Navigator.of(context).pop();
-                        context.push('/explore/clinic/${clinic.id}');
+                        ClinicDetailRoute(id: clinic.id).push(context);
                       },
                     );
                   },

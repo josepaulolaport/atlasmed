@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// "Pedidos recentes" — snapping PageView of cards, mirroring the médicos
 /// card layout (icon + identity header, badge area, info rows, footer link).
@@ -154,7 +154,7 @@ class _OrderCard extends StatelessWidget {
           const Divider(height: 1, color: AppColors.gray100),
           const SizedBox(height: 8),
           InkWell(
-            onTap: () => context.push('/orders/${order.id}'),
+            onTap: () => OrderDetailRoute(id: order.id).push(context),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(

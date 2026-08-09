@@ -10,6 +10,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_rep
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final int orderId;
@@ -555,7 +556,7 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                           if (canCancel) const SizedBox(width: 12),
                           Expanded(
                             child: FilledButton(
-                              onPressed: () => context.go('/splash'),
+                              onPressed: () => const SplashRoute().go(context),
                               style: FilledButton.styleFrom(
                                 backgroundColor: AppColors.navyDeep,
                                 foregroundColor: Colors.white,

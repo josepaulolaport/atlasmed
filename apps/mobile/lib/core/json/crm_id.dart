@@ -2,7 +2,7 @@
 ///
 /// Decode at wire edges only; domain models keep [int].
 /// - [readCrmId] — strict API JSON (integral number only; no silent truncate).
-/// - [parseRouteCrmId] — GoRouter path segments (always String).
+/// - [parseRouteCrmId] — leftover string path edges / tests (typed routes use codegen).
 /// - [readCrmIdLoose] — Mapbox/GeoJSON property edges (num or digit String).
 int readCrmId(Object? value, [String field = 'id']) {
   if (value is int) return value;

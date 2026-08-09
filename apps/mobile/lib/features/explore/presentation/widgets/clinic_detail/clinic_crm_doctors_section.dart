@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
@@ -7,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 /// "Médicos" — snapping PageView of compact cards, each focused on
 /// essential contact info (phone/email) plus a dedicated badges area. The
@@ -224,10 +224,10 @@ class _DoctorCard extends StatelessWidget {
                 InkWell(
                   onTap: () {
                     final id = facilityId;
-                    final uri = id == null || (id <= 0)
-                        ? '/explore/doctor/${doctor.id}'
-                        : '/explore/doctor/${doctor.id}?facilityId=$id';
-                    context.push(uri);
+                    DoctorDetailRoute(
+                      id: doctor.id,
+                      facilityId: id != null && id > 0 ? id : null,
+                    ).push(context);
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),

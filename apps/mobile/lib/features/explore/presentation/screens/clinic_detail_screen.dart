@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
@@ -52,6 +51,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/router/routes.dart';
 
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
@@ -719,7 +719,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                             ),
                           ),
                           label: const Text('Pedido'),
-                          onTap: () => context.push('/orders/new'),
+                          onTap: () => const NewOrderRoute().push(context),
                         ),
                       ],
                     ),
@@ -948,7 +948,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                           : _HeaderLinkButton(
                               label: 'Ver todos',
                               // Shell branch route — must go(), not push().
-                              onTap: () => context.go('/orders'),
+                              onTap: () => const OrdersRoute().go(context),
                             ),
                     ),
                     if (ordersState.loading && effectiveOrders.isEmpty)
