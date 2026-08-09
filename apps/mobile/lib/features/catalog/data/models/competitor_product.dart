@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// A competitor's equivalent product (mirrors `competitor_products`), used
 /// only inside comparison tables against an AtlasMed [CatalogVariant].
 class CompetitorProduct {

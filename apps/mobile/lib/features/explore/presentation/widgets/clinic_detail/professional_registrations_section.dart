@@ -137,9 +137,9 @@ class ProfessionalRegistrationsSection extends ConsumerWidget {
                       onChanged?.call();
                     } catch (e) {
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$e')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('$e')));
                     }
                   },
                 ),

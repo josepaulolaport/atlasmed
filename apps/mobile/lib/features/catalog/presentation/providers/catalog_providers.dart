@@ -24,10 +24,12 @@ final catalogFamiliesProvider = FutureProvider<List<CatalogFamily>>((ref) {
 
 /// "Comparativo" for a single AtlasMed variant — that product plus its
 /// registered competitor equivalences only.
-final catalogComparisonProvider =
-    FutureProvider.family<ComparisonGroup, int>((ref, variantId) {
-      return ref.watch(catalogRepositoryProvider).getComparison(variantId);
-    });
+final catalogComparisonProvider = FutureProvider.family<ComparisonGroup, int>((
+  ref,
+  variantId,
+) {
+  return ref.watch(catalogRepositoryProvider).getComparison(variantId);
+});
 
 /// Complete Tabela Brasíndice/Simpro — every product in the catalog.
 final catalogPriceIndexProvider = FutureProvider<List<ComparisonRow>>((ref) {

@@ -124,8 +124,9 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                                       ),
                                       child: _OrderCard(
                                         order: order,
-                                        onTap: () =>
-                                            OrderDetailRoute(id: order.id).push(context),
+                                        onTap: () => OrderDetailRoute(
+                                          id: order.id,
+                                        ).push(context),
                                       ),
                                     ),
                                   )

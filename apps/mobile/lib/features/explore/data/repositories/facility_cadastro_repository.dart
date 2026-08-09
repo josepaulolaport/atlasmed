@@ -199,7 +199,10 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
           .cast<Map<String, dynamic>>();
       final files = rawFiles
           .map((f) {
-            final fileAssetId = readCrmIdOrNull(f['fileAssetId'], 'fileAssetId');
+            final fileAssetId = readCrmIdOrNull(
+              f['fileAssetId'],
+              'fileAssetId',
+            );
             if (fileAssetId == null) return null;
             return CadastroDocumentFile(
               fileAssetId: fileAssetId,
@@ -276,7 +279,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
 
     final counts = map['counts'] as Map<String, dynamic>?;
     return FacilityCadastroChecklist(
-      facilityId: readCrmIdOrNull(map['facilityId'], 'facilityId') ?? facilityId,
+      facilityId:
+          readCrmIdOrNull(map['facilityId'], 'facilityId') ?? facilityId,
       legalDocumentType: map['legalDocumentType'] as String?,
       billingEmail: map['billingEmail'] as String?,
       commercialStatus: map['commercialStatus'] as String?,
@@ -320,8 +324,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       uri: uri,
       method: RepositoryHttpMethod.post,
       body: {
-        if (verticalId != null && (verticalId > 0))
-          'verticalId': verticalId,
+        if (verticalId != null && (verticalId > 0)) 'verticalId': verticalId,
       },
     );
     final id = readCrmIdOrNull(map['id'], 'id');
@@ -605,8 +608,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       uri: uri,
       method: RepositoryHttpMethod.post,
       body: {
-        if (documentId != null && (documentId > 0))
-          'documentId': documentId,
+        if (documentId != null && (documentId > 0)) 'documentId': documentId,
       },
     );
   }

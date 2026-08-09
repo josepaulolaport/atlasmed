@@ -242,25 +242,24 @@ void main() {
       String title,
       String localDate,
       String time,
-    ) =>
-        CalendarOccurrence.fromJson({
-          'id': id,
-          'occurrenceId': '$id:$localDate-$time',
-          'recurrenceKey': '$localDate-${time.replaceAll(':', '')}',
-          'kind': 'PERSONAL_BLOCK',
-          'title': title,
-          'owner': {'id': 1, 'name': 'Ana'},
-          'facility': null,
-          'modality': null,
-          'startsAt': '${localDate}T$time:00.000Z',
-          'endsAt': '${localDate}T$time:30.000Z',
-          'localDate': localDate,
-          'localStartsAt': time,
-          'localEndsAt': time,
-          'recurrence': 'NONE',
-          'interaction': null,
-          'canMutate': true,
-        });
+    ) => CalendarOccurrence.fromJson({
+      'id': id,
+      'occurrenceId': '$id:$localDate-$time',
+      'recurrenceKey': '$localDate-${time.replaceAll(':', '')}',
+      'kind': 'PERSONAL_BLOCK',
+      'title': title,
+      'owner': {'id': 1, 'name': 'Ana'},
+      'facility': null,
+      'modality': null,
+      'startsAt': '${localDate}T$time:00.000Z',
+      'endsAt': '${localDate}T$time:30.000Z',
+      'localDate': localDate,
+      'localStartsAt': time,
+      'localEndsAt': time,
+      'recurrence': 'NONE',
+      'interaction': null,
+      'canMutate': true,
+    });
 
     final sections = groupCalendarOccurrences([
       occurrence(3, 'late', '2026-08-04', '16:00'),

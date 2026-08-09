@@ -69,9 +69,9 @@ class AdministrativeProfessional {
 
   /// Multi-select role chips for list/profile UI (via catalog cache).
   List<String> get roleChipLabels => PersonFacilityRoleCatalog.labelsFor(
-        roleIds,
-        PersonFacilityRoleCatalogCache.entries,
-      );
+    roleIds,
+    PersonFacilityRoleCatalogCache.entries,
+  );
 
   AdministrativeProfessional copyWith({
     int? id,
@@ -380,8 +380,7 @@ extension FacilityConformityStatusX on FacilityConformityStatus {
 enum FacilityLegalDocumentType { cnpj, cpf }
 
 extension FacilityLegalDocumentTypeX on FacilityLegalDocumentType {
-  String get label =>
-      this == FacilityLegalDocumentType.cnpj ? 'CNPJ' : 'CPF';
+  String get label => this == FacilityLegalDocumentType.cnpj ? 'CNPJ' : 'CPF';
 
   IconData get icon => this == FacilityLegalDocumentType.cnpj
       ? Icons.apartment_rounded

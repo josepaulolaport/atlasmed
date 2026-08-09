@@ -12,17 +12,15 @@ class ProfessionalNotesException implements Exception {
 
 class ProfessionalNotesRepository extends Repository<List<ProfessionalNote>>
     with SessionEnvironmentMixin<List<ProfessionalNote>> {
-  ProfessionalNotesRepository(
-    this.personId, {
-    RepositoryHttpClient? client,
-  }) : _client = client,
-       super(
-         endpoint: Uri.parse(
-           '${AppConfig.apiBaseUrl}/api/v1/persons/$personId/notes',
-         ),
-         resolveOnCreate: true,
-         name: 'ProfessionalNotesRepository',
-       );
+  ProfessionalNotesRepository(this.personId, {RepositoryHttpClient? client})
+    : _client = client,
+      super(
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/persons/$personId/notes',
+        ),
+        resolveOnCreate: true,
+        name: 'ProfessionalNotesRepository',
+      );
 
   final int personId;
   final RepositoryHttpClient? _client;

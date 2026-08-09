@@ -993,8 +993,8 @@ class _ClinicDetailContent extends ConsumerWidget {
                             ? detail.address!.city
                             : null,
                         canManageConsultant: canAssignConsultant,
-                        onAssignConsultant: canAssignConsultant &&
-                                activeLinhaId != null
+                        onAssignConsultant:
+                            canAssignConsultant && activeLinhaId != null
                             ? () => _assignClinicConsultant(
                                 context,
                                 ref,
@@ -1002,7 +1002,8 @@ class _ClinicDetailContent extends ConsumerWidget {
                                 verticalId: activeLinhaId,
                               )
                             : null,
-                        onUnassignConsultant: canAssignConsultant &&
+                        onUnassignConsultant:
+                            canAssignConsultant &&
                                 activeLinhaId != null &&
                                 (detail.territory?.consultantName
                                         ?.trim()

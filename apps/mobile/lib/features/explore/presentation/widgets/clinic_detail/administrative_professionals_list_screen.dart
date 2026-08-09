@@ -116,9 +116,7 @@ class _AdministrativeProfessionalsListScreenState
       names.addAll(p.roleChipLabels);
     }
     final sorted = names.toList()..sort();
-    return {
-      if (sorted.isNotEmpty) _typeSection: sorted,
-    };
+    return {if (sorted.isNotEmpty) _typeSection: sorted};
   }
 
   int get _filterCount =>

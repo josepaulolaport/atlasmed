@@ -43,9 +43,7 @@ class PersonProfessionalRegistrationsRepository
     if (decoded is! List) return const [];
     return decoded
         .whereType<Map>()
-        .map(
-          (e) => ProfessionalRegistration.fromMap(e.cast<String, dynamic>()),
-        )
+        .map((e) => ProfessionalRegistration.fromMap(e.cast<String, dynamic>()))
         .toList(growable: false);
   }
 

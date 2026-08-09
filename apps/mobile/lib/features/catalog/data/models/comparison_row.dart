@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// A single line in a Tabela Brasíndice/Simpro comparison — either the
 /// AtlasMed variant itself ([isOwn] = true, one per table) or a competitor's
 /// equivalent product pulled from `product_equivalences`.

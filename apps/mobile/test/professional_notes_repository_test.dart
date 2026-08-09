@@ -49,18 +49,12 @@ void main() {
         ),
         const RepositoryHttpResponse(statusCode: 200, headers: {}, body: '[]'),
       ]);
-      final repository = ProfessionalNotesRepository(
-        1,
-        client: client,
-      );
+      final repository = ProfessionalNotesRepository(1, client: client);
 
       final note = await repository.createNote('Retornar amanhã');
 
       expect(note.id, 1);
-      expect(
-        client.requests.first.url.path,
-        '/api/v1/persons/1/notes',
-      );
+      expect(client.requests.first.url.path, '/api/v1/persons/1/notes');
       expect(client.requests.first.method, RepositoryHttpMethod.post);
       expect(client.requests.first.body, {'note': 'Retornar amanhã'});
     },

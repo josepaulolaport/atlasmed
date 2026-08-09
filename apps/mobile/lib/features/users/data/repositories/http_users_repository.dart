@@ -293,9 +293,7 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<TerritoryOption>> getTerritoryOptions({
-    int? verticalId,
-  }) async {
+  Future<List<TerritoryOption>> getTerritoryOptions({int? verticalId}) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': 'manager_zone',
@@ -330,7 +328,8 @@ class HttpUsersRepository implements UsersRepository {
         TerritoryOption(
           id: id,
           name: row['name'] as String,
-          verticalId: readCrmIdOrNull(row['verticalId'], 'verticalId') ?? verticalId,
+          verticalId:
+              readCrmIdOrNull(row['verticalId'], 'verticalId') ?? verticalId,
           centroid: boundary?.labelAnchor,
           boundary: boundary,
           isOccupied: isOccupied,
@@ -396,7 +395,8 @@ class HttpUsersRepository implements UsersRepository {
         TerritoryOption(
           id: id,
           name: row['name'] as String,
-          verticalId: readCrmIdOrNull(row['verticalId'], 'verticalId') ?? verticalId,
+          verticalId:
+              readCrmIdOrNull(row['verticalId'], 'verticalId') ?? verticalId,
           centroid: boundary?.labelAnchor,
           boundary: boundary,
           isOccupied: assignedCount > 0,

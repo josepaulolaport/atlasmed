@@ -50,7 +50,8 @@ class HttpInvitationsRepository implements InvitationsRepository {
     final role = json['role'] as Map<String, dynamic>?;
     final roleName =
         (json['roleName'] as String?) ?? (role?['name'] as String?) ?? 'REP';
-    final roleId = (readCrmIdOrNull(json['roleId'], 'roleId')) ?? role?['id'] as String?;
+    final roleId =
+        (readCrmIdOrNull(json['roleId'], 'roleId')) ?? role?['id'] as String?;
     final invitedBy = json['invitedBy'] as Map<String, dynamic>?;
     final composedInviter = [
       invitedBy?['firstName'],

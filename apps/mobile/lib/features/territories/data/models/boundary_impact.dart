@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// Clinic that must be deassigned before a boundary save (Spec 0006).
 class BoundaryImpactClinic {
   final int facilityId;
@@ -17,7 +18,8 @@ class BoundaryImpactClinic {
     return BoundaryImpactClinic(
       facilityId: readCrmId(json['facilityId'], 'facilityId'),
       facilityName: json['facilityName'] as String? ?? '',
-      consultantUserId: readCrmIdOrNull(json['consultantUserId'], 'consultantUserId') ?? 0,
+      consultantUserId:
+          readCrmIdOrNull(json['consultantUserId'], 'consultantUserId') ?? 0,
       consultantName: json['consultantName'] as String? ?? '',
     );
   }

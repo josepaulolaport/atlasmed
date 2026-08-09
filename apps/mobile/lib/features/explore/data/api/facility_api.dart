@@ -12,11 +12,7 @@ class ClinicalFocus {
   final String name;
   final String? cnesCode;
 
-  const ClinicalFocus({
-    required this.id,
-    required this.name,
-    this.cnesCode,
-  });
+  const ClinicalFocus({required this.id, required this.name, this.cnesCode});
 
   factory ClinicalFocus.fromMap(Map<String, dynamic> map) {
     return ClinicalFocus(
@@ -87,7 +83,9 @@ String resolveTerritoryAssignmentStatus({
   List<FacilityVerticalProfileDTO> verticalProfiles = const [],
 }) {
   if (apiStatus != null && apiStatus.isNotEmpty) return apiStatus;
-  final hasProfileTerritory = verticalProfiles.any((p) => p.territoryId != null);
+  final hasProfileTerritory = verticalProfiles.any(
+    (p) => p.territoryId != null,
+  );
   return territoryId != null || hasProfileTerritory ? 'assigned' : 'unassigned';
 }
 

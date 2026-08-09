@@ -143,9 +143,9 @@ class ProfessionalDTO {
       primaryRegistrationDisplay: readNullableString(
         map['primaryRegistrationDisplay'],
       ),
-      registrations: readObjectList(map['registrations'])
-          .map(ProfessionalRegistration.fromMap)
-          .toList(growable: false),
+      registrations: readObjectList(
+        map['registrations'],
+      ).map(ProfessionalRegistration.fromMap).toList(growable: false),
     );
   }
 

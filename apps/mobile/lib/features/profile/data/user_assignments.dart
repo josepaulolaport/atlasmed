@@ -75,7 +75,9 @@ class UserTerritoryAssignment extends Equatable {
 
   factory UserTerritoryAssignment.fromJson(Map<String, dynamic> json) {
     return UserTerritoryAssignment(
-      territoryId: readCrmIdOrNull(json['id'], 'id') ?? readCrmId(json['territoryId'], 'territoryId'),
+      territoryId:
+          readCrmIdOrNull(json['id'], 'id') ??
+          readCrmId(json['territoryId'], 'territoryId'),
       territoryName: (json['name'] as String?) ?? '—',
       managerZoneId: readCrmIdOrNull(json['managerZoneId'], 'managerZoneId'),
       managerZoneName: json['managerZoneName'] as String?,
@@ -132,10 +134,7 @@ class UserVerticalAssignment extends Equatable {
       final id = readCrmIdOrNull(json['managerId'], 'managerId');
       if (id != null || (json['managerName'] as String).isNotEmpty) {
         managers.add(
-          AssignmentManager(
-            id: id ?? 0,
-            name: json['managerName'] as String,
-          ),
+          AssignmentManager(id: id ?? 0, name: json['managerName'] as String),
         );
       }
     }

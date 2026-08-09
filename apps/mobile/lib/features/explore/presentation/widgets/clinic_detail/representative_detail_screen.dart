@@ -220,7 +220,9 @@ class _RepresentativeDetailScreenState
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB42318),
+            ),
             child: const Text('Encerrar'),
           ),
         ],

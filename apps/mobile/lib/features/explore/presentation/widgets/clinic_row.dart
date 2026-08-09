@@ -15,9 +15,7 @@ class ClinicRow extends StatelessWidget {
     final statusChips = buildFacilityStatusChips(
       verticalProfiles: clinic.verticalProfiles,
     );
-    final serviceChip = ClinicalFocusLabels.chipSummary(
-      clinic.displayServices,
-    );
+    final serviceChip = ClinicalFocusLabels.chipSummary(clinic.displayServices);
 
     return InkWell(
       onTap: onTap,

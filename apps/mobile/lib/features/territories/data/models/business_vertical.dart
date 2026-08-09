@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// Commercial business vertical (e.g. Ortopédica).
 ///
 /// Mirrors the business vertical DTO from `GET /access/business-verticals`

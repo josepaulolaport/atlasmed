@@ -9,8 +9,7 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 /// Active councils — `GET /api/v1/person-professional-registration-councils`.
 class PersonProfessionalRegistrationCouncilsRepository
     extends Repository<List<ProfessionalRegistrationCouncil>>
-    with
-        SessionEnvironmentMixin<List<ProfessionalRegistrationCouncil>> {
+    with SessionEnvironmentMixin<List<ProfessionalRegistrationCouncil>> {
   PersonProfessionalRegistrationCouncilsRepository({
     String? baseUrl,
     RepositoryHttpClient? client,
@@ -54,9 +53,7 @@ class PersonProfessionalRegistrationCouncilsRepository
       ),
     );
     if (!successfulCondition(response.statusCode, response.body)) {
-      throw StateError(
-        'Falha ao carregar conselhos (${response.statusCode})',
-      );
+      throw StateError('Falha ao carregar conselhos (${response.statusCode})');
     }
     return fromJson(response.body);
   }

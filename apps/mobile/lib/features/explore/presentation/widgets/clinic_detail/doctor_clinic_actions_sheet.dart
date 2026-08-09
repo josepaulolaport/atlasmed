@@ -123,7 +123,9 @@ class _ActionTile extends StatelessWidget {
               Icon(
                 Icons.chevron_right_rounded,
                 size: 20,
-                color: destructive ? accent.withValues(alpha: 0.55) : AppColors.gray400,
+                color: destructive
+                    ? accent.withValues(alpha: 0.55)
+                    : AppColors.gray400,
               ),
             ],
           ),

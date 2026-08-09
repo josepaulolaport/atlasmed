@@ -17,7 +17,7 @@ class AssignmentManagerRef extends Equatable {
       name: (json['name'] as String?)?.trim().isNotEmpty == true
           ? json['name'] as String
           : (json['username'] as String? ??
-              readCrmId(json['id'], 'id').toString()),
+                readCrmId(json['id'], 'id').toString()),
     );
   }
 

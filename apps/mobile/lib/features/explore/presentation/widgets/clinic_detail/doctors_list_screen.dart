@@ -156,9 +156,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         roles,
         PersonFacilityRoleCatalogCache.entries,
       );
-      list = list
-          .where((d) => d.roleIds.any(selectedIds.contains))
-          .toList();
+      list = list.where((d) => d.roleIds.any(selectedIds.contains)).toList();
     }
 
     switch (_sort) {
@@ -346,7 +344,9 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Não foi possível encerrar — vínculo sem identificador'),
+          content: Text(
+            'Não foi possível encerrar — vínculo sem identificador',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -368,7 +368,9 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFB42318)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFB42318),
+            ),
             child: const Text('Encerrar'),
           ),
         ],
@@ -394,7 +396,10 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
     if (!mounted) return;
     setState(() {
-      _doctors = [for (final d in _doctors) if (d.id != doctor.id) d];
+      _doctors = [
+        for (final d in _doctors)
+          if (d.id != doctor.id) d,
+      ];
     });
     ref
         .read(facilityDoctorsRosterProvider(facilityId).notifier)

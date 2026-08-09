@@ -24,7 +24,10 @@ class FacilityPayerShareApi {
     return FacilityPayerShareApi(
       id: readCrmId(map['id'], 'id'),
       facilityId: readCrmId(map['facilityId'], 'facilityId'),
-      healthcareProviderId: readCrmId(map['healthcareProviderId'], 'healthcareProviderId'),
+      healthcareProviderId: readCrmId(
+        map['healthcareProviderId'],
+        'healthcareProviderId',
+      ),
       sharePercent: readNullableDouble(map['sharePercent']) ?? 0,
       providerName: readString(provider['name']),
       isPackage: map['isPackage'] == true,
@@ -47,7 +50,9 @@ class FacilityPayerShareApi {
   PayerShare toDomain() {
     return PayerShare(
       id: healthcareProviderId,
-      name: providerName.isEmpty ? healthcareProviderId.toString() : providerName,
+      name: providerName.isEmpty
+          ? healthcareProviderId.toString()
+          : providerName,
       sharePercent: sharePercent,
       isPackage: isPackage,
       type: providerType,

@@ -68,10 +68,7 @@ InteractionDetail _detail({
   occurrenceStartsAt: DateTime.utc(2026, 8, 3, 12),
   occurrenceEndsAt: DateTime.utc(2026, 8, 3, 13),
   timeZone: 'America/Sao_Paulo',
-  facility: const InteractionFacility(
-    id: 1,
-    displayName: 'Clínica Central',
-  ),
+  facility: const InteractionFacility(id: 1, displayName: 'Clínica Central'),
   agent: const InteractionAgent(id: 1, displayName: 'Ana'),
   linkedOrders: const [],
   version: version,

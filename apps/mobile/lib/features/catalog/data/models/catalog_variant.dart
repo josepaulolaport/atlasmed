@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// A single sellable presentation of an AtlasMed product (mirrors a row of
 /// the `products` table: code, simpro/brasindice/tiss coding, ICMS pricing).
 ///

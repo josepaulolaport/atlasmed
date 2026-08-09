@@ -54,8 +54,9 @@ abstract final class PersonFacilityRoleCatalog {
 
   static List<PersonFacilityRoleCatalogEntry> activeEntries(
     Iterable<PersonFacilityRoleCatalogEntry> catalog,
-  ) =>
-      catalog.where((e) => e.isActive && e.name.isNotEmpty).toList(growable: false);
+  ) => catalog
+      .where((e) => e.isActive && e.name.isNotEmpty)
+      .toList(growable: false);
 
   static List<String> activeNames(
     Iterable<PersonFacilityRoleCatalogEntry> catalog,

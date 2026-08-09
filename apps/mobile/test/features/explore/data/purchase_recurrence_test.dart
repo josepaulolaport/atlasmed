@@ -29,8 +29,9 @@ void main() {
         ],
       });
 
-      final recurrence = pickVerticalProfile(facility.verticalProfiles)!
-          .purchaseRecurrence!;
+      final recurrence = pickVerticalProfile(
+        facility.verticalProfiles,
+      )!.purchaseRecurrence!;
       expect(recurrence.observedIntervalDays, 31);
       expect(recurrence.intervalDays, 30);
       expect(recurrence.source, PurchaseRecurrenceSource.calculated);
@@ -64,8 +65,9 @@ void main() {
         ],
       });
 
-      final recurrence = pickVerticalProfile(facility.verticalProfiles)!
-          .purchaseRecurrence!;
+      final recurrence = pickVerticalProfile(
+        facility.verticalProfiles,
+      )!.purchaseRecurrence!;
       expect(recurrence.source, isNull);
       expect(recurrence.rawSource, 'FUTURE_SOURCE');
       expect(recurrence.funnelStage, isNull);

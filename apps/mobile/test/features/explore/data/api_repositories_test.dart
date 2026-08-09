@@ -81,11 +81,7 @@ void main() {
         'name': 'Perfil com território',
         'professionalCount': 0,
         'verticalProfiles': [
-          {
-            'verticalId': 1,
-            'verticalName': 'Estética',
-            'territoryId': 4,
-          },
+          {'verticalId': 1, 'verticalName': 'Estética', 'territoryId': 4},
         ],
       });
       expect(fromProfile.territoryAssignmentStatus, 'assigned');

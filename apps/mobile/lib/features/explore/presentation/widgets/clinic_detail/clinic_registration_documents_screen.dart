@@ -69,7 +69,8 @@ class _ClinicRegistrationDocumentsScreenState
         ),
         data: (checklist) {
           final documents = checklist.documents;
-          final hasTaxType = checklist.legalDocumentType == 'CPF' ||
+          final hasTaxType =
+              checklist.legalDocumentType == 'CPF' ||
               checklist.legalDocumentType == 'CNPJ';
           final fileDocs = checklist.fileDocuments;
           return ListView(

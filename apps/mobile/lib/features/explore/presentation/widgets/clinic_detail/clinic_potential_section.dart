@@ -25,8 +25,7 @@ class ClinicPotentialSection extends ConsumerWidget {
     final verticalId = ref.watch(clinicDetailActiveLinhaIdProvider(facilityId));
     final async = ref.watch(clinicDetailPotentialsProvider(facilityId));
     final hasFields = async.asData?.value?.items.isNotEmpty ?? false;
-    final editVerticalId =
-        canEdit && hasFields ? verticalId : null;
+    final editVerticalId = canEdit && hasFields ? verticalId : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

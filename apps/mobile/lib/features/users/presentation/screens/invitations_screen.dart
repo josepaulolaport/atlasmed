@@ -92,7 +92,8 @@ class _InvitationRow extends ConsumerWidget {
     return Material(
       color: Colors.white,
       child: InkWell(
-        onTap: () => InvitationDetailRoute(invitationId: invitation.id).push(context),
+        onTap: () =>
+            InvitationDetailRoute(invitationId: invitation.id).push(context),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: const BoxDecoration(

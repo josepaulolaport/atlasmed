@@ -588,15 +588,21 @@ class CalendarOccurrence extends Equatable {
     final calendarId = json['calendarId'] != null
         ? readCrmId(json['calendarId'], 'calendarId')
         : readCrmId(json['id'], 'calendarId');
-    final ownerUserId = readCrmIdOrNull(json['ownerUserId'], 'ownerUserId')
-        ?? readCrmIdOrNull((json['owner'] as Map<String, dynamic>?)?['id'], 'owner.id')
-        ?? 0;
+    final ownerUserId =
+        readCrmIdOrNull(json['ownerUserId'], 'ownerUserId') ??
+        readCrmIdOrNull(
+          (json['owner'] as Map<String, dynamic>?)?['id'],
+          'owner.id',
+        ) ??
+        0;
     final interactionJson = json['interaction'] as Map<String, dynamic>?;
     final interaction = interactionJson == null
         ? null
         : CalendarInteractionContext.fromJson(interactionJson);
     final facilityId =
-        readCrmIdOrNull(json['facilityId'], 'facilityId') ?? interaction?.facilityId ?? 0;
+        readCrmIdOrNull(json['facilityId'], 'facilityId') ??
+        interaction?.facilityId ??
+        0;
     final ownerJson =
         json['owner'] as Map<String, dynamic>? ??
         <String, dynamic>{'name': json['ownerName']};

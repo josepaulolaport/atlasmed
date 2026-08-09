@@ -163,7 +163,8 @@ class HttpTerritoryRepository implements TerritoryRepository {
     // ignore_for_file: use_null_aware_elements — value-nullable map entry, not key-nullable.
     final body = <String, dynamic>{
       ...Map<String, dynamic>.from(geometry.toGeoJson()),
-      if (acceptedFacilityIds != null) 'acceptedFacilityIds': acceptedFacilityIds,
+      if (acceptedFacilityIds != null)
+        'acceptedFacilityIds': acceptedFacilityIds,
     };
     final response = await _send(
       _territoryUri('/territories/$id/boundary'),

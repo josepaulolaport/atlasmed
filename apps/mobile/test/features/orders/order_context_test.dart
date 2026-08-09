@@ -48,9 +48,7 @@ void main() {
       clinic: const SelectableClinic(id: 1, name: 'Clínica Central'),
     );
 
-    notifier.setClinic(
-      const SelectableClinic(id: 2, name: 'Outra clínica'),
-    );
+    notifier.setClinic(const SelectableClinic(id: 2, name: 'Outra clínica'));
 
     expect(notifier.state.interactionId, 1);
     expect(notifier.state.clinic?.id, 1);

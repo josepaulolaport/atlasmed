@@ -163,7 +163,10 @@ class TerritoryOption extends Equatable {
               ),
         isOccupied: json['isOccupied'] as bool? ?? false,
         assignedUserName: json['assignedUserName'] as String?,
-        managerTerritoryId: readCrmIdOrNull(json['managerTerritoryId'], 'managerTerritoryId'),
+        managerTerritoryId: readCrmIdOrNull(
+          json['managerTerritoryId'],
+          'managerTerritoryId',
+        ),
       );
 
   @override
@@ -186,8 +189,10 @@ class VerticalOption extends Equatable {
   final int id;
   final String name;
 
-  factory VerticalOption.fromJson(Map<String, dynamic> json) =>
-      VerticalOption(id: readCrmId(json['id'], 'id'), name: json['name'] as String);
+  factory VerticalOption.fromJson(Map<String, dynamic> json) => VerticalOption(
+    id: readCrmId(json['id'], 'id'),
+    name: json['name'] as String,
+  );
 
   @override
   List<Object?> get props => [id, name];

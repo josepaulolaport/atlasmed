@@ -55,25 +55,27 @@ class _FakeCalendarRepository implements CalendarMutationRepositoryContract {
   }
 }
 
-CalendarOccurrence _occurrence({int version = 8, int? overrideVersion}) =>
-    CalendarOccurrence.fromJson({
-      'id': 1,
-      'occurrenceId': '1:key-1',
-      'calendarId': 1,
-      'recurrenceKey': 'key-1',
-      'ownerUserId': 1,
-      'kind': 'PERSONAL_BLOCK',
-      'title': 'Bloqueio',
-      'startsAt': '2026-08-03T12:00:00.000Z',
-      'endsAt': '2026-08-03T13:00:00.000Z',
-      'timeZone': 'America/Sao_Paulo',
-      'durationMinutes': 60,
-      'recurrence': 'WEEKLY',
-      'version': version,
-      // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
-      if (overrideVersion != null) 'overrideVersion': overrideVersion,
-      'canMutate': true,
-    });
+CalendarOccurrence _occurrence({
+  int version = 8,
+  int? overrideVersion,
+}) => CalendarOccurrence.fromJson({
+  'id': 1,
+  'occurrenceId': '1:key-1',
+  'calendarId': 1,
+  'recurrenceKey': 'key-1',
+  'ownerUserId': 1,
+  'kind': 'PERSONAL_BLOCK',
+  'title': 'Bloqueio',
+  'startsAt': '2026-08-03T12:00:00.000Z',
+  'endsAt': '2026-08-03T13:00:00.000Z',
+  'timeZone': 'America/Sao_Paulo',
+  'durationMinutes': 60,
+  'recurrence': 'WEEKLY',
+  'version': version,
+  // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
+  if (overrideVersion != null) 'overrideVersion': overrideVersion,
+  'canMutate': true,
+});
 
 void main() {
   test(

@@ -263,9 +263,7 @@ class _CreateAdminProfessionalSheetState
         if (!mounted) return;
         Navigator.of(context).pop(
           AdministrativeProfessional(
-            id:
-                widget.existing?.id ??
-                -DateTime.now().millisecondsSinceEpoch,
+            id: widget.existing?.id ?? -DateTime.now().millisecondsSinceEpoch,
             name: name,
             roleTitle: roleTitle,
             phone: phone,

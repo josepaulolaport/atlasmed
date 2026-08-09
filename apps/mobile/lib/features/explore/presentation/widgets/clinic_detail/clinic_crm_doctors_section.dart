@@ -263,8 +263,8 @@ class _DoctorCard extends StatelessWidget {
   }
 
   List<Widget> get _badges => [
-        for (final label in doctor.roleChipLabels) _Flag(label: label),
-      ];
+    for (final label in doctor.roleChipLabels) _Flag(label: label),
+  ];
 
   Future<void> _editRoles(BuildContext context) async {
     final updated = await showEditDoctorRolesSheet(
@@ -380,4 +380,3 @@ class _Flag extends StatelessWidget {
     );
   }
 }
-

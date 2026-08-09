@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 /// Which side of the territory hierarchy a user works on — a manager zone
 /// needs a [manager], a rep patch needs a [rep]. Mirrors the real API's
 /// `role.name` (`MANAGER` / `REP`), simplified to just the two roles this

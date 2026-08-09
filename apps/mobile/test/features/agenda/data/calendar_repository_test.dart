@@ -298,10 +298,7 @@ void main() {
 
     expect(client.requests, hasLength(1));
     expect(client.requests.single.method, RepositoryHttpMethod.get);
-    expect(
-      client.requests.single.url.path,
-      '/api/v1/interactions/1',
-    );
+    expect(client.requests.single.url.path, '/api/v1/interactions/1');
     expect(interaction.status, InteractionStatus.scheduled);
     expect(interaction.facility.displayName, 'Clínica Central');
     expect(interaction.linkedOrders.single.id, 1);

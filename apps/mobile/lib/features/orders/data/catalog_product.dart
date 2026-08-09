@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 class CatalogProduct {
   const CatalogProduct({
     required this.id,

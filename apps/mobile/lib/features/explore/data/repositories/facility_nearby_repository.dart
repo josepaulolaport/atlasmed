@@ -33,7 +33,10 @@ Future<List<NearbyEstablishment>> fetchNearbyFacilities({
               excludeFacilityId == null || facility.id != excludeFacilityId,
         )
         .where((facility) => facility.lat != null && facility.lng != null)
-        .map((facility) => facilityToNearbyEstablishment(facility, verticalId: verticalId))
+        .map(
+          (facility) =>
+              facilityToNearbyEstablishment(facility, verticalId: verticalId),
+        )
         .toList(growable: false);
   } finally {
     repo.dispose();
@@ -71,7 +74,9 @@ NearbyEstablishment facilityToNearbyEstablishment(
         .map(
           (p) => NearbyVerticalBadge(
             id: p.verticalId,
-            name: p.verticalName.isNotEmpty ? p.verticalName : p.verticalId.toString(),
+            name: p.verticalName.isNotEmpty
+                ? p.verticalName
+                : p.verticalId.toString(),
           ),
         )
         .toList(growable: false),
@@ -91,5 +96,3 @@ String? _specialtyLabel(FacilityDTO facility) {
   if (city != null && city.isNotEmpty) return city;
   return null;
 }
-
-

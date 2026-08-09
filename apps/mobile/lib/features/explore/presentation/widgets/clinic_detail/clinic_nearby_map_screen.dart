@@ -174,15 +174,15 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     distanceKm: 0,
   );
 
-  Set<int> _sharedFor(List<int> userVerticalIds) =>
-      sharedNearbyVerticalIds(
-        clinicVerticalIds: widget.clinicVerticalIds,
-        userVerticalIds: userVerticalIds,
-      );
+  Set<int> _sharedFor(List<int> userVerticalIds) => sharedNearbyVerticalIds(
+    clinicVerticalIds: widget.clinicVerticalIds,
+    userVerticalIds: userVerticalIds,
+  );
 
   List<int> _userVerticalIds() {
-    final verticals =
-        ref.read(currentUserVerticalAssignmentsProvider).valueOrNull;
+    final verticals = ref
+        .read(currentUserVerticalAssignmentsProvider)
+        .valueOrNull;
     if (verticals == null) return const [];
     return verticals.map((v) => v.verticalId).toList(growable: false);
   }

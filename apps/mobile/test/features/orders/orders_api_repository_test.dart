@@ -125,11 +125,7 @@ void main() {
               'unitPrice': 50,
               'lineTotal': 100,
               'writtenOff': false,
-              'product': {
-                'id': 20,
-                'name': 'Produto Um',
-                'code': 'P-1',
-              },
+              'product': {'id': 20, 'name': 'Produto Um', 'code': 'P-1'},
             },
           ],
         }),

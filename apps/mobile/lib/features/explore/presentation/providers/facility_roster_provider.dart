@@ -101,7 +101,10 @@ class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>> {
 
   /// Locally drops items matching [test] (e.g. after ending an affiliation).
   void removeWhere(bool Function(T item) test) {
-    final next = [for (final item in state.items) if (!test(item)) item];
+    final next = [
+      for (final item in state.items)
+        if (!test(item)) item,
+    ];
     if (next.length == state.items.length) return;
     state = state.copyWith(
       items: next,

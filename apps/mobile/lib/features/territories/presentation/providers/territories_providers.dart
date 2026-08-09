@@ -30,9 +30,7 @@ final selectedTerritoryVerticalIdProvider = StateProvider<int?>((ref) {
 });
 
 /// Spec 0006: when viewing patches, show only one rep's shapes (not all overlaps).
-final selectedGeographyRepUserIdProvider = StateProvider<int?>(
-  (ref) => null,
-);
+final selectedGeographyRepUserIdProvider = StateProvider<int?>((ref) => null);
 
 final territoriesProvider = FutureProvider<List<Territory>>((ref) async {
   final repository = ref.watch(territoryRepositoryProvider);
@@ -60,9 +58,6 @@ final managerZonesUnderlayProvider = FutureProvider<List<Territory>>((
 
 final selectedTerritoryIdProvider = StateProvider<int?>((ref) => null);
 
-final territoryByIdProvider = FutureProvider.family<Territory?, int>((
-  ref,
-  id,
-) {
+final territoryByIdProvider = FutureProvider.family<Territory?, int>((ref, id) {
   return ref.watch(territoryRepositoryProvider).getTerritoryById(id);
 });

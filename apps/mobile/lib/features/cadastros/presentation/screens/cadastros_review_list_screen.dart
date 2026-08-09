@@ -148,8 +148,9 @@ class _CadastrosReviewListScreenState
                             if (i > 0) const SizedBox(height: 10),
                             _ReviewListCard(
                               submission: item,
-                              onTap: () =>
-                                  RegistrationDetailRoute(id: item.id).push(context),
+                              onTap: () => RegistrationDetailRoute(
+                                id: item.id,
+                              ).push(context),
                             ),
                           ],
                         ];

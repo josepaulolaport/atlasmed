@@ -186,50 +186,49 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final location = session.location;
     ref.watch(liveMapFacilityPointsWithDistanceProvider);
 
-    ref.listen<AsyncValue<List<NearbyEstablishment>>>(
-      liveMapFacilityPointsWithDistanceProvider,
-      (previous, next) {
-        next.when(
-          data: (items) {
-            if (!mounted) return;
+    ref.listen<
+      AsyncValue<List<NearbyEstablishment>>
+    >(liveMapFacilityPointsWithDistanceProvider, (previous, next) {
+      next.when(
+        data: (items) {
+          if (!mounted) return;
+          setState(() {
+            _clinics = items;
+            _pointsRefreshing = false;
+          });
+          // StyleManager pigeon is dead until onStyleLoaded — skip early sync.
+          if (_styleReady && _mapboxMap != null) {
+            unawaited(_syncAnnotations());
+          }
+          if (_selected != null && !items.any((e) => e.id == _selected!.id)) {
+            unawaited(_dismissCallout());
+          }
+        },
+        loading: () {
+          // Drop previous user's pins while the scoped list reloads.
+          if (mounted) {
             setState(() {
-              _clinics = items;
-              _pointsRefreshing = false;
+              _pointsRefreshing = true;
+              _clinics = const [];
             });
-            // StyleManager pigeon is dead until onStyleLoaded — skip early sync.
             if (_styleReady && _mapboxMap != null) {
               unawaited(_syncAnnotations());
             }
-            if (_selected != null && !items.any((e) => e.id == _selected!.id)) {
-              unawaited(_dismissCallout());
+          }
+        },
+        error: (_, _) {
+          if (mounted) {
+            setState(() {
+              _pointsRefreshing = false;
+              _clinics = const [];
+            });
+            if (_styleReady && _mapboxMap != null) {
+              unawaited(_syncAnnotations());
             }
-          },
-          loading: () {
-            // Drop previous user's pins while the scoped list reloads.
-            if (mounted) {
-              setState(() {
-                _pointsRefreshing = true;
-                _clinics = const [];
-              });
-              if (_styleReady && _mapboxMap != null) {
-                unawaited(_syncAnnotations());
-              }
-            }
-          },
-          error: (_, _) {
-            if (mounted) {
-              setState(() {
-                _pointsRefreshing = false;
-                _clinics = const [];
-              });
-              if (_styleReady && _mapboxMap != null) {
-                unawaited(_syncAnnotations());
-              }
-            }
-          },
-        );
-      },
-    );
+          }
+        },
+      );
+    });
 
     ref.listen<AsyncValue<TerritoryGeometry?>>(mapTerritoryProvider, (_, next) {
       next.whenData((territory) => unawaited(_drawTerritory(territory)));
@@ -1388,10 +1387,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           iconOffset: [0, -16],
           symbolSortKey: 10,
           // String — Mapbox customData often round-trips ints as doubles ("3.0").
-          customData: {
-            'action': 'open',
-            'facilityId': '${establishment.id}',
-          },
+          customData: {'action': 'open', 'facilityId': '${establishment.id}'},
         ),
       );
       if (previous != null) await manager.delete(previous);

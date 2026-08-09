@@ -13,10 +13,7 @@ void main() {
     );
     expect(OrderDetailRoute(id: 42).location, '/orders/42');
     expect(UserDetailRoute(id: 7).location, '/users/7');
-    expect(
-      UserAssignmentsRoute(id: 7).location,
-      '/users/7/assignments',
-    );
+    expect(UserAssignmentsRoute(id: 7).location, '/users/7/assignments');
     expect(
       InvitationDetailRoute(invitationId: 11).location,
       '/users/invitations/11',

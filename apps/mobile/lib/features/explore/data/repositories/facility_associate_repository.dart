@@ -161,8 +161,7 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
     }
   }
 
-  String get _relationshipPath =>
-      '${AppConfig.apiBaseUrl}/api/v1/persons';
+  String get _relationshipPath => '${AppConfig.apiBaseUrl}/api/v1/persons';
 
   /// `PATCH /persons/:personId/relationship`.
   Future<int?> updateRelationshipLevel(

@@ -29,9 +29,7 @@ CalendarOccurrence _occurrence({
       : CalendarEventKind.interaction,
   title: title,
   owner: const CalendarIdentity(id: 1, name: 'Ana Souza'),
-  facility: facility == null
-      ? null
-      : CalendarIdentity(id: 1, name: facility),
+  facility: facility == null ? null : CalendarIdentity(id: 1, name: facility),
   modality: modality,
   startsAt: DateTime.parse('${date}T$time:00.000Z'),
   endsAt: DateTime.parse('${date}T10:00:00.000Z'),

@@ -184,7 +184,8 @@ class _UsersListState extends ConsumerState<_UsersList> {
                         final user = state.items[index];
                         return UserRow(
                           user: user,
-                          onTap: () => UserDetailRoute(id: user.id).push(context),
+                          onTap: () =>
+                              UserDetailRoute(id: user.id).push(context),
                         );
                       },
                     ),

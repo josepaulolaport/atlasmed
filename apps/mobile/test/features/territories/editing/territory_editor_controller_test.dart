@@ -200,9 +200,7 @@ void main() {
     // zero — keep one alive for the life of the test so repeated `read`s
     // all see the same controller instance.
     container.listen(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(1),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       (previous, next) {},
     );
     final controller = container.read(
@@ -228,9 +226,7 @@ void main() {
     () async {
       await loadController();
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
 
       expect(state.loadError, isNull);
@@ -258,9 +254,7 @@ void main() {
     controller.endVertexDrag();
 
     var state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(1),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.working![0][0][0], _c(-1, -1));
     expect(state.isDirty, isTrue);
@@ -268,9 +262,7 @@ void main() {
 
     controller.undo();
     state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(1),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.working![0][0][0], _c(0, 0));
     expect(state.isDirty, isFalse);
@@ -292,9 +284,7 @@ void main() {
       controller.updateVertexDrag(vertexRef, _c(11, 11));
 
       var state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.validation.overlapsNeighbor, isTrue);
       expect(state.canSave, isFalse);
@@ -304,9 +294,7 @@ void main() {
       // neighbor's border.
       controller.endVertexDrag();
       state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.validation.overlapsNeighbor, isFalse);
       expect(
@@ -338,9 +326,7 @@ void main() {
       controller.endVertexDrag(); // auto-clips against the neighbor
 
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.selectedPart, isNull);
       expect(state.selectionAction, SelectionAction.none);
@@ -363,9 +349,7 @@ void main() {
 
     expect(controller.finishDrawing(), isTrue);
     final state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(1),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.mode, EditorMode.select);
     // Merged into a single, larger part rather than appended separately.
@@ -391,9 +375,7 @@ void main() {
 
       expect(controller.finishDrawing(), isTrue);
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.mode, EditorMode.select);
       expect(state.working!.length, 1);
@@ -420,9 +402,7 @@ void main() {
 
       expect(controller.finishDrawing(), isFalse);
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.mode, EditorMode.addArea);
       expect(state.working, [
@@ -453,9 +433,7 @@ void main() {
 
     expect(controller.finishDrawing(), isFalse);
     final state = container.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(1),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
     );
     expect(state.mode, EditorMode.removeArea);
     expect(state.working, [
@@ -495,9 +473,7 @@ void main() {
     );
     addTearDown(legacyContainer.dispose);
     legacyContainer.listen(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(3),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(3)),
       (previous, next) {},
     );
     final controller = legacyContainer.read(
@@ -517,9 +493,7 @@ void main() {
     });
 
     var state = legacyContainer.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(3),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(3)),
     );
     expect(state.working!.length, 2);
     expect(state.validation.hasMultipleAreas, isTrue);
@@ -532,9 +506,7 @@ void main() {
     controller.endVertexDrag();
 
     state = legacyContainer.read(
-      territoryEditorControllerProvider(
-        TerritoryEditorTarget.existing(3),
-      ),
+      territoryEditorControllerProvider(TerritoryEditorTarget.existing(3)),
     );
     expect(state.isDirty, isTrue);
     expect(state.validation.hasMultipleAreas, isTrue);
@@ -559,9 +531,7 @@ void main() {
 
       expect(controller.finishDrawing(), isFalse);
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.mode, EditorMode.removeArea);
       expect(state.working, [
@@ -592,9 +562,7 @@ void main() {
       expect(repository.lastSavedGeometry!.coordinates[0][0][0], _c(-1, -1));
 
       final state = container.read(
-        territoryEditorControllerProvider(
-          TerritoryEditorTarget.existing(1),
-        ),
+        territoryEditorControllerProvider(TerritoryEditorTarget.existing(1)),
       );
       expect(state.isDirty, isFalse);
       expect(state.saved, isTrue);
@@ -689,10 +657,7 @@ void main() {
       final state = container.read(
         territoryEditorControllerProvider(creatingTarget),
       );
-      expect(
-        state.neighbors.map((t) => t.id),
-        containsAll([1, 2]),
-      );
+      expect(state.neighbors.map((t) => t.id), containsAll([1, 2]));
     });
 
     test('save() creates a new territory instead of updating one', () async {

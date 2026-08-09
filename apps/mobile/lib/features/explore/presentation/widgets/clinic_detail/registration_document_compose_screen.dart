@@ -248,8 +248,7 @@ class _RegistrationDocumentComposeScreenState
 
       if (!mounted) return;
       setState(() {
-        item.fileAssetId = completedFileId ??
-            item.fileAssetId;
+        item.fileAssetId = completedFileId ?? item.fileAssetId;
         if (completedStatus == 'FAILED') {
           item.phase = _ItemPhase.failed;
           item.progress = 0;

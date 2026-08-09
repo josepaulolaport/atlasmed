@@ -24,7 +24,10 @@ void main() {
       expect(() => readCrmId(1.5), throwsA(isA<FormatException>()));
       expect(() => readCrmId('1.0'), throwsA(isA<FormatException>()));
       expect(() => readCrmId(null), throwsA(isA<FormatException>()));
-      expect(() => readCrmId(<String, Object>{}), throwsA(isA<FormatException>()));
+      expect(
+        () => readCrmId(<String, Object>{}),
+        throwsA(isA<FormatException>()),
+      );
       expect(() => readCrmId(<Object>[]), throwsA(isA<FormatException>()));
     });
   });

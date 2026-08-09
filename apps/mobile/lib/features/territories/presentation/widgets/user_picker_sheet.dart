@@ -168,9 +168,9 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
-                      onPressed: () => Navigator.of(
-                        context,
-                      ).pop(widget.pickingManagerZone ? null : kClearAssigneeId),
+                      onPressed: () => Navigator.of(context).pop(
+                        widget.pickingManagerZone ? null : kClearAssigneeId,
+                      ),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.redDark,
                         padding: EdgeInsets.zero,

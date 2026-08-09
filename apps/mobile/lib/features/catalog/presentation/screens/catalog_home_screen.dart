@@ -162,7 +162,8 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
             IconButton(
               tooltip: 'Campos de potencial',
               icon: const Icon(Icons.insights_outlined),
-              onPressed: () => const CatalogPotentialDefinitionsRoute().push(context),
+              onPressed: () =>
+                  const CatalogPotentialDefinitionsRoute().push(context),
             ),
         ],
       ),

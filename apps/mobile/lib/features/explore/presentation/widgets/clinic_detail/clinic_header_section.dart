@@ -64,7 +64,9 @@ class ClinicHeaderSection extends ConsumerWidget {
         );
       }
     });
-    final orderedFocuses = ClinicalFocusLabels.prioritize(detail.clinicalFocuses);
+    final orderedFocuses = ClinicalFocusLabels.prioritize(
+      detail.clinicalFocuses,
+    );
     final specialties = orderedFocuses.isEmpty
         ? sections?.specialtiesLabel
         : null;

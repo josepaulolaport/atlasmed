@@ -127,10 +127,7 @@ class PotentialDefinitionsRepository {
     );
   }
 
-  Future<PotentialDefinition> update({
-    required int id,
-    String? label,
-  }) async {
+  Future<PotentialDefinition> update({required int id, String? label}) async {
     final response = await _send(
       _uri('/potential-definitions/$id'),
       RepositoryHttpMethod.patch,

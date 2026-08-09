@@ -47,11 +47,7 @@ void main() {
           unitPrice: 40,
           lineTotal: 80,
           writtenOff: false,
-          product: ApiOrderProduct(
-            id: 1,
-            name: 'Produto Real',
-            code: 'PR-1',
-          ),
+          product: ApiOrderProduct(id: 1, name: 'Produto Real', code: 'PR-1'),
         ),
       ],
     );

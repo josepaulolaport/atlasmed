@@ -53,10 +53,7 @@ void main() {
     final repository = FacilityNotesRepository(42);
 
     expect(repository.facilityId, 42);
-    expect(
-      repository.endpoint.path,
-      '/api/v1/facilities/42/notes',
-    );
+    expect(repository.endpoint.path, '/api/v1/facilities/42/notes');
     expect(repository.endpoint.queryParameters, isEmpty);
   });
 
@@ -68,10 +65,7 @@ void main() {
         'createdAt': '2026-08-03T12:00:00.000Z',
       }),
     ]);
-    final repository = FacilityNotesRepository(
-      1,
-      client: client,
-    );
+    final repository = FacilityNotesRepository(1, client: client);
 
     await repository.createNote('Retornar em setembro.');
 

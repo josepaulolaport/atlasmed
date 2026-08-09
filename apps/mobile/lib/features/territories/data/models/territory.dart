@@ -70,7 +70,10 @@ class Territory {
       territoryType: TerritoryType.fromJson(
         json['territoryType'] as Map<String, dynamic>,
       ),
-      managerTerritoryId: readCrmIdOrNull(json['managerTerritoryId'], 'managerTerritoryId'),
+      managerTerritoryId: readCrmIdOrNull(
+        json['managerTerritoryId'],
+        'managerTerritoryId',
+      ),
       isActive: json['isActive'] as bool? ?? true,
       clinicCount: (json['clinicCount'] as num?)?.toInt() ?? 0,
       assignedUserCount: (json['assignedUserCount'] as num?)?.toInt() ?? 0,

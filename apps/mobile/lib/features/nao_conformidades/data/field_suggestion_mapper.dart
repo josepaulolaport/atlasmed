@@ -57,7 +57,10 @@ NaoConformidadeSuggestion suggestionFromApi(Map<String, dynamic> map) {
     currentValue: formatSuggestionValue(map['currentValue']),
     suggestedValue: formatSuggestionValue(map['proposedValue']),
     reason: map['reason'] as String?,
-    submittedByUserId: readCrmIdOrNull(map['submittedByUserId'], 'submittedByUserId'),
+    submittedByUserId: readCrmIdOrNull(
+      map['submittedByUserId'],
+      'submittedByUserId',
+    ),
     submittedByName: map['submittedByName'] as String? ?? 'Usuário',
     submittedByRole: roleRaw.contains('MANAGER')
         ? NaoConformidadeSubmitterRole.manager

@@ -21,10 +21,7 @@ final doctorsQueryProvider = Provider<DoctorsQuery>((ref) {
   return buildDoctorsQuery(ref.watch(exploreProvider));
 });
 
-ClinicsQuery buildClinicsQuery(
-  ExploreState state, {
-  int? verticalId,
-}) {
+ClinicsQuery buildClinicsQuery(ExploreState state, {int? verticalId}) {
   final sort = _facilitySort(state.sort, hasOrigin: state.origin != null);
   final purchaseBuckets = (state.filters['purchaseBucket'] ?? const [])
       .where(PurchaseBucketFilter.values.contains)

@@ -122,10 +122,7 @@ String interactionErrorMessage(Object error) {
 }
 
 final interactionProvider = StateNotifierProvider.autoDispose
-    .family<InteractionNotifier, InteractionState, int>((
-      ref,
-      interactionId,
-    ) {
+    .family<InteractionNotifier, InteractionState, int>((ref, interactionId) {
       return InteractionNotifier(
         ref.watch(calendarRepositoryProvider),
         interactionId,

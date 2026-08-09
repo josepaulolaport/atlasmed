@@ -50,9 +50,9 @@ class ProfessionalRoster {
 
   /// Catalog display names for [roleIds] (via session cache).
   List<String> get roleChipLabels => PersonFacilityRoleCatalog.labelsFor(
-        roleIds,
-        PersonFacilityRoleCatalogCache.entries,
-      );
+    roleIds,
+    PersonFacilityRoleCatalogCache.entries,
+  );
 
   /// "Formação" — no backing field yet.
   final String? education;

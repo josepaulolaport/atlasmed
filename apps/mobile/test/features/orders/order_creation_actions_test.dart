@@ -31,9 +31,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: ClinicOrdersSection(orders: [], facilityId: 1),
-        ),
+        home: Scaffold(body: ClinicOrdersSection(orders: [], facilityId: 1)),
       ),
     );
 

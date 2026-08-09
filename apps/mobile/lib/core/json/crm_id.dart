@@ -81,4 +81,3 @@ bool isMockFacilityId(int facilityId) => facilityId < 0;
 bool isMockNearbyFacilityId(int facilityId) => facilityId < 0;
 
 bool isMockEmptyFacilityId(int facilityId) => facilityId < 0;
-

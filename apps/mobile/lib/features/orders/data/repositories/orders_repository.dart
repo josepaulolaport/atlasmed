@@ -12,7 +12,10 @@ class ApiOrderIdentity {
   final String name;
 
   factory ApiOrderIdentity.fromJson(Map<String, dynamic> json) =>
-      ApiOrderIdentity(id: readCrmId(json['id'], 'id'), name: json['name'] as String);
+      ApiOrderIdentity(
+        id: readCrmId(json['id'], 'id'),
+        name: json['name'] as String,
+      );
 }
 
 class ApiOrderListItem {
@@ -48,7 +51,8 @@ class ApiOrderListItem {
   final double freight;
   final double total;
 
-  String get displayId => idAvulsaEmultec == null ? id.toString() : 'PED-$idAvulsaEmultec';
+  String get displayId =>
+      idAvulsaEmultec == null ? id.toString() : 'PED-$idAvulsaEmultec';
 
   factory ApiOrderListItem.fromJson(Map<String, dynamic> json) =>
       ApiOrderListItem(

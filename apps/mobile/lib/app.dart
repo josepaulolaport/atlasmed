@@ -30,10 +30,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
     WidgetsBinding.instance.addObserver(this);
     final sessionEnvironment = ref.read(sessionProvider);
     _sessionListenable = SessionListenable(sessionEnvironment);
-    _router = createAppRouter(
-      sessionListenable: _sessionListenable,
-      ref: ref,
-    );
+    _router = createAppRouter(sessionListenable: _sessionListenable, ref: ref);
     _locationSub = ref.listenManual<LocationSessionState>(
       locationSessionProvider,
       (_, _) => _router.refresh(),

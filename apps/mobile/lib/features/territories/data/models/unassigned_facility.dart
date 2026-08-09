@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
+
 class UnassignedFacility {
   final int id;
   final String displayName;
@@ -27,7 +28,7 @@ class UnassignedFacility {
       lng: (json['lng'] as num?)?.toDouble(),
       managerZoneId:
           (readCrmIdOrNull(json['managerZoneId'], 'managerZoneId')) ??
-          (          readCrmIdOrNull(json['territoryId'], 'territoryId')) ??
+          (readCrmIdOrNull(json['territoryId'], 'territoryId')) ??
           0,
       managerZoneName: json['managerZoneName'] as String?,
     );

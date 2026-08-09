@@ -219,9 +219,7 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
       ],
     ),
     TypedStatefulShellBranch<MapBranch>(
-      routes: <TypedRoute<RouteData>>[
-        TypedGoRoute<MapRoute>(path: '/map'),
-      ],
+      routes: <TypedRoute<RouteData>>[TypedGoRoute<MapRoute>(path: '/map')],
     ),
     TypedStatefulShellBranch<AgendaBranch>(
       routes: <TypedRoute<RouteData>>[
@@ -234,9 +232,7 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
       ],
     ),
     TypedStatefulShellBranch<UsersBranch>(
-      routes: <TypedRoute<RouteData>>[
-        TypedGoRoute<UsersRoute>(path: '/users'),
-      ],
+      routes: <TypedRoute<RouteData>>[TypedGoRoute<UsersRoute>(path: '/users')],
     ),
     TypedStatefulShellBranch<OrdersBranch>(
       routes: <TypedRoute<RouteData>>[
@@ -522,10 +518,7 @@ class ClinicDetailRoute extends GoRouteData with $ClinicDetailRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return ClinicDetailScreen(
-      clinicId: id,
-      initialVerticalId: verticalId,
-    );
+    return ClinicDetailScreen(clinicId: id, initialVerticalId: verticalId);
   }
 }
 
@@ -633,9 +626,7 @@ class NewOrderSuccessRoute extends GoRouteData with $NewOrderSuccessRoute {
 
 @TypedGoRoute<OrderDetailRoute>(
   path: '/orders/:id',
-  routes: [
-    TypedGoRoute<OrderTrackingRoute>(path: 'tracking'),
-  ],
+  routes: [TypedGoRoute<OrderTrackingRoute>(path: 'tracking')],
 )
 class OrderDetailRoute extends GoRouteData with $OrderDetailRoute {
   const OrderDetailRoute({required this.id});
@@ -664,7 +655,8 @@ class OrderTrackingRoute extends GoRouteData with $OrderTrackingRoute {
 }
 
 @TypedGoRoute<RegistrationDetailRoute>(path: '/registrations/:id')
-class RegistrationDetailRoute extends GoRouteData with $RegistrationDetailRoute {
+class RegistrationDetailRoute extends GoRouteData
+    with $RegistrationDetailRoute {
   const RegistrationDetailRoute({required this.id});
 
   final int id;
@@ -722,9 +714,7 @@ class InviteUserRoute extends GoRouteData with $InviteUserRoute {
   routes: [
     TypedGoRoute<InvitationDetailRoute>(
       path: ':invitationId',
-      routes: [
-        TypedGoRoute<InvitationEditRoute>(path: 'edit'),
-      ],
+      routes: [TypedGoRoute<InvitationEditRoute>(path: 'edit')],
     ),
   ],
 )
@@ -820,9 +810,7 @@ class TerritoryEditRoute extends GoRouteData with $TerritoryEditRoute {
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
-    return TerritoryEditorScreen(
-      target: TerritoryEditorTarget.existing(id),
-    );
+    return TerritoryEditorScreen(target: TerritoryEditorTarget.existing(id));
   }
 }
 
@@ -837,7 +825,8 @@ class TerritoryCreateRoute extends GoRouteData with $TerritoryCreateRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) {
     return TerritoryEditorScreen(
-      target: $extra ??
+      target:
+          $extra ??
           const TerritoryEditorTarget.creating(
             initialKind: TerritoryKind.managerZone,
           ),
@@ -857,7 +846,8 @@ class TerritoryCreatePtRoute extends GoRouteData with $TerritoryCreatePtRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) {
     return TerritoryEditorScreen(
-      target: $extra ??
+      target:
+          $extra ??
           const TerritoryEditorTarget.creating(
             initialKind: TerritoryKind.managerZone,
           ),
@@ -868,7 +858,9 @@ class TerritoryCreatePtRoute extends GoRouteData with $TerritoryCreatePtRoute {
 @TypedGoRoute<CatalogHomeRoute>(
   path: '/catalog',
   routes: [
-    TypedGoRoute<CatalogPotentialDefinitionsRoute>(path: 'potential-definitions'),
+    TypedGoRoute<CatalogPotentialDefinitionsRoute>(
+      path: 'potential-definitions',
+    ),
     TypedGoRoute<CatalogPriceIndexRoute>(path: 'price-index'),
     TypedGoRoute<CatalogComparisonRoute>(path: 'comparison/:variantId'),
   ],

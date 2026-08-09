@@ -39,9 +39,10 @@ class PersonFacilityRolesCatalogRepository
     }
     final entries = data
         .whereType<Map>()
-        .map((e) => PersonFacilityRoleCatalogEntry.fromMap(
-              e.cast<String, dynamic>(),
-            ))
+        .map(
+          (e) =>
+              PersonFacilityRoleCatalogEntry.fromMap(e.cast<String, dynamic>()),
+        )
         .where((e) => e.id != 0 && e.name.isNotEmpty)
         .toList(growable: false);
     PersonFacilityRoleCatalogCache.replace(entries);
@@ -56,9 +57,7 @@ class PersonFacilityRolesCatalogRepository
       ),
     );
     if (!successfulCondition(response.statusCode, response.body)) {
-      throw StateError(
-        'Falha ao carregar papéis (${response.statusCode})',
-      );
+      throw StateError('Falha ao carregar papéis (${response.statusCode})');
     }
     return fromJson(response.body);
   }

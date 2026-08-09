@@ -78,7 +78,8 @@ class CadastroReviewRepository
     return CadastroReviewSubmission(
       id: readCrmId(item['id'], 'id'),
       facilityId:
-          readCrmIdOrNull(item['facilityId'], 'facilityId') ?? readCrmId(facility['id'], 'id'),
+          readCrmIdOrNull(item['facilityId'], 'facilityId') ??
+          readCrmId(facility['id'], 'id'),
       facilityName: facility['name'] as String? ?? 'Estabelecimento',
       documentTitle: requirement['name'] as String? ?? 'Documento',
       documentDescription: requirement['description'] as String? ?? '',
@@ -118,10 +119,7 @@ class CadastroReviewRepository
     return result;
   }
 
-  Future<void> approve({
-    required int facilityId,
-    required int recordId,
-  }) async {
+  Future<void> approve({required int facilityId, required int recordId}) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/documents/$recordId/review',
     );

@@ -23,8 +23,9 @@ Future<void> showTaxIdTypeSuggestionSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (_) => _LegalDocumentTypeSuggestionSheetBody(
-      currentLegalDocumentType:
-          parseFacilityLegalDocumentType(currentLegalDocumentType),
+      currentLegalDocumentType: parseFacilityLegalDocumentType(
+        currentLegalDocumentType,
+      ),
     ),
   );
 

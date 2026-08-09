@@ -75,57 +75,55 @@ void main() {
 
   tearDown(PersonFacilityRoleCatalogCache.resetForTest);
 
-  test('updateDoctorRoles PUTs roleIds and fails without personFacilityId', () async {
-    final client = FakeClient([
-      RepositoryHttpResponse(
-        statusCode: 200,
-        headers: const {},
-        body: jsonEncode(
-          _projection(
-            personFacilityId: 10,
-            roleIds: [1, 3],
-          ),
+  test(
+    'updateDoctorRoles PUTs roleIds and fails without personFacilityId',
+    () async {
+      final client = FakeClient([
+        RepositoryHttpResponse(
+          statusCode: 200,
+          headers: const {},
+          body: jsonEncode(_projection(personFacilityId: 10, roleIds: [1, 3])),
         ),
-      ),
-    ]);
-    final repo = FacilityAssociateRepository(1, client: client);
+      ]);
+      final repo = FacilityAssociateRepository(1, client: client);
 
-    final updated = await repo.updateDoctorRoles(
-      const ProfessionalRoster(
-        id: 20,
-        personFacilityId: 10,
-        name: 'João Silva',
-        initials: 'JS',
-        hue: 1,
-      ),
-      roleIds: [1, 3],
-      catalog: _testCatalog,
-    );
-
-    expect(client.requests.single.method, RepositoryHttpMethod.put);
-    expect(
-      client.requests.single.url.path,
-      '/api/v1/facilities/1/healthcare-professionals/10/roles',
-    );
-    expect(client.requests.single.body, {
-      'roleIds': [1, 3],
-    });
-    expect(updated.roleIds, [1, 3]);
-    expect(updated.roleChipLabels, ['Prescritor', 'Decisor']);
-
-    expect(
-      () => repo.updateDoctorRoles(
+      final updated = await repo.updateDoctorRoles(
         const ProfessionalRoster(
           id: 20,
-          name: 'Sem afiliação',
-          initials: 'S',
+          personFacilityId: 10,
+          name: 'João Silva',
+          initials: 'JS',
           hue: 1,
         ),
-        roleIds: [1],
-      ),
-      throwsA(isA<FacilityAssociateException>()),
-    );
-  });
+        roleIds: [1, 3],
+        catalog: _testCatalog,
+      );
+
+      expect(client.requests.single.method, RepositoryHttpMethod.put);
+      expect(
+        client.requests.single.url.path,
+        '/api/v1/facilities/1/healthcare-professionals/10/roles',
+      );
+      expect(client.requests.single.body, {
+        'roleIds': [1, 3],
+      });
+      expect(updated.roleIds, [1, 3]);
+      expect(updated.roleChipLabels, ['Prescritor', 'Decisor']);
+
+      expect(
+        () => repo.updateDoctorRoles(
+          const ProfessionalRoster(
+            id: 20,
+            name: 'Sem afiliação',
+            initials: 'S',
+            hue: 1,
+          ),
+          roleIds: [1],
+        ),
+        throwsA(isA<FacilityAssociateException>()),
+      );
+    },
+  );
 
   test('admin create then PUT roles; update replaces roles', () async {
     final createClient = FakeClient([
@@ -210,47 +208,50 @@ void main() {
     expect(updated.roleChipLabels, ['Secretário(a)']);
   });
 
-  test('endDoctorAffiliation DELETEs affiliation and requires personFacilityId', () async {
-    final client = FakeClient([
-      RepositoryHttpResponse(
-        statusCode: 200,
-        headers: const {},
-        body: jsonEncode({
-          'personFacilityId': 10,
-          'endedAt': '2026-08-07T12:00:00.000Z',
-        }),
-      ),
-    ]);
-    final repo = FacilityAssociateRepository(1, client: client);
+  test(
+    'endDoctorAffiliation DELETEs affiliation and requires personFacilityId',
+    () async {
+      final client = FakeClient([
+        RepositoryHttpResponse(
+          statusCode: 200,
+          headers: const {},
+          body: jsonEncode({
+            'personFacilityId': 10,
+            'endedAt': '2026-08-07T12:00:00.000Z',
+          }),
+        ),
+      ]);
+      final repo = FacilityAssociateRepository(1, client: client);
 
-    await repo.endDoctorAffiliation(
-      const ProfessionalRoster(
-        id: 20,
-        personFacilityId: 10,
-        name: 'João Silva',
-        initials: 'JS',
-        hue: 1,
-      ),
-    );
-
-    expect(client.requests.single.method, RepositoryHttpMethod.delete);
-    expect(
-      client.requests.single.url.path,
-      '/api/v1/facilities/1/healthcare-professionals/10',
-    );
-
-    expect(
-      () => repo.endDoctorAffiliation(
+      await repo.endDoctorAffiliation(
         const ProfessionalRoster(
           id: 20,
-          name: 'Sem afiliação',
-          initials: 'S',
+          personFacilityId: 10,
+          name: 'João Silva',
+          initials: 'JS',
           hue: 1,
         ),
-      ),
-      throwsA(isA<FacilityAssociateException>()),
-    );
-  });
+      );
+
+      expect(client.requests.single.method, RepositoryHttpMethod.delete);
+      expect(
+        client.requests.single.url.path,
+        '/api/v1/facilities/1/healthcare-professionals/10',
+      );
+
+      expect(
+        () => repo.endDoctorAffiliation(
+          const ProfessionalRoster(
+            id: 20,
+            name: 'Sem afiliação',
+            initials: 'S',
+            hue: 1,
+          ),
+        ),
+        throwsA(isA<FacilityAssociateException>()),
+      );
+    },
+  );
 
   test('endAffiliation DELETEs administrative contact path', () async {
     final client = FakeClient([

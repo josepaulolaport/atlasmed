@@ -18,16 +18,13 @@ class MapFacilityPointsPage {
 
 class MapFacilityPointsRepository extends Repository<MapFacilityPointsPage>
     with SessionEnvironmentMixin<MapFacilityPointsPage> {
-  MapFacilityPointsRepository({
-    String? baseUrl,
-    this.verticalId,
-    super.tag,
-  }) : super(
-         endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
-         name: 'MapFacilityPointsRepository',
-         // Never hydrate cross-user Hive cache before the first network fetch.
-         resolveOnCreate: false,
-       );
+  MapFacilityPointsRepository({String? baseUrl, this.verticalId, super.tag})
+    : super(
+        endpoint: _buildEndpoint(baseUrl ?? AppConfig.apiBaseUrl, verticalId),
+        name: 'MapFacilityPointsRepository',
+        // Never hydrate cross-user Hive cache before the first network fetch.
+        resolveOnCreate: false,
+      );
 
   final int? verticalId;
 

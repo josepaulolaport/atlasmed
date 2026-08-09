@@ -41,8 +41,10 @@ class FacilityRepresentativeApi {
       roleTitle: readNullableString(map['roleTitle']),
       notes: readNullableString(map['notes']),
       hasHealthcareProfile: map['hasHealthcareProfile'] == true,
-      classificationIds:
-          readCrmIdList(map['classificationIds'], 'classificationIds'),
+      classificationIds: readCrmIdList(
+        map['classificationIds'],
+        'classificationIds',
+      ),
       roleIds: readCrmIdList(map['roleIds'], 'roleIds'),
     );
   }

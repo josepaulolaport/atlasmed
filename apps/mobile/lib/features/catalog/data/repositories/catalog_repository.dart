@@ -274,9 +274,7 @@ class CatalogRepository {
 
   /// Competitor products not yet linked to [variantId] — backs the "add
   /// existing competitor" step of the picker.
-  Future<List<CompetitorProduct>> getUnlinkedCompetitors(
-    int variantId,
-  ) async {
+  Future<List<CompetitorProduct>> getUnlinkedCompetitors(int variantId) async {
     final response = await _get(
       _uri('/products/$variantId/competitors/unlinked'),
     );

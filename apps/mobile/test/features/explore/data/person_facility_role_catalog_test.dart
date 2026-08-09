@@ -12,10 +12,10 @@ void main() {
         PersonFacilityRoleCatalogEntry(id: 10, name: 'Prescritor'),
         PersonFacilityRoleCatalogEntry(id: 11, name: 'Comprador'),
       ];
-      expect(
-        PersonFacilityRoleCatalog.labelsFor([11, 10], catalog),
-        ['Prescritor', 'Comprador'],
-      );
+      expect(PersonFacilityRoleCatalog.labelsFor([11, 10], catalog), [
+        'Prescritor',
+        'Comprador',
+      ]);
       expect(PersonFacilityRoleCatalog.labelsFor([99], catalog), isEmpty);
     });
 
@@ -25,10 +25,7 @@ void main() {
         PersonFacilityRoleCatalogEntry(id: 1, name: 'Alpha', isActive: false),
         PersonFacilityRoleCatalogEntry(id: 3, name: 'Beta', isActive: true),
       ];
-      expect(
-        PersonFacilityRoleCatalog.activeNames(catalog),
-        ['Beta', 'Zebra'],
-      );
+      expect(PersonFacilityRoleCatalog.activeNames(catalog), ['Beta', 'Zebra']);
     });
 
     test('idsForNames maps selected chip labels to ids', () {
@@ -36,10 +33,9 @@ void main() {
         PersonFacilityRoleCatalogEntry(id: 10, name: 'Prescritor'),
         PersonFacilityRoleCatalogEntry(id: 11, name: 'Comprador'),
       ];
-      expect(
-        PersonFacilityRoleCatalog.idsForNames(['Comprador'], catalog),
-        {11},
-      );
+      expect(PersonFacilityRoleCatalog.idsForNames(['Comprador'], catalog), {
+        11,
+      });
     });
 
     test('catalog entry parses id/name/isActive without code', () {

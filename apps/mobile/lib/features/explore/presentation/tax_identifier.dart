@@ -21,10 +21,9 @@ TaxIdentifier displayTaxIdentifier({
 }) {
   final normalized = _normalizedValue(legalDocument);
   final type = legalDocumentType?.trim().toUpperCase();
-  final isCpf = type == 'CPF' ||
-      (type == null &&
-          normalized != null &&
-          _digits(normalized).length == 11);
+  final isCpf =
+      type == 'CPF' ||
+      (type == null && normalized != null && _digits(normalized).length == 11);
 
   if (normalized != null) {
     return TaxIdentifier(

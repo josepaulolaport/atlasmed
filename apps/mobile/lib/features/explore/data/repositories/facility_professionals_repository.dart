@@ -68,7 +68,9 @@ class FacilityProfessionalsRepository
       catalogRepo.dispose();
     }
     var items = result.items
-        .map((item) => ProfessionalRoster.fromRosterItem(item, catalog: catalog))
+        .map(
+          (item) => ProfessionalRoster.fromRosterItem(item, catalog: catalog),
+        )
         .toList(growable: false);
     final q = search?.trim();
     if (q != null && q.isNotEmpty) {
