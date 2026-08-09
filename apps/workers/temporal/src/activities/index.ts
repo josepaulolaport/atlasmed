@@ -7,6 +7,7 @@ import {
   logPurchaseRecurrenceLifecycle as logPurchaseRecurrenceLifecycleImpl,
   recalculatePurchaseRecurrenceBatch as recalculatePurchaseRecurrenceBatchImpl,
 } from "./purchase-recurrence.activities";
+import { importEmultecOrdersPageActivity as importEmultecOrdersPageActivityImpl } from "./emultec-order-import.activities";
 
 export const recalculatePurchaseRecurrenceBatch = wrapActivity(
   "recalculatePurchaseRecurrenceBatch",
@@ -26,4 +27,9 @@ export const rebuildSearchIndexActivity = wrapActivity(
 export const processCadastroFileUploadedActivity = wrapActivity(
   "processCadastroFileUploaded",
   processCadastroFileUploadedActivityImpl
+);
+
+export const importEmultecOrdersPageActivity = wrapActivity(
+  "importEmultecOrdersPage",
+  importEmultecOrdersPageActivityImpl
 );

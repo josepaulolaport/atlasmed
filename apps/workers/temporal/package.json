@@ -9,7 +9,8 @@
     "typecheck": "bunx tsc -p tsconfig.json",
     "test": "bun test",
     "schedule:purchase-recurrence": "bun src/scripts/ensure-purchase-recurrence-schedule.ts",
-    "sync:emultec-products": "bun src/scripts/sync-emultec-products.ts"
+    "sync:emultec-products": "bun src/scripts/sync-emultec-products.ts",
+    "import:emultec-orders": "bun src/scripts/import-emultec-orders.ts"
   },
   "dependencies": {
     "@atlasmed/config": "workspace:*",
