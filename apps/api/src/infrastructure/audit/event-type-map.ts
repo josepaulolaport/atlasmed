@@ -42,9 +42,6 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "PATCH /api/v1/users/:id/unsuspend": { eventType: "USER.UNSUSPEND" },
   "PUT /api/v1/users/:id/territory": { eventType: "USER.TERRITORY_ASSIGNED" },
   "DELETE /api/v1/users/:id/territory/:territoryId": { eventType: "USER.TERRITORY_REVOKED" },
-  "PUT /api/v1/users/:id/permissions": { eventType: "USER.PERMISSION_GRANT", severity: "WARNING" },
-  "DELETE /api/v1/users/:id/permissions/:permissionId": { eventType: "USER.PERMISSION_REVOKE", severity: "WARNING" },
-
   // --- Invitations ---
   "POST /api/v1/invitations": { eventType: "USER.INVITE" },
   "POST /api/v1/invitations/:id/accept": { eventType: "USER.ACCEPT_INVITE" },

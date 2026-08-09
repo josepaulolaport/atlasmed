@@ -8,7 +8,6 @@ import type { UserRepository } from "../../application/interfaces/user.repositor
 import type { AuthCacheService } from "../cache/auth-cache.service";
 import type { SessionCacheService } from "../cache/session-cache.service";
 import type { ScopeService } from "../../application/services/scope.service";
-import type { AccessGrantService } from "../../application/services/access-grant.service";
 import type { Redis } from "ioredis";
 import { createMockScopeService } from "../../test-helpers/fixtures";
 import { createAccessTestApp } from "../../test-helpers/access-test-app";
@@ -24,7 +23,6 @@ describe("Auth Plugin Scope", () => {
   let mockAuthCacheService: AuthCacheService;
   let mockSessionCacheService: SessionCacheService;
   let mockScopeService: ScopeService;
-  let mockAccessGrantService: AccessGrantService;
   let mockRedis: Redis;
 
   const mockUser = {
@@ -124,10 +122,6 @@ describe("Auth Plugin Scope", () => {
     } as unknown as Redis;
 
     mockScopeService = createMockScopeService();
-
-    mockAccessGrantService = {
-      getActiveGrants: mock(async () => []),
-    } as unknown as AccessGrantService;
   });
 
   async function signToken(role: Role = "REP") {
@@ -148,7 +142,6 @@ describe("Auth Plugin Scope", () => {
       authCacheService: mockAuthCacheService,
       sessionCacheService: mockSessionCacheService,
       scopeService: mockScopeService,
-      accessGrantService: mockAccessGrantService,
       redis: mockRedis,
     });
 

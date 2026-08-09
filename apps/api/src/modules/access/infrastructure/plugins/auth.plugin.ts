@@ -12,7 +12,6 @@ import type { UserRepository } from "../../application/interfaces/user.repositor
 import type { AuthCacheService } from "../cache/auth-cache.service";
 import type { SessionCacheService } from "../cache/session-cache.service";
 import type { ScopeService } from "../../application/services/scope.service";
-import type { AccessGrantService } from "../../application/services/access-grant.service";
 import type { Redis } from "ioredis";
 import { logger } from "../../../../infrastructure/logging/logger";
 import { getClientIp } from "../../../../shared/utils/client-ip";
@@ -51,7 +50,6 @@ export interface AuthPluginDependencies {
   authCacheService: AuthCacheService;
   sessionCacheService: SessionCacheService;
   scopeService: ScopeService;
-  accessGrantService: AccessGrantService;
   redis: Redis;
 }
 
@@ -416,7 +414,7 @@ async function resolveAccessSessionFromToken(
 }
 
 export function createAuthPlugin(dependencies: AuthPluginDependencies) {
-  const { userRepository, scopeService, accessGrantService } = dependencies;
+  const { userRepository, scopeService } = dependencies;
 
   return new Elysia({ name: "auth" })
     .derive({ as: "scoped" }, async ({ request, server }) => {
@@ -463,8 +461,6 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
             }
             return user;
           },
-          getAccessGrants: async () =>
-            accessGrantService.getActiveGrants(authContext.userId),
         };
       } catch (error) {
         // Domain auth failures (expired/invalid token, suspended, etc.) — expected.

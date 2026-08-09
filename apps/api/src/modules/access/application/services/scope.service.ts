@@ -1,4 +1,4 @@
-import { mergeGrantsIntoScope, type ScopeContext } from "@atlasmed/access";
+import type { ScopeContext } from "@atlasmed/access";
 import type {
   FacilityAssociationPort,
   ScopeRepository,
@@ -7,25 +7,21 @@ import type {
 } from "../interfaces/scope.repository.interface";
 import { ScopeResolver } from "./scope-resolver.service";
 import { scopeCacheService } from "../../infrastructure/cache/scope-cache.service";
-import type { AccessGrantService } from "./access-grant.service";
 
 interface ScopeServiceDependencies {
   scopeRepository: ScopeRepository;
   territoryScopePort: TerritoryScopePort;
   territoryHierarchyPort: TerritoryHierarchyPort;
   facilityAssociationPort: FacilityAssociationPort;
-  accessGrantService: AccessGrantService;
 }
 
 export class ScopeService {
   private readonly scopeResolver: ScopeResolver;
   private readonly scopeRepository: ScopeRepository;
-  private readonly accessGrantService: AccessGrantService;
 
   constructor(deps: ScopeServiceDependencies) {
     this.scopeRepository = deps.scopeRepository;
     this.scopeResolver = new ScopeResolver(deps);
-    this.accessGrantService = deps.accessGrantService;
   }
 
   async resolve(userId: number, roleName: string): Promise<ScopeContext> {
@@ -36,8 +32,7 @@ export class ScopeService {
       await scopeCacheService.set(userId, scope);
     }
 
-    const grants = await this.accessGrantService.getActiveGrants(userId);
-    return mergeGrantsIntoScope(scope, grants);
+    return scope;
   }
 
   async invalidate(userId: number): Promise<void> {

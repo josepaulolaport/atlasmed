@@ -8,7 +8,6 @@ import type { UserRepository } from "../../application/interfaces/user.repositor
 import type { AuthCacheService } from "../cache/auth-cache.service";
 import type { SessionCacheService } from "../cache/session-cache.service";
 import type { ScopeService } from "../../application/services/scope.service";
-import type { AccessGrantService } from "../../application/services/access-grant.service";
 import type { Redis } from "ioredis";
 import { createMockScopeService } from "../../test-helpers/fixtures";
 
@@ -31,7 +30,6 @@ describe("Auth Plugin", () => {
   let mockAuthCacheService: AuthCacheService;
   let mockSessionCacheService: SessionCacheService;
   let mockScopeService: ScopeService;
-  let mockAccessGrantService: AccessGrantService;
   let mockRedis: Redis;
 
   const mockUser = {
@@ -131,10 +129,6 @@ describe("Auth Plugin", () => {
     } as any;
 
     mockScopeService = createMockScopeService();
-
-    mockAccessGrantService = {
-      getActiveGrants: mock(async () => []),
-    } as any;
   });
 
   describe("Auth context injection", () => {
@@ -154,8 +148,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -195,8 +188,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -221,8 +213,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -264,8 +255,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -312,8 +302,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -360,8 +349,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -435,8 +423,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -513,8 +500,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -580,8 +566,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -648,8 +633,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -717,8 +701,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -772,8 +755,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -829,8 +811,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -886,8 +867,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -945,8 +925,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -1004,8 +983,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()
@@ -1038,8 +1016,7 @@ describe("Auth Plugin", () => {
         authCacheService: mockAuthCacheService,
         sessionCacheService: mockSessionCacheService,
         scopeService: mockScopeService,
-        accessGrantService: mockAccessGrantService,
-        redis: mockRedis,
+          redis: mockRedis,
       });
 
       const testApp = createTestApp()

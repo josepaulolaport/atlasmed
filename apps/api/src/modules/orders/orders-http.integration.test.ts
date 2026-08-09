@@ -10,7 +10,7 @@ function actorPlugin() {
     getScope: async () => ({ ...createGlobalScopeContext(), assignedVerticalIds: [1] }),
     getAuthContext: async () => ({ userId: 1, sessionId: "session", roleName: "REP" as const }),
     getUser: async () => ({ id: 1, role: { name: "REP" as const } }),
-    getAccessGrants: async () => [],
+
   }));
 }
 

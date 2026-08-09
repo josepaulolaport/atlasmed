@@ -160,7 +160,6 @@ export function scopedManagerContext(input: {
   analyticsTerritoryIds?: number[];
   managedUserIds?: number[];
   isOperationallyActive?: boolean;
-  grantIds?: number[];
 }): ScopeContext {
   return withTerritoryScopeAliases({
     isGlobal: false,
@@ -172,7 +171,6 @@ export function scopedManagerContext(input: {
     managedUserIds: input.managedUserIds ?? [],
     isOperationallyActive:
       input.isOperationallyActive ?? input.territoryIds.length > 0,
-    grantIds: input.grantIds,
   });
 }
 

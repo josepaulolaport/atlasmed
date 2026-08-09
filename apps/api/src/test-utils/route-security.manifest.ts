@@ -11,8 +11,6 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/access/infrastructure/routes/request-password-reset.route.ts": "public",
   "modules/access/infrastructure/routes/verify-password-reset.route.ts": "public",
   "modules/access/infrastructure/routes/reset-password.route.ts": "public",
-
-  "modules/access/infrastructure/routes/capabilities.route.ts": "auth",
   "modules/access/infrastructure/routes/change-password.route.ts": "auth",
   "modules/access/infrastructure/routes/verification.route.ts": "auth",
 
@@ -27,7 +25,6 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/access/infrastructure/routes/verticals.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/user-assignments.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/user-management.route.ts": "auth+permission",
-  "modules/access/infrastructure/routes/user-permissions.route.ts": "auth+permission",
 
   "modules/calendar/infrastructure/routes/calendar.route.ts": "auth+permission",
 

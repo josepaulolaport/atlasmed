@@ -56,7 +56,6 @@ export const auditMiddleware = new Elysia({ name: "audit-middleware" }).onAfterH
       params["personFacilityId"] ??
       params["facilityId"] ??
       params["territoryId"] ??
-      params["permissionId"] ??
       undefined;
 
     void getAuthContext()

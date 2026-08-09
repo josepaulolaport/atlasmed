@@ -5,7 +5,6 @@ import {
   type Action,
   type Role,
   type Subject,
-  type AccessGrantRecord,
 } from "@atlasmed/access";
 import { ForbiddenError } from "../../../../shared/errors";
 import { parseRouteId } from "../../../../shared/utils/crm-id";
@@ -17,7 +16,6 @@ type PermissionContextUser = {
 };
 
 type GetUserFn = () => Promise<PermissionContextUser>;
-type GetAccessGrantsFn = () => Promise<AccessGrantRecord[]>;
 
 type PermissionOptions = {
   /** Elysia param name containing the resource id (e.g. "id"). */
@@ -38,12 +36,6 @@ async function assertPermission(
 
   const user = await (getUser as GetUserFn)();
 
-  let grants: AccessGrantRecord[] = [];
-  const getAccessGrants = context.getAccessGrants;
-  if (typeof getAccessGrants === "function") {
-    grants = await (getAccessGrants as GetAccessGrantsFn)();
-  }
-
   const resourceIdParam = options?.resourceIdParam;
   const params = context.params as Record<string, string | number> | undefined;
   const rawResourceId = resourceIdParam
@@ -54,7 +46,6 @@ async function assertPermission(
   if (resourceIdParam && rawResourceId !== undefined && rawResourceId !== "") {
     const allowed = canAccessResource(
       user.role.name,
-      grants,
       action,
       subject,
       parseRouteId(String(rawResourceId), resourceIdParam)
@@ -67,7 +58,7 @@ async function assertPermission(
     return;
   }
 
-  if (!canAccessRoute(user.role.name, grants, action, subject)) {
+  if (!canAccessRoute(user.role.name, action, subject)) {
     throw new ForbiddenError();
   }
 }
@@ -75,12 +66,13 @@ async function assertPermission(
 /**
  * Enforces CASL permissions on routes that also use the auth plugin.
  *
- * Resource-scoped grants only apply when `resourceIdParam` is set.
- * Type-level routes ignore scoped grants (prevents grant escalation).
+ * Role-based only (AccessGrants removed). `resourceIdParam` still scopes
+ * the check call site for clarity / future instance rules; today it uses
+ * the same role ability as type-level routes.
  *
  * Must use `{ as: 'scoped' }` so the hook runs on the parent route instance
  * (e.g. `.use(auth).use(requirePermission(...)).get(...)`) and can read
- * scoped values like `getUser` and `getAccessGrants` from auth.
+ * scoped values like `getUser` from auth.
  */
 export const requirePermission = (
   action: Action,

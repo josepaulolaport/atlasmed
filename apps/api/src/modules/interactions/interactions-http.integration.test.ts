@@ -11,7 +11,7 @@ function actorPlugin(roleName: Role = "REP", userId = 1) {
     getScope: async () => createGlobalScopeContext(),
     getAuthContext: async () => ({ userId, sessionId: "session", roleName }),
     getUser: async () => ({ id: userId, role: { name: roleName } }),
-    getAccessGrants: async () => [],
+
   }));
 }
 

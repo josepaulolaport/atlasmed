@@ -113,26 +113,12 @@ export class CleanupJobs {
     );
   }
 
-  async scheduleExpiredPermissionsCleanup(): Promise<void> {
-    await cleanupQueue.add(
-      "cleanup-expired-permissions",
-      {},
-      {
-        ...defaultJobOptions,
-        repeat: {
-          pattern: "0 3 * * *",
-        },
-      }
-    );
-  }
-
   async initializeAllJobs(): Promise<void> {
     await Promise.all([
       this.scheduleExpiredSessionsCleanup(),
       this.scheduleExpiredInvitesCleanup(),
       this.scheduleExpiredPasswordResetsCleanup(),
       this.scheduleExpiredVerificationTokensCleanup(),
-      this.scheduleExpiredPermissionsCleanup(),
       this.scheduleOldAuditLogsCleanup(),
       this.scheduleSiemAuditExport(),
     ]);
@@ -204,15 +190,6 @@ export function startCleanupWorker(): void {
             )
           ).returning({ id: verificationTokens.id });
           logger.info("Cleaned up verification tokens", { count: deleted.length });
-          break;
-        }
-
-        case "cleanup-expired-permissions": {
-          const { accessGrantService } = await import(
-            "../../modules/access/composition"
-          );
-          const removed = await accessGrantService.cleanupExpiredPermissions();
-          logger.info("Cleaned up expired permissions", { count: removed });
           break;
         }
 

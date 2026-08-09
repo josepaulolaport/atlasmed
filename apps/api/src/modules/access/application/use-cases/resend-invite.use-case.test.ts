@@ -70,7 +70,7 @@ describe("ResendInviteUseCase", () => {
       actorRole: Role.MANAGER,
       scope: scopedManagerContext({
         territoryIds: [1],
-        grantIds: [],
+
       }),
     });
 
@@ -98,7 +98,7 @@ describe("ResendInviteUseCase", () => {
         actorRole: Role.MANAGER,
         scope: scopedManagerContext({
           territoryIds: [],
-          grantIds: [],
+
         }),
       })
     ).rejects.toThrow(InsufficientPermissionsError);

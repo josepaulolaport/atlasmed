@@ -44,7 +44,6 @@ export interface ScopeContext {
    */
   oversightZoneIds?: number[];
   isOperationallyActive: boolean;
-  grantIds?: number[];
 }
 
 export interface ScopeActor {

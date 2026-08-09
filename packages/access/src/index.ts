@@ -23,7 +23,6 @@ export * from "./schemas/replace-user-assignments.schema";
 export * from "./schemas/user-preferences.schema";
 export * from "./schemas/change-password.schema";
 export * from "./schemas/user-assignment.schema";
-export * from "./schemas/user-permission.schema";
 export * from "./schemas/facility.schema";
 export * from "./schemas/professional.schema";
 export * from "./schemas/facility-professionals.schema";
@@ -53,29 +52,10 @@ export * from "./errors/rate-limit.error";
 
 export { defineAbilitiesFor } from "./permissions/role.permissions";
 export type { Action, AppAbility, Subject } from "./permissions/role.permissions";
-export { defineAbilitiesForUser } from "./permissions/grant.permissions";
 export {
   canAccessRoute,
   canAccessResource,
-  isValidGrantResource,
-  isValidGrantAction,
 } from "./permissions/route.permissions";
-export {
-  canOnResource,
-  toGrantResourceId,
-} from "./permissions/casl-scoped.helpers";
-export {
-  buildCaslConditionsFromGrant,
-  validateGrantConditions,
-  GrantConditionValidationError,
-} from "./permissions/grant-conditions";
-export type { AccessGrantRecord } from "./contracts/access-grant.contract";
-export {
-  GRANT_RESOURCE_TO_SUBJECT,
-  grantActionToCaslAction,
-  normalizeGrantResource,
-  LEGACY_GRANT_RESOURCE_ALIASES,
-} from "./contracts/access-grant.contract";
 export {
   canManageUsers,
   canReadFacilities,
@@ -113,7 +93,6 @@ export {
   canMutateUser,
   canChangeUserRole,
 } from "./scope/scope.helpers";
-export { mergeGrantsIntoScope } from "./scope/scope-grant.helpers";
 export { assertResourceInScope } from "./scope/scope-enforcement.helpers";
 export type { ScopedResourceType } from "./scope/scope-enforcement.helpers";
 export {
