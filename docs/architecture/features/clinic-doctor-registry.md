@@ -120,6 +120,12 @@ bun run --cwd apps/workers/temporal schedule:purchase-recurrence
 
 The schedule runs `RECONCILE` at minute zero each hour with overlap policy `SKIP`. It reads an overlapping two-hour order-update window and due stage transitions. The `00:00 UTC` run additionally performs a complete active-facility sweep. The freshness objective is the next successful hourly reconciliation for external order changes and UTC date transitions.
 
+Emultec avulsa → CRM orders (whitelist products, seller/facility gates): see [`docs/ops/emultec-order-import.md`](../../ops/emultec-order-import.md). After worker deploy with Emultec env + Docker:
+
+```sh
+bun run --cwd apps/workers/temporal schedule:emultec-order-import
+```
+
 Start the initial purchase-recurrence backfill through the authorized endpoint:
 
 ```http

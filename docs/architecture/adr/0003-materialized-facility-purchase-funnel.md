@@ -100,6 +100,8 @@ Both the API override path and worker recalculation lock the facility row with `
 
 When an order writer/importer is added to this repository, its post-commit hook must enqueue recalculation for changes to `facility_id`, `ordered_at`, `status`, or `type`, and for deletion. If the facility changes, both the old and new facility IDs must be recalculated. This hook improves freshness but does not replace hourly reconciliation and midnight repair.
 
+**Emultec avulsa importer (2026-08):** Temporal `emultecOrderImportWorkflow` (`HYBRID` by default) upserts eligible Emultec orders/items. After successful upserts it starts a child `purchaseRecurrenceWorkflow` `RECONCILE`. Ops: [`docs/ops/emultec-order-import.md`](../../ops/emultec-order-import.md). Daily schedule `emultec-order-import-daily` does not replace the hourly purchase-recurrence schedule.
+
 ## Alternatives
 
 ### Aggregate at query time
