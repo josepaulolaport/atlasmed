@@ -93,6 +93,7 @@ Expect:
 
 - Healthcare-profile persons only (ADR 0004 / Q31).
 - `activeFacilityIds` / `activeTerritoryIds` populated from active associations.
+- `registrationDisplays` searchable (`CRM/SP 123456` per active reg).
 
 ### 3. Drop orphan `professionals` index
 

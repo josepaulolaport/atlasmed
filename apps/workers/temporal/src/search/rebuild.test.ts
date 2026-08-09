@@ -140,6 +140,7 @@ describe("search rebuild", () => {
           { facilityId: 1, territoryId: 11 },
           { facilityId: 1, territoryId: 11 },
         ],
+        registrationDisplays: ["CRM/SP 123456", "CRM/RJ 654321"],
         deletedAt: null,
       })
     ).toEqual({
@@ -151,7 +152,23 @@ describe("search rebuild", () => {
       specialtyNormalized: "cardiologia",
       activeFacilityIds: [1, 2],
       activeTerritoryIds: [11, 22],
+      registrationDisplays: ["CRM/SP 123456", "CRM/RJ 654321"],
     });
+  });
+
+  test("defaults registrationDisplays to empty when omitted", () => {
+    expect(
+      mapPersonSearchDocument({
+        id: 2,
+        firstName: "Bia",
+        lastName: "Costa",
+        socialName: null,
+        cpf: null,
+        primarySpecialtyLabel: null,
+        activeAssociations: [],
+        deletedAt: null,
+      })?.registrationDisplays
+    ).toEqual([]);
   });
 
   test("exposes hybrid filter and distance-sort index settings", () => {
@@ -179,6 +196,15 @@ describe("search rebuild", () => {
     ]));
     expect(searchRebuild.PERSON_SETTINGS.filterableAttributes).toEqual(
       expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"])
+    );
+    expect(searchRebuild.PERSON_SETTINGS.searchableAttributes).toEqual(
+      expect.arrayContaining([
+        "name",
+        "socialName",
+        "cpf",
+        "specialty",
+        "registrationDisplays",
+      ])
     );
   });
 

@@ -464,8 +464,9 @@ Index uid = `persons`. Document id = `persons.id` (string). Documents only for p
 | `specialty` / `specialtyNormalized` | primary `healthcare_specialties.name` via `person_healthcare_profile_specialties` |
 | `activeFacilityIds` | `person_facilities` where `ended_at IS NULL` (+ active facility) |
 | `activeTerritoryIds` | `facility_vertical_profiles.manager_zone_id` for those facilities (active profiles) |
+| `registrationDisplays` | active `person_professional_registrations` as `CRM/SP 123456` (searchable; format sync with API `formatPrimaryRegistrationDisplay`) |
 
-Registrations intentionally omitted from Meili until multi-registration UI populates `person_professional_registrations`.
+After deploy: full `POST /sync` with `{"entity":"persons"}` so Meili reindexes displays. Person incremental upsert on registration write is a follow-up.
 
 ### 6.5 Classification seed
 

@@ -8,6 +8,8 @@ import {
   personFacilities,
   personHealthcareProfileSpecialties,
   personHealthcareProfiles,
+  personProfessionalRegistrationCouncils,
+  personProfessionalRegistrations,
   persons,
   states,
 } from "@atlasmed/database";
@@ -35,10 +37,9 @@ export {
 export type { FacilityProfileFunnelData, FacilitySearchDocument };
 
 /**
- * Q31 frozen Meili persons document fields (ADR 0004 §6.4):
+ * Q31 Meili persons document fields (ADR 0004 §6.4):
  * id, name, socialName, cpf, specialty, specialtyNormalized,
- * activeFacilityIds, activeTerritoryIds.
- * Registrations intentionally omitted until multi-registration UI populates them.
+ * activeFacilityIds, activeTerritoryIds, registrationDisplays.
  */
 export type PersonSearchDocument = {
   /** Meilisearch primary key (decimal string of persons.id). */
@@ -50,6 +51,8 @@ export type PersonSearchDocument = {
   specialtyNormalized: string | null;
   activeFacilityIds: number[];
   activeTerritoryIds: number[];
+  /** Active regs as `CRM/SP 123456` — searchable (multi-reg UI). */
+  registrationDisplays: string[];
 };
 
 type EnqueuedTask = { taskUid: number };
@@ -75,6 +78,18 @@ export function fullSearchSyncWorkflowId(target: SearchSyncTarget): string {
   return `search-sync-${target}-full`;
 }
 
+/**
+ * Keep in sync with apps/api `formatPrimaryRegistrationDisplay`
+ * (do not import across apps — trivial shared format).
+ */
+function formatRegistrationDisplay(input: {
+  councilAbbreviation: string;
+  stateCode: string;
+  registrationNumber: string;
+}): string {
+  return `${input.councilAbbreviation}/${input.stateCode} ${input.registrationNumber}`;
+}
+
 export function mapPersonSearchDocument(row: {
   id: number;
   firstName: string;
@@ -83,6 +98,7 @@ export function mapPersonSearchDocument(row: {
   cpf: string | null;
   primarySpecialtyLabel: string | null;
   activeAssociations: Array<{ facilityId: number; territoryId: number | null }>;
+  registrationDisplays?: string[];
   deletedAt: Date | null;
 }): PersonSearchDocument | null {
   if (row.deletedAt) return null;
@@ -105,6 +121,7 @@ export function mapPersonSearchDocument(row: {
       : null,
     activeFacilityIds,
     activeTerritoryIds,
+    registrationDisplays: row.registrationDisplays ?? [],
   };
 }
 
@@ -321,9 +338,15 @@ async function loadActiveFacilityProfiles(facilityIds: number[]): Promise<Active
 
   return { verticalIds, territoryIds, repUserIds, funnelData };
 }
-/** Q31 frozen settings — keep in sync with PersonSearchDocument field list. */
+/** Q31 settings — keep in sync with PersonSearchDocument field list. */
 export const PERSON_SETTINGS = {
-  searchableAttributes: ["name", "socialName", "cpf", "specialty"],
+  searchableAttributes: [
+    "name",
+    "socialName",
+    "cpf",
+    "specialty",
+    "registrationDisplays",
+  ],
   filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"],
 };
 
@@ -437,6 +460,68 @@ async function loadPrimarySpecialtyLabels(
   return map;
 }
 
+async function loadActiveRegistrationDisplays(
+  personIds: number[]
+): Promise<Map<number, string[]>> {
+  const map = new Map<number, string[]>();
+  if (personIds.length === 0) return map;
+
+  for (const id of personIds) map.set(id, []);
+
+  const rows = await db
+    .select({
+      personId: personProfessionalRegistrations.personId,
+      councilAbbreviation: personProfessionalRegistrationCouncils.abbreviation,
+      stateCode: personProfessionalRegistrations.stateCode,
+      registrationNumber: personProfessionalRegistrations.registrationNumber,
+      isPrimary: personProfessionalRegistrations.isPrimary,
+    })
+    .from(personProfessionalRegistrations)
+    .innerJoin(
+      personProfessionalRegistrationCouncils,
+      eq(
+        personProfessionalRegistrations.councilId,
+        personProfessionalRegistrationCouncils.id
+      )
+    )
+    .where(
+      and(
+        inArray(personProfessionalRegistrations.personId, personIds),
+        eq(personProfessionalRegistrations.isActive, true)
+      )
+    );
+
+  rows.sort((left, right) => {
+    if (left.personId !== right.personId) return left.personId - right.personId;
+    if (left.isPrimary !== right.isPrimary) return left.isPrimary ? -1 : 1;
+    const byAbbrev = left.councilAbbreviation.localeCompare(
+      right.councilAbbreviation,
+      "pt-BR"
+    );
+    if (byAbbrev !== 0) return byAbbrev;
+    const byState = left.stateCode.localeCompare(right.stateCode, "pt-BR");
+    if (byState !== 0) return byState;
+    return left.registrationNumber.localeCompare(
+      right.registrationNumber,
+      "pt-BR"
+    );
+  });
+
+  for (const row of rows) {
+    const list = map.get(row.personId) ?? [];
+    list.push(
+      formatRegistrationDisplay({
+        councilAbbreviation: row.councilAbbreviation,
+        stateCode: row.stateCode,
+        registrationNumber: row.registrationNumber,
+      })
+    );
+    map.set(row.personId, list);
+  }
+
+  return map;
+}
+
 /** Persons with healthcare profiles only (D16 / Q31). */
 async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
   let lastId: number | undefined;
@@ -463,9 +548,10 @@ async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
 
     lastId = rows.at(-1)!.id;
     const personIds = rows.map((row) => row.id);
-    const [associations, specialties] = await Promise.all([
+    const [associations, specialties, registrationDisplays] = await Promise.all([
       loadActivePersonAssociations(personIds),
       loadPrimarySpecialtyLabels(personIds),
+      loadActiveRegistrationDisplays(personIds),
     ]);
 
     yield rows
@@ -474,6 +560,7 @@ async function* personPages(): AsyncGenerator<PersonSearchDocument[]> {
           ...row,
           primarySpecialtyLabel: specialties.get(row.id) ?? null,
           activeAssociations: associations.get(row.id) ?? [],
+          registrationDisplays: registrationDisplays.get(row.id) ?? [],
         })
       )
       .filter((row): row is PersonSearchDocument => row !== null);
