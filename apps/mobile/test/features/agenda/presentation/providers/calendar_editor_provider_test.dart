@@ -146,7 +146,12 @@ void main() {
 
       final command = notifier.state.draft.toCreateCommand();
 
-      expect(command.startsAt, '2026-08-03T09:30:00.000+00:00');
+      // The notifier was given a UTC clock and 'Etc/UTC', so the instant is UTC
+      // and serializes as `Z` — no device offset in the answer. This assertion
+      // used to hardcode whichever offset the machine running it happened to
+      // have (`-03:00`, then `+00:00` for CI), so it could only ever pass in one
+      // timezone; the rounding in `_initialDraft` was silently localizing it.
+      expect(command.startsAt, '2026-08-03T09:30:00.000Z');
       expect(command.recurrence, CalendarRecurrence.monthly);
       expect(command.recurrenceCount, 6);
       expect(command.recurrenceUntil, isNull);
