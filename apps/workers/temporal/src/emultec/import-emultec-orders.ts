@@ -294,8 +294,6 @@ async function upsertOneOrder(
       .update(orders)
       .set({
         facilityVerticalProfileId: verticalProfile.id,
-        facilityId: facility.facilityId,
-        verticalId,
         sellerId: seller,
         personId,
         status,
@@ -313,8 +311,6 @@ async function upsertOneOrder(
       .values({
         idAvulsaEmultec: bundle.idAvulsa,
         facilityVerticalProfileId: verticalProfile.id,
-        facilityId: facility.facilityId,
-        verticalId,
         sellerId: seller,
         personId,
         status,

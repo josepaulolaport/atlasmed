@@ -37,18 +37,6 @@ export const orders = pgTable(
     facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
       .notNull()
       .references(() => facilityVerticalProfiles.id, { onDelete: "restrict" }),
-    /**
-     * @deprecated Superseded by `facilityVerticalProfileId`. Dropped in migration
-     * 0079 — writes must keep populating it until then (both are NOT NULL), reads
-     * must not use it.
-     */
-    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id),
-    /**
-     * @deprecated Superseded by `facilityVerticalProfileId`; derivable from it.
-     * Dropped in migration 0079 — same rule as `facilityId`.
-     */
-    verticalId: bigint("vertical_id", { mode: "number" })
-      .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
     sellerId: bigint("seller_id", { mode: "number" }).references(() => users.id),
     personId: bigint("person_id", { mode: "number" }).references(() => persons.id),
     interactionId: bigint("interaction_id", { mode: "number" }).references(() => interactions.id, {
@@ -75,20 +63,11 @@ export const orders = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
-    index("orders_facility_id_idx").on(t.facilityId),
-    index("orders_vertical_id_idx").on(t.verticalId),
     index("orders_status_idx").on(t.status),
     index("orders_ordered_at_idx").on(t.orderedAt),
     index("orders_person_id_idx").on(t.personId),
     index("orders_interaction_id_idx").on(t.interactionId),
     index("orders_seller_id_idx").on(t.sellerId),
-    index("orders_valid_purchase_facility_ordered_at_idx")
-      .on(t.facilityId, t.orderedAt.desc())
-      .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
-    index("orders_valid_purchase_facility_vertical_ordered_at_idx")
-      .on(t.facilityId, t.verticalId, t.orderedAt.desc())
-      .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
-    index("orders_updated_at_facility_id_idx").on(t.updatedAt, t.facilityId),
     index("orders_facility_vertical_profile_id_idx").on(t.facilityVerticalProfileId),
     /**
      * The funnel's index. `loadPurchaseDates` filters exactly this predicate; if it
@@ -159,8 +138,6 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.facilityVerticalProfileId],
     references: [facilityVerticalProfiles.id],
   }),
-  /** @deprecated Reach the facility through `verticalProfile`. Dropped in 0079. */
-  facility: one(facilities, { fields: [orders.facilityId], references: [facilities.id] }),
   interaction: one(interactions, {
     fields: [orders.interactionId],
     references: [interactions.id],

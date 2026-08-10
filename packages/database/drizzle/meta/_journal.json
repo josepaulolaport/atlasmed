@@ -554,6 +554,13 @@
       "when": 1786360657728,
       "tag": "0078_orders_key_on_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1786362768762,
+      "tag": "0079_orders_drop_legacy_keys",
+      "breakpoints": true
     }
   ]
 }

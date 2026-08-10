@@ -28,12 +28,9 @@ const recurringMonthly = {
 } satisfies typeof calendar.$inferInsert;
 
 const orderWithoutInteraction = {
-  // Spec 0010 §4: the profile is the real key. facilityId/verticalId remain
-  // NOT NULL until migration 0079 drops them, so an insert must still set all
-  // three — this is the transition shape, not the destination.
+  // Spec 0010 §4: the profile is the only key an order carries. facilityId and
+  // verticalId were dropped in 0079 — the facility is reached through the profile.
   facilityVerticalProfileId: 1,
-  facilityId: 1,
-  verticalId: 1,
   orderedAt: new Date("2026-01-31T12:00:00.000Z"),
 } satisfies typeof orders.$inferInsert;
 

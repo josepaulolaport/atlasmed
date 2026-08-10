@@ -124,9 +124,18 @@ describe("facility purchase recurrence schema", () => {
     ]);
   });
 
-  test("defines the valid purchase lookup in facility/date order with descending dates", () => {
+  /**
+   * Retargeted from `orders_valid_purchase_facility_ordered_at_idx`, dropped in
+   * 0079 with the facility keying it indexed (spec 0010 §4).
+   *
+   * This index is what makes the funnel's purchase lookup cheap. If it stops
+   * matching the query's predicate the funnel silently degrades to a sequential
+   * scan over every order — no error, just a slow query nobody attributes to
+   * this change. That is why the shape is asserted rather than assumed.
+   */
+  test("defines the valid purchase lookup in profile/date order with descending dates", () => {
     const purchaseIndex = getTableConfig(orders).indexes.find(
-      (candidate) => candidate.config.name === "orders_valid_purchase_facility_ordered_at_idx",
+      (candidate) => candidate.config.name === "orders_valid_purchase_profile_ordered_at_idx",
     );
 
     expect(purchaseIndex).toBeDefined();
@@ -140,7 +149,7 @@ describe("facility purchase recurrence schema", () => {
         ];
       }),
     ).toEqual([
-      ["facility_id", "asc", "last"],
+      ["facility_vertical_profile_id", "asc", "last"],
       ["ordered_at", "desc", "last"],
     ]);
   });
