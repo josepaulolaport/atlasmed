@@ -23,7 +23,7 @@ jobs:
               - 'apps/workers/**'
 
   packages:
-    name: Packages — typecheck
+    name: Packages — typecheck + test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -44,6 +44,11 @@ jobs:
         run: bun run typecheck --filter=@atlasmed/database
       - name: Typecheck packages/access
         run: bun run typecheck --filter=@atlasmed/access
+      # Until now no packages/* test ran anywhere in CI, which is how two
+      # failures in packages/database went unnoticed. These need no database:
+      # they are schema-shape and pure-function tests.
+      - name: Test packages
+        run: bun run test --filter='./packages/*'
 
   api:
     name: API — typecheck + test

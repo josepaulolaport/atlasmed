@@ -12,6 +12,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { environment } from "../../app/config/environment";
 import {
+  clampPresignTtl,
   getPresignStorageClient,
   getStorageClient,
   isStorageConfigured,
@@ -80,7 +81,7 @@ export class StorageService {
         Bucket: this.bucket(),
         Key: key,
       }),
-      { expiresIn: ttlSeconds }
+      { expiresIn: clampPresignTtl(ttlSeconds) }
     );
   }
 
@@ -96,7 +97,7 @@ export class StorageService {
         Key: key,
         ContentType: contentType,
       }),
-      { expiresIn: ttlSeconds }
+      { expiresIn: clampPresignTtl(ttlSeconds) }
     );
   }
 
@@ -159,7 +160,7 @@ export class StorageService {
         UploadId: uploadId,
         PartNumber: partNumber,
       }),
-      { expiresIn: ttlSeconds }
+      { expiresIn: clampPresignTtl(ttlSeconds) }
     );
   }
 

@@ -35,7 +35,7 @@ services:
       - STORAGE_ACCESS_KEY_ID=${STORAGE_ACCESS_KEY_ID}
       - STORAGE_SECRET_ACCESS_KEY=${STORAGE_SECRET_ACCESS_KEY}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
-      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - STORAGE_REGION=${STORAGE_REGION:-auto}
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
       - TEMPORAL_NAMESPACE=default
       - TEMPORAL_TASK_QUEUE=atlasmed-workflows
@@ -87,7 +87,7 @@ services:
       - STORAGE_ACCESS_KEY_ID=${STORAGE_ACCESS_KEY_ID}
       - STORAGE_SECRET_ACCESS_KEY=${STORAGE_SECRET_ACCESS_KEY}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
-      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - STORAGE_REGION=${STORAGE_REGION:-auto}
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
       - TEMPORAL_NAMESPACE=default
       - TEMPORAL_TASK_QUEUE=atlasmed-workflows
@@ -121,7 +121,7 @@ services:
       - STORAGE_ACCESS_KEY_ID=${STORAGE_ACCESS_KEY_ID}
       - STORAGE_SECRET_ACCESS_KEY=${STORAGE_SECRET_ACCESS_KEY}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
-      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - STORAGE_REGION=${STORAGE_REGION:-auto}
       - OTEL_SERVICE_NAME=atlasmed-temporal-worker
     depends_on:
       - atlasmed-temporal

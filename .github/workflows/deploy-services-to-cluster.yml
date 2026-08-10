@@ -173,7 +173,7 @@ jobs:
           MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
-          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
           # Storage endpoints are configuration, not credentials — GitHub Variables.
           # No literal fallbacks: a missing value must fail loudly at boot rather than
           # resolve to whichever store happened to be the default when this was written.

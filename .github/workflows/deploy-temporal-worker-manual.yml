@@ -99,7 +99,7 @@ jobs:
           STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
           STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
-          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
           STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
           STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
         run: uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-worker --recreate --yes
