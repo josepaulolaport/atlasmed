@@ -4,7 +4,7 @@ enum CapabilityResource {
   cadastro,
   fieldSuggestion,
   facility,
-  professional,
+  person,
   territory,
   user,
 }
@@ -26,7 +26,7 @@ extension CapabilityResourceX on CapabilityResource {
     CapabilityResource.cadastro => 'cadastro',
     CapabilityResource.fieldSuggestion => 'field-suggestion',
     CapabilityResource.facility => 'facility',
-    CapabilityResource.professional => 'professional',
+    CapabilityResource.person => 'person',
     CapabilityResource.territory => 'territory',
     CapabilityResource.user => 'user',
   };

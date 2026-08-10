@@ -212,8 +212,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         ),
       ),
       floatingActionButton:
-          ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ??
-              false
+          ref.watch(userCapabilitiesProvider)?.can(.manage, .person) ?? false
           ? FloatingActionButton(
               onPressed: _openAssociate,
               backgroundColor: AppColors.navyBright,
@@ -278,7 +277,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                         onMoreActions:
                             (ref
                                     .watch(userCapabilitiesProvider)
-                                    ?.can(.manage, .professional) ??
+                                    ?.can(.manage, .person) ??
                                 false)
                             ? () => _onMoreActions(d)
                             : null,

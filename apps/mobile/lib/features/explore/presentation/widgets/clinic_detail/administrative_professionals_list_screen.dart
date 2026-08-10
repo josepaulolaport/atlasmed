@@ -194,8 +194,7 @@ class _AdministrativeProfessionalsListScreenState
         ),
       ),
       floatingActionButton:
-          ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ??
-              false
+          ref.watch(userCapabilitiesProvider)?.can(.manage, .person) ?? false
           ? FloatingActionButton(
               onPressed: _openAssociate,
               backgroundColor: AppColors.navyBright,

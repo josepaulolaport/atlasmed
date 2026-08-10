@@ -43,8 +43,7 @@ class _RepresentativeDetailScreenState
   Widget build(BuildContext context) {
     final chips = _professional.roleChipLabels;
     final canEdit =
-        ref.watch(userCapabilitiesProvider)?.can(.manage, .professional) ??
-        false;
+        ref.watch(userCapabilitiesProvider)?.can(.manage, .person) ?? false;
 
     return PopScope(
       canPop: false,
