@@ -207,7 +207,22 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
     ]);
   });
 
-  it("rolls the de-assignments back when the boundary write fails", async () => {
+  /**
+   * What this proves: both writes are routed through a SINGLE port call, so no
+   * code path can end assignments outside the transaction, and nothing is
+   * published for a change that failed.
+   *
+   * What it does NOT prove: that Postgres rolls back. The rollback lives in
+   * `DrizzleTerritoryBoundaryWriter`, which has no test coverage — `apps/api`
+   * has no database-backed harness. Asserting the fake's post-failure state
+   * here would be circular: the fake's own `catch` performs the restore.
+   *
+   * Spec 0009 R1 requires an integration test. It does not exist yet. A real
+   * one seeds a territory with a child patch and an active assignment, calls
+   * `commitBoundaryChange` with a self-intersecting polygon, and asserts
+   * `ended_at IS NULL` still holds by querying the database.
+   */
+  it("routes both writes through one port call and publishes nothing on failure", async () => {
     const { useCases, writer, onBoundaryChanged } = buildUseCases({
       orphanedPatches: [],
       failBoundaryWrite: true,
@@ -222,14 +237,9 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
       })
     ).rejects.toBeInstanceOf(OperationNotAllowedError);
 
-    // The de-assignment was attempted, but inside the same transaction as the
-    // failed geometry write — so the assignment is still active afterwards.
+    // One call carries the de-assignment and the geometry write together.
     expect(writer.commitBoundaryChange).toHaveBeenCalledTimes(1);
-    expect(writer.activeProfileIds()).toEqual([
-      impactedClinic.facilityVerticalProfileId,
-    ]);
     expect(writer.boundaryWritten()).toBe(false);
-    // Nothing may be published for a change that rolled back.
     expect(onBoundaryChanged).not.toHaveBeenCalled();
   });
 
