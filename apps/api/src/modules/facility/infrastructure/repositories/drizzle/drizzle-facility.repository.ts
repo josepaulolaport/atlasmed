@@ -901,6 +901,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     legalDocument?: string | null;
     lat?: number | null;
     lng?: number | null;
+    verticalId: number;
   }): Promise<FacilityRecord> {
     const [mun] = await db
       .select({ id: municipalities.id, stateId: municipalities.stateId })
@@ -922,23 +923,44 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     }
 
     const hasCoords = data.lat != null && data.lng != null;
-    const [facility] = await db
-      .insert(facilities)
-      .values({
-        displayName: data.name,
-        stateId: data.stateId,
-        municipalityId: data.municipalityId,
-        legalDocumentType: data.legalDocumentType,
-        legalDocument: normalizeLegalDocument(data.legalDocument ?? null),
-        ...(hasCoords
-          ? { location: locationPointSql(data.lat!, data.lng!) }
-          : {}),
-      })
-      .returning();
+    // Facility + first vertical profile are one unit: a facility without a
+    // profile is invisible to every non-global scope (spec 0010 §1.2/§1.7).
+    // ensureVerticalProfile is not reused here — it closes over the `db`
+    // singleton, so it would run outside this transaction and could leave a
+    // profile-less facility behind.
+    const facilityId = await db.transaction(async (tx) => {
+      const [facility] = await tx
+        .insert(facilities)
+        .values({
+          displayName: data.name,
+          stateId: data.stateId,
+          municipalityId: data.municipalityId,
+          legalDocumentType: data.legalDocumentType,
+          legalDocument: normalizeLegalDocument(data.legalDocument ?? null),
+          ...(hasCoords
+            ? { location: locationPointSql(data.lat!, data.lng!) }
+            : {}),
+        })
+        .returning({ id: facilities.id });
 
-    const refreshed = await this.findById(facility!.id);
+      if (!facility) {
+        throw new ValidationError([
+          { field: "name", message: "Failed to create clinic" },
+        ]);
+      }
+
+      await tx.insert(facilityVerticalProfiles).values({
+        facilityId: facility.id,
+        verticalId: data.verticalId,
+        isActive: true,
+      });
+
+      return facility.id;
+    });
+
+    const refreshed = await this.findById(facilityId);
     if (!refreshed) {
-      throw new ResourceNotFoundError("Clinic", facility!.id);
+      throw new ResourceNotFoundError("Clinic", facilityId);
     }
     return refreshed;
   }
