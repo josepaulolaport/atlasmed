@@ -5,10 +5,14 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_potential_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_potential_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:flutter/material.dart';
@@ -111,4 +115,40 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'potential uses the standard empty state when linha has no fields',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            clinicDetailActiveLinhaIdProvider(1).overrideWith((ref) => 7),
+            clinicDetailPotentialsProvider(1).overrideWith(
+              (ref) async =>
+                  const FacilityPotentialsPage(verticalId: 7, items: []),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: ClinicPotentialSection(facilityId: 1, canEdit: true),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.byType(ClinicaEmptySection), findsOneWidget);
+      expect(
+        find.text('Nenhum campo de potencial configurado'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Os campos de potencial desta linha aparecerão aqui quando forem configurados.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }

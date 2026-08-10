@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clin
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_potential_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -93,11 +94,11 @@ class ClinicPotentialSection extends ConsumerWidget {
             ),
             data: (page) {
               if (page == null || page.items.isEmpty) {
-                return const ClinicDetailCard(
-                  child: Text(
-                    'Nenhum campo de potencial configurado para esta linha.',
-                    style: TextStyle(fontSize: 13, color: AppColors.gray400),
-                  ),
+                return const ClinicaEmptySection(
+                  icon: Icons.insights_outlined,
+                  title: 'Nenhum campo de potencial configurado',
+                  description:
+                      'Os campos de potencial desta linha aparecerão aqui quando forem configurados.',
                 );
               }
               return ClinicDetailCard(
