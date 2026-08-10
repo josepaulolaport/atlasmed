@@ -41,6 +41,10 @@ jobs:
       MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
       MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
       MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+      # Required by validate-production-env.yml. A workflow_call missing a
+      # required secret fails at startup, before any job runs.
+      STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+      STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
 
   deploy:
     needs: validate-production-env

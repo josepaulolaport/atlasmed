@@ -170,7 +170,9 @@ void main() {
         'counts': {'pendingAction': 0},
       });
 
-      final doc = FacilityCadastroRepository(1).fromJson(json).fileDocuments.single;
+      final doc = FacilityCadastroRepository(
+        1,
+      ).fromJson(json).fileDocuments.single;
       expect(doc.files.map((f) => f.fileAssetId), [900]);
       expect(doc.currentApproved!.files.map((f) => f.fileAssetId), [900]);
     });
