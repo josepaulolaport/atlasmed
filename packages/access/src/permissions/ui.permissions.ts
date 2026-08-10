@@ -42,13 +42,6 @@ export function canUpdatePersons(role: Role): boolean {
   return ability.can("update", "PERSON") || ability.can("manage", "PERSON");
 }
 
-/** @deprecated Slice C ADR-0004 — use canReadPersons */
-export const canReadProfessionals = canReadPersons;
-/** @deprecated Slice C ADR-0004 — use canManagePersons */
-export const canManageProfessionals = canManagePersons;
-/** @deprecated Slice C ADR-0004 — use canUpdatePersons */
-export const canUpdateProfessionals = canUpdatePersons;
-
 export function canUpdateFacilities(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
   return ability.can("update", "FACILITY") || ability.can("manage", "FACILITY");

@@ -48,6 +48,28 @@ function scopeFor(verticalIds: number[], facilityIds: number[]): ScopeContext {
 }
 
 /**
+ * An ADMIN as `scope-resolver.service.ts` actually builds one: global, and
+ * holding *every* vertical rather than an assigned subset. That distinction is
+ * the whole point of the ADMIN cases below — see the describe block.
+ */
+function globalScopeFor(verticalIds: number[]): ScopeContext {
+  return {
+    isGlobal: true,
+    assignedTerritoryIds: [],
+    effectiveTerritoryIds: [],
+    analyticsEffectiveTerritoryIds: [],
+    territoryIds: [],
+    facilityIds: [],
+    analyticsFacilityIds: [],
+    clinicIds: [],
+    analyticsClinicIds: [],
+    managedUserIds: [],
+    isOperationallyActive: true,
+    assignedVerticalIds: verticalIds,
+  };
+}
+
+/**
  * Minimal in-memory facility store that reproduces the production visibility
  * rule: a non-global scope only ever sees facilities that have an active
  * profile in one of the scoped verticals.
@@ -239,6 +261,102 @@ describe("CreateFacilityUseCase", () => {
         legalDocumentType: "CNPJ",
         role: Role.REP,
         scope: scopeFor([ortopediaId, dermatologiaId], []),
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+/**
+ * Every case above runs as a REP. An ADMIN is not just "a REP with more rows":
+ * `scope-resolver.service.ts` gives an ADMIN *all* verticals rather than an
+ * assigned subset, and `resolveAccessibleVerticalIds` keys entirely off
+ * `assignedVerticalIds` — role is explicitly unused there.
+ *
+ * The consequence is counter-intuitive enough that PR #201's description got it
+ * wrong: on a multi-vertical database an ADMIN who omits `verticalId` does not
+ * create a clinic in some default linha, and does not bypass the check for
+ * being global. It gets a ValidationError, because "all verticals" is the
+ * ambiguous case. These tests pin that down so it is not re-discovered from a
+ * production report.
+ */
+describe("CreateFacilityUseCase — ADMIN (global scope, all verticals)", () => {
+  it("rejects an omitted verticalId once more than one vertical exists", async () => {
+    const repository = inMemoryRepository();
+
+    await expect(
+      new CreateFacilityUseCase({ facilityRepository: repository }).execute({
+        name: "CLINICA ADMIN AMBIGUA",
+        stateId: 1,
+        municipalityId: 1,
+        legalDocumentType: "CNPJ",
+        role: Role.ADMIN,
+        scope: globalScopeFor([ortopediaId, dermatologiaId]),
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("creates the profile when the ADMIN names the vertical explicitly", async () => {
+    const repository = inMemoryRepository();
+
+    const created = await new CreateFacilityUseCase({
+      facilityRepository: repository,
+    }).execute({
+      name: "CLINICA ADMIN",
+      stateId: 1,
+      municipalityId: 1,
+      legalDocumentType: "CNPJ",
+      verticalId: dermatologiaId,
+      role: Role.ADMIN,
+      scope: globalScopeFor([ortopediaId, dermatologiaId]),
+    });
+
+    expect(repository.profilesOf(created.id).map((p) => p.verticalId)).toEqual([
+      dermatologiaId,
+    ]);
+
+    // The clinic an ADMIN creates must also be visible to the REP who works
+    // that linha — creating it globally is worthless if the field cannot see it.
+    const repScope = scopeFor([dermatologiaId], [created.id]);
+    const detail = await new GetFacilityUseCase({
+      facilityRepository: repository,
+    }).execute({ facilityId: created.id, scope: repScope, role: Role.REP });
+
+    expect(detail).not.toBeNull();
+    expect(detail?.verticalProfiles?.map((p) => p.verticalId)).toEqual([
+      dermatologiaId,
+    ]);
+  });
+
+  it("uses the single vertical when only one exists in the database", async () => {
+    const repository = inMemoryRepository();
+
+    const created = await new CreateFacilityUseCase({
+      facilityRepository: repository,
+    }).execute({
+      name: "CLINICA ADMIN UNICA",
+      stateId: 1,
+      municipalityId: 1,
+      legalDocumentType: "CNPJ",
+      role: Role.ADMIN,
+      scope: globalScopeFor([ortopediaId]),
+    });
+
+    expect(repository.profilesOf(created.id).map((p) => p.verticalId)).toEqual([
+      ortopediaId,
+    ]);
+  });
+
+  it("rejects creation when the scope carries no verticals at all", async () => {
+    const repository = inMemoryRepository();
+
+    await expect(
+      new CreateFacilityUseCase({ facilityRepository: repository }).execute({
+        name: "CLINICA SEM LINHA",
+        stateId: 1,
+        municipalityId: 1,
+        legalDocumentType: "CNPJ",
+        role: Role.ADMIN,
+        scope: globalScopeFor([]),
       }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
