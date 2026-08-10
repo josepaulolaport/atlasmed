@@ -62,6 +62,20 @@ void main() {
     expect(photos.photos, isEmpty);
   });
 
+  test('normalizes legacy scalar user fields instead of throwing', () {
+    final user = User.fromJson({
+      ..._userJson(),
+      'phoneNumber': 5521999999999,
+      'status': 1,
+      'role': {'id': '1', 'name': 2},
+    });
+
+    expect(user.phoneNumber, '5521999999999');
+    expect(user.status.name, 'active');
+    expect(user.role.id, 1);
+    expect(user.role.name.name, 'rep');
+  });
+
   test('keeps the first photo blurhash fallback for legacy responses', () {
     final photos = FacilityPhotosResponse.fromJson('''
       {"imageUrl":"/photo-1.png","data":[
