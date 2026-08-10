@@ -16,6 +16,41 @@ function declaresProductionAuth(content: string): boolean {
   );
 }
 
+/**
+ * Matches a route *definition* — an HTTP verb whose first argument is a string
+ * literal path (`.get("/facilities/:id", ...)`). Restricting to a leading `/`
+ * keeps incidental `.get(` calls on Maps/Headers out of the results.
+ */
+const ROUTE_DEFINITION =
+  /\.(get|post|put|patch|delete|head|options|all)\(\s*["'`](\/[^"'`]*)["'`]/g;
+
+/**
+ * Splits a route file into the individual Elysia chains it declares. Each
+ * `new Elysia()` starts a fresh plugin instance, so guards installed with
+ * `.use(...)` apply only within its own chain — which is exactly the unit the
+ * per-route assertion must check.
+ */
+function splitElysiaChains(content: string): string[] {
+  return content.split(/(?=new Elysia[(<])/).slice(1);
+}
+
+/**
+ * Returns the paths of every route defined on a chain that does not install
+ * `requirePermission`. An empty array means every route in the file is guarded.
+ */
+function findUnguardedRoutes(content: string): string[] {
+  const unguarded: string[] = [];
+
+  for (const chain of splitElysiaChains(content)) {
+    const paths = [...chain.matchAll(ROUTE_DEFINITION)].map((m) => m[2]!);
+    if (paths.length === 0) continue;
+    if (chain.includes("requirePermission")) continue;
+    unguarded.push(...paths);
+  }
+
+  return unguarded;
+}
+
 describe("route security registry (E.2)", () => {
   it("manifest covers every route file", () => {
     const routeFiles = [...new Glob("**/*.route.ts").scanSync({ cwd: SRC_ROOT })].sort();
@@ -47,6 +82,10 @@ describe("route security registry (E.2)", () => {
 
       if (level === "auth+permission") {
         expect(content.includes("requirePermission")).toBe(true);
+
+        // Per-route, not per-file: a single guarded route elsewhere in the file
+        // must not vouch for a sibling that carries no guard of its own.
+        expect(findUnguardedRoutes(content)).toEqual([]);
       }
     });
   }
