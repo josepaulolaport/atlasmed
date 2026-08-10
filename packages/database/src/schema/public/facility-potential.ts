@@ -7,6 +7,8 @@ import {
   uniqueIndex,
   unique,
   bigint,
+  primaryKey,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { businessVerticals } from "./business-verticals";
@@ -36,6 +38,10 @@ export const productPotentialDefinitions = pgTable(
     uniqueIndex("product_potential_definitions_vertical_key_active_uidx")
       .on(t.verticalId, t.key)
       .where(sql`${t.deletedAt} is null`),
+    // Redundant beside the primary key, but a composite foreign key can only
+    // reference a unique constraint. This is what lets a link pin the vertical
+    // it claims against the vertical its definition actually has.
+    unique("product_potential_definitions_id_vertical_id_key").on(t.id, t.verticalId),
   ],
 );
 
@@ -62,21 +68,43 @@ export const facilityPotentialValues = pgTable(
 );
 
 /**
- * Maps a product to exactly one potential metric definition (1:1).
- * Product must belong to the same Linha as the definition.
+ * Which of our products count toward which metric (spec 0013 §3).
+ *
+ * One definition per (product, vertical) — not one per product. `product_id`
+ * used to be the primary key, which contradicted `product_verticals` being M2M:
+ * a product sold in two linhas could carry a metric in one and, silently, none
+ * in the other.
+ *
+ * `vertical_id` is denormalised here purely to carry that rule into the schema.
+ * It is not independent data — the composite foreign key below ties it to the
+ * definition's own vertical, so a link cannot claim a linha its definition does
+ * not have.
  */
 export const productPotentialLinks = pgTable(
   "product_potential_links",
   {
     productId: bigint("product_id", { mode: "number" })
-      .primaryKey().references(() => products.id, { onDelete: "cascade" }),
-    definitionId: bigint("definition_id", { mode: "number" })
-      .notNull().references(() => productPotentialDefinitions.id, { onDelete: "cascade" }),
+      .notNull().references(() => products.id, { onDelete: "cascade" }),
+    definitionId: bigint("definition_id", { mode: "number" }).notNull(),
+    /** Always equal to the definition's vertical; the composite FK enforces it. */
+    verticalId: bigint("vertical_id", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
+    primaryKey({
+      name: "product_potential_links_pkey",
+      columns: [t.productId, t.definitionId],
+    }),
     index("product_potential_links_definition_id_idx").on(t.definitionId),
+    // The rule that matters: a product resolves to at most one metric per linha,
+    // so the penetration join can never double-count it.
+    unique("product_potential_links_product_vertical_key").on(t.productId, t.verticalId),
+    foreignKey({
+      name: "product_potential_links_definition_vertical_fk",
+      columns: [t.definitionId, t.verticalId],
+      foreignColumns: [productPotentialDefinitions.id, productPotentialDefinitions.verticalId],
+    }).onDelete("cascade"),
   ],
 );
 

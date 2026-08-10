@@ -270,23 +270,39 @@ export class LinkProductPotentialUseCase {
         },
       ]);
     }
+    // The definition's vertical is the link's vertical — it is never supplied by
+    // the caller. The composite FK would reject a disagreement anyway; passing
+    // it from here means the two can never disagree in the first place.
     await this.deps.potentialRepository.linkProduct({
       productId: input.productId,
       definitionId: input.definitionId,
+      verticalId: definition.verticalId,
     });
-    return { productId: input.productId, definitionId: input.definitionId };
+    return {
+      productId: input.productId,
+      definitionId: input.definitionId,
+      verticalId: definition.verticalId,
+    };
   }
 }
 
 export class UnlinkProductPotentialUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
-  async execute(input: { productId: number; scope: ScopeContext }) {
-    const link = await this.deps.potentialRepository.findLinkByProductId(
-      input.productId,
-    );
+  async execute(input: {
+    productId: number;
+    definitionId: number;
+    scope: ScopeContext;
+  }) {
+    const link = await this.deps.potentialRepository.findLink({
+      productId: input.productId,
+      definitionId: input.definitionId,
+    });
     if (!link) {
-      throw new ResourceNotFoundError("ProductPotentialLink", input.productId);
+      throw new ResourceNotFoundError(
+        "ProductPotentialLink",
+        `${input.productId}:${input.definitionId}`,
+      );
     }
     const definition = await this.deps.potentialRepository.findDefinitionById(
       link.definitionId,
@@ -295,7 +311,10 @@ export class UnlinkProductPotentialUseCase {
       throw new ResourceNotFoundError("PotentialDefinition", link.definitionId);
     }
     assertVerticalAccess(input.scope, definition.verticalId);
-    await this.deps.potentialRepository.unlinkProduct(input.productId);
+    await this.deps.potentialRepository.unlinkProduct({
+      productId: input.productId,
+      definitionId: input.definitionId,
+    });
     return { ok: true };
   }
 }
