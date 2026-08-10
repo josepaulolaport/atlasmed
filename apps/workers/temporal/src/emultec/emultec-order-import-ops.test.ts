@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   emultecOrderImportDeadLetters,
   emultecOrderImportRuns,
@@ -14,7 +14,16 @@ import {
   startEmultecImportRun,
 } from "./emultec-order-import-ops";
 
-const hasDb = Boolean(process.env.DATABASE_URL);
+/**
+ * Reachability, not configuration. `DATABASE_URL` is set by `.env.test` on
+ * every machine, so gating on it made these two tests fail with a Postgres auth
+ * error on any checkout without a local database instead of skipping. CI always
+ * has one, so nothing is lost where it counts.
+ */
+const hasDb = await db
+  .execute(sql`SELECT 1`)
+  .then(() => true)
+  .catch(() => false);
 
 describe("emultec-order-import-ops (ops schema)", () => {
   test.skipIf(!hasDb)("run digest + dead-letter lifecycle on ops.*", async () => {

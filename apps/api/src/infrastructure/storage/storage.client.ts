@@ -5,6 +5,7 @@ import {
   storageConfigIssues,
   type StorageConfigInput,
 } from "@atlasmed/config";
+import { createStorageClient } from "@atlasmed/storage";
 import { environment } from "../../app/config/environment";
 
 let client: S3Client | null = null;
@@ -89,23 +90,21 @@ export function clampPresignTtl(ttlSeconds: number): number {
   return Math.min(Math.floor(ttlSeconds), MAX_PRESIGN_TTL_SECONDS);
 }
 
+/**
+ * Delegates to `@atlasmed/storage` so the API and the Temporal worker cannot
+ * drift apart again — before that package existed the worker carried a
+ * hand-copied duplicate of this function, and #199 had to fix the same defect
+ * in both.
+ *
+ * The endpoint stays a parameter because this app needs two different clients:
+ * the internal one for server-side operations and the public one whose host is
+ * baked into presigned URLs handed to devices.
+ */
 function createS3Client(
   endpoint: string,
   env: StorageEnvironment = environment
 ): S3Client {
-  return new S3Client({
-    // R2 requires "auto"; MinIO ignores the value. Never inferred from an
-    // absent endpoint, which used to make the SDK target real AWS S3.
-    region: env.STORAGE_REGION ?? "us-east-1",
-    credentials: {
-      accessKeyId: env.STORAGE_ACCESS_KEY_ID!,
-      secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY!,
-    },
-    endpoint,
-    // Explicit, not conditional: MinIO requires path-style addressing and R2
-    // accepts it, so both providers are signed identically.
-    forcePathStyle: true,
-  });
+  return createStorageClient({ ...env, STORAGE_ENDPOINT: endpoint });
 }
 
 /** Server-side ops (API ↔ object store). Uses the internal cluster endpoint. */

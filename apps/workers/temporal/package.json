@@ -19,6 +19,7 @@
     "@atlasmed/database": "workspace:*",
     "@atlasmed/facility-insights": "workspace:*",
     "@atlasmed/observability": "workspace:*",
+    "@atlasmed/storage": "workspace:*",
     "@aws-sdk/client-s3": "^3.1093.0",
     "@temporalio/activity": "^1.11.7",
     "@temporalio/client": "^1.11.7",

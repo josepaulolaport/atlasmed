@@ -12,11 +12,8 @@ import {
   processingEvents,
   submissionDocuments,
 } from "@atlasmed/database";
-import {
-  assertStorageConfig,
-  environment,
-  type StorageConfigInput,
-} from "@atlasmed/config";
+import { environment, type StorageConfigInput } from "@atlasmed/config";
+import { createStorageClient } from "@atlasmed/storage";
 import { getDb } from "../infrastructure/db";
 
 export type CadastroFileUploadedInput = {
@@ -26,29 +23,13 @@ export type CadastroFileUploadedInput = {
 };
 
 /**
- * Mirrors apps/api/src/infrastructure/storage/storage.client.ts.
- *
- * The endpoint is mandatory and path-style addressing is unconditional. The
- * previous spread made both conditional on a truthy STORAGE_ENDPOINT, so an
- * unset endpoint produced virtual-host requests to real Amazon S3 (region
- * defaulting to us-east-1) signed with this cluster's credentials — a silent,
- * wrong destination rather than an error.
+ * Kept as a named export because callers and tests import it by this name. The
+ * construction moved to `@atlasmed/storage`, so it can no longer drift from the
+ * API's client the way it did before #199 — which had to fix the identical bug
+ * in both copies.
  */
-export function storageClient(
-  env: StorageConfigInput = environment
-): S3Client {
-  assertStorageConfig(env);
-
-  return new S3Client({
-    // "auto" for R2; ignored by MinIO. Never inferred from a missing endpoint.
-    region: env.STORAGE_REGION ?? "us-east-1",
-    credentials: {
-      accessKeyId: env.STORAGE_ACCESS_KEY_ID!,
-      secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY!,
-    },
-    endpoint: env.STORAGE_ENDPOINT!,
-    forcePathStyle: true,
-  });
+export function storageClient(env: StorageConfigInput = environment): S3Client {
+  return createStorageClient(env);
 }
 
 async function recordEvent(

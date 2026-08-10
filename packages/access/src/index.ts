@@ -23,7 +23,6 @@ export * from "./schemas/replace-user-assignments.schema";
 export * from "./schemas/user-preferences.schema";
 export * from "./schemas/change-password.schema";
 export * from "./schemas/user-assignment.schema";
-export * from "./schemas/professional.schema";
 export * from "./schemas/facility-professionals.schema";
 export * from "./schemas/territory.schema";
 
@@ -62,9 +61,6 @@ export {
   canReadPersons,
   canManagePersons,
   canUpdatePersons,
-  canReadProfessionals,
-  canManageProfessionals,
-  canUpdateProfessionals,
   canUpdateFacilities,
   canReadTerritories,
   canManageTerritories,
