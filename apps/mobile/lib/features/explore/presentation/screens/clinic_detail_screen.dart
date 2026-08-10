@@ -1036,7 +1036,6 @@ class _ClinicDetailContent extends ConsumerWidget {
                         ),
                 ),
                 PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
-                if (canSuggest) const _SuggestEditBanner(),
                 if (canSuggest)
                   _ClinicDeactivateButton(
                     clinicId: clinicId,
@@ -1176,48 +1175,6 @@ class _SectionErrorCard extends StatelessWidget {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-// ===============================================================
-// SuggestEditBanner — explains the per-field pencil pattern
-// ===============================================================
-class _SuggestEditBanner extends StatelessWidget {
-  const _SuggestEditBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceTertiary,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.surfaceSecondary),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            Icons.edit_note_rounded,
-            size: 20,
-            color: AppColors.gray500,
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'Toque nos ícones em qualquer campo. Sugestões passam por '
-              'revisão administrativa antes de entrar no perfil.',
-              style: TextStyle(
-                fontSize: 13.5,
-                height: 1.4,
-                color: AppColors.gray600,
-              ),
-            ),
-          ),
         ],
       ),
     );
