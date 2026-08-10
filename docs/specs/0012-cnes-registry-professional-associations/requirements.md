@@ -167,4 +167,4 @@ by `ad80e203`, may become relevant again — or should be deleted now and rewrit
 ## 9. Out of scope
 
 FTP/archive ingest · Temporal ingest workflows · `ingestion` schema · diff/suggestion review
-surface · `/registry/*` API module · write-back to `public` · `apps/web` (abandoned).
+surface · `/registry/*` API module · write-back to `public`.

@@ -306,4 +306,4 @@ D-59. See `.ai/backlog/2026-08-09-defect-register.md`.
 ## 10. Out of scope
 
 Virus scanning · CDN · OCR · deduplication · push callbacks from the object store · draft locking
-and takeover · `apps/web` (abandoned).
+and takeover.

@@ -71,6 +71,5 @@ write the same row. Being replaced by [Spec 0011](../specs/0011-cadastro-pipelin
 - Visit/activity domain is early / incomplete; nothing meaningful populates `visits` or
   `interactions` yet, so no activity metric is currently derivable.
 - Mobile stack migration (Flutter → React Native/Expo) not decided for production (ADR 0002 Proposed).
-- `apps/web` is abandoned and knowingly broken — see root `AGENTS.md`.
 - Several catalogs (`unit_types`, `unit_subtypes`, `clinical_focuses`, `occupations`,
   `healthcare_specialties`) have **no write path in code** and are populated manually.
