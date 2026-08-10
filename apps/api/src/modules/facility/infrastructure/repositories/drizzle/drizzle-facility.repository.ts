@@ -25,6 +25,7 @@ import type {
   FacilityCommercialStatus,
   FacilityListRecord,
   FacilityListScopeFilter,
+  FacilityMapBounds,
   FacilityMapPoint,
   FacilityPurchaseFunnelStage,
   FacilityRecord,
@@ -1113,10 +1114,49 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return refreshed;
   }
 
-  async listMapPoints(scope: FacilityListScopeFilter): Promise<FacilityMapPoint[]> {
+  async listMapPoints(
+    scope: FacilityListScopeFilter,
+    bounds?: FacilityMapBounds,
+  ): Promise<FacilityMapPoint[]> {
+    const visibleBoundsCondition = !bounds
+      ? undefined
+      : bounds.west <= bounds.east
+        ? sql`ST_Intersects(
+            ${facilities.location},
+            ST_MakeEnvelope(
+              ${bounds.west},
+              ${bounds.south},
+              ${bounds.east},
+              ${bounds.north},
+              4326
+            )
+          )`
+        : or(
+            sql`ST_Intersects(
+              ${facilities.location},
+              ST_MakeEnvelope(
+                ${bounds.west},
+                ${bounds.south},
+                180,
+                ${bounds.north},
+                4326
+              )
+            )`,
+            sql`ST_Intersects(
+              ${facilities.location},
+              ST_MakeEnvelope(
+                -180,
+                ${bounds.south},
+                ${bounds.east},
+                ${bounds.north},
+                4326
+              )
+            )`,
+          );
     const where = and(
       buildFacilityListConditions({ scope }),
       sql`${facilities.location} IS NOT NULL`,
+      visibleBoundsCondition,
     );
 
     const verticalIds = scope.verticalIds;

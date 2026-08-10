@@ -33,12 +33,26 @@ describe("ListMapFacilityPointsUseCase", () => {
       facilityRepository: fakeRepo(listMapPoints),
     });
 
+    const bounds = {
+      south: -23.7,
+      west: -46.8,
+      north: -23.4,
+      east: -46.5,
+    };
     const result = await useCase.execute({
       scope: createGlobalScopeContext(),
       role: "ADMIN",
+      bounds,
     });
 
-    expect(listMapPoints).toHaveBeenCalledTimes(1);
+    expect(listMapPoints).toHaveBeenCalledWith(
+      {
+        isGlobal: true,
+        verticalIds: [],
+        restrictToVerticalProfiles: false,
+      },
+      bounds,
+    );
     expect(result.type).toBe("FeatureCollection");
     expect(result.features).toHaveLength(2);
     expect(result.features[0]).toEqual({
@@ -52,12 +66,60 @@ describe("ListMapFacilityPointsUseCase", () => {
     });
   });
 
+  it("rejects inverted latitude bounds before querying", async () => {
+    const listMapPoints = mock(async () => []);
+    const useCase = new ListMapFacilityPointsUseCase({
+      facilityRepository: fakeRepo(listMapPoints),
+    });
+
+    await expect(
+      useCase.execute({
+        scope: createGlobalScopeContext(),
+        role: "ADMIN",
+        bounds: {
+          south: -23.4,
+          west: -46.8,
+          north: -23.7,
+          east: -46.5,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(listMapPoints).not.toHaveBeenCalled();
+  });
+
+  it("keeps the legacy unbounded query compatible", async () => {
+    const listMapPoints = mock(async () => []);
+    const useCase = new ListMapFacilityPointsUseCase({
+      facilityRepository: fakeRepo(listMapPoints),
+    });
+
+    await useCase.execute({
+      scope: createGlobalScopeContext(),
+      role: "ADMIN",
+    });
+
+    expect(listMapPoints).toHaveBeenCalledWith(
+      {
+        isGlobal: true,
+        verticalIds: [],
+        restrictToVerticalProfiles: false,
+      },
+      undefined,
+    );
+  });
+
   it("passes restricted scope for non-admin roles", async () => {
     const listMapPoints = mock(async () => []);
     const useCase = new ListMapFacilityPointsUseCase({
       facilityRepository: fakeRepo(listMapPoints),
     });
 
+    const bounds = {
+      south: -23.7,
+      west: -46.8,
+      north: -23.4,
+      east: -46.5,
+    };
     await useCase.execute({
       scope: {
         ...createEmptyScopeContext(),
@@ -66,13 +128,17 @@ describe("ListMapFacilityPointsUseCase", () => {
       },
       role: "REP",
       verticalId: 1,
+      bounds,
     });
 
-    expect(listMapPoints).toHaveBeenCalledWith({
-      isGlobal: false,
-      facilityIds: [1, 2],
-      verticalIds: [1],
-      restrictToVerticalProfiles: true,
-    });
+    expect(listMapPoints).toHaveBeenCalledWith(
+      {
+        isGlobal: false,
+        facilityIds: [1, 2],
+        verticalIds: [1],
+        restrictToVerticalProfiles: true,
+      },
+      bounds,
+    );
   });
 });

@@ -1,5 +1,9 @@
 import type { ScopeContext } from "@atlasmed/access";
-import type { FacilityRepository } from "../interfaces/facility.repository.interface";
+import type {
+  FacilityMapBounds,
+  FacilityRepository,
+} from "../interfaces/facility.repository.interface";
+import { ValidationError } from "../../../../shared/errors";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
 
 interface Dependencies {
@@ -27,14 +31,23 @@ export class ListMapFacilityPointsUseCase {
     scope: ScopeContext;
     role: string;
     verticalId?: number;
+    bounds?: FacilityMapBounds;
   }): Promise<MapFacilityPointsGeoJson> {
+    if (input.bounds && input.bounds.south >= input.bounds.north) {
+      throw new ValidationError([
+        { field: "bounds", message: "south must be less than north" },
+      ]);
+    }
     const listScope = buildFacilityListScope({
       scope: input.scope,
       role: input.role,
       verticalId: input.verticalId,
     });
 
-    const points = await this.deps.facilityRepository.listMapPoints(listScope);
+    const points = await this.deps.facilityRepository.listMapPoints(
+      listScope,
+      input.bounds,
+    );
 
     return {
       type: "FeatureCollection",

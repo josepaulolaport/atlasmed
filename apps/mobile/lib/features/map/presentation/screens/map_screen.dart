@@ -12,10 +12,13 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/providers/map_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_cluster_marker.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
+import 'package:atlasmed_mobile_app/features/map/presentation/utils/map_viewport_load_guard.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/mapbox/sized_map_host.dart';
@@ -127,6 +130,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// removes a source still bound to layers.
   Future<void>? _ensureClinicLayersInFlight;
 
+  final MapViewportLoadGuard _viewportLoadGuard = MapViewportLoadGuard();
+
   int _mountedClusterSourceConfigVersion = 0;
   Timer? _clusterImageThrottle;
 
@@ -155,6 +160,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   void dispose() {
+    _viewportLoadGuard.invalidate();
     _styleEpoch += 1;
     _styleReady = false;
     _clusterImageThrottle?.cancel();
@@ -303,6 +309,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                           onScrollListener: (_) => _stopFollowing(),
                           onCameraChangeListener: (_) =>
                               _scheduleClusterPinImages(),
+                          onMapIdleListener: (_) =>
+                              unawaited(_loadVisibleMapPoints()),
                         ),
                       ),
                       if (_pendingCapture != null)
@@ -362,6 +370,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _onMapCreated(MapboxMap map) {
+    _viewportLoadGuard.invalidate();
     _mapboxMap = map;
     _styleReady = false;
     _clinicLayersReady = false;
@@ -582,6 +591,50 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     } catch (_) {
       // Best-effort clear (admin / no territory).
+    }
+  }
+
+  Future<void> _loadVisibleMapPoints() async {
+    final map = _mapboxMap;
+    if (map == null || !mounted) return;
+    final request = _viewportLoadGuard.begin();
+    try {
+      final camera = await map.getCameraState();
+      final visible = await map.coordinateBoundsForCamera(
+        CameraOptions(
+          center: camera.center,
+          padding: camera.padding,
+          zoom: camera.zoom,
+          bearing: camera.bearing,
+          pitch: camera.pitch,
+        ),
+      );
+      if (!mounted ||
+          !identical(map, _mapboxMap) ||
+          !_viewportLoadGuard.isCurrent(request) ||
+          visible.infiniteBounds) {
+        return;
+      }
+      final southwest = visible.southwest.coordinates;
+      final northeast = visible.northeast.coordinates;
+      final bounds = MapBounds(
+        southwest: MapCoordinate(
+          latitude: southwest.lat.toDouble(),
+          longitude: southwest.lng.toDouble(),
+        ),
+        northeast: MapCoordinate(
+          latitude: northeast.lat.toDouble(),
+          longitude: northeast.lng.toDouble(),
+        ),
+      );
+      if (bounds.southwest.latitude >= bounds.northeast.latitude ||
+          !identical(map, _mapboxMap) ||
+          !_viewportLoadGuard.isCurrent(request)) {
+        return;
+      }
+      ref.read(mapViewportBoundsProvider.notifier).state = bounds;
+    } catch (error, stack) {
+      _logMapIssue('visible facility bounds', error, stack);
     }
   }
 
