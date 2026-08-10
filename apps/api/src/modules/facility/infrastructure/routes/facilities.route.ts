@@ -84,12 +84,19 @@ const createFacilityRoute = new Elysia()
   .use(requirePermission("create", "FACILITY"))
   .post(
     "/facilities",
-    async ({ body }) => {
-      return facilityUseCases.createFacility().execute(body);
+    async ({ body, getScope, getUser }) => {
+      const scope = await getScope();
+      const actor = await getUser();
+      return facilityUseCases.createFacility().execute({
+        ...body,
+        scope,
+        role: actor.role.name,
+      });
     },
     {
       detail: {
-        summary: "Create clinic",
+        summary:
+          "Create clinic (always creates the vertical profile; verticalId required unless the caller has a single vertical)",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -101,6 +108,7 @@ const createFacilityRoute = new Elysia()
         legalDocument: t.Optional(t.Union([t.String(), t.Null()])),
         lat: t.Optional(t.Number()),
         lng: t.Optional(t.Number()),
+        verticalId: t.Optional(t.Integer({ minimum: 1 })),
       }),
     }
   );

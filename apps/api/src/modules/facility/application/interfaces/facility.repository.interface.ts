@@ -211,6 +211,11 @@ export interface FacilityRepository {
   /** Clinical focus catalog for Explorar filters. */
   listClinicalFocusCatalog(): Promise<FacilityClinicalFocus[]>;
 
+  /**
+   * Creates the facility **and** its vertical profile atomically.
+   * The profile is what makes a clinic visible in a vertical (spec 0010 §1.2),
+   * so a facility must never exist without one.
+   */
   create(data: {
     name: string;
     stateId: number;
@@ -219,6 +224,8 @@ export interface FacilityRepository {
     legalDocument?: string | null;
     lat?: number | null;
     lng?: number | null;
+    /** Vertical the created facility gets its first profile in. */
+    verticalId: number;
   }): Promise<FacilityRecord>;
 
   update(
