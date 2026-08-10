@@ -4,6 +4,10 @@ import type { TerritoryTypeRepository } from "../interfaces/territory-type.repos
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryContainmentService } from "./territory-containment.service";
 import type { TerritoryRecord } from "../interfaces/territory.repository.interface";
+import type {
+  BoundaryCommitCommand,
+  TerritoryBoundaryWriter,
+} from "../interfaces/territory-boundary.writer.interface";
 import {
   isManagerZoneType,
   isRepPatchType,
@@ -40,11 +44,34 @@ export type TerritoryBoundaryResolution =
       mode: "other";
     };
 
-export async function applyTerritoryBoundary(
+/**
+ * A validated, not-yet-written boundary change.
+ *
+ * Spec 0009 R1: every check that can reject a boundary save runs while building
+ * the plan, so a caller can validate the whole change *before* it mutates
+ * anything (notably before it ends rep assignments).
+ */
+export type TerritoryBoundaryPlan =
+  | {
+      mode: "rep_patch";
+      boundary: GeoJsonGeometry;
+      managerTerritoryId: number;
+      managerZoneCandidates: Array<{ id: number; code: string; name: string }>;
+    }
+  | { mode: "manager_zone"; boundary: GeoJsonGeometry }
+  | { mode: "other"; boundary: GeoJsonGeometry };
+
+/**
+ * Read-only phase: normalize + validate the proposed geometry.
+ *
+ * Spec 0009 R1 order: geometry → containment → sibling overlap.
+ * Performs no writes and fires no side effects; every rejection throws here.
+ */
+export async function planTerritoryBoundary(
   deps: ApplyTerritoryBoundaryDeps,
   territory: TerritoryRecord,
   geoJson: GeoJsonGeometry
-): Promise<TerritoryBoundaryResolution> {
+): Promise<TerritoryBoundaryPlan> {
   const boundary = normalizeTerritoryBoundary(geoJson);
   const type =
     territory.territoryType ??
@@ -56,28 +83,18 @@ export async function applyTerritoryBoundary(
 
   assertSinglePolygonForEditableTerritory(type, boundary, "save_boundary");
 
-  await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
-
   if (isRepPatchType(type)) {
     const resolution = await deps.containmentService.resolveRepPatchManagerZone(boundary, {
       verticalId: territory.verticalId,
     });
 
-    await deps.spatialRepository.saveBoundary(territory.id, boundary);
-
-    await deps.territoryRepository.update(territory.id, {
-      managerTerritoryId: resolution.managerTerritoryId,
-    });
-
-    // Spec 0006: patch edits do not recompute clinic→zone membership.
-    await deps.onBoundaryChanged?.(territory.id);
-    await deps.onManagerTerritoryChanged?.(resolution.managerTerritoryId);
+    await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
 
     return {
       mode: "rep_patch",
+      boundary,
       managerTerritoryId: resolution.managerTerritoryId,
       managerZoneCandidates: resolution.candidates,
-      clinicRecomputeEnqueued: false,
     };
   }
 
@@ -87,7 +104,53 @@ export async function applyTerritoryBoundary(
       boundary
     );
 
-    await deps.spatialRepository.saveBoundary(territory.id, boundary);
+    await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
+
+    return { mode: "manager_zone", boundary };
+  }
+
+  if (!type.canHaveBoundary) {
+    throw new OperationNotAllowedError(
+      "save_boundary",
+      "This territory type cannot have a boundary"
+    );
+  }
+
+  await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
+
+  return { mode: "other", boundary };
+}
+
+/**
+ * Write phase for a plan produced by {@link planTerritoryBoundary}.
+ * Must only be called with a plan that validated successfully.
+ */
+export async function commitTerritoryBoundary(
+  deps: ApplyTerritoryBoundaryDeps,
+  territory: TerritoryRecord,
+  plan: TerritoryBoundaryPlan
+): Promise<TerritoryBoundaryResolution> {
+  if (plan.mode === "rep_patch") {
+    await deps.spatialRepository.saveBoundary(territory.id, plan.boundary);
+
+    await deps.territoryRepository.update(territory.id, {
+      managerTerritoryId: plan.managerTerritoryId,
+    });
+
+    // Spec 0006: patch edits do not recompute clinic→zone membership.
+    await deps.onBoundaryChanged?.(territory.id);
+    await deps.onManagerTerritoryChanged?.(plan.managerTerritoryId);
+
+    return {
+      mode: "rep_patch",
+      managerTerritoryId: plan.managerTerritoryId,
+      managerZoneCandidates: plan.managerZoneCandidates,
+      clinicRecomputeEnqueued: false,
+    };
+  }
+
+  if (plan.mode === "manager_zone") {
+    await deps.spatialRepository.saveBoundary(territory.id, plan.boundary);
 
     const repPatchCount = await deps.territoryRepository.countRepPatchesByManagerZone(
       territory.id
@@ -101,16 +164,93 @@ export async function applyTerritoryBoundary(
     };
   }
 
-  if (!type.canHaveBoundary) {
-    throw new OperationNotAllowedError(
-      "save_boundary",
-      "This territory type cannot have a boundary"
-    );
-  }
-
-  await deps.spatialRepository.saveBoundary(territory.id, boundary, {
+  await deps.spatialRepository.saveBoundary(territory.id, plan.boundary, {
     repairInvalid: true,
   });
+
+  return { mode: "other" };
+}
+
+export async function applyTerritoryBoundary(
+  deps: ApplyTerritoryBoundaryDeps,
+  territory: TerritoryRecord,
+  geoJson: GeoJsonGeometry
+): Promise<TerritoryBoundaryResolution> {
+  const plan = await planTerritoryBoundary(deps, territory, geoJson);
+  return commitTerritoryBoundary(deps, territory, plan);
+}
+
+export interface AtomicBoundaryCommitDeps {
+  boundaryWriter: TerritoryBoundaryWriter;
+  onBoundaryChanged?: (territoryId: number) => Promise<void>;
+  onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
+}
+
+function toCommitCommand(
+  territoryId: number,
+  plan: TerritoryBoundaryPlan,
+  assignments: { endForProfileIds: number[]; endReason: string }
+): BoundaryCommitCommand {
+  const base = {
+    territoryId,
+    boundary: plan.boundary,
+    endAssignmentsForProfileIds: assignments.endForProfileIds,
+    endReason: assignments.endReason,
+  };
+
+  if (plan.mode === "rep_patch") {
+    return {
+      ...base,
+      repairInvalid: false,
+      managerTerritoryId: plan.managerTerritoryId,
+      countRepPatches: false,
+    };
+  }
+
+  if (plan.mode === "manager_zone") {
+    return { ...base, repairInvalid: false, countRepPatches: true };
+  }
+
+  return { ...base, repairInvalid: true, countRepPatches: false };
+}
+
+/**
+ * Spec 0009 R1: commit a validated plan together with the rep de-assignments it
+ * requires, in a single transaction owned by the writer.
+ *
+ * Notifications fire only after the writer resolves — i.e. after commit — so a
+ * membership recompute or scope-cache invalidation never reads uncommitted rows
+ * or acts on a change that later rolled back.
+ */
+export async function commitTerritoryBoundaryAtomically(
+  deps: AtomicBoundaryCommitDeps,
+  territory: TerritoryRecord,
+  plan: TerritoryBoundaryPlan,
+  assignments: { endForProfileIds: number[]; endReason: string }
+): Promise<TerritoryBoundaryResolution> {
+  const result = await deps.boundaryWriter.commitBoundaryChange(
+    toCommitCommand(territory.id, plan, assignments)
+  );
+
+  // Committed. Side effects are safe to publish from here on.
+  if (plan.mode === "rep_patch") {
+    // Spec 0006: patch edits do not recompute clinic→zone membership.
+    await deps.onBoundaryChanged?.(territory.id);
+    await deps.onManagerTerritoryChanged?.(plan.managerTerritoryId);
+
+    return {
+      mode: "rep_patch",
+      managerTerritoryId: plan.managerTerritoryId,
+      managerZoneCandidates: plan.managerZoneCandidates,
+      clinicRecomputeEnqueued: false,
+    };
+  }
+
+  if (plan.mode === "manager_zone") {
+    await deps.onBoundaryChanged?.(territory.id);
+
+    return { mode: "manager_zone", repPatchCount: result.repPatchCount ?? 0 };
+  }
 
   return { mode: "other" };
 }
