@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 
 class DeviceLocation {
@@ -165,7 +166,10 @@ class GeolocatorLocationPlatform implements LocationPlatform {
 
   @override
   Stream<bool> get locationServicesEnabledStream {
-    if (_fixedLocation != null) return Stream<bool>.value(true);
+    if (_fixedLocation != null || kIsWeb) return Stream<bool>.value(true);
+    // geolocator_web's getServiceStatusStream() throws UnsupportedError and
+    // its isLocationServiceEnabled() always reports true — the web platform
+    // has no OS-level location service toggle to monitor.
     return Geolocator.getServiceStatusStream().map(
       (status) => status == ServiceStatus.enabled,
     );
