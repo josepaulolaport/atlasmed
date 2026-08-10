@@ -1,14 +1,15 @@
 # Spec 0007: Não Conformidades (Field Suggestions)
 
-**Status:** Draft for implementation — product decisions locked  
-**Last Updated:** 2026-07-22  
+**Status:** Implemented — verified against code 2026-08-10  
 **Domains:** `apps/api`, `apps/mobile`, `packages/database`, `packages/access`, `packages/mapbox`  
 **Related:**
-- [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md) (AC5: approving address changes SHALL trigger geocoding)
-- [Spec 0005 — Mobile Establishment Detail](../0005-establishment-detail-mobile/requirements.md) (F-015 Phase 2)
+- [Spec 0002 — Facility and Person CRM](../0002-clinic-doctor-crm/requirements.md) (AC5: approving address changes SHALL trigger geocoding)
+- [Spec 0009 — Territory & clinic ownership](../0009-territory-clinic-ownership/requirements.md) (address changes must go through the location-change choke point, R5)
 - [api-mobile integration](../../ai/integration-tasks/api-mobile.md)
 
-> **Scope boundary:** This feature is **user-submitted only**. It does not read, write, extend, or share a review queue with any CNES registry warehouse (removed). Do not couple Não Conformidades to a reintroduced registry-suggestion surface without a new ADR.
+> **Scope boundary:** This feature is **user-submitted only**. It shares no review queue with the
+> `registry` schema reintroduced by ADR 0006 — that is read-only reference data with no suggestion
+> surface. Do not couple the two without a new ADR.
 
 ## User Story
 

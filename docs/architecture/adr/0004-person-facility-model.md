@@ -8,7 +8,11 @@
 **Living document:** update when decisions change.  
 **Legend:** `LOCKED` = decided · §6.2/§6.4 freezes = shipped in this wave.
 
-**See also (P0 wave merge with DB triage):** [`docs/ai/db-overhaul-merged-p0.md`](../../ai/db-overhaul-merged-p0.md) — clash resolutions + slice order with triage P0. Person shape still owned here.
+**Amendments:** § 7 states role codes are "seeded 0054" — **false**. `0066`/`0067` drop and
+recreate `person_facility_roles` empty with no `code` column, and `0068`/`0069` do the same for
+`person_professional_registration_councils` with no reseed. Both are empty on a fresh database.
+See `.ai/backlog/2026-08-09-defect-register.md` D-64.
+Q21 ("person↔facility links are always manual") stands — [Spec 0012](../../specs/0012-cnes-registry-professional-associations/requirements.md) has CNES *suggest* while a human *confirms*.
 
 **ID / blast (via merge doc M11/M12):** CRM PKs = `bigint` identity; hard wipe OK (app not live). In-wave apps = database + api + mobile; web deferred.
 

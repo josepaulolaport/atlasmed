@@ -8,7 +8,7 @@ AccessGrants / `permissions` table overrides were removed — authorization is r
 
 Admin user management (list/detail/lifecycle, multi-vertical assignments, invites) is exposed under `/api/v1/access` and consumed by the Flutter Usuários screens via HTTP repositories.
 
-Business verticals (Ortopedia first) gate commercial facility visibility via `facility_vertical_profiles`. See [business-verticals.md](./business-verticals.md).
+Business verticals gate commercial facility visibility via `facility_vertical_profiles`. See [Spec 0010 — Verticals & profiles](../../specs/0010-verticals-and-profiles/requirements.md).
 
 ## Existing User Roles
 
@@ -50,13 +50,17 @@ Registration identity: inviter sets `birthDate` + name on the invite; invitee mu
 | `OPS` | Clinic `facilityIds` = all facilities with active profile in assigned verticals (no zone cover). |
 | `MANAGER` | Own territory oversight ∪ own consultant assignments. Does **not** include peer managers’ zones. Analytics facility set remains report-territory based (no consultant union). |
 
-### Manager ↔ REP (Spec 0006, 2026-08-02)
+### Manager ↔ REP
 
-- **Not** `users.manager_id` for runtime team/scope/clinic gerente.
+Canonical model: [Spec 0009 — Territory & clinic ownership](../../specs/0009-territory-clinic-ownership/requirements.md).
+
+- **Not** `users.manager_id` — the column was dropped in `0044_drop_manager_id_columns.sql`,
+  along with `user_vertical_assignments.manager_id`. Hard cut, no dual-read.
 - Derive: zone UTA → child patches → patch UTAs (= team). Clinic gerente = UTA on `manager_zone_id`.
-- Multi-manager REPs allowed (patches under different managers’ zones).
+- Multi-manager REPs are structurally possible (patches under different managers' zones).
+- ⚠️ A rep with **no patch has no manager**, appears on no team, and can hold no clinics.
+  Accepted as a forcing function for territory upkeep (Spec 0009 R8).
 - Edit roles: ADMIN CRUD zones + patches; MANAGER create/edit patches under own zones only.
-- Downstream TODOs: invite overhaul (drop invite/UVA `manager_id`), user-profile multi-manager UI, stop-write + drop `users.manager_id` / `user_vertical_assignments.manager_id`, dual-read compat while clients migrate.
 
 Optional query/body `verticalId` is validated against the caller’s allowed set (`ForbiddenError` if outside). Omit → union of assigned verticals (ADMIN without filter: all facilities including unprofiled).
 
@@ -75,13 +79,20 @@ Orders: REP list/detail restricted to `sellerId = actor` within facility scope.
 
 REP must not see the Cadastros ops queue. OPS reviews without needing `update FACILITY`.
 
-Cadastro drafts persist `vertical_id`. Inference: one facility profile → use it; else one user vertical matching a facility profile → use it; else require `verticalId` in the ensure-draft body. Completion writes `commercial_status` on `facility_vertical_profiles` for that vertical.
+Cadastro drafts persist `vertical_id`. Inference: one facility profile → use it; else one user vertical matching a facility profile → use it; else require `verticalId` in the ensure-draft body. Completion writes the conformity status on `facility_vertical_profiles` for that vertical.
+
+⚠️ Being restructured — [Spec 0011](../../specs/0011-cadastro-pipeline/requirements.md) keys
+cadastro on `facility_vertical_profile_id`, renames `commercial_status` → `conformity_status`
+(it was never commercial — it is cadastro completion), and scopes the review queue, which is
+currently **global** for MANAGER/OPS.
 
 ## Known Follow-Ups
 
-- Finish Spec 0006 clinic-ownership design if ownership should diverge from consultant assignments.
 - Expand audit events for 2FA failure reasons.
-- Add SSO/OIDC support for Google, Microsoft Entra ID, and Okta readiness.
 - Add 2FA recovery codes and admin reset workflow.
 - WhatsApp invite delivery requires Twilio env (email path uses Resend).
-- Territory × vertical ownership — design accepted; implementation on `feature/territory-vertical-ownership-20260726` / PR #120 (see [vertical-ownership-design.md](../../specs/0003-territory-management/vertical-ownership-design.md)).
+- ADMIN is currently **not** vertical-scoped — `isGlobal` short-circuits `assertResourceInScope`
+  entirely. Scoping ADMIN to its verticals, plus a SUPERUSER role, is deferred
+  (Spec 0010 § 2.3).
+- `ROLE_PRIORITY` gives OPS and REP the same value, so `hasMinimumRole` cannot distinguish them
+  (Spec 0010 § 2.3).
