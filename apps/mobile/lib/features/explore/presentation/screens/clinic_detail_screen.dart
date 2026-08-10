@@ -1288,7 +1288,6 @@ bool _shouldUpdateLoadedFacility(Facility? previous, Facility next) {
       previous.territory?.consultantName != next.territory?.consultantName ||
       previous.territory?.managerName != next.territory?.managerName ||
       previous.purchaseRecurrence != next.purchaseRecurrence ||
-      previous.commercial?.purchaseStatus != next.commercial?.purchaseStatus ||
       previous.commercial?.commercialStatus !=
           next.commercial?.commercialStatus ||
       previous.verticalProfiles.length != next.verticalProfiles.length;

@@ -58,8 +58,6 @@ function ortoOnlyFacility(): FacilityRecord {
     territoryName: null,
     territoryAssignmentStatus: "assigned",
     commercialStatus: null,
-    purchaseStatus: null,
-    conformityStatus: "INCOMPLETE",
     cnesCode: null,
     unitTypeId: null,
     unitSubtypeId: null,
@@ -79,7 +77,6 @@ function ortoOnlyFacility(): FacilityRecord {
         verticalName: "Ortopédica",
         isActive: true,
         commercialStatus: "UNREGISTERED",
-        purchaseStatus: "NON_BUYER",
         territoryId: 1,
       },
     ],
@@ -109,7 +106,6 @@ function repoWith(facility: FacilityRecord | null): FacilityRepository {
       verticalName: "Ortopédica",
       isActive: true,
       commercialStatus: null,
-      purchaseStatus: null,
     }),
   };
 }

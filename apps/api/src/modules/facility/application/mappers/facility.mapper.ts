@@ -96,7 +96,6 @@ export function serializeFacility(
           verticalProfiles: verticalContext.verticalProfiles.map(serializeVerticalProfile),
         }
       : {}),
-    conformityStatus: clinic.conformityStatus,
     professionalCount: list.professionalCount ?? 0,
     lastVisitAt: list.lastVisitAt?.toISOString() ?? undefined,
     consultantName: clinic.consultantName,
@@ -121,7 +120,6 @@ function serializeVerticalProfile(profile: FacilityVerticalProfileRecord) {
     verticalName: profile.verticalName,
     isActive: profile.isActive,
     commercialStatus: profile.commercialStatus ?? undefined,
-    purchaseStatus: profile.purchaseStatus ?? undefined,
     territoryId: profile.territoryId ?? undefined,
     ...(profile.purchaseRecurrence
       ? {

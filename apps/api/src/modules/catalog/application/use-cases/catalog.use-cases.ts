@@ -51,16 +51,16 @@ function serializeProduct(row: {
   unit: string | null;
   verticalIds: number[];
   pictureUrl: string | null;
-  simproCode: string;
-  brasindiceCode: string;
-  tissCode: string;
+  simproCode: string | null;
+  brasindiceCode: string | null;
+  tissCode: string | null;
   manufacturer: string;
   countryOfOrigin: string;
   price: number;
   price17: number;
   price18: number;
   price20: number;
-  brasindiceUpdatedAt: string;
+  brasindiceUpdatedAt: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -232,16 +232,16 @@ export class CreateProductUseCase {
     name: string;
     verticalIds: number[];
     pictureUrl?: string | null;
-    simproCode: string;
-    brasindiceCode: string;
-    tissCode: string;
+    simproCode: string | null;
+    brasindiceCode: string | null;
+    tissCode: string | null;
     manufacturer: string;
     countryOfOrigin: string;
     price: number;
     price17: number;
     price18: number;
     price20: number;
-    brasindiceUpdatedAt: string;
+    brasindiceUpdatedAt: string | null;
     isActive?: boolean;
   }) {
     const product = await this.deps.productRepository.create(input);
@@ -571,7 +571,8 @@ export interface ComparisonRow {
   price17: number;
   price18: number;
   price20: number;
-  updatedAt: string;
+  /** Brasíndice revision date; null when the product has no Brasíndice code. */
+  updatedAt: string | null;
   isOwn: boolean;
 }
 

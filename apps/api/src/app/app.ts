@@ -2,6 +2,10 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
+import {
+  HttpException,
+  httpExceptionPlugin,
+} from "elysia-http-exception";
 import { healthRoute } from "../infrastructure/health/health.route";
 import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
@@ -28,6 +32,37 @@ import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 import { hasDuplicatePathSlashes } from "./request-path";
+
+/**
+ * Elysia's ValidationError.detail() embeds the submitted payload under
+ * `found` and per-field submitted values under `errors[].value`, which can
+ * contain credentials or health data. Strip those keys while keeping the
+ * rest of the diagnostic detail.
+ */
+function sanitizeValidationDetail(detail: unknown): unknown {
+  if (typeof detail === "string") {
+    try {
+      return sanitizeValidationDetail(JSON.parse(detail));
+    } catch {
+      return detail;
+    }
+  }
+
+  if (Array.isArray(detail)) {
+    return detail.map((entry) => sanitizeValidationDetail(entry));
+  }
+
+  if (detail && typeof detail === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(detail)) {
+      if (key === "found" || key === "value") continue;
+      result[key] = sanitizeValidationDetail(value);
+    }
+    return result;
+  }
+
+  return detail;
+}
 
 const configuredCorsOrigins = environment.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
@@ -69,43 +104,75 @@ const app = new Elysia()
       };
     }
 
-    // Handle Zod validation errors
-    if (code === "VALIDATION") {
-      set.status = 400;
+    if (error instanceof HttpException) {
+      set.status = error.statusCode;
       return {
         error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid request data",
-          details: error instanceof Error ? error.message : String(error),
+          code: error.code,
+          message: error.statusCode >= 500
+            ? "An unexpected error occurred. Please try again later."
+            : error.message,
         },
       };
     }
 
-    // Elysia unknown route — not an internal failure
+    if (code === "VALIDATION") {
+      set.status = 400;
+      return sanitizeValidationDetail(error.detail(error.message));
+    }
+
+    if (code === "PARSE") {
+      set.status = 400;
+      return {
+        error: {
+          code: "INVALID_JSON",
+          message: "Request body contains invalid JSON",
+        },
+      };
+    }
+
+    if (code === "INVALID_COOKIE_SIGNATURE") {
+      set.status = 400;
+      return {
+        error: {
+          code: "INVALID_COOKIE_SIGNATURE",
+          message: "Invalid cookie signature",
+        },
+      };
+    }
+
     if (code === "NOT_FOUND") {
       set.status = 404;
       return {
         error: {
-          code: "NOT_FOUND",
+          code: "ROUTE_NOT_FOUND",
           message: "Route not found",
         },
       };
     }
 
-    // Unhandled — observability plugin logs this as a 500
+    if (code === "INVALID_FILE_TYPE") {
+      set.status = 415;
+      return {
+        error: {
+          code: "INVALID_FILE_TYPE",
+          message: "Invalid file type",
+        },
+      };
+    }
+
+    // Unhandled — observability logs the original Error and stack once.
     set.status = 500;
     return {
       error: {
         code: "INTERNAL_SERVER_ERROR",
-        message:
-          environment.NODE_ENV === "development"
-            ? error instanceof Error
-              ? error.message
-              : String(error)
-            : "An unexpected error occurred. Please try again later.",
+        message: "An unexpected error occurred. Please try again later.",
       },
     };
   })
+  // Register after the AtlasMed handler so its global hook observes framework
+  // errors first while this app-level handler retains control of the envelope.
+  .use(httpExceptionPlugin())
   // Configure CORS for frontend access
   .use(
     cors({
