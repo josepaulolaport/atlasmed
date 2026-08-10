@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/router/routes.dart';
 
-/// "Médicos" — snapping PageView of compact cards, each focused on
-/// essential contact info (phone/email) plus a dedicated badges area. The
-/// "Ver todos" link to the full doctor list lives on the section header.
+/// "Médicos" — compact vertical list. The "Ver todos" link to the full
+/// doctor list lives on the section header.
 class ClinicCrmDoctorsSection extends StatelessWidget {
   const ClinicCrmDoctorsSection({
     super.key,
@@ -26,17 +23,14 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   final List<ProfessionalRoster> doctors;
   final int? facilityId;
 
-  /// When true, [onLoadMore] is called as the user reaches the loaded cards.
   final bool hasMore;
-
-  /// Shows the trailing shimmer only for an active next-page request.
   final bool isLoadingMore;
   final VoidCallback? onLoadMore;
 
   /// Opens the full list / associate flow when the roster is empty.
   final VoidCallback? onAssociate;
 
-  /// Called after facility-scoped role flags are saved from the carousel.
+  /// Called after facility-scoped role flags are saved from a row.
   final ValueChanged<ProfessionalRoster>? onDoctorUpdated;
 
   @override
@@ -52,24 +46,30 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
       );
     }
 
-    return FacilityRosterPageView(
-      height: 268,
-      itemCount: doctors.length,
-      hasMore: hasMore,
-      isLoadingMore: isLoadingMore,
-      onLoadMore: onLoadMore,
-      itemBuilder: (_, i) => _DoctorCard(
-        doctor: doctors[i],
-        facilityId: facilityId,
-        canEditRoles: onDoctorUpdated != null,
-        onDoctorUpdated: onDoctorUpdated,
-      ),
-    );
+    if (doctors.isNotEmpty) {
+      return ClinicDetailCard(
+        child: Column(
+          children: [
+            for (final (i, doctor) in doctors.indexed) ...[
+              if (i > 0) const Divider(height: 1, color: AppColors.gray100),
+              _DoctorRow(
+                doctor: doctor,
+                facilityId: facilityId,
+                canEditRoles: onDoctorUpdated != null,
+                onDoctorUpdated: onDoctorUpdated,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
 
-class _DoctorCard extends StatelessWidget {
-  const _DoctorCard({
+class _DoctorRow extends StatelessWidget {
+  const _DoctorRow({
     required this.doctor,
     this.facilityId,
     this.canEditRoles = false,
@@ -85,179 +85,114 @@ class _DoctorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final badges = _badges;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: HSLColor.fromAHSL(1, doctor.hue, 0.2, 0.9).toColor(),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    doctor.initials,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: HSLColor.fromAHSL(
-                        1,
-                        doctor.hue,
-                        0.6,
-                        0.35,
-                      ).toColor(),
-                    ),
-                  ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: InkWell(
+        onTap: () => DoctorDetailRoute(
+          id: doctor.id,
+          facilityId: facilityId != null && facilityId! > 0 ? facilityId : null,
+        ).push(context),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: HSLColor.fromAHSL(
+                1,
+                doctor.hue,
+                0.48,
+                0.88,
+              ).toColor(),
+              child: Text(
+                doctor.initials,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: HSLColor.fromAHSL(1, doctor.hue, 0.55, 0.32).toColor(),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    doctor.name,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gray900,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (doctor.specialty != null) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      doctor.name,
+                      doctor.specialty!,
                       style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
+                        fontSize: 11.5,
+                        color: AppColors.gray500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (doctor.specialty != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        doctor.specialty!,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: AppColors.gray500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (doctor.crm != null) ...[
-                      const SizedBox(height: 1),
-                      Text(
-                        doctor.crm!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.gray400,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
                   ],
-                ),
+                  if (doctor.crm != null) ...[
+                    const SizedBox(height: 1),
+                    Text(
+                      doctor.crm!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.gray400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ),
-          if (badges.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: badges,
             ),
-          ],
-          if (canEditRoles) ...[
-            const SizedBox(height: 8),
-            _AlterRoleButton(
-              label: badges.isEmpty ? 'Definir papel' : 'Alterar papel',
-              onTap: () => _editRoles(context),
-            ),
-          ],
-          const SizedBox(height: 10),
-          const Divider(height: 1, color: AppColors.gray100),
-          const SizedBox(height: 8),
-          _ContactRow(
-            icon: Icons.phone_outlined,
-            value: doctor.phone,
-            onTap: doctor.phone != null
-                ? () => launchContactUrl(
-                    context,
-                    url: callUrl(doctor.phone),
-                    contactLabel: 'telefone',
-                  )
-                : null,
-          ),
-          const SizedBox(height: 6),
-          _ContactRow(
-            icon: Icons.email_outlined,
-            value: doctor.email,
-            onTap: doctor.email != null
-                ? () => launchContactUrl(
-                    context,
-                    url: emailUrl(doctor.email),
-                    contactLabel: 'e-mail',
-                  )
-                : null,
-          ),
-          const SizedBox(height: 8),
-          RelationshipStars(score: doctor.relationshipScore),
-          Expanded(
-            child: Column(
-              children: [
-                const Spacer(),
-                const Divider(height: 1, color: AppColors.gray100),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () {
-                    final id = facilityId;
-                    DoctorDetailRoute(
-                      id: doctor.id,
-                      facilityId: id != null && id > 0 ? id : null,
-                    ).push(context);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'Ver perfil completo',
+            if (canEditRoles)
+              InkWell(
+                onTap: () => _editRoles(context),
+                borderRadius: BorderRadius.circular(8),
+                child: badges.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          'Definir papel',
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             color: AppColors.navyBright,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: AppColors.navyBright,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-        ],
+                      )
+                    : Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          ...badges,
+                          const Icon(
+                            Icons.edit_outlined,
+                            size: 14,
+                            color: AppColors.navyBright,
+                          ),
+                        ],
+                      ),
+              )
+            else if (badges.isNotEmpty)
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: badges,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -274,85 +209,6 @@ class _DoctorCard extends StatelessWidget {
     );
     if (updated == null) return;
     onDoctorUpdated?.call(updated);
-  }
-}
-
-class _AlterRoleButton extends StatelessWidget {
-  const _AlterRoleButton({required this.onTap, required this.label});
-
-  final VoidCallback onTap;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.blueLight,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.badge_outlined,
-                size: 16,
-                color: AppColors.navyBright,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.navyBright,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ContactRow extends StatelessWidget {
-  const _ContactRow({required this.icon, required this.value, this.onTap});
-
-  final IconData icon;
-  final String? value;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 15,
-            color: value != null ? AppColors.navyBright : AppColors.gray300,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value ?? 'Não informado',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: value != null ? FontWeight.w500 : FontWeight.w400,
-                color: value != null ? AppColors.gray900 : AppColors.gray400,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
