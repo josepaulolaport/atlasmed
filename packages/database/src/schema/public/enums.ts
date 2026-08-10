@@ -103,6 +103,16 @@ export const facilityLegalDocumentTypeEnum = pgEnum("facility_legal_document_typ
   "CPF",
 ]);
 
+/**
+ * Whether a catalogued product is ours or a competitor's (spec 0013 §2).
+ * An enum rather than a boolean because a distributed third-party line is
+ * neither, and will want its own value rather than a second boolean.
+ */
+export const productOwnershipEnum = pgEnum("product_ownership", [
+  "OWN",
+  "COMPETITOR",
+]);
+
 export const orderStatusEnum = pgEnum("order_status", [
   "DRAFT",
   "PENDING",

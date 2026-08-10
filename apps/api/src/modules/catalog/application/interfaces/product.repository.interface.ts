@@ -10,16 +10,17 @@ export interface ProductRecord {
   unit: string | null;
   verticalIds: number[];
   pictureUrl: string | null;
-  simproCode: string;
-  brasindiceCode: string;
-  tissCode: string;
+  /** Null when the product has no pricing-table code — see spec 0013 §2. */
+  simproCode: string | null;
+  brasindiceCode: string | null;
+  tissCode: string | null;
   manufacturer: string;
   countryOfOrigin: string;
   price: number;
   price17: number;
   price18: number;
   price20: number;
-  brasindiceUpdatedAt: string;
+  brasindiceUpdatedAt: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -45,16 +46,16 @@ export interface ProductRepository {
     name: string;
     verticalIds: number[];
     pictureUrl?: string | null;
-    simproCode: string;
-    brasindiceCode: string;
-    tissCode: string;
+    simproCode?: string | null;
+    brasindiceCode?: string | null;
+    tissCode?: string | null;
     manufacturer: string;
     countryOfOrigin: string;
     price: number;
     price17: number;
     price18: number;
     price20: number;
-    brasindiceUpdatedAt: string;
+    brasindiceUpdatedAt: string | null;
     isActive?: boolean;
   }): Promise<ProductRecord>;
 
