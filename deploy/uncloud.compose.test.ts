@@ -115,11 +115,8 @@ describe("production deployment", () => {
     expect(workflow).toContain(
       "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes",
     );
-    // `uc rm` takes no flags. This used to assert `--yes`, pinning a command
-    // that failed on every deploy behind `|| true` (#220). Assert the bare form
-    // and the reporting that replaced the silent `|| true`.
-    expect(workflow).toContain("if uc rm atlasmed-web; then");
-    expect(workflow).not.toContain("uc rm atlasmed-web --yes");
+    // The retired Next.js web service (`atlasmed-web`) is no longer part of the
+    // deploy pipeline — the `Remove retired web service` step was removed.
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
     );
