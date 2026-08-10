@@ -30,8 +30,9 @@ export const invitationDetailRoute = new Elysia({
   .use(requirePermission("update", "INVITATION"))
   .patch(
     "/invites/:id",
-    async ({ params, body, getUser }: any) => {
+    async ({ params, body, getUser, getScope }: any) => {
       const actor = await getUser();
+      const scope = await getScope();
       const parsed = updateInvitationSchema.parse(body);
 
       return accessUseCases.updateInvitation().execute({
@@ -45,6 +46,7 @@ export const invitationDetailRoute = new Elysia({
         lastName: parsed.lastName,
         birthDate: parsed.birthDate,
         verticalAssignments: parsed.verticalAssignments,
+        scope,
       });
     },
     {

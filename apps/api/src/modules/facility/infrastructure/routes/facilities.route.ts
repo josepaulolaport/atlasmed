@@ -414,17 +414,20 @@ const updateFacilityBillingEmailRoute = new Elysia()
 
 const downloadFacilityCadastroFileRoute = new Elysia()
   .use(auth)
+  .use(requirePermission("read", "FACILITY"))
   .get(
     "/facilities/cadastro/files/*",
-    async ({ params, set }) => {
+    async ({ params, set, getScope }) => {
       const key = params["*"];
       if (typeof key !== "string") {
         throw new ValidationError([
           { field: "key", message: "Invalid cadastro file key" },
         ]);
       }
+      const scope = await getScope();
       const result = await facilityUseCases.downloadFacilityCadastroFile().execute({
         storageKey: key,
+        scope,
       });
       set.headers["content-type"] = result.contentType;
       set.headers["cache-control"] = "private, max-age=3600";
@@ -863,17 +866,20 @@ const uploadFacilityPhotoRoute = new Elysia()
 
 const downloadFacilityPhotoRoute = new Elysia()
   .use(auth)
+  .use(requirePermission("read", "FACILITY"))
   .get(
     "/facilities/photos/*",
-    async ({ params, set }) => {
+    async ({ params, set, getScope }) => {
       const key = params["*"];
       if (typeof key !== "string") {
         throw new ValidationError([
           { field: "key", message: "Invalid facility photo key" },
         ]);
       }
+      const scope = await getScope();
       const result = await facilityUseCases.downloadFacilityPhoto().execute({
         storageKey: key,
+        scope,
       });
       set.headers["content-type"] = result.contentType;
       set.headers["cache-control"] = "private, max-age=3600";
