@@ -65,11 +65,25 @@ families of the same kind of product. Adding a JSONB column later is a one-line 
 removing one after code depends on it is not. Revisit when a product type genuinely does not fit.
 
 ### 2.1 Enforcement
-- `order_items.product_id` may reference only `ownership = OWN`.
+- `order_items.product_id` may reference only `ownership = OWN`. ✅ migration `0085`
 - `facility_product_usage.product_id` may reference only `ownership = COMPETITOR` — orders are
   authoritative for our quantities, so there is no manual entry for our own products.
+  ⏳ the table does not exist until P4-2; `facility_competitor_product_standards`, which it
+  replaces, is constrained the same way in `0085` meanwhile.
 
 Both as DB constraints, not application discipline.
+
+**Also enforced in `0085`, and missing from this spec until it was asked for:** an equivalence is
+directional, so `product_equivalences.product_id` may reference only `OWN` and
+`competitor_product_id` only `COMPETITOR`, and the two ids must differ — a product cannot be its
+own competitor. Before `0085` that held only because `LinkCompetitorProductUseCase` resolved each
+id through a differently scoped repository; nothing in the schema said it, and a direct insert
+could link a product to itself.
+
+**Mechanism.** Each referencing table carries a `GENERATED ALWAYS` column holding the ownership it
+accepts, and a composite foreign key onto `products(id, ownership)` — which is why `products`
+gained a redundant-looking `unique(id, ownership)`. Generated means no insert can set the column
+and no default can drift.
 
 ---
 
