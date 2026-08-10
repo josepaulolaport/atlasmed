@@ -1,6 +1,6 @@
 export interface ProductRecord {
   id: number;
-  code: string;
+  code: string | null;
   name: string;
   description: string | null;
   commercialCode: string | null;
@@ -16,7 +16,7 @@ export interface ProductRecord {
   tissCode: string | null;
   manufacturer: string;
   countryOfOrigin: string;
-  price: number;
+  price: number | null;
   price17: number;
   price18: number;
   price20: number;
@@ -42,7 +42,7 @@ export interface ProductRepository {
   findAllActive(params: { verticalIds: number[] }): Promise<ProductRecord[]>;
 
   create(data: {
-    code: string;
+    code: string | null;
     name: string;
     verticalIds: number[];
     pictureUrl?: string | null;
@@ -51,7 +51,7 @@ export interface ProductRepository {
     tissCode?: string | null;
     manufacturer: string;
     countryOfOrigin: string;
-    price: number;
+    price: number | null;
     price17: number;
     price18: number;
     price20: number;

@@ -8,7 +8,7 @@ import type {
 
 function mapProduct(row: {
   id: number;
-  code: string;
+  code: string | null;
   name: string;
   description: string | null;
   commercialCode: string | null;
@@ -22,7 +22,7 @@ function mapProduct(row: {
   tissCode: string | null;
   manufacturer: string;
   countryOfOrigin: string;
-  price: string;
+  price: string | null;
   price17: string;
   price18: string;
   price20: string;
@@ -48,7 +48,7 @@ function mapProduct(row: {
     tissCode: row.tissCode,
     manufacturer: row.manufacturer,
     countryOfOrigin: row.countryOfOrigin,
-    price: Number(row.price),
+    price: row.price === null ? null : Number(row.price),
     price17: Number(row.price17),
     price18: Number(row.price18),
     price20: Number(row.price20),
@@ -58,6 +58,12 @@ function mapProduct(row: {
     updatedAt: row.updatedAt,
   };
 }
+
+/**
+ * Products we sell. `ownership = COMPETITOR` rows live in the same table
+ * (spec 0013 §2) and must never surface through the product catalogue.
+ */
+const IS_OWN = eq(products.ownership, "OWN");
 
 const productColumns = {
   id: products.id,
@@ -115,6 +121,10 @@ export class DrizzleProductRepository implements ProductRepository {
     const skip = (params.page - 1) * params.limit;
 
     const conditions = [
+      // Our catalogue only. Competitor products share this table since spec
+      // 0013 §2, and would otherwise appear in the product list, the search and
+      // every count derived from them.
+      IS_OWN,
       inArray(
         products.id,
         db
@@ -145,7 +155,10 @@ export class DrizzleProductRepository implements ProductRepository {
   }
 
   async findById(id: number): Promise<ProductRecord | null> {
-    const rows = await db.select(productColumns).from(products).where(eq(products.id, id));
+    const rows = await db
+      .select(productColumns)
+      .from(products)
+      .where(and(eq(products.id, id), IS_OWN));
     if (!rows[0]) return null;
     const verticalMap = await fetchVerticalIds([id]);
     return mapProduct(rows[0], verticalMap.get(id) ?? []);
@@ -159,6 +172,7 @@ export class DrizzleProductRepository implements ProductRepository {
       .from(products)
       .where(
         and(
+          IS_OWN,
           eq(products.isActive, true),
           inArray(
             products.id,
@@ -175,7 +189,7 @@ export class DrizzleProductRepository implements ProductRepository {
   }
 
   async create(data: {
-    code: string;
+    code: string | null;
     name: string;
     verticalIds: number[];
     pictureUrl?: string | null;
@@ -184,7 +198,7 @@ export class DrizzleProductRepository implements ProductRepository {
     tissCode: string;
     manufacturer: string;
     countryOfOrigin: string;
-    price: number;
+    price: number | null;
     price17: number;
     price18: number;
     price20: number;

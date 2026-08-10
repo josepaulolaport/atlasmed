@@ -20,7 +20,7 @@ export type ProductPotentialLinkRecord = {
   productId: number;
   definitionId: number;
   productName: string;
-  productCode: string;
+  productCode: string | null;
 };
 
 export type DefinitionQtySum = {
