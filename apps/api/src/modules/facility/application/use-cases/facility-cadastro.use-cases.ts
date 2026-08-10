@@ -9,7 +9,10 @@ import {
 } from "../../../../shared/errors";
 import type { ConformityRepository } from "../interfaces/conformity.repository.interface";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
-import type { CadastroSubmissionRepository } from "../interfaces/cadastro-submission.repository.interface";
+import type {
+  CadastroSubmissionRepository,
+  DocumentFileRecord,
+} from "../interfaces/cadastro-submission.repository.interface";
 import {
   FacilityCadastroCompletionService,
   isBillingEmailComplete,
@@ -185,6 +188,18 @@ function serializeRecord(record: {
   };
 }
 
+/** One physical file of a logical cadastro document, as the checklist serializes it. */
+function serializeDocumentFile(file: DocumentFileRecord) {
+  return {
+    fileAssetId: file.fileAssetId,
+    position: file.position,
+    role: file.role,
+    fileName: file.fileAsset?.originalFilename,
+    status: file.fileAsset?.status,
+    contentType: file.fileAsset?.detectedMimeType ?? file.fileAsset?.declaredMimeType,
+  };
+}
+
 export class GetFacilityCadastroChecklistUseCase {
   constructor(private readonly deps: Dependencies) {}
 
@@ -241,19 +256,31 @@ export class GetFacilityCadastroChecklistUseCase {
             ? mapSubmissionDocumentUiStatus(latestSubmitted.document.status)
             : mapRecordStatusToUi(record?.status);
 
-        // "Current document" for this requirement, in precedence order:
-        //   1. the approved document — the official one on file;
-        //   2. the document in the facility's current (draft or latest) package,
-        //      whatever its status: this is the row the compose screen uploads
-        //      into, so its files must be visible while it is still a DRAFT
-        //      (spec 0011 §8.1 / D-08 — returning [] here left the client poll
-        //      loop with nothing to match and "Enviar" permanently disabled);
+        // Two screens want two different documents, so they get two fields.
+        //
+        // Top level (documentId / documentStatus / files) = the WORKING
+        // document — what the rep is editing right now, in precedence order:
+        //   1. the document in the facility's current (draft or latest)
+        //      package: the row the compose screen uploads into, so its files
+        //      must be visible while it is still a DRAFT (spec 0011 §8.1 /
+        //      D-08 — returning the approved document's files here left the
+        //      client poll loop with nothing to match and "Enviar" disabled on
+        //      every re-upload over an already-approved requirement);
+        //   2. the approved document, when there is no working draft;
         //   3. the last document actually sent for review.
-        // documentId / documentStatus / files all describe this same document.
-        const displayDoc =
-          approvedEntry?.document ?? submissionDoc ?? latestSubmitted?.document ?? null;
-        const files = displayDoc
-          ? await this.deps.cadastroRepository!.listDocumentFiles(displayDoc.id)
+        //
+        // `currentApproved` (below) carries the APPROVED document and its own
+        // files — that is what the "DOCUMENTO ATUAL" card renders under its
+        // "Versão aprovada vN" label.
+        const workingDoc =
+          submissionDoc ?? approvedEntry?.document ?? latestSubmitted?.document ?? null;
+        const files = workingDoc
+          ? await this.deps.cadastroRepository!.listDocumentFiles(workingDoc.id)
+          : [];
+        const approvedFiles = approvedEntry
+          ? await this.deps.cadastroRepository!.listDocumentFiles(
+              approvedEntry.document.id
+            )
           : [];
 
         return {
@@ -265,8 +292,8 @@ export class GetFacilityCadastroChecklistUseCase {
           kind: "file" as const,
           required: true,
           uiStatus,
-          documentId: displayDoc?.id,
-          documentStatus: displayDoc?.status,
+          documentId: workingDoc?.id,
+          documentStatus: workingDoc?.status,
           latestSubmittedStatus: latestSubmitted?.document.status,
           latestSubmittedAt:
             latestSubmitted?.submission.submittedAt?.toISOString() ?? undefined,
@@ -279,22 +306,11 @@ export class GetFacilityCadastroChecklistUseCase {
                   approvedEntry.submission.submittedAt?.toISOString() ??
                   undefined,
                 reviewComment: approvedEntry.document.reviewComment ?? undefined,
-                fileCount: (
-                  await this.deps.cadastroRepository!.listDocumentFiles(
-                    approvedEntry.document.id
-                  )
-                ).length,
+                fileCount: approvedFiles.length,
+                files: approvedFiles.map(serializeDocumentFile),
               }
             : undefined,
-          files: files.map((f) => ({
-            fileAssetId: f.fileAssetId,
-            position: f.position,
-            role: f.role,
-            fileName: f.fileAsset?.originalFilename,
-            status: f.fileAsset?.status,
-            contentType:
-              f.fileAsset?.detectedMimeType ?? f.fileAsset?.declaredMimeType,
-          })),
+          files: files.map(serializeDocumentFile),
           record: record ? serializeRecord(record) : undefined,
         };
       })

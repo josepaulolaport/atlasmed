@@ -893,6 +893,7 @@ class CadastroApprovedSummary {
     this.submittedAt,
     this.reviewComment,
     this.fileCount = 0,
+    this.files = const [],
   });
 
   final int documentId;
@@ -902,7 +903,28 @@ class CadastroApprovedSummary {
   final String? reviewComment;
   final int fileCount;
 
+  /// Ordered physical files of the approved document itself — not of whatever
+  /// draft the rep may be composing on top of it.
+  final List<CadastroDocumentFile> files;
+
   factory CadastroApprovedSummary.fromJson(Map<String, dynamic> json) {
+    final rawFiles = (json['files'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
+    final files = rawFiles
+        .map((f) {
+          final fileAssetId = readCrmIdOrNull(f['fileAssetId'], 'fileAssetId');
+          if (fileAssetId == null) return null;
+          return CadastroDocumentFile(
+            fileAssetId: fileAssetId,
+            position: (f['position'] as num?)?.toInt() ?? 1,
+            role: f['role'] as String? ?? 'PAGE',
+            fileName: f['fileName'] as String?,
+            status: f['status'] as String?,
+            contentType: f['contentType'] as String?,
+          );
+        })
+        .whereType<CadastroDocumentFile>()
+        .toList(growable: false);
     return CadastroApprovedSummary(
       documentId: readCrmId(json['documentId'], 'documentId'),
       submissionId: readCrmId(json['submissionId'], 'submissionId'),
@@ -911,7 +933,8 @@ class CadastroApprovedSummary {
           ? DateTime.tryParse(json['submittedAt'] as String)
           : null,
       reviewComment: json['reviewComment'] as String?,
-      fileCount: (json['fileCount'] as num?)?.toInt() ?? 0,
+      fileCount: (json['fileCount'] as num?)?.toInt() ?? files.length,
+      files: files,
     );
   }
 }
