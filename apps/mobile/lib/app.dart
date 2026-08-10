@@ -6,6 +6,8 @@ import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/router/app_router.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -86,5 +88,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
     theme: AppTheme.light,
     themeMode: ThemeMode.light,
     routerConfig: _router,
+    // Device Preview: no web (ver main.dart) o app é envolvido no
+    // DevicePreview; aqui conectamos locale e builder para que o dispositivo
+    // simulado (MediaQuery) seja aplicado. Em plataformas nativas nada muda.
+    locale: kIsWeb ? DevicePreview.locale(context) : null,
+    builder: kIsWeb ? DevicePreview.appBuilder : null,
   );
 }
