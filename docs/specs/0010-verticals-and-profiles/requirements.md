@@ -201,6 +201,26 @@ standardise on `?verticalId=`.
 
 The real risk is surfaces that skip the helper — §2.2.
 
+### 2.1b Membership invariant: enforced in code, not in the schema
+
+> ⚠️ **Audited 2026-08-10.** "A user may hold a territory only in a vertical they are assigned"
+> (V1, shipped as P2-5 in #222) is enforced only by application code.
+> `user_territory_assignments` carries three foreign keys — user, territory, assigned_by — and
+> nothing ties the territory's vertical to the user's assignments. A direct insert, a migration or
+> a repair script bypasses it.
+>
+> The schema already contains the pattern that would express it, and P2-5 did not use it:
+>
+> ```
+> territories_manager_territory_vertical_fk
+>   FOREIGN KEY (manager_territory_id, vertical_id) REFERENCES territories(id, vertical_id)
+> ```
+>
+> Migration `0085` used that same composite-key shape to pin product ownership (spec 0013 §2.1).
+> Doing the same here needs `unique(user_id, vertical_id)` on `user_vertical_assignments`, a
+> denormalised `vertical_id` on `user_territory_assignments`, and a composite FK across both.
+> **Deferred by user decision, 2026-08-10.**
+
 ### 2.2 Gaps to close
 
 - `POST /territories` accepts any `verticalId` with no ⊆-assigned check

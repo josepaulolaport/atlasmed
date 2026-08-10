@@ -9,9 +9,10 @@ import {
   unique,
   bigint,
   char,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
-import { orderStatusEnum, orderTypeEnum } from "./enums";
+import { orderStatusEnum, orderTypeEnum, productOwnershipEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
 import { facilities, facilityVerticalProfiles } from "./facilities";
 import { persons } from "./persons";
@@ -115,6 +116,16 @@ export const orderItems = pgTable(
     idAvulsaItemEmultec: bigint("id_avulsa_item_emultec", { mode: "number" }),
     orderId: bigint("order_id", { mode: "number" }).notNull().references(() => orders.id, { onDelete: "cascade" }),
     productId: bigint("product_id", { mode: "number" }).references(() => products.id),
+    /**
+     * Pinned to OWN by the composite foreign key below. Never written.
+     *
+     * An order line is something we sold, so it can only reference a product of
+     * ours (spec 0013 §2.1). Before 0085 nothing said so: after competitor rows
+     * moved into `products`, a plain `REFERENCES products(id)` accepted either.
+     */
+    productOwnership: productOwnershipEnum("product_ownership")
+      .notNull()
+      .generatedAlwaysAs(sql`'OWN'::product_ownership`),
     /** Denormalized Emultec product id on the line (may differ from products.id_produto_emultec historically). */
     idProdutoEmultec: bigint("id_produto_emultec", { mode: "number" }),
     quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull().default("0"),
@@ -130,6 +141,14 @@ export const orderItems = pgTable(
     index("order_items_order_id_idx").on(t.orderId),
     index("order_items_product_id_idx").on(t.productId),
     unique("order_items_id_avulsa_item_emultec_key").on(t.idAvulsaItemEmultec),
+    // `product_id` stays nullable — a line whose product we never resolved. A
+    // composite key is MATCH SIMPLE, so a NULL product_id skips the check
+    // entirely, which is the behaviour we want until P4-4 makes it NOT NULL.
+    foreignKey({
+      name: "order_items_product_own_fk",
+      columns: [t.productId, t.productOwnership],
+      foreignColumns: [products.id, products.ownership],
+    }),
   ]
 );
 

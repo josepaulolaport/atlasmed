@@ -10,6 +10,8 @@ import {
   date,
   unique,
   bigint,
+  foreignKey,
+  check,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { productOwnershipEnum } from "./enums";
@@ -112,6 +114,10 @@ export const products = pgTable(
       .on(t.tissCode)
       .where(sql`${t.tissCode} IS NOT NULL`),
     unique("products_id_produto_emultec_key").on(t.idProdutoEmultec),
+    // Redundant on its own — `id` is already the primary key — but a composite
+    // foreign key can only reference a unique constraint, and this is what lets
+    // other tables pin *which ownership* they accept (spec 0013 §2.1).
+    unique("products_id_ownership_key").on(t.id, t.ownership),
   ]
 );
 
@@ -131,17 +137,40 @@ export const productVerticals = pgTable(
   ]
 );
 
+/**
+ * "This competitor product is the equivalent of that product of ours."
+ *
+ * The two sides are not interchangeable: `product_id` is always ours,
+ * `competitor_product_id` is always theirs. Until 0085 that was true only
+ * because the use case happened to look each id up through a differently scoped
+ * repository — an emergent property of two reads, stated nowhere. A direct
+ * insert could link a product to itself.
+ *
+ * Now the pair of ownerships is in the schema, plus an explicit check that the
+ * two ids differ. That check is redundant once the composite keys are in place
+ * (a row cannot be both OWN and COMPETITOR) and is kept anyway, because
+ * "a product cannot be its own competitor" should be legible without deriving
+ * it from two foreign keys.
+ */
 export const productEquivalences = pgTable(
   "product_equivalences",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     productId: bigint("product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "cascade" }),
+    /** Pinned to OWN by the composite foreign key below. Never written. */
+    productOwnership: productOwnershipEnum("product_ownership")
+      .notNull()
+      .generatedAlwaysAs(sql`'OWN'::product_ownership`),
     /**
      * A competitor product is a `products` row with ownership = COMPETITOR
      * (spec 0013 §2). The column keeps its name so nothing above the repository
      * changes shape; only what it references moved.
      */
     competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "cascade" }),
+    /** Pinned to COMPETITOR by the composite foreign key below. Never written. */
+    competitorOwnership: productOwnershipEnum("competitor_ownership")
+      .notNull()
+      .generatedAlwaysAs(sql`'COMPETITOR'::product_ownership`),
     notes: text("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -149,6 +178,20 @@ export const productEquivalences = pgTable(
     index("product_equivalences_cp_id_idx").on(t.competitorProductId),
     index("product_equivalences_product_id_idx").on(t.productId),
     unique("product_equivalences_unique").on(t.competitorProductId, t.productId),
+    foreignKey({
+      name: "product_equivalences_own_side_fk",
+      columns: [t.productId, t.productOwnership],
+      foreignColumns: [products.id, products.ownership],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "product_equivalences_competitor_side_fk",
+      columns: [t.competitorProductId, t.competitorOwnership],
+      foreignColumns: [products.id, products.ownership],
+    }).onDelete("cascade"),
+    check(
+      "product_equivalences_not_self",
+      sql`${t.productId} <> ${t.competitorProductId}`
+    ),
   ]
 );
 
@@ -171,6 +214,10 @@ export const facilityCompetitorProductStandards = pgTable(
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
     competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "restrict" }),
+    /** Pinned to COMPETITOR by the composite foreign key below. Never written. */
+    competitorOwnership: productOwnershipEnum("competitor_ownership")
+      .notNull()
+      .generatedAlwaysAs(sql`'COMPETITOR'::product_ownership`),
     standardizedQuantity: bigint("standardized_quantity", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
@@ -179,6 +226,14 @@ export const facilityCompetitorProductStandards = pgTable(
     uniqueIndex("facility_competitor_product_standards_pair_uidx").on(t.facilityId, t.competitorProductId),
     index("facility_competitor_product_standards_facility_idx").on(t.facilityId),
     index("facility_competitor_product_standards_competitor_idx").on(t.competitorProductId),
+    // A clinic's "standard" is what it uses *instead of* ours, so only a
+    // competitor row belongs here. Retired by P4-2 in favour of
+    // `facility_product_usage`; constrained meanwhile because it is live.
+    foreignKey({
+      name: "facility_competitor_standards_competitor_fk",
+      columns: [t.competitorProductId, t.competitorOwnership],
+      foreignColumns: [products.id, products.ownership],
+    }).onDelete("restrict"),
   ]
 );
 
