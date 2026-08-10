@@ -93,6 +93,19 @@ describe("production deployment", () => {
     );
     expect(temporalWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
     expect(temporalWorker).toContain("TEMPORAL_TASK_QUEUE=atlasmed-workflows");
+
+    // Emultec credentials were declared in the config schema but delivered to
+    // no container, so the import silently reported success having done
+    // nothing. Assert they actually reach the worker.
+    for (const key of [
+      "EMULTEC_MYSQL_HOST",
+      "EMULTEC_MYSQL_PORT",
+      "EMULTEC_MYSQL_USER",
+      "EMULTEC_MYSQL_PASSWORD",
+      "EMULTEC_MYSQL_DATABASE",
+    ]) {
+      expect(temporalWorker).toContain(`${key}=`);
+    }
   });
 
   it("recreates application services when deploying their mutable production images", () => {
@@ -102,7 +115,11 @@ describe("production deployment", () => {
     expect(workflow).toContain(
       "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes",
     );
-    expect(workflow).toContain("uc rm atlasmed-web --yes");
+    // `uc rm` takes no flags. This used to assert `--yes`, pinning a command
+    // that failed on every deploy behind `|| true` (#220). Assert the bare form
+    // and the reporting that replaced the silent `|| true`.
+    expect(workflow).toContain("if uc rm atlasmed-web; then");
+    expect(workflow).not.toContain("uc rm atlasmed-web --yes");
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
     );

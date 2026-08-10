@@ -122,6 +122,15 @@ services:
       - STORAGE_SECRET_ACCESS_KEY=${STORAGE_SECRET_ACCESS_KEY}
       - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
       - STORAGE_REGION=${STORAGE_REGION:-auto}
+      # Emultec is a third-party production database. Read-only credentials,
+      # supplied like every other secret — never on a command line. Absent
+      # values leave the import disabled rather than half-configured; see
+      # isEmultecMysqlConfigured.
+      - EMULTEC_MYSQL_HOST=${EMULTEC_MYSQL_HOST}
+      - EMULTEC_MYSQL_PORT=${EMULTEC_MYSQL_PORT:-3306}
+      - EMULTEC_MYSQL_USER=${EMULTEC_MYSQL_USER}
+      - EMULTEC_MYSQL_PASSWORD=${EMULTEC_MYSQL_PASSWORD}
+      - EMULTEC_MYSQL_DATABASE=${EMULTEC_MYSQL_DATABASE:-atlasmed}
       - OTEL_SERVICE_NAME=atlasmed-temporal-worker
     depends_on:
       - atlasmed-temporal

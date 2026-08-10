@@ -1,14 +1,19 @@
 import { environment } from "@atlasmed/config";
+import {
+  runEmultecQuery,
+  closeEmultecPool,
+  type EmultecMysqlConfig,
+} from "@atlasmed/emultec-mysql";
 
-export type EmultecMysqlConfig = {
-  host: string;
-  user: string;
-  password: string;
-  database: string;
-  port: number;
-};
+export type { EmultecMysqlConfig };
+export { closeEmultecPool as closeEmultecMysqlPool };
 
-/** True once EMULTEC_MYSQL_HOST/USER/PASSWORD are all set. Safe to call with no config present. */
+/**
+ * Credentials come from the central environment (`@atlasmed/config`) and are
+ * handed to the driver as a config object. They are never rendered into a
+ * command line, which is how the previous `docker run … -p<password>` transport
+ * leaked them into `ps` on the host and into Docker's process metadata.
+ */
 export function isEmultecMysqlConfigured(): boolean {
   return Boolean(
     environment.EMULTEC_MYSQL_HOST &&
@@ -34,52 +39,16 @@ export function requireEmultecMysqlConfig(): EmultecMysqlConfig {
 }
 
 /**
- * Run a read-only SQL statement via dockerized mysql:8 client.
- * Emultec often returns latin1 — decode as latin1.
+ * Run a read-only SELECT against Emultec.
+ *
+ * Returns tab-separated lines, preserving the exact shape the previous
+ * `mysql -N -B` transport produced, so every parser above this is unchanged.
  */
 export async function runEmultecMysqlQuery(
   sql: string,
   cfg: EmultecMysqlConfig = requireEmultecMysqlConfig()
 ): Promise<string[]> {
-  const proc = Bun.spawn(
-    [
-      "docker",
-      "run",
-      "--rm",
-      "mysql:8",
-      "mysql",
-      "-h",
-      cfg.host,
-      "-P",
-      String(cfg.port),
-      "-u",
-      cfg.user,
-      `-p${cfg.password}`,
-      cfg.database,
-      "-N",
-      "-B",
-      "-e",
-      sql,
-    ],
-    { stdout: "pipe", stderr: "pipe" }
-  );
-
-  const stdoutBuf = Buffer.from(await new Response(proc.stdout).arrayBuffer());
-  const stderrBuf = Buffer.from(await new Response(proc.stderr).arrayBuffer());
-  const exit = await proc.exited;
-  const stdout = stdoutBuf.toString("latin1");
-  const stderr = stderrBuf.toString("latin1");
-
-  if (exit !== 0) {
-    throw new Error(
-      `Emultec mysql query failed (exit ${exit}): ${stderr.trim() || stdout.trim()}`
-    );
-  }
-
-  return stdout
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .filter((line) => line.length > 0 && !line.includes("Using a password"));
+  return runEmultecQuery(sql, cfg);
 }
 
 export function nullIfNullToken(value: string | undefined): string | null {

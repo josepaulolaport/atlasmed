@@ -7,6 +7,7 @@ import { assertStorageConfig } from "@atlasmed/config";
 import * as activities from "./activities/index";
 import { loadWorkerConfig, type WorkerConfig } from "./config";
 import { logger } from "./logger";
+import { closeEmultecMysqlPool } from "./emultec/emultec-mysql";
 import { ensurePurchaseRecurrenceSchedules } from "./scripts/ensure-purchase-recurrence-schedule";
 import { ensureEmultecOrderImportSchedules } from "./scripts/ensure-emultec-order-import-schedule";
 
@@ -57,7 +58,13 @@ async function run() {
     taskQueue: config.taskQueue,
   });
 
-  await worker.run();
+  try {
+    await worker.run();
+  } finally {
+    // Emultec is someone else's database — leave it a clean FIN rather than
+    // sockets its server has to time out. `worker.run()` returns on shutdown.
+    await closeEmultecMysqlPool();
+  }
 }
 
 run().catch((error) => {
