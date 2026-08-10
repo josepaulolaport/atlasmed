@@ -26,7 +26,6 @@ function verticalProfile(verticalId: number): FacilityVerticalProfileRecord {
     verticalName: verticalId === ortopediaId ? "Ortopédica" : "Dermatológica",
     isActive: true,
     commercialStatus: null,
-    purchaseStatus: null,
   };
 }
 
@@ -111,8 +110,6 @@ function inMemoryRepository(): FacilityRepository & {
     territoryName: null,
     territoryAssignmentStatus: "assigned",
     commercialStatus: null,
-    purchaseStatus: null,
-    conformityStatus: "INCOMPLETE",
     cnesCode: null,
     unitTypeId: null,
     unitSubtypeId: null,

@@ -201,23 +201,9 @@ class UserAssignments extends Equatable {
   }
 
   factory UserAssignments.fromJson(Map<String, dynamic> json) {
-    final verticalRaw = json['verticalAssignments'] as List<dynamic>?;
-    if (verticalRaw != null) {
-      return UserAssignments(
-        userId: readCrmId(json['userId'], 'userId'),
-        verticals: verticalRaw
-            .map(
-              (item) =>
-                  UserVerticalAssignment.fromJson(item as Map<String, dynamic>),
-            )
-            .toList(),
-        isOperationallyActive: json['isOperationallyActive'] as bool? ?? false,
-      );
-    }
-
     return UserAssignments(
       userId: readCrmId(json['userId'], 'userId'),
-      verticals: (json['verticals'] as List<dynamic>? ?? const [])
+      verticals: (json['verticalAssignments'] as List<dynamic>? ?? const [])
           .map(
             (item) =>
                 UserVerticalAssignment.fromJson(item as Map<String, dynamic>),

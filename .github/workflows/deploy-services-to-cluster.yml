@@ -151,11 +151,6 @@ jobs:
           $UNCLOUD_SSH_CMD 'docker image prune -f'
           $UNCLOUD_SSH_CMD 'docker system df'
 
-      - name: Remove retired web service
-        env:
-          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
-        run: uc rm atlasmed-web --yes || true
-
       - name: Deploy services to cluster
         env:
           UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
@@ -189,6 +184,13 @@ jobs:
           # these are what the API signs with, and they become the R2 API token at cutover.
           STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
           STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
+          # Third-party Emultec database (read-only). Absent values leave the
+          # order import disabled rather than half-configured.
+          EMULTEC_MYSQL_HOST: ${{ secrets.EMULTEC_MYSQL_HOST }}
+          EMULTEC_MYSQL_PORT: ${{ vars.EMULTEC_MYSQL_PORT || '3306' }}
+          EMULTEC_MYSQL_USER: ${{ secrets.EMULTEC_MYSQL_USER }}
+          EMULTEC_MYSQL_PASSWORD: ${{ secrets.EMULTEC_MYSQL_PASSWORD }}
+          EMULTEC_MYSQL_DATABASE: ${{ vars.EMULTEC_MYSQL_DATABASE || 'atlasmed' }}
         run: |
           for attempt in 1 2; do
             if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes; then

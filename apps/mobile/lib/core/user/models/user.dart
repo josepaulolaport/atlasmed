@@ -14,10 +14,10 @@ class UserRole extends Equatable {
   factory UserRole.fromJson(Map<String, dynamic> json) => UserRole(
     id: readCrmId(json['id'], 'id'),
     name: UserRoleName.values.firstWhere(
-      (e) => e.name.toUpperCase() == (json['name'] as String).toUpperCase(),
+      (e) => e.name.toUpperCase() == _string(json['name']).toUpperCase(),
       orElse: () => UserRoleName.rep,
     ),
-    description: json['description'] as String?,
+    description: _stringOrNull(json['description']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -158,17 +158,16 @@ class User extends Equatable {
 
     return User(
       id: readCrmId(userJson['id'], 'id'),
-      email: userJson['email'] as String,
-      username: userJson['username'] as String,
-      phoneNumber: userJson['phoneNumber'] as String?,
-      firstName: userJson['firstName'] as String?,
-      lastName: userJson['lastName'] as String?,
-      avatarUrl: userJson['avatarUrl'] as String?,
-      avatarBlurhash: userJson['avatarBlurhash'] as String?,
+      email: _string(userJson['email']),
+      username: _string(userJson['username']),
+      phoneNumber: _stringOrNull(userJson['phoneNumber']),
+      firstName: _stringOrNull(userJson['firstName']),
+      lastName: _stringOrNull(userJson['lastName']),
+      avatarUrl: _stringOrNull(userJson['avatarUrl']),
+      avatarBlurhash: _stringOrNull(userJson['avatarBlurhash']),
       status: UserStatus.values.firstWhere(
         (e) =>
-            e.name.toUpperCase() ==
-            (userJson['status'] as String).toUpperCase(),
+            e.name.toUpperCase() == _string(userJson['status']).toUpperCase(),
         orElse: () => UserStatus.active,
       ),
       emailVerified: userJson['emailVerified'] as bool? ?? false,
@@ -177,8 +176,8 @@ class User extends Equatable {
       emailVerifiedAt: _dateTimeOrNull(userJson['emailVerifiedAt']),
       phoneVerifiedAt: _dateTimeOrNull(userJson['phoneVerifiedAt']),
       role: UserRole.fromJson(userJson['role'] as Map<String, dynamic>),
-      createdAt: DateTime.parse(userJson['createdAt'] as String),
-      updatedAt: DateTime.parse(userJson['updatedAt'] as String),
+      createdAt: DateTime.parse(_string(userJson['createdAt'])),
+      updatedAt: DateTime.parse(_string(userJson['updatedAt'])),
       lastLoginAt: _dateTimeOrNull(userJson['lastLoginAt']),
       suspendedAt: _dateTimeOrNull(userJson['suspendedAt']),
       deactivatedAt: _dateTimeOrNull(userJson['deactivatedAt']),
@@ -240,8 +239,13 @@ class User extends Equatable {
 }
 
 DateTime? _dateTimeOrNull(Object? value) {
-  if (value is String && value.isNotEmpty) {
-    return DateTime.parse(value);
+  final raw = _stringOrNull(value);
+  if (raw != null && raw.isNotEmpty) {
+    return DateTime.parse(raw);
   }
   return null;
 }
+
+String _string(Object? value) => value?.toString() ?? '';
+
+String? _stringOrNull(Object? value) => value?.toString();

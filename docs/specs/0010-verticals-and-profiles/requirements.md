@@ -118,6 +118,18 @@ meaningless.
 - **`purchase_status` (column + enum) is DROPPED entirely.** `purchase_funnel_stage` is the
   single source for filtering, display and calculations. Nothing displays `purchase_status`
   today — its whole mobile render path is dead code (§5.1).
+
+  *Verified on implementation (2026-08-10, migration 0080).* The claim is precise and worth
+  restating, because it looks false at a glance: `clinic_status_signals_section.dart` does
+  render `purchaseStatus` as a labelled "Tipo de cliente" row — but that widget is **never
+  mounted anywhere**. The only other reference was a repaint comparison in
+  `clinic_detail_screen.dart` on a field that is `NON_BUYER` for every row, so it could never
+  fire. Production confirmed the same: all 1443 profiles `NON_BUYER`, zero exceptions.
+
+  The funnel was already what reps actually see — `buildFacilityStatusChips` renders it in
+  both `clinic_row` and `clinic_header_section`, the explore filters key on it, and the
+  dashboard's `purchaseStatus` block is computed from `purchase_funnel_stage` despite its
+  name. So nothing needed rewiring; the drop removed dead code only.
 - **Cadastro submissions key on `facility_vertical_profile_id`**, replacing
   `facility_id` + nullable `vertical_id`.
 - The "one DRAFT per facility" partial unique index becomes **one DRAFT per profile**.

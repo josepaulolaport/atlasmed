@@ -16,7 +16,6 @@ import {
   RELATIONSHIP_LEVEL_MAX,
   conformityStatusEnum,
   conformityRecordStatusEnum,
-  purchaseStatusEnum,
   purchaseIntervalSourceEnum,
   purchaseProfileEnum,
   purchaseFunnelStageEnum,
@@ -45,7 +44,6 @@ export type RelationshipLevel = number;
 export { RELATIONSHIP_LEVEL_MIN, RELATIONSHIP_LEVEL_MAX };
 export type ConformityStatus = (typeof conformityStatusEnum.enumValues)[number];
 export type ConformityRecordStatus = (typeof conformityRecordStatusEnum.enumValues)[number];
-export type PurchaseStatus = (typeof purchaseStatusEnum.enumValues)[number];
 export type PurchaseIntervalSource = (typeof purchaseIntervalSourceEnum.enumValues)[number];
 export type PurchaseProfile = (typeof purchaseProfileEnum.enumValues)[number];
 export type PurchaseFunnelStage = (typeof purchaseFunnelStageEnum.enumValues)[number];

@@ -43,18 +43,18 @@ class AppUser {
   /// Builds an [AppUser] from a `list-users.use-case.ts` `serializeUser`
   /// row (`GET /access/users`, `GET /access/users/:id`).
   factory AppUser.fromJson(Map<String, dynamic> json) {
-    final firstName = json['firstName'] as String?;
-    final lastName = json['lastName'] as String?;
+    final firstName = _stringOrNull(json['firstName']);
+    final lastName = _stringOrNull(json['lastName']);
     final combinedName = [
       firstName,
       lastName,
     ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' ');
-    final username = json['username'] as String?;
-    final email = json['email'] as String?;
+    final username = _stringOrNull(json['username']);
+    final email = _stringOrNull(json['email']);
 
-    final roleName =
-        ((json['role'] as Map<String, dynamic>?)?['name'] as String?)
-            ?.toUpperCase();
+    final roleName = _stringOrNull(
+      (json['role'] as Map<String, dynamic>?)?['name'],
+    )?.toUpperCase();
 
     return AppUser(
       id: readCrmId(json['id'], 'id'),
@@ -64,7 +64,9 @@ class AppUser {
           ? username!
           : (email ?? ''),
       role: roleName == 'MANAGER' ? UserRole.manager : UserRole.rep,
-      isActive: (json['status'] as String?)?.toUpperCase() == 'ACTIVE',
+      isActive: _stringOrNull(json['status'])?.toUpperCase() == 'ACTIVE',
     );
   }
 }
+
+String? _stringOrNull(Object? value) => value?.toString();

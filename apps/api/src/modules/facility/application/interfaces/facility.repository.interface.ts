@@ -11,11 +11,6 @@ export type FacilityCommercialStatus =
   | "SUSPENDED"
   | "CLOSED";
 
-export type FacilityPurchaseStatus =
-  | "NON_BUYER"
-  | "LOW_BUYER"
-  | "REGULAR_BUYER"
-  | "HIGH_BUYER";
 
 export type FacilityConformityStatus =
   | "INCOMPLETE"
@@ -58,7 +53,6 @@ export interface FacilityVerticalProfileRecord {
   verticalName?: string;
   isActive: boolean;
   commercialStatus: FacilityCommercialStatus | null;
-  purchaseStatus: FacilityPurchaseStatus | null;
   /** Profile membership territory (source of truth; not facilities.territory_id). */
   territoryId?: number | null;
   /** Per-linha funnel/recurrence (orders of this verticalId). */
@@ -100,8 +94,6 @@ export interface FacilityRecord {
    */
   territoryAssignmentStatus: "assigned" | "unassigned";
   commercialStatus: FacilityCommercialStatus | null;
-  purchaseStatus: FacilityPurchaseStatus | null;
-  conformityStatus: FacilityConformityStatus;
   /** Active consultant display name when loaded (list + detail). */
   consultantName: string | null;
   /** Active vertical REP assignment start (`facility_vertical_rep_assignments.started_at`). */

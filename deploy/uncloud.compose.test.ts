@@ -93,6 +93,19 @@ describe("production deployment", () => {
     );
     expect(temporalWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
     expect(temporalWorker).toContain("TEMPORAL_TASK_QUEUE=atlasmed-workflows");
+
+    // Emultec credentials were declared in the config schema but delivered to
+    // no container, so the import silently reported success having done
+    // nothing. Assert they actually reach the worker.
+    for (const key of [
+      "EMULTEC_MYSQL_HOST",
+      "EMULTEC_MYSQL_PORT",
+      "EMULTEC_MYSQL_USER",
+      "EMULTEC_MYSQL_PASSWORD",
+      "EMULTEC_MYSQL_DATABASE",
+    ]) {
+      expect(temporalWorker).toContain(`${key}=`);
+    }
   });
 
   it("recreates application services when deploying their mutable production images", () => {
@@ -102,7 +115,8 @@ describe("production deployment", () => {
     expect(workflow).toContain(
       "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes",
     );
-    expect(workflow).toContain("uc rm atlasmed-web --yes");
+    // The retired Next.js web service (`atlasmed-web`) is no longer part of the
+    // deploy pipeline — the `Remove retired web service` step was removed.
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
     );

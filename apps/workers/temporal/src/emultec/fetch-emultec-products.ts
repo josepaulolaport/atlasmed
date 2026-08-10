@@ -7,7 +7,7 @@ import {
 } from "./emultec-mysql";
 
 /**
- * Fetch whitelist products via dockerized mysql client (no mysql2 dep for Slice 1).
+ * Fetch whitelist products over the shared read-only Emultec connection.
  * Expects local Docker daemon + network reachability to Emultec host.
  */
 export async function fetchEmultecWhitelistProducts(): Promise<

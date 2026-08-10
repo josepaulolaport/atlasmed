@@ -85,7 +85,6 @@ class Facility {
       ),
       commercial: FacilityCommercial(
         commercialStatus: profile?.commercialStatus,
-        purchaseStatus: profile?.purchaseStatus,
         conformityStatus: dto.conformityStatus,
         doctorCount: dto.professionalCount,
       ),
@@ -201,13 +200,11 @@ class FacilityContact {
 
 class FacilityCommercial {
   final String? commercialStatus;
-  final String? purchaseStatus;
   final String? conformityStatus;
   final int doctorCount;
 
   const FacilityCommercial({
     this.commercialStatus,
-    this.purchaseStatus,
     this.conformityStatus,
     this.doctorCount = 0,
   });

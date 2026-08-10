@@ -96,7 +96,6 @@ export function mapFacility(
     territoryId?: number | null;
     territoryName?: string | null;
     commercialStatus?: FacilityCommercialStatus | null;
-    purchaseStatus?: FacilityRecord["purchaseStatus"];
     verticalProfiles?: FacilityVerticalProfileRecord[];
   } = {}
 ): FacilityRecord {
@@ -133,8 +132,6 @@ export function mapFacility(
     territoryName: options.territoryName ?? null,
     territoryAssignmentStatus: deriveTerritoryAssignmentStatus(options.verticalProfiles),
     commercialStatus: options.commercialStatus ?? null,
-    purchaseStatus: options.purchaseStatus ?? null,
-    conformityStatus: facility.conformityStatus,
     consultantName: options.consultantName ?? null,
     consultantSince: options.consultantSince ?? null,
     managerName: options.managerName ?? null,
@@ -196,8 +193,7 @@ async function loadVerticalProfiles(
       verticalCode: businessVerticals.code,
       verticalName: businessVerticals.name,
       isActive: facilityVerticalProfiles.isActive,
-      commercialStatus: facilityVerticalProfiles.commercialStatus,
-      purchaseStatus: facilityVerticalProfiles.purchaseStatus,
+      commercialStatus: facilityVerticalProfiles.conformityStatus,
       territoryId: facilityVerticalProfiles.managerZoneId,
       observedPurchaseIntervalDays:
         facilityVerticalProfiles.observedPurchaseIntervalDays,
@@ -226,7 +222,6 @@ async function loadVerticalProfiles(
       verticalName: row.verticalName,
       isActive: row.isActive,
       commercialStatus: row.commercialStatus,
-      purchaseStatus: row.purchaseStatus,
       territoryId: row.territoryId,
       purchaseRecurrence: {
         observedPurchaseIntervalDays: row.observedPurchaseIntervalDays,
@@ -267,14 +262,11 @@ function activeProfileMatchCondition(
 
 function deriveProfileCommercialFields(
   profiles: FacilityVerticalProfileRecord[],
-): Pick<FacilityRecord, "commercialStatus" | "purchaseStatus"> {
+): Pick<FacilityRecord, "commercialStatus"> {
   if (profiles.length === 1) {
-    return {
-      commercialStatus: profiles[0]!.commercialStatus,
-      purchaseStatus: profiles[0]!.purchaseStatus,
-    };
+    return { commercialStatus: profiles[0]!.commercialStatus };
   }
-  return { commercialStatus: null, purchaseStatus: null };
+  return { commercialStatus: null };
 }
 
 type ConsultantInfo = {
@@ -513,7 +505,7 @@ export function buildFacilityListConditions(params: {
   if (params.commercialStatus) {
     conditions.push(inArray(facilities.id, db.select({ facilityId: facilityVerticalProfiles.facilityId })
       .from(facilityVerticalProfiles).where(and(
-        eq(facilityVerticalProfiles.commercialStatus, params.commercialStatus),
+        eq(facilityVerticalProfiles.conformityStatus, params.commercialStatus),
         eq(facilityVerticalProfiles.isActive, true),
         ...(params.scope.verticalIds?.length ? [inArray(facilityVerticalProfiles.verticalId, params.scope.verticalIds)] : []),
       ))));
@@ -798,7 +790,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
               ? (territoryNameById.get(territoryId) ?? null)
               : null,
             commercialStatus: derived.commercialStatus,
-            purchaseStatus: derived.purchaseStatus,
             verticalProfiles: profiles,
           }),
           distanceKm: row.distanceKm ?? null,
@@ -895,7 +886,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         ? (territoryNameById.get(territoryId) ?? null)
         : null,
       commercialStatus: derived.commercialStatus,
-      purchaseStatus: derived.purchaseStatus,
       verticalProfiles: profiles,
     });
   }
@@ -983,7 +973,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       billingEmail?: string | null;
       legalDocumentType?: "CNPJ" | "CPF";
       legalDocument?: string | null;
-      conformityStatus?: FacilityRecord["conformityStatus"];
     }
   ): Promise<FacilityRecord> {
     const setData: Record<string, unknown> = {
@@ -1012,10 +1001,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (data.legalDocument !== undefined) {
       setData.legalDocument = normalizeLegalDocument(data.legalDocument);
-    }
-
-    if (data.conformityStatus !== undefined) {
-      setData.conformityStatus = data.conformityStatus;
     }
 
     if (data.lat !== undefined || data.lng !== undefined) {
@@ -1248,7 +1233,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     await db
       .update(facilityVerticalProfiles)
       .set({
-        commercialStatus: input.commercialStatus,
+        conformityStatus: input.commercialStatus,
         updatedAt: new Date(),
       })
       .where(
@@ -1269,8 +1254,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         verticalCode: businessVerticals.code,
         verticalName: businessVerticals.name,
         isActive: facilityVerticalProfiles.isActive,
-        commercialStatus: facilityVerticalProfiles.commercialStatus,
-        purchaseStatus: facilityVerticalProfiles.purchaseStatus,
+        commercialStatus: facilityVerticalProfiles.conformityStatus,
       })
       .from(facilityVerticalProfiles)
       .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))
@@ -1290,7 +1274,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         verticalName: row.verticalName,
         isActive: row.isActive,
         commercialStatus: row.commercialStatus,
-        purchaseStatus: row.purchaseStatus,
       };
     }
 

@@ -37,8 +37,6 @@ function facilityRecord(id: number): FacilityListRecord {
     territoryName: null,
     territoryAssignmentStatus: "assigned",
     commercialStatus: null,
-    purchaseStatus: null,
-    conformityStatus: "INCOMPLETE",
     cnesCode: null,
     unitTypeId: null,
     unitSubtypeId: null,
@@ -77,7 +75,6 @@ function fakeRepository(
     ensureVerticalProfile: async () => ({
       verticalId: 1,
       commercialStatus: null,
-      purchaseStatus: null,
       isActive: true,
     }),
   };
