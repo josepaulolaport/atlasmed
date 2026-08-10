@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   businessVerticals,
   facilities,
+  facilityVerticalProfiles,
   orderItems,
   orders,
   persons,
@@ -250,6 +251,32 @@ async function upsertOneOrder(
     return { outcome: "skipped" };
   }
 
+  // Spec 0010 §4 — orders key on the profile, so one must exist before the order
+  // can be written. This THROWS rather than returning a skip: the caller
+  // dead-letters on throw and only counts skips, and an Emultec order is real
+  // revenue. Silently incrementing a counter is how the importer wrote orders
+  // that no per-vertical metric could see in the first place.
+  //
+  // The DLQ is keyed on id_avulsa_emultec, so once the missing profile is created
+  // the order replays cleanly.
+  const [verticalProfile] = await db
+    .select({ id: facilityVerticalProfiles.id })
+    .from(facilityVerticalProfiles)
+    .where(
+      and(
+        eq(facilityVerticalProfiles.facilityId, facility.facilityId),
+        eq(facilityVerticalProfiles.verticalId, verticalId),
+      ),
+    )
+    .limit(1);
+
+  if (!verticalProfile) {
+    throw new Error(
+      `No facility_vertical_profile for facility ${facility.facilityId} in vertical ${verticalId}; ` +
+        `refusing to import Emultec order ${bundle.idAvulsa}. Create the profile, then replay.`,
+    );
+  }
+
   const personId = await resolvePersonId(bundle);
   const status = mapEmultecOrderStatus(bundle.status);
   const orderedAt = parseOrderedAt(bundle.orderedAt);
@@ -266,6 +293,7 @@ async function upsertOneOrder(
     await db
       .update(orders)
       .set({
+        facilityVerticalProfileId: verticalProfile.id,
         facilityId: facility.facilityId,
         verticalId,
         sellerId: seller,
@@ -284,6 +312,7 @@ async function upsertOneOrder(
       .insert(orders)
       .values({
         idAvulsaEmultec: bundle.idAvulsa,
+        facilityVerticalProfileId: verticalProfile.id,
         facilityId: facility.facilityId,
         verticalId,
         sellerId: seller,

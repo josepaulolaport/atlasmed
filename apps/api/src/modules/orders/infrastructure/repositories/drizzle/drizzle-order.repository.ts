@@ -10,6 +10,7 @@ import {
 } from "@atlasmed/database";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
+import { ValidationError } from "../../../../../shared/errors";
 import type {
   CreateOrderInput,
   OrderDetailRecord,
@@ -18,9 +19,17 @@ import type {
   OrderStatus,
 } from "../../../application/interfaces/order.repository.interface";
 
+/**
+ * Since spec 0010 §4 the facility is reached through the profile, so every query
+ * using this must join `facilityVerticalProfiles` on
+ * `orders.facilityVerticalProfileId`.
+ */
 function scopeCondition(scope: OrderScopeFilter) {
   if (scope.isGlobal) return undefined;
-  return inArray(orders.facilityId, scope.facilityIds?.length ? scope.facilityIds : [-1]);
+  return inArray(
+    facilityVerticalProfiles.facilityId,
+    scope.facilityIds?.length ? scope.facilityIds : [-1],
+  );
 }
 
 function personName(firstName: string | null, lastName: string | null, fallback: string | null) {
@@ -44,10 +53,12 @@ export class DrizzleOrderRepository implements OrderRepository {
 
     const conditions = [
       scopeCondition(input.scope),
-      inArray(orders.verticalId, input.verticalIds),
+      inArray(facilityVerticalProfiles.verticalId, input.verticalIds),
     ];
     if (input.statuses?.length) conditions.push(inArray(orders.status, input.statuses));
-    if (input.facilityId) conditions.push(eq(orders.facilityId, input.facilityId));
+    if (input.facilityId) {
+      conditions.push(eq(facilityVerticalProfiles.facilityId, input.facilityId));
+    }
     if (input.sellerId) conditions.push(eq(orders.sellerId, input.sellerId));
     const where = and(...conditions);
     const skip = (input.page - 1) * input.limit;
@@ -57,7 +68,7 @@ export class DrizzleOrderRepository implements OrderRepository {
         .select({
           id: orders.id,
           idAvulsaEmultec: orders.idAvulsaEmultec,
-          verticalId: orders.verticalId,
+          verticalId: facilityVerticalProfiles.verticalId,
           status: orders.status,
           type: orders.type,
           orderedAt: orders.orderedAt,
@@ -75,16 +86,30 @@ export class DrizzleOrderRepository implements OrderRepository {
           itemsTotal: sql<string>`coalesce(sum(${orderItems.quantity} * ${orderItems.unitPrice}), 0)`,
         })
         .from(orders)
-        .innerJoin(facilities, eq(facilities.id, orders.facilityId))
+        .innerJoin(
+          facilityVerticalProfiles,
+          eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+        )
+        .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
         .leftJoin(persons, eq(persons.id, orders.personId))
         .leftJoin(users, eq(users.id, orders.sellerId))
         .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
         .where(where)
-        .groupBy(orders.id, facilities.id, persons.id, users.id)
+        .groupBy(orders.id, facilityVerticalProfiles.id, facilities.id, persons.id, users.id)
         .orderBy(desc(orders.orderedAt), desc(orders.createdAt))
         .offset(skip)
         .limit(input.limit),
-      db.select({ count: sql<number>`cast(count(*) as int)` }).from(orders).where(where),
+      // Shares `where` with the page query above, and that predicate now references
+      // facilityVerticalProfiles — so this must join it too, or Postgres rejects
+      // the statement with "missing FROM-clause entry".
+      db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(orders)
+        .innerJoin(
+          facilityVerticalProfiles,
+          eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+        )
+        .where(where),
     ]);
 
     const previewsByOrderId = input.includeItemPreviews && rows.length > 0
@@ -169,7 +194,11 @@ export class DrizzleOrderRepository implements OrderRepository {
         sellerLastName: users.lastName,
       })
       .from(orders)
-      .innerJoin(facilities, eq(facilities.id, orders.facilityId))
+      .innerJoin(
+        facilityVerticalProfiles,
+        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+      )
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
       .leftJoin(persons, eq(persons.id, orders.personId))
       .leftJoin(users, eq(users.id, orders.sellerId))
       .where(eq(orders.id, id))
@@ -289,9 +318,39 @@ export class DrizzleOrderRepository implements OrderRepository {
 
   async create(input: CreateOrderInput): Promise<OrderDetailRecord> {
     const orderId = await db.transaction(async (tx) => {
+      // Spec 0010 §4 — orders key on the profile. The caller still supplies
+      // (facility, vertical) because that is what the client knows, so resolve it
+      // here. Inside the transaction, so a profile deactivated concurrently
+      // cannot slip between the check and the insert.
+      //
+      // Throws rather than defaulting: an order written without a profile is
+      // invisible to every per-vertical metric, which is the failure this spec
+      // exists to make impossible.
+      const [verticalProfile] = await tx
+        .select({ id: facilityVerticalProfiles.id })
+        .from(facilityVerticalProfiles)
+        .where(
+          and(
+            eq(facilityVerticalProfiles.facilityId, input.facilityId),
+            eq(facilityVerticalProfiles.verticalId, input.verticalId),
+          ),
+        )
+        .limit(1);
+
+      if (!verticalProfile) {
+        throw new ValidationError([
+          {
+            field: "verticalId",
+            message:
+              "This clinic has no profile in that linha, so an order cannot be created for it.",
+          },
+        ]);
+      }
+
       const [created] = await tx
         .insert(orders)
         .values({
+          facilityVerticalProfileId: verticalProfile.id,
           facilityId: input.facilityId,
           verticalId: input.verticalId,
           sellerId: input.sellerId,

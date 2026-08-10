@@ -66,9 +66,15 @@ export interface PotentialRepository {
     definitionId: number;
   }): Promise<void>;
 
-  /** Sum SALE item qty over rolling window, keyed by definition. */
+  /**
+   * Sum SALE item qty over rolling window, keyed by definition.
+   *
+   * `verticalId` is required, not optional: without it this summed every linha's
+   * orders into each linha's penetration (spec 0010 §4).
+   */
   sumAtlasmedQtyByDefinition(input: {
     facilityId: number;
+    verticalId: number;
     definitionIds: number[];
     since: Date;
   }): Promise<DefinitionQtySum[]>;

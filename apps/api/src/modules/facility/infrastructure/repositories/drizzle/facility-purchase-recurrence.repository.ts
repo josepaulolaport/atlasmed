@@ -19,10 +19,21 @@ import { mapFacility } from "./drizzle-facility.repository";
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
+/**
+ * Eligible purchase dates for one profile.
+ *
+ * Keyed on the profile id rather than (facility, vertical) since spec 0010 §4.
+ * The caller has already SELECT ... FOR UPDATE'd that profile row, so this now
+ * reads orders for the exact row it locked instead of re-deriving the same
+ * profile from a pair.
+ *
+ * The predicate must stay identical to the partial index
+ * `orders_valid_purchase_profile_ordered_at_idx`. If they drift, this degrades to
+ * a sequential scan over every order and nothing fails loudly.
+ */
 async function loadPurchaseDates(
   tx: Tx,
-  facilityId: number,
-  verticalId: number,
+  facilityVerticalProfileId: number,
 ): Promise<string[]> {
   return tx
     .select({
@@ -33,8 +44,7 @@ async function loadPurchaseDates(
     .from(orders)
     .where(
       and(
-        eq(orders.facilityId, facilityId),
-        eq(orders.verticalId, verticalId),
+        eq(orders.facilityVerticalProfileId, facilityVerticalProfileId),
         inArray(orders.status, ["APPROVED", "INVOICED"]),
         inArray(orders.type, ["SALE", "CONSIGNMENT"]),
       ),
@@ -101,7 +111,7 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
         | undefined;
       if (!locked) return null;
 
-      const purchaseDates = await loadPurchaseDates(tx, facilityId, verticalId);
+      const purchaseDates = await loadPurchaseDates(tx, locked.id);
       const desired = await callback({
         purchaseDates,
         configuration: {
@@ -182,11 +192,7 @@ export class DrizzleFacilityPurchaseRecurrenceRepository
 
       let changed = false;
       for (const profile of profiles) {
-        const purchaseDates = await loadPurchaseDates(
-          tx,
-          facilityId,
-          profile.verticalId,
-        );
+        const purchaseDates = await loadPurchaseDates(tx, profile.id);
         const configuration: ManualPurchaseConfiguration = {
           manualProfile: profile.manualPurchaseProfile,
           manualIntervalDays: profile.manualPurchaseIntervalDays,

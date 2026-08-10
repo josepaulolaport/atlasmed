@@ -52,6 +52,7 @@ export class ListFacilityPotentialsUseCase {
       }),
       this.deps.potentialRepository.sumAtlasmedQtyByDefinition({
         facilityId: input.facilityId,
+        verticalId: input.verticalId,
         definitionIds,
         since: new Date(Date.now() - ROLLING_DAYS * 86_400_000),
       }),

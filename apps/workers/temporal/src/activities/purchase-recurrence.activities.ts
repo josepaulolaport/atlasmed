@@ -219,9 +219,12 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         const purchaseDates = await tx
           .select({ date: sql<string | Date>`(${orders.orderedAt} at time zone 'UTC')::date`.as("purchase_date") })
           .from(orders)
+          // Keyed on the profile since spec 0010 §4. We are already iterating
+          // profiles, so this reads orders for the row in hand rather than
+          // re-deriving it from (facility, vertical). Predicate must stay
+          // identical to orders_valid_purchase_profile_ordered_at_idx.
           .where(and(
-            eq(orders.facilityId, facilityId),
-            eq(orders.verticalId, profile.verticalId),
+            eq(orders.facilityVerticalProfileId, profile.id),
             inArray(orders.status, ["APPROVED", "INVOICED"]),
             inArray(orders.type, ["SALE", "CONSIGNMENT"]),
           ))
