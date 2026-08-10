@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/loading/atlas_shimmer.dart';
+import 'package:flutter/cupertino.dart'
+    show CupertinoSliverRefreshControl, CupertinoTheme;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
@@ -208,165 +210,172 @@ class _DoctorDetailContent extends ConsumerWidget {
       professionalNotesRepositoryProvider(doctorId),
     );
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Column(
-          children: [
-            Expanded(child: Container(color: detail.primaryColor)),
-            Expanded(child: Container(color: AppColors.surfaceTertiary)),
-          ],
-        ),
-        RefreshIndicator(
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      slivers: [
+        CupertinoSliverRefreshControl(
           onRefresh: () async {
             await Future.wait([
               repository.refresh(),
               notesRepository.refresh(),
             ]);
           },
-          child: SingleChildScrollView(
-            child: ColoredBox(
-              color: AppColors.surfaceTertiary,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _DoctorHeader(detail: detail),
-                  DetailQuickActions(
-                    themeColor: detail.primaryColor,
-                    actions: [
-                      QuickActionItem(
-                        icon: CircleAvatar(
-                          backgroundColor: detail.primaryColor
-                              .createSecondary(),
-                          radius: 18,
-                          child: Icon(
-                            Icons.phone_rounded,
-                            size: 18,
-                            color: detail.primaryColor,
-                          ),
-                        ),
-                        label: const Text('Ligar'),
-                        onTap: () => launchContactUrl(
-                          context,
-                          url: callUrl(detail.phone),
-                          contactLabel: 'telefone',
-                        ),
-                      ),
-                      QuickActionItem(
-                        icon: CircleAvatar(
-                          backgroundColor: detail.primaryColor
-                              .createSecondary(),
-                          radius: 18,
-                          child: Icon(
-                            Icons.chat_rounded,
-                            size: 18,
-                            color: detail.primaryColor,
-                          ),
-                        ),
-                        label: const Text('WhatsApp'),
-                        onTap: () => launchContactUrl(
-                          context,
-                          url: whatsappUrl(detail.whatsapp),
-                          contactLabel: 'WhatsApp',
-                        ),
-                      ),
-                      QuickActionItem(
-                        icon: CircleAvatar(
-                          backgroundColor: detail.primaryColor
-                              .createSecondary(),
-                          radius: 18,
-                          child: Icon(
-                            Icons.email_rounded,
-                            size: 18,
-                            color: detail.primaryColor,
-                          ),
-                        ),
-                        label: const Text('E-mail'),
-                        onTap: () => launchContactUrl(
-                          context,
-                          url: emailUrl(detail.email),
-                          contactLabel: 'e-mail',
-                        ),
-                      ),
-                      QuickActionItem(
-                        icon: CircleAvatar(
-                          backgroundColor: detail.primaryColor
-                              .createSecondary(),
-                          radius: 18,
-                          child: Icon(
-                            Icons.event_rounded,
-                            size: 18,
-                            color: detail.primaryColor,
-                          ),
-                        ),
-                        label: const Text('Nova visita'),
-                        onTap: null,
-                      ),
-                    ],
+          builder:
+              (
+                context,
+                refreshState,
+                pulledExtent,
+                refreshTriggerPullDistance,
+                refreshIndicatorExtent,
+              ) => ColoredBox(
+                color: detail.primaryColor,
+                child: CupertinoTheme(
+                  data: CupertinoTheme.of(
+                    context,
+                  ).copyWith(brightness: Brightness.dark),
+                  child: CupertinoSliverRefreshControl.buildRefreshIndicator(
+                    context,
+                    refreshState,
+                    pulledExtent,
+                    refreshTriggerPullDistance,
+                    refreshIndicatorExtent,
                   ),
-                  const SizedBox(height: 16),
-                  if (facilityId != null && facilityId! > 0) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _DoctorRelationshipCard(
-                        facilityId: facilityId!,
-                        professionalId: doctorId,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (detail.signals.isNotEmpty) ...[
-                    _ProfessionalSignals(
-                      detail: detail,
-                      signals: detail.signals,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _DoctorPersonalCard(
-                    detail: detail,
-                    onEditField: (field) => _editField(context, ref, field),
-                  ),
-                  const SizedBox(height: 16),
-                  ProfessionalRegistrationsSection(
-                    personId: doctorId,
-                    onChanged: () => repository.refresh(),
-                  ),
-                  const SizedBox(height: 16),
-                  if (detail.prescribing.isNotEmpty) ...[
-                    _DoctorPrescribing(
-                      detail: detail,
-                      items: detail.prescribing,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _ProfessionalClinics(detail: detail, clinics: detail.clinics),
-                  const SizedBox(height: 16),
-                  if (detail.visits.isNotEmpty) ...[
-                    _ProfessionalVisits(visits: detail.visits),
-                    const SizedBox(height: 16),
-                  ],
-                  RepositoryBuilder(
-                    repository: notesRepository,
-                    builder: (context, notes, repository) {
-                      return _DoctorNotes(
-                        detail: detail,
-                        notes: notes,
-                        onAddNote: () =>
-                            _showNoteSheet(context, ref, repository),
-                        onEditNote: (note) => _showNoteSheet(
-                          context,
-                          ref,
-                          repository,
-                          existing: note,
-                        ),
-                        onDeleteNote: (note) =>
-                            _confirmDeleteNote(context, repository, note),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
+        ),
+        SliverToBoxAdapter(
+          child: ColoredBox(
+            color: AppColors.surfaceTertiary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DoctorHeader(detail: detail),
+                DetailQuickActions(
+                  themeColor: detail.primaryColor,
+                  actions: [
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: detail.primaryColor.createSecondary(),
+                        radius: 18,
+                        child: Icon(
+                          Icons.phone_rounded,
+                          size: 18,
+                          color: detail.primaryColor,
+                        ),
+                      ),
+                      label: const Text('Ligar'),
+                      onTap: () => launchContactUrl(
+                        context,
+                        url: callUrl(detail.phone),
+                        contactLabel: 'telefone',
+                      ),
+                    ),
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: detail.primaryColor.createSecondary(),
+                        radius: 18,
+                        child: Icon(
+                          Icons.chat_rounded,
+                          size: 18,
+                          color: detail.primaryColor,
+                        ),
+                      ),
+                      label: const Text('WhatsApp'),
+                      onTap: () => launchContactUrl(
+                        context,
+                        url: whatsappUrl(detail.whatsapp),
+                        contactLabel: 'WhatsApp',
+                      ),
+                    ),
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: detail.primaryColor.createSecondary(),
+                        radius: 18,
+                        child: Icon(
+                          Icons.email_rounded,
+                          size: 18,
+                          color: detail.primaryColor,
+                        ),
+                      ),
+                      label: const Text('E-mail'),
+                      onTap: () => launchContactUrl(
+                        context,
+                        url: emailUrl(detail.email),
+                        contactLabel: 'e-mail',
+                      ),
+                    ),
+                    QuickActionItem(
+                      icon: CircleAvatar(
+                        backgroundColor: detail.primaryColor.createSecondary(),
+                        radius: 18,
+                        child: Icon(
+                          Icons.event_rounded,
+                          size: 18,
+                          color: detail.primaryColor,
+                        ),
+                      ),
+                      label: const Text('Nova visita'),
+                      onTap: null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (facilityId != null && facilityId! > 0) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _DoctorRelationshipCard(
+                      facilityId: facilityId!,
+                      professionalId: doctorId,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (detail.signals.isNotEmpty) ...[
+                  _ProfessionalSignals(detail: detail, signals: detail.signals),
+                  const SizedBox(height: 16),
+                ],
+                _DoctorPersonalCard(
+                  detail: detail,
+                  onEditField: (field) => _editField(context, ref, field),
+                ),
+                const SizedBox(height: 16),
+                ProfessionalRegistrationsSection(
+                  personId: doctorId,
+                  onChanged: () => repository.refresh(),
+                ),
+                const SizedBox(height: 16),
+                if (detail.prescribing.isNotEmpty) ...[
+                  _DoctorPrescribing(detail: detail, items: detail.prescribing),
+                  const SizedBox(height: 16),
+                ],
+                _ProfessionalClinics(detail: detail, clinics: detail.clinics),
+                const SizedBox(height: 16),
+                if (detail.visits.isNotEmpty) ...[
+                  _ProfessionalVisits(visits: detail.visits),
+                  const SizedBox(height: 16),
+                ],
+                RepositoryBuilder(
+                  repository: notesRepository,
+                  builder: (context, notes, repository) {
+                    return _DoctorNotes(
+                      detail: detail,
+                      notes: notes,
+                      onAddNote: () => _showNoteSheet(context, ref, repository),
+                      onEditNote: (note) => _showNoteSheet(
+                        context,
+                        ref,
+                        repository,
+                        existing: note,
+                      ),
+                      onDeleteNote: (note) =>
+                          _confirmDeleteNote(context, repository, note),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
           ),
         ),

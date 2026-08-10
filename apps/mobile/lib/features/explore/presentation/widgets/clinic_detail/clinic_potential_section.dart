@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clin
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_potential_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -44,7 +45,7 @@ class ClinicPotentialSection extends ConsumerWidget {
                   child: const Text(
                     'Editar potencial',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.navyBright,
                     ),
@@ -55,7 +56,11 @@ class ClinicPotentialSection extends ConsumerWidget {
           const ClinicDetailCard(
             child: Text(
               'Selecione uma linha comercial para ver o potencial.',
-              style: TextStyle(fontSize: 13, color: AppColors.gray400),
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: AppColors.gray500,
+              ),
             ),
           )
         else
@@ -78,7 +83,7 @@ class ClinicPotentialSection extends ConsumerWidget {
                   Text(
                     'Não foi possível carregar potencial.',
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: AppColors.gray500,
                     ),
                   ),
@@ -93,15 +98,15 @@ class ClinicPotentialSection extends ConsumerWidget {
             ),
             data: (page) {
               if (page == null || page.items.isEmpty) {
-                return const ClinicDetailCard(
-                  child: Text(
-                    'Nenhum campo de potencial configurado para esta linha.',
-                    style: TextStyle(fontSize: 13, color: AppColors.gray400),
-                  ),
+                return const ClinicaEmptySection(
+                  icon: Icons.insights_outlined,
+                  title: 'Nenhum campo de potencial configurado',
+                  description:
+                      'Os campos de potencial desta linha aparecerão aqui quando forem configurados.',
                 );
               }
               return ClinicDetailCard(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                 child: Column(
                   children: [
                     for (var i = 0; i < page.items.length; i++) ...[
@@ -166,7 +171,8 @@ class _PotentialRow extends StatelessWidget {
         Text(
           item.label,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 15,
+            height: 1.25,
             fontWeight: FontWeight.w700,
             color: AppColors.navyDeep,
           ),
@@ -182,7 +188,7 @@ class _PotentialRow extends StatelessWidget {
             ),
             Expanded(
               child: _Metric(
-                label: 'Qtd AtlasMed (média/mês)',
+                label: 'AtlasMed/mês',
                 value: _fmtQty(item.atlasmedMonthlyAvgQty),
               ),
             ),
@@ -215,16 +221,20 @@ class _Metric extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 10.5,
+            fontSize: 12,
+            height: 1.25,
             fontWeight: FontWeight.w500,
-            color: AppColors.gray400,
+            color: AppColors.gray500,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           value,
           style: const TextStyle(
-            fontSize: 15,
+            fontSize: 16,
+            height: 1.2,
             fontWeight: FontWeight.w700,
             color: AppColors.navyDeep,
           ),

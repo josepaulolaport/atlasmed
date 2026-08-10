@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:device_preview/device_preview.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:atlasmed_mobile_app/firebase_options.dart';
@@ -31,5 +33,9 @@ void main() async {
   // Configura o armazenamento de cache dos repositórios (usa Hive internamente)
   BaseRepository.storage = await HiveRepositoryCacheStorage.create();
 
-  runApp(const ProviderScope(child: AtlasMedApp()));
+  // No web o app roda sempre dentro do Device Preview (frame + toolbar de
+  // dispositivo) para simular o visual mobile no navegador. Em plataformas
+  // nativas o Device Preview fica desativado.
+  final app = const ProviderScope(child: AtlasMedApp());
+  runApp(kIsWeb ? DevicePreview(enabled: true, builder: (_) => app) : app);
 }
