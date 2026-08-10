@@ -86,7 +86,13 @@ class _ClinicRegistrationDocumentDetailScreenState
     final submittedAt =
         approved?.submittedAt ?? _document.latestSubmittedAt ?? DateTime.now();
     final version = approved?.version ?? 1;
-    final viewable = _document.files
+    // "DOCUMENTO ATUAL" is labelled "Versão aprovada vN", so it must render the
+    // approved document's own files. The top-level `files` describes the
+    // WORKING document (the draft the rep is composing), which is what the
+    // compose screen polls — using it here made the label lie on every
+    // re-upload over an approved requirement.
+    final currentFiles = approved?.files ?? _document.files;
+    final viewable = currentFiles
         .where((f) => f.canView && f.fileAssetId > 0)
         .toList(growable: false);
     final previewPages = [
