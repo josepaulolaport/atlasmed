@@ -547,6 +547,13 @@
       "when": 1786252265488,
       "tag": "0077_emultec_order_import_ops",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1786360657728,
+      "tag": "0078_orders_key_on_profile",
+      "breakpoints": true
     }
   ]
 }

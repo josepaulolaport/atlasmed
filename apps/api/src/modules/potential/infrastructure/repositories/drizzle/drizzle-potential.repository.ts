@@ -1,5 +1,6 @@
 import {
   facilityPotentialValues,
+  facilityVerticalProfiles,
   orderItems,
   orders,
   productPotentialDefinitions,
@@ -176,8 +177,18 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       );
   }
 
+  /**
+   * Penetration numerator.
+   *
+   * Previously filtered `orders.facility_id` alone and ignored the vertical
+   * entirely, so a clinic active in two linhas counted *every* linha's sales
+   * toward each one's penetration. Spec 0010 §4 predicted this would be fixed by
+   * the re-keying, and it is: orders now carry the profile, and the profile is
+   * what a vertical means.
+   */
   async sumAtlasmedQtyByDefinition(input: {
     facilityId: number;
+    verticalId: number;
     definitionIds: number[];
     since: Date;
   }): Promise<DefinitionQtySum[]> {
@@ -190,12 +201,17 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       .from(orderItems)
       .innerJoin(orders, eq(orders.id, orderItems.orderId))
       .innerJoin(
+        facilityVerticalProfiles,
+        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+      )
+      .innerJoin(
         productPotentialLinks,
         eq(productPotentialLinks.productId, orderItems.productId),
       )
       .where(
         and(
-          eq(orders.facilityId, input.facilityId),
+          eq(facilityVerticalProfiles.facilityId, input.facilityId),
+          eq(facilityVerticalProfiles.verticalId, input.verticalId),
           eq(orders.type, "SALE"),
           inArray(orders.status, ["APPROVED", "INVOICED"]),
           gte(orders.orderedAt, input.since),

@@ -13,7 +13,7 @@ import {
 import { relations, sql } from "drizzle-orm";
 import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
-import { facilities } from "./facilities";
+import { facilities, facilityVerticalProfiles } from "./facilities";
 import { persons } from "./persons";
 import { products } from "./catalog";
 import { interactions } from "./calendar";
@@ -25,8 +25,28 @@ export const orders = pgTable(
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     /** Emultec avulsa (order header) id. */
     idAvulsaEmultec: bigint("id_avulsa_emultec", { mode: "number" }),
+    /**
+     * The commercial unit this order belongs to (spec 0010 §4). Read this, not
+     * the pair below.
+     *
+     * Keying here rather than on (facility, vertical) is what makes an order
+     * without a profile impossible — the database enforces what the Emultec
+     * importer used to be able to skip. It also fixes the penetration numerator,
+     * which filtered facility only and silently ignored the vertical.
+     */
+    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
+      .notNull()
+      .references(() => facilityVerticalProfiles.id, { onDelete: "restrict" }),
+    /**
+     * @deprecated Superseded by `facilityVerticalProfileId`. Dropped in migration
+     * 0079 — writes must keep populating it until then (both are NOT NULL), reads
+     * must not use it.
+     */
     facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id),
-    /** Commercial vertical for this order (one vertical per order). */
+    /**
+     * @deprecated Superseded by `facilityVerticalProfileId`; derivable from it.
+     * Dropped in migration 0079 — same rule as `facilityId`.
+     */
     verticalId: bigint("vertical_id", { mode: "number" })
       .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
     sellerId: bigint("seller_id", { mode: "number" }).references(() => users.id),
@@ -69,6 +89,17 @@ export const orders = pgTable(
       .on(t.facilityId, t.verticalId, t.orderedAt.desc())
       .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
     index("orders_updated_at_facility_id_idx").on(t.updatedAt, t.facilityId),
+    index("orders_facility_vertical_profile_id_idx").on(t.facilityVerticalProfileId),
+    /**
+     * The funnel's index. `loadPurchaseDates` filters exactly this predicate; if it
+     * stops matching, the funnel degrades to a sequential scan over every order and
+     * nothing fails loudly. Replaces the (facility, vertical) form in 0079.
+     */
+    index("orders_valid_purchase_profile_ordered_at_idx")
+      .on(t.facilityVerticalProfileId, t.orderedAt.desc())
+      .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
+    /** Backs incremental search reindexing: orders touched since T, by profile. */
+    index("orders_updated_at_profile_id_idx").on(t.updatedAt, t.facilityVerticalProfileId),
     unique("orders_id_avulsa_emultec_key").on(t.idAvulsaEmultec),
   ]
 );
@@ -124,6 +155,11 @@ export const orderItems = pgTable(
 );
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
+  verticalProfile: one(facilityVerticalProfiles, {
+    fields: [orders.facilityVerticalProfileId],
+    references: [facilityVerticalProfiles.id],
+  }),
+  /** @deprecated Reach the facility through `verticalProfile`. Dropped in 0079. */
   facility: one(facilities, { fields: [orders.facilityId], references: [facilities.id] }),
   interaction: one(interactions, {
     fields: [orders.interactionId],
