@@ -19,8 +19,21 @@ export const EMULTEC_ORDER_IMPORT_SCHEDULES = [
 ] as const;
 
 export const EMULTEC_ORDER_IMPORT_SCHEDULE_ARGS = {
-  mode: "BACKFILL" as const,
+  /**
+   * HYBRID, not BACKFILL. A timer that fires every 10 minutes must not launch a
+   * full backfill each time — BACKFILL pages from the watermark with no natural
+   * stopping point, against a third-party production database. HYBRID is what
+   * the runs that actually succeeded on 2026-08-09 used.
+   *
+   * A real backfill is a deliberate, one-off run with an explicit maxPages.
+   */
+  mode: "HYBRID" as const,
   pageSize: 200,
+  /**
+   * Belt and braces with the workflow's own default: a scheduled run reads at
+   * most 50 x 200 rows, far more than any 10-minute window can produce.
+   */
+  maxPages: 50,
   triggerPurchaseRecurrence: true,
 };
 
@@ -34,8 +47,21 @@ function scheduleOptions(
       intervals: [{ every: "10m" as const }],
     },
     policies: {
-      overlap: ScheduleOverlapPolicy.BUFFER_ONE,
-      catchupWindow: "1h" as const,
+      /**
+       * SKIP, not BUFFER_ONE. Only one import may touch Emultec at a time, and
+       * a tick that arrives while one is running is dropped rather than queued.
+       *
+       * BUFFER_ONE is what turned a single stuck run on 2026-08-09 into a dead
+       * schedule: the buffered run waited behind it and every later tick was
+       * discarded anyway, so the queue bought nothing and hid the stall. With
+       * SKIP the next healthy tick simply runs.
+       */
+      overlap: ScheduleOverlapPolicy.SKIP,
+      /**
+       * No catch-up. After an outage we want the next scheduled read, not a
+       * burst of backdated ones aimed at someone else's database.
+       */
+      catchupWindow: "1m" as const,
     },
     action: {
       type: "startWorkflow" as const,

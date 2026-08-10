@@ -1,12 +1,23 @@
 import {
   log,
   proxyActivities,
+  sleep,
   startChild,
   ParentClosePolicy,
   workflowInfo,
 } from "@temporalio/workflow";
 
 export const EMULTEC_ORDER_IMPORT_ACTIVITY_RETRY = { maximumAttempts: 3 } as const;
+
+/** Safety cap on pages per phase when the caller does not set one. */
+export const DEFAULT_MAX_PAGES = 50;
+
+/**
+ * Pause between pages, so a run reads Emultec in steady sips rather than as
+ * fast as their server can answer. At 200 rows a page this is roughly 400
+ * rows/second — ample for the volume, gentle on a database we do not own.
+ */
+export const PAGE_DELAY_MS = 500;
 
 const activities = proxyActivities<typeof import("../activities/index")>({
   startToCloseTimeout: "30 minutes",
@@ -113,6 +124,9 @@ async function runPhase(input: {
     if (page.fetched === 0 && !progressed) break;
     if (page.fetched > 0 && page.fetched < input.pageSize) break;
     if (page.fetched === 0 && progressed) continue;
+
+    // Only between pages we are actually going to follow — never after the last.
+    await sleep(PAGE_DELAY_MS);
   }
 
   return {
@@ -136,7 +150,16 @@ export async function emultecOrderImportWorkflow(
 ): Promise<EmultecOrderImportWorkflowResult> {
   const mode = input.mode ?? "HYBRID";
   const pageSize = input.pageSize ?? 100;
-  const maxPages = input.maxPages ?? Number.POSITIVE_INFINITY;
+  /**
+   * Emultec is a third-party production database. An unbounded page loop is a
+   * promise to read their entire order history as fast as they can serve it,
+   * every time this runs — and the schedule fires every 10 minutes.
+   *
+   * 50 pages x 200 rows covers ~10k orders per run, far more than a 10-minute
+   * window can produce. A genuine backfill passes maxPages explicitly and is
+   * run deliberately, not on a timer.
+   */
+  const maxPages = input.maxPages ?? DEFAULT_MAX_PAGES;
   const reconcileDays = input.reconcileDays ?? 30;
   const startedAt = new Date(workflowInfo().startTime);
   const nowIso = startedAt.toISOString();
