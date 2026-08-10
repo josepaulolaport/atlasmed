@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
@@ -158,10 +160,23 @@ class GeolocatorLocationPlatform implements LocationPlatform {
     return Geolocator.isLocationServiceEnabled();
   }
 
+  /// Browsers apply no timeout to an unanswered geolocation prompt (Chrome
+  /// waits indefinitely), so without a bound the location gate would sit in
+  /// "checking" forever on web. With this deadline the flow degrades to the
+  /// blocked state, whose retry button re-prompts with a user gesture; the
+  /// periodic revalidate then self-heals once permission is granted.
+  static const _webPermissionDeadline = Duration(seconds: 20);
+
   @override
   Future<LocationPermissionStatus> requestPermission() async {
     if (_fixedLocation != null) return LocationPermissionStatus.whileInUse;
-    return _permissionFrom(await Geolocator.requestPermission());
+    final request = Geolocator.requestPermission();
+    if (!kIsWeb) return _permissionFrom(await request);
+    try {
+      return _permissionFrom(await request.timeout(_webPermissionDeadline));
+    } on TimeoutException {
+      throw const LocationPlatformException();
+    }
   }
 
   @override
