@@ -172,6 +172,191 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     ]);
     expect(result.billing.name).toBe("Email Administrativo");
   });
+
+  // D-08 regression (spec 0011 §1, §8.1). The checklist used to serialize files
+  // only for an APPROVED document, so a freshly uploaded DRAFT came back with
+  // `files: []`; the mobile compose screen matches poll results on
+  // `files[].fileAssetId`, never matched, and "Enviar" stayed disabled forever.
+  it("returns the DRAFT document's files and status in the checklist", async () => {
+    const listDocumentFiles = mock(async (documentId: number) =>
+      documentId === 100
+        ? [
+            {
+              id: 1,
+              submissionDocumentId: 100,
+              fileAssetId: 501,
+              position: 1,
+              role: "PAGE",
+              createdAt: now,
+              fileAsset: {
+                id: 501,
+                originalFilename: "rg-frente.jpg",
+                status: "READY",
+                declaredMimeType: "image/jpeg",
+                detectedMimeType: "image/jpeg",
+              },
+            },
+          ]
+        : []
+    );
+
+    const result = await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => facility({ legalDocumentType: "CPF" }),
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [requirement(1, "identidade", "CPF")],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      storage: {
+        upload: async () => undefined,
+        delete: async () => undefined,
+        download: async () => new Uint8Array(),
+      },
+      completionService: {
+        evaluateAndApply: async () => ({
+          complete: false,
+          conformityStatus: "INCOMPLETE",
+          commercialStatus: null,
+        }),
+      } as unknown as FacilityCadastroCompletionService,
+      cadastroRepository: {
+        findDraftByFacility: async () => ({
+          id: 10,
+          facilityId: 1,
+          status: "DRAFT",
+          version: 1,
+          submittedAt: null,
+        }),
+        findLatestByFacility: async () => null,
+        findDocumentsBySubmission: async () => [
+          {
+            id: 100,
+            submissionId: 10,
+            requirementId: 1,
+            title: "Identidade",
+            status: "DRAFT",
+            version: 1,
+            reviewComment: null,
+          },
+        ],
+        // Nothing has been sent for review yet.
+        listDocumentsForFacilityRequirement: async () => [],
+        listDocumentFiles,
+      } as never,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    const doc = result.documents[0]!;
+    expect(doc.documentId).toBe(100);
+    expect(doc.documentStatus).toBe("DRAFT");
+    expect(doc.files).toEqual([
+      {
+        fileAssetId: 501,
+        position: 1,
+        role: "PAGE",
+        fileName: "rg-frente.jpg",
+        status: "READY",
+        contentType: "image/jpeg",
+      },
+    ]);
+    // The pill is still "Pendente": nothing has been submitted for review.
+    expect(doc.uiStatus).toBe("missing");
+  });
+
+  it("keeps the approved document as the current one for the checklist", async () => {
+    const listDocumentFiles = mock(async (documentId: number) =>
+      documentId === 200
+        ? [
+            {
+              id: 2,
+              submissionDocumentId: 200,
+              fileAssetId: 900,
+              position: 1,
+              role: "PAGE",
+              createdAt: now,
+              fileAsset: {
+                id: 900,
+                originalFilename: "aprovado.pdf",
+                status: "READY",
+                declaredMimeType: "application/pdf",
+                detectedMimeType: "application/pdf",
+              },
+            },
+          ]
+        : []
+    );
+
+    const result = await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => facility({ legalDocumentType: "CPF" }),
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [requirement(1, "identidade", "CPF")],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      storage: {
+        upload: async () => undefined,
+        delete: async () => undefined,
+        download: async () => new Uint8Array(),
+      },
+      completionService: {
+        evaluateAndApply: async () => ({
+          complete: false,
+          conformityStatus: "INCOMPLETE",
+          commercialStatus: null,
+        }),
+      } as unknown as FacilityCadastroCompletionService,
+      cadastroRepository: {
+        findDraftByFacility: async () => ({
+          id: 11,
+          facilityId: 1,
+          status: "DRAFT",
+          version: 2,
+          submittedAt: null,
+        }),
+        findLatestByFacility: async () => null,
+        // A brand-new draft document replacing an already approved one.
+        findDocumentsBySubmission: async () => [
+          {
+            id: 101,
+            submissionId: 11,
+            requirementId: 1,
+            title: "Identidade",
+            status: "DRAFT",
+            version: 2,
+            reviewComment: null,
+          },
+        ],
+        listDocumentsForFacilityRequirement: async () => [
+          {
+            document: {
+              id: 200,
+              submissionId: 9,
+              requirementId: 1,
+              title: "Identidade",
+              status: "APPROVED",
+              version: 1,
+              reviewComment: null,
+            },
+            submission: {
+              id: 9,
+              facilityId: 1,
+              status: "APPROVED",
+              version: 1,
+              submittedAt: now,
+            },
+          },
+        ],
+        listDocumentFiles,
+      } as never,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    const doc = result.documents[0]!;
+    expect(doc.uiStatus).toBe("approved");
+    expect(doc.documentId).toBe(200);
+    expect(doc.documentStatus).toBe("APPROVED");
+    expect(doc.files.map((f) => f.fileAssetId)).toEqual([900]);
+  });
 });
 
 const verticalId = 1;
