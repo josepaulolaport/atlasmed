@@ -27,6 +27,10 @@ jobs:
       MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
       MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
       MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+      # Required by validate-production-env.yml. A workflow_call missing a
+      # required secret fails at startup, before any job runs.
+      STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+      STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
 
   deploy-infra:
     needs: validate-production-env
@@ -103,6 +107,15 @@ jobs:
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
           STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
+          # This job deploys only infra services, so it does not consume these.
+          # They are here because the compose file it hands to `uc deploy` also
+          # defines the API and workers, and those lost their defaults at the R2
+          # cutover — leaving these unset substitutes empty strings the moment
+          # anyone adds those services to the list below.
+          STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
+          STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
+          STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+          STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
         run: |
           for attempt in 1 2; do
             if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes; then
