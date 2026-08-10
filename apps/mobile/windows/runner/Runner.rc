@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "Atlasmed" "\0"
-            VALUE "FileDescription", "atlasmed_mobile_app" "\0"
+            VALUE "FileDescription", "AtlasMed" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "atlasmed_mobile_app" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 Atlasmed. All rights reserved." "\0"
             VALUE "OriginalFilename", "atlasmed_mobile_app.exe" "\0"
-            VALUE "ProductName", "atlasmed_mobile_app" "\0"
+            VALUE "ProductName", "AtlasMed" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
