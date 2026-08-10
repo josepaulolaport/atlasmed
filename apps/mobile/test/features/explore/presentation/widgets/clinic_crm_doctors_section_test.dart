@@ -43,4 +43,41 @@ void main() {
       greaterThan(tester.getTopLeft(find.text('Dra. Ana Lima')).dy),
     );
   });
+
+  testWidgets('editable tile fits a narrow screen with larger text', (
+    tester,
+  ) async {
+    const doctor = ProfessionalRoster(
+      id: 1,
+      name: 'Dra. Ana Carolina Lima de Oliveira',
+      initials: 'AL',
+      hue: 210,
+      specialty: 'Cardiologia intervencionista',
+      crm: 'CRM 123456 SP',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(320, 800),
+              textScaler: TextScaler.linear(1.4),
+            ),
+            child: SizedBox(
+              width: 320,
+              child: ClinicCrmDoctorsSection(
+                doctors: const [doctor],
+                facilityId: 10,
+                onDoctorUpdated: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Definir papel'), findsOneWidget);
+  });
 }

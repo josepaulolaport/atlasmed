@@ -86,7 +86,7 @@ class _DoctorRow extends StatelessWidget {
     final badges = _badges;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: InkWell(
         onTap: () => DoctorDetailRoute(
           id: doctor.id,
@@ -96,7 +96,7 @@ class _DoctorRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 18,
+              radius: 20,
               backgroundColor: HSLColor.fromAHSL(
                 1,
                 doctor.hue,
@@ -106,7 +106,7 @@ class _DoctorRow extends StatelessWidget {
               child: Text(
                 doctor.initials,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: HSLColor.fromAHSL(1, doctor.hue, 0.55, 0.32).toColor(),
                 ),
@@ -120,7 +120,8 @@ class _DoctorRow extends StatelessWidget {
                   Text(
                     doctor.name,
                     style: const TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 14,
+                      height: 1.25,
                       fontWeight: FontWeight.w700,
                       color: AppColors.gray900,
                     ),
@@ -132,7 +133,8 @@ class _DoctorRow extends StatelessWidget {
                     Text(
                       doctor.specialty!,
                       style: const TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 13,
+                        height: 1.25,
                         color: AppColors.gray500,
                       ),
                       maxLines: 1,
@@ -144,8 +146,9 @@ class _DoctorRow extends StatelessWidget {
                     Text(
                       doctor.crm!,
                       style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.gray400,
+                        fontSize: 12.5,
+                        height: 1.25,
+                        color: AppColors.gray500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -158,38 +161,49 @@ class _DoctorRow extends StatelessWidget {
               InkWell(
                 onTap: () => _editRoles(context),
                 borderRadius: BorderRadius.circular(8),
-                child: badges.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          'Definir papel',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.navyBright,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                    maxWidth: 140,
+                  ),
+                  child: Center(
+                    child: badges.isEmpty
+                        ? const Text(
+                            'Definir papel',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.navyBright,
+                            ),
+                          )
+                        : Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: 6,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              ...badges,
+                              const Icon(
+                                Icons.edit_outlined,
+                                size: 16,
+                                color: AppColors.navyBright,
+                              ),
+                            ],
                           ),
-                        ),
-                      )
-                    : Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          ...badges,
-                          const Icon(
-                            Icons.edit_outlined,
-                            size: 14,
-                            color: AppColors.navyBright,
-                          ),
-                        ],
-                      ),
+                  ),
+                ),
               )
             else if (badges.isNotEmpty)
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: badges,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 128),
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: badges,
+                ),
               ),
           ],
         ),
@@ -220,7 +234,7 @@ class _Flag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.blueLight,
         borderRadius: BorderRadius.circular(8),
@@ -228,7 +242,7 @@ class _Flag extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: AppColors.navyBright,
         ),

@@ -106,4 +106,37 @@ void main() {
       expect(find.text('Carregando…'), findsNothing);
     },
   );
+
+  testWidgets('tile fits a narrow screen with larger text', (tester) async {
+    const professional = AdministrativeProfessional(
+      id: 1,
+      name: 'Carlos Eduardo Mendes de Albuquerque',
+      roleTitle: 'Diretor administrativo e financeiro',
+      contactType: 'DECISOR',
+      roleIds: [3],
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MediaQuery(
+            data: MediaQueryData(
+              size: Size(320, 800),
+              textScaler: TextScaler.linear(1.4),
+            ),
+            child: SizedBox(
+              width: 320,
+              child: ClinicAdminProfessionalsSection(
+                professionals: [professional],
+                facilityName: 'Clínica Teste',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Decisor'), findsOneWidget);
+  });
 }

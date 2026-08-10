@@ -76,6 +76,35 @@ void main() {
     expect(find.text('Clínica Central'), findsOneWidget);
   });
 
+  testWidgets('header supports a narrow screen with larger text', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: MediaQueryData(
+                size: Size(320, 800),
+                textScaler: TextScaler.linear(1.4),
+              ),
+              child: SizedBox(
+                width: 320,
+                child: ClinicHeaderSection(
+                  detail: _facility,
+                  sections: null,
+                  photos: null,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('field notes shows loading indicator while notes resolve', (
     tester,
   ) async {
@@ -151,4 +180,55 @@ void main() {
       );
     },
   );
+
+  testWidgets('potential metrics fit a narrow screen with larger text', (
+    tester,
+  ) async {
+    const page = FacilityPotentialsPage(
+      verticalId: 7,
+      items: [
+        FacilityPotentialItem(
+          definitionId: 1,
+          key: 'procedimentos',
+          label: 'Procedimentos mensais',
+          potentialQuantity: 120,
+          atlasmedMonthlyAvgQty: 48,
+          penetration: 0.4,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          clinicDetailActiveLinhaIdProvider(1).overrideWith((ref) => 7),
+          clinicDetailPotentialsProvider(1).overrideWith((ref) async => page),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: MediaQueryData(
+                size: Size(320, 800),
+                textScaler: TextScaler.linear(1.4),
+              ),
+              child: SizedBox(
+                width: 320,
+                child: ClinicPotentialSection(facilityId: 1, canEdit: true),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Procedimentos mensais'), findsOneWidget);
+    expect(find.text('40%'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Editar potencial')).dy,
+      greaterThan(tester.getTopLeft(find.text('Potencial & share')).dy),
+    );
+  });
 }

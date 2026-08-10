@@ -1022,22 +1022,11 @@ class _ClinicDetailContent extends ConsumerWidget {
                         : null,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Compras',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0f1729),
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      if (canMutate)
-                        _HeaderLinkButton(
+                ClinicSectionHeader(
+                  title: 'Compras',
+                  trailing: !canMutate
+                      ? null
+                      : _HeaderLinkButton(
                           label: 'Editar',
                           onTap: () => _openPurchaseRecurrenceEditor(
                             context,
@@ -1045,8 +1034,6 @@ class _ClinicDetailContent extends ConsumerWidget {
                             detail,
                           ),
                         ),
-                    ],
-                  ),
                 ),
                 PurchaseRecurrenceSection(value: detail.purchaseRecurrence),
                 if (canSuggest) const _SuggestEditBanner(),
@@ -1109,14 +1096,19 @@ class _HeaderLinkButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.navyBright,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.navyBright,
+              ),
+            ),
           ),
         ),
       ),
@@ -1129,18 +1121,16 @@ class _SectionLoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      height: 80,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Center(
-        child: SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2),
+    return const ClinicDetailCard(
+      padding: EdgeInsets.zero,
+      child: SizedBox(
+        height: 80,
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
         ),
       ),
     );
@@ -1168,7 +1158,7 @@ class _SectionErrorCard extends StatelessWidget {
           Text(
             message,
             style: const TextStyle(
-              fontSize: 12.5,
+              fontSize: 14,
               color: AppColors.red,
               height: 1.4,
             ),
@@ -1202,7 +1192,7 @@ class _SuggestEditBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceTertiary,
         borderRadius: BorderRadius.circular(14),
@@ -1213,15 +1203,19 @@ class _SuggestEditBanner extends StatelessWidget {
         children: [
           const Icon(
             Icons.edit_note_rounded,
-            size: 18,
-            color: AppColors.gray400,
+            size: 20,
+            color: AppColors.gray500,
           ),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
               'Toque nos ícones em qualquer campo. Sugestões passam por '
               'revisão administrativa antes de entrar no perfil.',
-              style: TextStyle(fontSize: 11.5, color: AppColors.gray500),
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.4,
+                color: AppColors.gray600,
+              ),
             ),
           ),
         ],

@@ -83,7 +83,7 @@ class _ProfessionalRow extends StatelessWidget {
     final badges = professional.roleChipLabels;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: InkWell(
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
@@ -98,12 +98,12 @@ class _ProfessionalRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAvatar(
-              radius: 18,
+              radius: 20,
               backgroundColor: AppColors.blueLight,
               child: Text(
                 _initials(professional.name),
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.navyBright,
                 ),
@@ -117,7 +117,8 @@ class _ProfessionalRow extends StatelessWidget {
                   Text(
                     professional.name,
                     style: const TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 14,
+                      height: 1.25,
                       fontWeight: FontWeight.w700,
                       color: AppColors.gray900,
                     ),
@@ -129,7 +130,8 @@ class _ProfessionalRow extends StatelessWidget {
                     Text(
                       professional.roleTitle!,
                       style: const TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 13,
+                        height: 1.25,
                         color: AppColors.gray500,
                       ),
                       maxLines: 1,
@@ -140,10 +142,14 @@ class _ProfessionalRow extends StatelessWidget {
               ),
             ),
             if (badges.isNotEmpty)
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [for (final label in badges) _Flag(label: label)],
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 128),
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [for (final label in badges) _Flag(label: label)],
+                ),
               ),
           ],
         ),
@@ -168,7 +174,7 @@ class _Flag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.blueLight,
         borderRadius: BorderRadius.circular(8),
@@ -176,7 +182,7 @@ class _Flag extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: AppColors.navyBright,
         ),
