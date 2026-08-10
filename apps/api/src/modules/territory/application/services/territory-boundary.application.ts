@@ -186,7 +186,7 @@ export interface AtomicBoundaryCommitDeps {
   onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
 }
 
-function toCommitCommand(
+export function toBoundaryCommitCommand(
   territoryId: number,
   plan: TerritoryBoundaryPlan,
   assignments: { endForProfileIds: number[]; endReason: string }
@@ -215,29 +215,15 @@ function toCommitCommand(
 }
 
 /**
- * Spec 0009 R1: commit a validated plan together with the rep de-assignments it
- * requires, in a single transaction owned by the writer.
- *
- * Notifications fire only after the writer resolves — i.e. after commit — so a
- * membership recompute or scope-cache invalidation never reads uncommitted rows
- * or acts on a change that later rolled back.
+ * Describe what a committed plan produced. Pure: the caller publishes side
+ * effects itself, after the transaction commits.
  */
-export async function commitTerritoryBoundaryAtomically(
-  deps: AtomicBoundaryCommitDeps,
-  territory: TerritoryRecord,
+export function resolveBoundaryOutcome(
   plan: TerritoryBoundaryPlan,
-  assignments: { endForProfileIds: number[]; endReason: string }
-): Promise<TerritoryBoundaryResolution> {
-  const result = await deps.boundaryWriter.commitBoundaryChange(
-    toCommitCommand(territory.id, plan, assignments)
-  );
-
-  // Committed. Side effects are safe to publish from here on.
+  result: { repPatchCount?: number | null }
+): TerritoryBoundaryResolution {
   if (plan.mode === "rep_patch") {
     // Spec 0006: patch edits do not recompute clinic→zone membership.
-    await deps.onBoundaryChanged?.(territory.id);
-    await deps.onManagerTerritoryChanged?.(plan.managerTerritoryId);
-
     return {
       mode: "rep_patch",
       managerTerritoryId: plan.managerTerritoryId,
@@ -247,8 +233,6 @@ export async function commitTerritoryBoundaryAtomically(
   }
 
   if (plan.mode === "manager_zone") {
-    await deps.onBoundaryChanged?.(territory.id);
-
     return { mode: "manager_zone", repPatchCount: result.repPatchCount ?? 0 };
   }
 

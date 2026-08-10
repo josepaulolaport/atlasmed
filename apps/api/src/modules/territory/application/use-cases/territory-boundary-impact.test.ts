@@ -160,7 +160,20 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
         territoryTypeRepository: territoryTypeRepository as never,
         spatialRepository: spatialRepository as never,
       }),
-      boundaryWriter: writer as never,
+      // Spec 0009 R1: the save path runs through the transaction port. The fake
+      // hands back the same repositories, so the test still exercises the real
+      // ordering — lock, validate, recompute, de-assign, write.
+      transactionPort: {
+        run: async (fn: (deps: never) => Promise<unknown>) =>
+          fn({
+            territoryRepository,
+            territoryTypeRepository,
+            spatialRepository,
+            boundaryWriter: writer,
+            lockTerritory: async () => true,
+          } as never),
+      } as never,
+      buildContainmentService: (repos) => new TerritoryContainmentService(repos),
       onBoundaryChanged,
     });
 

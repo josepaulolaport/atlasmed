@@ -1,4 +1,5 @@
 import { db } from "../../../../../infrastructure/database/db";
+import type { AnyDatabase } from "@atlasmed/database";
 import { sql } from "drizzle-orm";
 import type {
   GeoJsonGeometry,
@@ -16,8 +17,15 @@ import {
 } from "../../../application/constants/territory-roles.constants";
 
 export class DrizzleTerritorySpatialRepository implements TerritorySpatialRepository {
+  /**
+ * Accepts a transaction handle so spec 0009 R1 can validate a boundary inside
+ * the same transaction that later mutates it. Defaults to the shared pool, so
+ * every existing caller is unchanged.
+ */
+  constructor(private readonly database: AnyDatabase = db) {}
+
   async getBoundaryAsGeoJson(territoryId: number): Promise<GeoJsonGeometry | null> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT ST_AsGeoJSON(boundary)::text AS geojson
       FROM territories
       WHERE id = ${territoryId}
@@ -41,7 +49,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
 
     const geoJsonString = JSON.stringify(geoJson);
 
-    const validation = await db.execute(sql`
+    const validation = await this.database.execute(sql`
       SELECT
         ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)) AS is_valid,
         ST_IsValidReason(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)) AS reason
@@ -55,7 +63,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         );
       }
 
-      await db.execute(sql`
+      await this.database.execute(sql`
         UPDATE territories
         SET boundary = ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)),
             updated_at = NOW()
@@ -64,7 +72,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       return;
     }
 
-    await db.execute(sql`
+    await this.database.execute(sql`
       UPDATE territories
       SET boundary = ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326),
           updated_at = NOW()
@@ -73,7 +81,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }
 
   async deleteBoundary(territoryId: number): Promise<void> {
-    await db.execute(sql`
+    await this.database.execute(sql`
       UPDATE territories
       SET boundary = NULL,
           updated_at = NOW()
@@ -82,7 +90,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }
 
   async hasBoundary(territoryId: number): Promise<boolean> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT boundary IS NOT NULL AS has_boundary
       FROM territories
       WHERE id = ${territoryId}
@@ -91,7 +99,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }
 
   async getBoundaryBoundingBox(territoryId: number): Promise<TerritoryBoundingBox | null> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT
         ST_XMin(extent)::float AS min_lng,
         ST_YMin(extent)::float AS min_lat,
@@ -134,7 +142,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   ): Promise<OverlappingTerritory[]> {
     const geoJsonString = JSON.stringify(geoJson);
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT t.id, t.code
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
@@ -158,7 +166,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     options?: { excludeTerritoryId?: number }
   ): Promise<ClinicAssignmentTerritoryMatch[]> {
     const excludeTerritoryId = options?.excludeTerritoryId ?? null;
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT t.id, t.vertical_id
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
@@ -183,7 +191,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     userId: number,
     facilityId: number
   ): Promise<boolean> {
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       SELECT 1 AS ok
       FROM user_territory_assignments uta
       INNER JOIN territories t ON t.id = uta.territory_id
@@ -216,7 +224,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     const geoJsonString = JSON.stringify(input.geoJson);
 
     if (input.mode === "manager_zone") {
-      const rows = await db.execute(sql`
+      const rows = await this.database.execute(sql`
         WITH proposed AS (
           SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
         )
@@ -256,7 +264,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       }));
     }
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH proposed AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       ),
@@ -324,7 +332,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }): Promise<SiblingOverlapConflict[]> {
     const geoJsonString = JSON.stringify(input.geoJson);
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH child AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
@@ -367,7 +375,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     const geoJsonString = JSON.stringify(input.geoJson);
     const verticalId = input.verticalId ?? null;
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH patch AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
@@ -396,7 +404,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }): Promise<Array<{ id: number; code: string }>> {
     const geoJsonString = JSON.stringify(input.managerZoneGeoJson);
 
-    const rows = await db.execute(sql`
+    const rows = await this.database.execute(sql`
       WITH zone AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
@@ -415,7 +423,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   }
 
   async updateBoundaryMetadata(territoryId: number): Promise<void> {
-    await db.execute(sql`
+    await this.database.execute(sql`
       UPDATE territories
       SET
         boundary_min_lng = bbox.min_lng,
