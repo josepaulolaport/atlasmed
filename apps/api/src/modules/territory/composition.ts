@@ -154,28 +154,12 @@ export const territoryUseCases = {
   deleteBoundary: () => createBoundaryUseCases(),
   recomputeMembership: () =>
     new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
       onFacilityChanged: upsertFacilitySearchDocument,
     }),
   listUnassignedFacilities: () =>
     new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
-      membershipService: territoryMembershipService,
-      clinicWriter: facilityMembershipWriter,
-      onFacilityChanged: upsertFacilitySearchDocument,
-    }),
-  adminOverrideClinicTerritory: () =>
-    new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
-      membershipService: territoryMembershipService,
-      clinicWriter: facilityMembershipWriter,
-      onFacilityChanged: upsertFacilitySearchDocument,
-    }),
-  unlockClinicGeo: () =>
-    new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
       onFacilityChanged: upsertFacilitySearchDocument,

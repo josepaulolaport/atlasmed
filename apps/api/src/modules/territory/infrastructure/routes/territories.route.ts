@@ -285,34 +285,9 @@ export const territoriesRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
     }
-  )
-  .use(requirePermission("manage", "FACILITY"))
-  .patch(
-    "/facilities/:id/territory",
-    async ({ params, body, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["clinic:update"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.adminOverrideClinicTerritory().adminOverrideClinicTerritory({
-        facilityId: parseId(params.id, "Facility"),
-        territoryId: parseId(body.territoryId, "Territory"),
-        reason: body.reason,
-      });
-    },
-    {
-      body: t.Object({
-        territoryId: t.String(),
-        reason: t.Optional(t.String()),
-      }),
-    }
-  )
-  .post("/facilities/:id/territory/unlock-geo", async ({ params, getUser }) => {
-    const user = await getUser();
-    if (!isAdminRole(user.role.name as Role)) {
-      throw new InsufficientPermissionsError(["clinic:update"], [`role:${user.role.name}`]);
-    }
-    return territoryUseCases.unlockClinicGeo().unlockClinicGeo({
-      facilityId: parseId(params.id, "Facility"),
-    });
-  });
+  );
+
+// Spec 0009 R7: `PATCH /facilities/:id/territory` and
+// `POST /facilities/:id/territory/unlock-geo` are gone. Zone membership is
+// derived from geometry with no exceptions, so there is no manual setter to
+// contradict it — and no `territory_assignment_source` to record which one won.
