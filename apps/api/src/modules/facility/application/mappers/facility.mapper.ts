@@ -121,7 +121,6 @@ function serializeVerticalProfile(profile: FacilityVerticalProfileRecord) {
     verticalName: profile.verticalName,
     isActive: profile.isActive,
     commercialStatus: profile.commercialStatus ?? undefined,
-    purchaseStatus: profile.purchaseStatus ?? undefined,
     territoryId: profile.territoryId ?? undefined,
     ...(profile.purchaseRecurrence
       ? {

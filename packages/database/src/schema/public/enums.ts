@@ -55,13 +55,6 @@ export const commercialStatusEnum = pgEnum("commercial_status", [
   "CLOSED",
 ]);
 
-export const purchaseStatusEnum = pgEnum("purchase_status", [
-  "NON_BUYER",
-  "LOW_BUYER",
-  "REGULAR_BUYER",
-  "HIGH_BUYER",
-]);
-
 export const purchaseIntervalSourceEnum = pgEnum(
   "purchase_interval_source",
   PURCHASE_INTERVAL_SOURCES,

@@ -30,7 +30,6 @@ class FacilityVerticalProfileDTO {
     required this.verticalName,
     this.verticalCode,
     this.commercialStatus,
-    this.purchaseStatus,
     this.territoryId,
     this.purchaseRecurrence,
   });
@@ -39,7 +38,6 @@ class FacilityVerticalProfileDTO {
   final String verticalName;
   final String? verticalCode;
   final String? commercialStatus;
-  final String? purchaseStatus;
   final int? territoryId;
   final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
@@ -49,7 +47,6 @@ class FacilityVerticalProfileDTO {
       verticalName: readString(map['verticalName']),
       verticalCode: readNullableString(map['verticalCode']),
       commercialStatus: readNullableString(map['commercialStatus']),
-      purchaseStatus: readNullableString(map['purchaseStatus']),
       territoryId: readCrmIdOrNull(map['territoryId'], 'territoryId'),
       purchaseRecurrence: map['purchaseRecurrence'] is Map
           ? PurchaseRecurrenceSnapshot.fromMap(

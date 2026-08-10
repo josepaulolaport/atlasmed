@@ -46,7 +46,6 @@ function baseFacility(
     territoryName: "Zona Sul",
     territoryAssignmentStatus: "assigned",
     commercialStatus: null,
-    purchaseStatus: null,
     conformityStatus: "COMPLETE",
     consultantName: "Ana Silva",
     consultantSince: new Date("2023-03-01T00:00:00.000Z"),
@@ -73,7 +72,6 @@ function baseFacility(
         verticalName: "Ortopedia",
         isActive: true,
         commercialStatus: "REGISTERED",
-        purchaseStatus: "REGULAR_BUYER",
         purchaseRecurrence: defaultPurchaseRecurrence,
       },
     ],
@@ -134,7 +132,6 @@ describe("serializeFacility", () => {
       expect.objectContaining({
         verticalId: 1,
         commercialStatus: "REGISTERED",
-        purchaseStatus: "REGULAR_BUYER",
       }),
     ]);
     expect(dto.createdAt).toBe(now.toISOString());
@@ -178,7 +175,6 @@ describe("serializeFacility", () => {
           verticalId: 1,
           isActive: true,
           commercialStatus: "REGISTERED",
-          purchaseStatus: "REGULAR_BUYER",
           purchaseRecurrence: {
             ...defaultPurchaseRecurrence,
             lastValidPurchaseDate: "2025-12-15",
@@ -200,7 +196,6 @@ describe("serializeFacility", () => {
           verticalId: 1,
           isActive: true,
           commercialStatus: "REGISTERED",
-          purchaseStatus: "REGULAR_BUYER",
           purchaseRecurrence: {
             ...defaultPurchaseRecurrence,
             lastValidPurchaseDate: "2026-01-10",
