@@ -19,9 +19,9 @@ As a healthcare commercial user, I want to manage facilities, people, and their 
 
 ## Acceptance Criteria
 
-1. WHEN a user lists facilities THEN the system SHALL return only facilities visible to the user's organization and scope.
+1. WHEN a user lists facilities THEN the system SHALL return only facilities visible within the user's territory and vertical scope (Specs 0009/0010).
 2. WHEN a user opens a facility THEN the system SHALL show facility details, associated healthcare professionals and administrative contacts (projections), relationship status where wired, consultant assignment, healthcare provider shares, and conformity / cadastro records as implemented.
-3. WHEN a user lists healthcare professionals (Explorar) THEN the system SHALL return only persons with healthcare profiles visible to the user's organization and scope.
+3. WHEN a user lists healthcare professionals (Explorar) THEN the system SHALL return only persons with healthcare profiles visible within the user's territory and vertical scope (Specs 0009/0010).
 4. WHEN a user opens a person THEN the system SHALL show identity/profile fields, associated facilities, specialties/registrations when present, and relationship status where wired.
 5. WHEN a user submits a Não Conformidade (field suggestion or deactivation) THEN the system SHALL persist a reviewable suggestion in `field_suggestions` without writing CRM truth until accept; approving address changes SHALL trigger geocoding (Spec 0007).
 6. WHEN a suggestion is approved or rejected THEN the system SHALL audit the decision and update affected facility data according to the suggestion type; facility deactivation approvals SHALL soft-deactivate the facility.
@@ -33,5 +33,7 @@ As a healthcare commercial user, I want to manage facilities, people, and their 
 ## Related docs
 
 - Feature guide: [Facility and Person CRM](../../architecture/features/clinic-doctor-registry.md)
-- Mobile establishment detail: [Spec 0005](../0005-establishment-detail-mobile/requirements.md)
 - Não Conformidades: [Spec 0007](../0007-nao-conformidades/requirements.md)
+- Territory & clinic ownership: [Spec 0009](../0009-territory-clinic-ownership/requirements.md)
+- Verticals & facility profiles: [Spec 0010](../0010-verticals-and-profiles/requirements.md)
+- CNES professional associations: [Spec 0012](../0012-cnes-registry-professional-associations/requirements.md)

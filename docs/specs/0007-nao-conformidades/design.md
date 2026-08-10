@@ -58,11 +58,14 @@ Routes import use-cases only from `composition.ts`.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | text PK (cuid) | |
+> **As-built note (2026-08-10):** ids are `bigint` identity, not text/cuid — the bigint cutover
+> landed in `0046_crm_bigint_identity_cutover.sql`. The table matches this design otherwise.
+
+| `id` | bigint identity PK | |
 | `kind` | enum `FIELD_CHANGE` \| `DEACTIVATION` | |
 | `status` | enum `PENDING` \| `APPROVED` \| `REJECTED` | Superseded rows use `REJECTED` (no separate SUPERSEDED status in v1) |
-| `facility_id` | text FK → facilities NOT NULL | |
-| `professional_id` | text FK nullable | unused in v1; reserved |
+| `facility_id` | bigint FK → facilities NOT NULL | |
+| `person_id` | bigint FK → persons, nullable | as-built name (was `professional_id` in draft) |
 | `field_key` | text nullable | required when `FIELD_CHANGE`; null for deactivation |
 | `current_value` | jsonb | snapshot at submit time (scalar or address object) |
 | `proposed_value` | jsonb | scalar or address object; null for deactivation |

@@ -5,7 +5,7 @@
 **Branch:** `feature/explore-ux-20260723`  
 **Domains:** `apps/mobile` (primary), `apps/api` (facility/professional list query contract), `packages/database` (optional GiST index)  
 **Related:**
-- [Spec 0005 — Mobile Establishment Detail](../0005-establishment-detail-mobile/requirements.md) (Explorar → clinic detail)
+- [Spec 0010 — Verticals & profiles](../0010-verticals-and-profiles/requirements.md) (Explorar is vertical-scoped)
 - [api-mobile integration](../../ai/integration-tasks/api-mobile.md)
 
 > **Scope boundary (v1):** Mobile Explorar list UX + **full-app location hard gate**. Web Explorar is out of scope. Background / always-on tracking is out of scope unless product later requires navigation.
