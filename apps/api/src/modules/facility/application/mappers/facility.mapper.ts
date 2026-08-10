@@ -96,7 +96,6 @@ export function serializeFacility(
           verticalProfiles: verticalContext.verticalProfiles.map(serializeVerticalProfile),
         }
       : {}),
-    conformityStatus: clinic.conformityStatus,
     professionalCount: list.professionalCount ?? 0,
     lastVisitAt: list.lastVisitAt?.toISOString() ?? undefined,
     consultantName: clinic.consultantName,

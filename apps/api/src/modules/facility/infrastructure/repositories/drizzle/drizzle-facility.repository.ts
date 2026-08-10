@@ -132,7 +132,6 @@ export function mapFacility(
     territoryName: options.territoryName ?? null,
     territoryAssignmentStatus: deriveTerritoryAssignmentStatus(options.verticalProfiles),
     commercialStatus: options.commercialStatus ?? null,
-    conformityStatus: facility.conformityStatus,
     consultantName: options.consultantName ?? null,
     consultantSince: options.consultantSince ?? null,
     managerName: options.managerName ?? null,
@@ -194,7 +193,7 @@ async function loadVerticalProfiles(
       verticalCode: businessVerticals.code,
       verticalName: businessVerticals.name,
       isActive: facilityVerticalProfiles.isActive,
-      commercialStatus: facilityVerticalProfiles.commercialStatus,
+      commercialStatus: facilityVerticalProfiles.conformityStatus,
       territoryId: facilityVerticalProfiles.managerZoneId,
       observedPurchaseIntervalDays:
         facilityVerticalProfiles.observedPurchaseIntervalDays,
@@ -506,7 +505,7 @@ export function buildFacilityListConditions(params: {
   if (params.commercialStatus) {
     conditions.push(inArray(facilities.id, db.select({ facilityId: facilityVerticalProfiles.facilityId })
       .from(facilityVerticalProfiles).where(and(
-        eq(facilityVerticalProfiles.commercialStatus, params.commercialStatus),
+        eq(facilityVerticalProfiles.conformityStatus, params.commercialStatus),
         eq(facilityVerticalProfiles.isActive, true),
         ...(params.scope.verticalIds?.length ? [inArray(facilityVerticalProfiles.verticalId, params.scope.verticalIds)] : []),
       ))));
@@ -974,7 +973,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       billingEmail?: string | null;
       legalDocumentType?: "CNPJ" | "CPF";
       legalDocument?: string | null;
-      conformityStatus?: FacilityRecord["conformityStatus"];
     }
   ): Promise<FacilityRecord> {
     const setData: Record<string, unknown> = {
@@ -1003,10 +1001,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (data.legalDocument !== undefined) {
       setData.legalDocument = normalizeLegalDocument(data.legalDocument);
-    }
-
-    if (data.conformityStatus !== undefined) {
-      setData.conformityStatus = data.conformityStatus;
     }
 
     if (data.lat !== undefined || data.lng !== undefined) {
@@ -1239,7 +1233,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     await db
       .update(facilityVerticalProfiles)
       .set({
-        commercialStatus: input.commercialStatus,
+        conformityStatus: input.commercialStatus,
         updatedAt: new Date(),
       })
       .where(
@@ -1260,7 +1254,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         verticalCode: businessVerticals.code,
         verticalName: businessVerticals.name,
         isActive: facilityVerticalProfiles.isActive,
-        commercialStatus: facilityVerticalProfiles.commercialStatus,
+        commercialStatus: facilityVerticalProfiles.conformityStatus,
       })
       .from(facilityVerticalProfiles)
       .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))

@@ -17,7 +17,6 @@ import { relations, sql } from "drizzle-orm";
 import { geometryPoint } from "../../types/geometry";
 import {
   conformityStatusEnum,
-  commercialStatusEnum,
   purchaseIntervalSourceEnum,
   purchaseProfileEnum,
   purchaseFunnelStageEnum,
@@ -81,7 +80,6 @@ export const facilities = pgTable(
     openingHours: text("opening_hours"),
 
     // --- Classification ---
-    conformityStatus: conformityStatusEnum("conformity_status").notNull().default("INCOMPLETE"),
     imageUrl: text("image_url"),
     /** BlurHash for the facility header image. */
     imageBlurhash: text("image_blurhash"),
@@ -139,7 +137,6 @@ export const facilities = pgTable(
       .where(sql`${t.deactivatedAt} IS NULL AND ${t.legalDocument} IS NOT NULL`),
     index("facilities_deactivated_at_idx").on(t.deactivatedAt),
     index("facilities_name_idx").on(t.displayName),
-    index("facilities_conformity_status_idx").on(t.conformityStatus),
     index("facilities_state_id_idx").on(t.stateId),
     index("facilities_municipality_id_idx").on(t.municipalityId),
     index("facilities_location_gist_idx")
@@ -221,7 +218,13 @@ export const facilityVerticalProfiles = pgTable(
      */
     managerZoneId: bigint("manager_zone_id", { mode: "number" }),
     isActive: boolean("is_active").notNull().default(true),
-    commercialStatus: commercialStatusEnum("commercial_status")
+    /**
+     * Cadastro document completion for this facility x vertical (spec 0010
+     * §1.6). Renamed from `commercial_status`: the values were always cadastro
+     * state, and the old name had reps reading "Operante" as a trading status.
+     * Written only by FacilityCadastroCompletionService.
+     */
+    conformityStatus: conformityStatusEnum("conformity_status")
       .notNull()
       .default("UNREGISTERED"),
     observedPurchaseIntervalDays: bigint("observed_purchase_interval_days", { mode: "number" }),
@@ -255,10 +258,10 @@ export const facilityVerticalProfiles = pgTable(
       t.facilityId,
       t.verticalId
     ),
+    index("facility_vertical_profiles_conformity_status_idx").on(t.conformityStatus),
     index("facility_vertical_profiles_facility_id_idx").on(t.facilityId),
     index("facility_vertical_profiles_vertical_id_idx").on(t.verticalId),
     index("facility_vertical_profiles_manager_zone_id_idx").on(t.managerZoneId),
-    index("facility_vertical_profiles_commercial_status_idx").on(t.commercialStatus),
     index("facility_vertical_profiles_vertical_funnel_stage_idx").on(
       t.verticalId,
       t.purchaseFunnelStage,

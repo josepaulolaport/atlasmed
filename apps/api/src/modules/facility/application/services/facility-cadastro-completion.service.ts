@@ -16,8 +16,7 @@ export function isBillingEmailComplete(billingEmail: string | null | undefined):
 
 /**
  * When every tax-type-applicable file doc is APPROVED/VALIDATED and billingEmail
- * is set, flip conformityStatus=COMPLETE and commercialStatus=REGISTERED on the
- * facility vertical profile. Otherwise force conformityStatus=INCOMPLETE and
+ * is set, flip the profile to REGISTERED. Otherwise, if it had been REGISTERED,
  * commercialStatus=SUSPENDED when it was REGISTERED (operante).
  */
 export class FacilityCadastroCompletionService {
@@ -28,7 +27,6 @@ export class FacilityCadastroCompletionService {
     verticalId: number,
   ): Promise<{
     complete: boolean;
-    conformityStatus: "INCOMPLETE" | "COMPLETE";
     commercialStatus: "REGISTERED" | "SUSPENDED" | null;
   }> {
     const facility = await this.deps.facilityRepository.findById(facilityId);
@@ -83,10 +81,12 @@ export class FacilityCadastroCompletionService {
     const emailComplete = isBillingEmailComplete(facility.billingEmail);
     const complete = docsComplete && emailComplete;
 
+    // Cadastro completion is recorded once, on the profile (spec 0010 §1.6).
+    // This used to write facilities.conformity_status as well — a second,
+    // facility-wide verdict for a per-vertical fact. A clinic complete in one
+    // linha and untouched in another read COMPLETE for both. That column is
+    // gone; the profile is the only record.
     if (complete) {
-      await this.deps.facilityRepository.update(facilityId, {
-        conformityStatus: "COMPLETE",
-      });
       await this.deps.facilityRepository.updateVerticalProfileCommercialStatus({
         facilityId,
         verticalId,
@@ -94,21 +94,13 @@ export class FacilityCadastroCompletionService {
       });
       return {
         complete: true,
-        conformityStatus: "COMPLETE",
         commercialStatus: "REGISTERED",
       };
     }
 
-    const patch: {
-      conformityStatus?: "INCOMPLETE";
-    } = {};
-    if (facility.conformityStatus !== "INCOMPLETE") {
-      patch.conformityStatus = "INCOMPLETE";
-    }
-    if (Object.keys(patch).length > 0) {
-      await this.deps.facilityRepository.update(facilityId, patch);
-    }
-
+    // Regression: only a profile that had reached REGISTERED can be SUSPENDED.
+    // An UNREGISTERED profile stays UNREGISTERED — never completed is not the
+    // same as stopped being complete.
     if (currentCommercialStatus === "REGISTERED") {
       await this.deps.facilityRepository.updateVerticalProfileCommercialStatus({
         facilityId,
@@ -119,7 +111,6 @@ export class FacilityCadastroCompletionService {
 
     return {
       complete: false,
-      conformityStatus: "INCOMPLETE",
       commercialStatus:
         currentCommercialStatus === "REGISTERED" ||
         currentCommercialStatus === "SUSPENDED"
