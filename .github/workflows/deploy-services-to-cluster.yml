@@ -151,10 +151,24 @@ jobs:
           $UNCLOUD_SSH_CMD 'docker image prune -f'
           $UNCLOUD_SSH_CMD 'docker system df'
 
+      # `uc rm SERVICE` takes no flags and does not prompt, so the `--yes` this
+      # used to pass was rejected outright. Every deploy since #196 logged
+      # "unknown flag: --yes" and the `|| true` swallowed it, so the service was
+      # never retired — it is still running the deleted Next.js app.
+      #
+      # Still tolerant of failure, because it must not block a deploy once the
+      # service is gone and `uc rm` starts reporting it cannot find it. But it
+      # now says which case happened, so a silent no-op cannot pass for success
+      # a second time.
       - name: Remove retired web service
         env:
           UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
-        run: uc rm atlasmed-web --yes || true
+        run: |
+          if uc rm atlasmed-web; then
+            echo "::notice::atlasmed-web removed from the cluster."
+          else
+            echo "::notice::uc rm atlasmed-web removed nothing — already gone, or see the error above."
+          fi
 
       - name: Deploy services to cluster
         env:
