@@ -63,8 +63,13 @@ const EnvironmentSchema = Type.Object({
   ),
   LOG_FORMAT: Type.Optional(Type.Union([Type.Literal("pretty"), Type.Literal("json")])),
 
+  /** Internal S3-compatible endpoint the API/workers use for server-side calls. */
   STORAGE_ENDPOINT: OptionalString(),
-  /** Public S3/MinIO base URL used when signing client-facing URLs. Falls back to STORAGE_ENDPOINT. */
+  /**
+   * Public S3-compatible base URL used when signing client-facing URLs. Must be reachable
+   * from phones/browsers. Never falls back to STORAGE_ENDPOINT — a cluster-internal
+   * hostname signed into a presigned URL is unreachable and leaks topology.
+   */
   STORAGE_PUBLIC_ENDPOINT: OptionalString(),
   STORAGE_ACCESS_KEY_ID: OptionalString(),
   STORAGE_SECRET_ACCESS_KEY: OptionalString(),
@@ -203,6 +208,9 @@ function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
     "MEILISEARCH_API_KEY",
     "MINIO_ROOT_USER",
     "MINIO_ROOT_PASSWORD",
+    "STORAGE_BUCKET",
+    "STORAGE_ENDPOINT",
+    "STORAGE_PUBLIC_ENDPOINT",
   ];
 
   const issues = required
@@ -252,6 +260,45 @@ function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
     issues.push("/TWO_FACTOR_ENCRYPTION_KEY: required when TWO_FACTOR_ENABLED=true");
   }
 
+  issues.push(...storageProductionIssues(env));
+
+  return issues;
+}
+
+const R2_ENDPOINT_PATTERN = /(^|\.)r2\.cloudflarestorage\.com(:|\/|$)/i;
+
+export function isR2Endpoint(endpoint: string | undefined): boolean {
+  return Boolean(endpoint && R2_ENDPOINT_PATTERN.test(endpoint));
+}
+
+/**
+ * Storage rules that only make sense in production. Kept separate so the
+ * reasoning stays readable: presigned URLs are handed to phones, so the public
+ * endpoint must be an https:// origin the device can actually resolve, and it
+ * must never be silently substituted with the cluster-internal endpoint.
+ */
+function storageProductionIssues(env: Environment): string[] {
+  const issues: string[] = [];
+  const { STORAGE_ENDPOINT, STORAGE_PUBLIC_ENDPOINT, STORAGE_REGION } = env;
+
+  if (STORAGE_ENDPOINT && !new RegExp(URL_PATTERN).test(STORAGE_ENDPOINT)) {
+    issues.push("/STORAGE_ENDPOINT: must be an absolute URL");
+  }
+
+  if (STORAGE_PUBLIC_ENDPOINT) {
+    if (!STORAGE_PUBLIC_ENDPOINT.startsWith("https://")) {
+      issues.push(
+        "/STORAGE_PUBLIC_ENDPOINT: must be an https:// URL reachable by mobile clients",
+      );
+    }
+  }
+
+  // R2 rejects any region other than "auto".
+  if (isR2Endpoint(STORAGE_ENDPOINT) || isR2Endpoint(STORAGE_PUBLIC_ENDPOINT)) {
+    if (STORAGE_REGION !== "auto") {
+      issues.push('/STORAGE_REGION: must be "auto" when using Cloudflare R2');
+    }
+  }
 
   return issues;
 }
@@ -264,7 +311,11 @@ export function getEnvironment(env: EnvInput = process.env): Environment {
   return Value.Decode(EnvironmentSchema, normalized) as Environment;
 }
 
-export function checkEnvironment(env: EnvInput = process.env): void {
+/**
+ * All validation problems with `env`, schema issues first. Returns an empty
+ * array when the environment is usable. Pure — safe to call from tests.
+ */
+export function environmentIssues(env: EnvInput = process.env): string[] {
   const normalized = normalizeEnvironment(env);
   const issues = validationIssues(normalized);
 
@@ -272,6 +323,12 @@ export function checkEnvironment(env: EnvInput = process.env): void {
     const parsed = Value.Decode(EnvironmentSchema, normalized) as Environment;
     issues.push(...productionIssues(parsed, env));
   }
+
+  return issues;
+}
+
+export function checkEnvironment(env: EnvInput = process.env): void {
+  const issues = environmentIssues(env);
 
   if (issues.length > 0) {
     console.error("\nInvalid environment variables detected:\n");
