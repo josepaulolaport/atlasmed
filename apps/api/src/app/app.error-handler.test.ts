@@ -48,7 +48,7 @@ describe("global error handler", () => {
     expect(response.headers.get("x-request-id")).toBeTruthy();
   });
 
-  it("returns Elysia's validation detail for schema errors", async () => {
+  it("returns Elysia's validation detail without echoing submitted values", async () => {
     const response = await request("/api/v1/session/", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -59,15 +59,19 @@ describe("global error handler", () => {
       }),
     });
     const body = await response.json();
+    const serialized = JSON.stringify(body);
 
     expect(response.status).toBe(400);
     expect(body).toMatchObject({
       type: "validation",
       on: "body",
     });
-    // detail() returns Elysia's own validation payload; without schema-level
-    // custom errors it falls back to error.message, which embeds `found`
-    // (the submitted value). Kept per project convention (see real-trend).
+    // detail() is kept per project convention, but `found` (the submitted
+    // payload) and errors[].value (per-field submitted values) are stripped
+    // so credentials/health data are never echoed back.
+    expect(body).not.toMatchObject({ found: expect.anything() });
+    expect(serialized).not.toContain("secret-token");
+    expect(serialized).not.toContain("sensitive diagnosis");
   });
 
   it("maps malformed JSON to a stable parse error", async () => {

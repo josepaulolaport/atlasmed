@@ -98,7 +98,7 @@ All errors follow a consistent format:
 | \`RESOURCE_NOT_FOUND\` | 404 | Resource does not exist |
 | \`ROUTE_NOT_FOUND\` | 404 | API route does not exist |
 | \`EMAIL_ALREADY_EXISTS\` | 409 | Email is already registered |
-| \`VALIDATION\` | 400 | Request validation failed — Elysia \`error.detail\` payload (\`type: "validation"\`, on/property/message) |
+| \`VALIDATION\` | 400 | Request validation failed — sanitized Elysia \`error.detail\` payload (\`type: "validation"\`, on/property/message; submitted values never echoed) |
 | \`INVALID_JSON\` | 400 | Request body contains malformed JSON |
 | \`INVALID_COOKIE_SIGNATURE\` | 400 | Signed cookie could not be verified |
 | \`INVALID_FILE_TYPE\` | 415 | Uploaded file type is unsupported |

@@ -33,6 +33,37 @@ import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 import { hasDuplicatePathSlashes } from "./request-path";
 
+/**
+ * Elysia's ValidationError.detail() embeds the submitted payload under
+ * `found` and per-field submitted values under `errors[].value`, which can
+ * contain credentials or health data. Strip those keys while keeping the
+ * rest of the diagnostic detail.
+ */
+function sanitizeValidationDetail(detail: unknown): unknown {
+  if (typeof detail === "string") {
+    try {
+      return sanitizeValidationDetail(JSON.parse(detail));
+    } catch {
+      return detail;
+    }
+  }
+
+  if (Array.isArray(detail)) {
+    return detail.map((entry) => sanitizeValidationDetail(entry));
+  }
+
+  if (detail && typeof detail === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(detail)) {
+      if (key === "found" || key === "value") continue;
+      result[key] = sanitizeValidationDetail(value);
+    }
+    return result;
+  }
+
+  return detail;
+}
+
 const configuredCorsOrigins = environment.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -87,7 +118,7 @@ const app = new Elysia()
 
     if (code === "VALIDATION") {
       set.status = 400;
-      return error.detail(error.message);
+      return sanitizeValidationDetail(error.detail(error.message));
     }
 
     if (code === "PARSE") {
