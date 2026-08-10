@@ -58,7 +58,6 @@ function ortoOnlyFacility(): FacilityRecord {
     territoryName: null,
     territoryAssignmentStatus: "assigned",
     commercialStatus: null,
-    conformityStatus: "INCOMPLETE",
     cnesCode: null,
     unitTypeId: null,
     unitSubtypeId: null,

@@ -94,7 +94,6 @@ export interface FacilityRecord {
    */
   territoryAssignmentStatus: "assigned" | "unassigned";
   commercialStatus: FacilityCommercialStatus | null;
-  conformityStatus: FacilityConformityStatus;
   /** Active consultant display name when loaded (list + detail). */
   consultantName: string | null;
   /** Active vertical REP assignment start (`facility_vertical_rep_assignments.started_at`). */

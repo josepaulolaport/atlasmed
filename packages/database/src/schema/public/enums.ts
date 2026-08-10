@@ -33,11 +33,27 @@ export const authSessionTypeEnum = pgEnum("auth_session_type", [
 ]);
 
 
+/**
+ * Cadastro document completion, per facility × vertical profile.
+ *
+ * Named `conformity_status` since spec 0010 §1.6, and `commercial_status`
+ * before that — the values were always cadastro state, never commercial state.
+ * `UNREGISTERED` = never completed, `REGISTERED` = complete, `SUSPENDED` =
+ * regressed after having been complete. `CLOSED` is unreachable; nothing writes
+ * it.
+ *
+ * The facility-wide `conformity_status` that previously owned this name
+ * (INCOMPLETE / COMPLETE / EXPIRING_SOON / NON_CONFORMING) was dropped in the
+ * same migration: one verdict across verticals that require different documents
+ * cannot mean anything. Spec 0011 §3.3 wants EXPIRING_SOON back when document
+ * expiry ships — that is an ALTER TYPE ADD VALUE at the time, not a reason to
+ * carry an unwritable value now (D-66).
+ */
 export const conformityStatusEnum = pgEnum("conformity_status", [
-  "INCOMPLETE",
-  "COMPLETE",
-  "EXPIRING_SOON",
-  "NON_CONFORMING",
+  "UNREGISTERED",
+  "REGISTERED",
+  "SUSPENDED",
+  "CLOSED",
 ]);
 
 export const conformityRecordStatusEnum = pgEnum("conformity_record_status", [
@@ -46,13 +62,6 @@ export const conformityRecordStatusEnum = pgEnum("conformity_record_status", [
   "VALIDATED",
   "REJECTED",
   "EXPIRED",
-]);
-
-export const commercialStatusEnum = pgEnum("commercial_status", [
-  "UNREGISTERED",
-  "REGISTERED",
-  "SUSPENDED",
-  "CLOSED",
 ]);
 
 export const purchaseIntervalSourceEnum = pgEnum(
@@ -92,6 +101,16 @@ export const verificationTokenTypeEnum = pgEnum("verification_token_type", [
 export const facilityLegalDocumentTypeEnum = pgEnum("facility_legal_document_type", [
   "CNPJ",
   "CPF",
+]);
+
+/**
+ * Whether a catalogued product is ours or a competitor's (spec 0013 §2).
+ * An enum rather than a boolean because a distributed third-party line is
+ * neither, and will want its own value rather than a second boolean.
+ */
+export const productOwnershipEnum = pgEnum("product_ownership", [
+  "OWN",
+  "COMPETITOR",
 ]);
 
 export const orderStatusEnum = pgEnum("order_status", [

@@ -32,7 +32,6 @@ function facility(overrides: Record<string, unknown> = {}) {
     legalDocumentType: "CPF",
     legalDocument: null,
     billingEmail: null,
-    conformityStatus: "INCOMPLETE",
     commercialStatus: null,
     ...overrides,
   } as Awaited<ReturnType<FacilityRepository["findById"]>>;
@@ -85,7 +84,6 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
       completionService: {
         evaluateAndApply: async () => ({
           complete: false,
-          conformityStatus: "INCOMPLETE",
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
@@ -123,7 +121,6 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
       completionService: {
         evaluateAndApply: async () => ({
           complete: false,
-          conformityStatus: "INCOMPLETE",
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
@@ -159,7 +156,6 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
       completionService: {
         evaluateAndApply: async () => ({
           complete: false,
-          conformityStatus: "INCOMPLETE",
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
@@ -216,7 +212,6 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
       completionService: {
         evaluateAndApply: async () => ({
           complete: false,
-          conformityStatus: "INCOMPLETE",
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
@@ -333,7 +328,6 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
       completionService: {
         evaluateAndApply: async () => ({
           complete: false,
-          conformityStatus: "INCOMPLETE",
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
@@ -453,7 +447,6 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
       completionService: {
         evaluateAndApply: async () => ({
           complete: false,
-          conformityStatus: "INCOMPLETE",
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,
@@ -524,7 +517,6 @@ describe("FacilityCadastroCompletionService", () => {
           facility({
             legalDocumentType: "CNPJ",
             billingEmail: "fin@ex.com",
-            conformityStatus: "INCOMPLETE",
           }),
         update,
         ...verticalProfileRepositoryMocks(),
@@ -556,11 +548,11 @@ describe("FacilityCadastroCompletionService", () => {
 
     const result = await service.evaluateAndApply(1, verticalId);
     expect(result.complete).toBe(true);
-    expect(result.conformityStatus).toBe("COMPLETE");
     expect(result.commercialStatus).toBe("REGISTERED");
-    expect(update).toHaveBeenCalledWith(1, {
-      conformityStatus: "COMPLETE",
-    });
+    // Spec 0010 §1.6: completion is recorded on the profile ONLY. The facility
+    // must not be touched — it used to carry a parallel conformity_status that
+    // said COMPLETE for every linha as soon as one of them completed.
+    expect(update).not.toHaveBeenCalled();
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
       facilityId: 1,
       verticalId,
@@ -576,7 +568,6 @@ describe("FacilityCadastroCompletionService", () => {
           facility({
             legalDocumentType: "CNPJ",
             billingEmail: null,
-            conformityStatus: "INCOMPLETE",
           }),
         update,
         ...verticalProfileRepositoryMocks(),
@@ -611,7 +602,6 @@ describe("FacilityCadastroCompletionService", () => {
           facility({
             legalDocumentType: "CNPJ",
             billingEmail: "fin@ex.com",
-            conformityStatus: "COMPLETE",
             commercialStatus: "REGISTERED",
           }),
         update,
@@ -657,11 +647,8 @@ describe("FacilityCadastroCompletionService", () => {
 
     const result = await service.evaluateAndApply(1, verticalId);
     expect(result.complete).toBe(false);
-    expect(result.conformityStatus).toBe("INCOMPLETE");
     expect(result.commercialStatus).toBe("SUSPENDED");
-    expect(update).toHaveBeenCalledWith(1, {
-      conformityStatus: "INCOMPLETE",
-    });
+    expect(update).not.toHaveBeenCalled();
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
       facilityId: 1,
       verticalId,
@@ -678,7 +665,6 @@ describe("FacilityCadastroCompletionService", () => {
           facility({
             legalDocumentType: "CNPJ",
             billingEmail: "fin@ex.com",
-            conformityStatus: "INCOMPLETE",
           }),
         update,
         ...verticalProfileRepositoryMocks(),
@@ -711,9 +697,7 @@ describe("FacilityCadastroCompletionService", () => {
 
     const result = await service.evaluateAndApply(1, verticalId);
     expect(result.complete).toBe(true);
-    expect(update).toHaveBeenCalledWith(1, {
-      conformityStatus: "COMPLETE",
-    });
+    expect(update).not.toHaveBeenCalled();
     expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
       facilityId: 1,
       verticalId,
@@ -765,7 +749,6 @@ describe("RejectFacilityCadastroRecordUseCase", () => {
       completionService: {
         evaluateAndApply: async () => ({
           complete: false,
-          conformityStatus: "INCOMPLETE",
           commercialStatus: null,
         }),
       } as unknown as FacilityCadastroCompletionService,

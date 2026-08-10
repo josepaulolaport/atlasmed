@@ -37,7 +37,6 @@ function facilityRecord(id: number): FacilityListRecord {
     territoryName: null,
     territoryAssignmentStatus: "assigned",
     commercialStatus: null,
-    conformityStatus: "INCOMPLETE",
     cnesCode: null,
     unitTypeId: null,
     unitSubtypeId: null,
