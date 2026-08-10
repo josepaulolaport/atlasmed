@@ -174,6 +174,17 @@ jobs:
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
           STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          # Storage endpoints are configuration, not credentials — GitHub Variables.
+          # No literal fallbacks: a missing value must fail loudly at boot rather than
+          # resolve to whichever store happened to be the default when this was written.
+          # Changing these two (with STORAGE_REGION) is the entire cutover; changing
+          # them back is the entire rollback. No code change either way.
+          STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
+          STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
+          # Credentials stay secrets. MINIO_ROOT_* above provision the MinIO server itself;
+          # these are what the API signs with, and they become the R2 API token at cutover.
+          STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+          STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
         run: |
           for attempt in 1 2; do
             if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes; then
