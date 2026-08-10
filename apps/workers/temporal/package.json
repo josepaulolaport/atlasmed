@@ -17,6 +17,7 @@
   "dependencies": {
     "@atlasmed/config": "workspace:*",
     "@atlasmed/database": "workspace:*",
+    "@atlasmed/emultec-mysql": "workspace:*",
     "@atlasmed/facility-insights": "workspace:*",
     "@atlasmed/observability": "workspace:*",
     "@atlasmed/storage": "workspace:*",

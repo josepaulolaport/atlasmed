@@ -72,6 +72,7 @@
       "dependencies": {
         "@atlasmed/config": "workspace:*",
         "@atlasmed/database": "workspace:*",
+        "@atlasmed/emultec-mysql": "workspace:*",
         "@atlasmed/facility-insights": "workspace:*",
         "@atlasmed/observability": "workspace:*",
         "@atlasmed/storage": "workspace:*",
@@ -123,6 +124,17 @@
       "devDependencies": {
         "@types/bun": "1.3.14",
         "drizzle-kit": "^0.31.10",
+        "typescript": "^5.9.3",
+      },
+    },
+    "packages/emultec-mysql": {
+      "name": "@atlasmed/emultec-mysql",
+      "version": "0.1.0",
+      "dependencies": {
+        "mysql2": "3.15.3",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.14",
         "typescript": "^5.9.3",
       },
     },
@@ -187,6 +199,8 @@
     "@atlasmed/config": ["@atlasmed/config@workspace:packages/config"],
 
     "@atlasmed/database": ["@atlasmed/database@workspace:packages/database"],
+
+    "@atlasmed/emultec-mysql": ["@atlasmed/emultec-mysql@workspace:packages/emultec-mysql"],
 
     "@atlasmed/facility-insights": ["@atlasmed/facility-insights@workspace:packages/facility-insights"],
 

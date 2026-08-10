@@ -106,6 +106,13 @@ jobs:
           STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
           STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
           STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
+          # Third-party Emultec database (read-only). Absent values leave the
+          # order import disabled rather than half-configured.
+          EMULTEC_MYSQL_HOST: ${{ secrets.EMULTEC_MYSQL_HOST }}
+          EMULTEC_MYSQL_PORT: ${{ vars.EMULTEC_MYSQL_PORT || '3306' }}
+          EMULTEC_MYSQL_USER: ${{ secrets.EMULTEC_MYSQL_USER }}
+          EMULTEC_MYSQL_PASSWORD: ${{ secrets.EMULTEC_MYSQL_PASSWORD }}
+          EMULTEC_MYSQL_DATABASE: ${{ vars.EMULTEC_MYSQL_DATABASE || 'atlasmed' }}
         run: uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-worker --recreate --yes
 
       - name: Verify worker is running
