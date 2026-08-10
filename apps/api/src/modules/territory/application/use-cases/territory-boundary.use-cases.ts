@@ -4,8 +4,11 @@ import type { TerritoryRepository } from "../interfaces/territory.repository.int
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
-import type { FacilityVerticalRepAssignmentRepository } from "../../../facility/application/interfaces/facility-vertical-rep-assignment.repository.interface";
-import { applyTerritoryBoundary } from "../services/territory-boundary.application";
+import {
+  commitTerritoryBoundaryAtomically,
+  planTerritoryBoundary,
+} from "../services/territory-boundary.application";
+import type { TerritoryBoundaryWriter } from "../interfaces/territory-boundary.writer.interface";
 import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
 import {
   MANAGER_ZONE_TYPE_SLUG,
@@ -26,7 +29,8 @@ interface Dependencies {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
-  repAssignmentRepository: FacilityVerticalRepAssignmentRepository;
+  /** Spec 0009 R1: owns the transaction spanning de-assignment + boundary write. */
+  boundaryWriter: TerritoryBoundaryWriter;
   onBoundaryChanged?: (territoryId: number) => Promise<void>;
   onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
 }
@@ -136,9 +140,28 @@ export class TerritoryBoundaryUseCases {
     acceptedFacilityIds?: number[];
   }) {
     const territory = await this.assertWritableBoundary(input.territoryId, input.scope);
+
+    const boundaryDeps = {
+      territoryRepository: this.deps.territoryRepository,
+      territoryTypeRepository: this.deps.territoryTypeRepository,
+      spatialRepository: this.deps.spatialRepository,
+      containmentService: this.deps.containmentService,
+      onBoundaryChanged: this.deps.onBoundaryChanged,
+      onManagerTerritoryChanged: this.deps.onManagerTerritoryChanged,
+    };
+
+    // Spec 0009 R1: validate before mutating. Geometry, child-patch containment
+    // and sibling overlap must all reject *before* any rep assignment is ended,
+    // otherwise a failed save (e.g. a zone split that orphans a patch) leaves
+    // reps de-assigned with nothing to restore them (I5: rows are never deleted).
+    const plan = await planTerritoryBoundary(boundaryDeps, territory, input.geoJson);
+
     const mode = await this.resolveImpactMode(territory);
 
+    let impactedProfileIds: number[] = [];
     if (mode) {
+      // The client is not trusted: recompute the impact set server-side and
+      // require the accepted set to match it exactly.
       const clinics =
         await this.deps.spatialRepository.findAssignedClinicsImpactedByBoundary({
           territoryId: input.territoryId,
@@ -149,28 +172,23 @@ export class TerritoryBoundaryUseCases {
       const impactedIds = clinics.map((c) => c.facilityId);
       assertAcceptedImpactFacilityIds(impactedIds, input.acceptedFacilityIds);
 
-      const profileIds = [
+      impactedProfileIds = [
         ...new Set(clinics.map((c) => c.facilityVerticalProfileId)),
       ];
-      if (profileIds.length > 0) {
-        await this.deps.repAssignmentRepository.endActiveForProfiles({
-          facilityVerticalProfileIds: profileIds,
-          endReason: "boundary_impact",
-        });
-      }
     }
 
-    const resolution = await applyTerritoryBoundary(
+    // Single mutating step. The writer ends the impacted rep assignments and
+    // rewrites the geometry inside one transaction, and the notify callbacks
+    // fire only after it commits.
+    const resolution = await commitTerritoryBoundaryAtomically(
       {
-        territoryRepository: this.deps.territoryRepository,
-        territoryTypeRepository: this.deps.territoryTypeRepository,
-        spatialRepository: this.deps.spatialRepository,
-        containmentService: this.deps.containmentService,
+        boundaryWriter: this.deps.boundaryWriter,
         onBoundaryChanged: this.deps.onBoundaryChanged,
         onManagerTerritoryChanged: this.deps.onManagerTerritoryChanged,
       },
       territory,
-      input.geoJson
+      plan,
+      { endForProfileIds: impactedProfileIds, endReason: "boundary_impact" }
     );
 
     return serializeBoundaryResolution(resolution);
