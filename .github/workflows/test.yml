@@ -109,7 +109,7 @@ jobs:
           RESEND_API_KEY: re_ci_test_key
           CORS_ORIGINS: http://localhost:3001
           FRONTEND_URL: http://localhost:3001
-        run: bun --cwd apps/api run test:unit
+        run: bun run --cwd apps/api test:unit
       - name: Build (only if apps/api changed)
         if: needs.changes.outputs.api == 'true'
         run: bun run api:build
