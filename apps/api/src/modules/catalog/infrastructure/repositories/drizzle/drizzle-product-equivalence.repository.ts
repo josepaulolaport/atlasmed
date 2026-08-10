@@ -1,6 +1,7 @@
 import { db } from "../../../../../infrastructure/database/db";
 import { products, productEquivalences } from "@atlasmed/database";
-import { eq, and, asc, notInArray } from "drizzle-orm";
+import { eq, and, asc, inArray, notInArray } from "drizzle-orm";
+import { ValidationError } from "../../../../../shared/errors";
 import type { ProductEquivalenceRepository } from "../../../application/interfaces/product-equivalence.repository.interface";
 import type { CompetitorProductRecord } from "../../../application/interfaces/competitor-product.repository.interface";
 
@@ -100,7 +101,41 @@ export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRe
     return rows.length > 0;
   }
 
+  /**
+   * Both ids now address the same table (spec 0013 §2), so the pairing must be
+   * checked explicitly. While competitor products lived in their own table the
+   * foreign keys made this structurally impossible; merging bought one table at
+   * the cost of this invariant, and nothing else enforces it.
+   *
+   * Without the check you can link a product to itself, or record two of our
+   * own products as competitors of each other — and the comparison screen would
+   * present that as market data.
+   */
   async link(productId: number, competitorProductId: number, notes?: string | null): Promise<void> {
+    if (productId === competitorProductId) {
+      throw new ValidationError([
+        { field: "competitorProductId", message: "A product cannot be its own competitor" },
+      ]);
+    }
+
+    const sides = await db
+      .select({ id: products.id, ownership: products.ownership })
+      .from(products)
+      .where(inArray(products.id, [productId, competitorProductId]));
+
+    const ownershipById = new Map(sides.map((row) => [row.id, row.ownership]));
+
+    if (ownershipById.get(productId) !== "OWN") {
+      throw new ValidationError([
+        { field: "productId", message: "Not one of our products" },
+      ]);
+    }
+    if (ownershipById.get(competitorProductId) !== "COMPETITOR") {
+      throw new ValidationError([
+        { field: "competitorProductId", message: "Not a competitor product" },
+      ]);
+    }
+
     await db.insert(productEquivalences).values({
       productId,
       competitorProductId,

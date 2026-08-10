@@ -209,6 +209,7 @@ export class DrizzleProductRepository implements ProductRepository {
       const [product] = await tx
         .insert(products)
         .values({
+          ownership: "OWN",
           code: data.code,
           name: data.name,
           pictureUrl: data.pictureUrl ?? null,
@@ -272,7 +273,9 @@ export class DrizzleProductRepository implements ProductRepository {
       const [product] = await tx
         .update(products)
         .set({ ...cleanData, updatedAt: new Date() })
-        .where(eq(products.id, id))
+        // Scoped: this endpoint must not be able to edit a competitor product,
+        // which shares this table since spec 0013 §2.
+        .where(and(eq(products.id, id), IS_OWN))
         .returning(productColumns);
       if (!product) throw new Error("Product not found");
 
