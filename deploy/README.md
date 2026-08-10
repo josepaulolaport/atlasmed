@@ -107,7 +107,6 @@ The API creates `STORAGE_BUCKET` on startup when object storage is configured.
    ```bash
    uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --yes
    ```
-7. **After first deploy of the Temporal worker rename:** Uncloud does **not** remove retired services. Drain Temporal queue `cnes-ingestion` if needed, then manually remove legacy `atlasmed-cnes-worker` (backlog: `backlog-retire-legacy-cnes-worker`). New queue is `atlasmed-workflows`.
 
 ## Meilisearch v1.13 to v1.48 rollout
 
@@ -117,7 +116,7 @@ Before deploying `atlasmed-meilisearch` with this compose change:
 
 1. Keep the v1.13 service running and call `POST /dumps` with the production master key. Wait for the returned task to reach `succeeded`.
 2. Copy the resulting `.dump` file out of the persistent volume and retain a separate backup of the original `atlasmed_meilisearch_data` volume for rollback. A snapshot alone is not a cross-version migration artifact.
-3. Inspect the dump or the v1.13 instance's `/indexes` response and record all index UIDs. Do not assume only the rebuildable facilities and professionals projections exist.
+3. Inspect the dump or the v1.13 instance's `/indexes` response and record all index UIDs. Do not assume only the rebuildable `facilities` and `persons` projections exist.
 4. Stop v1.13. Let Uncloud create the new `atlasmed_meilisearch_data_v148` volume declared by this compose file; do not delete, empty, or repurpose the retained `atlasmed_meilisearch_data` v1.13 volume.
 5. Import the dump into v1.48 at startup with `--import-dump`. The import must target the empty `atlasmed_meilisearch_data_v148` database. After import completes, verify `/version`, every recorded index, document counts/settings, and representative searches.
 6. Only after verification, deploy the API/workers. Keep the old v1.13 volume until the rollback window closes.

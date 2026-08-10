@@ -622,10 +622,12 @@ class ClinicalFocusChip {
 
 // ── Registration documents ("Cadastro") ───────────────────────
 
-/// Review status of a submitted registration document. No `facility_
-/// documents` table exists yet — this mirrors the vocabulary already used
-/// for `ingestion.cnes_suggestions.status` (`PENDING`/`APPROVED`/`REJECTED`)
-/// plus a `missing` state for a requirement that hasn't been submitted.
+/// Review status of a submitted registration document, as rendered in the UI.
+/// Collapses the backend cadastro vocabulary — `public.cadastro_document_status`
+/// (`DRAFT`/`PROCESSING`/`READY`/`SUBMITTED`/`UNDER_REVIEW`/`CHANGES_REQUESTED`/
+/// `APPROVED`/`REJECTED`) and the matching submission status — into the states
+/// the checklist shows, plus a `missing` state for a requirement that hasn't
+/// been submitted.
 enum EstablishmentDocumentStatus {
   missing,
 

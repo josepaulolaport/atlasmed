@@ -7,11 +7,11 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 | Path | Tech | Purpose |
 |---|---|---|
 | `apps/api` | Bun + Elysia | Backend API, Drizzle ORM, PostgreSQL/PostGIS, CASL authorization |
-| `apps/mobile` | Flutter | Mobile app (migration to React Native/Expo — see `docs/architecture/adr/0002-mobile-stack.md`) |
+| `apps/mobile` | Flutter | **The product surface.** All feature work lands here |
 | `apps/workers/temporal` | Temporal | Background workflows (search-sync, purchase-recurrence, cadastro) — package `@atlasmed/temporal-worker` |
 | `packages/database` | Drizzle | Schema, migrations (Drizzle Kit), DB client, PostGIS geometry types |
 | `packages/access` | CASL | Authorization rules, roles, row-level access |
-| ~~`packages/cnes-ingestion`~~ | — | **Removed** — CNES ingest + `registry`/`ingestion` schemas deleted |
+| ~~`packages/cnes-ingestion`~~ | — | **Removed.** A *narrowed* `registry` schema is reintroduced by ADR 0006 — see § CNES |
 | `packages/mapbox` | — | Mapbox API client wrappers (geocoding, directions, matrix) |
 | `packages/config` | Zod | Shared runtime config, env parsing, feature flags |
 | `packages/observability` | — | Structured logging, distributed tracing, metrics |
@@ -48,14 +48,15 @@ concerns:    authorization | persistence | styling | testing | docs |
 |---|---|
 | Always | this file |
 | Single domain | see § Domain guides below for that area's conventions + required docs |
-| Cross-boundary (2+ domains) | `docs/ai/integration-tasks/<combo>.md` FIRST — it names exact next-step files |
+| Cross-boundary (2+ domains) | the domain guide for each affected area, plus the spec that owns the feature |
 | Concern involves authorization or security | see § Domain guides → `packages/access` |
 | Concern involves persistence or domain model | see § Domain guides → `packages/database` |
 | Concern involves background jobs / messaging | see § Domain guides → `apps/workers` |
 | Concern involves observability or audit | see § Domain guides → `packages/observability` |
 | Concern involves configuration | see § Domain guides → `packages/config` |
 
-`docs/ai/context-map.md` is a fuller dispatch table by domain, procedure, and concern.
+This file is the only router. Each domain guide below carries its own "Required docs" table —
+there is no second dispatch layer to keep in sync.
 
 ### Step 3 — Load docs (only when named)
 
@@ -237,7 +238,7 @@ detail: {
 - Unit-test use-cases with fake repositories.
 - Integration-test routes via Elysia app (`<module>-http.integration.test.ts`).
 - Cover: happy path, unauthenticated, unauthorized, scope-denied, validation error.
-- See `apps/api/TESTING.md`.
+- Route security is machine-audited by `apps/api/src/test-utils/route-security.manifest.ts` and scope enforcement by `scope-enforcement.manifest.ts`. Add new routes/use-cases to those manifests.
 
 ### Observability
 
@@ -254,12 +255,27 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 
 | Task | Load |
 |---|---|
-| General API work | `docs/architecture/current.md`, `docs/architecture/target.md` |
+| General API work | `docs/architecture/current.md` |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
 | Database change | this file → `packages/database` section |
-| (CNES warehouse removed) | n/a — public CNES lookups + `facilities.cnes_code` only; do not re-add registry READ without ADR |
-| Multi-tenancy | `docs/specs/0001-multi-tenancy/design.md`, `docs/specs/0001-multi-tenancy/tasks.md` |
-| Territory logic | `docs/specs/0003-territory-management/requirements.md` |
+| CNES / registry | `docs/architecture/adr/0006-cnes-registry-reintroduction.md`, `docs/specs/0012-cnes-registry-professional-associations/requirements.md` |
+| Territory / clinic ownership | `docs/specs/0009-territory-clinic-ownership/requirements.md` |
+| Verticals / facility profiles | `docs/specs/0010-verticals-and-profiles/requirements.md` |
+| Cadastro | `docs/specs/0011-cadastro-pipeline/requirements.md` |
+| Products / potencial de mercado | `docs/specs/0013-potencial-de-mercado/requirements.md` |
+| Dashboards / team | `docs/specs/0014-desempenho-e-equipe/requirements.md` |
+
+---
+
+## apps/web — REMOVED
+
+The Next.js admin app was **deleted**. All product surfaces are mobile: admin and manager
+features that would conventionally be web — team management, performance dashboards, catalog and
+potential admin, entity CRUDs — go in `apps/mobile`.
+
+It was abandoned first (2026-08-09) and removed shortly after. By then several of its pages
+called endpoints deleted in the `a3e32ac5` cutover and 404'd at runtime, and it had zero tests.
+Do not resurrect it, and do not plan work against it.
 
 ---
 
@@ -281,10 +297,13 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 
 | Task | Load |
 |---|---|
-| General mobile work | `docs/architecture/current.md` (mobile section), `docs/architecture/target.md` |
-| Map / route / territory | `docs/specs/0003-territory-management/requirements.md` |
-| Visit logging | TODO: `docs/product/visits.md` (not yet created) |
-| API-backed mobile feature | `docs/ai/integration-tasks/api-mobile.md` |
+| General mobile work | `docs/architecture/current.md` (mobile section) |
+| Map / route / territory | `docs/specs/0009-territory-clinic-ownership/requirements.md` |
+| Verticals / linha switching | `docs/specs/0010-verticals-and-profiles/requirements.md` |
+| Cadastro screens | `docs/specs/0011-cadastro-pipeline/requirements.md` |
+| Potencial de mercado | `docs/specs/0013-potencial-de-mercado/requirements.md` |
+| Desempenho / Equipe | `docs/specs/0014-desempenho-e-equipe/requirements.md` |
+| API-backed mobile feature | this file → `apps/api` section (contract + DTO discipline) |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
 
 ### Anti-patterns
@@ -311,8 +330,9 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 
 | Task | Load |
 |---|---|
-| General worker work | `docs/architecture/current.md`, `docs/architecture/target.md` |
-| (CNES ingest removed) | n/a — do not add FTP/Temporal CNES ingest without a new ADR |
+| General worker work | `docs/architecture/current.md` |
+| CNES | `docs/architecture/adr/0006-cnes-registry-reintroduction.md` — a narrow `registry` schema is permitted; FTP/archive/Temporal ingest is **not** |
+| Emultec order import | `docs/ops/emultec-order-import.md` |
 | Persistence from workflow | this file → `packages/database` section |
 | Workflow triggered by API | this file → `apps/api` section (only the trigger surface) |
 
@@ -341,8 +361,8 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 | Task | Load |
 |---|---|
 | Any change here | this file → `apps/api` § Authorization invariants, `docs/architecture/features/access-auth.md` |
-| Territory visibility | `docs/specs/0003-territory-management/requirements.md` |
-| Multi-tenancy | `docs/specs/0001-multi-tenancy/design.md` |
+| Territory visibility | `docs/specs/0009-territory-clinic-ownership/requirements.md` |
+| Verticals / profile scoping | `docs/specs/0010-verticals-and-profiles/requirements.md` |
 
 ### Anti-patterns
 
@@ -508,7 +528,7 @@ DATABASE_URL=<url> bun run db:migrate
 | Task | Load |
 |---|---|
 | Migration | this section |
-| Territory / PostGIS | `docs/specs/0003-territory-management/requirements.md` |
+| Territory / PostGIS | `docs/specs/0009-territory-clinic-ownership/requirements.md` |
 | Access / row-level | this file → `packages/access` section |
 
 ---
@@ -548,13 +568,25 @@ DATABASE_URL=<url> bun run db:migrate
 
 ---
 
-## packages/cnes-ingestion — REMOVED
+## CNES — ingest removed, narrow registry reintroduced
 
-Package deleted. CNES FTP/archive/Temporal monthly ingest, registry warehouse READ/confirm, and Postgres schemas `registry` / `ingestion` are gone (`facilities.cnes_unit_id` dropped).
+The original ingest vertical was deleted in `a3e32ac5`: FTP/archive/Temporal monthly ingest, the
+registry warehouse READ/confirm surface, and Postgres schemas `registry` / `ingestion`
+(`facilities.cnes_unit_id` dropped). **Do not bring any of that back.**
 
-**Still in repo:** public CNES lookup tables, `facilities.cnes_code`, Spec 0007 `field_suggestions`, Temporal worker at `apps/workers/temporal` (`@atlasmed/temporal-worker`, queue `atlasmed-workflows`).
+**ADR 0006 reintroduces a deliberately narrower `registry` schema** — three read-only tables
+(facilities, deduplicated professionals, vínculo links), loaded manually, used to suggest which
+professionals CNES associates with a clinic. See `docs/specs/0012-cnes-registry-professional-associations/`.
 
-Do not reintroduce CNES ingest / registry warehouse without an ADR + product decision.
+Explicitly still out of scope: FTP adapter · archive storage · Temporal ingest workflows ·
+`ingestion` schema · run/diff/suggestion tables · a `/registry/*` API module · any write-back
+from `registry` to `public`.
+
+Widening that boundary needs a new ADR.
+
+**Also in repo:** public CNES lookup tables, `facilities.cnes_code`,
+`person_healthcare_profiles.cnes_professional_id`, Spec 0007 `field_suggestions`, Temporal worker
+at `apps/workers/temporal` (`@atlasmed/temporal-worker`, queue `atlasmed-workflows`).
 
 ---
 

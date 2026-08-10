@@ -87,7 +87,7 @@ jobs:
       - name: Typecheck API
         run: bun run api:typecheck
 
-      - name: Typecheck CNES worker
+      - name: Typecheck Temporal worker
         run: bun run workers:typecheck
 
 
