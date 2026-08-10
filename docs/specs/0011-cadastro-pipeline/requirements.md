@@ -98,15 +98,20 @@ Requirements:
 ## 3. Data model
 
 ### 3.1 Cadastro keys on the profile
-Per spec 0010 §1.6. `cadastro_submissions` keys on `facility_vertical_profile_id`, replacing
-`facility_id` + nullable `vertical_id`. The "one DRAFT per facility" partial unique index becomes
-**one DRAFT per profile**. `FacilityCadastroCompletionService` computes per profile and writes
+
+> ⚠️ **Superseded by ADR 0007 (2026-08-10), implemented in migration `0084`.** There is no
+> package to key on: `cadastro_submissions` is deleted. The **document** carries
+> `facility_id` plus a nullable `facility_vertical_profile_id` (null = facility-scoped), and
+> uniqueness is `(facility_id, requirement_id, version)`. The "one DRAFT per …" partial index —
+> in either form — is gone, which is what closes D-16.
+
+`FacilityCadastroCompletionService` computes per profile and writes
 `facility_vertical_profiles.conformity_status` (renamed from `commercial_status`);
-`facilities.conformity_status` is removed.
+`facilities.conformity_status` is removed. That part stands.
 
 **`file_assets` stays facility-scoped — deliberately.** Under §3.2 a facility-scoped requirement
 is satisfied once for every profile, so the same physical object must be able to back documents
-in two profiles. Submissions move to the profile; files stay with the facility.
+in two profiles. Documents carry the profile; files stay with the facility.
 
 ### 3.2 Requirement scoping
 `conformity_requirements.vertical_id` **null = facility-scoped** (satisfied once, counts for
@@ -196,14 +201,20 @@ actors are the assigned rep, their manager and OPS — collaboration, not conten
 
 ## 5. Submit & review
 
-**Delete the package-submit path.** `submitPackage` / `canSubmitPackage` are dead client code
-with no callers, and the two paths enforce `requiresFrontAndBack` differently — strict at
-`:840-848`, lenient at `:1201-1214`. Mobile calls only the per-requirement path. One path, one
-rule.
+> ⚠️ **Amended by ADR 0007 (2026-08-10).** "Delete the package-submit path" below is correct and
+> goes further: the package itself is deleted. The `CHANGES_REQUESTED` clone in §6 is not wrapped
+> in a transaction — it is removed, which is what actually closes D-16. Optimistic concurrency
+> (§4.5) moves to the document; it was never implemented, so nothing is lost.
 
-**Scope the review queue.** `GET /cadastro/packages` and `GET /cadastro/submissions` never call
-`assertResourceInScope`; MANAGER and OPS currently get a **global** queue across all territories
-(D-07). Scope both to the reviewer's territory and vertical.
+**Delete the package-submit path.** ✅ Done in migration `0084` — the whole package went with it.
+`submitPackage` / `canSubmitPackage` were dead client code with no callers, and the two paths
+enforced `requiresFrontAndBack` differently — strict at `:840-848`, lenient at `:1201-1214`. Only
+the per-requirement path remains. One path, one rule.
+
+**Scope the review queue.** `GET /cadastro/packages` is deleted (it had no consumer).
+`GET /cadastro/submissions` still never calls `assertResourceInScope`; MANAGER and OPS get a
+**global** queue across all territories (D-07, still open). Scope it to the reviewer's territory
+and vertical.
 
 **Delete the legacy download route.** `GET /facilities/cadastro/files/*`
 (`facilities.route.ts:407-432`) has `auth` only — no `requirePermission`, no scope — and its use

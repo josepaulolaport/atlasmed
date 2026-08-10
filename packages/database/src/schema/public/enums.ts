@@ -129,18 +129,10 @@ export const orderTypeEnum = pgEnum("order_type", [
   "OTHER",
 ]);
 
-/** Cadastro package (submission) lifecycle. */
-export const cadastroSubmissionStatusEnum = pgEnum("cadastro_submission_status", [
-  "DRAFT",
-  "SUBMITTED",
-  "UNDER_REVIEW",
-  "CHANGES_REQUESTED",
-  "APPROVED",
-  "REJECTED",
-  "SUPERSEDED",
-]);
-
-/** Logical document within a cadastro submission. */
+/**
+ * Cadastro document lifecycle. The document is the unit — there is no package
+ * status above it (ADR 0007).
+ */
 export const cadastroDocumentStatusEnum = pgEnum("cadastro_document_status", [
   "DRAFT",
   "PROCESSING",

@@ -188,6 +188,7 @@ async function loadVerticalProfiles(
 
   const rows = await db
     .select({
+      id: facilityVerticalProfiles.id,
       facilityId: facilityVerticalProfiles.facilityId,
       verticalId: facilityVerticalProfiles.verticalId,
       verticalCode: businessVerticals.code,
@@ -217,6 +218,7 @@ async function loadVerticalProfiles(
   for (const row of rows) {
     const list = map.get(row.facilityId) ?? [];
     list.push({
+      id: row.id,
       verticalId: row.verticalId,
       verticalCode: row.verticalCode,
       verticalName: row.verticalName,
@@ -1250,6 +1252,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
   }): Promise<FacilityVerticalProfileRecord> {
     const existing = await db
       .select({
+        id: facilityVerticalProfiles.id,
         verticalId: facilityVerticalProfiles.verticalId,
         verticalCode: businessVerticals.code,
         verticalName: businessVerticals.name,
@@ -1269,6 +1272,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     if (existing[0]) {
       const row = existing[0];
       return {
+        id: row.id,
         verticalId: row.verticalId,
         verticalCode: row.verticalCode,
         verticalName: row.verticalName,

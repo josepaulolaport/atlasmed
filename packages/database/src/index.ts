@@ -25,7 +25,6 @@ import {
   facilityLegalDocumentTypeEnum,
   orderStatusEnum,
   orderTypeEnum,
-  cadastroSubmissionStatusEnum,
   cadastroDocumentStatusEnum,
   cadastroFileAssetStatusEnum,
   cadastroDocumentFileRoleEnum,
@@ -54,8 +53,6 @@ export type FacilityLegalDocumentType =
   (typeof facilityLegalDocumentTypeEnum.enumValues)[number];
 export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
 export type OrderType = (typeof orderTypeEnum.enumValues)[number];
-export type CadastroSubmissionStatus =
-  (typeof cadastroSubmissionStatusEnum.enumValues)[number];
 export type CadastroDocumentStatus =
   (typeof cadastroDocumentStatusEnum.enumValues)[number];
 export type CadastroFileAssetStatus =

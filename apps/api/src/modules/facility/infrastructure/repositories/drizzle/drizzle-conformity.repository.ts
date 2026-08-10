@@ -2,9 +2,10 @@ import {
   conformityRecords,
   conformityRequirements,
   facilities,
+  type Database,
   type FacilityLegalDocumentType,
 } from "@atlasmed/database";
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, or } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   ConformityRecordRow,
@@ -121,8 +122,11 @@ function mapRecord(row: RecordWithRequirement): ConformityRecordRow {
   };
 }
 
-async function loadRecordById(id: number): Promise<ConformityRecordRow | null> {
-  const [record] = await db
+async function loadRecordById(
+  database: Database,
+  id: number
+): Promise<ConformityRecordRow | null> {
+  const [record] = await database
     .select(recordWithRequirementSelect)
     .from(conformityRecords)
     .innerJoin(
@@ -135,13 +139,28 @@ async function loadRecordById(id: number): Promise<ConformityRecordRow | null> {
 }
 
 export class DrizzleConformityRepository implements ConformityRepository {
+  /**
+   * Injectable so a test can hand it a transaction, matching
+   * DrizzleFacilityPurchaseRecurrenceRepository. Without it these queries can
+   * only be exercised against committed rows.
+   */
+  constructor(private readonly database: Database = db) {}
+
   async findActiveRequirements(params?: {
     legalDocumentType?: FacilityLegalDocumentType | null;
+    /**
+     * Restrict to requirements that apply to this vertical (D-49).
+     *
+     * `conformity_requirements.vertical_id` existed but was never read, so a
+     * clinic's cadastro checklist listed every vertical's documents — including
+     * ones its linha does not require. Omitted (admin catalogue) means no
+     * vertical filter at all.
+     */
+    verticalId?: number | null;
   }): Promise<ConformityRequirementRecord[]> {
     // No params → full active catalog (admin list).
-    // Explicit legalDocumentType CNPJ/CPF → ONLY that catalog (no shared/null rows —
-    // legacy shared requirements must not appear in Cadastro checklists).
-    // Explicit null/unknown → empty (caller should set legalDocumentType first).
+    // Explicit null/unknown legal type → empty; the caller must establish whether
+    // the clinic is a CNPJ or a CPF before a checklist means anything.
     if (
       params !== undefined &&
       params.legalDocumentType !== "CNPJ" &&
@@ -150,29 +169,48 @@ export class DrizzleConformityRepository implements ConformityRepository {
       return [];
     }
 
-    const typeFilter =
-      params === undefined
-        ? undefined
-        : eq(
+    const conditions = [eq(conformityRequirements.isActive, true)];
+
+    // ADR 0007: a null scope column means "applies to everyone", for BOTH scope
+    // columns. This one used to exclude nulls, to stop legacy shared rows from
+    // reaching checklists — but those rows no longer exist, and having null mean
+    // "everyone" for vertical_id while meaning "nobody" here is a trap for
+    // whoever adds the next requirement.
+    if (params !== undefined) {
+      conditions.push(
+        or(
+          isNull(conformityRequirements.appliesToLegalDocumentType),
+          eq(
             conformityRequirements.appliesToLegalDocumentType,
             params.legalDocumentType!
-          );
+          )
+        )!
+      );
+    }
 
-    const rows = await db
+    // Same rule for the vertical (spec 0011 §3.2): a null vertical_id is
+    // facility-scoped — satisfied once, counting for every linha — while a set
+    // one belongs to that linha alone.
+    if (params?.verticalId != null) {
+      conditions.push(
+        or(
+          isNull(conformityRequirements.verticalId),
+          eq(conformityRequirements.verticalId, params.verticalId)
+        )!
+      );
+    }
+
+    const rows = await this.database
       .select()
       .from(conformityRequirements)
-      .where(
-        typeFilter
-          ? and(eq(conformityRequirements.isActive, true), typeFilter)
-          : eq(conformityRequirements.isActive, true)
-      )
+      .where(and(...conditions))
       .orderBy(asc(conformityRequirements.name));
 
     return rows.map(mapRequirement);
   }
 
   async findRequirementById(id: number): Promise<ConformityRequirementRecord | null> {
-    const [row] = await db
+    const [row] = await this.database
       .select()
       .from(conformityRequirements)
       .where(eq(conformityRequirements.id, id))
@@ -182,7 +220,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
   }
 
   async findRecordsByFacility(facilityId: number): Promise<ConformityRecordRow[]> {
-    const rows = await db
+    const rows = await this.database
       .select(recordWithRequirementSelect)
       .from(conformityRecords)
       .innerJoin(
@@ -196,14 +234,14 @@ export class DrizzleConformityRepository implements ConformityRepository {
   }
 
   async findRecordById(id: number): Promise<ConformityRecordRow | null> {
-    return loadRecordById(id);
+    return loadRecordById(this.database, id);
   }
 
   async findRecordByFacilityAndRequirement(
     facilityId: number,
     requirementId: number
   ): Promise<ConformityRecordRow | null> {
-    const [record] = await db
+    const [record] = await this.database
       .select(recordWithRequirementSelect)
       .from(conformityRecords)
       .innerJoin(
@@ -224,7 +262,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
   async findRecordByStorageKey(
     storageKey: string
   ): Promise<ConformityRecordRow | null> {
-    const [record] = await db
+    const [record] = await this.database
       .select(recordWithRequirementSelect)
       .from(conformityRecords)
       .innerJoin(
@@ -244,12 +282,12 @@ export class DrizzleConformityRepository implements ConformityRepository {
   }): Promise<{ records: ConformityRecordRow[]; total: number }> {
     const offset = (params.page - 1) * params.limit;
 
-    const [totalRow] = await db
+    const [totalRow] = await this.database
       .select({ total: count() })
       .from(conformityRecords)
       .where(eq(conformityRecords.status, params.status));
 
-    const rows = await db
+    const rows = await this.database
       .select({
         ...recordWithRequirementSelect,
         facility: {
@@ -291,7 +329,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
     requirementId: number;
     status?: ConformityRecordStatus;
   }): Promise<ConformityRecordRow> {
-    const [inserted] = await db
+    const [inserted] = await this.database
       .insert(conformityRecords)
       .values({
         facilityId: params.facilityId,
@@ -300,7 +338,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
       })
       .returning({ id: conformityRecords.id });
 
-    const record = await loadRecordById(inserted!.id);
+    const record = await loadRecordById(this.database, inserted!.id);
     if (!record) {
       throw new ResourceNotFoundError("ConformityRecord", inserted!.id);
     }
@@ -316,7 +354,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
     fileName: string;
   }): Promise<ConformityRecordRow> {
     const now = new Date();
-    const [upserted] = await db
+    const [upserted] = await this.database
       .insert(conformityRecords)
       .values({
         facilityId: params.facilityId,
@@ -349,7 +387,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
       })
       .returning({ id: conformityRecords.id });
 
-    const record = await loadRecordById(upserted!.id);
+    const record = await loadRecordById(this.database, upserted!.id);
     if (!record) {
       throw new ResourceNotFoundError("ConformityRecord", upserted!.id);
     }
@@ -361,7 +399,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
     validatedByUserId: number;
   }): Promise<ConformityRecordRow> {
     const now = new Date();
-    const [updated] = await db
+    const [updated] = await this.database
       .update(conformityRecords)
       .set({
         status: "VALIDATED",
@@ -377,7 +415,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
       throw new ResourceNotFoundError("ConformityRecord", params.recordId);
     }
 
-    const record = await loadRecordById(updated.id);
+    const record = await loadRecordById(this.database, updated.id);
     if (!record) {
       throw new ResourceNotFoundError("ConformityRecord", params.recordId);
     }
@@ -390,7 +428,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
     reviewerNote: string;
   }): Promise<ConformityRecordRow> {
     const now = new Date();
-    const [updated] = await db
+    const [updated] = await this.database
       .update(conformityRecords)
       .set({
         status: "REJECTED",
@@ -406,7 +444,7 @@ export class DrizzleConformityRepository implements ConformityRepository {
       throw new ResourceNotFoundError("ConformityRecord", params.recordId);
     }
 
-    const record = await loadRecordById(updated.id);
+    const record = await loadRecordById(this.database, updated.id);
     if (!record) {
       throw new ResourceNotFoundError("ConformityRecord", params.recordId);
     }

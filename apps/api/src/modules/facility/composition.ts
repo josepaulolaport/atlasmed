@@ -39,18 +39,15 @@ import {
 } from "./application/use-cases/facility-cadastro.use-cases";
 import {
   CompleteCadastroFileUploadUseCase,
-  CreateCadastroSubmissionDocumentUseCase,
-  DeleteDraftCadastroSubmissionUseCase,
-  EnsureDraftCadastroSubmissionUseCase,
+  CreateCadastroDocumentUseCase,
+  DeleteCadastroDocumentUseCase,
   GetCadastroFileSignedUrlUseCase,
   InitiateCadastroFileUploadUseCase,
-  ListCadastroPackageSubmissionsUseCase,
   ListCadastroRequirementSubmissionsUseCase,
   ReorderCadastroDocumentFilesUseCase,
   ReviewCadastroDocumentUseCase,
   SignCadastroUploadPartsUseCase,
   SubmitCadastroRequirementUseCase,
-  SubmitCadastroSubmissionUseCase,
 } from "./application/use-cases/cadastro-submission.use-cases";
 import { FacilityCadastroCompletionService } from "./application/services/facility-cadastro-completion.service";
 import {
@@ -317,10 +314,8 @@ export const facilityUseCases = {
       facilityRepository: facilityRepositories.facility,
       cadastroRepository: facilityRepositories.cadastroSubmission,
     }),
-  ensureDraftCadastroSubmission: () =>
-    new EnsureDraftCadastroSubmissionUseCase(cadastroSubmissionDeps),
-  createCadastroSubmissionDocument: () =>
-    new CreateCadastroSubmissionDocumentUseCase(cadastroSubmissionDeps),
+  createCadastroDocument: () =>
+    new CreateCadastroDocumentUseCase(cadastroSubmissionDeps),
   initiateCadastroFileUpload: () =>
     new InitiateCadastroFileUploadUseCase(cadastroSubmissionDeps),
   signCadastroUploadParts: () =>
@@ -331,18 +326,14 @@ export const facilityUseCases = {
     new ReorderCadastroDocumentFilesUseCase(cadastroSubmissionDeps),
   getCadastroFileSignedUrl: () =>
     new GetCadastroFileSignedUrlUseCase(cadastroSubmissionDeps),
-  submitCadastroSubmission: () =>
-    new SubmitCadastroSubmissionUseCase(cadastroSubmissionDeps),
   submitCadastroRequirement: () =>
     new SubmitCadastroRequirementUseCase(cadastroSubmissionDeps),
   listCadastroRequirementSubmissions: () =>
     new ListCadastroRequirementSubmissionsUseCase(cadastroSubmissionDeps),
-  deleteDraftCadastroSubmission: () =>
-    new DeleteDraftCadastroSubmissionUseCase(cadastroSubmissionDeps),
+  deleteCadastroDocument: () =>
+    new DeleteCadastroDocumentUseCase(cadastroSubmissionDeps),
   reviewCadastroDocument: () =>
     new ReviewCadastroDocumentUseCase(cadastroSubmissionDeps),
-  listCadastroPackageSubmissions: () =>
-    new ListCadastroPackageSubmissionsUseCase(cadastroSubmissionDeps),
   listFacilityVisits: () =>
     new ListFacilityVisitsUseCase({
       visitRepository: facilityRepositories.visit,

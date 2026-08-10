@@ -105,6 +105,20 @@ relationship it keys on the profile; if it describes the building it keys on the
 
 ### 1.6 Cadastro is per profile, not per facility
 
+> ⚠️ **SUPERSEDED by ADR 0007 (2026-08-10).** The premise below is right — a facility-wide
+> conformity verdict is meaningless — but the conclusion is wrong. Cadastro submissions are NOT
+> re-keyed onto the profile: the *package* is deleted entirely and the **document** becomes the
+> unit, carrying a nullable `facility_vertical_profile_id`.
+>
+> Investigation showed the package is a layer every consumer routes around: `submitPackage` has no
+> caller, reviews attach to documents, completion reads document status, and the package version
+> is read only by the CHANGES_REQUESTED clone that wedges clinics (D-16). Re-keying it would have
+> preserved machinery that should be removed.
+>
+> Still correct below and implemented: `commercial_status` → `conformity_status` on the profile,
+> `facilities.conformity_status` removed, `purchase_status` dropped, and requirements filtered by
+> vertical (D-49). Read the rest with the package claim struck out.
+
 Different verticals require different documents, so a single facility-wide conformity verdict is
 meaningless.
 

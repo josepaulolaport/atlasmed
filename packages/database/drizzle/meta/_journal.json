@@ -589,6 +589,13 @@
       "when": 1786376060155,
       "tag": "0083_competitor_products_merge",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1786385734761,
+      "tag": "0084_cadastro_document_is_the_unit",
+      "breakpoints": true
     }
   ]
 }

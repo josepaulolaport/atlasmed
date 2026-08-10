@@ -745,7 +745,6 @@ class CadastroDocumentFile {
 class CadastroRequirementSubmission {
   const CadastroRequirementSubmission({
     required this.documentId,
-    required this.submissionId,
     required this.requirementId,
     required this.title,
     required this.status,
@@ -759,7 +758,6 @@ class CadastroRequirementSubmission {
   });
 
   final int documentId;
-  final int submissionId;
   final int requirementId;
   final String title;
   final String status;
@@ -796,7 +794,6 @@ class CadastroRequirementSubmission {
         .cast<Map<String, dynamic>>();
     return CadastroRequirementSubmission(
       documentId: readCrmId(json['documentId'], 'documentId'),
-      submissionId: readCrmId(json['submissionId'], 'submissionId'),
       requirementId: readCrmId(json['requirementId'], 'requirementId'),
       title: json['title'] as String? ?? 'Envio',
       status: json['status'] as String? ?? '',
@@ -836,7 +833,6 @@ class CadastroRequirementSubmission {
 class CadastroApprovedSummary {
   const CadastroApprovedSummary({
     required this.documentId,
-    required this.submissionId,
     required this.version,
     this.submittedAt,
     this.reviewComment,
@@ -845,7 +841,6 @@ class CadastroApprovedSummary {
   });
 
   final int documentId;
-  final int submissionId;
   final int version;
   final DateTime? submittedAt;
   final String? reviewComment;
@@ -875,7 +870,6 @@ class CadastroApprovedSummary {
         .toList(growable: false);
     return CadastroApprovedSummary(
       documentId: readCrmId(json['documentId'], 'documentId'),
-      submissionId: readCrmId(json['submissionId'], 'submissionId'),
       version: (json['version'] as num?)?.toInt() ?? 1,
       submittedAt: json['submittedAt'] != null
           ? DateTime.tryParse(json['submittedAt'] as String)

@@ -107,20 +107,10 @@ class FacilityCadastroController {
     }
   }
 
-  Future<void> submitPackage(int submissionId) async {
+  Future<void> deleteDocument(int documentId) async {
     final repo = FacilityCadastroRepository(facilityId);
     try {
-      await repo.submitPackage(submissionId);
-      await refresh();
-    } finally {
-      repo.dispose();
-    }
-  }
-
-  Future<void> deleteDraft(int submissionId) async {
-    final repo = FacilityCadastroRepository(facilityId);
-    try {
-      await repo.deleteDraft(submissionId);
+      await repo.deleteDocument(documentId);
       await refresh();
     } finally {
       repo.dispose();

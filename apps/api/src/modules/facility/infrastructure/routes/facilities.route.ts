@@ -5,7 +5,7 @@ import { facilityUseCases } from "../../composition";
 import { ordersUseCases } from "../../../orders/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
-import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
+import { cadastroDocumentsRoute } from "./cadastro-documents.route";
 import { mapFacilitiesRoute } from "./map-facilities.route";
 import { personProjectionsRoute } from "./person-projections.route";
 
@@ -895,7 +895,7 @@ const downloadFacilityPhotoRoute = new Elysia()
   );
 
 export const facilitiesRoute = new Elysia()
-  .use(cadastroSubmissionsRoute)
+  .use(cadastroDocumentsRoute)
   .use(mapFacilitiesRoute)
   .use(personProjectionsRoute)
   .use(listFacilitiesRoute)

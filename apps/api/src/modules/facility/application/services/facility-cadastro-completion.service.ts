@@ -46,8 +46,12 @@ export class FacilityCadastroCompletionService {
     const profile = profiles.get(facilityId)?.[0];
     const currentCommercialStatus = profile?.commercialStatus ?? null;
 
+    // Scoped to the linha being evaluated (D-49). Without it a clinic could
+    // never complete: it would be judged against every vertical's documents,
+    // including ones its linha does not require.
     const requirements = await this.deps.conformityRepository.findActiveRequirements({
       legalDocumentType: resolveFacilityLegalDocumentType(facility),
+      verticalId,
     });
 
     let docsComplete = false;
@@ -60,7 +64,7 @@ export class FacilityCadastroCompletionService {
               requirementId: requirement.id,
               excludeDraft: true,
             });
-          return history.some((h) => h.document.status === "APPROVED");
+          return history.some((document) => document.status === "APPROVED");
         })
       );
       docsComplete =

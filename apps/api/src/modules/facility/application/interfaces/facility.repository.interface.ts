@@ -48,6 +48,8 @@ export interface FacilityVerticalProfilePurchaseRecurrence {
 }
 
 export interface FacilityVerticalProfileRecord {
+  /** The profile row's own id — cadastro documents key on it (ADR 0007). */
+  id: number;
   verticalId: number;
   verticalCode?: string;
   verticalName?: string;

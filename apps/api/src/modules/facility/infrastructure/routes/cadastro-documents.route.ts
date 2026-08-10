@@ -11,63 +11,32 @@ const documentFileRole = t.Union([
   t.Literal("SUPPORTING_DOCUMENT"),
 ]);
 
-const ensureDraftSubmissionRoute = new Elysia()
+const createCadastroDocumentRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .post(
-    "/facilities/:id/cadastro/submissions",
-    async ({ params, body, getScope, getUserId }) => {
-      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
-      return facilityUseCases.ensureDraftCadastroSubmission().execute({
-        facilityId: params.id,
-        userId,
-        scope,
-        verticalId: body?.verticalId ?? undefined,
-      });
-    },
-    {
-      detail: {
-        summary: "Create or return the current DRAFT cadastro submission",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-      params: t.Object({
-        id: t.Number({ minimum: 1 }),
-      }),
-      body: t.Optional(
-        t.Object({
-          verticalId: t.Optional(t.Number({ minimum: 1 })),
-        })
-      ),
-    }
-  );
-
-const createSubmissionDocumentRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
-  .post(
-    "/facilities/:id/cadastro/submissions/:submissionId/documents",
+    "/facilities/:id/cadastro/documents",
     async ({ params, body, getScope }) => {
       const scope = await getScope();
-      return facilityUseCases.createCadastroSubmissionDocument().execute({
+      return facilityUseCases.createCadastroDocument().execute({
         facilityId: params.id,
-        submissionId: params.submissionId,
         requirementId: body.requirementId,
         scope,
+        verticalId: body.verticalId ?? undefined,
       });
     },
     {
       detail: {
-        summary: "Create a logical document inside a cadastro submission",
+        summary: "Open (or return) the working document for one requirement",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
       params: t.Object({
         id: t.Number({ minimum: 1 }),
-        submissionId: t.Number({ minimum: 1 }),
       }),
       body: t.Object({
         requirementId: t.Number({ minimum: 1 }),
+        verticalId: t.Optional(t.Number({ minimum: 1 })),
       }),
     }
   );
@@ -257,55 +226,28 @@ const getFileSignedUrlRoute = new Elysia()
     }
   );
 
-const submitPackageRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
-  .post(
-    "/facilities/:id/cadastro/submissions/:submissionId/submit",
-    async ({ params, getScope, getUserId }) => {
-      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
-      return facilityUseCases.submitCadastroSubmission().execute({
-        facilityId: params.id,
-        submissionId: params.submissionId,
-        userId,
-        scope,
-      });
-    },
-    {
-      detail: {
-        summary: "Freeze and submit a cadastro package for review",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-      params: t.Object({
-        id: t.Number({ minimum: 1 }),
-        submissionId: t.Number({ minimum: 1 }),
-      }),
-    }
-  );
-
-const deleteDraftSubmissionRoute = new Elysia()
+const deleteCadastroDocumentRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .delete(
-    "/facilities/:id/cadastro/submissions/:submissionId",
+    "/facilities/:id/cadastro/documents/:documentId",
     async ({ params, getScope }) => {
       const scope = await getScope();
-      return facilityUseCases.deleteDraftCadastroSubmission().execute({
+      return facilityUseCases.deleteCadastroDocument().execute({
         facilityId: params.id,
-        submissionId: params.submissionId,
+        documentId: params.documentId,
         scope,
       });
     },
     {
       detail: {
-        summary: "Delete a DRAFT cadastro submission package",
+        summary: "Discard one unsent cadastro document and its files",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
       params: t.Object({
         id: t.Number({ minimum: 1 }),
-        submissionId: t.Number({ minimum: 1 }),
+        documentId: t.Number({ minimum: 1 }),
       }),
     }
   );
@@ -347,41 +289,6 @@ const reviewDocumentRoute = new Elysia()
         comment: t.Optional(t.String({ maxLength: 2000 })),
         reasonCode: t.Optional(t.String({ maxLength: 64 })),
         flaggedFileAssetIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
-      }),
-    }
-  );
-
-const listPackageSubmissionsRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "CADASTRO_SUBMISSION"))
-  .get(
-    "/cadastro/packages",
-    async ({ query }) => {
-      return facilityUseCases.listCadastroPackageSubmissions().execute({
-        status: query.status
-          ? [query.status as "UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED"]
-          : undefined,
-        page: query.page,
-        limit: query.limit,
-      });
-    },
-    {
-      detail: {
-        summary: "List versioned cadastro submission packages for ops review",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: t.Object({
-        status: t.Optional(
-          t.Union([
-            t.Literal("UNDER_REVIEW"),
-            t.Literal("APPROVED"),
-            t.Literal("REJECTED"),
-            t.Literal("CHANGES_REQUESTED"),
-          ])
-        ),
-        page: t.Optional(t.Number({ minimum: 1 })),
-        limit: t.Optional(t.Number({ minimum: 1, maximum: 100 })),
       }),
     }
   );
@@ -445,17 +352,14 @@ const submitRequirementRoute = new Elysia()
     }
   );
 
-export const cadastroSubmissionsRoute = new Elysia()
-  .use(ensureDraftSubmissionRoute)
-  .use(createSubmissionDocumentRoute)
+export const cadastroDocumentsRoute = new Elysia()
+  .use(createCadastroDocumentRoute)
   .use(initiateFileUploadRoute)
   .use(signUploadPartsRoute)
   .use(completeFileUploadRoute)
   .use(reorderDocumentFilesRoute)
   .use(getFileSignedUrlRoute)
-  .use(submitPackageRoute)
   .use(submitRequirementRoute)
   .use(listRequirementSubmissionsRoute)
-  .use(deleteDraftSubmissionRoute)
-  .use(reviewDocumentRoute)
-  .use(listPackageSubmissionsRoute);
+  .use(deleteCadastroDocumentRoute)
+  .use(reviewDocumentRoute);
