@@ -7,6 +7,7 @@ import {
 } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import type { ScopeRepository } from "../../../application/interfaces/scope.repository.interface";
+import { OperationNotAllowedError } from "../../../../../shared/errors";
 
 /** Keep slugs local — avoid access ↔ territory composition cycles. */
 const MANAGER_ZONE_TYPE_SLUG = "manager_zone";
@@ -138,28 +139,25 @@ export class DrizzleScopeRepository implements ScopeRepository {
     return null;
   }
 
+  /**
+   * Verticals a user is a member of. UVA is the only grant (spec 0010 §1.1).
+   *
+   * This used to UNION in `SELECT DISTINCT territories.vertical_id` of the
+   * user's territory assignments, while `GET /user/assignments` reported UVA
+   * only — so assigning a territory silently granted its vertical everywhere,
+   * and effective access exceeded anything any UI could show (D-29).
+   *
+   * The union is redundant now that invariant I6 holds: a territory can only be
+   * assigned in a vertical the user already has, so every territory's vertical
+   * is necessarily in UVA already.
+   */
   async findVerticalIdsByUserId(userId: number): Promise<number[]> {
-    const [uvaRows, territoryRows] = await Promise.all([
-      db
-        .select({ verticalId: userVerticalAssignments.verticalId })
-        .from(userVerticalAssignments)
-        .where(eq(userVerticalAssignments.userId, userId)),
-      db
-        .selectDistinct({ verticalId: territories.verticalId })
-        .from(userTerritoryAssignments)
-        .innerJoin(
-          territories,
-          eq(territories.id, userTerritoryAssignments.territoryId),
-        )
-        .where(eq(userTerritoryAssignments.userId, userId)),
-    ]);
+    const rows = await db
+      .select({ verticalId: userVerticalAssignments.verticalId })
+      .from(userVerticalAssignments)
+      .where(eq(userVerticalAssignments.userId, userId));
 
-    return [
-      ...new Set([
-        ...uvaRows.map((r) => r.verticalId),
-        ...territoryRows.map((r) => r.verticalId),
-      ]),
-    ];
+    return [...new Set(rows.map((r) => r.verticalId))];
   }
 
   async assignVertical(params: {
@@ -184,7 +182,39 @@ export class DrizzleScopeRepository implements ScopeRepository {
       });
   }
 
+  /**
+   * Spec 0010 §1.1: revoking a vertical from a user who holds territories in it
+   * is BLOCKED — "remove their territories first". Never silently end UTAs.
+   *
+   * Without this, revoking a vertical would leave the user holding territories
+   * in a vertical they are no longer a member of, which is exactly the state
+   * invariant I6 forbids on the way in. The alternative — cascading the
+   * revocation into their territory assignments — destroys a human decision to
+   * satisfy a bookkeeping one, and the assignment rows are not recoverable.
+   *
+   * Enforced here because the route calls this method directly; there is no
+   * use case in between to hold the rule.
+   */
   async revokeVertical(params: { userId: number; verticalId: number }): Promise<void> {
+    const heldTerritories = await db
+      .select({ id: territories.id, name: territories.name })
+      .from(userTerritoryAssignments)
+      .innerJoin(territories, eq(territories.id, userTerritoryAssignments.territoryId))
+      .where(
+        and(
+          eq(userTerritoryAssignments.userId, params.userId),
+          eq(territories.verticalId, params.verticalId)
+        )
+      );
+
+    if (heldTerritories.length > 0) {
+      const names = heldTerritories.map((t) => t.name).join(", ");
+      throw new OperationNotAllowedError(
+        "revoke_vertical",
+        `User still holds ${heldTerritories.length} territory/territories in this vertical (${names}). Remove those assignments first.`
+      );
+    }
+
     await db
       .delete(userVerticalAssignments)
       .where(
