@@ -128,7 +128,7 @@ Root: `../atlasmed-worktrees/` — sibling of the main repo dir. Never nest insi
 
 - Squash PR to `main`. Merge commit body summarizes the branch.
 - Delete branch after merge — locally AND remotely.
-- **All required CI checks must pass before merge.** GitHub ruleset `Protect main` enforces this.
+- **All four CI jobs must pass before merge.** GitHub ruleset `Protect main` enforces this.
 
 ### Cleanup cadence (weekly)
 
@@ -153,6 +153,41 @@ Delete `experiment/` branches older than 7 days regardless of merge status.
 - Update nearby docs when behavior changes.
 - Do not add dependencies without explaining why.
 - Do not touch unrelated files.
+
+## Never let a failure become silence
+
+The most expensive defects in this repo have all been the same shape: something
+was broken **and reported success**. Not one was found by a failing check.
+
+Three, all confirmed on 2026-08-10:
+
+- **CI ran zero API tests for an unknown period.** `bun --cwd apps/api run test:unit`
+  prints `bun run`'s usage text and exits **0** — the flag must follow the
+  subcommand. The required `API — typecheck + test` check was green on typecheck
+  alone. Found while checking whether a new test had actually executed.
+- **A retired service was never removed.** `uc rm atlasmed-web --yes` failed on
+  every deploy with `unknown flag: --yes`; a trailing `|| true` swallowed it. The
+  service kept running for weeks. Found while reading a deploy log for an
+  unrelated reason.
+- **Migration `0046` truncated 68 tables with no reseed.** A fresh database
+  cannot create a user, because `roles` is never inserted anywhere. Nothing
+  fails until someone tries to stand up an environment.
+
+The lesson is not "be careful". It is that **a guard which converts failure into
+silence is worse than no guard**, because it also removes the evidence.
+
+Concretely, when writing or reviewing anything in the deploy or CI path:
+
+- `|| true`, `continue-on-error`, `--no-exit-on-error` and empty `catch` blocks
+  must **log what they suppressed**. Tolerating failure is often right; hiding
+  which failure never is.
+- A command that "succeeds" is not evidence it did anything. Check the output.
+  `exit 0` from a CLI that printed its help text is the canonical trap.
+- Prefer a command that fails loudly and is made idempotent over one wrapped in
+  `|| true` to make it re-runnable.
+- After changing a migration, deploy step or CI invocation, **read the log of the
+  first real run** and confirm the thing you expected to happen appears in it.
+  Green is not evidence.
 
 ## When restructuring documentation
 
