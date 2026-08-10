@@ -126,7 +126,13 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
   },
   "modules/territory/application/use-cases/territory-crud.use-cases.ts": {
     kind: "domain-policy",
-    patterns: ["assertManagerReadScope", "effectiveTerritoryIds"],
+    patterns: [
+      "assertManagerReadScope",
+      "effectiveTerritoryIds",
+      // Spec 0010 §2.2: territory read + vertical filter guards.
+      "assertResourceInScope",
+      "resolveScopedVerticalIds",
+    ],
   },
   "modules/territory/application/use-cases/territory-membership.use-cases.ts": {
     kind: "inline-scope",

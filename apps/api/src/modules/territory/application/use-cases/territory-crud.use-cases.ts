@@ -1,4 +1,4 @@
-import { Role } from "@atlasmed/access";
+import { Role, assertResourceInScope, resolveAccessibleVerticalIds } from "@atlasmed/access";
 import type { ScopeContext } from "@atlasmed/access";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
@@ -14,9 +14,41 @@ import { serializeBoundaryResolution } from "../utils/territory-boundary-resolut
 import { assertSinglePolygonForEditableTerritory } from "../utils/territory-boundary.utils";
 import { normalizeTerritorySlug } from "../constants/territory-slug.constants";
 import {
+  ForbiddenError,
   OperationNotAllowedError,
   ResourceNotFoundError,
 } from "../../../../shared/errors";
+
+/**
+ * Spec 0010 §2.1 — the vertical parameter is a filter, never a grant.
+ *
+ * Returns the vertical ids the caller may operate in, narrowed by `filterVerticalId`
+ * when provided, or `null` when no vertical narrowing applies (global scope, or no
+ * scope supplied by an internal caller).
+ *
+ * Global scope (ADMIN) is deliberately not narrowed: spec 0010 §2.3 defers ADMIN
+ * vertical scoping, and `createGlobalScopeContext()` carries `assignedVerticalIds: []`,
+ * which the helper would otherwise read as "nothing accessible".
+ */
+function resolveScopedVerticalIds(
+  scope: ScopeContext | undefined,
+  filterVerticalId?: number | null
+): number[] | null {
+  if (!scope || scope.isGlobal) {
+    return null;
+  }
+
+  const result = resolveAccessibleVerticalIds({
+    assignedVerticalIds: scope.assignedVerticalIds ?? [],
+    filterVerticalId: filterVerticalId ?? null,
+  });
+
+  if (!result.ok) {
+    throw new ForbiddenError("Vertical outside assignment");
+  }
+
+  return result.verticalIds;
+}
 
 export interface TerritoryDeletionMembershipPort {
   disassociateClinicsForTerritory(territoryId: number): Promise<{ processed: number }>;
@@ -95,7 +127,15 @@ export class TerritoryCrudUseCases {
     territoryTypeId?: number;
     typeSlug?: string;
     boundary?: GeoJsonGeometry;
+    /**
+     * Caller scope. Omitted only by internal/admin flows (invite, invitation update)
+     * that do not originate from a scoped HTTP request.
+     */
+    scope?: ScopeContext;
   }) {
+    // Spec 0010 §2.2 — a caller may only create territories in their own verticals.
+    resolveScopedVerticalIds(input.scope, input.verticalId);
+
     const type = input.territoryTypeId
       ? await this.deps.territoryTypeRepository.findById(input.territoryTypeId)
       : input.typeSlug
@@ -163,7 +203,12 @@ export class TerritoryCrudUseCases {
     };
   }
 
-  async getTerritory(id: number) {
+  async getTerritory(id: number, scope?: ScopeContext) {
+    // Spec 0010 §2.2 — reading a territory by id must respect territory scope.
+    if (scope) {
+      assertResourceInScope(scope, "territory", id);
+    }
+
     const territory = await this.deps.territoryRepository.findById(id);
     if (!territory) {
       return null;
@@ -176,6 +221,13 @@ export class TerritoryCrudUseCases {
     scope?: ScopeContext,
     filters?: { typeSlug?: string; managerTerritoryId?: number; verticalId?: number }
   ) {
+    // Spec 0010 §2.2/§2.1 — `verticalId` may only narrow the caller's assigned set,
+    // never widen it. Throws before any query when the filter is not assigned.
+    const accessibleVerticalIds = resolveScopedVerticalIds(
+      scope,
+      filters?.verticalId
+    );
+
     const territories = await this.deps.territoryRepository.findAllActive(
       filters?.verticalId,
     );
@@ -184,6 +236,12 @@ export class TerritoryCrudUseCases {
     if (scope && !scope.isGlobal) {
       filtered = territories.filter((territory) =>
         scope.effectiveTerritoryIds.includes(territory.id)
+      );
+    }
+
+    if (accessibleVerticalIds && accessibleVerticalIds.length > 0) {
+      filtered = filtered.filter((territory) =>
+        accessibleVerticalIds.includes(territory.verticalId)
       );
     }
 

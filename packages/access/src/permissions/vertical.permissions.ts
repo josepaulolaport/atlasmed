@@ -6,7 +6,8 @@ export const VERTICAL_ID_HEADER = "x-atlasmed-vertical-id";
  * All roles (incl. ADMIN): must be in `assignedVerticalIds` from scope/UVA.
  */
 export function canAccessVertical(input: {
-  role: string;
+  /** Unused — access is decided by UVA alone, incl. for ADMIN. Kept for call-site readability. */
+  role?: string;
   assignedVerticalIds: number[];
   verticalId: number;
 }): boolean {
@@ -22,7 +23,8 @@ export function canAccessVertical(input: {
  * - Filter (header or query) → single id if allowed; else not accessible.
  */
 export function resolveAccessibleVerticalIds(input: {
-  role: string;
+  /** Unused — see `canAccessVertical`. */
+  role?: string;
   assignedVerticalIds: number[];
   /** Optional narrowing filter (header preferred over query). */
   filterVerticalId?: number | null;
