@@ -146,7 +146,7 @@ void main() {
 
       final command = notifier.state.draft.toCreateCommand();
 
-      expect(command.startsAt, '2026-08-03T09:30:00.000-03:00');
+      expect(command.startsAt, '2026-08-03T09:30:00.000+00:00');
       expect(command.recurrence, CalendarRecurrence.monthly);
       expect(command.recurrenceCount, 6);
       expect(command.recurrenceUntil, isNull);

@@ -129,6 +129,30 @@ void main() {
     expect(find.text('Há 3 dias'), findsOneWidget);
   });
 
+  testWidgets('uses Brazil calendar days independently of the host timezone', (
+    tester,
+  ) async {
+    final clinic = FacilityEntry.fromDTO(
+      api.FacilityDTO.fromMap(const {
+        'id': 30,
+        'name': 'Clínica próxima da meia-noite',
+        'professionalCount': 1,
+        'lastVisitAt': '2026-07-24T23:30:00.000-03:00',
+      }),
+      now: DateTime.utc(2026, 7, 27, 11),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClinicRow(clinic: clinic, onTap: () {}),
+        ),
+      ),
+    );
+
+    expect(find.text('Há 3 dias'), findsOneWidget);
+  });
+
   testWidgets('shows a compact purchase funnel stage when available', (
     tester,
   ) async {
