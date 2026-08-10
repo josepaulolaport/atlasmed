@@ -57,17 +57,11 @@ class FacilityEntry {
     ];
     final profile = pickVerticalProfile(dto.verticalProfiles);
     final status = profile?.commercialStatus?.trim();
-    final lastVisitAt = DateTime.tryParse(dto.lastVisitAt ?? '')?.toLocal();
-    final reference = (now ?? DateTime.now()).toLocal();
+    final lastVisitAt = DateTime.tryParse(dto.lastVisitAt ?? '');
+    final reference = now ?? DateTime.now();
     final lastVisitDays = lastVisitAt == null
         ? null
-        : DateTime(reference.year, reference.month, reference.day)
-              .difference(
-                DateTime(lastVisitAt.year, lastVisitAt.month, lastVisitAt.day),
-              )
-              .inDays
-              .clamp(0, 1 << 31)
-              .toInt();
+        : calendarDaysBetweenBr(lastVisitAt, reference);
     return FacilityEntry(
       id: dto.id,
       name: dto.name,
@@ -84,4 +78,20 @@ class FacilityEntry {
       verticalProfiles: dto.verticalProfiles,
     );
   }
+}
+
+/// Calendar-day delta in Brazil (UTC−3, no DST since 2019).
+///
+/// Host `.toLocal()` shifts midnight-adjacent visits on UTC CI runners and
+/// changes "Há N dias". Always measure business calendar days in BRT.
+int calendarDaysBetweenBr(DateTime from, DateTime to) {
+  final start = _brazilianCalendarDate(from);
+  final end = _brazilianCalendarDate(to);
+  return end.difference(start).inDays.clamp(0, 1 << 31).toInt();
+}
+
+DateTime _brazilianCalendarDate(DateTime instant) {
+  // Shift absolute instant into BRT wall time, then take Y/M/D.
+  final brt = instant.toUtc().subtract(const Duration(hours: 3));
+  return DateTime.utc(brt.year, brt.month, brt.day);
 }
