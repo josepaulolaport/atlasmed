@@ -216,9 +216,9 @@ training ride-alongs need a second coincident patch.
 - `managerId` in the `POST /users/:id/verticals` body — dead since `0044`.
 - Empty dir `apps/web/app/(dashboard)/territories/approvals/`.
 - `findManagerIdByUserId` — hardcoded `return null` (`drizzle-scope.repository.ts:136-139`).
-- `.github/workflows/prod-cleanup-multi-uta-patches.yml` + `cleanup-legacy-multi-uta-patches.ts`
-  + its two `apps/api/package.json` entries. **Confirmed never run in production**, so no
-  cloned patches exist to remediate.
+- ~~`.github/workflows/prod-cleanup-multi-uta-patches.yml` + `cleanup-legacy-multi-uta-patches.ts`
+  + its two `apps/api/package.json` entries~~ — **done.** Confirmed never run in production, so no
+  cloned patches existed to remediate.
 
 Keep `territory_types` for now (2-row catalog) but do not invest in its admin UI.
 

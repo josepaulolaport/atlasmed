@@ -12,7 +12,8 @@
     "db:migrate": "bun run scripts/migrate.ts",
     "db:push": "bun run scripts/db-push.ts",
     "db:check": "bunx drizzle-kit check",
-    "db:studio": "bunx drizzle-kit studio"
+    "db:studio": "bunx drizzle-kit studio",
+    "db:ingest:geo": "python3 scripts/ingest-admin-geography.py"
   },
   "dependencies": {
     "@atlasmed/config": "workspace:*",
