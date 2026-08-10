@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/shared/clinica_empty_section.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
-/// "Profissionais administrativos" — snapping PageView of compact cards
-/// with contact info (phone/email) and role chips.
+/// "Profissionais administrativos" — compact vertical list. The "Ver todos"
+/// link to the full list lives on the section header.
 class ClinicAdminProfessionalsSection extends StatelessWidget {
   const ClinicAdminProfessionalsSection({
     super.key,
@@ -47,23 +46,29 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
       );
     }
 
-    return FacilityRosterPageView(
-      height: 220,
-      itemCount: professionals.length,
-      hasMore: hasMore,
-      isLoadingMore: isLoadingMore,
-      onLoadMore: onLoadMore,
-      itemBuilder: (_, i) => _ProfessionalCard(
-        professional: professionals[i],
-        facilityName: facilityName,
-        facilityId: facilityId,
-      ),
-    );
+    if (professionals.isNotEmpty) {
+      return ClinicDetailCard(
+        child: Column(
+          children: [
+            for (final (i, professional) in professionals.indexed) ...[
+              if (i > 0) const Divider(height: 1, color: AppColors.gray100),
+              _ProfessionalRow(
+                professional: professional,
+                facilityName: facilityName,
+                facilityId: facilityId,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 }
 
-class _ProfessionalCard extends StatelessWidget {
-  const _ProfessionalCard({
+class _ProfessionalRow extends StatelessWidget {
+  const _ProfessionalRow({
     required this.professional,
     required this.facilityName,
     this.facilityId,
@@ -75,157 +80,73 @@ class _ProfessionalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    final badges = professional.roleChipLabels;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RepresentativeDetailScreen(
+              professional: professional,
+              facilityName: facilityName,
+              facilityId: facilityId,
+            ),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.blueLight,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    _initials(professional.name),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navyBright,
-                    ),
-                  ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.blueLight,
+              child: Text(
+                _initials(professional.name),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyBright,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    professional.name,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gray900,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (professional.roleTitle != null) ...[
+                    const SizedBox(height: 2),
                     Text(
-                      professional.name,
+                      professional.roleTitle!,
                       style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray900,
+                        fontSize: 11.5,
+                        color: AppColors.gray500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (professional.roleTitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        professional.roleTitle!,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: AppColors.gray500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
-            ],
-          ),
-          if (professional.roleChipLabels.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final label in professional.roleChipLabels)
-                  _Flag(label: label),
-              ],
             ),
+            if (badges.isNotEmpty)
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [for (final label in badges) _Flag(label: label)],
+              ),
           ],
-          const SizedBox(height: 10),
-          const Divider(height: 1, color: AppColors.gray100),
-          const SizedBox(height: 8),
-          _ContactRow(
-            icon: Icons.phone_outlined,
-            value: professional.phone,
-            onTap: professional.phone != null
-                ? () => launchContactUrl(
-                    context,
-                    url: callUrl(professional.phone),
-                    contactLabel: 'telefone',
-                  )
-                : null,
-          ),
-          const SizedBox(height: 6),
-          _ContactRow(
-            icon: Icons.email_outlined,
-            value: professional.email,
-            onTap: professional.email != null
-                ? () => launchContactUrl(
-                    context,
-                    url: emailUrl(professional.email),
-                    contactLabel: 'e-mail',
-                  )
-                : null,
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                const Spacer(),
-                const Divider(height: 1, color: AppColors.gray100),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => RepresentativeDetailScreen(
-                        professional: professional,
-                        facilityName: facilityName,
-                        facilityId: facilityId,
-                      ),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'Ver perfil completo',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.navyBright,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: AppColors.navyBright,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -236,44 +157,6 @@ class _ProfessionalCard extends StatelessWidget {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
-  }
-}
-
-class _ContactRow extends StatelessWidget {
-  const _ContactRow({required this.icon, required this.value, this.onTap});
-
-  final IconData icon;
-  final String? value;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 15,
-            color: value != null ? AppColors.navyBright : AppColors.gray300,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value ?? 'Não informado',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: value != null ? FontWeight.w500 : FontWeight.w400,
-                color: value != null ? AppColors.gray900 : AppColors.gray400,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
