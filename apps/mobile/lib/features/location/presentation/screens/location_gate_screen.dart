@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,6 +68,9 @@ class _LocationGateScreenState extends ConsumerState<LocationGateScreen>
   }
 
   bool _shouldOpenSettings(LocationFailure? failure) {
+    // Browsers have no app-settings page to open — the primary action
+    // re-prompts the browser permission dialog via ensureLocation() instead.
+    if (kIsWeb) return false;
     return failure == LocationFailure.deniedForever ||
         failure == LocationFailure.serviceDisabled;
   }

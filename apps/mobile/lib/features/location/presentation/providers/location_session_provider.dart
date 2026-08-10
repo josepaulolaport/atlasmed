@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -167,6 +168,11 @@ class LocationSessionNotifier extends Notifier<LocationSessionState> {
   }
 
   Future<void> openSystemSettings() async {
+    // Browsers have no app-settings surface to open (geolocator_web throws
+    // from openAppSettings/openLocationSettings). The gate screen hides the
+    // settings button on web; this guard is defense in depth — stay a no-op
+    // so re-prompting via ensureLocation() remains the only course of action.
+    if (kIsWeb) return;
     final failure = state.failure;
     if (failure == LocationFailure.serviceDisabled) {
       await Geolocator.openLocationSettings();
