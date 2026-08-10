@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { resolveCadastroVerticalId } from "./cadastro-vertical-inference.utils";
-import { ValidationError } from "../../../../shared/errors";
+import { ForbiddenError, ValidationError } from "../../../../shared/errors";
 
 function repoWithProfiles(
   profiles: Array<{ verticalId: number; isActive: boolean }>
@@ -59,5 +59,53 @@ describe("resolveCadastroVerticalId", () => {
       verticalId: 2,
     });
     expect(verticalId).toBe(2);
+  });
+
+  // Spec 0010 §2.1/§2.2 — the vertical parameter is a filter, never a grant.
+  it("rejects an explicit verticalId outside the caller's assignments", async () => {
+    await expect(
+      resolveCadastroVerticalId({
+        facilityId: 1,
+        assignedVerticalIds: [1],
+        facilityRepository: repoWithProfiles([
+          { verticalId: 1, isActive: true },
+          { verticalId: 2, isActive: true },
+        ]),
+        verticalId: 2,
+      })
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("rejects a single active profile the caller is not assigned to", async () => {
+    await expect(
+      resolveCadastroVerticalId({
+        facilityId: 1,
+        assignedVerticalIds: [2],
+        facilityRepository: repoWithProfiles([{ verticalId: 1, isActive: true }]),
+      })
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("does not narrow global (ADMIN) scope", async () => {
+    const verticalId = await resolveCadastroVerticalId({
+      facilityId: 1,
+      assignedVerticalIds: [],
+      isGlobal: true,
+      facilityRepository: repoWithProfiles([{ verticalId: 1, isActive: true }]),
+    });
+    expect(verticalId).toBe(1);
+  });
+
+  it("accepts an explicit verticalId that is assigned", async () => {
+    const verticalId = await resolveCadastroVerticalId({
+      facilityId: 1,
+      assignedVerticalIds: [1, 2],
+      facilityRepository: repoWithProfiles([
+        { verticalId: 1, isActive: true },
+        { verticalId: 2, isActive: true },
+      ]),
+      verticalId: 1,
+    });
+    expect(verticalId).toBe(1);
   });
 });

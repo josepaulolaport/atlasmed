@@ -373,6 +373,7 @@ export class UpdateFacilityBillingEmailUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
       verticalId: input.verticalId,
     });
@@ -473,6 +474,7 @@ export class SubmitFacilityCadastroDocumentUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
     });
 
@@ -552,6 +554,7 @@ export class ApproveFacilityCadastroRecordUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
     });
 
@@ -606,6 +609,7 @@ export class RejectFacilityCadastroRecordUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
     });
 
