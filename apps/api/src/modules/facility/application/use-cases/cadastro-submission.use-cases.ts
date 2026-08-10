@@ -804,8 +804,13 @@ export class SubmitCadastroSubmissionUseCase {
     }
 
     const legalDocumentType = resolveFacilityLegalDocumentType(facility);
-    const requirements =
-      await this.deps.conformityRepository.findActiveRequirements({ legalDocumentType });
+    // Scoped to the submission's linha (D-49). Submitting used to validate
+    // against every vertical's requirements, so a clinic could be blocked by
+    // documents its linha never asked for.
+    const requirements = await this.deps.conformityRepository.findActiveRequirements({
+      legalDocumentType,
+      verticalId: submission.verticalId,
+    });
     const documents =
       await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
 
