@@ -62,8 +62,23 @@ async function seedAssignedClinic(tx: Tx) {
   const one = async <T>(query: Promise<unknown>): Promise<T> =>
     ((await query) as T[])[0] as T;
 
+  // Seed rather than assume. `territory_types` and `roles` are reference data
+  // that no migration inserts (see D-64), so they are populated in production
+  // and empty in a database migrated from scratch — which is exactly what CI
+  // uses. Reading them directly passes locally against a production clone and
+  // fails in CI, so the test brings its own.
   const zoneType = await one<{ id: number }>(
-    tx.execute(sql`SELECT id FROM territory_types WHERE slug = 'manager_zone' LIMIT 1`)
+    tx.execute(sql`
+      WITH existing AS (
+        SELECT id FROM territory_types WHERE slug = 'manager_zone'
+      ), created AS (
+        INSERT INTO territory_types (slug, name, can_have_boundary, block_sibling_overlap)
+        SELECT 'manager_zone', 'Manager Zone', true, true
+        WHERE NOT EXISTS (SELECT 1 FROM existing)
+        RETURNING id
+      )
+      SELECT id FROM existing UNION ALL SELECT id FROM created
+    `)
   );
   const vertical = await one<{ id: number }>(
     tx.execute(
@@ -104,7 +119,17 @@ async function seedAssignedClinic(tx: Tx) {
   );
 
   const role = await one<{ id: number }>(
-    tx.execute(sql`SELECT id FROM roles ORDER BY id LIMIT 1`)
+    tx.execute(sql`
+      WITH existing AS (
+        SELECT id FROM roles ORDER BY id LIMIT 1
+      ), created AS (
+        INSERT INTO roles (name)
+        SELECT 'T-R1-ROLE'
+        WHERE NOT EXISTS (SELECT 1 FROM existing)
+        RETURNING id
+      )
+      SELECT id FROM existing UNION ALL SELECT id FROM created
+    `)
   );
   const user = await one<{ id: number }>(
     tx.execute(sql`
