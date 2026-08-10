@@ -28,8 +28,11 @@ const defaultSleep = (ms: number) =>
  * accepting connections yet.
  *
  * The distinction that matters:
- *  - a *permanent* error (bad credentials, denied, illegal bucket name) is a
- *    misconfiguration and is rethrown, so the API refuses to start;
+ *  - a *permanent* error (wrong credential, illegal bucket name, or a probe
+ *    that could not answer whether the credential is wrong) is rethrown, so
+ *    the API refuses to start;
+ *  - a credential that is valid but cannot introspect the bucket is normal on
+ *    R2 and only warns — see ensureBucketExists;
  *  - a *transient* error (connection refused, timeout, 5xx) is retried with
  *    backoff and, if it still fails, only logged. The API then starts and
  *    serves every non-storage route; uploads fail loudly per-request until the
@@ -48,7 +51,19 @@ export async function provisionBucket(
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      await ensureBucketExists(client, bucket, region);
+      const outcome = await ensureBucketExists(client, bucket, region);
+
+      if (outcome.status === "skipped") {
+        logger.warn(
+          "Object storage bucket provisioning skipped; assuming the bucket exists",
+          {
+            bucket,
+            reason: outcome.reason,
+            hint: "expected for an R2 token scoped to object access; if uploads fail with NoSuchBucket, create the bucket manually",
+          }
+        );
+      }
+
       return;
     } catch (error) {
       if (isPermanentStorageError(error)) {
