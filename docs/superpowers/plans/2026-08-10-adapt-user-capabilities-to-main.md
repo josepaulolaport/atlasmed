@@ -46,6 +46,7 @@ The endpoint is authenticated via the existing `userRoute` auth plugin. It is a 
 | `professional.read/update` | `PERSON.read/update` | `professional` stays the stable mobile DTO resource; only the backend CASL subject changes. |
 | `territory.read/create/update/delete` | `TERRITORY` same action | UI should use `update` for manager/admin consultant-assignment controls. |
 | `user.read/manage/lifecycle` | `USER.read/manage/update` | `manage` remains admin-only; `lifecycle` aliases update for manager/admin lifecycle controls. |
+| `visit.create/read` | `VISIT.create/read` | Preserve the current clinic-detail “Visita” quick action for ADMIN, MANAGER, and REP. |
 
 ### Required mobile semantic corrections
 
@@ -213,6 +214,7 @@ export const APP_CAPABILITY_ACTIONS = {
   professional: ["read", "update"],
   territory: ["read", "create", "update", "delete"],
   user: ["read", "manage", "lifecycle"],
+  visit: ["create", "read"],
 } as const;
 
 type CapabilityCheck = { action: Action; subject: Subject };
@@ -457,7 +459,7 @@ Update app-shell tests to override the capabilities provider and prove unauthori
 Apply the semantic-corrections table exactly:
 
 ```text
-clinic_detail_screen.dart                         update facility; create field-suggestion; create agenda; update territory
+clinic_detail_screen.dart                         update facility; create field-suggestion; create visit; update territory
 clinic_header_section.dart                        update facility
 administrative_professionals_list_screen.dart     update professional
 doctors_list_screen.dart                          update professional
