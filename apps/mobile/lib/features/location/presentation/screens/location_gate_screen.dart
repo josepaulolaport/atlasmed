@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -25,7 +27,22 @@ class _LocationGateScreenState extends ConsumerState<LocationGateScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(locationSessionProvider.notifier).ensureLocation();
+      final notifier = ref.read(locationSessionProvider.notifier);
+      if (kIsWeb) {
+        // Chrome suppresses or silently queues geolocation prompts while the
+        // tab is not the focused/visible tab (background load, boot). Defer to
+        // the resumed lifecycle handler, and give boot a beat so the page is
+        // fully active before asking.
+        if (WidgetsBinding.instance.lifecycleState !=
+            AppLifecycleState.resumed) {
+          return;
+        }
+        Timer(const Duration(seconds: 1), () {
+          unawaited(notifier.ensureLocation());
+        });
+        return;
+      }
+      notifier.ensureLocation();
     });
   }
 
