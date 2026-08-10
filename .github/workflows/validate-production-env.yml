@@ -74,7 +74,13 @@ jobs:
       REDIS_URL: redis://atlasmed-redis:6379
       JWT_EXPIRATION: ${{ vars.JWT_EXPIRATION || '15m' }}
       STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
+      # R2 requires STORAGE_REGION=auto; keep us-east-1 only while MinIO serves production.
       STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+      # Server-side endpoint (API -> object store). Distinct from the public one below:
+      # while MinIO sits behind Caddy these are different hosts, and signing a client URL
+      # against the internal host hands phones an unreachable address.
+      STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT || 'http://atlasmed-minio:9000' }}
+      # Baked into presigned URLs handed to browsers and phones — must be device-reachable.
       STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT || 'https://storage.tdomains.uk' }}
       NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
       NEXT_PUBLIC_HEALTH_URL: https://atlasmed-api.b1ixob.uncld.dev
