@@ -4,7 +4,7 @@ import {
   facilities,
   type FacilityLegalDocumentType,
 } from "@atlasmed/database";
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, or } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   ConformityRecordRow,
@@ -137,6 +137,15 @@ async function loadRecordById(id: number): Promise<ConformityRecordRow | null> {
 export class DrizzleConformityRepository implements ConformityRepository {
   async findActiveRequirements(params?: {
     legalDocumentType?: FacilityLegalDocumentType | null;
+    /**
+     * Restrict to requirements that apply to this vertical (D-49).
+     *
+     * `conformity_requirements.vertical_id` existed but was never read, so a
+     * clinic's cadastro checklist listed every vertical's documents — including
+     * ones its linha does not require. Omitted (admin catalogue) means no
+     * vertical filter at all.
+     */
+    verticalId?: number | null;
   }): Promise<ConformityRequirementRecord[]> {
     // No params → full active catalog (admin list).
     // Explicit legalDocumentType CNPJ/CPF → ONLY that catalog (no shared/null rows —
@@ -158,14 +167,25 @@ export class DrizzleConformityRepository implements ConformityRepository {
             params.legalDocumentType!
           );
 
+    const conditions = [eq(conformityRequirements.isActive, true)];
+    if (typeFilter) conditions.push(typeFilter);
+
+    // Spec 0011 §3.2, scoping option (b): a null vertical_id is facility-scoped
+    // — satisfied once and counting for every linha — while a set one belongs
+    // to that linha alone.
+    if (params?.verticalId != null) {
+      conditions.push(
+        or(
+          isNull(conformityRequirements.verticalId),
+          eq(conformityRequirements.verticalId, params.verticalId)
+        )!
+      );
+    }
+
     const rows = await db
       .select()
       .from(conformityRequirements)
-      .where(
-        typeFilter
-          ? and(eq(conformityRequirements.isActive, true), typeFilter)
-          : eq(conformityRequirements.isActive, true)
-      )
+      .where(and(...conditions))
       .orderBy(asc(conformityRequirements.name));
 
     return rows.map(mapRequirement);
