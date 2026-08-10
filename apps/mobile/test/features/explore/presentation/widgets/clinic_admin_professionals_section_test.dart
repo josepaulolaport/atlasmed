@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 
 void main() {
   setUp(() {
@@ -25,6 +24,14 @@ void main() {
         contactType: 'DECISOR',
         roleIds: [3],
       ),
+      AdministrativeProfessional(
+        id: 2,
+        name: 'Marina Alves',
+        roleTitle: 'Gerente',
+        email: 'marina@test.com',
+        phone: '11888888888',
+        contactType: 'DECISOR',
+      ),
     ];
 
     await tester.pumpWidget(
@@ -41,6 +48,12 @@ void main() {
     expect(find.text('Carlos Mendes'), findsOneWidget);
     expect(find.text('Diretor administrativo'), findsOneWidget);
     expect(find.text('Decisor'), findsOneWidget);
+    expect(find.text('Marina Alves'), findsOneWidget);
+    expect(find.byType(PageView), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('Marina Alves')).dy,
+      greaterThan(tester.getTopLeft(find.text('Carlos Mendes')).dy),
+    );
   });
 
   testWidgets('shows empty state', (tester) async {
@@ -88,9 +101,42 @@ void main() {
         ),
       );
 
-      expect(find.byType(FacilityRosterPaginationSkeleton), findsNothing);
+      expect(find.byType(PageView), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       expect(find.text('Carregando…'), findsNothing);
     },
   );
+
+  testWidgets('tile fits a narrow screen with larger text', (tester) async {
+    const professional = AdministrativeProfessional(
+      id: 1,
+      name: 'Carlos Eduardo Mendes de Albuquerque',
+      roleTitle: 'Diretor administrativo e financeiro',
+      contactType: 'DECISOR',
+      roleIds: [3],
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MediaQuery(
+            data: MediaQueryData(
+              size: Size(320, 800),
+              textScaler: TextScaler.linear(1.4),
+            ),
+            child: SizedBox(
+              width: 320,
+              child: ClinicAdminProfessionalsSection(
+                professionals: [professional],
+                facilityName: 'Clínica Teste',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Decisor'), findsOneWidget);
+  });
 }

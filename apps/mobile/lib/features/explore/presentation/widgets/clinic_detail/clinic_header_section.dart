@@ -83,13 +83,13 @@ class ClinicHeaderSection extends ConsumerWidget {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(16, top + 4, 16, 18),
+      padding: EdgeInsets.fromLTRB(16, top + 8, 16, 20),
       decoration: const BoxDecoration(color: AppColors.navyBright),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -109,7 +109,7 @@ class ClinicHeaderSection extends ConsumerWidget {
                       uploading: uploading,
                       onTap: () => _showPhotoActions(context, ref, photos),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,18 +117,20 @@ class ClinicHeaderSection extends ConsumerWidget {
                           Text(
                             detail.name,
                             style: const TextStyle(
-                              fontSize: 19,
+                              fontSize: 20,
+                              height: 1.15,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                               letterSpacing: -0.3,
                             ),
                           ),
                           if (specialties != null) ...[
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 4),
                             Text(
                               specialties,
                               style: const TextStyle(
-                                fontSize: 12.5,
+                                fontSize: 14,
+                                height: 1.3,
                                 color: Color(0xCCFFFFFF),
                               ),
                               maxLines: 1,
@@ -136,11 +138,12 @@ class ClinicHeaderSection extends ConsumerWidget {
                             ),
                           ],
                           if (legalDocumentType != null) ...[
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 4),
                             Text(
                               'Estabelecimento ${legalDocumentType.label}',
                               style: const TextStyle(
-                                fontSize: 11.5,
+                                fontSize: 12.5,
+                                height: 1.3,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xB3FFFFFF),
                               ),
@@ -153,7 +156,7 @@ class ClinicHeaderSection extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 if (orderedFocuses.isNotEmpty)
                   ClinicServiceChips(
                     focuses: orderedFocuses,
@@ -185,21 +188,22 @@ class ClinicHeaderSection extends ConsumerWidget {
                   },
                 ),
                 if (fullAddress != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Icon(
                         Icons.location_on_rounded,
-                        size: 14,
+                        size: 16,
                         color: Color(0xB3FFFFFF),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           fullAddress,
                           style: const TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 13.5,
+                            height: 1.35,
                             color: Color(0xE6FFFFFF),
                           ),
                         ),
@@ -208,10 +212,10 @@ class ClinicHeaderSection extends ConsumerWidget {
                   ),
                 ],
                 if (phone != null || whatsapp != null || email != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Wrap(
-                    spacing: 14,
-                    runSpacing: 6,
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
                       if (phoneLabel != null)
                         _HeaderContactAction(
@@ -487,27 +491,31 @@ class _HeaderContactAction extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: const Color(0xCCFFFFFF)),
-          const SizedBox(width: 5),
-          // Bound width without Flexible — Flex parentData inside Wrap
-          // children trips `!semantics.parentDataDirty` during rebuilds.
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 220),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xE6FFFFFF),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: const Color(0xCCFFFFFF)),
+            const SizedBox(width: 6),
+            // Bound width without Flexible — Flex parentData inside Wrap
+            // children trips `!semantics.parentDataDirty` during rebuilds.
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.25,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xE6FFFFFF),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

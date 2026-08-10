@@ -25,18 +25,17 @@ class DetailQuickActions extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border.all(color: AppColors.surfaceSecondary),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: themeColor.withValues(alpha: 0.12),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+                  color: themeColor.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -66,7 +65,7 @@ class QuickActionItem extends StatelessWidget {
     this.onTap,
   });
 
-  static const double _labelHeight = 14;
+  static const double _labelHeight = 16;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +74,7 @@ class QuickActionItem extends StatelessWidget {
       onTap: isDisabled ? null : onTap,
       child: Padding(
         // Tight horizontal padding so 5 labels (esp. WhatsApp) fit one line.
-        padding: const EdgeInsets.fromLTRB(2, 12, 2, 12),
+        padding: const EdgeInsets.fromLTRB(2, 14, 2, 14),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -85,7 +84,7 @@ class QuickActionItem extends StatelessWidget {
                   : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
               child: icon,
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 6),
             SizedBox(
               height: _labelHeight,
               width: double.infinity,
@@ -94,7 +93,7 @@ class QuickActionItem extends StatelessWidget {
                 alignment: Alignment.center,
                 child: DefaultTextStyle(
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     height: 1.0,
                     letterSpacing: 0,
