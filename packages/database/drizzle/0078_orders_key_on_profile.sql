@@ -23,8 +23,14 @@
 -- deploy nothing about scale.
 
 -- Guard 1 — ambiguity, checked BEFORE writing anything.
--- The backfill joins on (facility_id, vertical_id). If that pair is not unique on
--- facility_vertical_profiles the join multiplies rows and the mapping is undefined.
+-- The backfill joins on (facility_id, vertical_id). If that pair were not unique on
+-- facility_vertical_profiles the join would multiply rows and the mapping would be
+-- undefined.
+--
+-- `facility_vertical_profiles_facility_id_vertical_id_uidx` already guarantees this,
+-- so in practice the guard cannot fire. Kept because the backfill's correctness
+-- depends on that index existing, and this states the dependency where it is
+-- relied on rather than leaving it implicit.
 DO $$
 DECLARE
   dup_count  bigint;
