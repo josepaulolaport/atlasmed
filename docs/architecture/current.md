@@ -2,7 +2,7 @@
 
 ## Overview
 
-Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, a Flutter mobile app, Temporal workers, and shared packages for access control, database, config, observability, Mapbox, and facility insights.
+Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Flutter mobile app, Temporal workers, and shared packages for access control, database, config, observability, Mapbox, and facility insights.
 
 ## Backend Runtime
 
@@ -27,14 +27,6 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, 
 - `field-suggestions`: user-submitted Não Conformidades (`field_suggestions`).
 - `dashboard`, `maps`, `potential`, `search-sync`, `sessions`, `user`, `visits`.
 
-## Web Architecture
-
-- Next.js App Router.
-- Route groups for auth and dashboard.
-- API client modules under `apps/web/lib/api`.
-- Role/permission helpers under `apps/web/lib/permissions.ts`.
-- Reusable UI components under `apps/web/components/ui`.
-- UI language: pt-BR.
 
 ## Mobile Architecture
 
@@ -79,6 +71,5 @@ write the same row. Being replaced by [Spec 0011](../specs/0011-cadastro-pipelin
 - Visit/activity domain is early / incomplete; nothing meaningful populates `visits` or
   `interactions` yet, so no activity metric is currently derivable.
 - Mobile stack migration (Flutter → React Native/Expo) not decided for production (ADR 0002 Proposed).
-- `apps/web` is abandoned and knowingly broken — see root `AGENTS.md`.
 - Several catalogs (`unit_types`, `unit_subtypes`, `clinical_focuses`, `occupations`,
   `healthcare_specialties`) have **no write path in code** and are populated manually.

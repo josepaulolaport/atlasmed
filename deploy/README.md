@@ -18,7 +18,7 @@ bun run temporal:up
 bun run observability:up
 
 # 5. Start apps
-bun run web:dev
+bun run api:dev
 ```
 
 ## Service access
@@ -52,7 +52,6 @@ Copy the `.env.development.example` files in each app:
 
 - `apps/api/.env.development.example` → `apps/api/.env`
 - `apps/workers/temporal/.env.development.example` → `apps/workers/temporal/.env`
-- `apps/web/.env.development.local.example` → `apps/web/.env.local`
 
 ## PostgreSQL setup
 
@@ -76,7 +75,6 @@ Production backend services deploy to Uncloud with `deploy/uncloud.compose.yml`.
 
 | Service | Exposure | Purpose |
 |---|---|---|
-| `atlasmed-web` | `https://atlasmed-web.b1ixob.uncld.dev` | Admin/web app. |
 | `atlasmed-api` | `https://atlasmed-api.b1ixob.uncld.dev` | Public HTTP API. |
 | `atlasmed-api-worker` | private | BullMQ workers: notifications, cleanup, territory membership. |
 | `atlasmed-temporal-worker` | private | Temporal worker (search-sync, purchase-recurrence, cadastro). |
@@ -107,7 +105,7 @@ The API creates `STORAGE_BUCKET` on startup when object storage is configured.
    ```
 6. Deploy app services. Bucket creation happens during `atlasmed-api` startup; re-running the app deploy is safe because bucket creation first checks whether each bucket already exists.
    ```bash
-   uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker atlasmed-web --yes
+   uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --yes
    ```
 
 ## Meilisearch v1.13 to v1.48 rollout
@@ -134,7 +132,6 @@ Official references:
 ## Runtime health checks
 
 - API: `https://atlasmed-api.b1ixob.uncld.dev/health`
-- Web: `https://atlasmed-web.b1ixob.uncld.dev`
 - Temporal UI: `https://atlasmed-temporal-ui.b1ixob.uncld.dev`
 
 ## Database migrations
