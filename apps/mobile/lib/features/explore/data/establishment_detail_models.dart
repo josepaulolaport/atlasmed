@@ -306,40 +306,6 @@ extension FacilityCommercialStatusX on FacilityCommercialStatus {
   }
 }
 
-/// Mirrors `purchase_status` on `facilities`: NON_BUYER | LOW_BUYER | REGULAR_BUYER | HIGH_BUYER.
-/// Displayed to the user as "Tipo de cliente".
-enum FacilityPurchaseStatus { nonBuyer, lowBuyer, regularBuyer, highBuyer }
-
-extension FacilityPurchaseStatusX on FacilityPurchaseStatus {
-  /// Short labels for the header "Status: …" chip (purchase intensity).
-  /// Never reuse commercial-status wording like "Encerrada".
-  String get label {
-    switch (this) {
-      case FacilityPurchaseStatus.nonBuyer:
-        return 'Não compra';
-      case FacilityPurchaseStatus.lowBuyer:
-        return 'Ocasional';
-      case FacilityPurchaseStatus.regularBuyer:
-        return 'Regular';
-      case FacilityPurchaseStatus.highBuyer:
-        return 'Frequente';
-    }
-  }
-
-  Color get color {
-    switch (this) {
-      case FacilityPurchaseStatus.nonBuyer:
-        return AppColors.amber;
-      case FacilityPurchaseStatus.lowBuyer:
-        return AppColors.blueAccent;
-      case FacilityPurchaseStatus.regularBuyer:
-        return AppColors.navyBright;
-      case FacilityPurchaseStatus.highBuyer:
-        return AppColors.green;
-    }
-  }
-}
-
 /// Mirrors `conformity_status` on `facilities`: INCOMPLETE | COMPLETE | EXPIRING_SOON | NON_CONFORMING.
 enum FacilityConformityStatus {
   incomplete,
@@ -414,21 +380,6 @@ FacilityCommercialStatus? parseFacilityCommercialStatus(String? raw) {
   }
 }
 
-FacilityPurchaseStatus? parseFacilityPurchaseStatus(String? raw) {
-  switch (raw?.trim().toUpperCase()) {
-    case 'NON_BUYER':
-      return FacilityPurchaseStatus.nonBuyer;
-    case 'LOW_BUYER':
-      return FacilityPurchaseStatus.lowBuyer;
-    case 'REGULAR_BUYER':
-      return FacilityPurchaseStatus.regularBuyer;
-    case 'HIGH_BUYER':
-      return FacilityPurchaseStatus.highBuyer;
-    default:
-      return null;
-  }
-}
-
 FacilityConformityStatus? parseFacilityConformityStatus(String? raw) {
   switch (raw?.trim().toUpperCase()) {
     case 'INCOMPLETE':
@@ -448,15 +399,12 @@ FacilityConformityStatus? parseFacilityConformityStatus(String? raw) {
 class FacilityStatusSignals {
   const FacilityStatusSignals({
     required this.commercialStatus,
-    this.purchaseStatus,
     required this.conformityStatus,
     this.lastPurchaseAt,
   });
 
   final FacilityCommercialStatus commercialStatus;
 
-  /// Omitted when the API has no purchase aggregate (no mock fallback).
-  final FacilityPurchaseStatus? purchaseStatus;
   final FacilityConformityStatus conformityStatus;
 
   /// Backend-computed from `orders` in Phase 2. Mocked in Phase 1.

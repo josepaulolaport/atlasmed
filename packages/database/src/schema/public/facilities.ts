@@ -18,7 +18,6 @@ import { geometryPoint } from "../../types/geometry";
 import {
   conformityStatusEnum,
   commercialStatusEnum,
-  purchaseStatusEnum,
   purchaseIntervalSourceEnum,
   purchaseProfileEnum,
   purchaseFunnelStageEnum,
@@ -225,9 +224,6 @@ export const facilityVerticalProfiles = pgTable(
     commercialStatus: commercialStatusEnum("commercial_status")
       .notNull()
       .default("UNREGISTERED"),
-    purchaseStatus: purchaseStatusEnum("purchase_status")
-      .notNull()
-      .default("NON_BUYER"),
     observedPurchaseIntervalDays: bigint("observed_purchase_interval_days", { mode: "number" }),
     purchaseIntervalDays: bigint("purchase_interval_days", { mode: "number" }).notNull().default(30),
     purchaseIntervalSource: purchaseIntervalSourceEnum("purchase_interval_source")

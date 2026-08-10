@@ -561,6 +561,13 @@
       "when": 1786362768762,
       "tag": "0079_orders_drop_legacy_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1786364504113,
+      "tag": "0080_drop_purchase_status",
+      "breakpoints": true
     }
   ]
 }
