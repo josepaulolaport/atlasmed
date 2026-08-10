@@ -196,6 +196,11 @@ actors are the assigned rep, their manager and OPS — collaboration, not conten
 
 ## 5. Submit & review
 
+> ⚠️ **Amended by ADR 0007 (2026-08-10).** "Delete the package-submit path" below is correct and
+> goes further: the package itself is deleted. The `CHANGES_REQUESTED` clone in §6 is not wrapped
+> in a transaction — it is removed, which is what actually closes D-16. Optimistic concurrency
+> (§4.5) moves to the document; it was never implemented, so nothing is lost.
+
 **Delete the package-submit path.** `submitPackage` / `canSubmitPackage` are dead client code
 with no callers, and the two paths enforce `requiresFrontAndBack` differently — strict at
 `:840-848`, lenient at `:1201-1214`. Mobile calls only the per-requirement path. One path, one
