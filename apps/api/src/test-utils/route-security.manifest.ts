@@ -14,7 +14,6 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/access/infrastructure/routes/reset-password.route.ts": "public",
   "modules/access/infrastructure/routes/verify-2fa-login.route.ts": "public",
 
-  "modules/access/infrastructure/routes/capabilities.route.ts": "auth",
   "modules/access/infrastructure/routes/change-password.route.ts": "auth",
   "modules/access/infrastructure/routes/logout.route.ts": "auth",
   "modules/access/infrastructure/routes/profile.route.ts": "auth",

@@ -1,7 +1,8 @@
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { AccessGrantService } from "../services/access-grant.service";
-import { getAppCapabilities, type Role } from "@atlasmed/access";
 import { UserNotFoundError } from "../../../../shared/errors";
+import { getAppCapabilities } from "../services/app-capabilities";
+import type { Role } from "@atlasmed/access";
 
 interface Dependencies {
   userRepository: UserRepository;

@@ -1,6 +1,5 @@
-import type { AccessGrantRecord } from "../contracts/access-grant.contract";
-import type { Role } from "../enums/role.enum";
-import { defineAbilitiesForUser } from "../permissions/grant.permissions";
+import { defineAbilitiesForUser, type Role } from "@atlasmed/access";
+import type { AccessGrantRecord } from "@atlasmed/access";
 
 export const APP_CAPABILITY_ACTIONS = {
   agenda: ["read", "create", "update", "delete"],
@@ -71,8 +70,12 @@ const CAPABILITY_CHECKS = {
   },
 } satisfies CapabilityChecks;
 
-export function getAppCapabilities(role: Role, grants: AccessGrantRecord[] = []): AppCapability[] {
+export function getAppCapabilities(
+  role: Role,
+  grants: AccessGrantRecord[] = [],
+): AppCapability[] {
   const ability = defineAbilitiesForUser(role, grants);
+
   return Object.entries(APP_CAPABILITY_ACTIONS).flatMap(([resource, actions]) => {
     const checks = CAPABILITY_CHECKS[resource as AppCapabilityResource] as Record<
       AppCapabilityAction,
@@ -80,18 +83,11 @@ export function getAppCapabilities(role: Role, grants: AccessGrantRecord[] = [])
     >;
     const grantedActions = actions.filter((action) => {
       const check = checks[action];
-      return ability.can(check.action as any, check.subject as any);
+      return ability.can(check.action as never, check.subject as never);
     });
 
     return grantedActions.length > 0
       ? [{ resource: resource as AppCapabilityResource, actions: grantedActions }]
       : [];
   });
-}
-
-/** Compatibility adapter for mobile clients still consuming snapshot version 1. */
-export function toLegacyAppCapabilities(capabilities: AppCapability[]): string[] {
-  return capabilities.flatMap(({ resource, actions }) =>
-    actions.map((action) => `${resource}.${action}`)
-  );
 }

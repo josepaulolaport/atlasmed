@@ -67,6 +67,12 @@ export const routeTestContext = {
         smsNotificationsEnabled: false,
       }),
     ),
+    getCapabilitiesExecute: mock(async (_params?: unknown) =>
+      Promise.resolve({
+        version: 2 as const,
+        capabilities: [{ resource: "agenda", actions: ["read"] }],
+      }),
+    ),
     listUsersExecute: mock(async (_params?: unknown) =>
       Promise.resolve({
         data: [],

@@ -9,9 +9,7 @@ class UserCapabilitiesRepository extends Repository<UserCapabilities>
     with SessionEnvironmentMixin<UserCapabilities> {
   UserCapabilitiesRepository()
     : super(
-        endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/user/capabilities/v2',
-        ),
+        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/user/capabilities'),
         fromJson: (json) => .fromJson(jsonDecode(json)),
       );
 

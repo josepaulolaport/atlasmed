@@ -3,10 +3,29 @@ import {
   updateProfileSchema,
   updateUserPreferencesSchema,
 } from "@atlasmed/access";
+import {
+  APP_CAPABILITY_ACTIONS,
+  type AppCapability,
+} from "../../application/services/app-capabilities";
 import { accessUseCases, auth } from "../../composition";
 import { serializeUser } from "./user.serializer";
 import { profileRateLimit } from "../middleware/rate-limit.middleware";
 import { ValidationError } from "../../../../shared/errors";
+
+const capabilityResponseSchema = t.Unsafe<AppCapability[]>({
+  type: "array",
+  items: {
+    oneOf: Object.entries(APP_CAPABILITY_ACTIONS).map(([resource, actions]) => ({
+      type: "object",
+      additionalProperties: false,
+      required: ["resource", "actions"],
+      properties: {
+        resource: { type: "string", const: resource },
+        actions: { type: "array", items: { type: "string", enum: actions } },
+      },
+    })),
+  },
+});
 
 function toValidationError(error: unknown): ValidationError {
   if (error && typeof error === "object" && "issues" in error) {
@@ -46,6 +65,29 @@ export const userRoute = new Elysia({
     {
       detail: {
         summary: "Get authenticated user profile",
+        tags: ["User"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+  )
+  .get(
+    "/user/capabilities",
+    async ({ getUserId }: any) => {
+      return accessUseCases.getCapabilities().execute({
+        userId: await getUserId(),
+      });
+    },
+    {
+      response: {
+        200: t.Object({
+          version: t.Literal(2),
+          capabilities: capabilityResponseSchema,
+        }),
+      },
+      detail: {
+        summary: "Get authenticated user capabilities",
+        description:
+          "Returns the authenticated user's typed capability snapshot grouped by resource.",
         tags: ["User"],
         security: [{ bearerAuth: [] }],
       },

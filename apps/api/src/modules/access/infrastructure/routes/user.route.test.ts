@@ -44,6 +44,10 @@ function buildUserTestRoute() {
       });
       return serializeUser(updated as any);
     })
+    .get("/user/capabilities", async ({ getUserId }: any) => {
+      const userId = await getUserId();
+      return routeTestContext.mocks.getCapabilitiesExecute({ userId });
+    })
     .get("/user/preferences", async ({ getUserId }: any) => {
       const userId = await getUserId();
       return routeTestContext.mocks.getUserPreferencesExecute({ userId });
@@ -128,6 +132,26 @@ describe("userRoute", () => {
     expect(routeTestContext.mocks.updateProfileExecute).toHaveBeenCalledWith({
       userId: fullUser.id,
       firstName: "Updated",
+    });
+  });
+
+  it("returns the authenticated capability snapshot from GET /user/capabilities", async () => {
+    const response = await createApp().handle(
+      new Request("http://localhost/user/capabilities"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(routeTestContext.mocks.getCapabilitiesExecute).toHaveBeenCalledWith({
+      userId: fullUser.id,
+    });
+    expect(
+      await parseJsonResponse<{
+        version: number;
+        capabilities: Array<{ resource: string; actions: string[] }>;
+      }>(response),
+    ).toEqual({
+      version: 2,
+      capabilities: [{ resource: "agenda", actions: ["read"] }],
     });
   });
 

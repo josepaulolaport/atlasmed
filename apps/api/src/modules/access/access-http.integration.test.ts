@@ -105,36 +105,13 @@ describe("Access HTTP auth integration", () => {
     expect(Array.isArray(body.data)).toBe(true);
   });
 
-  it("returns the authenticated capability snapshot", async () => {
+  it("returns the authenticated typed capability snapshot", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
       app,
       "http://localhost/api/v1/user/capabilities",
-      token
-    );
-
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
-      version: number;
-      capabilities: string[];
-    };
-    expect(body).toEqual(
-      expect.objectContaining({
-        version: 1,
-        capabilities: expect.arrayContaining(["agenda.read", "facility.update"]),
-      })
-    );
-  });
-
-  it("returns the authenticated capability snapshot grouped by resource in v2", async () => {
-    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
-
-    const token = await loginToken(fixtures.manager.email);
-    const response = await authRequest(
-      app,
-      "http://localhost/api/v1/user/capabilities/v2",
       token
     );
 
@@ -160,11 +137,9 @@ describe("Access HTTP auth integration", () => {
     );
   });
 
-  it("returns 401 for unauthenticated capability snapshot", async () => {
-    const response = await authRequest(
-      app,
-      "http://localhost/api/v1/user/capabilities",
-      null
+  it("returns 401 for an unauthenticated capability snapshot request", async () => {
+    const response = await app.handle(
+      new Request("http://localhost/api/v1/user/capabilities"),
     );
 
     expect(response.status).toBe(401);

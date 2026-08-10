@@ -135,8 +135,11 @@ export interface AccessGrant {
 }
 
 export interface CapabilitiesResponse {
-  role: string;
-  grants: AccessGrant[];
+  version: 2;
+  capabilities: Array<{
+    resource: string;
+    actions: string[];
+  }>;
 }
 
 export interface UpdateProfileRequest {
