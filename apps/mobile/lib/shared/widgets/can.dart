@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class Can extends ConsumerWidget {
-  final CapabilityResource resource;
+  final CapabilitySubject subject;
   final CapabilityAction action;
 
   final Widget? Function(BuildContext context, bool allowed) builder;
 
   const Can({
     super.key,
-    required this.resource,
+    required this.subject,
     required this.action,
     required this.builder,
   });
@@ -20,7 +20,7 @@ class Can extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final capabilities = ref.watch(userCapabilitiesProvider);
 
-    return builder(context, capabilities?.can(action, resource) ?? false) ??
+    return builder(context, capabilities?.can(action, subject) ?? false) ??
         const SizedBox.shrink();
   }
 }

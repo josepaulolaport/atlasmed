@@ -70,7 +70,7 @@ export const routeTestContext = {
     getCapabilitiesExecute: mock(async (_params?: unknown) =>
       Promise.resolve({
         version: 2 as const,
-        capabilities: [{ resource: "agenda", actions: ["read"] }],
+        capabilities: [{ action: "read", subject: "CALENDAR" }],
       }),
     ),
     listUsersExecute: mock(async (_params?: unknown) =>

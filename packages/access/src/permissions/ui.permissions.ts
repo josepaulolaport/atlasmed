@@ -29,17 +29,17 @@ export function canManageFacilities(role: Role): boolean {
 
 export function canReadProfessionals(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
-  return ability.can("read", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
+  return ability.can("read", "PERSON") || ability.can("manage", "PERSON");
 }
 
 export function canManageProfessionals(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
-  return ability.can("create", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
+  return ability.can("create", "PERSON") || ability.can("manage", "PERSON");
 }
 
 export function canUpdateProfessionals(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
-  return ability.can("update", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
+  return ability.can("update", "PERSON") || ability.can("manage", "PERSON");
 }
 
 export function canUpdateFacilities(role: Role): boolean {

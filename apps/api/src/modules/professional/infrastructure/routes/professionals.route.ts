@@ -49,7 +49,7 @@ const professionalPersonBody = {
 
 const listProfessionalsRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "PROFESSIONAL"))
+  .use(requirePermission("read", "PERSON"))
   .get(
     "/professionals",
     async ({ query, getScope, getUser }) => {
@@ -90,7 +90,7 @@ const listProfessionalsRoute = new Elysia()
 /** Static path — must register before `/professionals/:id`. */
 const listProfessionalSpecialtiesRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "PROFESSIONAL"))
+  .use(requirePermission("read", "PERSON"))
   .get(
     "/professionals/specialties",
     async ({ getScope }) => {
@@ -108,7 +108,7 @@ const listProfessionalSpecialtiesRoute = new Elysia()
 
 const createDoctorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("create", "PROFESSIONAL"))
+  .use(requirePermission("create", "PERSON"))
   .post(
     "/professionals",
     async ({ body, getScope }) => {
@@ -136,7 +136,7 @@ const createDoctorRoute = new Elysia()
 
 const getProfessionalRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission("read", "PERSON", { resourceIdParam: "id" }))
   .get(
     "/professionals/:id",
     async ({ params, getScope }) => {
@@ -163,7 +163,7 @@ const getProfessionalRoute = new Elysia()
 
 const updateDoctorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission("update", "PERSON", { resourceIdParam: "id" }))
   .patch(
     "/professionals/:id",
     async ({ params, body, getScope }) => {
@@ -208,7 +208,7 @@ const professionalNoteBody = t.Object({
 
 const listProfessionalNotesRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission("read", "PERSON", { resourceIdParam: "id" }))
   .get(
     "/professionals/:id/notes",
     async ({ params, getScope, getUserId }) => {
@@ -230,7 +230,7 @@ const listProfessionalNotesRoute = new Elysia()
 
 const createProfessionalNoteRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission("update", "PERSON", { resourceIdParam: "id" }))
   .post(
     "/professionals/:id/notes",
     async ({ params, body, getScope, getUserId }) => {
@@ -258,7 +258,7 @@ const createProfessionalNoteRoute = new Elysia()
 
 const deleteDoctorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("delete", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission("delete", "PERSON", { resourceIdParam: "id" }))
   .delete(
     "/professionals/:id",
     async ({ params, getScope }) => {

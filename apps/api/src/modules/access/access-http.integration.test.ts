@@ -118,20 +118,19 @@ describe("Access HTTP auth integration", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       version: number;
-      capabilities: Array<{ resource: string; actions: string[] }>;
+      capabilities: Array<{
+        action: string;
+        subject: string;
+        inverted?: true;
+      }>;
     };
     expect(body).toEqual(
       expect.objectContaining({
         version: 2,
         capabilities: expect.arrayContaining([
-          {
-            resource: "agenda",
-            actions: expect.arrayContaining(["read"]),
-          },
-          {
-            resource: "facility",
-            actions: expect.arrayContaining(["update"]),
-          },
+          { action: "read", subject: "CALENDAR" },
+          { action: "update", subject: "FACILITY" },
+          { action: "read", subject: "PERSON" },
         ]),
       })
     );

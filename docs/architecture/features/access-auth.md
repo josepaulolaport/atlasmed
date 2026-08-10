@@ -63,9 +63,9 @@ Scope cache is invalidated when consultant assignments change (assignee + previo
 
 API lists/details that take `getScope()` filter or `assertResourceInScope` on `facilityIds`. Mobile nav/actions now mirror the authenticated capability snapshot; empty/403 from API remains authoritative.
 
-Mobile authorization reads `GET /api/v1/user/capabilities` and caches the versioned DTO:
-`{ version: 2, capabilities: [{ resource, actions }] }`. Resources expose only their valid actions; unknown future resources and actions are ignored safely.
-Use capabilities for route/type-level UI decisions; keep resource-specific state in DTO flags like `canMutate`.
+Mobile authorization reads `GET /api/v1/user/capabilities` and caches the ordered CASL rule projection:
+`{ version: 2, capabilities: [{ action, subject, inverted? }] }`. Type-level rules preserve CASL order, `manage` wildcard semantics, and explicit `cannot` rules through `inverted: true`; conditional/resource-scoped rules are omitted so the snapshot cannot broaden access. Unknown future actions and subjects are ignored safely.
+Use capabilities for route/type-level UI decisions; keep resource-specific state in DTO flags like `canMutate`, and keep backend authorization authoritative.
 
 Orders: REP list/detail restricted to `sellerId = actor` within facility scope.
 

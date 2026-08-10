@@ -49,7 +49,10 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     final status = submission.status;
     final pending =
         submission.isPending &&
-        (ref.watch(userCapabilitiesProvider)?.can(.review, .cadastro) ?? false);
+        (ref
+                .watch(userCapabilitiesProvider)
+                ?.can(.update, .cadastroSubmission) ??
+            false);
 
     return Scaffold(
       appBar: const AtlasAppBar(page: 'Cadastros', compact: true),
@@ -141,8 +144,8 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
             ),
             if (pending)
               Can(
-                resource: CapabilityResource.cadastro,
-                action: CapabilityAction.review,
+                subject: CapabilitySubject.cadastroSubmission,
+                action: CapabilityAction.update,
                 builder: (context, allowed) => !allowed
                     ? null
                     : _DecisionBar(

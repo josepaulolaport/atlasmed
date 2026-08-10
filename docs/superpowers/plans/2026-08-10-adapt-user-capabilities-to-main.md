@@ -1,3 +1,5 @@
+> **Superseded contract note (2026-08-10):** The implementation no longer uses the app-specific `{ resource, actions }` catalog described below. The approved v2 response is an ordered direct projection of type-level CASL rules: `{ version: 2, capabilities: [{ action, subject, inverted? }] }`. Mobile evaluates the rules in reverse order, treats `manage` as an action wildcard, honors `inverted`, ignores unknown values, and denies when no rule matches. The historical steps below remain useful only for rebase conflict context.
+
 # Adapt User Capabilities to Main Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

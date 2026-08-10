@@ -7,7 +7,7 @@ const SUPPORTED_CONDITION_KEYS = new Set(["id"]);
 const SCOPED_SUBJECTS = new Set<Subject>([
   "USER",
   "FACILITY",
-  "PROFESSIONAL",
+  "PERSON",
   "TERRITORY",
 ]);
 

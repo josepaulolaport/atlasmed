@@ -325,7 +325,7 @@ final appNavigationItems = <AppNavigationItem>[
     route: '/agenda',
     icon: Icons.calendar_month_outlined,
     visibleFor: (ref) =>
-        ref.watch(userCapabilitiesProvider)?.can(.read, .agenda) ?? false,
+        ref.watch(userCapabilitiesProvider)?.can(.read, .calendar) ?? false,
   ),
   AppNavigationItem(
     branchIndex: 4,
@@ -355,7 +355,10 @@ final appNavigationItems = <AppNavigationItem>[
     route: '/registrations',
     icon: Icons.fact_check_outlined,
     visibleFor: (ref) =>
-        ref.watch(userCapabilitiesProvider)?.can(.review, .cadastro) ?? false,
+        ref
+            .watch(userCapabilitiesProvider)
+            ?.can(.update, .cadastroSubmission) ??
+        false,
   ),
   AppNavigationItem(
     branchIndex: 8,

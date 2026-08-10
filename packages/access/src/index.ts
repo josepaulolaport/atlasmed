@@ -51,6 +51,10 @@ export * from "./errors/invalid-invite.error";
 export * from "./errors/unauthorized.error";
 export * from "./errors/rate-limit.error";
 
+export {
+  serializeAbilityRules,
+  type SerializedAbilityRule,
+} from "./permissions/ability-rule-serialization";
 export { defineAbilitiesFor } from "./permissions/role.permissions";
 export type { Action, AppAbility, Subject } from "./permissions/role.permissions";
 export { defineAbilitiesForUser } from "./permissions/grant.permissions";

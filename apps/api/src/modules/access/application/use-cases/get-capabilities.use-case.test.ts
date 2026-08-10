@@ -36,25 +36,39 @@ describe("GetCapabilitiesUseCase", () => {
     });
   });
 
-  it("should return resource actions and ignore resource-scoped grants for type-level decisions", async () => {
+  it("returns the ordered CASL rule projection and omits scoped grant rules", async () => {
     const result = await useCase.execute({ userId: "user-123" });
 
-    expect(result.version).toBe(2);
-    expect(result.capabilities).toEqual(
-      expect.arrayContaining([
-        { resource: "agenda", actions: ["read"] },
-        { resource: "catalog", actions: ["read"] },
-        { resource: "cadastro", actions: ["read", "review"] },
-        { resource: "field-suggestion", actions: ["read", "review"] },
-        { resource: "facility", actions: ["read", "update"] },
-        { resource: "professional", actions: ["read", "update"] },
-        { resource: "territory", actions: ["read", "create", "update"] },
-        { resource: "user", actions: ["read", "lifecycle"] },
-      ])
-    );
-    expect(result.capabilities).not.toContainEqual({
-      resource: "agenda",
-      actions: expect.arrayContaining(["create"]),
+    expect(result).toEqual({
+      version: 2,
+      capabilities: [
+        { action: "create", subject: "VISIT" },
+        { action: "read", subject: "VISIT" },
+        { action: "read", subject: "CALENDAR" },
+        { action: "read", subject: "INTERACTION" },
+        { action: "read", subject: "USER" },
+        { action: "update", subject: "USER" },
+        { action: "create", subject: "USER" },
+        { action: "create", subject: "INVITATION" },
+        { action: "update", subject: "INVITATION" },
+        { action: "delete", subject: "INVITATION" },
+        { action: "read", subject: "FACILITY" },
+        { action: "update", subject: "FACILITY" },
+        { action: "read", subject: "PERSON" },
+        { action: "update", subject: "PERSON" },
+        { action: "read", subject: "TERRITORY" },
+        { action: "create", subject: "TERRITORY" },
+        { action: "update", subject: "TERRITORY" },
+        { action: "read", subject: "REGISTRY_SUGGESTION" },
+        { action: "update", subject: "REGISTRY_SUGGESTION" },
+        { action: "read", subject: "REGISTRY_INGESTION" },
+        { action: "read", subject: "CATALOG" },
+        { action: "create", subject: "FIELD_SUGGESTION" },
+        { action: "read", subject: "FIELD_SUGGESTION" },
+        { action: "update", subject: "FIELD_SUGGESTION" },
+        { action: "read", subject: "CADASTRO_SUBMISSION" },
+        { action: "update", subject: "CADASTRO_SUBMISSION" },
+      ],
     });
   });
 
@@ -81,9 +95,9 @@ describe("GetCapabilitiesUseCase", () => {
 
     const result = await useCase.execute({ userId: "user-123" });
 
-    expect(result.capabilities).toContainEqual({
-      resource: "user",
-      actions: expect.arrayContaining(["manage"]),
+    expect(result.capabilities.at(-1)).toEqual({
+      action: "manage",
+      subject: "USER",
     });
   });
 

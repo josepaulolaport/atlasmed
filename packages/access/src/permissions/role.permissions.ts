@@ -16,7 +16,7 @@ export function applyRoleAbilities(
     case "ADMIN":
       can("manage", "USER");
       can("manage", "FACILITY");
-      can("manage", "PROFESSIONAL");
+      can("manage", "PERSON");
       can("manage", "TERRITORY");
       can("manage", "INVITATION");
       can("manage", "REGISTRY_INGESTION");
@@ -43,8 +43,8 @@ export function applyRoleAbilities(
       can("delete", "INVITATION");
       can("read", "FACILITY");
       can("update", "FACILITY");
-      can("read", "PROFESSIONAL");
-      can("update", "PROFESSIONAL");
+      can("read", "PERSON");
+      can("update", "PERSON");
       can("read", "TERRITORY");
       can("create", "TERRITORY");
       can("update", "TERRITORY");
@@ -72,8 +72,8 @@ export function applyRoleAbilities(
       can("delete", "INTERACTION");
       can("read", "FACILITY");
       can("update", "FACILITY");
-      can("read", "PROFESSIONAL");
-      can("update", "PROFESSIONAL");
+      can("read", "PERSON");
+      can("update", "PERSON");
       can("read", "CATALOG");
       // Mine list is facility-scoped (read FACILITY); ops queue requires read FIELD_SUGGESTION.
       can("create", "FIELD_SUGGESTION");
@@ -89,7 +89,7 @@ export function applyRoleAbilities(
 
     case "OPS":
       can("read", "FACILITY");
-      can("read", "PROFESSIONAL");
+      can("read", "PERSON");
       can("read", "TERRITORY");
       can("read", "USER");
       can("read", "FIELD_SUGGESTION");
@@ -100,9 +100,9 @@ export function applyRoleAbilities(
       cannot("create", "FACILITY");
       cannot("update", "FACILITY");
       cannot("delete", "FACILITY");
-      cannot("create", "PROFESSIONAL");
-      cannot("update", "PROFESSIONAL");
-      cannot("delete", "PROFESSIONAL");
+      cannot("create", "PERSON");
+      cannot("update", "PERSON");
+      cannot("delete", "PERSON");
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");

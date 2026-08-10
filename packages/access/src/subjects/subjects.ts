@@ -3,7 +3,7 @@ export const Subjects = {
 
   FACILITY: "FACILITY",
 
-  PROFESSIONAL: "PROFESSIONAL",
+  PERSON: "PERSON",
 
   TERRITORY: "TERRITORY",
 

@@ -147,11 +147,15 @@ describe("userRoute", () => {
     expect(
       await parseJsonResponse<{
         version: number;
-        capabilities: Array<{ resource: string; actions: string[] }>;
+        capabilities: Array<{
+          action: string;
+          subject: string;
+          inverted?: true;
+        }>;
       }>(response),
     ).toEqual({
       version: 2,
-      capabilities: [{ resource: "agenda", actions: ["read"] }],
+      capabilities: [{ action: "read", subject: "CALENDAR" }],
     });
   });
 

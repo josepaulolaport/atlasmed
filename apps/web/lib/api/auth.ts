@@ -98,7 +98,7 @@ export const authApi = {
 
   getCapabilities: async (): Promise<CapabilitiesResponse> => {
     const response = await apiClient.get<CapabilitiesResponse>(
-      "/user/capabilities"
+      "/access/me/capabilities"
     );
     return response.data;
   },

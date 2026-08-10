@@ -64,11 +64,14 @@ void main() {
       ProviderScope(
         overrides: [
           userCapabilitiesProvider.overrideWith(
-            (ref) => UserCapabilities(
+            (ref) => const UserCapabilities(
               version: 2,
-              capabilities: {
-                CapabilityResource.agenda: {CapabilityAction.read},
-              },
+              rules: [
+                CapabilityRule(
+                  action: CapabilityAction.read,
+                  subject: CapabilitySubject.calendar,
+                ),
+              ],
             ),
           ),
         ],

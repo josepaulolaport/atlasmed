@@ -3,34 +3,68 @@ import 'package:atlasmed_mobile_app/core/user/models/user_capabilities.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('uses person as the capability resource wire name', () {
-    expect(CapabilityResource.person.wireName, 'person');
-    expect(CapabilityResourceX.tryParse('person'), CapabilityResource.person);
-    expect(CapabilityResourceX.tryParse('professional'), isNull);
+  UserCapabilities decode(List<Map<String, Object?>> rules) =>
+      UserCapabilities.fromJson({'version': 2, 'capabilities': rules});
+
+  test('uses exact backend CASL wire vocabulary', () {
+    expect(CapabilitySubject.calendar.wireName, 'CALENDAR');
+    expect(CapabilitySubject.person.wireName, 'PERSON');
+    expect(CapabilitySubjectX.tryParse('PROFESSIONAL'), isNull);
+    expect(CapabilityAction.update.wireName, 'update');
   });
 
-  test('decodes typed resource actions and ignores unknown values', () {
-    final capabilities = UserCapabilities.fromJson({
-      'version': 2,
-      'capabilities': [
-        {
-          'resource': 'agenda',
-          'actions': ['read', 'unknown.future.action'],
-        },
-        {
-          'resource': 'unknown.future.resource',
-          'actions': ['read'],
-        },
-        {
-          'resource': 'person',
-          'actions': ['update'],
-        },
-      ],
-    });
+  test('allows an exact action and subject match', () {
+    final capabilities = decode([
+      {'action': 'read', 'subject': 'CALENDAR'},
+    ]);
 
-    expect(capabilities.version, 2);
-    expect(capabilities.can(.read, .agenda), isTrue);
-    expect(capabilities.can(.update, .person), isTrue);
-    expect(capabilities.capabilities.length, 2);
+    expect(capabilities.can(.read, .calendar), isTrue);
+  });
+
+  test('treats manage as an action wildcard for an exact subject', () {
+    final capabilities = decode([
+      {'action': 'manage', 'subject': 'USER'},
+    ]);
+
+    expect(capabilities.can(.update, .user), isTrue);
+  });
+
+  test('lets a later inverted denial override an earlier manage rule', () {
+    final capabilities = decode([
+      {'action': 'manage', 'subject': 'USER'},
+      {'action': 'update', 'subject': 'USER', 'inverted': true},
+    ]);
+
+    expect(capabilities.can(.update, .user), isFalse);
+    expect(capabilities.can(.read, .user), isTrue);
+  });
+
+  test('lets a later allow override an earlier denial', () {
+    final capabilities = decode([
+      {'action': 'read', 'subject': 'PERSON', 'inverted': true},
+      {'action': 'read', 'subject': 'PERSON'},
+    ]);
+
+    expect(capabilities.can(.read, .person), isTrue);
+  });
+
+  test('ignores unknown actions and subjects safely', () {
+    final capabilities = decode([
+      {'action': 'future', 'subject': 'USER'},
+      {'action': 'read', 'subject': 'FUTURE_SUBJECT'},
+      {'action': 'read', 'subject': 'PERSON'},
+    ]);
+
+    expect(capabilities.can(.read, .person), isTrue);
+    expect(capabilities.rules, hasLength(1));
+  });
+
+  test('denies when no rule matches', () {
+    final capabilities = decode([
+      {'action': 'read', 'subject': 'PERSON'},
+    ]);
+
+    expect(capabilities.can(.update, .person), isFalse);
+    expect(capabilities.can(.read, .user), isFalse);
   });
 }

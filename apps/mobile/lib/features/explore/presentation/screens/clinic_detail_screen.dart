@@ -290,7 +290,7 @@ class _ClinicDetailContent extends ConsumerWidget {
     final capabilities = ref.watch(userCapabilitiesProvider);
     final canMutate = capabilities?.can(.manage, .facility) ?? false;
     final canSuggest = capabilities?.can(.create, .fieldSuggestion) ?? false;
-    final canCreateVisit = capabilities?.can(.create, .agenda) ?? false;
+    final canCreateVisit = capabilities?.can(.create, .visit) ?? false;
     final canAssignConsultant = capabilities?.can(.manage, .territory) ?? false;
     final userLinhaOptions =
         ref.watch(currentUserFacilityVerticalOptionsProvider).valueOrNull ??

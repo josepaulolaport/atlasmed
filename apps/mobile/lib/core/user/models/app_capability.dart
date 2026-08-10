@@ -1,55 +1,40 @@
-enum CapabilityResource {
-  agenda,
+enum CapabilitySubject {
+  calendar,
   catalog,
-  cadastro,
+  cadastroSubmission,
   fieldSuggestion,
   facility,
   person,
   territory,
   user,
+  visit,
 }
 
-enum CapabilityAction {
-  read,
-  create,
-  update,
-  delete,
-  manage,
-  review,
-  lifecycle,
-}
+enum CapabilityAction { read, create, update, delete, manage }
 
-extension CapabilityResourceX on CapabilityResource {
+extension CapabilitySubjectX on CapabilitySubject {
   String get wireName => switch (this) {
-    CapabilityResource.agenda => 'agenda',
-    CapabilityResource.catalog => 'catalog',
-    CapabilityResource.cadastro => 'cadastro',
-    CapabilityResource.fieldSuggestion => 'field-suggestion',
-    CapabilityResource.facility => 'facility',
-    CapabilityResource.person => 'person',
-    CapabilityResource.territory => 'territory',
-    CapabilityResource.user => 'user',
+    .calendar => 'CALENDAR',
+    .catalog => 'CATALOG',
+    .cadastroSubmission => 'CADASTRO_SUBMISSION',
+    .fieldSuggestion => 'FIELD_SUGGESTION',
+    .facility => 'FACILITY',
+    .person => 'PERSON',
+    .territory => 'TERRITORY',
+    .user => 'USER',
+    .visit => 'VISIT',
   };
 
-  static CapabilityResource? tryParse(String value) {
-    for (final resource in CapabilityResource.values) {
-      if (resource.wireName == value) return resource;
+  static CapabilitySubject? tryParse(String value) {
+    for (final subject in CapabilitySubject.values) {
+      if (subject.wireName == value) return subject;
     }
-
     return null;
   }
 }
 
-extension AppCapabilityActionX on CapabilityAction {
-  String get wireName => switch (this) {
-    .read => 'read',
-    .create => 'create',
-    .update => 'update',
-    .delete => 'delete',
-    .manage => 'manage',
-    .review => 'review',
-    .lifecycle => 'lifecycle',
-  };
+extension CapabilityActionX on CapabilityAction {
+  String get wireName => name;
 
   static CapabilityAction? tryParse(String value) {
     for (final action in CapabilityAction.values) {
@@ -57,4 +42,16 @@ extension AppCapabilityActionX on CapabilityAction {
     }
     return null;
   }
+}
+
+class CapabilityRule {
+  const CapabilityRule({
+    required this.action,
+    required this.subject,
+    this.inverted = false,
+  });
+
+  final CapabilityAction action;
+  final CapabilitySubject subject;
+  final bool inverted;
 }

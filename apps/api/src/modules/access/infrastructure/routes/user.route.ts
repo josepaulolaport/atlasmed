@@ -3,29 +3,18 @@ import {
   updateProfileSchema,
   updateUserPreferencesSchema,
 } from "@atlasmed/access";
-import {
-  APP_CAPABILITY_ACTIONS,
-  type AppCapability,
-} from "../../application/services/app-capabilities";
 import { accessUseCases, auth } from "../../composition";
 import { serializeUser } from "./user.serializer";
 import { profileRateLimit } from "../middleware/rate-limit.middleware";
 import { ValidationError } from "../../../../shared/errors";
 
-const capabilityResponseSchema = t.Unsafe<AppCapability[]>({
-  type: "array",
-  items: {
-    oneOf: Object.entries(APP_CAPABILITY_ACTIONS).map(([resource, actions]) => ({
-      type: "object",
-      additionalProperties: false,
-      required: ["resource", "actions"],
-      properties: {
-        resource: { type: "string", const: resource },
-        actions: { type: "array", items: { type: "string", enum: actions } },
-      },
-    })),
-  },
-});
+const capabilityResponseSchema = t.Array(
+  t.Object({
+    action: t.String(),
+    subject: t.String(),
+    inverted: t.Optional(t.Literal(true)),
+  }),
+);
 
 function toValidationError(error: unknown): ValidationError {
   if (error && typeof error === "object" && "issues" in error) {
@@ -87,7 +76,7 @@ export const userRoute = new Elysia({
       detail: {
         summary: "Get authenticated user capabilities",
         description:
-          "Returns the authenticated user's typed capability snapshot grouped by resource.",
+          "Returns the authenticated user's ordered type-level CASL ability rules.",
         tags: ["User"],
         security: [{ bearerAuth: [] }],
       },
