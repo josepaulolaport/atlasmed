@@ -102,7 +102,7 @@ jobs:
           MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
-          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
         run: |
           for attempt in 1 2; do
             if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes; then

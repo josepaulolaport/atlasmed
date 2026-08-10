@@ -84,12 +84,19 @@ const createFacilityRoute = new Elysia()
   .use(requirePermission("create", "FACILITY"))
   .post(
     "/facilities",
-    async ({ body }) => {
-      return facilityUseCases.createFacility().execute(body);
+    async ({ body, getScope, getUser }) => {
+      const scope = await getScope();
+      const actor = await getUser();
+      return facilityUseCases.createFacility().execute({
+        ...body,
+        scope,
+        role: actor.role.name,
+      });
     },
     {
       detail: {
-        summary: "Create clinic",
+        summary:
+          "Create clinic (always creates the vertical profile; verticalId required unless the caller has a single vertical)",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -101,6 +108,7 @@ const createFacilityRoute = new Elysia()
         legalDocument: t.Optional(t.Union([t.String(), t.Null()])),
         lat: t.Optional(t.Number()),
         lng: t.Optional(t.Number()),
+        verticalId: t.Optional(t.Integer({ minimum: 1 })),
       }),
     }
   );
@@ -406,17 +414,20 @@ const updateFacilityBillingEmailRoute = new Elysia()
 
 const downloadFacilityCadastroFileRoute = new Elysia()
   .use(auth)
+  .use(requirePermission("read", "FACILITY"))
   .get(
     "/facilities/cadastro/files/*",
-    async ({ params, set }) => {
+    async ({ params, set, getScope }) => {
       const key = params["*"];
       if (typeof key !== "string") {
         throw new ValidationError([
           { field: "key", message: "Invalid cadastro file key" },
         ]);
       }
+      const scope = await getScope();
       const result = await facilityUseCases.downloadFacilityCadastroFile().execute({
         storageKey: key,
+        scope,
       });
       set.headers["content-type"] = result.contentType;
       set.headers["cache-control"] = "private, max-age=3600";
@@ -855,17 +866,20 @@ const uploadFacilityPhotoRoute = new Elysia()
 
 const downloadFacilityPhotoRoute = new Elysia()
   .use(auth)
+  .use(requirePermission("read", "FACILITY"))
   .get(
     "/facilities/photos/*",
-    async ({ params, set }) => {
+    async ({ params, set, getScope }) => {
       const key = params["*"];
       if (typeof key !== "string") {
         throw new ValidationError([
           { field: "key", message: "Invalid facility photo key" },
         ]);
       }
+      const scope = await getScope();
       const result = await facilityUseCases.downloadFacilityPhoto().execute({
         storageKey: key,
+        scope,
       });
       set.headers["content-type"] = result.contentType;
       set.headers["cache-control"] = "private, max-age=3600";

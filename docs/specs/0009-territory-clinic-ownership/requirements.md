@@ -214,7 +214,6 @@ training ride-alongs need a second coincident patch.
 - `user_territory_assignments.assigned_by` — written, never read.
 - `reason` in the `PATCH /territories/:id` body — accepted and discarded.
 - `managerId` in the `POST /users/:id/verticals` body — dead since `0044`.
-- Empty dir `apps/web/app/(dashboard)/territories/approvals/`.
 - `findManagerIdByUserId` — hardcoded `return null` (`drizzle-scope.repository.ts:136-139`).
 - `.github/workflows/prod-cleanup-multi-uta-patches.yml` + `cleanup-legacy-multi-uta-patches.ts`
   + its two `apps/api/package.json` entries. **Confirmed never run in production**, so no

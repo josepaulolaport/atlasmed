@@ -17,6 +17,7 @@ import { reportSearchMeiliFallback } from "../../../../infrastructure/search/sea
 import { purchaseBucketToFunnelFilter } from "../list-facilities-query";
 import { serializeFacility } from "../mappers/facility.mapper";
 import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
+import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import {
   meiliFunnelStageFilter,
   meiliPurchaseProfileFilter,
@@ -335,7 +336,36 @@ export class CreateFacilityUseCase {
     legalDocument?: string | null;
     lat?: number;
     lng?: number;
+    /** Required unless the caller has exactly one accessible vertical. */
+    verticalId?: number;
+    scope: ScopeContext;
+    role: string;
   }) {
+    // A facility with no vertical profile is invisible to every non-global
+    // scope, so creation must resolve exactly one vertical (spec 0010 §1.7).
+    // resolveVerticalIds wraps resolveAccessibleVerticalIds: it throws
+    // Forbidden when verticalId is outside the caller's assignments, and
+    // returns all assigned verticals when none is supplied.
+    const accessibleVerticalIds = resolveVerticalIds({
+      role: input.role,
+      assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      queryVerticalId: input.verticalId ?? null,
+    });
+
+    if (accessibleVerticalIds.length === 0) {
+      throw new ValidationError([{
+        field: "verticalId",
+        message: "Caller has no accessible verticals to create a clinic in",
+      }]);
+    }
+    if (accessibleVerticalIds.length > 1) {
+      throw new ValidationError([{
+        field: "verticalId",
+        message: "verticalId is required when the caller has multiple verticals",
+      }]);
+    }
+    const verticalId = accessibleVerticalIds[0]!;
+
     const coordinates = this.deps.facilityGeocodingService
       ? await this.deps.facilityGeocodingService.resolveCoordinates({
           lat: input.lat,
@@ -351,6 +381,7 @@ export class CreateFacilityUseCase {
       legalDocument: input.legalDocument,
       lat: coordinates.lat,
       lng: coordinates.lng,
+      verticalId,
     });
 
     if (coordinates.lat != null && coordinates.lng != null) {
@@ -359,7 +390,7 @@ export class CreateFacilityUseCase {
     await this.deps.onFacilityChanged?.(clinic.id);
 
     const refreshed = await this.deps.facilityRepository.findById(clinic.id);
-    return serializeFacility(refreshed ?? clinic);
+    return serializeFacility(refreshed ?? clinic, [verticalId]);
   }
 }
 

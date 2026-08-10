@@ -109,11 +109,6 @@ const EnvironmentSchema = Type.Object({
   EMULTEC_MYSQL_PASSWORD: OptionalString(),
   EMULTEC_MYSQL_DATABASE: Type.String({ default: "atlasmed", minLength: 1 }),
 
-  NEXT_PUBLIC_API_URL: Type.String({ default: "http://localhost:3000/api/v1", pattern: URL_PATTERN }),
-  NEXT_PUBLIC_HEALTH_URL: Type.String({ default: "http://localhost:3000", pattern: URL_PATTERN }),
-  NEXT_PUBLIC_MAP_PROVIDER: Type.Union([Type.Literal("leaflet"), Type.Literal("mapbox")], {
-    default: "leaflet",
-  }),
 
   UNCLOUD_CONNECT: OptionalString(),
   TEMPORAL_DB_PASSWORD: OptionalString(),
@@ -194,9 +189,6 @@ function normalizeEnvironment(rawEnv: EnvInput) {
     TEMPORAL_TASK_QUEUE: env.TEMPORAL_TASK_QUEUE ?? "atlasmed-workflows",
     EMULTEC_MYSQL_PORT: numberFromEnv(env.EMULTEC_MYSQL_PORT, 3306),
     EMULTEC_MYSQL_DATABASE: env.EMULTEC_MYSQL_DATABASE ?? "atlasmed",
-    NEXT_PUBLIC_API_URL: env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1",
-    NEXT_PUBLIC_HEALTH_URL: env.NEXT_PUBLIC_HEALTH_URL ?? "http://localhost:3000",
-    NEXT_PUBLIC_MAP_PROVIDER: env.NEXT_PUBLIC_MAP_PROVIDER ?? "leaflet",
   };
 }
 

@@ -241,8 +241,17 @@ export class GetFacilityCadastroChecklistUseCase {
             ? mapSubmissionDocumentUiStatus(latestSubmitted.document.status)
             : mapRecordStatusToUi(record?.status);
 
-        // Official current files = approved only. Draft READY files stay off this surface.
-        const displayDoc = approvedEntry?.document ?? null;
+        // "Current document" for this requirement, in precedence order:
+        //   1. the approved document — the official one on file;
+        //   2. the document in the facility's current (draft or latest) package,
+        //      whatever its status: this is the row the compose screen uploads
+        //      into, so its files must be visible while it is still a DRAFT
+        //      (spec 0011 §8.1 / D-08 — returning [] here left the client poll
+        //      loop with nothing to match and "Enviar" permanently disabled);
+        //   3. the last document actually sent for review.
+        // documentId / documentStatus / files all describe this same document.
+        const displayDoc =
+          approvedEntry?.document ?? submissionDoc ?? latestSubmitted?.document ?? null;
         const files = displayDoc
           ? await this.deps.cadastroRepository!.listDocumentFiles(displayDoc.id)
           : [];
@@ -256,18 +265,8 @@ export class GetFacilityCadastroChecklistUseCase {
           kind: "file" as const,
           required: true,
           uiStatus,
-          documentId:
-            displayDoc?.id ??
-            latestSubmitted?.document.id ??
-            submissionDoc?.id,
-          documentStatus:
-            displayDoc?.status ??
-            latestSubmitted?.document.status ??
-            (submissionDoc?.status === "READY" ||
-            submissionDoc?.status === "DRAFT" ||
-            submissionDoc?.status === "PROCESSING"
-              ? undefined
-              : submissionDoc?.status),
+          documentId: displayDoc?.id,
+          documentStatus: displayDoc?.status,
           latestSubmittedStatus: latestSubmitted?.document.status,
           latestSubmittedAt:
             latestSubmitted?.submission.submittedAt?.toISOString() ?? undefined,
@@ -373,6 +372,7 @@ export class UpdateFacilityBillingEmailUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
       verticalId: input.verticalId,
     });
@@ -473,6 +473,7 @@ export class SubmitFacilityCadastroDocumentUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
     });
 
@@ -490,7 +491,7 @@ export class DownloadFacilityCadastroFileUseCase {
     private readonly deps: Pick<Dependencies, "conformityRepository" | "storage">
   ) {}
 
-  async execute(input: { storageKey: string }) {
+  async execute(input: { storageKey: string; scope: ScopeContext }) {
     if (
       !/^facilities\/[a-zA-Z0-9_-]+\/cadastro\/[a-z0-9_]+\/[a-z0-9-]+\.(jpg|png|webp|pdf)$/.test(
         input.storageKey
@@ -507,6 +508,12 @@ export class DownloadFacilityCadastroFileUseCase {
     if (!record || !record.contentType) {
       throw new ResourceNotFoundError("ConformityRecord", input.storageKey);
     }
+
+    // The storage key is a capability: it embeds a v4 UUID, so it is not
+    // enumerable, but it never expires and cannot be revoked. Re-check scope on
+    // every read — via the facility the record already names — so losing scope
+    // actually revokes access, and do it before any bytes are fetched.
+    assertResourceInScope(input.scope, "facility", record.facilityId);
 
     const bytes = await this.deps.storage.download(input.storageKey);
     return { bytes, contentType: record.contentType };
@@ -546,6 +553,7 @@ export class ApproveFacilityCadastroRecordUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
     });
 
@@ -600,6 +608,7 @@ export class RejectFacilityCadastroRecordUseCase {
     const resolvedVerticalId = await resolveCadastroVerticalId({
       facilityId: input.facilityId,
       assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+      isGlobal: input.scope.isGlobal,
       facilityRepository: this.deps.facilityRepository,
     });
 
