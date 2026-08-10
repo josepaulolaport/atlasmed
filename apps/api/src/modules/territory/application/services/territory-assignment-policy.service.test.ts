@@ -13,6 +13,8 @@ function buildService(options: {
   territoryTypeOverrides?: Partial<{ slug: string }>;
   territoryOverrides?: Partial<{ isActive: boolean }>;
   conflictingAssignments?: Array<{ userId: number }>;
+  /** UVA rows for the target. Defaults to holding the territory's vertical. */
+  assignedVerticalIds?: number[];
 } = {}) {
   const territoryRepository: Pick<TerritoryRepository, "findById" | "findConflictingAssignments"> = {
     findById: mock(async () => ({
@@ -47,12 +49,17 @@ function buildService(options: {
     findById: mock(async () => null),
   };
 
+  const verticalMembership = {
+    findVerticalIdsByUserId: mock(async () => options.assignedVerticalIds ?? [1]),
+  };
+
   const service = new TerritoryAssignmentPolicyService({
     territoryRepository: territoryRepository as TerritoryRepository,
     territoryTypeRepository: territoryTypeRepository as TerritoryTypeRepository,
+    verticalMembership,
   });
 
-  return { service, territoryRepository };
+  return { service, territoryRepository, verticalMembership };
 }
 
 describe("TerritoryAssignmentPolicyService", () => {
@@ -171,5 +178,53 @@ describe("TerritoryAssignmentPolicyService", () => {
         territoryId: TERRITORY_ID,
       })
     ).rejects.toBeInstanceOf(OperationNotAllowedError);
+  });
+
+  /**
+   * Invariant I6 (spec 0010 §1.1). Before this, scope resolution unioned the
+   * verticals of a user's territories into their membership, so assigning a
+   * territory silently granted its vertical everywhere while
+   * `GET /user/assignments` still reported UVA only (D-29). Dropping that union
+   * is only safe because this check makes it redundant.
+   */
+  it("refuses a territory in a vertical the user is not assigned", async () => {
+    const { service } = buildService({ assignedVerticalIds: [2] });
+
+    await expect(
+      service.validateAssignment({
+        targetUserId: TARGET_USER_ID,
+        targetRole: Role.REP,
+        territoryId: TERRITORY_ID,
+      })
+    ).rejects.toBeInstanceOf(OperationNotAllowedError);
+  });
+
+  it("refuses a territory when the user has no verticals at all", async () => {
+    const { service } = buildService({ assignedVerticalIds: [] });
+
+    await expect(
+      service.validateAssignment({
+        targetUserId: TARGET_USER_ID,
+        targetRole: Role.REP,
+        territoryId: TERRITORY_ID,
+      })
+    ).rejects.toBeInstanceOf(OperationNotAllowedError);
+  });
+
+  it("allows the assignment when the user holds the territory's vertical", async () => {
+    const { service, verticalMembership } = buildService({
+      assignedVerticalIds: [1],
+      conflictingAssignments: [],
+    });
+
+    await service.validateAssignment({
+      targetUserId: TARGET_USER_ID,
+      targetRole: Role.REP,
+      territoryId: TERRITORY_ID,
+    });
+
+    expect(verticalMembership.findVerticalIdsByUserId).toHaveBeenCalledWith(
+      TARGET_USER_ID
+    );
   });
 });

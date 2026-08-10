@@ -143,12 +143,27 @@ export class GetUserAssignmentsUseCase {
       territoriesByVertical.set(territory.verticalId, list);
     }
 
-    // UVAs are source of truth; also surface verticals that only appear via
-    // territory UTAs (legacy accepts / partial backfills) so Desempenho/map work.
+    // UVA is the source of truth (spec 0010 §1.1). Territory verticals are
+    // still unioned in for now: invariant I6 makes them necessarily a subset,
+    // so this is a no-op for compliant data and a safety net for anything that
+    // predates the invariant.
     const verticalIds = new Set<number>([
       ...verticalRows.map((row) => row.verticalId),
       ...territoriesByVertical.keys(),
     ]);
+
+    // D-30: an ADMIN with no UVA rows is granted every active vertical by
+    // scope resolution, but this endpoint reported [] — and mobile builds its
+    // vertical picker from this response. The result was a full admin staring
+    // at an empty selector and an empty potential-definitions screen.
+    //
+    // Report what scope resolution actually grants, using the same rule, so
+    // the two cannot disagree.
+    if (verticalIds.size === 0 && user.role.name === Role.ADMIN) {
+      for (const vertical of verticals) {
+        verticalIds.add(vertical.id);
+      }
+    }
 
     const verticalAssignments: VerticalAssignmentDto[] = [...verticalIds].map(
       (verticalId) => {

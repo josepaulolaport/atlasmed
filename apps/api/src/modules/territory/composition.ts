@@ -5,6 +5,7 @@ import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-te
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
 import { DrizzleTerritoryBoundaryWriter } from "./infrastructure/adapters/drizzle-territory-boundary.writer";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
+import { DrizzleScopeRepository } from "../access/infrastructure/repositories/drizzle/drizzle-scope.repository";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
 import { TerritoryContainmentService } from "./application/services/territory-containment.service";
 import { TerritoryCrudUseCases } from "./application/use-cases/territory-crud.use-cases";
@@ -130,6 +131,10 @@ export { territoryMembershipService, enqueueClinicMembershipUpdate };
 export const territoryAssignmentPolicy = new TerritoryAssignmentPolicyService({
   territoryRepository: territoryRepositories.territory,
   territoryTypeRepository: territoryRepositories.territoryType,
+  // Invariant I6 needs the target's asserted vertical membership. Constructed
+  // directly rather than imported from the access module's composition: that
+  // module imports this one, and going the other way closes the cycle.
+  verticalMembership: new DrizzleScopeRepository(),
 });
 
 export const territoryUseCases = {
