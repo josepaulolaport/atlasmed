@@ -7,7 +7,7 @@ Adicionar ao aplicativo móvel uma agenda cronológica para agentes comerciais e
 ## Escopo
 
 - Implementação em `apps/mobile`, `apps/api`, `packages/database` e `packages/access`.
-- `apps/web` não participa desta versão.
+- O cliente de administração removido não participa desta versão.
 - O agente administra somente a própria agenda.
 - O gestor consulta, sem alterar, agendas alcançadas pelo RBAC e escopo territorial existentes.
 - Não serão geradas nem aplicadas migrations nesta branch. Somente os schemas Drizzle serão alterados; o responsável pelo merge gerará as migrations posteriormente.

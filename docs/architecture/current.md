@@ -2,7 +2,7 @@
 
 ## Overview
 
-Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, a Flutter mobile app, Temporal workers, and shared packages for access control, database, config, observability, Mapbox, and facility insights.
+Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Flutter mobile app, Temporal workers, and shared packages for access control, database, config, observability, Mapbox, and facility insights.
 
 ## Backend Runtime
 
@@ -27,14 +27,6 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, 
 - `field-suggestions`: user-submitted Não Conformidades (`field_suggestions`).
 - `dashboard`, `maps`, `potential`, `search-sync`, `sessions`, `user`, `visits`.
 
-## Web Architecture
-
-- Next.js App Router.
-- Route groups for auth and dashboard.
-- API client modules under `apps/web/lib/api`.
-- Role/permission helpers under `apps/web/lib/permissions.ts`.
-- Reusable UI components under `apps/web/components/ui`.
-- UI language: pt-BR.
 
 ## Mobile Architecture
 

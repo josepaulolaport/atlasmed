@@ -8,7 +8,6 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 |---|---|---|
 | `apps/api` | Bun + Elysia | Backend API, Drizzle ORM, PostgreSQL/PostGIS, CASL authorization |
 | `apps/mobile` | Flutter | Mobile app (migration to React Native/Expo — see `docs/architecture/adr/0002-mobile-stack.md`) |
-| `apps/web` | Next.js 16 | Admin/web app |
 | `apps/workers/temporal` | Temporal | Background workflows (search-sync, purchase-recurrence, cadastro) — package `@atlasmed/temporal-worker` |
 | `packages/database` | Drizzle | Schema, migrations (Drizzle Kit), DB client, PostGIS geometry types |
 | `packages/access` | CASL | Authorization rules, roles, row-level access |
@@ -16,7 +15,7 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 | `packages/mapbox` | — | Mapbox API client wrappers (geocoding, directions, matrix) |
 | `packages/config` | Zod | Shared runtime config, env parsing, feature flags |
 | `packages/observability` | — | Structured logging, distributed tracing, metrics |
-| `packages/ui` | — | Shared UI primitives (future — atoms currently inline in `apps/web`) |
+| `packages/ui` | — | Shared UI primitives for future cross-client reuse |
 
 ## Task lifecycle (mandatory)
 
@@ -38,7 +37,7 @@ Do not skip this because the change "looks small."
 ### Step 1 — Classify
 
 ```
-domain(s):   web | api | mobile | workers | shared-package    (1 or more)
+domain(s):   api | mobile | workers | shared-package    (1 or more)
 concerns:    authorization | persistence | styling | testing | docs |
              api-contract | background-jobs | offline-first | …
 ```
@@ -246,7 +245,7 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 
 ### Anti-patterns
 
-- Do not import from `apps/web` or `apps/mobile`.
+- Do not import from other apps.
 - Do not skip `getScope()` "because the query is simple."
 - Do not throw raw `Error`.
 - Do not instantiate repositories in routes — always go through `composition.ts`.
@@ -261,43 +260,6 @@ Log via shared logger from `packages/observability`. Never `console.log`. Struct
 | (CNES warehouse removed) | n/a — public CNES lookups + `facilities.cnes_code` only; do not re-add registry READ without ADR |
 | Multi-tenancy | `docs/specs/0001-multi-tenancy/design.md`, `docs/specs/0001-multi-tenancy/tasks.md` |
 | Territory logic | `docs/specs/0003-territory-management/requirements.md` |
-
----
-
-## apps/web
-
-**Scope:** Admin screens (facilities, professionals, territories, users, field-suggestions), manager/BI dashboards, tables/filters/forms, auth flows (login, 2fa, register, forgot/reset password).
-
-### Stack
-
-Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent, Inter font) + `iconify-icon` (Solar set) + Radix UI + react-hook-form + zod + axios.
-
-### Conventions
-
-- **Language: Brazilian Portuguese (pt-BR) only.** All UI text (labels, buttons, headings, placeholders, nav, empty/loading states, table headers, dialogs, `aria-label`/`title`, page metadata) MUST be pt-BR. No i18n framework — strings live in-place.
-- Dates/numbers use `pt-BR` locale (dd/mm/aaaa). Use `formatDate`/`formatDateTime` helpers in `lib/utils.ts`.
-- Design tokens: zinc palette + blue accent + Inter font. No ad-hoc colors.
-- Section cards: `rounded-xl border border-zinc-200 bg-white shadow-sm`.
-- Loading state: `<div className="py-10 text-center text-sm text-zinc-500">Carregando…</div>`.
-- Client components only where interactivity is needed. Do not add `"use client"` speculatively.
-- Permission-sensitive UI matches backend authorization. Backend is source of truth.
-
-### Required docs
-
-| Task | Load |
-|---|---|
-| General web work | this file → `apps/web` section, `apps/web/README.md` |
-| Auth screens | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
-| Facility / professional / territory | `docs/architecture/features/clinic-doctor-registry.md`, `docs/specs/0003-territory-management/requirements.md` |
-| Não Conformidades / field suggestions | `docs/specs/0007-nao-conformidades/requirements.md`, this file → `apps/api` section |
-| API-backed feature | `docs/ai/integration-tasks/api-web.md` |
-| Multi-tenancy UI | `docs/specs/0001-multi-tenancy/design.md` |
-
-### Anti-patterns
-
-- Do not import Drizzle row types — consume backend DTOs only.
-- Do not fetch inside server components with a browser-only axios instance.
-- Do not add heavy client-side dependencies (charting libs, map libs) without discussion.
 
 ---
 
@@ -327,7 +289,7 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 ### Anti-patterns
 
-- Do not import from `apps/api` or `apps/web`.
+- Do not import from other apps.
 - Do not couple to database row types — consume backend DTOs only.
 - Do not add new native plugins without noting platform impact (iOS + Android build changes).
 
@@ -370,7 +332,7 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 - Backend authorization is the source of truth. Frontend visibility is not security.
 - Centralize permission logic here. Do not duplicate CASL rules inside `apps/*`.
-- Roles are enum-typed and stable (`ADMIN`, `MANAGER`, `REP`, `OPS`). Adding/renaming a role is breaking — coordinate across `apps/api`, `apps/web`, `apps/mobile` in the same PR.
+- Roles are enum-typed and stable (`ADMIN`, `MANAGER`, `REP`, `OPS`). Adding/renaming a role is breaking — coordinate across every active consumer in the same PR.
 - Permission helpers: `can<Verb><Noun>` (e.g. `canReadFacilities`).
 - `canAccessRoute` — type-level only. `canAccessResource` — resource-level (subject + id + grants). Do not merge.
 
@@ -580,7 +542,7 @@ DATABASE_URL=<url> bun run db:migrate
 
 - `@atlasmed/config` is the single source of truth for environment variables. Apps and packages that need env values import `environment` from this package instead of reading `process.env` directly.
 - Env vars are validated with TypeBox. Production validation runs through the root `bun run env:check`, which delegates to the only workspace-level `env:check` script in `@atlasmed/config`.
-- No config value baked at build time unless it is explicitly a public `NEXT_PUBLIC_*` value.
+- No config value baked at build time unless explicitly designated as public client configuration.
 - No secret defaulting — production requires explicit values.
 - Feature flags are typed. No string-keyed lookups.
 
@@ -598,7 +560,7 @@ Do not reintroduce CNES ingest / registry warehouse without an ADR + product dec
 
 ## packages/mapbox
 
-**Scope:** Mapbox API client wrappers — forward/reverse geocoding, matrix, directions. Shared by `apps/api` (facility geocoding) and potentially `apps/web` and `apps/mobile`.
+**Scope:** Mapbox API client wrappers — forward/reverse geocoding, matrix, directions. Shared by `apps/api` (facility geocoding) and potentially `apps/mobile`.
 
 ### Rules
 
@@ -608,19 +570,3 @@ Do not reintroduce CNES ingest / registry warehouse without an ADR + product dec
 - Consumers pass token via factory/env, not a hardcoded global.
 
 ---
-
-## packages/ui
-
-**Scope:** Shared UI primitives if used across `apps/web` and future React-based mobile client. Most `apps/web` UI atoms currently live inside `apps/web/components/ui/`.
-
-### Rules
-
-- Only add a component here when at least two apps consume it.
-- Component must be styling-token-driven — no `apps/web`-specific palette hardcoding.
-- Do not depend on `apps/*`.
-- Do not import Radix without verifying the target app already ships it.
-
-### Anti-patterns
-
-- Do not clone `apps/web/components/ui/*` here speculatively.
-- Do not create new palette tokens divergent from `apps/web/app/globals.css` — sync them.

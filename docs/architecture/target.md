@@ -15,14 +15,6 @@ Atlasmed should continue as a modular monolith while the product matures. The ba
 - Drizzle ORM, with repository boundaries insulating domain logic from persistence details.
 - OpenAPI-first API design.
 
-## Target Web Stack
-
-- Next.js.
-- React.
-- TypeScript.
-- Tailwind CSS.
-- Component-based design system.
-- Dashboard and analytics-first UX.
 
 ## Target Mobile Stack
 

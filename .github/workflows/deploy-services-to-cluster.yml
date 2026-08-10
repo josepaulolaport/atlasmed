@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'apps/api/**'
-      - 'apps/web/**'
       - 'apps/workers/**'
       - 'packages/**'
       - 'deploy/**'
@@ -91,10 +90,6 @@ jobs:
       - name: Typecheck CNES worker
         run: bun run workers:typecheck
 
-      - name: Build web
-        env:
-          NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
-        run: bun run web:build
 
       - name: Run database migrations
         env:
@@ -152,6 +147,11 @@ jobs:
           $UNCLOUD_SSH_CMD 'docker image prune -f'
           $UNCLOUD_SSH_CMD 'docker system df'
 
+      - name: Remove retired web service
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+        run: uc rm atlasmed-web --yes || true
+
       - name: Deploy services to cluster
         env:
           UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
@@ -176,7 +176,7 @@ jobs:
           STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
         run: |
           for attempt in 1 2; do
-            if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker atlasmed-web --recreate --yes; then
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes; then
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then
@@ -190,16 +190,6 @@ jobs:
         run: |
           for i in {1..20}; do
             if curl -fsS https://atlasmed-api.b1ixob.uncld.dev/health >/dev/null; then
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
-
-      - name: Health check web
-        run: |
-          for i in {1..20}; do
-            if curl -fsS https://atlasmed-web.b1ixob.uncld.dev >/dev/null; then
               exit 0
             fi
             sleep 5

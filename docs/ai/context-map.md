@@ -9,7 +9,6 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 | Domain | Load |
 |---|---|
 | api | root `AGENTS.md` § `apps/api` |
-| web | root `AGENTS.md` § `apps/web`, `apps/web/README.md` |
 | mobile | root `AGENTS.md` § `apps/mobile` |
 | workers | root `AGENTS.md` § `apps/workers` |
 | shared-package | root `AGENTS.md` § matching `packages/*` |
@@ -31,8 +30,6 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 | compliance | root `AGENTS.md` § `packages/observability` + affected domain |
 | ci-cd / deployment | `.github/`, `.githooks/`, `scripts/install-git-hooks.sh` |
 | configuration | root `AGENTS.md` § `packages/config` |
-| styling / layout / interaction / accessibility | root `AGENTS.md` § `apps/web` |
-| state management / data fetching / forms | root `AGENTS.md` § `apps/web` |
 | business logic / refactor | root `AGENTS.md` § affected app |
 | testing | `apps/api/TESTING.md` (for api) |
 | docs | root `AGENTS.md` § When restructuring documentation |
@@ -59,13 +56,10 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 
 | Combo | Load |
 |---|---|
-| api + web | `docs/ai/integration-tasks/api-web.md` |
 | api + mobile | `docs/ai/integration-tasks/api-mobile.md` |
 | api + database | `docs/ai/integration-tasks/api-database.md` |
 | api + access | `docs/ai/integration-tasks/api-access.md` |
-| web + BI/dashboard | `docs/ai/integration-tasks/web-bi.md` |
 | mobile + visits | `docs/ai/integration-tasks/mobile-visits.md` |
-| api + web + mobile + shared | `docs/ai/integration-tasks/fullstack-feature.md` |
 
 ## Rules
 

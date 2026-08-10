@@ -8,52 +8,6 @@ Per-app / per-package `AGENTS.md` files were consolidated into root `AGENTS.md` 
 
 ---
 
-## Example 1 — "Add a facility archive endpoint + web button"
-
-**Classify:**
-```
-domain(s):  [api, web]
-concerns:   [authorization, data-fetching, state-management, docs, testing, api-contract]
-```
-
-**Cross-boundary → load integration doc first.**
-
-**Loading:**
-```
-Tier 0: AGENTS.md
-Tier 1: docs/ai/integration-tasks/api-web.md
-        AGENTS.md § apps/api
-        AGENTS.md § apps/web
-        AGENTS.md § packages/access          (authorization concern)
-        docs/architecture/features/access-auth.md
-```
-**Total: 5 files** (root AGENTS counted once).
-
-**NOT loaded:** `apps/mobile/*`, `apps/workers/*`, `packages/database/*` (no schema change), `docs/product/*`.
-
----
-
-## Example 2 — "Restyle the sidebar to add a collapsed state"
-
-**Classify:**
-```
-domain(s):  [web]
-concerns:   [styling, layout, interaction, state-management]
-```
-
-**Single-domain → skip integration doc.**
-
-**Loading:**
-```
-Tier 0: AGENTS.md
-Tier 1: AGENTS.md § apps/web
-        apps/web/README.md
-```
-**Total: 2 files.**
-
-Design tokens (zinc palette + section-card pattern) come from `AGENTS.md` § `apps/web` Conventions.
-
----
 
 ## Example 3 — "Add a Drizzle migration for facility.archived_at + backfill"
 

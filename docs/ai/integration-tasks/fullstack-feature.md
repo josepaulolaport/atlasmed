@@ -1,12 +1,12 @@
 # Fullstack Feature Integration
 
-Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least one shared package (schema, permissions, shared types). Highest-scope integration doc.
+Use when a feature spans `apps/api` + `apps/mobile` + at least one shared package (schema, permissions, shared types). Highest-scope integration doc.
 
 ## Load
 
 **Always:**
 - `AGENTS.md` (relevant domain sections only)
-- `docs/ai/integration-tasks/api-web.md` OR `docs/ai/integration-tasks/api-mobile.md` (pick the frontend side)
+- `docs/ai/integration-tasks/api-mobile.md`
 
 **Conditional:**
 
@@ -27,7 +27,7 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 4. Schema change: `generate` + `migrate` locally (gated `db:push` only on disposable empty DBs); `generate` once before PR if needed; `drizzle-kit check` (see `AGENTS.md` § Migration workflow / HARD SAFETY).
 5. Backend: validation → authorization → use-case → DTO mapping → tests.
 6. Permissions: helper in `packages/access` if reused; enforce at API boundary.
-7. Frontend: fetch → state → UI → loading/empty/error states.
+7. Mobile client: fetch → state → UI → loading/empty/error states.
 8. Observability + audit for permission-sensitive events.
 9. Verify permissions end-to-end.
 10. Update matching docs in same PR if conventions shifted.
@@ -39,7 +39,7 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 - Do NOT implement frontend assumptions before backend contract is defined.
 - Do NOT duplicate authorization logic across apps.
 - Keep shared contracts in a shared location, not inline.
-- Split the work into small commits: schema → shared types → backend → permissions → frontend → tests → docs.
+- Split the work into small commits: schema → shared types → backend → permissions → mobile client → tests → docs.
 
 ## Docs to update after
 

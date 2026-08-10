@@ -13,7 +13,6 @@ Use when a task changes authorization behavior (roles, CASL rules, permission he
 | Concern | Load |
 |---|---|
 | observability / audit | `AGENTS.md` § `packages/observability` |
-| Change surfaces in web UI | `AGENTS.md` § `apps/web` |
 | Change surfaces in mobile UI | `AGENTS.md` § `apps/mobile` |
 | testing | `apps/api/TESTING.md` |
 
@@ -22,7 +21,7 @@ Use when a task changes authorization behavior (roles, CASL rules, permission he
 1. Update CASL abilities or role mapping in `packages/access`.
 2. Expose a `can<Verb><Noun>` helper if the check is reused.
 3. Update every API route/use-case that enforces the change (via `requirePermission`).
-4. Update frontend gates so UI matches — hide/disable, not enforce.
+4. Update active client gates so UX matches — hide/disable, not enforce.
 5. Add unit tests for the ability and integration tests for the enforcement path.
 6. Emit audit log entries for permission-sensitive events.
 7. Update matching docs in same PR if conventions shifted.

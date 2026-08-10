@@ -21,8 +21,6 @@ node_modules
 *.log
 coverage
 
-apps/web/.next
-apps/web/out
 apps/mobile/build
 **/dist
 **/*.tsbuildinfo
