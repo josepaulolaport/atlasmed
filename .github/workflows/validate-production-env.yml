@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'apps/api/**'
-      - 'apps/web/**'
       - 'apps/workers/**'
       - 'packages/**'
       - 'deploy/**'
@@ -46,6 +45,10 @@ on:
         required: true
       MINIO_ROOT_PASSWORD:
         required: true
+      STORAGE_ACCESS_KEY_ID:
+        required: true
+      STORAGE_SECRET_ACCESS_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -73,11 +76,28 @@ jobs:
       PORT: "3000"
       REDIS_URL: redis://atlasmed-redis:6379
       JWT_EXPIRATION: ${{ vars.JWT_EXPIRATION || '15m' }}
+      # These must mirror deploy-services-to-cluster.yml exactly. A fallback here
+      # that the deploy workflow does not have makes this gate pass on values
+      # that will never be deployed: delete or typo a variable and the gate goes
+      # green on MinIO defaults while the cluster receives empty strings.
+      # STORAGE_BUCKET and STORAGE_REGION keep defaults because the deploy has them too.
       STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
-      STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
-      STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT || 'https://storage.tdomains.uk' }}
-      NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
-      NEXT_PUBLIC_HEALTH_URL: https://atlasmed-api.b1ixob.uncld.dev
+      # R2 accepts only "auto"; MinIO ignored the region entirely. So "auto" is correct
+      # for both, and the old us-east-1 default is a MinIO-era value R2 rejects.
+      STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
+      # No fallbacks, deliberately: these must mirror deploy-services-to-cluster.yml,
+      # which has none either. A default here makes this gate pass on values that are
+      # never deployed — delete or typo a variable and it goes green while the cluster
+      # receives an empty string.
+      # Server-side endpoint (API -> object store) and the one baked into presigned URLs
+      # handed to devices. They are the same host on R2; they were not on MinIO+Caddy,
+      # which is why both still exist.
+      STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
+      STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
+      # What requests are signed with — the R2 API token. MINIO_ROOT_* above provision
+      # the MinIO server itself and are a different thing.
+      STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+      STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
 
     steps:
       - name: Checkout

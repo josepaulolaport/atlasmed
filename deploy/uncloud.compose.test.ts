@@ -7,7 +7,6 @@ const dockerfilePaths = [
   "api.Dockerfile",
   "api-worker.Dockerfile",
   "temporal-worker.Dockerfile",
-  "web.Dockerfile",
 ].map((name) => resolve(import.meta.dir, "docker", name));
 const workflowPath = resolve(
   import.meta.dir,
@@ -26,7 +25,6 @@ describe("production deployment", () => {
     const { compose } = readDeploymentConfig();
 
     for (const serviceName of [
-      "atlasmed-web",
       "atlasmed-api",
       "atlasmed-api-worker",
       "atlasmed-temporal-worker",
@@ -101,10 +99,10 @@ describe("production deployment", () => {
     const { compose, workflow } = readDeploymentConfig();
 
     expect(compose).toContain("image: atlasmed/api:prod");
-    expect(compose).toContain("image: atlasmed/web:prod");
     expect(workflow).toContain(
-      "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker atlasmed-web --recreate --yes",
+      "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes",
     );
+    expect(workflow).toContain("uc rm atlasmed-web --yes");
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
     );

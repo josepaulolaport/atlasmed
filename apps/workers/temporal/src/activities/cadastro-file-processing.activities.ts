@@ -12,7 +12,11 @@ import {
   processingEvents,
   submissionDocuments,
 } from "@atlasmed/database";
-import { environment } from "@atlasmed/config";
+import {
+  assertStorageConfig,
+  environment,
+  type StorageConfigInput,
+} from "@atlasmed/config";
 import { getDb } from "../infrastructure/db";
 
 export type CadastroFileUploadedInput = {
@@ -21,16 +25,29 @@ export type CadastroFileUploadedInput = {
   objectKey: string;
 };
 
-function storageClient(): S3Client {
+/**
+ * Mirrors apps/api/src/infrastructure/storage/storage.client.ts.
+ *
+ * The endpoint is mandatory and path-style addressing is unconditional. The
+ * previous spread made both conditional on a truthy STORAGE_ENDPOINT, so an
+ * unset endpoint produced virtual-host requests to real Amazon S3 (region
+ * defaulting to us-east-1) signed with this cluster's credentials — a silent,
+ * wrong destination rather than an error.
+ */
+export function storageClient(
+  env: StorageConfigInput = environment
+): S3Client {
+  assertStorageConfig(env);
+
   return new S3Client({
-    region: environment.STORAGE_REGION ?? "us-east-1",
+    // "auto" for R2; ignored by MinIO. Never inferred from a missing endpoint.
+    region: env.STORAGE_REGION ?? "us-east-1",
     credentials: {
-      accessKeyId: environment.STORAGE_ACCESS_KEY_ID!,
-      secretAccessKey: environment.STORAGE_SECRET_ACCESS_KEY!,
+      accessKeyId: env.STORAGE_ACCESS_KEY_ID!,
+      secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY!,
     },
-    ...(environment.STORAGE_ENDPOINT
-      ? { endpoint: environment.STORAGE_ENDPOINT, forcePathStyle: true }
-      : {}),
+    endpoint: env.STORAGE_ENDPOINT!,
+    forcePathStyle: true,
   });
 }
 

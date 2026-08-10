@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'apps/api/**'
-      - 'apps/web/**'
       - 'apps/workers/**'
       - 'packages/**'
       - 'deploy/**'
@@ -91,10 +90,6 @@ jobs:
       - name: Typecheck Temporal worker
         run: bun run workers:typecheck
 
-      - name: Build web
-        env:
-          NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
-        run: bun run web:build
 
       - name: Run database migrations
         env:
@@ -152,6 +147,11 @@ jobs:
           $UNCLOUD_SSH_CMD 'docker image prune -f'
           $UNCLOUD_SSH_CMD 'docker system df'
 
+      - name: Remove retired web service
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+        run: uc rm atlasmed-web --yes || true
+
       - name: Deploy services to cluster
         env:
           UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
@@ -173,10 +173,21 @@ jobs:
           MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
-          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
+          # Storage endpoints are configuration, not credentials — GitHub Variables.
+          # No literal fallbacks: a missing value must fail loudly at boot rather than
+          # resolve to whichever store happened to be the default when this was written.
+          # Changing these two (with STORAGE_REGION) is the entire cutover; changing
+          # them back is the entire rollback. No code change either way.
+          STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
+          STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
+          # Credentials stay secrets. MINIO_ROOT_* above provision the MinIO server itself;
+          # these are what the API signs with, and they become the R2 API token at cutover.
+          STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+          STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
         run: |
           for attempt in 1 2; do
-            if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker atlasmed-web --recreate --yes; then
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-temporal-worker --recreate --yes; then
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then
@@ -190,16 +201,6 @@ jobs:
         run: |
           for i in {1..20}; do
             if curl -fsS https://atlasmed-api.b1ixob.uncld.dev/health >/dev/null; then
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
-
-      - name: Health check web
-        run: |
-          for i in {1..20}; do
-            if curl -fsS https://atlasmed-web.b1ixob.uncld.dev >/dev/null; then
               exit 0
             fi
             sleep 5

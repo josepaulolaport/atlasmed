@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "env:check": "bun src/env/check.ts",
+    "test": "bun test",
     "typecheck": "bunx tsc -p tsconfig.json"
   },
   "dependencies": {

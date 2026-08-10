@@ -91,7 +91,17 @@ jobs:
           MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
           MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
           MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
-          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          # Must mirror the storage block in deploy-services-to-cluster.yml. This
+          # workflow deploys atlasmed-temporal-worker from the same compose file, so
+          # any variable missing here interpolates to an empty string — and the worker
+          # validates nothing at boot, so it would start and sign requests against the
+          # wrong store rather than failing.
+          STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
+          STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
+          STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
+          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'auto' }}
+          STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+          STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
         run: uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-worker --recreate --yes
 
       - name: Verify worker is running

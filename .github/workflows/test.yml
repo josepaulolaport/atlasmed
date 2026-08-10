@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.filter.outputs.api }}
-      web: ${{ steps.filter.outputs.web }}
       workers: ${{ steps.filter.outputs.workers }}
     steps:
       - uses: actions/checkout@v5
@@ -20,13 +19,11 @@ jobs:
           filters: |
             api:
               - 'apps/api/**'
-            web:
-              - 'apps/web/**'
             workers:
               - 'apps/workers/**'
 
   packages:
-    name: Packages — typecheck
+    name: Packages — typecheck + test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -47,6 +44,11 @@ jobs:
         run: bun run typecheck --filter=@atlasmed/database
       - name: Typecheck packages/access
         run: bun run typecheck --filter=@atlasmed/access
+      # Until now no packages/* test ran anywhere in CI, which is how two
+      # failures in packages/database went unnoticed. These need no database:
+      # they are schema-shape and pure-function tests.
+      - name: Test packages
+        run: bun run test --filter='./packages/*'
 
   api:
     name: API — typecheck + test
@@ -112,31 +114,6 @@ jobs:
         if: needs.changes.outputs.api == 'true'
         run: bun run api:build
 
-  web:
-    name: Web — build
-    runs-on: ubuntu-latest
-    needs: [changes]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.14'
-      - name: Install dependencies
-        run: bun install
-      - name: Restore Turbo cache
-        if: needs.changes.outputs.web == 'true'
-        uses: actions/cache@v5
-        with:
-          path: .turbo/cache
-          key: ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-
-            ${{ runner.os }}-turbo-${{ github.job }}-
-      - name: Build (only if apps/web changed)
-        if: needs.changes.outputs.web == 'true'
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:3000
-        run: bun run web:build
 
   workers:
     name: Workers — typecheck + test
