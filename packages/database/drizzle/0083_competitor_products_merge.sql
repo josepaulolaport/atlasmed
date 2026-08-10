@@ -50,10 +50,21 @@ ALTER TABLE "competitor_product_verticals" DISABLE ROW LEVEL SECURITY;--> statem
 ALTER TABLE "competitor_products" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 DROP TABLE "competitor_product_verticals" CASCADE;--> statement-breakpoint
 DROP TABLE "competitor_products" CASCADE;--> statement-breakpoint
-ALTER TABLE "products" DROP CONSTRAINT "products_code_unique";--> statement-breakpoint
-ALTER TABLE "facility_competitor_product_standards" DROP CONSTRAINT "facility_competitor_product_standards_competitor_product_id_competitor_products_id_fk";
+-- IF EXISTS on all three, for two independent reasons — either alone would
+-- fail this migration, and `drizzle-kit generate` accounts for neither:
+--
+-- 1. The DROP TABLE ... CASCADE above has already removed both foreign keys.
+--    CASCADE takes dependent constraints with it, so by the time we get here
+--    there is nothing left to drop.
+-- 2. Postgres truncates identifiers at 63 characters. These were stored as
+--    `facility_competitor_product_standards_competitor_product_id_com` and
+--    `product_equivalences_competitor_product_id_competitor_products_`, not
+--    under the full names drizzle emits, so the DROP could not have matched
+--    even before the CASCADE.
+ALTER TABLE "products" DROP CONSTRAINT IF EXISTS "products_code_unique";--> statement-breakpoint
+ALTER TABLE "facility_competitor_product_standards" DROP CONSTRAINT IF EXISTS "facility_competitor_product_standards_competitor_product_id_competitor_products_id_fk";
 --> statement-breakpoint
-ALTER TABLE "product_equivalences" DROP CONSTRAINT "product_equivalences_competitor_product_id_competitor_products_id_fk";
+ALTER TABLE "product_equivalences" DROP CONSTRAINT IF EXISTS "product_equivalences_competitor_product_id_competitor_products_id_fk";
 --> statement-breakpoint
 ALTER TABLE "products" ALTER COLUMN "code" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "products" ALTER COLUMN "price" DROP NOT NULL;--> statement-breakpoint
