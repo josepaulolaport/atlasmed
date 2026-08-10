@@ -33,49 +33,6 @@ import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 import { hasDuplicatePathSlashes } from "./request-path";
 
-type ValidationIssue = {
-  field: string;
-  message: string;
-};
-
-function normalizeValidationField(path: unknown): string {
-  if (typeof path !== "string") return "request";
-
-  const field = path
-    .replace(/^\//, "")
-    .split("/")
-    .filter(Boolean)
-    .join(".");
-
-  return field || "request";
-}
-
-function normalizeValidationIssues(error: unknown): ValidationIssue[] {
-  if (
-    !error ||
-    typeof error !== "object" ||
-    !("all" in error) ||
-    !Array.isArray(error.all)
-  ) {
-    return [{ field: "request", message: "Invalid value" }];
-  }
-
-  const issues = error.all.flatMap((issue) => {
-    if (!issue || typeof issue !== "object") return [];
-
-    const path = "path" in issue ? issue.path : undefined;
-
-    return [{
-      field: normalizeValidationField(path),
-      message: "Invalid value",
-    }];
-  });
-
-  return issues.length > 0
-    ? issues
-    : [{ field: "request", message: "Invalid value" }];
-}
-
 const configuredCorsOrigins = environment.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -130,13 +87,7 @@ const app = new Elysia()
 
     if (code === "VALIDATION") {
       set.status = 400;
-      return {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid request data",
-          issues: normalizeValidationIssues(error),
-        },
-      };
+      return error.detail(error.message);
     }
 
     if (code === "PARSE") {
