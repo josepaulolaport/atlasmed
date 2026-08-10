@@ -40,6 +40,12 @@ disabled**.
 
 ## 2. Target architecture
 
+> ⚠️ **Amended by ADR 0008 (2026-08-10).** The flow below is right except for one step: there is
+> no `worker → verify` stage. With hashing and derivatives removed, verification is a single
+> `HEAD`, so it happens in the request that triggers it and the per-file Temporal workflow is
+> deleted. The sweep stays and becomes a Temporal *schedule*. §2.1's storage-port requirements are
+> almost entirely closed already by #199/#202 — see the ADR for what is left.
+
 ```
 client → POST /uploads/initiate      → presigned PUT (+ multipart part URLs)
 client → PUT directly to object store        (bytes never traverse the API)
@@ -120,6 +126,11 @@ every profile of that facility — CNPJ card, contrato social); **non-null = ver
 (D-49).
 
 ### 3.3 Validity / expiry
+
+> ⚠️ **Amended by ADR 0008.** `requires_validity_date` and `valid_until` stand. Reviving
+> `EXPIRING_SOON` does not: the warning is **derived at read time** from `valid_until`, and only
+> on the document in the cadastro screen. The clinic-level status in Explorar is untouched —
+> deriving it there would mean evaluating every document of every clinic inside the list query.
 - `conformity_requirements.requires_validity_date boolean` — declares whether a validity date
   applies. A CNPJ card does not expire; an alvará does.
 - Document-level nullable `valid_until date`.
@@ -212,9 +223,13 @@ enforced `requiresFrontAndBack` differently — strict at `:840-848`, lenient at
 the per-requirement path remains. One path, one rule.
 
 **Scope the review queue.** `GET /cadastro/packages` is deleted (it had no consumer).
-`GET /cadastro/submissions` still never calls `assertResourceInScope`; MANAGER and OPS get a
-**global** queue across all territories (D-07, still open). Scope it to the reviewer's territory
-and vertical.
+`GET /cadastro/submissions` still never calls `assertResourceInScope`; reviewers get a **global**
+queue across all territories (D-07, still open).
+
+> ⚠️ **Amended by ADR 0008.** MANAGER loses cadastro review entirely — it is back-office work, so
+> **OPS and ADMIN only**. Revoking `read`/`update` on `CADASTRO_SUBMISSION` at
+> `role.permissions.ts:54-55` also hides the screen, since `ui.permissions.ts:102` gates the nav on
+> the same ability. The queue is facility-scoped for the roles that keep it; ADMIN stays global.
 
 **Delete the legacy download route.** `GET /facilities/cadastro/files/*`
 (`facilities.route.ts:407-432`) has `auth` only — no `requirePermission`, no scope — and its use
@@ -233,6 +248,11 @@ where the requirement declares one.
 ---
 
 ## 6. Retention
+
+> ⚠️ **Amended by ADR 0008.** Purge deletes **files only**; the `submission_documents` row is kept
+> with its status, version and reviewer comment, so the history of what was rejected survives.
+> Note the vocabulary below predates ADR 0007 — "packages" are per-document versions now, and the
+> `CHANGES_REQUESTED` clone flagged at the end of this section no longer exists to wrap.
 
 | State | Policy |
 |---|---|
