@@ -12,7 +12,7 @@ class _Unset {
 
 const _unset = _Unset();
 
-/// Mirrors the `Territory` DTO from `apps/web/types/territory.ts`, with an
+/// Mirrors the territory DTO exposed by the API, with an
 /// added `boundary`/`centroid` pair — on the real API those are fetched
 /// separately via `GET /territories/:id/boundary`, but for this map-first
 /// screen we keep the geometry alongside the rest of the fields.

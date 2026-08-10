@@ -3,7 +3,7 @@ import { DrizzleTerritoryTypeRepository } from "./infrastructure/repositories/dr
 import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
 import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
-import { DrizzleFacilityVerticalRepAssignmentRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-vertical-rep-assignment.repository";
+import { DrizzleTerritoryBoundaryWriter } from "./infrastructure/adapters/drizzle-territory-boundary.writer";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
 import { TerritoryContainmentService } from "./application/services/territory-containment.service";
@@ -111,8 +111,7 @@ const territoryCrud = new TerritoryCrudUseCases({
 
 const territoryTypeCrud = new TerritoryTypeUseCases(territoryRepositories.territoryType);
 
-const repAssignmentRepository =
-  new DrizzleFacilityVerticalRepAssignmentRepository();
+const territoryBoundaryWriter = new DrizzleTerritoryBoundaryWriter();
 
 function createBoundaryUseCases() {
   return new TerritoryBoundaryUseCases({
@@ -120,7 +119,7 @@ function createBoundaryUseCases() {
     territoryTypeRepository: territoryRepositories.territoryType,
     spatialRepository: territoryRepositories.spatial,
     containmentService: territoryContainmentService,
-    repAssignmentRepository,
+    boundaryWriter: territoryBoundaryWriter,
     onBoundaryChanged: onTerritoryBoundaryChanged,
     onManagerTerritoryChanged: onManagerTerritoryChanged,
   });

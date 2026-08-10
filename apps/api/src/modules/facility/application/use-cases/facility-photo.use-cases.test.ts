@@ -152,11 +152,60 @@ describe("Facility photo use cases", () => {
         delete: async () => undefined,
         download,
       },
-    }).execute({ storageKey: key });
+    }).execute({
+      storageKey: key,
+      scope: { ...globalScope, isGlobal: false, facilityIds: [1], clinicIds: [1] },
+    });
 
     expect(download).toHaveBeenCalledWith(key);
     expect(result.contentType).toBe("image/jpeg");
     expect(result.bytes).toEqual(new Uint8Array([9, 8, 7]));
+  });
+
+  it("denies a photo download for a caller outside the facility's scope", async () => {
+    const key =
+      "facilities/facility-1/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg";
+    const download = mock(async () => new Uint8Array([9, 8, 7]));
+
+    await expect(
+      new DownloadFacilityPhotoUseCase({
+        facilityPhotoRepository: {
+          findByFacility: async () => [],
+          create: async () => {
+            throw new Error("unused");
+          },
+          findById: async () => null,
+          findByStorageKey: async () => ({
+            id: 1,
+            facilityId: 1,
+            storageKey: key,
+            url: `/api/v1/facilities/photos/${key}`,
+            contentType: "image/jpeg",
+            blurhash: null,
+            uploadedByUserId: 1,
+            createdAt: now,
+            updatedAt: now,
+          }),
+        },
+        storage: {
+          upload: async () => undefined,
+          delete: async () => undefined,
+          download,
+        },
+      }).execute({
+        // Holds a valid capability URL for facility 1, but only has scope
+        // over facility 2.
+        storageKey: key,
+        scope: {
+          ...globalScope,
+          isGlobal: false,
+          facilityIds: [2],
+          clinicIds: [2],
+        },
+      })
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    expect(download).not.toHaveBeenCalled();
   });
 
   it("rejects invalid download keys", async () => {
@@ -175,7 +224,7 @@ describe("Facility photo use cases", () => {
           delete: async () => undefined,
           download: async () => new Uint8Array(),
         },
-      }).execute({ storageKey: "../etc/passwd" })
+      }).execute({ storageKey: "../etc/passwd", scope: globalScope })
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 

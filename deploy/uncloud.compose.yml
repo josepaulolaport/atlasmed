@@ -1,28 +1,6 @@
 name: atlasmed
 
 services:
-  atlasmed-web:
-    platform: linux/arm64
-    x-machines: oracle-luis
-    image: atlasmed/web:prod
-    build:
-      context: ..
-      dockerfile: deploy/docker/web.Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: https://api.tdomains.uk/api/v1
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://api.tdomains.uk/api/v1
-    depends_on:
-      - atlasmed-api
-    x-caddy: |
-      atlasmed-web.b1ixob.uncld.dev {
-        reverse_proxy {{upstreams 3000}}
-      }
-      app.tdomains.uk {
-        reverse_proxy {{upstreams 3000}}
-      }
-
   atlasmed-api:
     platform: linux/arm64
     x-machines: oracle-luis
@@ -41,8 +19,8 @@ services:
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_EXPIRATION=${JWT_EXPIRATION:-15m}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev,https://app.tdomains.uk}
-      - FRONTEND_URL=${FRONTEND_URL:-https://app.tdomains.uk}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - FRONTEND_URL=${FRONTEND_URL:-}
       - TRUST_PROXY=true
       - SESSION_SECURITY_MODE=audit_only
       - RESEND_API_KEY=${RESEND_API_KEY}
@@ -93,7 +71,7 @@ services:
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_EXPIRATION=${JWT_EXPIRATION:-15m}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
       - FRONTEND_URL=${FRONTEND_URL}
       - TRUST_PROXY=true
       - SESSION_SECURITY_MODE=audit_only
