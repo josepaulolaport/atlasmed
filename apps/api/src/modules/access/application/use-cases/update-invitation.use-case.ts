@@ -1,4 +1,9 @@
-import { Role, toDateOnlyString, type InviteVerticalAssignmentInput } from "@atlasmed/access";
+import {
+  Role,
+  toDateOnlyString,
+  type InviteVerticalAssignmentInput,
+  type ScopeContext,
+} from "@atlasmed/access";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { RoleRepository } from "../interfaces/role.repository.interface";
@@ -37,6 +42,10 @@ export class UpdateInvitationUseCase {
     lastName?: string;
     birthDate?: string;
     verticalAssignments?: InviteVerticalAssignmentInput[];
+    /**
+     * Actor scope. Required — see `InviteUserParams.scope` (spec 0010 §2.2).
+     */
+    scope: ScopeContext;
   }) {
     if (params.actorRole !== Role.ADMIN && params.actorRole !== Role.MANAGER) {
       throw new InsufficientPermissionsError(
@@ -82,6 +91,7 @@ export class UpdateInvitationUseCase {
       const resolved = await this.resolveNewPatches(
         role.name,
         params.verticalAssignments ?? [],
+        params.scope,
       );
       assignments = normalizeInviteAssignments({
         roleName: role.name,
@@ -128,6 +138,7 @@ export class UpdateInvitationUseCase {
   private async resolveNewPatches(
     roleName: string,
     verticalAssignments: InviteVerticalAssignmentInput[],
+    scope: ScopeContext,
   ): Promise<InviteVerticalAssignmentInput[]> {
     if (roleName !== Role.REP || verticalAssignments.length === 0) {
       return verticalAssignments.map((v) => ({
@@ -180,6 +191,7 @@ export class UpdateInvitationUseCase {
           type: "Polygon" | "MultiPolygon";
           coordinates: unknown;
         },
+        scope,
       });
 
       if (created.managerTerritoryId !== draft.managerZoneId) {

@@ -128,10 +128,11 @@ export class TerritoryCrudUseCases {
     typeSlug?: string;
     boundary?: GeoJsonGeometry;
     /**
-     * Caller scope. Omitted only by internal/admin flows (invite, invitation update)
-     * that do not originate from a scoped HTTP request.
+     * Caller scope. REQUIRED — every path into territory creation originates from
+     * an authenticated HTTP request, so there is no legitimate scope-less caller.
+     * Making it optional is what allowed D-04 to survive the route-level fix.
      */
-    scope?: ScopeContext;
+    scope: ScopeContext;
   }) {
     // Spec 0010 §2.2 — a caller may only create territories in their own verticals.
     resolveScopedVerticalIds(input.scope, input.verticalId);
@@ -203,11 +204,9 @@ export class TerritoryCrudUseCases {
     };
   }
 
-  async getTerritory(id: number, scope?: ScopeContext) {
+  async getTerritory(id: number, scope: ScopeContext) {
     // Spec 0010 §2.2 — reading a territory by id must respect territory scope.
-    if (scope) {
-      assertResourceInScope(scope, "territory", id);
-    }
+    assertResourceInScope(scope, "territory", id);
 
     const territory = await this.deps.territoryRepository.findById(id);
     if (!territory) {

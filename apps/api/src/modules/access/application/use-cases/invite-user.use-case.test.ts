@@ -21,6 +21,13 @@ import {
   ResourceConflictError,
   InsufficientPermissionsError,
 } from "../../../../shared/errors";
+import {
+  createGlobalScopeContext,
+  withTerritoryScopeAliases,
+  type ScopeContext,
+} from "@atlasmed/access";
+import { ForbiddenError } from "../../../../shared/errors";
+import type { TerritoryCrudUseCases } from "../../../territory/application/use-cases/territory-crud.use-cases";
 import { ROLE_PRIORITY_BY_NAME } from "../constants/role-priority.constants";
 import { 
   createMockInviteRepository, 
@@ -29,8 +36,23 @@ import {
   createMockUserWithRole,
 } from "../../test-helpers/fixtures";
 
+type InviteParams = Parameters<InviteUserUseCase["execute"]>[0];
+
 describe("InviteUserUseCase", () => {
   let inviteUserUseCase: InviteUserUseCase;
+
+  /**
+   * These cases exercise invite mechanics, not vertical authorization, so they
+   * run as ADMIN (global scope). D-04 coverage lives in the dedicated
+   * "new patch vertical authorization" block below.
+   */
+  function invite(params: Omit<InviteParams, "scope">) {
+    return inviteUserUseCase.execute({
+      ...params,
+      scope: createGlobalScopeContext(),
+    });
+  }
+
   let mockInviteRepository: InviteRepository;
   let mockUserRepository: UserRepository;
   let mockRoleRepository: RoleRepository;
@@ -107,7 +129,7 @@ describe("InviteUserUseCase", () => {
         lastName: "User",
       };
 
-      const result = await inviteUserUseCase.execute(params);
+      const result = await invite(params);
 
       expect(result).toHaveProperty("invite");
       expect(result).toHaveProperty("token");
@@ -130,14 +152,14 @@ describe("InviteUserUseCase", () => {
         lastName: "User",
       };
 
-      const result = await inviteUserUseCase.execute(params);
+      const result = await invite(params);
 
       expect(result).toHaveProperty("invite");
       expect(result).toHaveProperty("token");
     });
 
     it("should generate invite token", async () => {
-      const result = await inviteUserUseCase.execute({
+      const result = await invite({
         email: "newuser@example.com",
         roleId: 1,
         invitedByUserId: 456,
@@ -151,7 +173,7 @@ describe("InviteUserUseCase", () => {
     });
 
     it("should return invite object", async () => {
-      const result = await inviteUserUseCase.execute({
+      const result = await invite({
         email: "newuser@example.com",
         roleId: 1,
         invitedByUserId: 456,
@@ -166,7 +188,7 @@ describe("InviteUserUseCase", () => {
     it("should link invite to role", async () => {
       const roleId = 789;
 
-      await inviteUserUseCase.execute({
+      await invite({
         email: "newuser@example.com",
         roleId,
         invitedByUserId: 456,
@@ -181,7 +203,7 @@ describe("InviteUserUseCase", () => {
     it("should link invite to inviter", async () => {
       const invitedByUserId = 999;
 
-      await inviteUserUseCase.execute({
+      await invite({
         email: "newuser@example.com",
         roleId: 1,
         invitedByUserId,
@@ -197,7 +219,7 @@ describe("InviteUserUseCase", () => {
   describe("validation", () => {
     it("should throw error when neither email nor phoneNumber provided", async () => {
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           roleId: 1,
           invitedByUserId: 456,
         birthDate: "1990-05-12",
@@ -211,7 +233,7 @@ describe("InviteUserUseCase", () => {
       mockRoleRepository.findById = mock(async () => null);
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           email: "user@example.com",
           roleId: 99999,
           invitedByUserId: 456,
@@ -226,7 +248,7 @@ describe("InviteUserUseCase", () => {
       mockRoleRepository.findById = mock(async () => null);
 
       try {
-        await inviteUserUseCase.execute({
+        await invite({
           email: "user@example.com",
           roleId: 99999,
           invitedByUserId: 456,
@@ -243,7 +265,7 @@ describe("InviteUserUseCase", () => {
 
     it("should allow both email and phoneNumber", async () => {
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           email: "user@example.com",
           phoneNumber: "+1234567890",
           roleId: 1,
@@ -263,7 +285,7 @@ describe("InviteUserUseCase", () => {
       })) as any;
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           email: "existing@example.com",
           roleId: 1,
           invitedByUserId: 456,
@@ -280,7 +302,7 @@ describe("InviteUserUseCase", () => {
       })) as any;
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           phoneNumber: "+1234567890",
           roleId: 1,
           invitedByUserId: 456,
@@ -294,7 +316,7 @@ describe("InviteUserUseCase", () => {
     it("should check user existence by email", async () => {
       const email = "newuser@example.com";
 
-      await inviteUserUseCase.execute({
+      await invite({
         email,
         roleId: 1,
         invitedByUserId: 456,
@@ -311,7 +333,7 @@ describe("InviteUserUseCase", () => {
     it("should check user existence by phone number", async () => {
       const phoneNumber = "+1234567890";
 
-      await inviteUserUseCase.execute({
+      await invite({
         phoneNumber,
         roleId: 1,
         invitedByUserId: 456,
@@ -331,7 +353,7 @@ describe("InviteUserUseCase", () => {
       })) as any;
 
       try {
-        await inviteUserUseCase.execute({
+        await invite({
           email: "existing@example.com",
           roleId: 1,
           invitedByUserId: 456,
@@ -350,7 +372,7 @@ describe("InviteUserUseCase", () => {
       mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite) as any;
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           email: "newuser@example.com",
           roleId: 1,
           invitedByUserId: 456,
@@ -365,7 +387,7 @@ describe("InviteUserUseCase", () => {
       mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite) as any;
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           phoneNumber: "+1234567890",
           roleId: 1,
           invitedByUserId: 456,
@@ -379,7 +401,7 @@ describe("InviteUserUseCase", () => {
     it("should check for existing invite by email", async () => {
       const email = "newuser@example.com";
 
-      await inviteUserUseCase.execute({
+      await invite({
         email,
         roleId: 1,
         invitedByUserId: 456,
@@ -397,7 +419,7 @@ describe("InviteUserUseCase", () => {
     it("should check for existing invite by phone number", async () => {
       const phoneNumber = "+1234567890";
 
-      await inviteUserUseCase.execute({
+      await invite({
         phoneNumber,
         roleId: 1,
         invitedByUserId: 456,
@@ -416,7 +438,7 @@ describe("InviteUserUseCase", () => {
       mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite) as any;
 
       try {
-        await inviteUserUseCase.execute({
+        await invite({
           email: "newuser@example.com",
           roleId: 1,
           invitedByUserId: 456,
@@ -465,7 +487,7 @@ describe("InviteUserUseCase", () => {
       setupTargetRole("REP");
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           ...inviteParams,
           verticalAssignments: [
             {
@@ -481,7 +503,7 @@ describe("InviteUserUseCase", () => {
       setupInviter("MANAGER");
       setupTargetRole("MANAGER");
 
-      await expect(inviteUserUseCase.execute(inviteParams)).rejects.toThrow(
+      await expect(invite(inviteParams)).rejects.toThrow(
         InsufficientPermissionsError
       );
     });
@@ -490,7 +512,7 @@ describe("InviteUserUseCase", () => {
       setupInviter("MANAGER");
       setupTargetRole("ADMIN");
 
-      await expect(inviteUserUseCase.execute(inviteParams)).rejects.toThrow(
+      await expect(invite(inviteParams)).rejects.toThrow(
         InsufficientPermissionsError
       );
     });
@@ -500,7 +522,7 @@ describe("InviteUserUseCase", () => {
       setupTargetRole("ADMIN");
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           ...inviteParams,
           invitedByUserId: 456,
         birthDate: "1990-05-12",
@@ -515,10 +537,163 @@ describe("InviteUserUseCase", () => {
       setupTargetRole("ADMIN");
 
       try {
-        await inviteUserUseCase.execute(inviteParams);
+        await invite(inviteParams);
       } catch {}
 
       expect(mockInviteRepository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // D-04 / spec 0010 §2.2 — `newPatch` creates a real territory. A MANAGER holds
+  // `create INVITATION`, so the invite flow is a second door into territory
+  // creation and must enforce the same vertical rule as POST /territories.
+  describe("new patch vertical authorization", () => {
+    const PATCH_TYPE = {
+      id: 2,
+      slug: "patch",
+      name: "Rep patch",
+      description: null,
+      canHaveBoundary: true,
+      blockSiblingOverlap: true,
+      isActive: true,
+    };
+
+    let createTerritoryRow: ReturnType<typeof mock>;
+
+    /** MANAGER assigned to vertical 1 only. */
+    function managerScope(verticalIds: number[]): ScopeContext {
+      return withTerritoryScopeAliases({
+        isGlobal: false,
+        assignedTerritoryIds: [10],
+        effectiveTerritoryIds: [10],
+        analyticsEffectiveTerritoryIds: [],
+        facilityIds: [],
+        analyticsFacilityIds: [],
+        managedUserIds: [],
+        assignedVerticalIds: verticalIds,
+        isOperationallyActive: true,
+      });
+    }
+
+    function newPatchAssignment(verticalId: number) {
+      return [
+        {
+          verticalId,
+          territoryIds: [],
+          newPatch: {
+            name: "Patch Norte",
+            managerZoneId: 10,
+            boundary: {
+              type: "Polygon" as const,
+              coordinates: [
+                [
+                  [0, 0],
+                  [0, 1],
+                  [1, 1],
+                  [0, 0],
+                ],
+              ],
+            },
+          },
+        },
+      ];
+    }
+
+    beforeEach(async () => {
+      const { TerritoryCrudUseCases } = await import(
+        "../../../territory/application/use-cases/territory-crud.use-cases"
+      );
+
+      createTerritoryRow = mock(async () => {
+        throw new Error("territory row created");
+      });
+
+      const territoryCrud = new TerritoryCrudUseCases({
+        territoryRepository: {
+          findBySlug: async () => null,
+          create: createTerritoryRow,
+        } as never,
+        territoryTypeRepository: {
+          findBySlug: async () => PATCH_TYPE,
+          findById: async () => PATCH_TYPE,
+        } as never,
+        spatialRepository: {} as never,
+        containmentService: {} as never,
+      }) as TerritoryCrudUseCases;
+
+      mockUserRepository.findById = mock(async () =>
+        createMockUserWithRole({
+          user: { id: 123 },
+          role: { name: "MANAGER", priority: ROLE_PRIORITY_BY_NAME.MANAGER },
+        })
+      );
+      mockRoleRepository.findById = mock(async () => ({
+        id: 5,
+        name: "REP",
+        priority: ROLE_PRIORITY_BY_NAME.REP,
+      }));
+
+      inviteUserUseCase = new InviteUserUseCase({
+        inviteRepository: mockInviteRepository,
+        userRepository: mockUserRepository,
+        roleRepository: mockRoleRepository,
+        territoryCrud,
+        auditLog: createMockAuditLogService({
+          logInviteUser: mockLogInviteUser,
+        }),
+        metrics: createMockMetricsService(),
+      });
+    });
+
+    it("rejects a newPatch in a vertical the inviter is not assigned to", async () => {
+      await expect(
+        inviteUserUseCase.execute({
+          email: "rep@example.com",
+          roleId: 5,
+          invitedByUserId: 123,
+          birthDate: "1990-05-12",
+          firstName: "Test",
+          lastName: "User",
+          verticalAssignments: newPatchAssignment(2),
+          scope: managerScope([1]),
+        })
+      ).rejects.toBeInstanceOf(ForbiddenError);
+    });
+
+    it("does not create the territory row when the vertical is refused", async () => {
+      try {
+        await inviteUserUseCase.execute({
+          email: "rep@example.com",
+          roleId: 5,
+          invitedByUserId: 123,
+          birthDate: "1990-05-12",
+          firstName: "Test",
+          lastName: "User",
+          verticalAssignments: newPatchAssignment(2),
+          scope: managerScope([1]),
+        });
+      } catch {}
+
+      expect(createTerritoryRow).not.toHaveBeenCalled();
+      expect(mockInviteRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("allows a newPatch in a vertical the inviter is assigned to", async () => {
+      // Passes the vertical guard and reaches territory persistence, which the
+      // fake rejects — proving the guard itself did not refuse the manager.
+      await expect(
+        inviteUserUseCase.execute({
+          email: "rep@example.com",
+          roleId: 5,
+          invitedByUserId: 123,
+          birthDate: "1990-05-12",
+          firstName: "Test",
+          lastName: "User",
+          verticalAssignments: newPatchAssignment(1),
+          scope: managerScope([1]),
+        })
+      ).rejects.toThrow("territory row created");
+      expect(createTerritoryRow).toHaveBeenCalled();
     });
   });
 
@@ -529,7 +704,7 @@ describe("InviteUserUseCase", () => {
       });
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           email: "user@example.com",
           roleId: 1,
           invitedByUserId: 456,
@@ -546,7 +721,7 @@ describe("InviteUserUseCase", () => {
       });
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           email: "user@example.com",
           roleId: 1,
           invitedByUserId: 456,
@@ -563,7 +738,7 @@ describe("InviteUserUseCase", () => {
       });
 
       await expect(
-        inviteUserUseCase.execute({
+        invite({
           email: "user@example.com",
           roleId: 1,
           invitedByUserId: 456,

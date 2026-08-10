@@ -22,6 +22,17 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "inline-scope",
     patterns: ["scope.isGlobal", "invitedByUserId"],
   },
+  // Spec 0010 §2.2 / D-04: these stage a `newPatch`, which creates a real
+  // territory. They carry the actor scope solely to hand it to
+  // `TerritoryCrudUseCases.createTerritory`, which owns the vertical guard.
+  "modules/access/application/use-cases/invite-user.use-case.ts": {
+    kind: "domain-policy",
+    patterns: ["params.scope", "createTerritory"],
+  },
+  "modules/access/application/use-cases/update-invitation.use-case.ts": {
+    kind: "domain-policy",
+    patterns: ["params.scope", "createTerritory"],
+  },
   "modules/access/application/use-cases/list-users.use-case.ts": {
     kind: "repo-filter",
     patterns: ["managedUserIds", "isGlobal"],

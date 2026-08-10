@@ -20,6 +20,7 @@ import {
   Role,
   toDateOnlyString,
   type InviteVerticalAssignmentInput,
+  type ScopeContext,
 } from "@atlasmed/access";
 import { canAssignRole } from "../constants/role-priority.constants";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
@@ -49,6 +50,11 @@ interface InviteUserParams {
   lastName?: string | undefined;
   birthDate: string;
   verticalAssignments?: InviteVerticalAssignmentInput[];
+  /**
+   * Inviter scope. Required — staging a `newPatch` creates a real territory, and
+   * spec 0010 §2.2 forbids creating one in a vertical the inviter does not hold.
+   */
+  scope: ScopeContext;
 }
 
 export class InviteUserUseCase {
@@ -111,6 +117,7 @@ export class InviteUserUseCase {
     const resolvedVerticals = await this.resolveNewPatches(
       role.name,
       params.verticalAssignments ?? [],
+      params.scope,
     );
 
     const assignments = normalizeInviteAssignments({
@@ -183,6 +190,7 @@ export class InviteUserUseCase {
   private async resolveNewPatches(
     roleName: string,
     verticalAssignments: InviteVerticalAssignmentInput[],
+    scope: ScopeContext,
   ): Promise<InviteVerticalAssignmentInput[]> {
     if (roleName !== Role.REP || verticalAssignments.length === 0) {
       return verticalAssignments.map((v) => ({
@@ -236,6 +244,7 @@ export class InviteUserUseCase {
             type: "Polygon" | "MultiPolygon";
             coordinates: unknown;
           },
+          scope,
         });
 
         if (created.managerTerritoryId !== draft.managerZoneId) {
