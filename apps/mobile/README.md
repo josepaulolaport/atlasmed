@@ -33,3 +33,11 @@ A tela solicita apenas uma localização atual. A integração de API deve forne
 ```sh
 flutter run
 ```
+
+## Web / Device Preview
+
+No web (`flutter run -d chrome` ou `-d web-server`) o app é exibido
+automaticamente dentro do **Device Preview** — sem flag de build. Isso simula o
+visual mobile (frame de dispositivo, orientação, escala de texto, idioma)
+diretamente no navegador, útil para validar a UI antes de rodar em dispositivo
+físico. Em plataformas nativas (Android/iOS) o Device Preview fica desativado.
