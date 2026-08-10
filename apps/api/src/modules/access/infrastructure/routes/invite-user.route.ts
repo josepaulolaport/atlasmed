@@ -18,8 +18,9 @@ export const inviteUserRoute = new Elysia({
   .use(auth)
   .use(requirePermission("create", "INVITATION"))
   .use(inviteRateLimit)
-  .post("/invite", async ({ body, getUser, request, status }: any) => {
+  .post("/invite", async ({ body, getUser, getScope, request, status }: any) => {
     const user = await getUser();
+    const scope = await getScope();
 
     let parsed: ReturnType<typeof inviteUserSchema.parse>;
     try {
@@ -46,6 +47,7 @@ export const inviteUserRoute = new Elysia({
         lastName: parsed.lastName,
         birthDate: parsed.birthDate,
         verticalAssignments: parsed.verticalAssignments,
+        scope,
       });
 
       if (parsed.email) {

@@ -126,7 +126,7 @@ export class DownloadFacilityPhotoUseCase {
     }
   ) {}
 
-  async execute(input: { storageKey: string }) {
+  async execute(input: { storageKey: string; scope: ScopeContext }) {
     if (
       !/^facilities\/[a-zA-Z0-9_-]+\/[a-z0-9-]+\.(jpg|png|webp)$/.test(
         input.storageKey
@@ -143,6 +143,11 @@ export class DownloadFacilityPhotoUseCase {
     if (!photo) {
       throw new ResourceNotFoundError("FacilityPhoto", input.storageKey);
     }
+
+    // Same capability-URL problem as the cadastro download: the key embeds a
+    // v4 UUID but never expires and cannot be revoked. Re-check scope against
+    // the photo's own facility on every read, before fetching bytes.
+    assertResourceInScope(input.scope, "facility", photo.facilityId);
 
     const bytes = await this.deps.storage.download(input.storageKey);
     return { bytes, contentType: photo.contentType };

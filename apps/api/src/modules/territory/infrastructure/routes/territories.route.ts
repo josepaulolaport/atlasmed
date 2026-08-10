@@ -100,7 +100,9 @@ export const territoriesRoute = new Elysia()
   .get("/territories/:id", async ({ params, getScope }) => {
     const territoryId = parseId(params.id, "Territory");
     const scope = await getScope();
-    const territory = await territoryUseCases.getTerritory().getTerritory(territoryId);
+    const territory = await territoryUseCases
+      .getTerritory()
+      .getTerritory(territoryId, scope);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", territoryId);
     }
@@ -110,8 +112,9 @@ export const territoriesRoute = new Elysia()
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territories",
-    async ({ body, getUser }) => {
+    async ({ body, getUser, getScope }) => {
       const user = await getUser();
+      const scope = await getScope();
       const role = user.role.name as Role;
       if (isAdminRole(role)) {
         return territoryUseCases.createTerritory().createTerritory({
@@ -120,6 +123,7 @@ export const territoriesRoute = new Elysia()
           territoryTypeId: body.territoryTypeId
             ? parseId(body.territoryTypeId, "TerritoryType")
             : undefined,
+          scope,
         });
       }
       // Spec 0006: managers may create rep patches only (not manager zones).
@@ -130,6 +134,7 @@ export const territoriesRoute = new Elysia()
           territoryTypeId: body.territoryTypeId
             ? parseId(body.territoryTypeId, "TerritoryType")
             : undefined,
+          scope,
         });
       }
       throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);

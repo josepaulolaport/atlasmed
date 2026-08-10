@@ -276,6 +276,7 @@ export class EnsureDraftCadastroSubmissionUseCase {
       const verticalId = await resolveCadastroVerticalId({
         facilityId: input.facilityId,
         assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+        isGlobal: input.scope.isGlobal,
         facilityRepository: this.deps.facilityRepository,
         verticalId: input.verticalId,
       });
@@ -934,6 +935,7 @@ export class ReviewCadastroDocumentUseCase {
           (await resolveCadastroVerticalId({
             facilityId: input.facilityId,
             assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+            isGlobal: input.scope.isGlobal,
             facilityRepository: this.deps.facilityRepository,
           })),
         submittedByUserId: submission.submittedByUserId,
@@ -999,6 +1001,7 @@ export class ReviewCadastroDocumentUseCase {
           (await resolveCadastroVerticalId({
             facilityId: input.facilityId,
             assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
+            isGlobal: input.scope.isGlobal,
             facilityRepository: this.deps.facilityRepository,
           })),
       );
