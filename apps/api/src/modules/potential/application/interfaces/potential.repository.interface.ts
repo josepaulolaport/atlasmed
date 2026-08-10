@@ -79,12 +79,17 @@ export interface PotentialRepository {
     since: Date;
   }): Promise<DefinitionQtySum[]>;
 
+  /** Replaces the product's link within `verticalId`; other linhas untouched. */
   linkProduct(input: {
     productId: number;
     definitionId: number;
+    verticalId: number;
   }): Promise<void>;
 
-  unlinkProduct(productId: number): Promise<boolean>;
+  unlinkProduct(input: {
+    productId: number;
+    definitionId: number;
+  }): Promise<boolean>;
 
   listProductsForDefinition(
     definitionId: number,
@@ -95,7 +100,9 @@ export interface PotentialRepository {
     verticalId: number;
   }): Promise<boolean>;
 
-  findLinkByProductId(
-    productId: number,
-  ): Promise<{ productId: number; definitionId: number } | null>;
+  /** A product may be linked in several linhas, so the definition is required. */
+  findLink(input: {
+    productId: number;
+    definitionId: number;
+  }): Promise<{ productId: number; definitionId: number; verticalId: number } | null>;
 }

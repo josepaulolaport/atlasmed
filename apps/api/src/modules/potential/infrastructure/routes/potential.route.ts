@@ -199,7 +199,8 @@ const linkProductRoute = new Elysia()
     },
     {
       detail: {
-        summary: "Link product to a potential definition (1:1)",
+        summary:
+          "Link product to a potential definition (replaces its link in that Linha)",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
@@ -213,22 +214,28 @@ const linkProductRoute = new Elysia()
 const unlinkProductRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CATALOG"))
+  // The definition is part of the path because a product may be linked in
+  // several Linhas since spec 0013 §3 — the product alone no longer names a row.
   .delete(
-    "/products/:id/potential-definition",
+    "/products/:id/potential-definitions/:definitionId",
     async ({ params, getScope }) => {
       const scope = await getScope();
       return potentialUseCases.unlinkProduct().execute({
         productId: params.id,
+        definitionId: params.definitionId,
         scope,
       });
     },
     {
       detail: {
-        summary: "Unlink product from potential definition",
+        summary: "Unlink product from one potential definition",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
-      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+      }),
     },
   );
 
