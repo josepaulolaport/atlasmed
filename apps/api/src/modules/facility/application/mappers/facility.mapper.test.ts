@@ -66,6 +66,7 @@ function baseFacility(
     ],
     verticalProfiles: [
       {
+        id: 901,
         verticalId: 1,
         verticalCode: "ORTOPEDIA",
         verticalName: "Ortopedia",
@@ -170,6 +171,7 @@ describe("serializeFacility", () => {
     const dto = serializeFacility(
       baseFacility({
         verticalProfiles: [{
+          id: 902,
           verticalId: 1,
           isActive: true,
           commercialStatus: "REGISTERED",
@@ -191,6 +193,7 @@ describe("serializeFacility", () => {
     const dto = serializeFacility(
       baseFacility({
         verticalProfiles: [{
+          id: 902,
           verticalId: 1,
           isActive: true,
           commercialStatus: "REGISTERED",

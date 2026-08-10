@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { applyVerticalProfileContext } from "./facility-vertical-scope.utils";
 
 const ortho = {
+  id: 901,
   verticalId: 1,
   verticalCode: "ORTOPEDIA",
   verticalName: "Ortopedia",
@@ -12,6 +13,7 @@ const ortho = {
 };
 
 const derm = {
+  id: 902,
   verticalId: 2,
   verticalCode: "DERMATOLOGIA",
   verticalName: "Dermatologia",

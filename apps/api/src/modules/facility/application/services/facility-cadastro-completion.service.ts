@@ -64,7 +64,7 @@ export class FacilityCadastroCompletionService {
               requirementId: requirement.id,
               excludeDraft: true,
             });
-          return history.some((h) => h.document.status === "APPROVED");
+          return history.some((document) => document.status === "APPROVED");
         })
       );
       docsComplete =

@@ -223,6 +223,25 @@ function serializeFile(file: {
   };
 }
 
+/**
+ * Statuses in which a document still accepts uploads and edits.
+ *
+ * This gate used to live on the package, which is what wedged clinics: a rep
+ * who submitted one requirement flipped the package to UNDER_REVIEW and could
+ * no longer upload into any *other* requirement. Per-document, that cannot
+ * happen — the linha's other documents are untouched.
+ */
+const EDITABLE_DOCUMENT_STATUSES = new Set([
+  "DRAFT",
+  "PROCESSING",
+  "READY",
+  "CHANGES_REQUESTED",
+]);
+
+function assertDocumentEditable(status: string) {
+  if (!EDITABLE_DOCUMENT_STATUSES.has(status)) throw new ForbiddenError();
+}
+
 async function serializeDocument(
   repo: CadastroSubmissionRepository,
   documentId: number
@@ -232,12 +251,14 @@ async function serializeDocument(
   const files = await repo.listDocumentFiles(documentId);
   return {
     id: document.id,
-    submissionId: document.submissionId,
+    facilityId: document.facilityId,
+    facilityVerticalProfileId: document.facilityVerticalProfileId,
     requirementId: document.requirementId,
     title: document.title,
     status: document.status,
     version: document.version,
     reviewComment: document.reviewComment ?? undefined,
+    submittedAt: document.submittedAt?.toISOString(),
     requirement: document.requirement
       ? {
           id: document.requirement.id,
@@ -256,78 +277,28 @@ async function serializeDocument(
   };
 }
 
-export class EnsureDraftCadastroSubmissionUseCase {
+/**
+ * Opens (or returns) the document a rep is working on for one requirement.
+ *
+ * This replaces the old two-step "ensure a draft package, then create a
+ * document inside it". There is no package: the client names a requirement and
+ * gets back the row it uploads into.
+ *
+ * Re-uploading over a finished attempt (APPROVED / REJECTED / SUPERSEDED) opens
+ * the next version rather than mutating a reviewed row.
+ */
+export class CreateCadastroDocumentUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
     facilityId: number;
-    userId: number;
+    requirementId: number;
     scope: ScopeContext;
     verticalId?: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
     if (!facility) throw new ResourceNotFoundError("Facility", input.facilityId);
-
-    let draft = await this.deps.cadastroRepository.findDraftByFacility(
-      input.facilityId
-    );
-    if (!draft) {
-      const verticalId = await resolveCadastroVerticalId({
-        facilityId: input.facilityId,
-        assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-        isGlobal: input.scope.isGlobal,
-        facilityRepository: this.deps.facilityRepository,
-        verticalId: input.verticalId,
-      });
-      const latest = await this.deps.cadastroRepository.findLatestByFacility(
-        input.facilityId
-      );
-      draft = await this.deps.cadastroRepository.createSubmission({
-        facilityId: input.facilityId,
-        verticalId,
-        submittedByUserId: input.userId,
-        version: (latest?.version ?? 0) + 1,
-      });
-    }
-
-    const documents = await this.deps.cadastroRepository.findDocumentsBySubmission(
-      draft.id
-    );
-    const serializedDocs = await Promise.all(
-      documents.map((d) => serializeDocument(this.deps.cadastroRepository, d.id))
-    );
-
-    return {
-      id: draft.id,
-      facilityId: draft.facilityId,
-      status: draft.status,
-      version: draft.version,
-      submittedAt: draft.submittedAt?.toISOString(),
-      documents: serializedDocs.filter(Boolean),
-    };
-  }
-}
-
-export class CreateCadastroSubmissionDocumentUseCase {
-  constructor(private readonly deps: Dependencies) {}
-
-  async execute(input: {
-    facilityId: number;
-    submissionId: number;
-    requirementId: number;
-    scope: ScopeContext;
-  }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
-    const submission = await this.deps.cadastroRepository.findById(
-      input.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", input.submissionId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
 
     const requirement = await this.deps.conformityRepository.findRequirementById(
       input.requirementId
@@ -336,19 +307,40 @@ export class CreateCadastroSubmissionDocumentUseCase {
       throw new ResourceNotFoundError("ConformityRequirement", input.requirementId);
     }
 
-    const existing =
-      await this.deps.cadastroRepository.findDocumentBySubmissionAndRequirement(
-        input.submissionId,
-        input.requirementId
-      );
+    const existing = await this.deps.cadastroRepository.findWorkingDocument({
+      facilityId: input.facilityId,
+      requirementId: input.requirementId,
+    });
     if (existing) {
+      // An attempt already under review is not an editing surface.
+      assertDocumentEditable(existing.status);
       return serializeDocument(this.deps.cadastroRepository, existing.id);
     }
 
+    // A requirement with no vertical applies to every linha, so the document it
+    // produces is facility-scoped: uploaded once, counted everywhere (ADR 0007).
+    let facilityVerticalProfileId: number | null = null;
+    if (requirement.verticalId != null) {
+      const profile = await this.deps.facilityRepository.ensureVerticalProfile({
+        facilityId: input.facilityId,
+        verticalId: requirement.verticalId,
+      });
+      facilityVerticalProfileId = profile.id;
+    }
+
+    const history =
+      await this.deps.cadastroRepository.listDocumentsForFacilityRequirement({
+        facilityId: input.facilityId,
+        requirementId: input.requirementId,
+      });
+    const nextVersion = (history[0]?.version ?? 0) + 1;
+
     const document = await this.deps.cadastroRepository.createDocument({
-      submissionId: input.submissionId,
+      facilityId: input.facilityId,
+      facilityVerticalProfileId,
       requirementId: input.requirementId,
       title: requirement.name,
+      version: nextVersion,
     });
     return serializeDocument(this.deps.cadastroRepository, document.id);
   }
@@ -378,18 +370,10 @@ export class InitiateCadastroFileUploadUseCase {
     const document = await this.deps.cadastroRepository.findDocumentById(
       input.documentId
     );
-    if (!document) {
+    if (!document || document.facilityId !== input.facilityId) {
       throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
+    assertDocumentEditable(document.status);
 
     const req = document.requirement;
     if (!req) {
@@ -433,7 +417,7 @@ export class InitiateCadastroFileUploadUseCase {
     }
 
     const fileId = randomUUID();
-    const objectKey = `facilities/${input.facilityId}/submissions/${submission.id}/documents/${document.id}/files/${fileId}/original`;
+    const objectKey = `facilities/${input.facilityId}/documents/${document.id}/v${document.version}/files/${fileId}/original`;
 
     const asset = await this.deps.cadastroRepository.createFileAsset({
       facilityId: input.facilityId,
@@ -669,18 +653,10 @@ export class ReorderCadastroDocumentFilesUseCase {
     const document = await this.deps.cadastroRepository.findDocumentById(
       input.documentId
     );
-    if (!document) {
+    if (!document || document.facilityId !== input.facilityId) {
       throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
+    assertDocumentEditable(document.status);
 
     await this.deps.cadastroRepository.reorderDocumentFiles({
       submissionDocumentId: document.id,
@@ -717,46 +693,43 @@ export class GetCadastroFileSignedUrlUseCase {
   }
 }
 
-export class DeleteDraftCadastroSubmissionUseCase {
+/**
+ * Discards one unsent document and the files behind it.
+ *
+ * The package version of this deleted an entire clinic's cadastro in one call.
+ * A document is the unit, so this is the unit of discard too.
+ */
+export class DeleteCadastroDocumentUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
     facilityId: number;
-    submissionId: number;
+    documentId: number;
     scope: ScopeContext;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
-    const submission = await this.deps.cadastroRepository.findById(
-      input.submissionId
+    const document = await this.deps.cadastroRepository.findDocumentById(
+      input.documentId
     );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", input.submissionId);
+    if (!document || document.facilityId !== input.facilityId) {
+      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
+    if (!EDITABLE_DOCUMENT_STATUSES.has(document.status)) {
       throw new ValidationError([
         {
-          field: "submissionId",
-          message: "Somente rascunhos podem ser excluídos",
+          field: "documentId",
+          message: "Documentos já enviados para revisão não podem ser excluídos",
         },
       ]);
     }
 
-    const documents =
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
-    const assetIds: number[] = [];
-    for (const doc of documents) {
-      const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
-      for (const file of files) {
-        assetIds.push(file.fileAssetId);
-      }
-    }
-
-    // Collect assets before cascade removes document_files links.
+    // Read the assets before the cascade removes the document_files links.
+    const files = await this.deps.cadastroRepository.listDocumentFiles(document.id);
     const assets = await Promise.all(
-      assetIds.map((id) => this.deps.cadastroRepository.findFileAssetById(id))
+      files.map((f) => this.deps.cadastroRepository.findFileAssetById(f.fileAssetId))
     );
 
-    await this.deps.cadastroRepository.deleteSubmission(submission.id);
+    await this.deps.cadastroRepository.deleteDocument(document.id);
 
     for (const asset of assets) {
       if (!asset) continue;
@@ -776,106 +749,7 @@ export class DeleteDraftCadastroSubmissionUseCase {
       }
     }
 
-    return { deleted: true, submissionId: submission.id };
-  }
-}
-
-export class SubmitCadastroSubmissionUseCase {
-  constructor(private readonly deps: Dependencies) {}
-
-  async execute(input: {
-    facilityId: number;
-    submissionId: number;
-    userId: number;
-    scope: ScopeContext;
-  }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
-    const facility = await this.deps.facilityRepository.findById(input.facilityId);
-    if (!facility) throw new ResourceNotFoundError("Facility", input.facilityId);
-
-    const submission = await this.deps.cadastroRepository.findById(
-      input.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", input.submissionId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
-
-    const legalDocumentType = resolveFacilityLegalDocumentType(facility);
-    // Scoped to the submission's linha (D-49). Submitting used to validate
-    // against every vertical's requirements, so a clinic could be blocked by
-    // documents its linha never asked for.
-    const requirements = await this.deps.conformityRepository.findActiveRequirements({
-      legalDocumentType,
-      verticalId: submission.verticalId,
-    });
-    const documents =
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
-
-    const issues: Array<{ field: string; message: string }> = [];
-    for (const req of requirements) {
-      const doc = documents.find((d) => d.requirementId === req.id);
-      if (!doc) {
-        issues.push({
-          field: req.slug,
-          message: `Documento obrigatório ausente: ${req.name}`,
-        });
-        continue;
-      }
-      await pruneIncompleteDocumentUploads(
-        this.deps.cadastroRepository,
-        doc.id
-      );
-      const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
-      if (files.length === 0) {
-        issues.push({
-          field: req.slug,
-          message: `Nenhum arquivo em: ${req.name}`,
-        });
-        continue;
-      }
-      const notReady = files.filter((f) => f.fileAsset?.status !== "READY");
-      if (notReady.length > 0) {
-        issues.push({
-          field: req.slug,
-          message: `Arquivos ainda não prontos em: ${req.name}`,
-        });
-      }
-      if (req.requiresFrontAndBack) {
-        const roles = new Set(files.map((f) => f.role));
-        if (!roles.has("FRONT") || !roles.has("BACK")) {
-          issues.push({
-            field: req.slug,
-            message: `${req.name} exige frente e verso`,
-          });
-        }
-      }
-    }
-
-    if (issues.length > 0) throw new ValidationError(issues);
-
-    for (const doc of documents) {
-      await this.deps.cadastroRepository.updateDocumentStatus({
-        id: doc.id,
-        status: "UNDER_REVIEW",
-      });
-    }
-
-    const updated = await this.deps.cadastroRepository.updateSubmissionStatus({
-      id: submission.id,
-      status: "UNDER_REVIEW",
-      submittedAt: new Date(),
-      submittedByUserId: input.userId,
-    });
-
-    return {
-      id: updated.id,
-      status: updated.status,
-      version: updated.version,
-      submittedAt: updated.submittedAt?.toISOString(),
-    };
+    return { deleted: true, documentId: document.id };
   }
 }
 
@@ -896,16 +770,11 @@ export class ReviewCadastroDocumentUseCase {
     const document = await this.deps.cadastroRepository.findDocumentById(
       input.documentId
     );
-    if (!document) {
+    if (!document || document.facilityId !== input.facilityId) {
       throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
     }
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("SubmissionDocument", input.documentId);
-    }
-    if (submission.status !== "UNDER_REVIEW") {
+    // Only the document actually awaiting a verdict can receive one.
+    if (document.status !== "UNDER_REVIEW" && document.status !== "SUBMITTED") {
       throw new ForbiddenError();
     }
 
@@ -919,102 +788,34 @@ export class ReviewCadastroDocumentUseCase {
       flaggedFileAssetIds: input.flaggedFileAssetIds,
     });
 
+    // CHANGES_REQUESTED is now exactly this: one status write on one document.
+    //
+    // It used to supersede the package, open a new version, and clone every
+    // document and file row into it. A crash mid-loop left a superseded package
+    // beside a half-built draft, and the partial-unique DRAFT index then
+    // rejected every retry — the clinic's cadastro wedged permanently (D-16).
+    // The safest version of that clone is the one that does not exist.
     await this.deps.cadastroRepository.updateDocumentStatus({
       id: document.id,
       status: input.decision,
       reviewComment: input.comment ?? null,
     });
 
-    const allDocs =
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id);
-
-    if (input.decision === "CHANGES_REQUESTED") {
-      await this.deps.cadastroRepository.updateSubmissionStatus({
-        id: submission.id,
-        status: "SUPERSEDED",
-      });
-      const next = await this.deps.cadastroRepository.createSubmission({
-        facilityId: input.facilityId,
-        verticalId:
-          submission.verticalId ??
-          (await resolveCadastroVerticalId({
-            facilityId: input.facilityId,
-            assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-            isGlobal: input.scope.isGlobal,
-            facilityRepository: this.deps.facilityRepository,
-          })),
-        submittedByUserId: submission.submittedByUserId,
-        version: submission.version + 1,
-      });
-      // Clone non-flagged ready docs as APPROVED/READY into new draft for correction.
-      for (const doc of allDocs) {
-        const cloned = await this.deps.cadastroRepository.createDocument({
-          submissionId: next.id,
-          requirementId: doc.requirementId,
-          title: doc.title,
-        });
-        if (doc.id === document.id) {
-          await this.deps.cadastroRepository.updateDocumentStatus({
-            id: cloned.id,
-            status: "CHANGES_REQUESTED",
-            reviewComment: input.comment ?? null,
-            version: doc.version + 1,
-          });
-        } else if (doc.status === "APPROVED") {
-          await this.deps.cadastroRepository.updateDocumentStatus({
-            id: cloned.id,
-            status: "APPROVED",
-            version: doc.version,
-          });
-          const files = await this.deps.cadastroRepository.listDocumentFiles(doc.id);
-          for (const file of files) {
-            await this.deps.cadastroRepository.createDocumentFile({
-              submissionDocumentId: cloned.id,
-              fileAssetId: file.fileAssetId,
-              position: file.position,
-              role: file.role,
-            });
-          }
-        } else {
-          await this.deps.cadastroRepository.updateDocumentStatus({
-            id: cloned.id,
-            status: "DRAFT",
-            version: doc.version,
-          });
-        }
-      }
-      return {
-        documentId: document.id,
-        decision: input.decision,
-        nextSubmissionId: next.id,
-        nextVersion: next.version,
-      };
-    }
-
-    const statuses = (
-      await this.deps.cadastroRepository.findDocumentsBySubmission(submission.id)
-    ).map((d) => d.status);
-
-    if (statuses.every((s) => s === "APPROVED")) {
-      await this.deps.cadastroRepository.updateSubmissionStatus({
-        id: submission.id,
-        status: "APPROVED",
-      });
-      await this.deps.completionService.evaluateAndApply(
+    // Approving one document can complete a linha. Completion is evaluated for
+    // the linha this document belongs to; a facility-scoped document (no
+    // profile) can complete any of them, so every linha is re-evaluated.
+    if (input.decision === "APPROVED") {
+      const verticalIds = await this.resolveVerticalIdsToEvaluate(
         input.facilityId,
-        submission.verticalId ??
-          (await resolveCadastroVerticalId({
-            facilityId: input.facilityId,
-            assignedVerticalIds: input.scope.assignedVerticalIds ?? [],
-            isGlobal: input.scope.isGlobal,
-            facilityRepository: this.deps.facilityRepository,
-          })),
+        document.facilityVerticalProfileId,
+        input.scope
       );
-    } else if (statuses.some((s) => s === "REJECTED") && statuses.every((s) => s === "APPROVED" || s === "REJECTED")) {
-      await this.deps.cadastroRepository.updateSubmissionStatus({
-        id: submission.id,
-        status: "REJECTED",
-      });
+      for (const verticalId of verticalIds) {
+        await this.deps.completionService.evaluateAndApply(
+          input.facilityId,
+          verticalId
+        );
+      }
     }
 
     return {
@@ -1022,46 +823,39 @@ export class ReviewCadastroDocumentUseCase {
       decision: input.decision,
     };
   }
-}
 
-export class ListCadastroPackageSubmissionsUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  private async resolveVerticalIdsToEvaluate(
+    facilityId: number,
+    facilityVerticalProfileId: number | null,
+    scope: ScopeContext
+  ): Promise<number[]> {
+    const profiles =
+      await this.deps.facilityRepository.findVerticalProfilesByFacilityIds([
+        facilityId,
+      ]);
+    const facilityProfiles = profiles.get(facilityId) ?? [];
 
-  async execute(input: {
-    status?: Array<"UNDER_REVIEW" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED">;
-    page?: number;
-    limit?: number;
-  }) {
-    const page = input.page ?? 1;
-    const limit = Math.min(input.limit ?? 20, 100);
-    const result = await this.deps.cadastroRepository.listSubmissions({
-      status: input.status ?? ["UNDER_REVIEW"],
-      page,
-      limit,
-    });
+    if (facilityVerticalProfileId != null) {
+      const owning = facilityProfiles.find(
+        (p) => p.id === facilityVerticalProfileId
+      );
+      if (owning) return [owning.verticalId];
+    }
 
-    const items = await Promise.all(
-      result.items.map(async (submission) => {
-        const facility = await this.deps.facilityRepository.findById(
-          submission.facilityId
-        );
-        const documents =
-          await this.deps.cadastroRepository.findDocumentsBySubmission(
-            submission.id
-          );
-        return {
-          id: submission.id,
-          facilityId: submission.facilityId,
-          facilityName: facility?.name,
-          status: submission.status,
-          version: submission.version,
-          submittedAt: submission.submittedAt?.toISOString(),
-          documentCount: documents.length,
-        };
-      })
-    );
+    if (facilityProfiles.length > 0) {
+      return facilityProfiles.map((p) => p.verticalId);
+    }
 
-    return { items, total: result.total, page, limit };
+    // No profiles at all: fall back to the caller's linha so a facility-scoped
+    // approval still records completion somewhere.
+    return [
+      await resolveCadastroVerticalId({
+        facilityId,
+        assignedVerticalIds: scope.assignedVerticalIds ?? [],
+        isGlobal: scope.isGlobal,
+        facilityRepository: this.deps.facilityRepository,
+      }),
+    ];
   }
 }
 
@@ -1085,20 +879,19 @@ export class ListCadastroRequirementSubmissionsUseCase {
       });
 
     const items = await Promise.all(
-      rows.map(async ({ document, submission }) => {
+      rows.map(async (document) => {
         const files = await this.deps.cadastroRepository.listDocumentFiles(
           document.id
         );
         return {
           documentId: document.id,
-          submissionId: submission.id,
           requirementId: document.requirementId,
           title: document.title,
           status: document.status,
-          version: submission.version,
+          version: document.version,
           documentVersion: document.version,
           reviewComment: document.reviewComment ?? undefined,
-          submittedAt: submission.submittedAt?.toISOString() ?? undefined,
+          submittedAt: document.submittedAt?.toISOString() ?? undefined,
           createdAt: document.createdAt.toISOString(),
           updatedAt: document.updatedAt.toISOString(),
           fileCount: files.length,
@@ -1134,51 +927,24 @@ export class SubmitCadastroRequirementUseCase {
       throw new ResourceNotFoundError("ConformityRequirement", input.requirementId);
     }
 
-    let document = input.documentId
+    const document = input.documentId
       ? await this.deps.cadastroRepository.findDocumentById(input.documentId)
-      : null;
+      : await this.deps.cadastroRepository.findWorkingDocument({
+          facilityId: input.facilityId,
+          requirementId: input.requirementId,
+        });
 
-    if (!document) {
-      const draft = await this.deps.cadastroRepository.findDraftByFacility(
-        input.facilityId
-      );
-      if (!draft) {
-        throw new ValidationError([
-          {
-            field: "requirementId",
-            message: "Nenhum rascunho com arquivos para enviar",
-          },
-        ]);
-      }
-      document =
-        await this.deps.cadastroRepository.findDocumentBySubmissionAndRequirement(
-          draft.id,
-          input.requirementId
-        );
-    }
-
-    if (!document || document.requirementId !== input.requirementId) {
+    if (
+      !document ||
+      document.requirementId !== input.requirementId ||
+      document.facilityId !== input.facilityId
+    ) {
       throw new ResourceNotFoundError(
         "SubmissionDocument",
         input.documentId ?? input.requirementId
       );
     }
-
-    const submission = await this.deps.cadastroRepository.findById(
-      document.submissionId
-    );
-    if (!submission || submission.facilityId !== input.facilityId) {
-      throw new ResourceNotFoundError("CadastroSubmission", document.submissionId);
-    }
-    if (submission.status !== "DRAFT" && submission.status !== "CHANGES_REQUESTED") {
-      throw new ForbiddenError();
-    }
-    if (
-      document.status !== "DRAFT" &&
-      document.status !== "READY" &&
-      document.status !== "CHANGES_REQUESTED" &&
-      document.status !== "PROCESSING"
-    ) {
+    if (!EDITABLE_DOCUMENT_STATUSES.has(document.status)) {
       throw new ValidationError([
         {
           field: "documentId",
@@ -1221,21 +987,17 @@ export class SubmitCadastroRequirementUseCase {
       }
     }
 
-    await this.deps.cadastroRepository.updateDocumentStatus({
+    // One write. Submitting this document leaves every other requirement for
+    // this clinic still editable — under the package, this call froze them all.
+    const updated = await this.deps.cadastroRepository.updateDocumentStatus({
       id: document.id,
-      status: "UNDER_REVIEW",
-    });
-
-    const updated = await this.deps.cadastroRepository.updateSubmissionStatus({
-      id: submission.id,
       status: "UNDER_REVIEW",
       submittedAt: new Date(),
       submittedByUserId: input.userId,
     });
 
     return {
-      documentId: document.id,
-      submissionId: updated.id,
+      documentId: updated.id,
       status: "UNDER_REVIEW" as const,
       version: updated.version,
       submittedAt: updated.submittedAt?.toISOString(),

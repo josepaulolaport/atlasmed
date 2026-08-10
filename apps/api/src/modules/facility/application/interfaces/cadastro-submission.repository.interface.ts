@@ -3,30 +3,25 @@ import type {
   CadastroDocumentStatus,
   CadastroFileAssetStatus,
   CadastroReviewDecision,
-  CadastroSubmissionStatus,
   CadastroUploadSessionStatus,
 } from "@atlasmed/database";
 
-export interface CadastroSubmissionRecord {
-  id: number;
-  facilityId: number;
-  verticalId: number | null;
-  submittedByUserId: number | null;
-  status: CadastroSubmissionStatus;
-  version: number;
-  submittedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
+/**
+ * A cadastro document — the unit of the pipeline (ADR 0007). There is no
+ * package record above it.
+ */
 export interface SubmissionDocumentRecord {
   id: number;
-  submissionId: number;
+  facilityId: number;
+  /** NULL = facility-scoped: satisfies this requirement for every linha. */
+  facilityVerticalProfileId: number | null;
   requirementId: number;
   title: string;
   status: CadastroDocumentStatus;
   version: number;
   reviewComment: string | null;
+  submittedByUserId: number | null;
+  submittedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   requirement?: {
@@ -90,45 +85,23 @@ export interface UploadSessionRecord {
 }
 
 export interface CadastroSubmissionRepository {
-  findDraftByFacility(facilityId: number): Promise<CadastroSubmissionRecord | null>;
-  findById(id: number): Promise<CadastroSubmissionRecord | null>;
-  findLatestByFacility(facilityId: number): Promise<CadastroSubmissionRecord | null>;
-  createSubmission(input: {
-    facilityId: number;
-    verticalId: number;
-    submittedByUserId?: number | null;
-    version: number;
-  }): Promise<CadastroSubmissionRecord>;
-  updateSubmissionStatus(input: {
-    id: number;
-    status: CadastroSubmissionStatus;
-    submittedAt?: Date | null;
-    submittedByUserId?: number | null;
-  }): Promise<CadastroSubmissionRecord>;
-  deleteSubmission(id: number): Promise<void>;
-  listSubmissions(input: {
-    status?: CadastroSubmissionStatus[];
-    page: number;
-    limit: number;
-  }): Promise<{ items: CadastroSubmissionRecord[]; total: number }>;
-
   findDocumentById(id: number): Promise<SubmissionDocumentRecord | null>;
-  findDocumentsBySubmission(submissionId: number): Promise<SubmissionDocumentRecord[]>;
-  findDocumentBySubmissionAndRequirement(
-    submissionId: number,
-    requirementId: number
-  ): Promise<SubmissionDocumentRecord | null>;
-  /** Documents for a facility+requirement, newest package first. */
+  /**
+   * The document a rep is currently working on for this requirement: the
+   * highest version that has not been closed out. Null when the requirement has
+   * never been touched, or when every attempt is finished (APPROVED/REJECTED/
+   * SUPERSEDED) and the next upload should open a new version.
+   */
+  findWorkingDocument(input: {
+    facilityId: number;
+    requirementId: number;
+  }): Promise<SubmissionDocumentRecord | null>;
+  /** All versions for a facility+requirement, newest first. */
   listDocumentsForFacilityRequirement(input: {
     facilityId: number;
     requirementId: number;
     excludeDraft?: boolean;
-  }): Promise<
-    Array<{
-      document: SubmissionDocumentRecord;
-      submission: CadastroSubmissionRecord;
-    }>
-  >;
+  }): Promise<SubmissionDocumentRecord[]>;
   /** Ops review queue: documents across facilities by document status. */
   listDocumentsForReview(input: {
     status: CadastroDocumentStatus[];
@@ -137,21 +110,26 @@ export interface CadastroSubmissionRepository {
   }): Promise<{
     items: Array<{
       document: SubmissionDocumentRecord;
-      submission: CadastroSubmissionRecord;
+      facilityId: number;
       submittedByName: string | null;
     }>;
     total: number;
   }>;
   createDocument(input: {
-    submissionId: number;
+    facilityId: number;
+    facilityVerticalProfileId: number | null;
     requirementId: number;
     title: string;
+    version?: number;
   }): Promise<SubmissionDocumentRecord>;
+  deleteDocument(id: number): Promise<void>;
   updateDocumentStatus(input: {
     id: number;
     status: CadastroDocumentStatus;
     reviewComment?: string | null;
     version?: number;
+    submittedAt?: Date | null;
+    submittedByUserId?: number | null;
   }): Promise<SubmissionDocumentRecord>;
 
   createFileAsset(input: {

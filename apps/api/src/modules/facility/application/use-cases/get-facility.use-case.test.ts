@@ -72,6 +72,7 @@ function ortoOnlyFacility(): FacilityRecord {
     imageBlurhash: null,
     verticalProfiles: [
       {
+        id: 901,
         verticalId: ortopediaId,
         verticalCode: "ORTOPEDIA",
         verticalName: "Ortopédica",
@@ -101,6 +102,7 @@ function repoWith(facility: FacilityRecord | null): FacilityRepository {
     findVerticalProfilesByFacilityIds: async () => new Map(),
     updateVerticalProfileCommercialStatus: async () => {},
     ensureVerticalProfile: async () => ({
+      id: 901,
       verticalId: ortopediaId,
       verticalCode: "ORTOPEDIA",
       verticalName: "Ortopédica",

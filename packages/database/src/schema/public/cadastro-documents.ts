@@ -9,7 +9,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import {
-  cadastroSubmissionStatusEnum,
   cadastroDocumentStatusEnum,
   cadastroFileAssetStatusEnum,
   cadastroDocumentFileRoleEnum,
@@ -17,69 +16,60 @@ import {
   cadastroReviewDecisionEnum,
   cadastroProcessingStepStatusEnum,
 } from "./enums";
-import { facilities, conformityRequirements } from "./facilities";
-import { businessVerticals } from "./business-verticals";
+import {
+  facilities,
+  conformityRequirements,
+  facilityVerticalProfiles,
+} from "./facilities";
 import { users } from "./users";
 
 /**
- * Versioned cadastro package for a facility.
- * Corrections open a new version; previous is SUPERSEDED.
+ * A cadastro document — the unit of the whole pipeline (ADR 0007).
+ *
+ * It belongs directly to a facility: uploaded, submitted, reviewed, approved
+ * and versioned on its own. There is no package above it.
+ *
+ * `facilityVerticalProfileId` records which linha's requirement this satisfies.
+ * NULL means facility-scoped — a Cartão CNPJ is uploaded once and counts for
+ * every linha, mirroring `conformity_requirements.vertical_id`, where NULL
+ * likewise means "applies to all".
  */
-export const cadastroSubmissions = pgTable(
-  "cadastro_submissions",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    facilityId: bigint("facility_id", { mode: "number" })
-      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    verticalId: bigint("vertical_id", { mode: "number" }).references(() => businessVerticals.id, {
-      onDelete: "restrict",
-    }),
-    submittedByUserId: bigint("submitted_by_user_id", { mode: "number" }).references(() => users.id, {
-      onDelete: "set null",
-    }),
-    status: cadastroSubmissionStatusEnum("status").notNull().default("DRAFT"),
-    version: bigint("version", { mode: "number" }).notNull().default(1),
-    submittedAt: timestamp("submitted_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  },
-  (t) => [
-    index("cadastro_submissions_facility_id_idx").on(t.facilityId),
-    index("cadastro_submissions_vertical_id_idx").on(t.verticalId),
-    index("cadastro_submissions_status_idx").on(t.status),
-    uniqueIndex("cadastro_submissions_facility_id_version_uidx").on(
-      t.facilityId,
-      t.version
-    ),
-    uniqueIndex("cadastro_submissions_facility_draft_uidx")
-      .on(t.facilityId)
-      .where(sql`${t.status} = 'DRAFT'`),
-  ]
-);
-
-/** Logical document (e.g. Medical License) inside a submission. */
 export const submissionDocuments = pgTable(
   "submission_documents",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    submissionId: bigint("submission_id", { mode: "number" })
-      .notNull().references(() => cadastroSubmissions.id, { onDelete: "cascade" }),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
+      .references(() => facilityVerticalProfiles.id, { onDelete: "restrict" }),
     requirementId: bigint("requirement_id", { mode: "number" })
       .notNull().references(() => conformityRequirements.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
     status: cadastroDocumentStatusEnum("status").notNull().default("DRAFT"),
     version: bigint("version", { mode: "number" }).notNull().default(1),
     reviewComment: text("review_comment"),
+    submittedByUserId: bigint("submitted_by_user_id", { mode: "number" }).references(
+      () => users.id,
+      { onDelete: "set null" }
+    ),
+    submittedAt: timestamp("submitted_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
-    index("submission_documents_submission_id_idx").on(t.submissionId),
+    index("submission_documents_facility_id_idx").on(t.facilityId),
+    index("submission_documents_facility_vertical_profile_id_idx").on(
+      t.facilityVerticalProfileId
+    ),
     index("submission_documents_requirement_id_idx").on(t.requirementId),
     index("submission_documents_status_idx").on(t.status),
-    uniqueIndex("submission_documents_submission_requirement_uidx").on(
-      t.submissionId,
-      t.requirementId
+    // Version is the history axis: one row per attempt at a requirement. The
+    // package's "one DRAFT per facility" index is gone with the package that
+    // owned it (D-16).
+    uniqueIndex("submission_documents_facility_requirement_version_uidx").on(
+      t.facilityId,
+      t.requirementId,
+      t.version
     ),
   ]
 );
@@ -229,31 +219,20 @@ export const processingEvents = pgTable(
   ]
 );
 
-export const cadastroSubmissionsRelations = relations(
-  cadastroSubmissions,
-  ({ one, many }) => ({
-    facility: one(facilities, {
-      fields: [cadastroSubmissions.facilityId],
-      references: [facilities.id],
-    }),
-    vertical: one(businessVerticals, {
-      fields: [cadastroSubmissions.verticalId],
-      references: [businessVerticals.id],
-    }),
-    submittedBy: one(users, {
-      fields: [cadastroSubmissions.submittedByUserId],
-      references: [users.id],
-    }),
-    documents: many(submissionDocuments),
-  })
-);
-
 export const submissionDocumentsRelations = relations(
   submissionDocuments,
   ({ one, many }) => ({
-    submission: one(cadastroSubmissions, {
-      fields: [submissionDocuments.submissionId],
-      references: [cadastroSubmissions.id],
+    facility: one(facilities, {
+      fields: [submissionDocuments.facilityId],
+      references: [facilities.id],
+    }),
+    verticalProfile: one(facilityVerticalProfiles, {
+      fields: [submissionDocuments.facilityVerticalProfileId],
+      references: [facilityVerticalProfiles.id],
+    }),
+    submittedBy: one(users, {
+      fields: [submissionDocuments.submittedByUserId],
+      references: [users.id],
     }),
     requirement: one(conformityRequirements, {
       fields: [submissionDocuments.requirementId],

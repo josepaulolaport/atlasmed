@@ -71,6 +71,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
         findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements,
@@ -108,6 +109,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
         findById: async () => facility({ legalDocumentType: "CNPJ" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements,
@@ -138,6 +140,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
         findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
       } as unknown as FacilityRepository,
       conformityRepository: {
         // Deliberately unsorted
@@ -199,6 +202,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
         findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [requirement(1, "identidade", "CPF")],
@@ -216,25 +220,17 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         }),
       } as unknown as FacilityCadastroCompletionService,
       cadastroRepository: {
-        findDraftByFacility: async () => ({
-          id: 10,
+        findWorkingDocument: async () => ({
+          id: 100,
           facilityId: 1,
+          facilityVerticalProfileId: null,
+          requirementId: 1,
+          title: "Identidade",
           status: "DRAFT",
           version: 1,
+          reviewComment: null,
           submittedAt: null,
         }),
-        findLatestByFacility: async () => null,
-        findDocumentsBySubmission: async () => [
-          {
-            id: 100,
-            submissionId: 10,
-            requirementId: 1,
-            title: "Identidade",
-            status: "DRAFT",
-            version: 1,
-            reviewComment: null,
-          },
-        ],
         // Nothing has been sent for review yet.
         listDocumentsForFacilityRequirement: async () => [],
         listDocumentFiles,
@@ -315,6 +311,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
         findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [requirement(1, "identidade", "CPF")],
@@ -332,44 +329,29 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         }),
       } as unknown as FacilityCadastroCompletionService,
       cadastroRepository: {
-        findDraftByFacility: async () => ({
-          id: 11,
+        // A brand-new draft version replacing an already approved one.
+        findWorkingDocument: async () => ({
+          id: 101,
           facilityId: 1,
+          facilityVerticalProfileId: null,
+          requirementId: 1,
+          title: "Identidade",
           status: "DRAFT",
           version: 2,
+          reviewComment: null,
           submittedAt: null,
         }),
-        findLatestByFacility: async () => null,
-        // A brand-new draft document replacing an already approved one.
-        findDocumentsBySubmission: async () => [
-          {
-            id: 101,
-            submissionId: 11,
-            requirementId: 1,
-            title: "Identidade",
-            status: "DRAFT",
-            version: 2,
-            reviewComment: null,
-          },
-        ],
         listDocumentsForFacilityRequirement: async () => [
           {
-            document: {
-              id: 200,
-              submissionId: 9,
-              requirementId: 1,
-              title: "Identidade",
-              status: "APPROVED",
-              version: 1,
-              reviewComment: null,
-            },
-            submission: {
-              id: 9,
-              facilityId: 1,
-              status: "APPROVED",
-              version: 1,
-              submittedAt: now,
-            },
+            id: 200,
+            facilityId: 1,
+            facilityVerticalProfileId: null,
+            requirementId: 1,
+            title: "Identidade",
+            status: "APPROVED",
+            version: 1,
+            reviewComment: null,
+            submittedAt: now,
           },
         ],
         listDocumentFiles,
@@ -434,6 +416,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
         findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [requirement(1, "identidade", "CPF")],
@@ -452,27 +435,18 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
       } as unknown as FacilityCadastroCompletionService,
       cadastroRepository: {
         // Nothing in progress — the rep has not started a new version.
-        findDraftByFacility: async () => null,
-        findLatestByFacility: async () => null,
-        findDocumentsBySubmission: async () => [],
+        findWorkingDocument: async () => null,
         listDocumentsForFacilityRequirement: async () => [
           {
-            document: {
-              id: 200,
-              submissionId: 9,
-              requirementId: 1,
-              title: "Identidade",
-              status: "APPROVED",
-              version: 1,
-              reviewComment: null,
-            },
-            submission: {
-              id: 9,
-              facilityId: 1,
-              status: "APPROVED",
-              version: 1,
-              submittedAt: now,
-            },
+            id: 200,
+            facilityId: 1,
+            facilityVerticalProfileId: null,
+            requirementId: 1,
+            title: "Identidade",
+            status: "APPROVED",
+            version: 1,
+            reviewComment: null,
+            submittedAt: now,
           },
         ],
         listDocumentFiles,
@@ -656,7 +630,7 @@ describe("FacilityCadastroCompletionService", () => {
     });
   });
 
-  it("treats per-requirement APPROVED docs across packages as complete", async () => {
+  it("treats an APPROVED document per requirement as complete", async () => {
     const update = mock(async () => facility());
     const updateVerticalProfileCommercialStatus = mock(async () => {});
     const service = new FacilityCadastroCompletionService({
@@ -684,12 +658,9 @@ describe("FacilityCadastroCompletionService", () => {
           requirementId: number;
         }) => [
           {
-            document: {
-              id: `doc-${requirementId}`,
-              requirementId,
-              status: "APPROVED",
-            },
-            submission: { id: `sub-${requirementId}`, status: "APPROVED" },
+            id: `doc-${requirementId}`,
+            requirementId,
+            status: "APPROVED",
           },
         ],
       } as never,

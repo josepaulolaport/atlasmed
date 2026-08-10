@@ -213,9 +213,14 @@ export class GetFacilityCadastroChecklistUseCase {
 
     const legalDocumentType = resolveFacilityLegalDocumentType(facility);
 
+    // One cadastro page per clinic (ADR 0007). The rep sees the requirements of
+    // the linhas they and the clinic have in common, plus the facility-scoped
+    // ones — not a per-linha switcher, and never another linha's documents.
     const requirements = sortRequirementsByCatalogOrder(
-      await this.deps.conformityRepository.findActiveRequirements({
+      await this.loadRequirementsForCaller({
+        facilityId: input.facilityId,
         legalDocumentType,
+        scope: input.scope,
       })
     );
     const records = await this.deps.conformityRepository.findRecordsByFacility(
@@ -223,20 +228,16 @@ export class GetFacilityCadastroChecklistUseCase {
     );
     const recordByRequirement = new Map(records.map((r) => [r.requirementId, r]));
 
-    const draft =
-      (await this.deps.cadastroRepository?.findDraftByFacility(input.facilityId)) ??
-      (await this.deps.cadastroRepository?.findLatestByFacility(input.facilityId));
-    const submissionDocs = draft
-      ? await this.deps.cadastroRepository!.findDocumentsBySubmission(draft.id)
-      : [];
-    const submissionDocByRequirement = new Map(
-      submissionDocs.map((d) => [d.requirementId, d])
-    );
-
     const documents = await Promise.all(
       requirements.map(async (requirement) => {
-        const submissionDoc = submissionDocByRequirement.get(requirement.id);
         const record = recordByRequirement.get(requirement.id);
+
+        const workingDocument = this.deps.cadastroRepository
+          ? await this.deps.cadastroRepository.findWorkingDocument({
+              facilityId: input.facilityId,
+              requirementId: requirement.id,
+            })
+          : null;
 
         const history = this.deps.cadastroRepository
           ? await this.deps.cadastroRepository.listDocumentsForFacilityRequirement({
@@ -247,40 +248,38 @@ export class GetFacilityCadastroChecklistUseCase {
           : [];
         const latestSubmitted = history[0] ?? null;
         const approvedEntry =
-          history.find((h) => h.document.status === "APPROVED") ?? null;
+          history.find((document) => document.status === "APPROVED") ?? null;
 
         // List/detail pill: approved → pending review → rejected. Never "ready"/Pronto.
         const uiStatus = approvedEntry
           ? ("approved" as const)
           : latestSubmitted
-            ? mapSubmissionDocumentUiStatus(latestSubmitted.document.status)
+            ? mapSubmissionDocumentUiStatus(latestSubmitted.status)
             : mapRecordStatusToUi(record?.status);
 
         // Two screens want two different documents, so they get two fields.
         //
         // Top level (documentId / documentStatus / files) = the WORKING
         // document — what the rep is editing right now, in precedence order:
-        //   1. the document in the facility's current (draft or latest)
-        //      package: the row the compose screen uploads into, so its files
-        //      must be visible while it is still a DRAFT (spec 0011 §8.1 /
-        //      D-08 — returning the approved document's files here left the
-        //      client poll loop with nothing to match and "Enviar" disabled on
-        //      every re-upload over an already-approved requirement);
-        //   2. the approved document, when there is no working draft;
+        //   1. the open attempt at this requirement: the row the compose screen
+        //      uploads into, so its files must be visible while it is still a
+        //      DRAFT (spec 0011 §8.1 / D-08 — returning the approved document's
+        //      files here left the client poll loop with nothing to match and
+        //      "Enviar" disabled on every re-upload over an already-approved
+        //      requirement);
+        //   2. the approved document, when there is no open attempt;
         //   3. the last document actually sent for review.
         //
         // `currentApproved` (below) carries the APPROVED document and its own
         // files — that is what the "DOCUMENTO ATUAL" card renders under its
         // "Versão aprovada vN" label.
         const workingDoc =
-          submissionDoc ?? approvedEntry?.document ?? latestSubmitted?.document ?? null;
+          workingDocument ?? approvedEntry ?? latestSubmitted ?? null;
         const files = workingDoc
           ? await this.deps.cadastroRepository!.listDocumentFiles(workingDoc.id)
           : [];
         const approvedFiles = approvedEntry
-          ? await this.deps.cadastroRepository!.listDocumentFiles(
-              approvedEntry.document.id
-            )
+          ? await this.deps.cadastroRepository!.listDocumentFiles(approvedEntry.id)
           : [];
 
         return {
@@ -294,18 +293,14 @@ export class GetFacilityCadastroChecklistUseCase {
           uiStatus,
           documentId: workingDoc?.id,
           documentStatus: workingDoc?.status,
-          latestSubmittedStatus: latestSubmitted?.document.status,
-          latestSubmittedAt:
-            latestSubmitted?.submission.submittedAt?.toISOString() ?? undefined,
+          latestSubmittedStatus: latestSubmitted?.status,
+          latestSubmittedAt: latestSubmitted?.submittedAt?.toISOString() ?? undefined,
           currentApproved: approvedEntry
             ? {
-                documentId: approvedEntry.document.id,
-                submissionId: approvedEntry.submission.id,
-                version: approvedEntry.submission.version,
-                submittedAt:
-                  approvedEntry.submission.submittedAt?.toISOString() ??
-                  undefined,
-                reviewComment: approvedEntry.document.reviewComment ?? undefined,
+                documentId: approvedEntry.id,
+                version: approvedEntry.version,
+                submittedAt: approvedEntry.submittedAt?.toISOString() ?? undefined,
+                reviewComment: approvedEntry.reviewComment ?? undefined,
                 fileCount: approvedFiles.length,
                 files: approvedFiles.map(serializeDocumentFile),
               }
@@ -341,9 +336,6 @@ export class GetFacilityCadastroChecklistUseCase {
       legalDocumentType,
       billingEmail,
       commercialStatus: facility.commercialStatus ?? undefined,
-      submissionId: draft?.id,
-      submissionStatus: draft?.status,
-      submissionVersion: draft?.version,
       documents,
       billing: billingRow,
       counts: {
@@ -354,6 +346,62 @@ export class GetFacilityCadastroChecklistUseCase {
         complete: pendingCount === 0 && validatedFileCount === documents.length && billingComplete,
       },
     };
+  }
+
+  /**
+   * The requirements this caller should see for this clinic: the linhas they
+   * have in common, plus every facility-scoped requirement.
+   *
+   * A rep working Ortopedia at a clinic that runs Ortopedia and Dermatologia
+   * sees Ortopedia's documents and the shared ones — never Dermatologia's. A
+   * global user sees every linha the clinic actually runs. When there is no
+   * overlap at all, only the facility-scoped documents remain, which is the
+   * honest answer: nothing linha-specific applies.
+   */
+  private async loadRequirementsForCaller(input: {
+    facilityId: number;
+    legalDocumentType: ReturnType<typeof resolveFacilityLegalDocumentType>;
+    scope: ScopeContext;
+  }) {
+    const profiles =
+      await this.deps.facilityRepository.findVerticalProfilesByFacilityIds([
+        input.facilityId,
+      ]);
+    const clinicVerticalIds = (profiles.get(input.facilityId) ?? [])
+      .filter((profile) => profile.isActive)
+      .map((profile) => profile.verticalId);
+
+    const assigned = input.scope.assignedVerticalIds ?? [];
+    const verticalIds = input.scope.isGlobal
+      ? clinicVerticalIds
+      : clinicVerticalIds.filter((id) => assigned.includes(id));
+
+    if (verticalIds.length === 0) {
+      // No shared linha: only requirements that apply to everyone. Asking
+      // without a verticalId would return every linha's documents, which is
+      // exactly the leak D-49 fixed elsewhere.
+      const all = await this.deps.conformityRepository.findActiveRequirements({
+        legalDocumentType: input.legalDocumentType,
+      });
+      return all.filter((requirement) => requirement.verticalId == null);
+    }
+
+    // Each call already includes the unscoped requirements (null vertical means
+    // applies-to-all, ADR 0007), so dedupe by id after the union.
+    const perVertical = await Promise.all(
+      verticalIds.map((verticalId) =>
+        this.deps.conformityRepository.findActiveRequirements({
+          legalDocumentType: input.legalDocumentType,
+          verticalId,
+        })
+      )
+    );
+
+    const byId = new Map<number, (typeof perVertical)[number][number]>();
+    for (const requirement of perVertical.flat()) {
+      byId.set(requirement.id, requirement);
+    }
+    return [...byId.values()];
   }
 }
 
@@ -696,10 +744,8 @@ export class ListCadastroSubmissionsUseCase {
         });
 
       const data = await Promise.all(
-        items.map(async ({ document, submission, submittedByName }) => {
-          const facility = await this.deps.facilityRepository.findById(
-            submission.facilityId
-          );
+        items.map(async ({ document, facilityId, submittedByName }) => {
+          const facility = await this.deps.facilityRepository.findById(facilityId);
           const files = await this.deps.cadastroRepository!.listDocumentFiles(
             document.id
           );
@@ -729,7 +775,7 @@ export class ListCadastroSubmissionsUseCase {
           const first = serializedFiles[0];
           return {
             id: document.id,
-            facilityId: submission.facilityId,
+            facilityId,
             requirementId: document.requirementId,
             requirement: document.requirement
               ? {
@@ -747,11 +793,9 @@ export class ListCadastroSubmissionsUseCase {
                 },
             status: mapDocumentStatusForOpsQueue(document.status),
             documentStatus: document.status,
-            submissionId: submission.id,
-            submissionStatus: submission.status,
             uiStatus: mapSubmissionDocumentUiStatus(document.status),
-            submittedAt: submission.submittedAt?.toISOString(),
-            submittedByUserId: submission.submittedByUserId ?? undefined,
+            submittedAt: document.submittedAt?.toISOString(),
+            submittedByUserId: document.submittedByUserId ?? undefined,
             submittedByName: submittedByName ?? undefined,
             validatedAt:
               document.status === "APPROVED"

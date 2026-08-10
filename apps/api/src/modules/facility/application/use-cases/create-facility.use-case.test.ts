@@ -21,6 +21,7 @@ const dermatologiaId = 20;
 
 function verticalProfile(verticalId: number): FacilityVerticalProfileRecord {
   return {
+    id: 900 + verticalId,
     verticalId,
     verticalCode: verticalId === ortopediaId ? "ORTOPEDIA" : "DERMATOLOGIA",
     verticalName: verticalId === ortopediaId ? "Ortopédica" : "Dermatológica",
