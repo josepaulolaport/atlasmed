@@ -515,13 +515,31 @@ export class SignCadastroUploadPartsUseCase {
       throw new ResourceNotFoundError("UploadSession", input.uploadSessionId);
     }
 
+    // Part URLs must live as long as the session they belong to. Signed with
+    // the default TTL they expired after 1 hour against a 6-hour session, so a
+    // slow or resumed upload got `403 SignatureDoesNotMatch` *after* the bytes
+    // were already moving — the failure looked like a storage fault, not an
+    // expiry (spec 0011 §2.1).
+    const remainingSessionSeconds = Math.floor(
+      (session.expiresAt.getTime() - Date.now()) / 1000
+    );
+    if (remainingSessionSeconds <= 0) {
+      throw new ValidationError([
+        {
+          field: "uploadSessionId",
+          message: "Sessão de upload expirada. Inicie o envio novamente.",
+        },
+      ]);
+    }
+
     const parts = await Promise.all(
       input.partNumbers.map(async (partNumber) => ({
         partNumber,
         uploadUrl: await storageService.signedUploadPartUrl(
           asset.objectKey,
           session.storageUploadId,
-          partNumber
+          partNumber,
+          remainingSessionSeconds
         ),
       }))
     );

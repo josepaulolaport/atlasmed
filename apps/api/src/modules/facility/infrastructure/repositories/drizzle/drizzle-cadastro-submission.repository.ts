@@ -185,13 +185,21 @@ export class DrizzleCadastroSubmissionRepository
 
   async listDocumentsForReview(input: {
     status: SubmissionDocumentRecord["status"][];
+    facilityIds?: number[];
     page: number;
     limit: number;
   }) {
-    const where =
-      input.status.length > 0
-        ? inArray(submissionDocuments.status, input.status)
-        : undefined;
+    const conditions = [];
+    if (input.status.length > 0) {
+      conditions.push(inArray(submissionDocuments.status, input.status));
+    }
+    // Applied to both the page and the count, so the total matches what the
+    // reviewer can actually open — a scoped total over an unscoped count would
+    // paginate into pages that render empty.
+    if (input.facilityIds !== undefined) {
+      conditions.push(inArray(submissionDocuments.facilityId, input.facilityIds));
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
     const offset = (input.page - 1) * input.limit;
     const [rows, totals] = await Promise.all([
       db

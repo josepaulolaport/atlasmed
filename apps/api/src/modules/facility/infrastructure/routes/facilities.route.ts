@@ -505,7 +505,8 @@ const listCadastroSubmissionsRoute = new Elysia()
   .use(requirePermission("read", "CADASTRO_SUBMISSION"))
   .get(
     "/cadastro/submissions",
-    async ({ query }) => {
+    async ({ query, getScope }) => {
+      const scope = await getScope();
       return facilityUseCases.listCadastroSubmissions().execute({
         status: query.status as
           | "SUBMITTED"
@@ -514,6 +515,7 @@ const listCadastroSubmissionsRoute = new Elysia()
           | "UNDER_REVIEW"
           | "APPROVED"
           | undefined,
+        scope,
         page: query.page,
         limit: query.limit,
       });

@@ -727,11 +727,28 @@ export class ListCadastroSubmissionsUseCase {
 
   async execute(input: {
     status?: "SUBMITTED" | "VALIDATED" | "REJECTED" | "UNDER_REVIEW" | "APPROVED";
+    scope: ScopeContext;
     page?: number;
     limit?: number;
   }) {
     const page = input.page && input.page > 0 ? input.page : 1;
     const limit = input.limit && input.limit > 0 ? Math.min(input.limit, 100) : 50;
+
+    // D-07: this queue never filtered by scope, so every reviewer saw every
+    // territory. It cannot use `assertResourceInScope` — there is no single
+    // resource to check — so the restriction is pushed into the query.
+    //
+    // ADMIN is global and keeps the whole queue. OPS is not global: its
+    // `facilityIds` is every facility profiled in the linhas it is assigned
+    // (scope-resolver.service.ts), so this scopes by linha rather than by
+    // territory, which is what makes a facility no reviewer can see impossible.
+    const facilityIds = input.scope.isGlobal ? undefined : input.scope.facilityIds;
+
+    // An empty scope means "nothing", not "everything". Returning early keeps
+    // that explicit rather than trusting an empty IN () to behave.
+    if (facilityIds !== undefined && facilityIds.length === 0) {
+      return { data: [], page, limit, total: 0 };
+    }
 
     // Prefer versioned submission documents (per-requirement send flow).
     if (this.deps.cadastroRepository) {
@@ -739,6 +756,7 @@ export class ListCadastroSubmissionsUseCase {
       const { items, total } =
         await this.deps.cadastroRepository.listDocumentsForReview({
           status: documentStatuses,
+          facilityIds,
           page,
           limit,
         });

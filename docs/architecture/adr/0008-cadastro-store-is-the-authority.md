@@ -68,9 +68,17 @@ reached production once and the fix stopped one status short.
 Cadastro review is back-office work. **OPS and ADMIN only.**
 
 `MANAGER` currently holds `read` and `update` on `CADASTRO_SUBMISSION`
-(`role.permissions.ts:54-55`); both are revoked. The nav gate at `ui.permissions.ts:102` reads the
-same ability, so the screen disappears with the grant — one change, both effects. REP is already
-denied explicitly.
+(`role.permissions.ts:54-55`); both are revoked. REP is already denied explicitly.
+
+**Correction to an earlier draft of this ADR:** it claimed the revoke would also hide the screen,
+because `ui.permissions.ts:102` gates the nav on the same ability. It does not.
+`canReadCadastroSubmissions` is exported and has **no consumer** — the Flutter client never calls
+it — and nothing navigates to `RegistrationsRoute` either. Enforcement is entirely server-side,
+via `requirePermission` on the review routes, which is sufficient but is not the same claim.
+
+That leaves a separate gap worth naming: **the review queue has no navigation entry for anyone**,
+so OPS cannot reach it through the UI today. Same class as the never-mounted
+`ClinicStatusSignalsSection`. It belongs with the client work (P3-9), not here.
 
 The queue is **also** facility-scoped, for the roles that keep it: it never called
 `assertResourceInScope`, so every reviewer saw every territory (D-07). ADMIN is global and stays

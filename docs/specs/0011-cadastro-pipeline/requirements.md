@@ -227,9 +227,10 @@ the per-requirement path remains. One path, one rule.
 queue across all territories (D-07, still open).
 
 > ⚠️ **Amended by ADR 0008.** MANAGER loses cadastro review entirely — it is back-office work, so
-> **OPS and ADMIN only**. Revoking `read`/`update` on `CADASTRO_SUBMISSION` at
-> `role.permissions.ts:54-55` also hides the screen, since `ui.permissions.ts:102` gates the nav on
-> the same ability. The queue is facility-scoped for the roles that keep it; ADMIN stays global.
+> **OPS and ADMIN only**, enforced server-side by `requirePermission` on the review routes.
+> (`canReadCadastroSubmissions` exists but has no consumer, and nothing navigates to the review
+> screen today — so nothing in the client changes.) The queue is facility-scoped for the roles that
+> keep it; ADMIN stays global.
 
 **Delete the legacy download route.** `GET /facilities/cadastro/files/*`
 (`facilities.route.ts:407-432`) has `auth` only — no `requirePermission`, no scope — and its use
