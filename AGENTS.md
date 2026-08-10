@@ -128,7 +128,7 @@ Root: `../atlasmed-worktrees/` — sibling of the main repo dir. Never nest insi
 
 - Squash PR to `main`. Merge commit body summarizes the branch.
 - Delete branch after merge — locally AND remotely.
-- **All four CI jobs must pass before merge.** GitHub ruleset `Protect main` enforces this.
+- **All required CI checks must pass before merge.** GitHub ruleset `Protect main` enforces this.
 
 ### Cleanup cadence (weekly)
 
