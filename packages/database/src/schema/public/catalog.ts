@@ -11,7 +11,8 @@ import {
   unique,
   bigint,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
+import { productOwnershipEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
 import { facilities } from "./facilities";
 
@@ -37,16 +38,47 @@ export const products = pgTable(
     pictureUrl: text("picture_url"),
     pictureBlurhash: text("picture_blurhash"),
     // Pricing and coding columns
-    simproCode: text("simpro_code").notNull(),
-    brasindiceCode: text("brasindice_code").notNull(),
-    tissCode: text("tiss_code").notNull(),
+    /**
+     * Pricing-table codes. NULLABLE by correctness, not by relaxation
+     * (spec 0013 §2): these were NOT NULL + unique, so the Emultec importer
+     * invented `EMULTEC-SIM-{id}` / `EMULTEC-BRA-{id}` values purely to satisfy
+     * the constraint. All 12 production rows hold synthetic codes today. The
+     * constraint never guaranteed a real code — only a string — and the invented
+     * ones would have to be reconciled against the real Brasíndice import.
+     */
+    simproCode: text("simpro_code"),
+    brasindiceCode: text("brasindice_code"),
+    tissCode: text("tiss_code"),
     manufacturer: text("manufacturer").notNull(),
     countryOfOrigin: text("country_of_origin").notNull(),
     price: numeric("price", { precision: 12, scale: 2 }).notNull(),
     price17: numeric("price_17", { precision: 12, scale: 2 }).notNull(),
     price18: numeric("price_18", { precision: 12, scale: 2 }).notNull(),
     price20: numeric("price_20", { precision: 12, scale: 2 }).notNull(),
-    brasindiceUpdatedAt: date("brasindice_updated_at").notNull(),
+    /** Meaningless without a brasindice_code, so nullable alongside it. */
+    brasindiceUpdatedAt: date("brasindice_updated_at"),
+    /**
+     * Whether this is our product or a competitor's (spec 0013 §2).
+     *
+     * "Competitor" is a statement about our commercial relationship to a
+     * product, not a kind of product — modelling it as a separate table
+     * produced two near-identical tables, two vertical M2M tables, two
+     * repositories and a bridging table whose job was to reconnect what should
+     * never have been split.
+     */
+    ownership: productOwnershipEnum("ownership").notNull().default("OWN"),
+    /**
+     * How many metric units one product unit represents — a box of 5 ampoules
+     * is 5, a single ampoule is 1 (spec 0013 §4.2).
+     *
+     * A correctness fix, not an enhancement: the penetration numerator sums
+     * `order_items.quantity` raw, so ten boxes of five register as 10 ampoules
+     * instead of 50. Every share figure computed today is wrong, and wrong
+     * plausibly enough that nobody noticed.
+     */
+    metricUnits: numeric("metric_units", { precision: 12, scale: 3 })
+      .notNull()
+      .default("1"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
@@ -54,9 +86,19 @@ export const products = pgTable(
   (t) => [
     index("products_is_active_idx").on(t.isActive),
     index("products_product_group_idx").on(t.productGroup),
-    uniqueIndex("products_simpro_code_unique").on(t.simproCode),
-    uniqueIndex("products_brasindice_code_unique").on(t.brasindiceCode),
-    uniqueIndex("products_tiss_code_unique").on(t.tissCode),
+    index("products_ownership_idx").on(t.ownership),
+    // Partial-unique: a code must be unique when present, but most products have
+    // none. A plain unique index over a nullable column would technically allow
+    // this too, but stating the predicate keeps the intent explicit.
+    uniqueIndex("products_simpro_code_unique")
+      .on(t.simproCode)
+      .where(sql`${t.simproCode} IS NOT NULL`),
+    uniqueIndex("products_brasindice_code_unique")
+      .on(t.brasindiceCode)
+      .where(sql`${t.brasindiceCode} IS NOT NULL`),
+    uniqueIndex("products_tiss_code_unique")
+      .on(t.tissCode)
+      .where(sql`${t.tissCode} IS NOT NULL`),
     unique("products_id_produto_emultec_key").on(t.idProdutoEmultec),
   ]
 );

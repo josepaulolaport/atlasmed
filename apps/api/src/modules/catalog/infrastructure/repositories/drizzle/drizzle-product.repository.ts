@@ -17,16 +17,16 @@ function mapProduct(row: {
   brand: string | null;
   unit: string | null;
   pictureUrl: string | null;
-  simproCode: string;
-  brasindiceCode: string;
-  tissCode: string;
+  simproCode: string | null;
+  brasindiceCode: string | null;
+  tissCode: string | null;
   manufacturer: string;
   countryOfOrigin: string;
   price: string;
   price17: string;
   price18: string;
   price20: string;
-  brasindiceUpdatedAt: string;
+  brasindiceUpdatedAt: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -188,7 +188,7 @@ export class DrizzleProductRepository implements ProductRepository {
     price17: number;
     price18: number;
     price20: number;
-    brasindiceUpdatedAt: string;
+    brasindiceUpdatedAt: string | null;
     isActive?: boolean;
   }): Promise<ProductRecord> {
     return db.transaction(async (tx) => {
