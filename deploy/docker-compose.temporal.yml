@@ -1,8 +1,9 @@
-# Local Temporal dev stack for CNES ingestion worker.
+# Local Temporal dev stack for the AtlasMed Temporal worker
+# (Emultec order import, search sync, purchase recurrence).
 # Start: bun run temporal:up
 # UI: http://localhost:8088  |  gRPC: localhost:7233
 #
-# MinIO for CNES archive staging lives in docker-compose.dev.yml (port 9000).
+# Supporting services (Redis, MinIO, Meilisearch) live in docker-compose.dev.yml.
 
 services:
   temporal-postgresql:
