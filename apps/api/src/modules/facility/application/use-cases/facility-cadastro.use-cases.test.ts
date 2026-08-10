@@ -259,32 +259,63 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         contentType: "image/jpeg",
       },
     ]);
+    // Nothing approved yet, so the detail card has no approved version to show.
+    expect(doc.currentApproved).toBeUndefined();
     // The pill is still "Pendente": nothing has been submitted for review.
     expect(doc.uiStatus).toBe("missing");
   });
 
-  it("keeps the approved document as the current one for the checklist", async () => {
-    const listDocumentFiles = mock(async (documentId: number) =>
-      documentId === 200
-        ? [
-            {
-              id: 2,
-              submissionDocumentId: 200,
-              fileAssetId: 900,
-              position: 1,
-              role: "PAGE",
-              createdAt: now,
-              fileAsset: {
-                id: 900,
-                originalFilename: "aprovado.pdf",
-                status: "READY",
-                declaredMimeType: "application/pdf",
-                detectedMimeType: "application/pdf",
-              },
+  // Re-upload over an already-approved requirement — the "Enviar novo" flow,
+  // which is the steady state once a clinic's cadastro is complete.
+  //
+  // The two fields describe two different documents on purpose: the top level
+  // is the WORKING document (the draft the compose screen uploads into and
+  // polls), `currentApproved` is the APPROVED one the detail screen renders
+  // under "Versão aprovada vN". Serving the approved document at the top level
+  // — as this test used to assert — left the compose screen's poll with
+  // nothing to match, so "Enviar" never enabled on a re-upload.
+  it("returns the draft as the working document over an approved one", async () => {
+    const listDocumentFiles = mock(async (documentId: number) => {
+      if (documentId === 200) {
+        return [
+          {
+            id: 2,
+            submissionDocumentId: 200,
+            fileAssetId: 900,
+            position: 1,
+            role: "PAGE",
+            createdAt: now,
+            fileAsset: {
+              id: 900,
+              originalFilename: "aprovado.pdf",
+              status: "READY",
+              declaredMimeType: "application/pdf",
+              detectedMimeType: "application/pdf",
             },
-          ]
-        : []
-    );
+          },
+        ];
+      }
+      if (documentId === 101) {
+        return [
+          {
+            id: 3,
+            submissionDocumentId: 101,
+            fileAssetId: 901,
+            position: 1,
+            role: "PAGE",
+            createdAt: now,
+            fileAsset: {
+              id: 901,
+              originalFilename: "renovacao.pdf",
+              status: "READY",
+              declaredMimeType: "application/pdf",
+              detectedMimeType: "application/pdf",
+            },
+          },
+        ];
+      }
+      return [];
+    });
 
     const result = await new GetFacilityCadastroChecklistUseCase({
       facilityRepository: {
@@ -352,10 +383,115 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
     }).execute({ facilityId: 1, scope: globalScope });
 
     const doc = result.documents[0]!;
+    // The pill is unchanged: an approved document still reads "Aprovado".
+    expect(doc.uiStatus).toBe("approved");
+    // Working document = the draft.
+    expect(doc.documentId).toBe(101);
+    expect(doc.documentStatus).toBe("DRAFT");
+    expect(doc.files.map((f) => f.fileAssetId)).toEqual([901]);
+    // Approved document keeps its own files, for the "DOCUMENTO ATUAL" card.
+    expect(doc.currentApproved?.documentId).toBe(200);
+    expect(doc.currentApproved?.version).toBe(1);
+    expect(doc.currentApproved?.fileCount).toBe(1);
+    expect(doc.currentApproved?.files).toEqual([
+      {
+        fileAssetId: 900,
+        position: 1,
+        role: "PAGE",
+        fileName: "aprovado.pdf",
+        status: "READY",
+        contentType: "application/pdf",
+      },
+    ]);
+
+    // What the mobile compose screen does every 2 s: find its requirement row,
+    // then match the file it just uploaded by `fileAssetId`. Before this fix
+    // the row carried the approved document's file (900), the match failed and
+    // the tile stayed "Processando..." forever with "Enviar" disabled.
+    const polled = result.documents.find((d) => d.requirementId === 1)!;
+    const match = polled.files.find((f) => f.fileAssetId === 901);
+    expect(match).toBeDefined();
+    expect(match!.status).toBe("READY");
+  });
+
+  it("falls back to the approved document when there is no draft", async () => {
+    const listDocumentFiles = mock(async (documentId: number) =>
+      documentId === 200
+        ? [
+            {
+              id: 2,
+              submissionDocumentId: 200,
+              fileAssetId: 900,
+              position: 1,
+              role: "PAGE",
+              createdAt: now,
+              fileAsset: {
+                id: 900,
+                originalFilename: "aprovado.pdf",
+                status: "READY",
+                declaredMimeType: "application/pdf",
+                detectedMimeType: "application/pdf",
+              },
+            },
+          ]
+        : []
+    );
+
+    const result = await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => facility({ legalDocumentType: "CPF" }),
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [requirement(1, "identidade", "CPF")],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      storage: {
+        upload: async () => undefined,
+        delete: async () => undefined,
+        download: async () => new Uint8Array(),
+      },
+      completionService: {
+        evaluateAndApply: async () => ({
+          complete: false,
+          conformityStatus: "INCOMPLETE",
+          commercialStatus: null,
+        }),
+      } as unknown as FacilityCadastroCompletionService,
+      cadastroRepository: {
+        // Nothing in progress — the rep has not started a new version.
+        findDraftByFacility: async () => null,
+        findLatestByFacility: async () => null,
+        findDocumentsBySubmission: async () => [],
+        listDocumentsForFacilityRequirement: async () => [
+          {
+            document: {
+              id: 200,
+              submissionId: 9,
+              requirementId: 1,
+              title: "Identidade",
+              status: "APPROVED",
+              version: 1,
+              reviewComment: null,
+            },
+            submission: {
+              id: 9,
+              facilityId: 1,
+              status: "APPROVED",
+              version: 1,
+              submittedAt: now,
+            },
+          },
+        ],
+        listDocumentFiles,
+      } as never,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    const doc = result.documents[0]!;
     expect(doc.uiStatus).toBe("approved");
     expect(doc.documentId).toBe(200);
     expect(doc.documentStatus).toBe("APPROVED");
     expect(doc.files.map((f) => f.fileAssetId)).toEqual([900]);
+    expect(doc.currentApproved?.files.map((f) => f.fileAssetId)).toEqual([900]);
   });
 });
 
