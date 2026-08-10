@@ -175,11 +175,12 @@ jobs:
           STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
           STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
           # Storage endpoints are configuration, not credentials — GitHub Variables.
-          # Defaults keep MinIO serving until the R2 variables are set; flipping them
-          # (together with STORAGE_REGION=auto) is the entire cutover, and reverting
-          # them is the entire rollback. No code change either way.
-          STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT || 'http://atlasmed-minio:9000' }}
-          STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT || 'https://storage.tdomains.uk' }}
+          # No literal fallbacks: a missing value must fail loudly at boot rather than
+          # resolve to whichever store happened to be the default when this was written.
+          # Changing these two (with STORAGE_REGION) is the entire cutover; changing
+          # them back is the entire rollback. No code change either way.
+          STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
+          STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
           # Credentials stay secrets. MINIO_ROOT_* above provision the MinIO server itself;
           # these are what the API signs with, and they become the R2 API token at cutover.
           STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
