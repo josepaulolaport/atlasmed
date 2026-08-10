@@ -96,8 +96,12 @@ All errors follow a consistent format:
 | \`INSUFFICIENT_PERMISSIONS\` | 403 | User lacks required permissions |
 | \`ACCOUNT_SUSPENDED\` | 403 | Account has been suspended |
 | \`RESOURCE_NOT_FOUND\` | 404 | Resource does not exist |
+| \`ROUTE_NOT_FOUND\` | 404 | API route does not exist |
 | \`EMAIL_ALREADY_EXISTS\` | 409 | Email is already registered |
-| \`VALIDATION_ERROR\` | 400 | Request validation failed |
+| \`VALIDATION\` | 400 | Request validation failed — sanitized Elysia \`error.detail\` payload (\`type: "validation"\`, on/property/message; submitted values never echoed) |
+| \`INVALID_JSON\` | 400 | Request body contains malformed JSON |
+| \`INVALID_COOKIE_SIGNATURE\` | 400 | Signed cookie could not be verified |
+| \`INVALID_FILE_TYPE\` | 415 | Uploaded file type is unsupported |
 | \`RATE_LIMIT_EXCEEDED\` | 429 | Too many requests |
 | \`INTERNAL_SERVER_ERROR\` | 500 | Unexpected server error |
 
@@ -398,16 +402,11 @@ Need help?
           'application/json': {
             schema: { $ref: '#/components/schemas/Error' },
             example: {
-              error: {
-                code: 'VALIDATION_ERROR',
-                message: 'Validation failed',
-                context: {
-                  errors: [
-                    { field: 'email', message: 'Invalid email format' },
-                    { field: 'password', message: 'Password too short' }
-                  ]
-                }
-              }
+              type: 'validation',
+              on: 'body',
+              property: '/email',
+              message: 'Invalid email',
+              summary: 'Expected string'
             }
           }
         }
