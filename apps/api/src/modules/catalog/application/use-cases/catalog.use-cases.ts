@@ -23,7 +23,7 @@ function productVisibleInVerticals(product: ProductRecord, verticalIds: number[]
 
 function serializeBusinessVertical(row: {
   id: number;
-  code: string;
+  code: string | null;
   name: string;
   isActive: boolean;
   createdAt: Date;
@@ -41,7 +41,7 @@ function serializeBusinessVertical(row: {
 
 function serializeProduct(row: {
   id: number;
-  code: string;
+  code: string | null;
   name: string;
   description: string | null;
   commercialCode: string | null;
@@ -56,7 +56,7 @@ function serializeProduct(row: {
   tissCode: string | null;
   manufacturer: string;
   countryOfOrigin: string;
-  price: number;
+  price: number | null;
   price17: number;
   price18: number;
   price20: number;
@@ -228,7 +228,7 @@ export class CreateProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
   async execute(input: {
-    code: string;
+    code: string | null;
     name: string;
     verticalIds: number[];
     pictureUrl?: string | null;
@@ -237,7 +237,7 @@ export class CreateProductUseCase {
     tissCode: string | null;
     manufacturer: string;
     countryOfOrigin: string;
-    price: number;
+    price: number | null;
     price17: number;
     price18: number;
     price20: number;

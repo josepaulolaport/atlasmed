@@ -20,7 +20,11 @@ export const products = pgTable(
   "products",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    code: text("code").notNull().unique(),
+    /**
+     * Internal catalogue code. Nullable since spec 0013 §2: a competitor's
+     * product lives in this table too and we do not assign it one.
+     */
+    code: text("code"),
     name: text("name").notNull(),
     /** Emultec product id. */
     idProdutoEmultec: bigint("id_produto_emultec", { mode: "number" }),
@@ -51,7 +55,12 @@ export const products = pgTable(
     tissCode: text("tiss_code"),
     manufacturer: text("manufacturer").notNull(),
     countryOfOrigin: text("country_of_origin").notNull(),
-    price: numeric("price", { precision: 12, scale: 2 }).notNull(),
+    /**
+     * Our list price. Null for `ownership = COMPETITOR` — we do not sell it, so
+     * there is no price of ours to record. Comparison reads price17/18/20,
+     * which both sides have.
+     */
+    price: numeric("price", { precision: 12, scale: 2 }),
     price17: numeric("price_17", { precision: 12, scale: 2 }).notNull(),
     price18: numeric("price_18", { precision: 12, scale: 2 }).notNull(),
     price20: numeric("price_20", { precision: 12, scale: 2 }).notNull(),
@@ -87,6 +96,9 @@ export const products = pgTable(
     index("products_is_active_idx").on(t.isActive),
     index("products_product_group_idx").on(t.productGroup),
     index("products_ownership_idx").on(t.ownership),
+    uniqueIndex("products_code_unique")
+      .on(t.code)
+      .where(sql`${t.code} IS NOT NULL`),
     // Partial-unique: a code must be unique when present, but most products have
     // none. A plain unique index over a nullable column would technically allow
     // this too, but stating the predicate keeps the intent explicit.
@@ -119,55 +131,17 @@ export const productVerticals = pgTable(
   ]
 );
 
-export const competitorProducts = pgTable(
-  "competitor_products",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    code: text("code"),
-    name: text("name").notNull(),
-    manufacturer: text("manufacturer"),
-    brand: text("brand"),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-    countryOfOrigin: text("country_of_origin"),
-    price17: numeric("price_17", { precision: 12, scale: 2 }),
-    price18: numeric("price_18", { precision: 12, scale: 2 }),
-    price20: numeric("price_20", { precision: 12, scale: 2 }),
-    brasindiceUpdatedAt: date("brasindice_updated_at"),
-  },
-  (t) => [
-    index("competitor_products_is_active_idx").on(t.isActive),
-    index("competitor_products_manufacturer_idx").on(t.manufacturer),
-  ]
-);
-
-export const competitorProductVerticals = pgTable(
-  "competitor_product_verticals",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    competitorProductId: bigint("competitor_product_id", { mode: "number" })
-      .notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
-    verticalId: bigint("vertical_id", { mode: "number" })
-      .notNull().references(() => businessVerticals.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (t) => [
-    index("competitor_product_verticals_cp_id_idx").on(t.competitorProductId),
-    index("competitor_product_verticals_vertical_id_idx").on(t.verticalId),
-    unique("competitor_product_verticals_unique").on(
-      t.competitorProductId,
-      t.verticalId
-    ),
-  ]
-);
-
 export const productEquivalences = pgTable(
   "product_equivalences",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     productId: bigint("product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "cascade" }),
-    competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
+    /**
+     * A competitor product is a `products` row with ownership = COMPETITOR
+     * (spec 0013 §2). The column keeps its name so nothing above the repository
+     * changes shape; only what it references moved.
+     */
+    competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "cascade" }),
     notes: text("notes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -191,37 +165,12 @@ export const productVerticalsRelations = relations(productVerticals, ({ one }) =
   }),
 }));
 
-export const competitorProductsRelations = relations(competitorProducts, ({ many }) => ({
-  competitorProductVerticals: many(competitorProductVerticals),
-  equivalences: many(productEquivalences),
-  facilityStandards: many(facilityCompetitorProductStandards),
-}));
-
-export const competitorProductVerticalsRelations = relations(
-  competitorProductVerticals,
-  ({ one }) => ({
-    competitorProduct: one(competitorProducts, {
-      fields: [competitorProductVerticals.competitorProductId],
-      references: [competitorProducts.id],
-    }),
-    vertical: one(businessVerticals, {
-      fields: [competitorProductVerticals.verticalId],
-      references: [businessVerticals.id],
-    }),
-  })
-);
-
-export const productEquivalencesRelations = relations(productEquivalences, ({ one }) => ({
-  product: one(products, { fields: [productEquivalences.productId], references: [products.id] }),
-  competitorProduct: one(competitorProducts, { fields: [productEquivalences.competitorProductId], references: [competitorProducts.id] }),
-}));
-
 export const facilityCompetitorProductStandards = pgTable(
   "facility_competitor_product_standards",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => competitorProducts.id, { onDelete: "restrict" }),
+    competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "restrict" }),
     standardizedQuantity: bigint("standardized_quantity", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
@@ -235,6 +184,6 @@ export const facilityCompetitorProductStandards = pgTable(
 
 export const facilityCompetitorProductStandardsRelations = relations(facilityCompetitorProductStandards, ({ one }) => ({
   facility: one(facilities, { fields: [facilityCompetitorProductStandards.facilityId], references: [facilities.id] }),
-  competitorProduct: one(competitorProducts, { fields: [facilityCompetitorProductStandards.competitorProductId], references: [competitorProducts.id] }),
+  competitorProduct: one(products, { fields: [facilityCompetitorProductStandards.competitorProductId], references: [products.id] }),
 }));
 

@@ -1,5 +1,5 @@
 import { db } from "../../../../../infrastructure/database/db";
-import { competitorProducts } from "@atlasmed/database";
+import { products } from "@atlasmed/database";
 import { eq, and, asc, sql, ilike, or } from "drizzle-orm";
 import type {
   CompetitorProductRecord,
@@ -42,6 +42,35 @@ function mapCompetitorProduct(row: {
   };
 }
 
+/**
+ * Competitor products are `products` rows with `ownership = COMPETITOR`
+ * (spec 0013 §2). "Competitor" is a statement about our commercial relationship
+ * to a product, not a kind of product, so it is a column rather than a table.
+ *
+ * Every query below carries this predicate. Without it on a *read*, our own
+ * catalogue leaks into the competitor list; without it on `findById` or
+ * `update`, the competitor endpoints become an unguarded way to read and edit
+ * our own products by id.
+ */
+const IS_COMPETITOR = eq(products.ownership, "COMPETITOR");
+
+/** The subset the competitor contract exposes; `products` has more. */
+const competitorColumns = {
+  id: products.id,
+  code: products.code,
+  name: products.name,
+  manufacturer: products.manufacturer,
+  brand: products.brand,
+  countryOfOrigin: products.countryOfOrigin,
+  price17: products.price17,
+  price18: products.price18,
+  price20: products.price20,
+  brasindiceUpdatedAt: products.brasindiceUpdatedAt,
+  isActive: products.isActive,
+  createdAt: products.createdAt,
+  updatedAt: products.updatedAt,
+};
+
 export class DrizzleCompetitorProductRepository implements CompetitorProductRepository {
   async findAll(params: {
     page: number;
@@ -51,27 +80,27 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
   }): Promise<{ competitorProducts: CompetitorProductRecord[]; total: number }> {
     const skip = (params.page - 1) * params.limit;
 
-    const conditions = [];
+    const conditions = [IS_COMPETITOR];
     if (params.isActive !== undefined) {
-      conditions.push(eq(competitorProducts.isActive, params.isActive));
+      conditions.push(eq(products.isActive, params.isActive));
     }
     if (params.search?.trim()) {
       const pattern = `%${params.search.trim()}%`;
       conditions.push(
-        or(ilike(competitorProducts.name, pattern), ilike(competitorProducts.manufacturer, pattern))
+        or(ilike(products.name, pattern), ilike(products.manufacturer, pattern))!
       );
     }
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const where = and(...conditions);
 
     const [rows, countRows] = await Promise.all([
       db
-        .select()
-        .from(competitorProducts)
+        .select(competitorColumns)
+        .from(products)
         .where(where)
-        .orderBy(asc(competitorProducts.name))
+        .orderBy(asc(products.name))
         .offset(skip)
         .limit(params.limit),
-      db.select({ count: sql<number>`count(*)` }).from(competitorProducts).where(where),
+      db.select({ count: sql<number>`count(*)` }).from(products).where(where),
     ]);
 
     return {
@@ -81,16 +110,19 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
   }
 
   async findById(id: number): Promise<CompetitorProductRecord | null> {
-    const rows = await db.select().from(competitorProducts).where(eq(competitorProducts.id, id));
+    const rows = await db
+      .select(competitorColumns)
+      .from(products)
+      .where(and(eq(products.id, id), IS_COMPETITOR));
     return rows[0] ? mapCompetitorProduct(rows[0]) : null;
   }
 
   async findAllActive(): Promise<CompetitorProductRecord[]> {
     const rows = await db
-      .select()
-      .from(competitorProducts)
-      .where(eq(competitorProducts.isActive, true))
-      .orderBy(asc(competitorProducts.name));
+      .select(competitorColumns)
+      .from(products)
+      .where(and(IS_COMPETITOR, eq(products.isActive, true)))
+      .orderBy(asc(products.name));
     return rows.map(mapCompetitorProduct);
   }
 
@@ -107,8 +139,9 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
     isActive?: boolean;
   }): Promise<CompetitorProductRecord> {
     const [row] = await db
-      .insert(competitorProducts)
+      .insert(products)
       .values({
+        ownership: "COMPETITOR",
         code: data.code ?? null,
         name: data.name,
         manufacturer: data.manufacturer,
@@ -120,7 +153,7 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
         brasindiceUpdatedAt: data.brasindiceUpdatedAt,
         isActive: data.isActive ?? true,
       })
-      .returning();
+      .returning(competitorColumns);
     return mapCompetitorProduct(row!);
   }
 
@@ -150,10 +183,11 @@ export class DrizzleCompetitorProductRepository implements CompetitorProductRepo
     );
 
     const [row] = await db
-      .update(competitorProducts)
+      .update(products)
       .set({ ...cleanData, updatedAt: new Date() })
-      .where(eq(competitorProducts.id, id))
-      .returning();
+      // Scoped: this endpoint must not be able to edit one of our own products.
+      .where(and(eq(products.id, id), IS_COMPETITOR))
+      .returning(competitorColumns);
     if (!row) throw new Error("Competitor product not found");
     return mapCompetitorProduct(row);
   }

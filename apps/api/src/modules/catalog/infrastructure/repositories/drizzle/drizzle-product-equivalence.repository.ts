@@ -1,5 +1,5 @@
 import { db } from "../../../../../infrastructure/database/db";
-import { competitorProducts, productEquivalences } from "@atlasmed/database";
+import { products, productEquivalences } from "@atlasmed/database";
 import { eq, and, asc, notInArray } from "drizzle-orm";
 import type { ProductEquivalenceRepository } from "../../../application/interfaces/product-equivalence.repository.interface";
 import type { CompetitorProductRecord } from "../../../application/interfaces/competitor-product.repository.interface";
@@ -44,24 +44,24 @@ export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRe
   async findLinkedByProduct(productId: number): Promise<CompetitorProductRecord[]> {
     const rows = await db
       .select({
-        id: competitorProducts.id,
-        code: competitorProducts.code,
-        name: competitorProducts.name,
-        manufacturer: competitorProducts.manufacturer,
-        brand: competitorProducts.brand,
-        countryOfOrigin: competitorProducts.countryOfOrigin,
-        price17: competitorProducts.price17,
-        price18: competitorProducts.price18,
-        price20: competitorProducts.price20,
-        brasindiceUpdatedAt: competitorProducts.brasindiceUpdatedAt,
-        isActive: competitorProducts.isActive,
-        createdAt: competitorProducts.createdAt,
-        updatedAt: competitorProducts.updatedAt,
+        id: products.id,
+        code: products.code,
+        name: products.name,
+        manufacturer: products.manufacturer,
+        brand: products.brand,
+        countryOfOrigin: products.countryOfOrigin,
+        price17: products.price17,
+        price18: products.price18,
+        price20: products.price20,
+        brasindiceUpdatedAt: products.brasindiceUpdatedAt,
+        isActive: products.isActive,
+        createdAt: products.createdAt,
+        updatedAt: products.updatedAt,
       })
       .from(productEquivalences)
-      .innerJoin(competitorProducts, eq(productEquivalences.competitorProductId, competitorProducts.id))
+      .innerJoin(products, eq(productEquivalences.competitorProductId, products.id))
       .where(eq(productEquivalences.productId, productId))
-      .orderBy(asc(competitorProducts.name));
+      .orderBy(asc(products.name));
     return rows.map(mapCompetitorProduct);
   }
 
@@ -73,11 +73,17 @@ export class DrizzleProductEquivalenceRepository implements ProductEquivalenceRe
 
     const rows = await db
       .select()
-      .from(competitorProducts)
+      .from(products)
       .where(
-        and(eq(competitorProducts.isActive, true), notInArray(competitorProducts.id, linked))
+        and(
+          // Without this the picker would offer our own products as competitors
+          // — they live in the same table since spec 0013 §2.
+          eq(products.ownership, "COMPETITOR"),
+          eq(products.isActive, true),
+          notInArray(products.id, linked)
+        )
       )
-      .orderBy(asc(competitorProducts.name));
+      .orderBy(asc(products.name));
     return rows.map(mapCompetitorProduct);
   }
 
