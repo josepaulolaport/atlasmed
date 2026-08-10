@@ -4,6 +4,7 @@ import type { ConformityRepository } from "../interfaces/conformity.repository.i
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { FacilityCadastroCompletionService } from "../services/facility-cadastro-completion.service";
 import {
+  DownloadFacilityCadastroFileUseCase,
   GetFacilityCadastroChecklistUseCase,
   RejectFacilityCadastroRecordUseCase,
 } from "./facility-cadastro.use-cases";
@@ -458,5 +459,78 @@ describe("RejectFacilityCadastroRecordUseCase", () => {
         reviewerNote: "   ",
       })
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+  });
+});
+
+describe("DownloadFacilityCadastroFileUseCase", () => {
+  const storageKey =
+    "facilities/7/cadastro/identidade/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.pdf";
+
+  function conformityRepository(download: () => Promise<void> = async () => {}) {
+    return {
+      findRecordByStorageKey: async () => {
+        await download();
+        return {
+          id: 1,
+          // The record names the facility, so the storage key never has to be
+          // parsed to find out who owns the file.
+          facilityId: 7,
+          requirementId: 1,
+          status: "SUBMITTED",
+          storageKey,
+          url: `/api/v1/facilities/cadastro/files/${storageKey}`,
+          contentType: "application/pdf",
+          fileName: "identidade.pdf",
+        };
+      },
+    } as unknown as ConformityRepository;
+  }
+
+  it("downloads a file for a caller whose scope covers the facility", async () => {
+    const download = mock(async () => new Uint8Array([1, 2, 3]));
+
+    const result = await new DownloadFacilityCadastroFileUseCase({
+      conformityRepository: conformityRepository(),
+      storage: {
+        upload: async () => undefined,
+        delete: async () => undefined,
+        download,
+      },
+    }).execute({
+      storageKey,
+      scope: { ...globalScope, isGlobal: false, facilityIds: [7], clinicIds: [7] },
+    });
+
+    expect(download).toHaveBeenCalledWith(storageKey);
+    expect(result.contentType).toBe("application/pdf");
+    expect(result.bytes).toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  it("denies a caller holding the key but no scope over the facility", async () => {
+    const download = mock(async () => new Uint8Array([1, 2, 3]));
+
+    await expect(
+      new DownloadFacilityCadastroFileUseCase({
+        conformityRepository: conformityRepository(),
+        storage: {
+          upload: async () => undefined,
+          delete: async () => undefined,
+          download,
+        },
+      }).execute({
+        storageKey,
+        // Knows the exact capability URL, but the facility is not theirs — the
+        // situation a consultant lands in after losing the territory.
+        scope: {
+          ...globalScope,
+          isGlobal: false,
+          facilityIds: [1],
+          clinicIds: [1],
+        },
+      })
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    // Scope is asserted before any bytes leave storage.
+    expect(download).not.toHaveBeenCalled();
   });
 });
