@@ -184,6 +184,8 @@ export class DrizzleOrderRepository implements OrderRepository {
     const [order] = await db
       .select({
         order: orders,
+        // Comes from the profile now — orders no longer carry vertical_id (0079).
+        verticalId: facilityVerticalProfiles.verticalId,
         facilityId: facilities.id,
         facilityName: facilities.displayName,
         personId: persons.id,
@@ -216,7 +218,7 @@ export class DrizzleOrderRepository implements OrderRepository {
     return {
       id: order.order.id,
       idAvulsaEmultec: order.order.idAvulsaEmultec,
-      verticalId: order.order.verticalId,
+      verticalId: order.verticalId,
       status: order.order.status,
       type: order.order.type,
       orderedAt: order.order.orderedAt,
@@ -351,8 +353,6 @@ export class DrizzleOrderRepository implements OrderRepository {
         .insert(orders)
         .values({
           facilityVerticalProfileId: verticalProfile.id,
-          facilityId: input.facilityId,
-          verticalId: input.verticalId,
           sellerId: input.sellerId,
           personId: input.personId ?? null,
           status: (input.status ?? "PENDING") as OrderStatus,

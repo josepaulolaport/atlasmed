@@ -529,9 +529,16 @@ export function buildFacilityListConditions(params: {
       : inArray(facilityVerticalProfiles.purchaseFunnelStage, bucket.stages);
     conditions.push(activeProfileMatchCondition(verticalIds, [stageCond]));
   }
-  if (params.productIds?.length) conditions.push(inArray(facilities.id, db.select({ facilityId: orders.facilityId })
-    .from(orders).innerJoin(orderItems, eq(orderItems.orderId, orders.id))
-    .where(inArray(orderItems.productId, params.productIds))));
+  // Orders reach the facility through the profile since spec 0010 §4.
+  if (params.productIds?.length) conditions.push(inArray(facilities.id,
+    db.select({ facilityId: facilityVerticalProfiles.facilityId })
+      .from(orders)
+      .innerJoin(
+        facilityVerticalProfiles,
+        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+      )
+      .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+      .where(inArray(orderItems.productId, params.productIds))));
   if (params.clinicalFocusIds?.length) {
     // AND: clinic must offer every selected clinical focus.
     const ids = [...new Set(params.clinicalFocusIds)];

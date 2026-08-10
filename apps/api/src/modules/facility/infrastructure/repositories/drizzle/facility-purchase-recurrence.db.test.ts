@@ -75,16 +75,12 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
       await tx.insert(orders).values([
         {
           facilityVerticalProfileId: ortoProfile!.id,
-          facilityId: facility!.id,
-          verticalId: orto!.id,
           status: "APPROVED",
           type: "SALE",
           orderedAt: new Date("2026-03-10T12:00:00.000Z"),
         },
         {
           facilityVerticalProfileId: dermaProfile!.id,
-          facilityId: facility!.id,
-          verticalId: derma!.id,
           status: "APPROVED",
           type: "SALE",
           orderedAt: new Date("2026-04-20T12:00:00.000Z"),
@@ -93,8 +89,6 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
         // which must stay identical to orders_valid_purchase_profile_ordered_at_idx.
         {
           facilityVerticalProfileId: ortoProfile!.id,
-          facilityId: facility!.id,
-          verticalId: orto!.id,
           status: "DRAFT",
           type: "SALE",
           orderedAt: new Date("2026-05-01T12:00:00.000Z"),
