@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { NativeConnection, Worker } from "@temporalio/worker";
 import { Client, Connection } from "@temporalio/client";
+import { assertStorageConfig } from "@atlasmed/config";
 import * as activities from "./activities/index";
 import { loadWorkerConfig, type WorkerConfig } from "./config";
 import { logger } from "./logger";
@@ -28,6 +29,12 @@ async function ensureSchedules(config: WorkerConfig): Promise<void> {
 
 async function run() {
   const config = loadWorkerConfig();
+
+  // Fail before picking up any task. The cadastro file-processing activity
+  // signs S3 requests with these values; an empty endpoint used to send them,
+  // silently, to real Amazon S3. There is no useful degraded mode — a worker
+  // that leases file-processing tasks it cannot perform just fails them.
+  assertStorageConfig();
 
   await ensureSchedules(config);
 

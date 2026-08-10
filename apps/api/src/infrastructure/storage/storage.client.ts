@@ -1,4 +1,10 @@
 import { S3Client } from "@aws-sdk/client-s3";
+import {
+  STORAGE_REQUIRED_KEYS,
+  assertStorageConfig,
+  storageConfigIssues,
+  type StorageConfigInput,
+} from "@atlasmed/config";
 import { environment } from "../../app/config/environment";
 
 let client: S3Client | null = null;
@@ -12,30 +18,19 @@ let presignClient: S3Client | null = null;
 export const MAX_PRESIGN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 /** Only the storage-relevant slice of the environment, so this stays testable. */
-export interface StorageEnvironment {
-  STORAGE_ENDPOINT?: string;
-  STORAGE_PUBLIC_ENDPOINT?: string;
-  STORAGE_ACCESS_KEY_ID?: string;
-  STORAGE_SECRET_ACCESS_KEY?: string;
-  STORAGE_BUCKET?: string;
-  STORAGE_REGION?: string;
-  NODE_ENV?: string;
-}
-
-const REQUIRED_STORAGE_KEYS = [
-  "STORAGE_ENDPOINT",
-  "STORAGE_PUBLIC_ENDPOINT",
-  "STORAGE_ACCESS_KEY_ID",
-  "STORAGE_SECRET_ACCESS_KEY",
-  "STORAGE_BUCKET",
-] as const satisfies readonly (keyof StorageEnvironment)[];
+export type StorageEnvironment = StorageConfigInput;
 
 export function missingStorageConfig(
   env: StorageEnvironment = environment
 ): string[] {
-  return REQUIRED_STORAGE_KEYS.filter((key) => !env[key]);
+  return STORAGE_REQUIRED_KEYS.filter((key) => !env[key]);
 }
 
+/**
+ * Whether storage-backed features can run at all. Distinct from *valid*: a
+ * configuration can be complete yet still rejected by `assertStorageConfig`
+ * (http:// public endpoint, R2 with the wrong region).
+ */
 export function isStorageConfigured(
   env: StorageEnvironment = environment
 ): boolean {
@@ -43,32 +38,18 @@ export function isStorageConfigured(
 }
 
 /**
- * Boot-time gate. Throws when object storage is misconfigured, so the failure
- * surfaces at startup instead of at the first upload.
- *
- * A completely empty storage configuration is tolerated outside production:
- * local development without MinIO simply runs with storage-backed features
- * disabled. A *partial* configuration is always fatal — that is the shape a
- * typo or a dropped deploy variable takes, and it is exactly the case that used
- * to boot happily and then hand unreachable URLs to phones.
+ * Boot-time gate, so a bad configuration surfaces at startup rather than at
+ * the first upload. Delegates to @atlasmed/config so the boot gate and the CI
+ * `env:check` gate enforce exactly the same rules.
  */
 export function assertStorageConfigured(
   env: StorageEnvironment = environment
 ): void {
-  const missing = missingStorageConfig(env);
-  if (missing.length === 0) return;
-
-  const isProduction = env.NODE_ENV === "production";
-  const isFullyUnset = missing.length === REQUIRED_STORAGE_KEYS.length;
-
-  if (!isProduction && isFullyUnset) return;
-
-  throw new Error(
-    `Object storage is misconfigured; missing: ${missing.join(", ")}. ` +
-      "All of these are required together — refusing to start with a partial " +
-      "storage configuration."
-  );
+  assertStorageConfig(env);
 }
+
+/** Re-exported so callers can list problems without throwing. */
+export { storageConfigIssues };
 
 /**
  * Endpoint used to sign URLs handed to browsers/mobile. Deliberately has **no**

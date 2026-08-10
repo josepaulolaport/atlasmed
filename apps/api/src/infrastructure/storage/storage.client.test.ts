@@ -70,6 +70,34 @@ describe("assertStorageConfigured", () => {
     );
   });
 
+  test("rejects a complete but invalid configuration", () => {
+    // Presence is not validity: these used to pass the boot gate and only fail
+    // in the field, because the boot gate checked presence and nothing else.
+    expect(() =>
+      assertStorageConfigured({
+        ...CONFIGURED,
+        STORAGE_PUBLIC_ENDPOINT: "http://atlasmed-minio:9000",
+      }),
+    ).toThrow(/https:\/\//);
+
+    expect(() =>
+      assertStorageConfigured({
+        ...CONFIGURED,
+        STORAGE_ENDPOINT: "https://acct.r2.cloudflarestorage.com",
+        STORAGE_REGION: "us-east-1",
+      }),
+    ).toThrow(/auto/);
+  });
+
+  test("missing credentials are fatal", () => {
+    expect(() =>
+      assertStorageConfigured({
+        ...CONFIGURED,
+        STORAGE_SECRET_ACCESS_KEY: undefined,
+      }),
+    ).toThrow(/STORAGE_SECRET_ACCESS_KEY/);
+  });
+
   test("tolerates entirely-unset storage outside production", () => {
     expect(() =>
       assertStorageConfigured({ NODE_ENV: "development" }),

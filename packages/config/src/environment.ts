@@ -130,7 +130,23 @@ const booleanFromEnv = (value: string | undefined, fallback: boolean): boolean =
   return value === "true" || value === "1";
 };
 
-function normalizeEnvironment(env: EnvInput) {
+/**
+ * An unset variable interpolated by compose (`FOO=${FOO}`) or by a GitHub
+ * Actions expression that resolves to nothing arrives as an empty string, not
+ * as undefined. Treat the two identically, so "deleted the variable" produces
+ * the same clear "required" message as "never set it" instead of a raw schema
+ * violation about string length.
+ */
+function withoutEmptyValues(env: EnvInput): EnvInput {
+  const out: EnvInput = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (value !== "") out[key] = value;
+  }
+  return out;
+}
+
+function normalizeEnvironment(rawEnv: EnvInput) {
+  const env = withoutEmptyValues(rawEnv);
   return {
     ...env,
     NODE_ENV: env.NODE_ENV ?? "development",
@@ -191,11 +207,25 @@ function validationIssues(value: unknown): string[] {
   });
 }
 
+/**
+ * Variables that exist on the deploy host and in CI but are deliberately NOT
+ * injected into any application container: UNCLOUD_CONNECT is the ssh target
+ * for the deploy CLI, TEMPORAL_DB_PASSWORD belongs to the Temporal Postgres
+ * service, and MINIO_ROOT_* provision the MinIO server itself. A running API
+ * has none of them and must never be asked for them — see `environmentIssues`.
+ */
+const DEPLOYMENT_ONLY_REQUIRED = [
+  "UNCLOUD_CONNECT",
+  "TEMPORAL_DB_PASSWORD",
+  "MINIO_ROOT_USER",
+  "MINIO_ROOT_PASSWORD",
+] as const;
+
 function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
   if (env.NODE_ENV !== "production") return [];
 
   const required = [
-    "UNCLOUD_CONNECT",
+    ...DEPLOYMENT_ONLY_REQUIRED,
     "DATABASE_URL",
     "REDIS_URL",
     "JWT_ACCESS_SECRET",
@@ -204,13 +234,7 @@ function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
     "FRONTEND_URL",
     "RESEND_API_KEY",
     "RESEND_FROM_EMAIL",
-    "TEMPORAL_DB_PASSWORD",
     "MEILISEARCH_API_KEY",
-    "MINIO_ROOT_USER",
-    "MINIO_ROOT_PASSWORD",
-    "STORAGE_BUCKET",
-    "STORAGE_ENDPOINT",
-    "STORAGE_PUBLIC_ENDPOINT",
   ];
 
   const issues = required
@@ -260,7 +284,7 @@ function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
     issues.push("/TWO_FACTOR_ENCRYPTION_KEY: required when TWO_FACTOR_ENABLED=true");
   }
 
-  issues.push(...storageProductionIssues(env));
+  issues.push(...storageConfigIssues(env));
 
   return issues;
 }
@@ -272,35 +296,95 @@ export function isR2Endpoint(endpoint: string | undefined): boolean {
 }
 
 /**
- * Storage rules that only make sense in production. Kept separate so the
- * reasoning stays readable: presigned URLs are handed to phones, so the public
- * endpoint must be an https:// origin the device can actually resolve, and it
- * must never be silently substituted with the cluster-internal endpoint.
+ * Every variable the object-storage client needs. All five are required
+ * together: the credentials sign the request, the bucket names the target, the
+ * internal endpoint is what the server talks to, and the public endpoint is
+ * what gets baked into presigned URLs handed to phones. Any one missing
+ * produces requests that are signed wrong, aimed wrong, or unreachable.
  */
-function storageProductionIssues(env: Environment): string[] {
-  const issues: string[] = [];
-  const { STORAGE_ENDPOINT, STORAGE_PUBLIC_ENDPOINT, STORAGE_REGION } = env;
+export const STORAGE_REQUIRED_KEYS = [
+  "STORAGE_ENDPOINT",
+  "STORAGE_PUBLIC_ENDPOINT",
+  "STORAGE_ACCESS_KEY_ID",
+  "STORAGE_SECRET_ACCESS_KEY",
+  "STORAGE_BUCKET",
+] as const;
 
-  if (STORAGE_ENDPOINT && !new RegExp(URL_PATTERN).test(STORAGE_ENDPOINT)) {
+export type StorageConfigKey = (typeof STORAGE_REQUIRED_KEYS)[number];
+
+export type StorageConfigInput = {
+  NODE_ENV?: string;
+  STORAGE_REGION?: string;
+} & Partial<Record<StorageConfigKey, string>>;
+
+/**
+ * Every problem with the object-storage configuration; empty means usable.
+ *
+ * This is the single rule set: the CI `env:check` gate and the API/worker boot
+ * gate both call it, so a config that passes CI is a config that boots.
+ *
+ * Outside production a completely empty storage configuration is allowed —
+ * local development without MinIO simply runs with storage features off. A
+ * *partial* configuration is rejected everywhere, because that is the shape a
+ * typo or a dropped deploy variable takes, never a deliberate "storage off".
+ */
+export function storageConfigIssues(env: StorageConfigInput): string[] {
+  const issues: string[] = [];
+  const isProduction = env.NODE_ENV === "production";
+  const missing = STORAGE_REQUIRED_KEYS.filter((key) => !env[key]);
+
+  if (isProduction) {
+    for (const key of missing) {
+      issues.push(`/${key}: required in production`);
+    }
+  } else if (missing.length > 0 && missing.length < STORAGE_REQUIRED_KEYS.length) {
+    for (const key of missing) {
+      issues.push(`/${key}: required when object storage is configured`);
+    }
+  }
+
+  const absoluteUrl = new RegExp(URL_PATTERN);
+
+  if (env.STORAGE_ENDPOINT && !absoluteUrl.test(env.STORAGE_ENDPOINT)) {
     issues.push("/STORAGE_ENDPOINT: must be an absolute URL");
   }
 
-  if (STORAGE_PUBLIC_ENDPOINT) {
-    if (!STORAGE_PUBLIC_ENDPOINT.startsWith("https://")) {
+  if (env.STORAGE_PUBLIC_ENDPOINT) {
+    if (!absoluteUrl.test(env.STORAGE_PUBLIC_ENDPOINT)) {
+      issues.push("/STORAGE_PUBLIC_ENDPOINT: must be an absolute URL");
+    } else if (isProduction && !env.STORAGE_PUBLIC_ENDPOINT.startsWith("https://")) {
+      // Signed into URLs that leave the cluster; http:// would ship user
+      // documents over plaintext and is rejected outright by mobile ATS/NSC.
       issues.push(
         "/STORAGE_PUBLIC_ENDPOINT: must be an https:// URL reachable by mobile clients",
       );
     }
   }
 
-  // R2 rejects any region other than "auto".
-  if (isR2Endpoint(STORAGE_ENDPOINT) || isR2Endpoint(STORAGE_PUBLIC_ENDPOINT)) {
-    if (STORAGE_REGION !== "auto") {
+  // R2 rejects any region other than "auto", in every environment.
+  if (isR2Endpoint(env.STORAGE_ENDPOINT) || isR2Endpoint(env.STORAGE_PUBLIC_ENDPOINT)) {
+    if (env.STORAGE_REGION !== "auto") {
       issues.push('/STORAGE_REGION: must be "auto" when using Cloudflare R2');
     }
   }
 
   return issues;
+}
+
+/**
+ * Boot gate for any process that touches object storage. Throws rather than
+ * exiting so the caller decides how to report — see apps/api/src/app/server.ts
+ * and apps/workers/temporal/src/worker.ts.
+ */
+export function assertStorageConfig(env: StorageConfigInput = environment): void {
+  const issues = storageConfigIssues(env);
+  if (issues.length === 0) return;
+
+  throw new Error(
+    `Object storage is misconfigured; refusing to start:\n${issues
+      .map((issue) => `  - ${issue}`)
+      .join("\n")}`,
+  );
 }
 
 export function getEnvironment(env: EnvInput = process.env): Environment {
@@ -314,6 +398,12 @@ export function getEnvironment(env: EnvInput = process.env): Environment {
 /**
  * All validation problems with `env`, schema issues first. Returns an empty
  * array when the environment is usable. Pure — safe to call from tests.
+ *
+ * This is the **deploy-time** gate: it assumes the full deployment environment,
+ * including DEPLOYMENT_ONLY_REQUIRED variables that no application container
+ * ever receives. Do not call it from a running service — a correctly deployed
+ * API would fail it. Services validate the subset they actually consume; for
+ * object storage that is `assertStorageConfig`.
  */
 export function environmentIssues(env: EnvInput = process.env): string[] {
   const normalized = normalizeEnvironment(env);

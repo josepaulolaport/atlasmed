@@ -46,6 +46,10 @@ on:
         required: true
       MINIO_ROOT_PASSWORD:
         required: true
+      STORAGE_ACCESS_KEY_ID:
+        required: true
+      STORAGE_SECRET_ACCESS_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -73,15 +77,24 @@ jobs:
       PORT: "3000"
       REDIS_URL: redis://atlasmed-redis:6379
       JWT_EXPIRATION: ${{ vars.JWT_EXPIRATION || '15m' }}
+      # These must mirror deploy-services-to-cluster.yml exactly. A fallback here
+      # that the deploy workflow does not have makes this gate pass on values
+      # that will never be deployed: delete or typo a variable and the gate goes
+      # green on MinIO defaults while the cluster receives empty strings.
+      # STORAGE_BUCKET and STORAGE_REGION keep defaults because the deploy has them too.
       STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
       # R2 requires STORAGE_REGION=auto; keep us-east-1 only while MinIO serves production.
       STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
       # Server-side endpoint (API -> object store). Distinct from the public one below:
       # while MinIO sits behind Caddy these are different hosts, and signing a client URL
-      # against the internal host hands phones an unreachable address.
-      STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT || 'http://atlasmed-minio:9000' }}
+      # against the internal host hands phones an unreachable address. They converge on R2.
+      STORAGE_ENDPOINT: ${{ vars.STORAGE_ENDPOINT }}
       # Baked into presigned URLs handed to browsers and phones — must be device-reachable.
-      STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT || 'https://storage.tdomains.uk' }}
+      STORAGE_PUBLIC_ENDPOINT: ${{ vars.STORAGE_PUBLIC_ENDPOINT }}
+      # What requests are actually signed with. MINIO_ROOT_* above provision the
+      # MinIO server; these become the R2 API token at cutover.
+      STORAGE_ACCESS_KEY_ID: ${{ secrets.STORAGE_ACCESS_KEY_ID }}
+      STORAGE_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_SECRET_ACCESS_KEY }}
       NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
       NEXT_PUBLIC_HEALTH_URL: https://atlasmed-api.b1ixob.uncld.dev
 
