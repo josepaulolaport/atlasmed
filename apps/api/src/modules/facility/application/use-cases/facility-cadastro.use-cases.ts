@@ -341,7 +341,6 @@ export class GetFacilityCadastroChecklistUseCase {
       legalDocumentType,
       billingEmail,
       commercialStatus: facility.commercialStatus ?? undefined,
-      conformityStatus: facility.conformityStatus,
       submissionId: draft?.id,
       submissionStatus: draft?.status,
       submissionVersion: draft?.version,
