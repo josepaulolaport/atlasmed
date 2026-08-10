@@ -10,6 +10,21 @@ mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
   }),
 }));
 
+const mockLoggerWarn = mock((_message: string, _context?: unknown) => {});
+const mockLoggerError = mock((_message: string, _context?: unknown) => {});
+
+mock.module("../../../../infrastructure/logging/logger", () => ({
+  logger: {
+    trace: mock(() => {}),
+    debug: mock(() => {}),
+    info: mock(() => {}),
+    warn: mockLoggerWarn,
+    error: mockLoggerError,
+    fatal: mock(() => {}),
+    child: mock(() => ({})),
+  },
+}));
+
 import { InviteUserUseCase } from "./invite-user.use-case";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import type { UserRepository } from "../interfaces/user.repository.interface";
@@ -694,6 +709,163 @@ describe("InviteUserUseCase", () => {
         })
       ).rejects.toThrow("territory row created");
       expect(createTerritoryRow).toHaveBeenCalled();
+    });
+  });
+
+  // A `newPatch` territory is created before the invite can be validated, so a
+  // rejected invite must take it back down. Best-effort containment, not a
+  // transaction — see `staged-territory-cleanup.utils.ts`.
+  describe("staged territory cleanup", () => {
+    const STAGED_ID = 777;
+
+    let createTerritory: ReturnType<typeof mock>;
+    let deleteTerritory: ReturnType<typeof mock>;
+
+    function newPatchAssignment() {
+      return [
+        {
+          verticalId: 1,
+          territoryIds: [],
+          newPatch: {
+            name: "Patch Norte",
+            managerZoneId: 10,
+            boundary: {
+              type: "Polygon" as const,
+              coordinates: [[[0, 0], [0, 1], [1, 1], [0, 0]]],
+            },
+          },
+        },
+      ];
+    }
+
+    function inviteRep() {
+      return inviteUserUseCase.execute({
+        email: "rep@example.com",
+        roleId: 5,
+        invitedByUserId: 123,
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
+        verticalAssignments: newPatchAssignment(),
+        scope: createGlobalScopeContext(),
+      });
+    }
+
+    /** `managerTerritoryId` decides whether containment rejects the draft. */
+    function buildUseCase(options: {
+      managerTerritoryId: number;
+      deleteFails?: boolean;
+    }) {
+      createTerritory = mock(async () => ({
+        id: STAGED_ID,
+        managerTerritoryId: options.managerTerritoryId,
+      }));
+      deleteTerritory = mock(async () => {
+        if (options.deleteFails) {
+          throw new Error("territory is locked");
+        }
+        return { id: STAGED_ID };
+      });
+
+      mockUserRepository.findById = mock(async () =>
+        createMockUserWithRole({
+          user: { id: 123 },
+          role: { name: "ADMIN", priority: ROLE_PRIORITY_BY_NAME.ADMIN },
+        })
+      );
+      mockRoleRepository.findById = mock(async () => ({
+        id: 5,
+        name: "REP",
+        priority: ROLE_PRIORITY_BY_NAME.REP,
+      }));
+
+      inviteUserUseCase = new InviteUserUseCase({
+        inviteRepository: mockInviteRepository,
+        userRepository: mockUserRepository,
+        roleRepository: mockRoleRepository,
+        territoryCrud: {
+          createTerritory,
+          deleteTerritory,
+        } as unknown as TerritoryCrudUseCases,
+        auditLog: createMockAuditLogService({
+          logInviteUser: mockLogInviteUser,
+        }),
+        metrics: createMockMetricsService(),
+      });
+    }
+
+    beforeEach(() => {
+      mockLoggerWarn.mockClear();
+      mockLoggerError.mockClear();
+    });
+
+    it("removes the staged territory when the draft is rejected", async () => {
+      // managerTerritoryId 99 != draft managerZoneId 10 → containment rejects.
+      buildUseCase({ managerTerritoryId: 99 });
+
+      const error = await inviteRep().catch((e) => e);
+
+      expect(error).toBeInstanceOf(ValidationError);
+      expect((error.context as { errors: Array<{ message: string }> }).errors[0]!.message).toBe(
+        "Drawn patch must be contained within the selected manager zone"
+      );
+      expect(createTerritory).toHaveBeenCalled();
+      expect(deleteTerritory).toHaveBeenCalledWith(STAGED_ID);
+    });
+
+    it("removes the staged territory when the invite is rejected after validation", async () => {
+      // Proves the rollback span reaches past territory validation: this
+      // failure happens at the duplicate-user check.
+      buildUseCase({ managerTerritoryId: 10 });
+      mockUserRepository.findByIdentifier = mock(async () => ({
+        id: "existing-user",
+      })) as any;
+
+      await expect(inviteRep()).rejects.toBeInstanceOf(EmailAlreadyExistsError);
+      expect(deleteTerritory).toHaveBeenCalledWith(STAGED_ID);
+      expect(mockInviteRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("surfaces the original error and logs when cleanup itself fails", async () => {
+      buildUseCase({ managerTerritoryId: 99, deleteFails: true });
+
+      const error = await inviteRep().catch((e) => e);
+
+      // The rollback failure must not mask the reason the invite was rejected.
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error.message).not.toContain("locked");
+      expect(deleteTerritory).toHaveBeenCalledWith(STAGED_ID);
+      expect(mockLoggerError).toHaveBeenCalled();
+      const [message, context] = mockLoggerError.mock.calls[0] as [
+        string,
+        Record<string, unknown>,
+      ];
+      expect(message).toBe("invite.staged_territory_cleanup_failed");
+      expect(context.territoryId).toBe(STAGED_ID);
+      expect(context.cleanupError).toBe("territory is locked");
+    });
+
+    it("logs the territory id and cause on successful cleanup", async () => {
+      buildUseCase({ managerTerritoryId: 99 });
+
+      try {
+        await inviteRep();
+      } catch {}
+
+      const [message, context] = mockLoggerWarn.mock.calls[0] as [
+        string,
+        Record<string, unknown>,
+      ];
+      expect(message).toBe("invite.staged_territory_cleaned_up");
+      expect(context.territoryId).toBe(STAGED_ID);
+      expect(context.cause).toBe("Request validation failed");
+    });
+
+    it("keeps the territory when the invite succeeds", async () => {
+      buildUseCase({ managerTerritoryId: 10 });
+
+      await expect(inviteRep()).resolves.toBeDefined();
+      expect(deleteTerritory).not.toHaveBeenCalled();
     });
   });
 

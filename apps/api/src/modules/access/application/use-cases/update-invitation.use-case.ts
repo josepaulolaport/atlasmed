@@ -10,6 +10,7 @@ import type { RoleRepository } from "../interfaces/role.repository.interface";
 import type { InvitationTerritoryValidatorService } from "../services/invitation-territory-validator.service";
 import type { TerritoryCrudUseCases } from "../../../territory/application/use-cases/territory-crud.use-cases";
 import { normalizeInviteAssignments } from "../utils/invite-assignments.utils";
+import { cleanupStagedTerritories } from "../utils/staged-territory-cleanup.utils";
 import {
   InsufficientPermissionsError,
   OperationNotAllowedError,
@@ -87,47 +88,61 @@ export class UpdateInvitationUseCase {
     const shouldReplaceVerticals = params.verticalAssignments !== undefined;
     let assignments = null as ReturnType<typeof normalizeInviteAssignments> | null;
 
-    if (shouldReplaceVerticals) {
-      const resolved = await this.resolveNewPatches(
-        role.name,
-        params.verticalAssignments ?? [],
-        params.scope,
+    // See `cleanupStagedTerritories`: a `newPatch` must be created before it can
+    // be validated, so a rejected edit has to take the territory back down.
+    const stagedTerritoryIds: number[] = [];
+
+    try {
+      if (shouldReplaceVerticals) {
+        const resolved = await this.resolveNewPatches(
+          role.name,
+          params.verticalAssignments ?? [],
+          params.scope,
+          stagedTerritoryIds,
+        );
+        assignments = normalizeInviteAssignments({
+          roleName: role.name,
+          verticalAssignments: resolved,
+        });
+
+        await this.deps.territoryValidator.validateInvitationTerritories({
+          roleId: role.id,
+          roleName: role.name,
+          inviterUserId: params.actorUserId,
+          inviterRoleName: params.actorRole,
+          excludeInvitationId: params.inviteId,
+          verticalAssignments: assignments.verticalAssignments,
+        });
+      }
+
+      await this.deps.inviteRepository.updatePending({
+        inviteId: params.inviteId,
+        email,
+        phoneNumber: phoneNumber ?? null,
+        roleId,
+        firstName: params.firstName ?? invite.firstName ?? undefined,
+        lastName: params.lastName ?? invite.lastName ?? undefined,
+        birthDate:
+          params.birthDate !== undefined
+            ? new Date(`${toDateOnlyString(params.birthDate)}T00:00:00.000Z`)
+            : undefined,
+        ...(assignments
+          ? {
+              verticalAssignments: assignments.verticalAssignments.map((v) => ({
+                verticalId: v.verticalId,
+                territoryIds: v.territoryIds,
+              })),
+            }
+          : {}),
+      });
+    } catch (error) {
+      await cleanupStagedTerritories(
+        this.deps.territoryCrud,
+        stagedTerritoryIds,
+        error,
       );
-      assignments = normalizeInviteAssignments({
-        roleName: role.name,
-        verticalAssignments: resolved,
-      });
-
-      await this.deps.territoryValidator.validateInvitationTerritories({
-        roleId: role.id,
-        roleName: role.name,
-        inviterUserId: params.actorUserId,
-        inviterRoleName: params.actorRole,
-        excludeInvitationId: params.inviteId,
-        verticalAssignments: assignments.verticalAssignments,
-      });
+      throw error;
     }
-
-    await this.deps.inviteRepository.updatePending({
-      inviteId: params.inviteId,
-      email,
-      phoneNumber: phoneNumber ?? null,
-      roleId,
-      firstName: params.firstName ?? invite.firstName ?? undefined,
-      lastName: params.lastName ?? invite.lastName ?? undefined,
-      birthDate:
-        params.birthDate !== undefined
-          ? new Date(`${toDateOnlyString(params.birthDate)}T00:00:00.000Z`)
-          : undefined,
-      ...(assignments
-        ? {
-            verticalAssignments: assignments.verticalAssignments.map((v) => ({
-              verticalId: v.verticalId,
-              territoryIds: v.territoryIds,
-            })),
-          }
-        : {}),
-    });
 
     return this.deps.getInvitationById.execute({
       inviteId: params.inviteId,
@@ -139,6 +154,8 @@ export class UpdateInvitationUseCase {
     roleName: string,
     verticalAssignments: InviteVerticalAssignmentInput[],
     scope: ScopeContext,
+    /** Collects created territory ids so the caller can roll them back. */
+    stagedTerritoryIds: number[],
   ): Promise<InviteVerticalAssignmentInput[]> {
     if (roleName !== Role.REP || verticalAssignments.length === 0) {
       return verticalAssignments.map((v) => ({
@@ -193,6 +210,7 @@ export class UpdateInvitationUseCase {
         },
         scope,
       });
+      stagedTerritoryIds.push(created.id);
 
       if (created.managerTerritoryId !== draft.managerZoneId) {
         throw new ValidationError([

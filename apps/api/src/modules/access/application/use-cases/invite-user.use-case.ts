@@ -27,6 +27,7 @@ import type { IAuditLog } from "../interfaces/audit-log.interface";
 import type { IMetrics } from "../interfaces/metrics.interface";
 import { tracer } from "../../../../infrastructure/tracing/tracer";
 import { normalizeInviteAssignments } from "../utils/invite-assignments.utils";
+import { cleanupStagedTerritories } from "../utils/staged-territory-cleanup.utils";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
@@ -114,59 +115,77 @@ export class InviteUserUseCase {
       );
     }
 
-    const resolvedVerticals = await this.resolveNewPatches(
-      role.name,
-      params.verticalAssignments ?? [],
-      params.scope,
-    );
+    // Staging a `newPatch` creates a real territory before the invite exists.
+    // Anything that rejects the invite from here until the invite row is
+    // written must take those territories back down — see
+    // `cleanupStagedTerritories` for why creation cannot simply run later.
+    const stagedTerritoryIds: number[] = [];
+    let invite: Awaited<ReturnType<InviteService["createInvite"]>>["invite"];
+    let token: string;
 
-    const assignments = normalizeInviteAssignments({
-      roleName: role.name,
-      verticalAssignments: resolvedVerticals,
-    });
-
-    await this.territoryValidator.validateInvitationTerritories({
-      roleId: params.roleId,
-      roleName: role.name,
-      inviterUserId: params.invitedByUserId,
-      inviterRoleName: inviterRole.name,
-      verticalAssignments: assignments.verticalAssignments,
-    });
-
-    const identifier = params.email || params.phoneNumber!;
-    const existingUser = await this.deps.userRepository.findByIdentifier({ identifier });
-
-    if (existingUser && params.email) {
-      throw new EmailAlreadyExistsError(params.email);
-    } else if (existingUser) {
-      throw new ResourceConflictError("User", "User already exists with this phone number");
-    }
-
-    const existingInvite = await this.deps.inviteRepository.findByEmailOrPhone(
-      params.email || undefined,
-      params.phoneNumber || undefined
-    );
-
-    if (existingInvite) {
-      throw new ResourceConflictError(
-        "Invitation",
-        "A pending invitation already exists for this user"
+    try {
+      const resolvedVerticals = await this.resolveNewPatches(
+        role.name,
+        params.verticalAssignments ?? [],
+        params.scope,
+        stagedTerritoryIds,
       );
-    }
 
-    const { invite, token } = await this.inviteService.createInvite({
-      email: params.email || undefined,
-      phoneNumber: params.phoneNumber || undefined,
-      roleId: params.roleId,
-      invitedByUserId: params.invitedByUserId,
-      firstName: params.firstName,
-      lastName: params.lastName,
-      birthDate: new Date(`${toDateOnlyString(params.birthDate)}T00:00:00.000Z`),
-      verticalAssignments: assignments.verticalAssignments.map((v) => ({
-        verticalId: v.verticalId,
-        territoryIds: v.territoryIds,
-      })),
-    });
+      const assignments = normalizeInviteAssignments({
+        roleName: role.name,
+        verticalAssignments: resolvedVerticals,
+      });
+
+      await this.territoryValidator.validateInvitationTerritories({
+        roleId: params.roleId,
+        roleName: role.name,
+        inviterUserId: params.invitedByUserId,
+        inviterRoleName: inviterRole.name,
+        verticalAssignments: assignments.verticalAssignments,
+      });
+
+      const identifier = params.email || params.phoneNumber!;
+      const existingUser = await this.deps.userRepository.findByIdentifier({ identifier });
+
+      if (existingUser && params.email) {
+        throw new EmailAlreadyExistsError(params.email);
+      } else if (existingUser) {
+        throw new ResourceConflictError("User", "User already exists with this phone number");
+      }
+
+      const existingInvite = await this.deps.inviteRepository.findByEmailOrPhone(
+        params.email || undefined,
+        params.phoneNumber || undefined
+      );
+
+      if (existingInvite) {
+        throw new ResourceConflictError(
+          "Invitation",
+          "A pending invitation already exists for this user"
+        );
+      }
+
+      ({ invite, token } = await this.inviteService.createInvite({
+        email: params.email || undefined,
+        phoneNumber: params.phoneNumber || undefined,
+        roleId: params.roleId,
+        invitedByUserId: params.invitedByUserId,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        birthDate: new Date(`${toDateOnlyString(params.birthDate)}T00:00:00.000Z`),
+        verticalAssignments: assignments.verticalAssignments.map((v) => ({
+          verticalId: v.verticalId,
+          territoryIds: v.territoryIds,
+        })),
+      }));
+    } catch (error) {
+      await cleanupStagedTerritories(
+        this.deps.territoryCrud,
+        stagedTerritoryIds,
+        error,
+      );
+      throw error;
+    }
 
     await this.deps.auditLog.logInviteUser({
       invitedByUserId: params.invitedByUserId,
@@ -191,6 +210,8 @@ export class InviteUserUseCase {
     roleName: string,
     verticalAssignments: InviteVerticalAssignmentInput[],
     scope: ScopeContext,
+    /** Collects created territory ids so the caller can roll them back. */
+    stagedTerritoryIds: number[],
   ): Promise<InviteVerticalAssignmentInput[]> {
     if (roleName !== Role.REP || verticalAssignments.length === 0) {
       return verticalAssignments.map((v) => ({
@@ -246,6 +267,7 @@ export class InviteUserUseCase {
           },
           scope,
         });
+        stagedTerritoryIds.push(created.id);
 
         if (created.managerTerritoryId !== draft.managerZoneId) {
           throw new ValidationError([
