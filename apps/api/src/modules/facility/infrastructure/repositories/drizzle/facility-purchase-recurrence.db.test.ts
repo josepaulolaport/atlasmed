@@ -7,6 +7,7 @@ import {
   orders,
   states,
 } from "@atlasmed/database";
+import { sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./facility-purchase-recurrence.repository";
 
@@ -57,6 +58,8 @@ describe.skipIf(!dbUp)("funnel purchase dates (database)", () => {
           legalDocumentType: "CNPJ",
           stateId: state!.id,
           municipalityId: municipality!.id,
+          // Spec 0009 R5: every clinic has a position.
+          location: sql`ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326)`,
         })
         .returning({ id: facilities.id });
 

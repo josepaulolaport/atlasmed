@@ -106,8 +106,10 @@ const createFacilityRoute = new Elysia()
         municipalityId: t.Integer({ minimum: 1 }),
         legalDocumentType: t.Union([t.Literal("CNPJ"), t.Literal("CPF")]),
         legalDocument: t.Optional(t.Union([t.String(), t.Null()])),
-        lat: t.Optional(t.Number()),
-        lng: t.Optional(t.Number()),
+        // Spec 0009 R5: a clinic without a position cannot be owned by anyone,
+        // so it cannot be created. `facilities.location` is NOT NULL.
+        lat: t.Number(),
+        lng: t.Number(),
         verticalId: t.Optional(t.Integer({ minimum: 1 })),
       }),
     }
