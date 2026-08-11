@@ -333,6 +333,16 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
     limit: number;
   }> {
     const context = await this.resolve(request);
+    // Before the empty-scope shortcut, so the card and its breakdown refuse a
+    // REP for the same reason at the same point: a rep whose scope happened to
+    // resolve to nothing would otherwise get an empty list where the card gave
+    // them a 403, and an empty list reads as the reassuring answer.
+    if (
+      request.metric === "unassigned-clinics" &&
+      context.subject.roleName === Role.REP
+    ) {
+      throw new ForbiddenError();
+    }
     if (!context.filter) {
       return {
         verticalId: context.verticalId,
@@ -341,12 +351,6 @@ export class ListMetricClinicsUseCase extends DashboardMetricUseCase {
         page: request.page,
         limit: request.limit,
       };
-    }
-    if (
-      request.metric === "unassigned-clinics" &&
-      context.subject.roleName === Role.REP
-    ) {
-      throw new ForbiddenError();
     }
 
     const { rows, total } = await this.deps.repository.listScopedClinics({

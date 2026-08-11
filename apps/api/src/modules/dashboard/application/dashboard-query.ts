@@ -105,6 +105,13 @@ export function resolveSingleVerticalId(input: {
  * A manager reaches their own reps only; an admin reaches anyone. This is the
  * check behind spec 0014 §2's "→ perfil → Ver desempenho": the drill-down is a
  * scope change, so it is an authorization decision, not a UI one.
+ *
+ * OPS reaches anyone too. Spec 0014 §2's table does not list OPS, but the
+ * roster does (`ListTeamUseCase` lets it read the manager list), and a role
+ * that may list the team but not compute a single row of it fails the whole
+ * request the moment the roster is sorted by a metric — a 403 for asking a
+ * question the same screen already invited. OPS reads every clinic in its
+ * verticals already (`resolveOpsScope`), so this widens no data.
  */
 export async function resolveSubject(input: {
   viewer: DashboardSubject;
@@ -128,7 +135,8 @@ export async function resolveSubject(input: {
   }
   if (
     input.viewer.roleName !== Role.ADMIN &&
-    input.viewer.roleName !== Role.MANAGER
+    input.viewer.roleName !== Role.MANAGER &&
+    input.viewer.roleName !== Role.OPS
   ) {
     throw new ForbiddenError();
   }

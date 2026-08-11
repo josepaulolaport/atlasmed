@@ -97,6 +97,19 @@ describe("resolveSubject (spec 0014 §2)", () => {
     ).rejects.toThrow(ForbiddenError);
   });
 
+  it("lets ops open anyone — it already reads every clinic in the linha", async () => {
+    // Regression: ops may list the roster (`ListTeamUseCase`), so refusing it a
+    // subject made the whole request 403 the moment that roster was sorted by a
+    // metric — every row is computed by resolving that member as the subject.
+    const subject = await resolveSubject({
+      viewer: { userId: 8, roleName: Role.OPS },
+      subjectUserId: 2,
+      managedUserIds: [],
+      directory: directory({ findUser: async () => manager }),
+    });
+    expect(subject).toEqual(manager);
+  });
+
   it("lets an admin open anyone", async () => {
     const subject = await resolveSubject({
       viewer: admin,

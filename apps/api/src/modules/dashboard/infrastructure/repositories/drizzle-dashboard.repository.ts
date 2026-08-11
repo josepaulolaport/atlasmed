@@ -264,9 +264,17 @@ export class DrizzleDashboardRepository {
 
     const scoped = buildScopedProfilesQuery(input.filter);
 
+    // A `Date` bound inside a raw `sql` template never reaches the column's
+    // encoder — there is no column for the driver to infer from — and postgres-js
+    // rejects it at Bind time with ERR_INVALID_ARG_TYPE. Mapping through the
+    // column itself is what the builder path does, so the two agree on how a
+    // `timestamp without time zone` holding UTC is written.
+    const bound = (instant: Date) =>
+      orders.orderedAt.mapToDriverValue(instant) as string;
+
     const counters = input.ranges.map(
       (range) =>
-        sql`COUNT(*) FILTER (WHERE ${orders.orderedAt} >= ${range.start} AND ${orders.orderedAt} < ${range.end})::int`,
+        sql`COUNT(*) FILTER (WHERE ${orders.orderedAt} >= ${bound(range.start)}::timestamp AND ${orders.orderedAt} < ${bound(range.end)}::timestamp)::int`,
     );
 
     const rows = (await db.execute(sql`
@@ -467,6 +475,10 @@ export class DrizzleDashboardRepository {
         and(
           eq(userTerritoryAssignments.userId, input.userId),
           eq(territories.verticalId, input.verticalId),
+          // Same predicate the denominator uses (`findManagerZoneIds`). Without
+          // it the card can draw a retired zone the metrics already stopped
+          // counting, and the map would disagree with every number beside it.
+          eq(territories.isActive, true),
         ),
       )
       .orderBy(territories.name);
@@ -491,6 +503,7 @@ export class DrizzleDashboardRepository {
       .where(
         and(
           eq(territories.verticalId, verticalId),
+          eq(territories.isActive, true),
           isNotNull(territories.boundary),
         ),
       )

@@ -1,5 +1,7 @@
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -119,6 +121,35 @@ void main() {
 
       expect(member.metricValue, isNull);
       expect(member.assignedClinicCount, 12);
+    });
+  });
+
+  group('dashboardScopeArgsProvider', () {
+    /// Regression: the subject used to live in a global `StateProvider` that
+    /// the pushed subject screen wrote to on mount and nothing reset on pop.
+    /// A manager who looked at a rep's Desempenho and went back kept seeing
+    /// that rep's numbers on their own tab, under the heading "Desempenho".
+    test('one viewer and one subject do not share a scope', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      container.read(dashboardSelectedVerticalIdProvider.notifier).state = 1;
+
+      expect(
+        container.read(dashboardScopeArgsProvider(null))!.subjectUserId,
+        isNull,
+      );
+      expect(container.read(dashboardScopeArgsProvider(7))!.subjectUserId, 7);
+      // Reading the subject's scope must not have changed the viewer's own.
+      expect(
+        container.read(dashboardScopeArgsProvider(null))!.subjectUserId,
+        isNull,
+      );
+    });
+
+    test('no linha, no scope — a metric has no correct answer yet', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      expect(container.read(dashboardScopeArgsProvider(null)), isNull);
     });
   });
 }

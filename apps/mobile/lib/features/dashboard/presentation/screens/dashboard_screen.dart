@@ -36,8 +36,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(dashboardSubjectUserIdProvider.notifier).state =
-          widget.subjectUserId;
       _ensureVerticalSelected();
     });
   }
@@ -66,7 +64,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final optionsAsync = ref.watch(dashboardVerticalOptionsProvider);
     final selectedVerticalId = ref.watch(dashboardSelectedVerticalIdProvider);
-    final scope = ref.watch(dashboardScopeArgsProvider);
+    final scope = ref.watch(dashboardScopeArgsProvider(widget.subjectUserId));
     // Clínicas não atribuídas is a manager question: a rep holds no zones, so
     // the API refuses it for them rather than answering a reassuring 0.
     final role = ref.watch(currentUserRoleProvider);

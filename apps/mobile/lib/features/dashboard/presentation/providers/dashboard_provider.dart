@@ -13,9 +13,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// ADMIN special case that produced "Brasil · visão geral" is gone.
 final dashboardSelectedVerticalIdProvider = StateProvider<int?>((ref) => null);
 
-/// Whose desempenho is on screen — null is the signed-in user's own.
-final dashboardSubjectUserIdProvider = StateProvider<int?>((ref) => null);
-
 /// The active filter set (spec 0014 §5), applied uniformly to every metric.
 final dashboardFiltersProvider = StateProvider<DashboardScopeArgs?>(
   (ref) => null,
@@ -27,14 +24,24 @@ final dashboardVerticalOptionsProvider = FutureProvider<List<BusinessVertical>>(
 
 /// The scope every metric request shares. Null until a linha is known — no
 /// metric may be fetched before then, because there is no correct answer.
-final dashboardScopeArgsProvider = Provider<DashboardScopeArgs?>((ref) {
+///
+/// Keyed by the subject (spec 0014 §2: null is the viewer's own Desempenho,
+/// otherwise the person whose profile it was opened from). It is a family and
+/// not a `StateProvider` the subject screen writes to, because the subject
+/// screen is *pushed over* the dashboard tab: a global would still hold the
+/// other person's id after the push was popped, and the viewer's own tab would
+/// go on showing that person's numbers under the heading "Desempenho".
+final dashboardScopeArgsProvider = Provider.family<DashboardScopeArgs?, int?>((
+  ref,
+  subjectUserId,
+) {
   final verticalId = ref.watch(dashboardSelectedVerticalIdProvider);
   if (verticalId == null) return null;
 
   final filters = ref.watch(dashboardFiltersProvider);
   return DashboardScopeArgs(
     verticalId: verticalId,
-    subjectUserId: ref.watch(dashboardSubjectUserIdProvider),
+    subjectUserId: subjectUserId,
     unitTypeId: filters?.unitTypeId,
     managerId: filters?.managerId,
     repId: filters?.repId,

@@ -182,6 +182,51 @@ that have orders and no competitor data. Those are the `share = 100%` clinics (s
 §9.2), so omitting them drags the aggregate mean down systematically: not an empty number, a
 plausible wrong one. Picker, triggers and the reconciliation sweep have to land together.
 
+## 8.2 Found in review (2026-08-11)
+
+Four defects, one of them fatal to an endpoint, plus two gaps that are the
+user's call rather than a bug.
+
+- **`GET /dashboard/metrics/orders` was a 500 on every call.** `countOrders`
+  bound two `Date` values inside a raw `sql` template, where there is no column
+  for the driver to infer an encoder from, so postgres-js rejected the statement
+  at Bind time with `ERR_INVALID_ARG_TYPE`. The query-shape test passed
+  throughout — the SQL it emitted was correct; it was never sent. Fixed by
+  mapping through `orders.orderedAt.mapToDriverValue`, and covered by
+  `dashboard-queries.db.test.ts`, which now *executes* every dashboard query
+  rather than inspecting it. That file is the real lesson: a repository whose
+  only test is `toSQL()` has no proof it runs.
+- **The subject leaked across screens.** The subject lived in a global
+  `StateProvider` that the pushed subject screen wrote to on mount, and nothing
+  reset on pop — so a manager who opened a rep's Desempenho and went back kept
+  seeing that rep's numbers on their own tab, under the heading "Desempenho".
+  The scope is now a `Provider.family` keyed by the subject, which makes the
+  leak unrepresentable rather than remembered.
+- **OPS could list the roster but not sort it.** `ListTeamUseCase` admits OPS;
+  `resolveSubject` refused it, and every leaderboard row resolves its member as
+  a subject — so sorting Equipe by any metric 403'd the whole request. OPS now
+  resolves subjects; it already reads every clinic in its verticals.
+- **Two smaller ones:** the territory card read territories without
+  `is_active`, so it could draw a retired zone beside metrics that had stopped
+  counting it; and the `unassigned-clinics` breakdown checked the scope before
+  the role, so a REP whose scope resolved to nothing got an empty list where the
+  card gave them a 403 — and an empty list reads as the reassuring answer.
+
+**Two gaps that need a product decision, not a fix:**
+
+- **An admin's Equipe is empty in production.** The roster lists users holding a
+  `manager_zone`, and no user holds one: the snapshot has 2 ADMINs and 5 REPs,
+  no MANAGER, with all five zones unassigned. §2 routes an admin to reps
+  *through* managers, so today an admin has no path to any rep's Desempenho at
+  all. Either managers get assigned to those zones, or the admin roster needs to
+  list reps who sit under no listed manager. This is a data and modelling
+  question, so it is not decided here.
+- **Only `unit_type` of §5's five filters is in the UI.** The API takes all
+  five; the filter bar renders one — and the unit-type catalog is empty in
+  production, so the bar currently renders nothing at all. §5 argues that
+  `manager`/`rep` filters are "the reason nested dashboard segments are
+  unnecessary", and that argument is not yet backed by shipped UI.
+
 **Not built:** route-level HTTP integration tests for the new endpoints. The dashboard
 module's routes import `composition` directly rather than taking injected use cases, so
 they cannot be mounted the way `orders-http.integration.test.ts` mounts its factory.
