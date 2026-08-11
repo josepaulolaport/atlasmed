@@ -1,27 +1,28 @@
 import { describe, expect, it, mock } from "bun:test";
 import { FieldSuggestionApplyService } from "./field-suggestion-apply.service";
 import type { FacilityRepository } from "../../../facility/application/interfaces/facility.repository.interface";
-import type { FacilityGeocodingService } from "../../../facility/application/services/facility-geocoding.service";
-import {
-  OperationNotAllowedError,
-  ValidationError,
-} from "../../../../shared/errors";
+import type { FacilityLocationService } from "../../../facility/application/services/facility-location.service";
+import { ValidationError } from "../../../../shared/errors";
 
 describe("FieldSuggestionApplyService", () => {
   const facilityRepository = {
     applyApprovedFieldUpdates: mock(async () => ({ id: 1 })),
   } as unknown as FacilityRepository;
 
-  const facilityGeocodingService = {
-    geocodeAddress: mock(async () => ({ lat: -23.55, lng: -46.63 })),
-  } as unknown as FacilityGeocodingService;
-
-  const onFacilityLocationChanged = mock(async () => undefined);
+  // Spec 0009 R5: this service no longer geocodes or writes coordinates. It
+  // hands the change to the one owner of `facilities.location`, which resolves,
+  // checks the coverage delta, writes, and recomputes membership.
+  const applyLocation = mock(async (_input: unknown) => ({
+    lat: -23.55,
+    lng: -46.63,
+    resolvedAddress: null,
+    geocoded: true,
+    losingCoverage: [],
+  }));
 
   const service = new FieldSuggestionApplyService({
     facilityRepository,
-    facilityGeocodingService,
-    onFacilityLocationChanged,
+    locationService: { applyLocation } as unknown as FacilityLocationService,
   });
 
   it("applies phone without geocoding", async () => {
@@ -32,14 +33,13 @@ describe("FieldSuggestionApplyService", () => {
     });
 
     expect(result).toEqual({ geocoded: false });
-    expect(facilityGeocodingService.geocodeAddress).not.toHaveBeenCalled();
+    expect(applyLocation).not.toHaveBeenCalled();
     expect(facilityRepository.applyApprovedFieldUpdates).toHaveBeenCalled();
   });
 
-  it("geocodes and updates location for address", async () => {
+  it("routes an address change through the location service", async () => {
     (facilityRepository.applyApprovedFieldUpdates as ReturnType<typeof mock>).mockClear();
-    (facilityGeocodingService.geocodeAddress as ReturnType<typeof mock>).mockClear();
-    onFacilityLocationChanged.mockClear();
+    applyLocation.mockClear();
 
     const result = await service.applyFieldChange({
       facilityId: 1,
@@ -53,30 +53,55 @@ describe("FieldSuggestionApplyService", () => {
     });
 
     expect(result).toEqual({ geocoded: true });
-    expect(facilityGeocodingService.geocodeAddress).toHaveBeenCalled();
-    expect(onFacilityLocationChanged).toHaveBeenCalledWith(1);
-    expect(facilityRepository.applyApprovedFieldUpdates).toHaveBeenCalledWith(
-      1,
+    // The point is derived by the location service, not written here.
+    expect(applyLocation).toHaveBeenCalledWith(
       expect.objectContaining({
-        streetAddress: "Av. Paulista",
-        lat: -23.55,
-        lng: -46.63,
+        facilityId: 1,
+        address: expect.objectContaining({ streetAddress: "Av. Paulista" }),
       })
     );
+    // The address text is still applied as the suggestion's own payload — and
+    // without lat/lng, which this service must no longer write.
+    const updates = (facilityRepository.applyApprovedFieldUpdates as ReturnType<typeof mock>)
+      .mock.calls[0]![1] as Record<string, unknown>;
+    expect(updates).toMatchObject({ streetAddress: "Av. Paulista" });
+    expect(updates.lat).toBeUndefined();
+    expect(updates.lng).toBeUndefined();
   });
 
-  it("fails when geocode returns null", async () => {
-    (facilityGeocodingService.geocodeAddress as ReturnType<typeof mock>).mockResolvedValueOnce(
-      null
-    );
+  /**
+   * Spec 0009 R5 / decision 4: a pin move is reviewable like any other edit, and
+   * the one most able to strand a rep.
+   */
+  it("routes a coordinate change through the location service", async () => {
+    applyLocation.mockClear();
 
-    await expect(
-      service.applyFieldChange({
-        facilityId: 1,
-        fieldKey: "address",
-        proposedValue: { streetAddress: "Rua X", city: "São Paulo" },
-      })
-    ).rejects.toBeInstanceOf(OperationNotAllowedError);
+    const result = await service.applyFieldChange({
+      facilityId: 1,
+      fieldKey: "coordinates",
+      proposedValue: { lat: -23.5, lng: -46.6 },
+      acceptCoverageLoss: true,
+    });
+
+    expect(result).toEqual({ geocoded: false });
+    expect(applyLocation).toHaveBeenCalledWith({
+      facilityId: 1,
+      lat: -23.5,
+      lng: -46.6,
+      acceptCoverageLoss: true,
+    });
+  });
+
+  it("rejects coordinates outside the possible range", () => {
+    expect(() =>
+      service.validateProposedValue("coordinates", { lat: 91, lng: 0 })
+    ).toThrow(ValidationError);
+    expect(() =>
+      service.validateProposedValue("coordinates", { lat: 0, lng: 181 })
+    ).toThrow(ValidationError);
+    expect(() =>
+      service.validateProposedValue("coordinates", { lat: "x", lng: 0 })
+    ).toThrow(ValidationError);
   });
 
   it("rejects empty string proposed values", () => {

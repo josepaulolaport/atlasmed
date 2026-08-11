@@ -196,6 +196,7 @@ const approveFieldSuggestionRoute = new Elysia()
         userId,
         scope,
         resolutionNote: body.resolutionNote,
+        acceptCoverageLoss: body.acceptCoverageLoss,
       });
       if (!result) {
         throw new ResourceNotFoundError("FieldSuggestion", params.id);
@@ -204,13 +205,20 @@ const approveFieldSuggestionRoute = new Elysia()
     },
     {
       detail: {
-        summary: "Approve field suggestion",
+        summary:
+          "Approve field suggestion (location changes that strand a rep need acceptCoverageLoss)",
         tags: ["FieldSuggestions"],
         security: [{ bearerAuth: [] }],
       },
       params: t.Object({ id: t.Number({ minimum: 1 }) }),
       body: t.Object({
         resolutionNote: t.Optional(t.String()),
+        /**
+         * Spec 0009 R5. Omit it and a move that would leave reps outside their
+         * patch is refused with 409 and the list of affected assignments; the
+         * suggestion stays PENDING.
+         */
+        acceptCoverageLoss: t.Optional(t.Boolean()),
       }),
     }
   );
