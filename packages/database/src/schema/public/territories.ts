@@ -59,6 +59,31 @@ export const territories = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
+  /*
+   * Why the geometric invariants are NOT database constraints (spec 0009).
+   *
+   * I3 (same-vertical zones must not overlap), I4 (a patch is contained in
+   * exactly one zone) and I2 (a rep may hold a clinic their patch covers) are
+   * enforced in the application, deliberately — not by omission.
+   *
+   * The obvious constraint for I3 is
+   *   EXCLUDE USING gist (vertical_id WITH =, boundary WITH &&)
+   * and it would be **wrong**. `&&` tests bounding-box overlap, not true
+   * intersection, so it rejects every pair of adjacent zones whose boxes touch
+   * — which is most real neighbours. The rule this system actually needs is
+   * `ST_Intersects AND NOT ST_Touches`, above a 1 m² epsilon, and no EXCLUDE
+   * operator class expresses that.
+   *
+   * Getting them into the database means CONSTRAINT TRIGGERs running PostGIS
+   * predicates on every write. That is a real option, not a forbidden one; it is
+   * simply a larger change than the guarantee currently justifies, given every
+   * write already goes through one transactional path (`planTerritoryBoundary`)
+   * and the epsilon is proved against the database in
+   * `territory-sibling-overlap.db.test.ts`.
+   *
+   * If a second writer ever appears, this trade stops holding and the triggers
+   * become the right answer.
+   */
   (t) => [
     uniqueIndex("territories_vertical_id_slug_uidx").on(t.verticalId, t.slug),
     /** Target for composite FKs that must match territory vertical. */
