@@ -124,9 +124,8 @@ export class RefreshSessionUseCase {
       loadDeviceFingerprintFromDb: !dbSessionRecord,
     });
 
-    const refreshCredentials = this.deps.sessionService.buildRefreshCredentials({
-      userRole: oldSession.user.role.name as any,
-    });
+    const refreshCredentials =
+      this.deps.sessionService.buildRefreshCredentials();
 
     const rotationResult =
       await this.deps.sessionRepository.rotateRefreshTokenTransaction({

@@ -121,12 +121,12 @@ class ClinicsQuery {
 
 final clinicsPageProvider = StreamProvider.autoDispose
     .family<PaginatedFacilities, ClinicsQuery>((ref, query) async* {
+      final lifetime = keepExplorePageAlive(ref);
       final sessionTag = await ref.watch(exploreSessionCacheTagProvider.future);
-      if (sessionTag == null) return;
+      if (sessionTag == null || lifetime.isDisposed) return;
       final repository = ref.watch(
         _clinicsPageRepositoryProvider((query: query, sessionTag: sessionTag)),
       );
-      keepExplorePageAlive(ref);
 
       final currentValue = repository.currentValue;
       if (currentValue != null) yield currentValue;
