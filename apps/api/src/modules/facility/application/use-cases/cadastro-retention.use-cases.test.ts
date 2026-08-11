@@ -34,7 +34,9 @@ const globalScope = {
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 function reviewUseCase() {
-  const setPurgeAfterForDocument = mock(async () => {});
+  const setPurgeAfterForDocument = mock(
+    async (_input: { documentId: number; purgeAfter: Date | null }) => {}
+  );
 
   return {
     setPurgeAfterForDocument,
@@ -83,10 +85,7 @@ describe("retention on review", () => {
     });
 
     expect(setPurgeAfterForDocument).toHaveBeenCalledTimes(1);
-    const call = setPurgeAfterForDocument.mock.calls[0]![0] as {
-      documentId: number;
-      purgeAfter: Date | null;
-    };
+    const call = setPurgeAfterForDocument.mock.calls[0]![0];
     expect(call.documentId).toBe(10);
     const scheduled = call.purgeAfter!.getTime();
     // A week out, allowing for the clock moving during the call.
