@@ -15,6 +15,20 @@ export type {
   PurchaseRecurrenceSnapshot,
 } from "./purchase-recurrence";
 export {
+  APPLICATION_TIMEZONE,
+  MarketMetricValidationError,
+  addMonths,
+  averageMonthly,
+  deriveShare,
+  monthBounds,
+  monthKeyAt,
+  trailingMonths,
+} from "./market-metric";
+export type {
+  MarketMetricValidationErrorCode,
+  MonthKey,
+} from "./market-metric";
+export {
   deriveFacilityProfileFunnelFields,
   mapFacilitySearchDocument,
 } from "./facility-search-document";

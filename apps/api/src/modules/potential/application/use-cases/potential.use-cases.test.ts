@@ -40,7 +40,7 @@ function createRepository(
     listUsage: async () => [],
     upsertUsage: async () => undefined,
     deleteUsage: async () => true,
-    sumAtlasmedQtyByDefinition: async () => [],
+    sumAtlasmedQtyByDefinitionAndMonth: async () => [],
     linkProduct: async () => undefined,
     unlinkProduct: async () => false,
     listProductsForDefinition: async () => [],

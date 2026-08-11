@@ -112,8 +112,8 @@ already used by `territories_id_vertical_id_uidx` and the manager-zone FK.
 | `product_potential_definitions` | admin | the metric per vertical (`ampolas_mes`, `label`). **Unchanged.** |
 | `product_potential_links` | admin | **our** products → definition (many products : one definition) |
 | `product_equivalences` | admin | our product ↔ competitor product |
-| `facility_product_usage` | **rep** | (profile, definition, competitor product) → quantity |
-| `facility_metric_snapshot` | system | (profile, definition) → ours, theirs, total, share |
+| `facility_product_usage` | **rep** | (profile, definition, competitor product, **month**) → quantity |
+| `facility_metric_snapshot` | system | (profile, definition, **month**) → ours, theirs, total, share |
 
 > **Decisions 2026-08-10 — the rep's entry, and the usage key.**
 >
@@ -126,6 +126,28 @@ already used by `territories_id_vertical_id_uidx` and the manager-zone FK.
 > **Uniqueness is (profile, definition, product).** The same competitor product may carry a
 > separate quantity under each metric it belongs to. The §7 ambiguity is a *picker* problem, not a
 > storage one — the schema stays capable and the UI decides what to offer.
+
+> **Amendment 2026-08-11 — the key gains a month: (profile, definition, product, month).**
+>
+> The rep's number is a **monthly observation**, not a timeless attribute: they answer *quantas por
+> mês*, and that answer is true of a month. Stored without one, today's figure silently became the
+> answer for every month ever asked about.
+>
+> This matters because of an asymmetry. **`ours` already has perfect history** — every past month's
+> numerator is exactly recomputable from `orders.ordered_at`, forever. Only `theirs` lacked it. The
+> first P4-3 design compensated with a freeze rule (complete months stop being recomputable after a
+> three-month tail) so that recomputing March could not write today's competitor number onto it.
+> That worked, but it bought an arbitrary freeze horizon, snapshots whose meaning depended on when
+> you read them, a trend chart whose last three points moved whenever a rep edited a quantity, and a
+> reconciliation sweep promoted from optimisation to correctness — all to paper over one missing
+> column.
+>
+> With the month in the key, every one of those disappears and `facility_metric_snapshot` becomes a
+> **derived cache**: truncatable and rebuildable from scratch, deterministically, at any time.
+>
+> Changed the same day P4-2 merged, while the table had zero rows and no writer
+> (`setCompetitorQuantity` had no call sites — the picker is P4-5). It would not have been free
+> later.
 
 **`product_equivalences` is used only to populate the rep's picker.** It is not part of the
 metric's keying. A usage row, once created, stands on its own — so removing an equivalence does
@@ -168,20 +190,49 @@ must measure in the same unit. Revisit if that ever fails.
 
 ### 4.3 Calculation
 
+Per calendar month M, in the application timezone:
+
 ```
-ours_monthly   = Σ (order_items.quantity × products.metric_units)
-                 over orders for this profile, last N months ÷ N
-theirs_monthly = Σ (facility_product_usage.quantity × products.metric_units)
-total          = ours_monthly + theirs_monthly
-share          = ours_monthly ÷ total          (null when total = 0)
+ours[M]   = Σ (order_items.quantity × products.metric_units)
+            over eligible orders with ordered_at in [M, M+1)
+theirs[M] = Σ (facility_product_usage.quantity × products.metric_units)
+            over usage rows for month M
+total[M]  = ours[M] + theirs[M]
+share[M]  = ours[M] ÷ total[M]                 (null when total = 0)
 ```
 
-- **N configurable, default 3.** Both sides must represent the same period — the rep enters a
-  monthly figure, so ours must be a monthly average, not a 90-day sum.
-  **Decision 2026-08-10: N is a single global constant** (`MONTHS_IN_WINDOW`), not per-definition
-  and not database-backed. Changing it is a deploy and changes every metric at once. Revisit only
-  when two metrics genuinely need different windows — a column added later is a small migration,
-  a per-definition value nobody varies is permanent noise.
+The **trailing N-month average is derived at read time** from those stored months — it is not a
+stored value:
+
+```
+ours_monthly = (Σ ours[M-N+1 … M]) ÷ N
+```
+
+> **Amendment 2026-08-11 — store facts, derive views.** The formula previously read
+> "over orders for this profile, last N months ÷ N", which is a *rolling window* and cannot be
+> stored per month: it depends on when you ask. Three things follow from storing month facts
+> instead.
+>
+> The snapshot row becomes genuinely idempotent — no wall-clock reaches the computation, so
+> recomputing month M tomorrow yields exactly today's answer. This is what §4.4 requires of the
+> handler and what a reconciliation sweep needs in order to converge at all; a value that drifts
+> with the clock would mark every snapshot permanently stale.
+>
+> "March versus April" is answerable, because that is what is stored.
+>
+> **Changing N stops being a data migration and becomes a query change.**
+>
+> It also removes a live distortion: dividing by a constant 3 understated any clinic with fewer
+> than three months of orders by up to 3×.
+
+- **N configurable, default 3**, a single global constant (`MONTHS_IN_WINDOW`) — not
+  per-definition, not database-backed. It now lives on the **read** path, where a presentation
+  constant belongs. Revisit only when two metrics genuinely need different windows.
+- **Month boundaries are `America/São_Paulo`**, not UTC. `orders.ordered_at` is `timestamp without
+  time zone` on a UTC server, so UTC bounds would place an order taken 31 March 22:00 in São Paulo
+  into April — and the rep who entered it would disagree with the chart. No existing figure moves:
+  all 1,131 production orders are Emultec imports stamped at noon UTC, whose date component is the
+  same in both zones. It matters for orders created in-app, which carry a real timestamp.
 - Eligible orders follow ADR 0003: `status ∈ (APPROVED, INVOICED)`, `type ∈ (SALE, CONSIGNMENT)`.
   **This corrects a live inconsistency** — the penetration query currently filters `type = 'SALE'`
   only while the funnel counts both.
@@ -246,6 +297,27 @@ historical. Recomputed on:
 > keys on `computed_at` versus input timestamps, which needs an index, and the query plan must be
 > checked against real data rather than assumed.
 
+> **Amendment 2026-08-11 — the snapshot is a derived cache, and the sweep is no longer correctness.**
+>
+> Once usage carries a month (§4.1), **both inputs have history**, so every row is a pure function
+> of stored state for all time — not merely for the recent past. The snapshot table can be
+> truncated and rebuilt from scratch, deterministically, and reproduce itself exactly.
+>
+> What that changes:
+>
+> - **the sweep drops from correctness to latency.** A sweep that never runs costs staleness, not a
+>   wrong number, because the truth is always recoverable from the inputs
+> - **the backfill command is just a rebuild** over an explicit month range, not an escape hatch
+> - **no month ever changes meaning after the fact** — stability is structural, not a policy
+>
+> Index reality, measured rather than assumed: `orders_updated_at_profile_id_idx` on
+> `(updated_at, facility_vertical_profile_id)` already gives the sweep its range scan.
+> `facility_product_usage` has **no `updated_at` index** and needs one before it grows.
+>
+> **The sweep must still report, not just repair.** It emits `recomputed N, differed M`; a nonzero
+> `differed` means a trigger was lost. A sweep that silently corrects is the counter-instead-of-an-
+> alarm this codebase has been bitten by before.
+
 **Granularity: one row per (profile, definition, month).** Calendar months, not sliding windows.
 
 Rejected: a row per day. At ~14k clinics × N metrics that is ~15M rows a year, of which the
@@ -270,6 +342,12 @@ only complete months.
 > A **backfill command must still exist**, idempotent and restricted to an explicit month range —
 > needed to repair a gap after an incident, and to populate history once competitor data has been
 > collected for a period. It is a tool, not part of the migration.
+
+> **Still true after the 2026-08-11 amendment, and for a sharper reason.** With usage keyed by
+> month, a backfilled month simply *has no usage rows*: `theirs = 0`, so `total = ours` and
+> `share = 100%`. Not a null, not a gap — a confident, wrong number. The rule stands: snapshots
+> begin at the current month, and history is populated only for periods where competitor data was
+> actually collected.
 
 ### 4.5 Historical view
 

@@ -7,9 +7,27 @@ import {
   ResourceNotFoundError,
   ValidationError,
 } from "../../../../shared/errors";
+import {
+  averageMonthly,
+  deriveShare,
+  monthBounds,
+  monthKeyAt,
+  trailingMonths,
+  type MonthKey,
+} from "@atlasmed/facility-insights";
 import type { PotentialRepository } from "../interfaces/potential.repository.interface";
 
-const ROLLING_DAYS = 90;
+/**
+ * How many calendar months the displayed monthly figure averages over.
+ *
+ * A **read-side** constant (spec 0013 §4.3): snapshots store the facts of one
+ * month, and the window is applied when they are presented. Changing it is a
+ * query change, not a data migration.
+ *
+ * It replaced a rolling 90-day sum divided by 3 — which had no upper bound, so
+ * future-dated orders counted, and which depended on the clock, so the same
+ * month could never be recomputed to the same number.
+ */
 const MONTHS_IN_WINDOW = 3;
 
 function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
@@ -37,9 +55,16 @@ export class ListFacilityPotentialsUseCase {
     facilityId: number;
     verticalId: number;
     scope: ScopeContext;
+    /** Injectable so the window under test does not depend on the wall clock. */
+    now?: Date;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
+
+    const currentMonth = monthKeyAt(input.now ?? new Date());
+    const months = trailingMonths(currentMonth, MONTHS_IN_WINDOW);
+    const windowStart = monthBounds(months[0]!).start;
+    const windowEnd = monthBounds(currentMonth).end;
 
     const definitions = await this.deps.potentialRepository.listDefinitions({
       verticalId: input.verticalId,
@@ -53,16 +78,23 @@ export class ListFacilityPotentialsUseCase {
     const [usage, qtySums] = await Promise.all([
       profileId == null
         ? Promise.resolve([])
-        : this.deps.potentialRepository.listUsage({ profileId, definitionIds }),
-      this.deps.potentialRepository.sumAtlasmedQtyByDefinition({
+        : this.deps.potentialRepository.listUsage({ profileId, definitionIds, months }),
+      this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
         facilityId: input.facilityId,
         verticalId: input.verticalId,
         definitionIds,
-        since: new Date(Date.now() - ROLLING_DAYS * 86_400_000),
+        rangeStart: windowStart,
+        rangeEnd: windowEnd,
       }),
     ]);
 
-    const qtyByDef = new Map(qtySums.map((q) => [q.definitionId, q.totalQty]));
+    // Ours: sum each month in the window, then divide by the window — months
+    // with no orders are real zeros, not missing data.
+    const oursByDef = new Map<number, number>();
+    for (const row of qtySums) {
+      oursByDef.set(row.definitionId, (oursByDef.get(row.definitionId) ?? 0) + row.totalQty);
+    }
+
     const usageByDef = new Map<number, typeof usage>();
     for (const row of usage) {
       const list = usageByDef.get(row.definitionId) ?? [];
@@ -73,11 +105,21 @@ export class ListFacilityPotentialsUseCase {
     return {
       verticalId: input.verticalId,
       items: definitions.map((def) => {
-        const sumQty = qtyByDef.get(def.id) ?? 0;
-        const ours = sumQty / MONTHS_IN_WINDOW;
-        const competitors = usageByDef.get(def.id) ?? [];
-        const theirs = competitors.reduce((sum, c) => sum + c.metricQuantity, 0);
-        const total = ours + theirs;
+        const monthlyRows = usageByDef.get(def.id) ?? [];
+
+        // Both sides average over the same window, or the ratio compares a
+        // three-month total against a one-month figure.
+        const ours = averageMonthly([oursByDef.get(def.id) ?? 0], MONTHS_IN_WINDOW);
+        const theirs = averageMonthly(
+          monthlyRows.map((row) => row.metricQuantity),
+          MONTHS_IN_WINDOW,
+        );
+        const { totalQty, share } = deriveShare(ours, theirs);
+
+        // The list names who supplies this clinic *now*; the averages above are
+        // the window. Showing three months of rows would double-count a product
+        // the rep recorded in each of them.
+        const currentMonthRows = monthlyRows.filter((row) => row.month === currentMonth);
 
         return {
           definitionId: def.id,
@@ -85,10 +127,10 @@ export class ListFacilityPotentialsUseCase {
           label: def.label,
           /** Ours, from orders — monthly average over the window. */
           atlasmedMonthlyAvgQty: ours,
-          /** Theirs, as recorded by the rep. */
+          /** Theirs, as recorded by the rep — monthly average over the window. */
           competitorMonthlyQty: theirs,
           /** The observed market: ours + theirs. */
-          totalMarketQty: total,
+          totalMarketQty: totalQty,
           /**
            * Our share of the observed market, 0–1.
            *
@@ -98,8 +140,10 @@ export class ListFacilityPotentialsUseCase {
            * second. A clinic with orders and no competitor data is genuinely
            * 100%: everything we can see of that market is ours.
            */
-          share: total > 0 ? ours / total : null,
-          competitors: competitors.map((c) => ({
+          share,
+          /** The month the competitor rows below belong to. */
+          month: currentMonth,
+          competitors: currentMonthRows.map((c) => ({
             productId: c.productId,
             productName: c.productName,
             quantity: c.quantity,
@@ -128,8 +172,11 @@ export class SetFacilityProductUsageUseCase {
     definitionId: number;
     productId: number;
     quantity: number;
+    /** The month observed. Defaults to the current month in São Paulo. */
+    month?: MonthKey;
     userId: number;
     scope: ScopeContext;
+    now?: Date;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
@@ -137,6 +184,17 @@ export class SetFacilityProductUsageUseCase {
     if (!Number.isFinite(input.quantity) || input.quantity < 0) {
       throw new ValidationError([
         { field: "quantity", message: "quantity must be a non-negative number" },
+      ]);
+    }
+
+    const currentMonth = monthKeyAt(input.now ?? new Date());
+    const month = input.month ?? currentMonth;
+    // A rep can correct an earlier month, but not record the future — there is
+    // nothing to observe yet, and a future row would silently enter the window
+    // as soon as the calendar caught up.
+    if (month > currentMonth) {
+      throw new ValidationError([
+        { field: "month", message: "cannot record usage for a future month" },
       ]);
     }
 
@@ -173,6 +231,7 @@ export class SetFacilityProductUsageUseCase {
       definitionId: input.definitionId,
       verticalId: definition.verticalId,
       productId: input.productId,
+      month,
       quantity: input.quantity,
       updatedByUserId: input.userId,
     });
@@ -181,6 +240,7 @@ export class SetFacilityProductUsageUseCase {
       facilityId: input.facilityId,
       verticalId: input.verticalId,
       scope: input.scope,
+      now: input.now,
     });
   }
 }
@@ -193,10 +253,15 @@ export class RemoveFacilityProductUsageUseCase {
     verticalId: number;
     definitionId: number;
     productId: number;
+    /** The month to clear. Defaults to the current month in São Paulo. */
+    month?: MonthKey;
     scope: ScopeContext;
+    now?: Date;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
+
+    const month = input.month ?? monthKeyAt(input.now ?? new Date());
 
     const profileId = await this.deps.potentialRepository.findProfileId({
       facilityId: input.facilityId,
@@ -209,15 +274,18 @@ export class RemoveFacilityProductUsageUseCase {
       );
     }
 
+    // Deletes one month, never the product's whole history — removing what the
+    // rep sees today must not silently erase what was true in March.
     const removed = await this.deps.potentialRepository.deleteUsage({
       profileId,
       definitionId: input.definitionId,
       productId: input.productId,
+      month,
     });
     if (!removed) {
       throw new ResourceNotFoundError(
         "FacilityProductUsage",
-        `${input.definitionId}:${input.productId}`,
+        `${input.definitionId}:${input.productId}:${month}`,
       );
     }
 
@@ -225,6 +293,7 @@ export class RemoveFacilityProductUsageUseCase {
       facilityId: input.facilityId,
       verticalId: input.verticalId,
       scope: input.scope,
+      now: input.now,
     });
   }
 }
