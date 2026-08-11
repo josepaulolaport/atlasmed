@@ -28,6 +28,16 @@ export type {
   MarketMetricValidationErrorCode,
   MonthKey,
 } from "./market-metric";
+export { recomputeMetricSnapshots } from "./metric-snapshot";
+export type {
+  MetricSnapshotStore,
+  OursByDefinitionMonth,
+  ProfileForSnapshot,
+  RecomputeMetricSnapshotsResult,
+  SnapshotRowToWrite,
+  StoredSnapshotCell,
+  TheirsByDefinitionMonth,
+} from "./metric-snapshot";
 export {
   deriveFacilityProfileFunnelFields,
   mapFacilitySearchDocument,
