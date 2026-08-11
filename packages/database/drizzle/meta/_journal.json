@@ -624,6 +624,13 @@
       "when": 1786411218862,
       "tag": "0088_retire_legacy_potential_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1786412520812,
+      "tag": "0089_cadastro_requirement_catalog",
+      "breakpoints": true
     }
   ]
 }

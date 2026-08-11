@@ -35,6 +35,7 @@ export {
   ResourceConflictError,
   CalendarConflictError,
   CalendarVersionConflictError,
+  BoundaryImpactSetChangedError,
   EmailAlreadyExistsError,
   UsernameAlreadyExistsError,
   InviteAlreadyUsedError,

@@ -5,7 +5,7 @@ import type {
   TerritorySpatialRepository,
 } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryRecord } from "../interfaces/territory.repository.interface";
-import { GEO_SIBLING_OVERLAP_BLOCK_RATIO } from "../constants/territory-geo.constants";
+import { GEO_SIBLING_OVERLAP_EPSILON_SQ_M } from "../constants/territory-geo.constants";
 import {
   isManagerZoneType,
   isRepPatchType,
@@ -21,6 +21,14 @@ export interface ManagerZoneCandidate {
 export interface RepPatchContainmentResolution {
   managerTerritoryId: number;
   candidates: ManagerZoneCandidate[];
+}
+
+/** Square metres are unreadable above a hectare; the operator drew in km. */
+function formatOverlapArea(squareMeters: number): string {
+  if (squareMeters >= 1_000_000) {
+    return `${(squareMeters / 1_000_000).toFixed(2)} km²`;
+  }
+  return `${Math.round(squareMeters)} m²`;
 }
 
 export class TerritoryContainmentService {
@@ -49,14 +57,17 @@ export class TerritoryContainmentService {
       geoJson,
     });
 
-    const substantial = conflicts.filter(
-      (c) => c.overlapRatio > GEO_SIBLING_OVERLAP_BLOCK_RATIO
+    // Spec 0009 R3 / invariant I3: same-vertical zones must not overlap beyond
+    // float noise. Anything the editor produces clips exactly (see the constant),
+    // so a conflict reaching here is a real overlap, not a rounding artefact.
+    const overlapping = conflicts.filter(
+      (c) => c.overlapSquareMeters > GEO_SIBLING_OVERLAP_EPSILON_SQ_M
     );
-    if (substantial.length > 0) {
+    if (overlapping.length > 0) {
       throw new OperationNotAllowedError(
         "save_boundary",
-        `Boundary substantially overlaps sibling territories: ${substantial
-          .map((c) => `${c.code} (${Math.round(c.overlapRatio * 100)}%)`)
+        `Boundary overlaps sibling territories: ${overlapping
+          .map((c) => `${c.code} (${formatOverlapArea(c.overlapSquareMeters)})`)
           .join(", ")}`
       );
     }

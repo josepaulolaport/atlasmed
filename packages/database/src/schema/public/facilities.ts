@@ -411,6 +411,17 @@ export const conformityRequirements = pgTable(
       .notNull()
       .default(209_715_200),
     requiresFrontAndBack: boolean("requires_front_and_back").notNull().default(false),
+    /**
+     * Whether the rep is asked for a validity date when submitting this
+     * requirement, and the reviewer asked to confirm it on approval
+     * (spec 0011 §3.3, ADR 0008 §4/§6).
+     *
+     * It is a property of the *requirement*, not of the document: a Cartão CNPJ
+     * never expires, a Licença Sanitária always does. The date itself lives on
+     * the document, and the expiry warning is derived from it at read time —
+     * there is no stored EXPIRING_SOON status to keep in step.
+     */
+    requiresValidityDate: boolean("requires_validity_date").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },

@@ -11,11 +11,50 @@ export interface ClinicMembershipTarget {
   managerZoneId: number | null;
 }
 
+/** One profile whose derived manager zone changed. */
+export interface ManagerZoneMembershipChange {
+  facilityVerticalProfileId: number;
+  facilityId: number;
+  managerZoneId: number | null;
+}
+
+/**
+ * A profile covered by more than one same-vertical manager zone. Its membership
+ * is set to NULL because no single owner can be derived — spec 0009 R4 requires
+ * this to be loud rather than a silent disappearance from both zones.
+ */
+export interface AmbiguousManagerZoneMatch {
+  facilityVerticalProfileId: number;
+  facilityId: number;
+  verticalId: number;
+  zoneIds: number[];
+}
+
+export interface ManagerZoneMembershipRecompute {
+  changed: ManagerZoneMembershipChange[];
+  ambiguous: AmbiguousManagerZoneMatch[];
+}
+
 export interface ClinicMembershipWriter {
   updateProfileTerritoryMemberships(
     facilityId: number,
     memberships: Array<{ verticalId: number; managerZoneId: number | null }>
   ): Promise<void>;
+
+  /**
+   * Recomputes derived manager-zone membership for every profile a territory's
+   * boundary can affect, in one statement.
+   *
+   * Spec 0009 R6. The per-clinic loop this replaces cost two round-trips per
+   * clinic — ~2500 for a national recompute — which is why the work was pushed
+   * onto a queue and HTTP 200 stopped meaning "membership is updated". Set-based
+   * it measures ~21 ms against the production snapshot, so it can run inside the
+   * boundary transaction: geometry and the membership it implies now commit
+   * together or not at all.
+   */
+  recomputeManagerZoneMembership(
+    territoryId: number
+  ): Promise<ManagerZoneMembershipRecompute>;
 
 
   findClinicsForMembership(params?: {
@@ -49,6 +88,17 @@ interface Dependencies {
   clinicWriter: ClinicMembershipWriter;
   /** Keep Meili `territoryIds` in sync after zone membership writes. */
   onClinicMembershipChanged?: (facilityId: number) => Promise<void>;
+  /**
+   * Spec 0009 R4 reporting. Injected rather than imported so this service stays
+   * free of the metrics and logging singletons, as the rest of the application
+   * layer here is.
+   */
+  recordAmbiguousMatch?: (source: "clinic_recompute", count: number) => void;
+  logAmbiguousMatch?: (match: {
+    facilityId: number;
+    verticalId: number;
+    zoneIds: number[];
+  }) => void;
 }
 
 export class TerritoryMembershipService {
@@ -83,7 +133,23 @@ export class TerritoryMembershipService {
       { excludeTerritoryId: options?.excludeTerritoryId }
     );
 
-    const { singleMatches } = this.resolveVerticalMatches(matches);
+    const { singleMatches, ambiguousMatches } = this.resolveVerticalMatches(matches);
+
+    // Spec 0009 R4. Until now `hasAmbiguousMatch` was computed and had no
+    // consumer at all: a clinic covered by two same-vertical zones vanished from
+    // both managers' views with nothing recorded anywhere. Membership still
+    // clears — no single owner can be derived — but it no longer does so quietly.
+    if (ambiguousMatches.length > 0) {
+      this.deps.recordAmbiguousMatch?.("clinic_recompute", ambiguousMatches.length);
+      for (const ambiguous of ambiguousMatches) {
+        this.deps.logAmbiguousMatch?.({
+          facilityId: clinic.id,
+          verticalId: ambiguous.verticalId,
+          zoneIds: ambiguous.zoneIds,
+        });
+      }
+    }
+
     await this.deps.clinicWriter.updateProfileTerritoryMemberships(
       clinic.id,
       singleMatches.map((match) => ({
@@ -150,38 +216,30 @@ export class TerritoryMembershipService {
     return { processed: clinics.length, updated };
   }
 
-  async recomputeForTerritoryBoundary(territoryId: number): Promise<{ processed: number }> {
-    const clinicsById = new Map<number, ClinicMembershipTarget>();
-
-    const assignedToTerritory = await this.deps.clinicWriter.findClinicsForMembership({
-      territoryIds: [territoryId],
-    });
-    for (const clinic of assignedToTerritory) {
-      clinicsById.set(clinic.id, clinic);
-    }
-
-    const boundingBox = await this.deps.spatialRepository.getBoundaryBoundingBox(territoryId);
-    if (boundingBox) {
-      const inBoundingBox = await this.deps.clinicWriter.findClinicsForMembership({
-        boundingBox,
-      });
-      for (const clinic of inBoundingBox) {
-        clinicsById.set(clinic.id, clinic);
-      }
-    }
-
-    let processed = 0;
-    for (const clinic of clinicsById.values()) {
-      await this.assignClinicByGeo(clinic, { notifySearch: false });
-      processed += 1;
-    }
-
-    return { processed };
+  /**
+   * Delegates to the one set-based statement so the queued path and the
+   * transactional path in `saveBoundary` apply the same rule. Two
+   * implementations of "which zone owns this clinic" would drift.
+   */
+  async recomputeForTerritoryBoundary(
+    territoryId: number
+  ): Promise<ManagerZoneMembershipRecompute> {
+    // Deliberately does not touch the search index, matching the loop it
+    // replaces (which passed `notifySearch: false`): Meili's `territoryIds`
+    // catch up on the periodic rebuild, not here. Syncing inline would put N
+    // HTTP calls to an external service on this path.
+    return this.deps.clinicWriter.recomputeManagerZoneMembership(territoryId);
   }
 
+  /**
+   * Exactly one covering zone per vertical wins; zero or several resolve to no
+   * membership. Returns *which* verticals were ambiguous and which zones
+   * competed — the previous `hasAmbiguousMatch: boolean` could not say either,
+   * which is part of why nothing consumed it.
+   */
   private resolveVerticalMatches(matches: ClinicAssignmentTerritoryMatch[]): {
     singleMatches: ClinicAssignmentTerritoryMatch[];
-    hasAmbiguousMatch: boolean;
+    ambiguousMatches: Array<{ verticalId: number; zoneIds: number[] }>;
   } {
     const matchesByVerticalId = new Map<number, ClinicAssignmentTerritoryMatch[]>();
     for (const match of matches) {
@@ -191,15 +249,18 @@ export class TerritoryMembershipService {
     }
 
     const singleMatches: ClinicAssignmentTerritoryMatch[] = [];
-    let hasAmbiguousMatch = false;
-    for (const verticalMatches of matchesByVerticalId.values()) {
+    const ambiguousMatches: Array<{ verticalId: number; zoneIds: number[] }> = [];
+    for (const [verticalId, verticalMatches] of matchesByVerticalId) {
       if (verticalMatches.length === 1) {
         singleMatches.push(verticalMatches[0]!);
       } else {
-        hasAmbiguousMatch = true;
+        ambiguousMatches.push({
+          verticalId,
+          zoneIds: verticalMatches.map((match) => match.id),
+        });
       }
     }
 
-    return { singleMatches, hasAmbiguousMatch };
+    return { singleMatches, ambiguousMatches };
   }
 }
