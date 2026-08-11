@@ -396,3 +396,20 @@ String _fmtQty(double? value) {
   if (value == value.roundToDouble()) return value.toStringAsFixed(0);
   return value.toStringAsFixed(1);
 }
+
+/// The metric row on its own, so its layout can be asserted at a real phone
+/// width without standing up providers, a repository and a network.
+///
+/// The layout is the thing worth testing here: the previous version put four
+/// stat tiles across 360dp and silently ellipsised every caption.
+@visibleForTesting
+class PotentialRowHarness extends StatelessWidget {
+  const PotentialRowHarness({super.key, required this.item, this.onEdit});
+
+  final FacilityPotentialItem item;
+  final void Function(CompetitorUsage? existing)? onEdit;
+
+  @override
+  Widget build(BuildContext context) =>
+      _PotentialRow(item: item, onEdit: onEdit);
+}
