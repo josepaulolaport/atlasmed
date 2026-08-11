@@ -26,7 +26,6 @@ import {
 import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
 import { assertTerritorialJurisdiction } from "../services/territory-scope-policy.service";
 import type { AmbiguousManagerZoneMatch } from "../services/territory-membership.service";
-import { logger } from "../../../../infrastructure/logging/logger";
 
 interface Dependencies {
   territoryRepository: TerritoryRepository;
@@ -55,6 +54,12 @@ interface Dependencies {
    * Empty sets are not published.
    */
   onMembershipRecomputed?: (facilityIds: number[]) => Promise<void>;
+  /**
+   * Spec 0009 R4: clinics this save left covered by two same-vertical zones.
+   * Injected rather than reaching for the metrics and logging singletons, which
+   * is the convention the access module's `IMetrics` already sets.
+   */
+  onAmbiguousManagerZones?: (matches: AmbiguousManagerZoneMatch[]) => void;
 }
 
 export type BoundaryImpactClinic = {
@@ -237,18 +242,10 @@ export class TerritoryBoundaryUseCases {
       };
     });
 
-    // Spec 0009 R4 wants this loud. The full treatment — metric and a distinct
-    // `ambiguous_zone` reason in the unassigned queue — belongs to P5-3; leaving
-    // it entirely unreported in the meantime, when the recompute has just handed
-    // it to us, would be manufacturing the silence that requirement is about.
-    for (const match of ambiguous) {
-      logger.warn("Clinic covered by more than one manager zone; membership cleared", {
-        facilityId: match.facilityId,
-        facilityVerticalProfileId: match.facilityVerticalProfileId,
-        verticalId: match.verticalId,
-        zoneIds: match.zoneIds.join(","),
-        territoryId: input.territoryId,
-      });
+    // Spec 0009 R4: an overlap that clears a clinic's membership must leave
+    // evidence rather than removing it from both managers' views in silence.
+    if (ambiguous.length > 0) {
+      this.deps.onAmbiguousManagerZones?.(ambiguous);
     }
 
     // Published only after commit, so no downstream job reads uncommitted rows

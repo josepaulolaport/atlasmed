@@ -1,7 +1,8 @@
 export interface SiblingOverlapConflict {
   id: number;
   code: string;
-  overlapRatio: number;
+  /** Absolute intersection area. Spec 0009 R3 judges overlap in m², not as a share. */
+  overlapSquareMeters: number;
 }
 
 export interface OverlappingTerritory {

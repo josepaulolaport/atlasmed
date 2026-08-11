@@ -25,6 +25,7 @@ export class MetricsService {
   public readonly auditSiemExportBatchesCounter: Counter;
   public readonly auditSiemExportFailuresCounter: Counter;
   public readonly searchMeiliFallbackCounter: Counter;
+  public readonly territoryAmbiguousZoneCounter: Counter;
 
   private constructor() {
     this.httpRequestDuration = new Histogram({
@@ -152,6 +153,14 @@ export class MetricsService {
       help: "Meilisearch list/search requests that fell back to SQL",
       labelNames: ["index", "reason"],
     });
+
+    this.territoryAmbiguousZoneCounter = new Counter({
+      name: "territory_ambiguous_manager_zone_total",
+      help:
+        "Clinic profiles covered by more than one same-vertical manager zone, " +
+        "whose derived membership was therefore cleared (spec 0009 R4)",
+      labelNames: ["source"],
+    });
   }
 
   public static getInstance(): MetricsService {
@@ -212,6 +221,20 @@ export class MetricsService {
 
   public recordSuspiciousActivity(type: string): void {
     this.suspiciousActivityCounter.inc({ type });
+  }
+
+  /**
+   * Spec 0009 R4. `source` distinguishes the boundary save from the single-clinic
+   * recompute, because they mean different things: the first says an edit just
+   * created the overlap, the second that a clinic moved into a pre-existing one.
+   */
+  public recordAmbiguousManagerZone(
+    source: "boundary_save" | "clinic_recompute",
+    count = 1
+  ): void {
+    if (count > 0) {
+      this.territoryAmbiguousZoneCounter.inc({ source }, count);
+    }
   }
 
   public recordDbQuery(operation: string, table: string, duration: number): void {

@@ -339,11 +339,11 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       SELECT
         t.id,
         t.code,
-        CASE
-          WHEN ST_Area(child.geom::geography) = 0 THEN 0
-          ELSE ST_Area(ST_Intersection(t.boundary, child.geom)::geography)
-            / ST_Area(child.geom::geography)
-        END AS overlap_ratio
+        -- Spec 0009 R3: absolute area, not a share of the proposed polygon. As a
+        -- ratio the same sliver read as negligible on a state and alarming on a
+        -- city, which is backwards — an overlap is real or it is float noise,
+        -- and that does not depend on the size of what it overlaps.
+        ST_Area(ST_Intersection(t.boundary, child.geom)::geography) AS overlap_sq_m
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       CROSS JOIN child
@@ -359,12 +359,12 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.block_sibling_overlap = true
         AND ST_Intersects(t.boundary, child.geom)
         AND NOT ST_Touches(t.boundary, child.geom)
-    `) as Array<{ id: string; code: string; overlap_ratio: number }>;
+    `) as Array<{ id: string; code: string; overlap_sq_m: number }>;
 
     return rows.map((row) => ({
       id: Number(row.id),
       code: row.code,
-      overlapRatio: Number(row.overlap_ratio),
+      overlapSquareMeters: Number(row.overlap_sq_m),
     }));
   }
 
