@@ -2,56 +2,40 @@ import {
   monthKeyAt,
   recomputeMetricSnapshots,
   trailingMonths,
-  type MetricSnapshotStore,
   type MonthKey,
   type RecomputeMetricSnapshotsResult,
 } from "@atlasmed/facility-insights";
-import type { PotentialRepository } from "../interfaces/potential.repository.interface";
+import { createMetricSnapshotStore, type AnyDatabase } from "@atlasmed/database";
+import { db } from "../../../../infrastructure/database/db";
 
 /**
  * Recomputes `facility_metric_snapshots` for one profile.
  *
- * The algorithm itself lives in `@atlasmed/facility-insights` because the
- * Temporal worker cannot import from `apps/api` and needs the identical
- * behaviour for the reconciliation sweep. This class is the adapter that lets
- * the API's repository satisfy that port — it holds no rules of its own, so
- * there is nothing here to drift from what the sweep does.
+ * Both the algorithm and its queries live outside this module — the algorithm in
+ * `@atlasmed/facility-insights`, the storage in `@atlasmed/database` — because
+ * the Temporal worker runs the identical recompute for the reconciliation sweep
+ * and cannot import from `apps/api`. This class is the API's entry point to
+ * them, and deliberately holds no rules of its own: there is nothing here that
+ * could drift from what the sweep does.
+ *
+ * The database is injectable so the behaviour can be asserted inside a
+ * rolled-back transaction against real rows.
  */
 export class RecomputeMetricSnapshotsUseCase {
-  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+  constructor(private readonly deps: { database?: AnyDatabase } = {}) {}
 
   async execute(input: {
     profileId: number;
     months: MonthKey[];
     computedAt?: Date;
   }): Promise<RecomputeMetricSnapshotsResult> {
-    return recomputeMetricSnapshots(toStore(this.deps.potentialRepository), {
+    const store = createMetricSnapshotStore(this.deps.database ?? db);
+    return recomputeMetricSnapshots(store, {
       profileId: input.profileId,
       months: input.months,
       computedAt: input.computedAt ?? new Date(),
     });
   }
-}
-
-function toStore(repository: PotentialRepository): MetricSnapshotStore {
-  return {
-    findProfile: (profileId) => repository.findProfileById(profileId),
-    listDefinitionIds: async ({ verticalId }) => {
-      const definitions = await repository.listDefinitions({ verticalId });
-      return definitions.map((definition) => definition.id);
-    },
-    sumOurs: (query) => repository.sumAtlasmedQtyByDefinitionAndMonth(query),
-    sumTheirs: async (query) => {
-      const usage = await repository.listUsage(query);
-      return usage.map((row) => ({
-        definitionId: row.definitionId,
-        month: row.month,
-        metricQuantity: row.metricQuantity,
-      }));
-    },
-    listExisting: (query) => repository.listMetricSnapshotValues(query),
-    upsert: (rows) => repository.upsertMetricSnapshots(rows),
-  };
 }
 
 /**
