@@ -292,6 +292,28 @@ export class FacilityGeocodingService {
     }
   ) {}
 
+  /**
+   * The address a point sits at. Spec 0009 decision 4: an address and a pin are
+   * two views of one fact, so moving the pin must re-derive the address rather
+   * than leave it describing where the clinic used to be.
+   *
+   * Returns null rather than throwing when geocoding is unavailable — the pin is
+   * authoritative and a failed lookup must not block the move.
+   */
+  async describePoint(input: { lat: number; lng: number }): Promise<string | null> {
+    if (!this.deps.geocodingPort) {
+      return null;
+    }
+
+    const hit = await this.deps.geocodingPort.reverseGeocode({
+      latitude: input.lat,
+      longitude: input.lng,
+      limit: 1,
+    });
+
+    return hit?.fullAddress ?? null;
+  }
+
   async geocodeAddress(
     parts: AddressParts
   ): Promise<{ lat: number; lng: number } | null> {

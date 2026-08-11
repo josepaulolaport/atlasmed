@@ -15,6 +15,34 @@ export type {
   PurchaseRecurrenceSnapshot,
 } from "./purchase-recurrence";
 export {
+  APPLICATION_TIMEZONE,
+  DAYS_PER_MONTH,
+  ROLLING_WINDOW_DAYS,
+  monthlyRateFromDays,
+  rollingWindow,
+  MarketMetricValidationError,
+  addMonths,
+  averageMonthly,
+  deriveShare,
+  monthBounds,
+  monthKeyAt,
+  trailingMonths,
+} from "./market-metric";
+export type {
+  MarketMetricValidationErrorCode,
+  MonthKey,
+} from "./market-metric";
+export { recomputeMetricSnapshots } from "./metric-snapshot";
+export type {
+  MetricSnapshotStore,
+  OursByDefinitionMonth,
+  ProfileForSnapshot,
+  RecomputeMetricSnapshotsResult,
+  SnapshotRowToWrite,
+  StoredSnapshotCell,
+  TheirsByDefinitionMonth,
+} from "./metric-snapshot";
+export {
   deriveFacilityProfileFunnelFields,
   mapFacilitySearchDocument,
 } from "./facility-search-document";

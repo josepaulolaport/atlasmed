@@ -36,15 +36,17 @@ function createRepository(
     },
     updateDefinition: async () => null,
     softDeleteDefinition: async () => false,
-    listFacilityValues: async () => [],
-    upsertFacilityValue: async () => undefined,
-    deleteFacilityValue: async () => undefined,
-    sumAtlasmedQtyByDefinition: async () => [],
+    findProfileId: async () => 1,
+    listMetricSnapshots: async () => [],
+    listUsage: async () => [],
+    upsertUsage: async () => undefined,
+    deleteUsage: async () => true,
+    sumAtlasmedQtyByDefinitionAndMonth: async () => [],
     linkProduct: async () => undefined,
     unlinkProduct: async () => false,
     listProductsForDefinition: async () => [],
     productBelongsToVertical: async () => false,
-    findLinkByProductId: async () => null,
+    findLink: async () => null,
     ...overrides,
   };
 }
@@ -84,15 +86,17 @@ describe("potential scope enforcement", () => {
     await expect(
       new UnlinkProductPotentialUseCase({
         potentialRepository: createRepository({
-          findLinkByProductId: async () => ({
+          findLink: async () => ({
             productId: 1,
             definitionId: 2,
+            verticalId: 1,
           }),
           findDefinitionById: async () => null,
           unlinkProduct,
         }),
       }).execute({
         productId: 1,
+        definitionId: 2,
         scope: { ...baseScope, assignedVerticalIds: [1] },
       }),
     ).rejects.toBeInstanceOf(ResourceNotFoundError);

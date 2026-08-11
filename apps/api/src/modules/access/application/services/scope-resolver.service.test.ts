@@ -49,7 +49,6 @@ describe("ScopeResolver", () => {
       revokeTerritory: mock(async () => undefined),
       findTerritoryAssignmentsByUserId: mock(async () => []),
       findUserIdsByTerritoryId: mock(async () => []),
-      findManagerIdByUserId: mock(async () => null),
       findVerticalIdsByUserId: mock(async () => []),
       assignVertical: mock(async () => undefined),
       revokeVertical: mock(async () => undefined),

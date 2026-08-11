@@ -170,7 +170,9 @@ export const territoriesRoute = new Elysia()
       body: t.Object({
         name: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
-        reason: t.Optional(t.String()),
+        // Spec 0009 R9: `reason` is gone. It was accepted and discarded — never
+        // stored, never logged, never read. A field that looks like an audit
+        // trail and is not is worse than no field.
       }),
     }
   )
@@ -223,12 +225,15 @@ export const territoriesRoute = new Elysia()
   )
   .put(
     "/territories/:id/boundary",
-    async ({ params, body, getScope }) => {
+    async ({ params, body, getScope, getUserId }) => {
       const scope = await getScope();
+      // Spec 0009 R2/R5: recorded against any assignment this edit ends.
+      const actorUserId = await getUserId();
       const { acceptedFacilityIds, ...geoJson } = body;
       return territoryUseCases.saveBoundary().saveBoundary({
         territoryId: parseId(params.id, "Territory"),
         scope,
+        actorUserId,
         geoJson,
         acceptedFacilityIds: acceptedFacilityIds?.map((id) => parseId(id, "Facility")),
       });
@@ -285,34 +290,9 @@ export const territoriesRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
     }
-  )
-  .use(requirePermission("manage", "FACILITY"))
-  .patch(
-    "/facilities/:id/territory",
-    async ({ params, body, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["clinic:update"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.adminOverrideClinicTerritory().adminOverrideClinicTerritory({
-        facilityId: parseId(params.id, "Facility"),
-        territoryId: parseId(body.territoryId, "Territory"),
-        reason: body.reason,
-      });
-    },
-    {
-      body: t.Object({
-        territoryId: t.String(),
-        reason: t.Optional(t.String()),
-      }),
-    }
-  )
-  .post("/facilities/:id/territory/unlock-geo", async ({ params, getUser }) => {
-    const user = await getUser();
-    if (!isAdminRole(user.role.name as Role)) {
-      throw new InsufficientPermissionsError(["clinic:update"], [`role:${user.role.name}`]);
-    }
-    return territoryUseCases.unlockClinicGeo().unlockClinicGeo({
-      facilityId: parseId(params.id, "Facility"),
-    });
-  });
+  );
+
+// Spec 0009 R7: `PATCH /facilities/:id/territory` and
+// `POST /facilities/:id/territory/unlock-geo` are gone. Zone membership is
+// derived from geometry with no exceptions, so there is no manual setter to
+// contradict it — and no `territory_assignment_source` to record which one won.

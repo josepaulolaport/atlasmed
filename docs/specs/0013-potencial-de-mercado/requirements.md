@@ -65,11 +65,25 @@ families of the same kind of product. Adding a JSONB column later is a one-line 
 removing one after code depends on it is not. Revisit when a product type genuinely does not fit.
 
 ### 2.1 Enforcement
-- `order_items.product_id` may reference only `ownership = OWN`.
+- `order_items.product_id` may reference only `ownership = OWN`. ✅ migration `0085`
 - `facility_product_usage.product_id` may reference only `ownership = COMPETITOR` — orders are
   authoritative for our quantities, so there is no manual entry for our own products.
+  ⏳ the table does not exist until P4-2; `facility_competitor_product_standards`, which it
+  replaces, is constrained the same way in `0085` meanwhile.
 
 Both as DB constraints, not application discipline.
+
+**Also enforced in `0085`, and missing from this spec until it was asked for:** an equivalence is
+directional, so `product_equivalences.product_id` may reference only `OWN` and
+`competitor_product_id` only `COMPETITOR`, and the two ids must differ — a product cannot be its
+own competitor. Before `0085` that held only because `LinkCompetitorProductUseCase` resolved each
+id through a differently scoped repository; nothing in the schema said it, and a direct insert
+could link a product to itself.
+
+**Mechanism.** Each referencing table carries a `GENERATED ALWAYS` column holding the ownership it
+accepts, and a composite foreign key onto `products(id, ownership)` — which is why `products`
+gained a redundant-looking `unique(id, ownership)`. Generated means no insert can set the column
+and no default can drift.
 
 ---
 
@@ -98,8 +112,42 @@ already used by `territories_id_vertical_id_uidx` and the manager-zone FK.
 | `product_potential_definitions` | admin | the metric per vertical (`ampolas_mes`, `label`). **Unchanged.** |
 | `product_potential_links` | admin | **our** products → definition (many products : one definition) |
 | `product_equivalences` | admin | our product ↔ competitor product |
-| `facility_product_usage` | **rep** | (profile, definition, competitor product) → quantity |
-| `facility_metric_snapshot` | system | (profile, definition) → ours, theirs, total, share |
+| `facility_product_usage` | **rep** | (profile, definition, competitor product, **month**) → quantity |
+| `facility_metric_snapshot` | system | (profile, definition, **month**) → ours, theirs, total, share |
+
+> **Decisions 2026-08-10 — the rep's entry, and the usage key.**
+>
+> **The rep types only a number.** The competitor product comes from the picker; the number is the
+> quantity of *that product* per month — **product units, not metric units** — and is multiplied by
+> that product's `metric_units`, exactly like our side multiplies order lines. Symmetric by
+> construction. Since every product sits at `metric_units = 1` until an admin sets real values
+> (§4.2), the rep's number passes through unchanged today.
+>
+> **Uniqueness is (profile, definition, product).** The same competitor product may carry a
+> separate quantity under each metric it belongs to. The §7 ambiguity is a *picker* problem, not a
+> storage one — the schema stays capable and the UI decides what to offer.
+
+> **Amendment 2026-08-11 — the key gains a month: (profile, definition, product, month).**
+>
+> The rep's number is a **monthly observation**, not a timeless attribute: they answer *quantas por
+> mês*, and that answer is true of a month. Stored without one, today's figure silently became the
+> answer for every month ever asked about.
+>
+> This matters because of an asymmetry. **`ours` already has perfect history** — every past month's
+> numerator is exactly recomputable from `orders.ordered_at`, forever. Only `theirs` lacked it. The
+> first P4-3 design compensated with a freeze rule (complete months stop being recomputable after a
+> three-month tail) so that recomputing March could not write today's competitor number onto it.
+> That worked, but it bought an arbitrary freeze horizon, snapshots whose meaning depended on when
+> you read them, a trend chart whose last three points moved whenever a rep edited a quantity, and a
+> reconciliation sweep promoted from optimisation to correctness — all to paper over one missing
+> column.
+>
+> With the month in the key, every one of those disappears and `facility_metric_snapshot` becomes a
+> **derived cache**: truncatable and rebuildable from scratch, deterministically, at any time.
+>
+> Changed the same day P4-2 merged, while the table had zero rows and no writer
+> (`setCompetitorQuantity` had no call sites — the picker is P4-5). It would not have been free
+> later.
 
 **`product_equivalences` is used only to populate the rep's picker.** It is not part of the
 metric's keying. A usage row, once created, stands on its own — so removing an equivalence does
@@ -125,22 +173,72 @@ plausibly enough that nobody notices.
 Accepted constraint: a product carries one `metric_units` value, so every metric it belongs to
 must measure in the same unit. Revisit if that ever fails.
 
+> **Decision 2026-08-10 — the values are admin data, not something we derive.**
+> All 12 production products carry `metric_units = 1` (the `0082` default) and an empty `unit`
+> text column, so there is nothing in the database to infer a box size from. Three names appear
+> twice under different EAN codes (e.g. REVISCON 1.0% as `4064544000182` and `8718802047995`),
+> which are plausibly different presentations — but "plausibly" is not a basis for multiplying
+> revenue figures.
+>
+> Phase 4 therefore ships the **mechanism** and leaves every value at 1. Nothing is invented.
+> **Until an admin sets real values, the numerator remains understated exactly as it is today** —
+> acceptance criterion §9.1 is *not* met by P4-1 alone, and that is deliberate.
+>
+> **Required of the admin UI (not yet built):** an editable `metric_units` per product, presented
+> as "how many metric units is one unit of this product" with the unit label from the definition
+> (e.g. *ampolas*). This is the only place the value can come from.
+
 ### 4.3 Calculation
 
+Per calendar month M, in the application timezone:
+
 ```
-ours_monthly   = Σ (order_items.quantity × products.metric_units)
-                 over orders for this profile, last N months ÷ N
-theirs_monthly = Σ (facility_product_usage.quantity × products.metric_units)
-total          = ours_monthly + theirs_monthly
-share          = ours_monthly ÷ total          (null when total = 0)
+ours[M]   = Σ (order_items.quantity × products.metric_units)
+            over eligible orders with ordered_at in [M, M+1)
+theirs[M] = Σ (facility_product_usage.quantity × products.metric_units)
+            over usage rows for month M
+total[M]  = ours[M] + theirs[M]
+share[M]  = ours[M] ÷ total[M]                 (null when total = 0)
 ```
 
-- **N configurable, default 3.** Both sides must represent the same period — the rep enters a
-  monthly figure, so ours must be a monthly average, not a 90-day sum.
+The **trailing N-month average is derived at read time** from those stored months — it is not a
+stored value:
+
+```
+ours_monthly = (Σ ours[M-N+1 … M]) ÷ N
+```
+
+> **Amendment 2026-08-11 — store facts, derive views.** The formula previously read
+> "over orders for this profile, last N months ÷ N", which is a *rolling window* and cannot be
+> stored per month: it depends on when you ask. Three things follow from storing month facts
+> instead.
+>
+> The snapshot row becomes genuinely idempotent — no wall-clock reaches the computation, so
+> recomputing month M tomorrow yields exactly today's answer. This is what §4.4 requires of the
+> handler and what a reconciliation sweep needs in order to converge at all; a value that drifts
+> with the clock would mark every snapshot permanently stale.
+>
+> "March versus April" is answerable, because that is what is stored.
+>
+> **Changing N stops being a data migration and becomes a query change.**
+>
+> It also removes a live distortion: dividing by a constant 3 understated any clinic with fewer
+> than three months of orders by up to 3×.
+
+- **N configurable, default 3**, a single global constant (`MONTHS_IN_WINDOW`) — not
+  per-definition, not database-backed. It now lives on the **read** path, where a presentation
+  constant belongs. Revisit only when two metrics genuinely need different windows.
+- **Month boundaries are `America/São_Paulo`**, not UTC. `orders.ordered_at` is `timestamp without
+  time zone` on a UTC server, so UTC bounds would place an order taken 31 March 22:00 in São Paulo
+  into April — and the rep who entered it would disagree with the chart. No existing figure moves:
+  all 1,131 production orders are Emultec imports stamped at noon UTC, whose date component is the
+  same in both zones. It matters for orders created in-app, which carry a real timestamp.
 - Eligible orders follow ADR 0003: `status ∈ (APPROVED, INVOICED)`, `type ∈ (SALE, CONSIGNMENT)`.
   **This corrects a live inconsistency** — the penetration query currently filters `type = 'SALE'`
   only while the funnel counts both.
 - **Written-off lines are included** (user decision).
+- **`CONSIGNMENT` is included** alongside `SALE` (user decision, 2026-08-10) — confirming the
+  §4.3 rule against the live query, which filters `type = 'SALE'` only.
 - Scoping is structural: orders key on `facility_vertical_profile_id` (spec 0010 §4), so the
   numerator no longer needs — and no longer silently omits — a vertical filter.
 - `share` is **null**, never `0`, when there is no data. "No sales" and "no information" must be
@@ -157,6 +255,69 @@ historical. Recomputed on:
 
 **Not** on equivalence changes (§4.1).
 
+> **Decision 2026-08-10 — asynchronous for orders, synchronous for the rep.**
+> A rep editing a quantity (2) or adding/removing a competitor product (3) recomputes **inline**,
+> so the number they just changed is correct when the screen redraws.
+>
+> Order writes (1) **enqueue** a recompute keyed on the affected profile, deduplicated. The Emultec
+> importer upserts tens of orders per run every ten minutes and would otherwise recompute the same
+> profile once per order, turning one import into dozens of identical recomputations — and putting
+> the metric's cost on the critical path of an importer that must stay a considerate guest of a
+> third-party database.
+>
+> The recompute must be **idempotent**: running it twice for the same (profile, definition, month)
+> produces the same row.
+>
+> **Decision 2026-08-10 — idempotency lives in the handler; correctness lives in a sweep.**
+>
+> The handler is a **pure function of stored state**: for one (profile, definition, month) it reads
+> the orders and usage rows, computes, and UPSERTs that single row. Never a delta, never an
+> increment. Run once or fifty times, concurrently or out of order, the row is identical. This is
+> what makes at-least-once delivery acceptable.
+>
+> Transport is `purchaseRecurrenceWorkflow`'s pattern — a Temporal workflow started from the API —
+> because an equivalent per-profile derived value already recomputes from orders that way, and one
+> convention should cover both.
+>
+> **But a Temporal start is a network call outside the database transaction.** Commit an order,
+> crash before starting the workflow, and that snapshot is never recomputed and nothing reports it.
+> A Postgres job table enqueued in the same transaction would close that specific hole, at the cost
+> of a second async mechanism — and it would still not survive a call site that simply forgets to
+> enqueue, or a script writing rows directly.
+>
+> So the trigger is **not** where correctness comes from. A **scheduled reconciliation sweep**
+> recomputes any (profile, month) whose inputs changed after the snapshot's `computed_at`, compared
+> against `max(orders.updated_at)` / `max(usage.updated_at)` for that profile. Consequences:
+>
+> - a lost trigger costs one sweep interval of staleness, not a permanently wrong number
+> - the trigger becomes a latency optimisation, not a correctness requirement
+> - the §4.4 backfill command is the same sweep over an explicit month range
+>
+> ⚠️ The sweep must not scan every profile every run — at ~14k clinics that does not hold up. It
+> keys on `computed_at` versus input timestamps, which needs an index, and the query plan must be
+> checked against real data rather than assumed.
+
+> **Amendment 2026-08-11 — the snapshot is a derived cache, and the sweep is no longer correctness.**
+>
+> Once usage carries a month (§4.1), **both inputs have history**, so every row is a pure function
+> of stored state for all time — not merely for the recent past. The snapshot table can be
+> truncated and rebuilt from scratch, deterministically, and reproduce itself exactly.
+>
+> What that changes:
+>
+> - **the sweep drops from correctness to latency.** A sweep that never runs costs staleness, not a
+>   wrong number, because the truth is always recoverable from the inputs
+> - **the backfill command is just a rebuild** over an explicit month range, not an escape hatch
+> - **no month ever changes meaning after the fact** — stability is structural, not a policy
+>
+> Index reality, measured rather than assumed: `orders_updated_at_profile_id_idx` on
+> `(updated_at, facility_vertical_profile_id)` already gives the sweep its range scan.
+> `facility_product_usage` has **no `updated_at` index** and needs one before it grows.
+>
+> **The sweep must still report, not just repair.** It emits `recomputed N, differed M`; a nonzero
+> `differed` means a trigger was lost. A sweep that silently corrects is the counter-instead-of-an-
+> alarm this codebase has been bitten by before.
+
 **Granularity: one row per (profile, definition, month).** Calendar months, not sliding windows.
 
 Rejected: a row per day. At ~14k clinics × N metrics that is ~15M rows a year, of which the
@@ -172,6 +333,21 @@ Calendar months instead:
 
 The current month is partial: show it as **parcial** alongside the last complete month, and plot
 only complete months.
+
+> **Decision 2026-08-10 — no historical backfill; snapshots begin at the current month.**
+> Backfilling from the 1131 existing orders would produce months with a real numerator and an
+> absent denominator (competitor quantities did not exist then), so every reconstructed month would
+> read as share = 100%. That is not history, it is an artefact that looks like history.
+>
+> A **backfill command must still exist**, idempotent and restricted to an explicit month range —
+> needed to repair a gap after an incident, and to populate history once competitor data has been
+> collected for a period. It is a tool, not part of the migration.
+
+> **Still true after the 2026-08-11 amendment, and for a sharper reason.** With usage keyed by
+> month, a backfilled month simply *has no usage rows*: `theirs = 0`, so `total = ours` and
+> `share = 100%`. Not a null, not a gap — a confident, wrong number. The rule stands: snapshots
+> begin at the current month, and history is populated only for periods where competitor data was
+> actually collected.
 
 ### 4.5 Historical view
 

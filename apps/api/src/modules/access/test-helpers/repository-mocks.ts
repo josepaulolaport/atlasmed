@@ -19,7 +19,6 @@ export function createMockScopeRepository(
     revokeTerritory: mock(() => Promise.resolve()),
     findTerritoryAssignmentsByUserId: mock(() => Promise.resolve([])),
     findUserIdsByTerritoryId: mock(() => Promise.resolve([])),
-    findManagerIdByUserId: mock(() => Promise.resolve(null)),
     findVerticalIdsByUserId: mock(() => Promise.resolve([])),
     assignVertical: mock(() => Promise.resolve()),
     revokeVertical: mock(() => Promise.resolve()),

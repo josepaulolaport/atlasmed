@@ -8,7 +8,6 @@ export interface ScopeRepository {
   assignTerritory(params: {
     userId: number;
     territoryId: number;
-    assignedBy: number;
   }): Promise<void>;
 
   revokeTerritory(params: {
@@ -29,8 +28,6 @@ export interface ScopeRepository {
       assignedAt: Date;
     }>
   >;
-
-  findManagerIdByUserId(userId: number): Promise<number | null>;
 
   /** Returns business vertical IDs assigned to the user. */
   findVerticalIdsByUserId(userId: number): Promise<number[]>;

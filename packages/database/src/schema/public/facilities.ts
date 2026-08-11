@@ -10,6 +10,7 @@ import {
   numeric,
   index,
   uniqueIndex,
+  unique,
   check,
   foreignKey,
 } from "drizzle-orm/pg-core";
@@ -63,7 +64,14 @@ export const facilities = pgTable(
     stateId: integer("state_id").notNull(),
     /** Admin geography FK → municipalities.id; mun∈state via composite FK. */
     municipalityId: integer("municipality_id").notNull(),
-    location: geometryPoint("location"),
+    /**
+     * Spec 0009 R5. Required: the whole ownership model is geometric — a clinic
+     * with no point cannot sit in a manager zone, cannot be checked against a
+     * rep's patch, and cannot satisfy I2. It is not a partially-filled record but
+     * one the model has no meaning for, so the database refuses it rather than
+     * leaving every reader to handle a state that should not exist.
+     */
+    location: geometryPoint("location").notNull(),
 
     // --- Contact ---
     phoneNumber: text("phone_number"),
@@ -258,6 +266,10 @@ export const facilityVerticalProfiles = pgTable(
       t.facilityId,
       t.verticalId
     ),
+    // Redundant beside the primary key, but a composite foreign key can only
+    // reference a unique constraint. `facility_product_usage` uses it to hold a
+    // usage row's profile and its definition in the same linha.
+    unique("facility_vertical_profiles_id_vertical_id_key").on(t.id, t.verticalId),
     index("facility_vertical_profiles_conformity_status_idx").on(t.conformityStatus),
     index("facility_vertical_profiles_facility_id_idx").on(t.facilityId),
     index("facility_vertical_profiles_vertical_id_idx").on(t.verticalId),
@@ -308,18 +320,48 @@ export const facilityVerticalRepAssignments = pgTable(
   "facility_vertical_rep_assignments",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
-      .notNull()
-      .references(() => facilityVerticalProfiles.id, { onDelete: "cascade" }),
-    userId: bigint("user_id", { mode: "number" })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /*
+     * Invariant I5: rep assignment rows are never deleted — ending one sets
+     * `ended_at`. Both of these were ON DELETE CASCADE, which meant deleting a
+     * user or a vertical profile erased their entire assignment history: no
+     * `ended_at`, no `end_reason`, no `ended_by_user_id`, no row.
+     *
+     * That contradicted the invariant the rest of spec 0009 is built on. R1
+     * reorders validate-before-destroy precisely because an ended assignment
+     * cannot be restored by re-creating it — and underneath, two foreign keys
+     * could delete the history outright.
+     *
+     * RESTRICT costs nothing today: nothing in the codebase hard-deletes a user
+     * or a profile. Users carry `deleted_at`, profiles carry `is_active`. It
+     * turns "you may not do this" from a convention into a rule.
+     */
+    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" }).notNull(),
+    userId: bigint("user_id", { mode: "number" }).notNull(),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     endedAt: timestamp("ended_at"),
     assignedByUserId: bigint("assigned_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
     }),
     endReason: text("end_reason"),
+    /**
+     * Spec 0009 R5/R2: who ended it. `end_reason` recorded *why* and nothing
+     * recorded *who* — and manager-zone boundary edits are ADMIN-only, so an
+     * admin's redraw ended rep assignments a manager had made, untraceably.
+     * Nullable with no backfill: we genuinely do not know for existing rows.
+     */
+    endedByUserId: bigint("ended_by_user_id", { mode: "number" }),
+    /**
+     * Spec 0009 R2. The informal market requires assigning a rep outside their
+     * patch, so I2 becomes "a patch covers the clinic **or** this is set".
+     *
+     * Modelled on the assignment rather than as an exception type, because the
+     * override is a property of *this* rep holding *this* clinic — and because
+     * recompute must be able to see it. An overridden assignment is skipped by
+     * de-assignment sweeps and excluded from boundary-impact sets: an override
+     * that a recompute can erase is not an override.
+     */
+    overrideReason: text("override_reason"),
+    overrideByUserId: bigint("override_by_user_id", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
@@ -328,6 +370,45 @@ export const facilityVerticalRepAssignments = pgTable(
       t.facilityVerticalProfileId,
       t.endedAt,
     ),
+    /** The out-of-territory report: active overrides, newest first. */
+    index("facility_vertical_rep_assignments_override_idx")
+      .on(t.overrideByUserId)
+      .where(sql`${t.overrideReason} IS NOT NULL AND ${t.endedAt} IS NULL`),
+    /*
+     * Named explicitly. Drizzle's derived name for the override FK would be
+     * `facility_vertical_rep_assignments_override_by_user_id_users_id_fk` — 65
+     * characters, which Postgres silently truncates to 63. This table already
+     * carries two such casualties (`..._assigned_by_user_id_users_id_`, missing
+     * its `fk` suffix), and a truncated name is one a later DROP CONSTRAINT
+     * cannot find.
+     */
+    /*
+     * Named explicitly for the same reason as the override FK below: Drizzle's
+     * derived name for the profile FK is 95 characters, and Postgres stored it
+     * truncated at 63. The generated migration then tried to DROP the *full*
+     * name — a constraint that does not exist — which would have failed on
+     * apply. Short explicit names make the file and the database agree.
+     */
+    foreignKey({
+      name: "fvra_profile_id_fk",
+      columns: [t.facilityVerticalProfileId],
+      foreignColumns: [facilityVerticalProfiles.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fvra_user_id_fk",
+      columns: [t.userId],
+      foreignColumns: [users.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fvra_ended_by_user_id_fk",
+      columns: [t.endedByUserId],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "fvra_override_by_user_id_fk",
+      columns: [t.overrideByUserId],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
     index("facility_vertical_rep_assignments_user_id_ended_at_idx").on(t.userId, t.endedAt),
     uniqueIndex("facility_vertical_rep_assignments_profile_active_uidx")
       .on(t.facilityVerticalProfileId)
@@ -335,6 +416,17 @@ export const facilityVerticalRepAssignments = pgTable(
     check(
       "facility_vertical_rep_assignments_ended_at_gte_started_at_check",
       sql`${t.endedAt} IS NULL OR ${t.endedAt} >= ${t.startedAt}`,
+    ),
+    /*
+     * Spec 0009 R2: an override records who and why, or it is not an override.
+     * The use case always writes both, but nothing stopped a script or a
+     * backfill writing a reason with no author — and the out-of-territory
+     * report would then answer "why" and not "who", which is the exact gap
+     * `ended_by_user_id` was added to close elsewhere in this table.
+     */
+    check(
+      "fvra_override_reason_and_author_together_check",
+      sql`(${t.overrideReason} IS NULL) = (${t.overrideByUserId} IS NULL)`,
     ),
   ],
 );
@@ -406,6 +498,17 @@ export const conformityRequirements = pgTable(
       .notNull()
       .default(209_715_200),
     requiresFrontAndBack: boolean("requires_front_and_back").notNull().default(false),
+    /**
+     * Whether the rep is asked for a validity date when submitting this
+     * requirement, and the reviewer asked to confirm it on approval
+     * (spec 0011 §3.3, ADR 0008 §4/§6).
+     *
+     * It is a property of the *requirement*, not of the document: a Cartão CNPJ
+     * never expires, a Licença Sanitária always does. The date itself lives on
+     * the document, and the expiry warning is derived from it at read time —
+     * there is no stored EXPIRING_SOON status to keep in step.
+     */
+    requiresValidityDate: boolean("requires_validity_date").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },

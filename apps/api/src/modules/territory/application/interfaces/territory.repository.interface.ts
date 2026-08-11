@@ -5,7 +5,6 @@ export interface TerritoryRecord {
   id: number;
   name: string;
   slug: string;
-  code: string;
   verticalId: number;
   territoryTypeId: number;
   territoryType?: TerritoryTypeRecord;
@@ -32,8 +31,6 @@ export interface TerritoryRepository {
   findById(id: number): Promise<TerritoryRecord | null>;
 
   findBySlug(slug: string, verticalId?: number): Promise<TerritoryRecord | null>;
-
-  findByCode(code: string, verticalId?: number): Promise<TerritoryRecord | null>;
 
   findAllActive(verticalId?: number): Promise<TerritoryRecord[]>;
 

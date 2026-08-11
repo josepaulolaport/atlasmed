@@ -1,6 +1,5 @@
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import {
-  cadastroSubmissions,
   conformityRequirements,
   documentFiles,
   fileAssets,
@@ -13,29 +12,12 @@ import {
 } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
-  CadastroSubmissionRecord,
   CadastroSubmissionRepository,
   DocumentFileRecord,
   FileAssetRecord,
   SubmissionDocumentRecord,
   UploadSessionRecord,
 } from "../../../application/interfaces/cadastro-submission.repository.interface";
-
-function mapSubmission(
-  row: typeof cadastroSubmissions.$inferSelect
-): CadastroSubmissionRecord {
-  return {
-    id: row.id,
-    facilityId: row.facilityId,
-    verticalId: row.verticalId,
-    submittedByUserId: row.submittedByUserId,
-    status: row.status,
-    version: row.version,
-    submittedAt: row.submittedAt,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
 
 function formatUserDisplayName(parts: {
   firstName: string | null;
@@ -57,12 +39,16 @@ function mapDocument(
 ): SubmissionDocumentRecord {
   return {
     id: row.id,
-    submissionId: row.submissionId,
+    facilityId: row.facilityId,
+    facilityVerticalProfileId: row.facilityVerticalProfileId,
     requirementId: row.requirementId,
     title: row.title,
     status: row.status,
     version: row.version,
     reviewComment: row.reviewComment,
+    validUntil: row.validUntil,
+    submittedByUserId: row.submittedByUserId,
+    submittedAt: row.submittedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     requirement: requirement
@@ -77,6 +63,7 @@ function mapDocument(
           maxFileSizeBytes: requirement.maxFileSizeBytes,
           maxCombinedSizeBytes: requirement.maxCombinedSizeBytes,
           requiresFrontAndBack: requirement.requiresFrontAndBack,
+          requiresValidityDate: requirement.requiresValidityDate,
         }
       : undefined,
   };
@@ -102,6 +89,8 @@ function mapFileAsset(row: typeof fileAssets.$inferSelect): FileAssetRecord {
     height: row.height,
     errorCode: row.errorCode,
     errorMessage: row.errorMessage,
+    uploadedByUserId: row.uploadedByUserId,
+    purgeAfter: row.purgeAfter,
     uploadedAt: row.uploadedAt,
     processedAt: row.processedAt,
     createdAt: row.createdAt,
@@ -111,9 +100,11 @@ function mapFileAsset(row: typeof fileAssets.$inferSelect): FileAssetRecord {
 
 function mapDocumentFile(
   row: typeof documentFiles.$inferSelect,
-  asset?: typeof fileAssets.$inferSelect
+  asset?: typeof fileAssets.$inferSelect,
+  uploadedByName?: string | null
 ): DocumentFileRecord {
   return {
+    uploadedByName: uploadedByName ?? null,
     id: row.id,
     submissionDocumentId: row.submissionDocumentId,
     fileAssetId: row.fileAssetId,
@@ -142,111 +133,6 @@ function mapUploadSession(
 export class DrizzleCadastroSubmissionRepository
   implements CadastroSubmissionRepository
 {
-  async findDraftByFacility(facilityId: number) {
-    const [row] = await db
-      .select()
-      .from(cadastroSubmissions)
-      .where(
-        and(
-          eq(cadastroSubmissions.facilityId, facilityId),
-          eq(cadastroSubmissions.status, "DRAFT")
-        )
-      )
-      .limit(1);
-    return row ? mapSubmission(row) : null;
-  }
-
-  async findById(id: number) {
-    const [row] = await db
-      .select()
-      .from(cadastroSubmissions)
-      .where(eq(cadastroSubmissions.id, id))
-      .limit(1);
-    return row ? mapSubmission(row) : null;
-  }
-
-  async findLatestByFacility(facilityId: number) {
-    const [row] = await db
-      .select()
-      .from(cadastroSubmissions)
-      .where(eq(cadastroSubmissions.facilityId, facilityId))
-      .orderBy(desc(cadastroSubmissions.version))
-      .limit(1);
-    return row ? mapSubmission(row) : null;
-  }
-
-  async createSubmission(input: {
-    facilityId: number;
-    verticalId: number;
-    submittedByUserId?: number | null;
-    version: number;
-  }) {
-    const [row] = await db
-      .insert(cadastroSubmissions)
-      .values({
-        facilityId: input.facilityId,
-        verticalId: input.verticalId,
-        submittedByUserId: input.submittedByUserId ?? null,
-        version: input.version,
-        status: "DRAFT",
-      })
-      .returning();
-    return mapSubmission(row!);
-  }
-
-  async updateSubmissionStatus(input: {
-    id: number;
-    status: CadastroSubmissionRecord["status"];
-    submittedAt?: Date | null;
-    submittedByUserId?: number | null;
-  }) {
-    const [row] = await db
-      .update(cadastroSubmissions)
-      .set({
-        status: input.status,
-        ...(input.submittedAt !== undefined
-          ? { submittedAt: input.submittedAt }
-          : {}),
-        ...(input.submittedByUserId !== undefined
-          ? { submittedByUserId: input.submittedByUserId }
-          : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(cadastroSubmissions.id, input.id))
-      .returning();
-    return mapSubmission(row!);
-  }
-
-  async deleteSubmission(id: number) {
-    await db.delete(cadastroSubmissions).where(eq(cadastroSubmissions.id, id));
-  }
-
-  async listSubmissions(input: {
-    status?: CadastroSubmissionRecord["status"][];
-    page: number;
-    limit: number;
-  }) {
-    const where =
-      input.status && input.status.length > 0
-        ? inArray(cadastroSubmissions.status, input.status)
-        : undefined;
-    const offset = (input.page - 1) * input.limit;
-    const [rows, totals] = await Promise.all([
-      db
-        .select()
-        .from(cadastroSubmissions)
-        .where(where)
-        .orderBy(desc(cadastroSubmissions.updatedAt))
-        .limit(input.limit)
-        .offset(offset),
-      db.select({ value: count() }).from(cadastroSubmissions).where(where),
-    ]);
-    return {
-      items: rows.map(mapSubmission),
-      total: Number(totals[0]?.value ?? 0),
-    };
-  }
-
   async findDocumentById(id: number) {
     const [row] = await db
       .select({
@@ -263,25 +149,17 @@ export class DrizzleCadastroSubmissionRepository
     return row ? mapDocument(row.document, row.requirement) : null;
   }
 
-  async findDocumentsBySubmission(submissionId: number) {
-    const rows = await db
-      .select({
-        document: submissionDocuments,
-        requirement: conformityRequirements,
-      })
-      .from(submissionDocuments)
-      .innerJoin(
-        conformityRequirements,
-        eq(submissionDocuments.requirementId, conformityRequirements.id)
-      )
-      .where(eq(submissionDocuments.submissionId, submissionId));
-    return rows.map((r) => mapDocument(r.document, r.requirement));
-  }
-
-  async findDocumentBySubmissionAndRequirement(
-    submissionId: number,
-    requirementId: number
-  ) {
+  /**
+   * The open attempt at a requirement, if there is one.
+   *
+   * APPROVED / REJECTED / SUPERSEDED are closed: a re-upload over any of them
+   * opens a new version rather than mutating a reviewed row, which is what
+   * keeps the history in `listDocumentsForFacilityRequirement` truthful.
+   */
+  async findWorkingDocument(input: {
+    facilityId: number;
+    requirementId: number;
+  }) {
     const [row] = await db
       .select({
         document: submissionDocuments,
@@ -294,47 +172,59 @@ export class DrizzleCadastroSubmissionRepository
       )
       .where(
         and(
-          eq(submissionDocuments.submissionId, submissionId),
-          eq(submissionDocuments.requirementId, requirementId)
+          eq(submissionDocuments.facilityId, input.facilityId),
+          eq(submissionDocuments.requirementId, input.requirementId),
+          inArray(submissionDocuments.status, [
+            "DRAFT",
+            "PROCESSING",
+            "READY",
+            "SUBMITTED",
+            "UNDER_REVIEW",
+            "CHANGES_REQUESTED",
+          ])
         )
       )
+      .orderBy(desc(submissionDocuments.version))
       .limit(1);
     return row ? mapDocument(row.document, row.requirement) : null;
   }
 
   async listDocumentsForReview(input: {
     status: SubmissionDocumentRecord["status"][];
+    facilityIds?: number[];
     page: number;
     limit: number;
   }) {
-    const where =
-      input.status.length > 0
-        ? inArray(submissionDocuments.status, input.status)
-        : undefined;
+    const conditions = [];
+    if (input.status.length > 0) {
+      conditions.push(inArray(submissionDocuments.status, input.status));
+    }
+    // Applied to both the page and the count, so the total matches what the
+    // reviewer can actually open — a scoped total over an unscoped count would
+    // paginate into pages that render empty.
+    if (input.facilityIds !== undefined) {
+      conditions.push(inArray(submissionDocuments.facilityId, input.facilityIds));
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
     const offset = (input.page - 1) * input.limit;
     const [rows, totals] = await Promise.all([
       db
         .select({
           document: submissionDocuments,
           requirement: conformityRequirements,
-          submission: cadastroSubmissions,
           submittedByFirstName: users.firstName,
           submittedByLastName: users.lastName,
           submittedByUsername: users.username,
         })
         .from(submissionDocuments)
         .innerJoin(
-          cadastroSubmissions,
-          eq(submissionDocuments.submissionId, cadastroSubmissions.id)
-        )
-        .innerJoin(
           conformityRequirements,
           eq(submissionDocuments.requirementId, conformityRequirements.id)
         )
-        .leftJoin(users, eq(cadastroSubmissions.submittedByUserId, users.id))
+        .leftJoin(users, eq(submissionDocuments.submittedByUserId, users.id))
         .where(where)
         .orderBy(
-          desc(cadastroSubmissions.submittedAt),
+          desc(submissionDocuments.submittedAt),
           desc(submissionDocuments.updatedAt)
         )
         .limit(input.limit)
@@ -347,7 +237,7 @@ export class DrizzleCadastroSubmissionRepository
     return {
       items: rows.map((r) => ({
         document: mapDocument(r.document, r.requirement),
-        submission: mapSubmission(r.submission),
+        facilityId: r.document.facilityId,
         submittedByName: formatUserDisplayName({
           firstName: r.submittedByFirstName,
           lastName: r.submittedByLastName,
@@ -364,7 +254,7 @@ export class DrizzleCadastroSubmissionRepository
     excludeDraft?: boolean;
   }) {
     const conditions = [
-      eq(cadastroSubmissions.facilityId, input.facilityId),
+      eq(submissionDocuments.facilityId, input.facilityId),
       eq(submissionDocuments.requirementId, input.requirementId),
     ];
     if (input.excludeDraft) {
@@ -384,51 +274,53 @@ export class DrizzleCadastroSubmissionRepository
       .select({
         document: submissionDocuments,
         requirement: conformityRequirements,
-        submission: cadastroSubmissions,
       })
       .from(submissionDocuments)
-      .innerJoin(
-        cadastroSubmissions,
-        eq(submissionDocuments.submissionId, cadastroSubmissions.id)
-      )
       .innerJoin(
         conformityRequirements,
         eq(submissionDocuments.requirementId, conformityRequirements.id)
       )
       .where(and(...conditions))
       .orderBy(
-        desc(cadastroSubmissions.submittedAt),
-        desc(cadastroSubmissions.version),
+        desc(submissionDocuments.version),
         desc(submissionDocuments.updatedAt)
       );
-    return rows.map((r) => ({
-      document: mapDocument(r.document, r.requirement),
-      submission: mapSubmission(r.submission),
-    }));
+    return rows.map((r) => mapDocument(r.document, r.requirement));
   }
 
   async createDocument(input: {
-    submissionId: number;
+    facilityId: number;
+    facilityVerticalProfileId: number | null;
     requirementId: number;
     title: string;
+    version?: number;
   }) {
     const [row] = await db
       .insert(submissionDocuments)
       .values({
-        submissionId: input.submissionId,
+        facilityId: input.facilityId,
+        facilityVerticalProfileId: input.facilityVerticalProfileId,
         requirementId: input.requirementId,
         title: input.title,
         status: "DRAFT",
+        ...(input.version !== undefined ? { version: input.version } : {}),
       })
       .returning();
     return this.findDocumentById(row!.id).then((d) => d!);
+  }
+
+  async deleteDocument(id: number) {
+    await db.delete(submissionDocuments).where(eq(submissionDocuments.id, id));
   }
 
   async updateDocumentStatus(input: {
     id: number;
     status: SubmissionDocumentRecord["status"];
     reviewComment?: string | null;
+    validUntil?: string | null;
     version?: number;
+    submittedAt?: Date | null;
+    submittedByUserId?: number | null;
   }) {
     await db
       .update(submissionDocuments)
@@ -437,7 +329,14 @@ export class DrizzleCadastroSubmissionRepository
         ...(input.reviewComment !== undefined
           ? { reviewComment: input.reviewComment }
           : {}),
+        ...(input.validUntil !== undefined ? { validUntil: input.validUntil } : {}),
         ...(input.version !== undefined ? { version: input.version } : {}),
+        ...(input.submittedAt !== undefined
+          ? { submittedAt: input.submittedAt }
+          : {}),
+        ...(input.submittedByUserId !== undefined
+          ? { submittedByUserId: input.submittedByUserId }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(submissionDocuments.id, input.id));
@@ -509,17 +408,133 @@ export class DrizzleCadastroSubmissionRepository
     return mapFileAsset(row!);
   }
 
+  async attachFileToDocument(input: {
+    documentId: number;
+    facilityId: number;
+    bucket: string;
+    objectKey: string;
+    originalFilename: string;
+    declaredMimeType: string;
+    sizeBytes: number;
+    sha256?: string | null;
+    role: DocumentFileRecord["role"];
+    position?: number;
+    maxFiles: number;
+    maxCombinedSizeBytes: number;
+    uploadedByUserId: number | null;
+  }) {
+    return db.transaction(async (tx) => {
+      // The lock is on the parent document because that is the scope of every
+      // quantity below: the file count, the combined size and the position
+      // sequence are all per-document. Concurrent uploads into *different*
+      // documents never touch the same row and do not contend.
+      const [document] = await tx
+        .select({ id: submissionDocuments.id })
+        .from(submissionDocuments)
+        .where(eq(submissionDocuments.id, input.documentId))
+        .for("update");
+
+      if (!document) return { outcome: "document_missing" as const };
+
+      // One pass for all three quantities, inside the lock, so they cannot
+      // disagree with each other or go stale before the insert.
+      const [totals] = await tx
+        .select({
+          files: count(),
+          combinedSize: sql<number>`coalesce(sum(${fileAssets.sizeBytes}), 0)`,
+          maxPosition: sql<number>`coalesce(max(${documentFiles.position}), 0)`,
+        })
+        .from(documentFiles)
+        .innerJoin(fileAssets, eq(documentFiles.fileAssetId, fileAssets.id))
+        .where(eq(documentFiles.submissionDocumentId, input.documentId));
+
+      const currentFiles = Number(totals?.files ?? 0);
+      const currentSize = Number(totals?.combinedSize ?? 0);
+
+      if (currentFiles >= input.maxFiles) {
+        return { outcome: "max_files_exceeded" as const };
+      }
+      if (currentSize + input.sizeBytes > input.maxCombinedSizeBytes) {
+        return { outcome: "max_combined_size_exceeded" as const };
+      }
+
+      const [assetRow] = await tx
+        .insert(fileAssets)
+        .values({
+          facilityId: input.facilityId,
+          bucket: input.bucket,
+          objectKey: input.objectKey,
+          originalFilename: input.originalFilename,
+          declaredMimeType: input.declaredMimeType,
+          sizeBytes: input.sizeBytes,
+          sha256: input.sha256 ?? null,
+          status: "PENDING_UPLOAD",
+          uploadedByUserId: input.uploadedByUserId,
+        })
+        .returning();
+
+      const position = input.position ?? Number(totals?.maxPosition ?? 0) + 1;
+
+      await tx.insert(documentFiles).values({
+        submissionDocumentId: input.documentId,
+        fileAssetId: assetRow!.id,
+        position,
+        role: input.role,
+      });
+
+      return {
+        outcome: "attached" as const,
+        asset: mapFileAsset(assetRow!),
+        position,
+      };
+    });
+  }
+
   async listDocumentFiles(documentId: number) {
     const rows = await db
       .select({
         link: documentFiles,
         asset: fileAssets,
+        uploaderFirstName: users.firstName,
+        uploaderLastName: users.lastName,
+        uploaderUsername: users.username,
       })
       .from(documentFiles)
       .innerJoin(fileAssets, eq(documentFiles.fileAssetId, fileAssets.id))
+      // Left, not inner: a file whose uploader was deleted, or one uploaded
+      // before attribution existed, must still appear in the checklist.
+      .leftJoin(users, eq(fileAssets.uploadedByUserId, users.id))
       .where(eq(documentFiles.submissionDocumentId, documentId))
       .orderBy(documentFiles.position);
-    return rows.map((r) => mapDocumentFile(r.link, r.asset));
+    return rows.map((r) =>
+      mapDocumentFile(
+        r.link,
+        r.asset,
+        formatUserDisplayName({
+          firstName: r.uploaderFirstName,
+          lastName: r.uploaderLastName,
+          username: r.uploaderUsername,
+        })
+      )
+    );
+  }
+
+  async setPurgeAfterForDocument(input: {
+    documentId: number;
+    purgeAfter: Date | null;
+  }) {
+    // Scoped through the link table so only this document's files are touched;
+    // a facility-scoped asset shared by two documents is not collateral.
+    const links = await db
+      .select({ fileAssetId: documentFiles.fileAssetId })
+      .from(documentFiles)
+      .where(eq(documentFiles.submissionDocumentId, input.documentId));
+    if (links.length === 0) return;
+
+    await db
+      .update(fileAssets)
+      .set({ purgeAfter: input.purgeAfter })
+      .where(inArray(fileAssets.id, links.map((l) => l.fileAssetId)));
   }
 
   async findDocumentFileByFileAssetId(fileAssetId: number) {

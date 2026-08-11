@@ -2,6 +2,7 @@ import {
   pgTable,
   text,
   timestamp,
+  date,
   integer,
   bigint,
   index,
@@ -9,7 +10,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import {
-  cadastroSubmissionStatusEnum,
   cadastroDocumentStatusEnum,
   cadastroFileAssetStatusEnum,
   cadastroDocumentFileRoleEnum,
@@ -17,69 +17,68 @@ import {
   cadastroReviewDecisionEnum,
   cadastroProcessingStepStatusEnum,
 } from "./enums";
-import { facilities, conformityRequirements } from "./facilities";
-import { businessVerticals } from "./business-verticals";
+import {
+  facilities,
+  conformityRequirements,
+  facilityVerticalProfiles,
+} from "./facilities";
 import { users } from "./users";
 
 /**
- * Versioned cadastro package for a facility.
- * Corrections open a new version; previous is SUPERSEDED.
+ * A cadastro document — the unit of the whole pipeline (ADR 0007).
+ *
+ * It belongs directly to a facility: uploaded, submitted, reviewed, approved
+ * and versioned on its own. There is no package above it.
+ *
+ * `facilityVerticalProfileId` records which linha's requirement this satisfies.
+ * NULL means facility-scoped — a Cartão CNPJ is uploaded once and counts for
+ * every linha, mirroring `conformity_requirements.vertical_id`, where NULL
+ * likewise means "applies to all".
  */
-export const cadastroSubmissions = pgTable(
-  "cadastro_submissions",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    facilityId: bigint("facility_id", { mode: "number" })
-      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    verticalId: bigint("vertical_id", { mode: "number" }).references(() => businessVerticals.id, {
-      onDelete: "restrict",
-    }),
-    submittedByUserId: bigint("submitted_by_user_id", { mode: "number" }).references(() => users.id, {
-      onDelete: "set null",
-    }),
-    status: cadastroSubmissionStatusEnum("status").notNull().default("DRAFT"),
-    version: bigint("version", { mode: "number" }).notNull().default(1),
-    submittedAt: timestamp("submitted_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  },
-  (t) => [
-    index("cadastro_submissions_facility_id_idx").on(t.facilityId),
-    index("cadastro_submissions_vertical_id_idx").on(t.verticalId),
-    index("cadastro_submissions_status_idx").on(t.status),
-    uniqueIndex("cadastro_submissions_facility_id_version_uidx").on(
-      t.facilityId,
-      t.version
-    ),
-    uniqueIndex("cadastro_submissions_facility_draft_uidx")
-      .on(t.facilityId)
-      .where(sql`${t.status} = 'DRAFT'`),
-  ]
-);
-
-/** Logical document (e.g. Medical License) inside a submission. */
 export const submissionDocuments = pgTable(
   "submission_documents",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    submissionId: bigint("submission_id", { mode: "number" })
-      .notNull().references(() => cadastroSubmissions.id, { onDelete: "cascade" }),
+    facilityId: bigint("facility_id", { mode: "number" })
+      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
+      .references(() => facilityVerticalProfiles.id, { onDelete: "restrict" }),
     requirementId: bigint("requirement_id", { mode: "number" })
       .notNull().references(() => conformityRequirements.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
     status: cadastroDocumentStatusEnum("status").notNull().default("DRAFT"),
     version: bigint("version", { mode: "number" }).notNull().default(1),
     reviewComment: text("review_comment"),
+    submittedByUserId: bigint("submitted_by_user_id", { mode: "number" }).references(
+      () => users.id,
+      { onDelete: "set null" }
+    ),
+    submittedAt: timestamp("submitted_at"),
+    /**
+     * When the document stops being valid evidence — null where the requirement
+     * declares no validity (`conformity_requirements.requires_validity_date`).
+     *
+     * A date, not a timestamp: an alvará expires on a calendar day, and storing
+     * it as an instant would drag a timezone into a fact that has none.
+     */
+    validUntil: date("valid_until"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
-    index("submission_documents_submission_id_idx").on(t.submissionId),
+    index("submission_documents_facility_id_idx").on(t.facilityId),
+    index("submission_documents_facility_vertical_profile_id_idx").on(
+      t.facilityVerticalProfileId
+    ),
     index("submission_documents_requirement_id_idx").on(t.requirementId),
     index("submission_documents_status_idx").on(t.status),
-    uniqueIndex("submission_documents_submission_requirement_uidx").on(
-      t.submissionId,
-      t.requirementId
+    // Version is the history axis: one row per attempt at a requirement. The
+    // package's "one DRAFT per facility" index is gone with the package that
+    // owned it (D-16).
+    uniqueIndex("submission_documents_facility_requirement_version_uidx").on(
+      t.facilityId,
+      t.requirementId,
+      t.version
     ),
   ]
 );
@@ -107,6 +106,32 @@ export const fileAssets = pgTable(
     height: bigint("height", { mode: "number" }),
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
+    /**
+     * Who uploaded this file (spec 0011 §3.4). Set at `initiate`.
+     *
+     * The draft belongs to the profile, not to a person: the assigned rep,
+     * their manager and OPS can all contribute to the same document, and until
+     * now nobody could tell which of them sent a given file. `set null` on
+     * delete because the file outlives the account — losing the attribution is
+     * acceptable, losing the evidence is not.
+     */
+    uploadedByUserId: bigint("uploaded_by_user_id", { mode: "number" }).references(
+      () => users.id,
+      { onDelete: "set null" }
+    ),
+    /**
+     * When the bytes may be deleted — null means never (spec 0011 §6).
+     *
+     * Set when a document is rejected or superseded, cleared if it becomes
+     * approved. The sweep deletes the object and this row; the
+     * `submission_documents` row survives with its status, version and reviewer
+     * comment, so "v2 — Reprovado — <comment>" still renders with no files to
+     * open (ADR 0008 §5).
+     *
+     * The application drives this rather than an object-lifecycle rule, because
+     * lifecycle rules cannot see submission state.
+     */
+    purgeAfter: timestamp("purge_after"),
     uploadedAt: timestamp("uploaded_at"),
     processedAt: timestamp("processed_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -116,6 +141,15 @@ export const fileAssets = pgTable(
     index("file_assets_facility_id_idx").on(t.facilityId),
     index("file_assets_status_idx").on(t.status),
     uniqueIndex("file_assets_object_key_uidx").on(t.objectKey),
+    /**
+     * The retention sweep's index. Partial, because null means "never delete"
+     * and that is the overwhelming majority of rows — approved evidence is kept
+     * forever. Without it, every sweep tick full-scans `file_assets` to find
+     * the handful of rows that are due.
+     */
+    index("file_assets_purge_after_idx")
+      .on(t.purgeAfter)
+      .where(sql`${t.purgeAfter} IS NOT NULL`),
   ]
 );
 
@@ -229,31 +263,20 @@ export const processingEvents = pgTable(
   ]
 );
 
-export const cadastroSubmissionsRelations = relations(
-  cadastroSubmissions,
-  ({ one, many }) => ({
-    facility: one(facilities, {
-      fields: [cadastroSubmissions.facilityId],
-      references: [facilities.id],
-    }),
-    vertical: one(businessVerticals, {
-      fields: [cadastroSubmissions.verticalId],
-      references: [businessVerticals.id],
-    }),
-    submittedBy: one(users, {
-      fields: [cadastroSubmissions.submittedByUserId],
-      references: [users.id],
-    }),
-    documents: many(submissionDocuments),
-  })
-);
-
 export const submissionDocumentsRelations = relations(
   submissionDocuments,
   ({ one, many }) => ({
-    submission: one(cadastroSubmissions, {
-      fields: [submissionDocuments.submissionId],
-      references: [cadastroSubmissions.id],
+    facility: one(facilities, {
+      fields: [submissionDocuments.facilityId],
+      references: [facilities.id],
+    }),
+    verticalProfile: one(facilityVerticalProfiles, {
+      fields: [submissionDocuments.facilityVerticalProfileId],
+      references: [facilityVerticalProfiles.id],
+    }),
+    submittedBy: one(users, {
+      fields: [submissionDocuments.submittedByUserId],
+      references: [users.id],
     }),
     requirement: one(conformityRequirements, {
       fields: [submissionDocuments.requirementId],

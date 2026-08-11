@@ -453,13 +453,31 @@ CalendarEditorDraft _initialDraft(
       recurrenceProvided: occurrence.recurrenceProvided,
     );
   }
-  final rounded = DateTime(
-    now.year,
-    now.month,
-    now.day,
-    now.hour,
-    now.minute < 30 ? 30 : 0,
-  ).add(now.minute >= 30 ? const Duration(hours: 1) : Duration.zero);
+  // Round up to the next half hour, in the clock's own zone.
+  //
+  // The unnamed `DateTime` constructor always builds a *local* value, so
+  // rebuilding from `now`'s components used to reinterpret a UTC clock as local
+  // — same wall-clock reading, different instant, silently off by the device
+  // offset. Production passes `DateTime.now()` (local) so it never showed there;
+  // it surfaced as a test that could only pass in one timezone.
+  final startOfHalfHour = now.isUtc
+      ? DateTime.utc(
+          now.year,
+          now.month,
+          now.day,
+          now.hour,
+          now.minute < 30 ? 30 : 0,
+        )
+      : DateTime(
+          now.year,
+          now.month,
+          now.day,
+          now.hour,
+          now.minute < 30 ? 30 : 0,
+        );
+  final rounded = startOfHalfHour.add(
+    now.minute >= 30 ? const Duration(hours: 1) : Duration.zero,
+  );
   final prefill = target.prefill;
   return CalendarEditorDraft(
     kind: prefill?.kind ?? CalendarEventKind.interaction,

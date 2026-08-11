@@ -66,21 +66,18 @@ export class DrizzleScopeRepository implements ScopeRepository {
   async assignTerritory(params: {
     userId: number;
     territoryId: number;
-    assignedBy: number;
   }): Promise<void> {
     await db
       .insert(userTerritoryAssignments)
       .values({
         userId: params.userId,
         territoryId: params.territoryId,
-        assignedBy: params.assignedBy,
       })
       .onConflictDoUpdate({
         target: [userTerritoryAssignments.userId, userTerritoryAssignments.territoryId],
-        set: {
-          assignedBy: params.assignedBy,
-          updatedAt: new Date(),
-        },
+        // Spec 0009 R9: `assigned_by` is gone — written, never read. Who
+        // assigned whom lives in the audit log, which the use case already writes.
+        set: { updatedAt: new Date() },
       });
   }
 
@@ -133,12 +130,6 @@ export class DrizzleScopeRepository implements ScopeRepository {
       assignedAt: row.createdAt,
     }));
   }
-
-  async findManagerIdByUserId(_userId: number): Promise<number | null> {
-    // Spec 0006: users.manager_id dropped — manager is territory-derived.
-    return null;
-  }
-
   /**
    * Verticals a user is a member of. UVA is the only grant (spec 0010 §1.1).
    *
@@ -271,7 +262,6 @@ export class DrizzleScopeRepository implements ScopeRepository {
           await tx.insert(userTerritoryAssignments).values({
             userId: params.userId,
             territoryId,
-            assignedBy: params.assignedByUserId,
           });
         }
       }

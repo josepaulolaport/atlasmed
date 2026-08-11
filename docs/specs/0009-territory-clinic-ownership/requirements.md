@@ -188,10 +188,16 @@ TOCTOU fails **closed**.
   (`drizzle-territory-spatial.repository.ts:240,289`) — un-geocoded clinics are invisible to
   the safety mechanism meant to protect them. Include them, flagged.
 
-### 3.7 Remove the admin geo-override — R7
+### 3.7 Remove the admin geo-override — R7 ✅ done
 
 Delete `PATCH /facilities/:id/territory`, `POST /facilities/:id/territory/unlock-geo`, the
 `adminOverrideClinicTerritory` / `unlockClinicGeo` use-cases, and the web override dialog.
+
+> Shipped. Both routes lived in `territories.route.ts`, not `facilities.route.ts` as written
+> above. The web dialog was already gone with `apps/web`, and no mobile client ever called
+> either route, so this was server-only. `ClinicMembershipWriter.setProfileTerritory` went with
+> them — the override was its only caller, and leaving a manual setter in place would contradict
+> "purely derived". `territory_assignment_source` never existed, so no migration was needed.
 
 Zone membership becomes **purely derived, with no exceptions**. Consequently no
 `territory_assignment_source` column is needed, and Spec 0003 AC12/AC14 are deleted.

@@ -8,8 +8,25 @@ export interface FacilityVerticalRepAssignmentRecord {
   endedAt: Date | null;
   assignedByUserId: number | null;
   endReason: string | null;
+  /** Spec 0009 R2: set when the rep holds this clinic outside their patch. */
+  overrideReason: string | null;
+  overrideByUserId: number | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Spec 0009 R2: "how many out-of-territory assignments exist, who, and why". */
+export interface OutOfTerritoryAssignment {
+  assignmentId: number;
+  facilityId: number;
+  facilityName: string;
+  verticalId: number;
+  userId: number;
+  userName: string;
+  overrideReason: string;
+  overrideByUserId: number | null;
+  overrideByName: string | null;
+  startedAt: Date;
 }
 
 export interface FacilityVerticalRepAssignmentRepository {
@@ -38,6 +55,9 @@ export interface FacilityVerticalRepAssignmentRepository {
     verticalId: number;
     userId: number;
     assignedByUserId: number;
+    /** Spec 0009 R2: null unless the rep is being given a clinic off-patch. */
+    overrideReason?: string | null;
+    overrideByUserId?: number | null;
   }): Promise<{
     assignment: FacilityVerticalRepAssignmentRecord;
     previousUserId: number | null;
@@ -68,4 +88,14 @@ export interface FacilityVerticalRepAssignmentRepository {
     profileId: number | null;
     endedUserId: number | null;
   }>;
+
+  /**
+   * Spec 0009 R2's acceptance criterion: overrides are reportable. Active
+   * overrides only — an ended one is history, not an exposure.
+   */
+  findOutOfTerritoryAssignments(params: {
+    verticalIds?: number[];
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: OutOfTerritoryAssignment[]; total: number }>;
 }

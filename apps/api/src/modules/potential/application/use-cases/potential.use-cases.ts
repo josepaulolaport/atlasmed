@@ -7,9 +7,29 @@ import {
   ResourceNotFoundError,
   ValidationError,
 } from "../../../../shared/errors";
+import {
+  addMonths,
+  averageMonthly,
+  deriveShare,
+  monthKeyAt,
+  monthlyRateFromDays,
+  rollingWindow,
+  trailingMonths,
+  type MonthKey,
+} from "@atlasmed/facility-insights";
 import type { PotentialRepository } from "../interfaces/potential.repository.interface";
 
-const ROLLING_DAYS = 90;
+/**
+ * How many calendar months the displayed monthly figure averages over.
+ *
+ * A **read-side** constant (spec 0013 §4.3): snapshots store the facts of one
+ * month, and the window is applied when they are presented. Changing it is a
+ * query change, not a data migration.
+ *
+ * It replaced a rolling 90-day sum divided by 3 — which had no upper bound, so
+ * future-dated orders counted, and which depended on the clock, so the same
+ * month could never be recomputed to the same number.
+ */
 const MONTHS_IN_WINDOW = 3;
 
 function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
@@ -18,6 +38,17 @@ function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
   if (!assigned.includes(verticalId)) {
     throw new ForbiddenError();
   }
+}
+
+/**
+ * The months one edit invalidates.
+ *
+ * An edit belongs to a single month, but the displayed figure averages a
+ * trailing window — so the months after it change too. Recomputing only the
+ * edited month would leave the visible number stale.
+ */
+function windowFor(month: MonthKey): MonthKey[] {
+  return trailingMonths(addMonths(month, MONTHS_IN_WINDOW - 1), MONTHS_IN_WINDOW);
 }
 
 function slugKey(raw: string): string {
@@ -37,111 +68,283 @@ export class ListFacilityPotentialsUseCase {
     facilityId: number;
     verticalId: number;
     scope: ScopeContext;
+    /** Injectable so the window under test does not depend on the wall clock. */
+    now?: Date;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
+
+    const now = input.now ?? new Date();
+    const currentMonth = monthKeyAt(now);
+    // The rep's competitor figures are month-keyed, so the window still names
+    // months for them — but ours is a rolling day window (spec 0013 §4.3), which
+    // is what stops a partial month from dragging the number down.
+    const months = trailingMonths(currentMonth, MONTHS_IN_WINDOW);
+    const window = rollingWindow(now);
 
     const definitions = await this.deps.potentialRepository.listDefinitions({
       verticalId: input.verticalId,
     });
     const definitionIds = definitions.map((d) => d.id);
-    const [values, qtySums] = await Promise.all([
-      this.deps.potentialRepository.listFacilityValues({
-        facilityId: input.facilityId,
-        definitionIds,
-      }),
-      this.deps.potentialRepository.sumAtlasmedQtyByDefinition({
+    const profileId = await this.deps.potentialRepository.findProfileId({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+    });
+
+    const [usage, qtySums] = await Promise.all([
+      profileId == null
+        ? Promise.resolve([])
+        : this.deps.potentialRepository.listUsage({ profileId, definitionIds, months }),
+      // Live from orders, not from snapshots: snapshots are per calendar month
+      // and a day window cannot be derived from month facts. They keep serving
+      // history and the aggregate views (spec 0013 §4.5).
+      this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
         facilityId: input.facilityId,
         verticalId: input.verticalId,
         definitionIds,
-        since: new Date(Date.now() - ROLLING_DAYS * 86_400_000),
+        rangeStart: window.start,
+        rangeEnd: window.end,
       }),
     ]);
 
-    const valueByDef = new Map(values.map((v) => [v.definitionId, v.quantity]));
-    const qtyByDef = new Map(qtySums.map((q) => [q.definitionId, q.totalQty]));
+    const oursByDef = new Map<number, number>();
+    for (const row of qtySums) {
+      oursByDef.set(row.definitionId, (oursByDef.get(row.definitionId) ?? 0) + row.totalQty);
+    }
+
+    const usageByDef = new Map<number, typeof usage>();
+    for (const row of usage) {
+      const list = usageByDef.get(row.definitionId) ?? [];
+      list.push(row);
+      usageByDef.set(row.definitionId, list);
+    }
 
     return {
       verticalId: input.verticalId,
       items: definitions.map((def) => {
-        const potentialQuantity = valueByDef.get(def.id) ?? null;
-        const sumQty = qtyByDef.get(def.id) ?? 0;
-        const atlasmedMonthlyAvgQty = sumQty / MONTHS_IN_WINDOW;
-        const penetration =
-          potentialQuantity != null && potentialQuantity > 0
-            ? atlasmedMonthlyAvgQty / potentialQuantity
-            : null;
+        const monthlyRows = usageByDef.get(def.id) ?? [];
+
+        // Ours: a quantity observed over the window, normalised to a month.
+        const ours = monthlyRateFromDays(oursByDef.get(def.id) ?? 0);
+        // Theirs: the rep already answers "quantas por mês", so these are rates
+        // and are averaged, never day-normalised. Normalising them would divide
+        // a rate by time and produce nonsense.
+        const theirs = averageMonthly(
+          monthlyRows.map((row) => row.metricQuantity),
+          MONTHS_IN_WINDOW,
+        );
+        // A share needs a denominator we actually know. With no competitor
+        // observation at all the market is *unknown*, not "all ours" — reporting
+        // 100% would assert we own it on zero evidence. This is the same
+        // null-versus-zero rule spec 0013 §4.3 applies to "no sales", carried to
+        // the other operand: `theirs = 0` because the rep recorded a zero is a
+        // fact; `theirs = 0` because nobody has asked is not.
+        const hasCompetitorObservation = monthlyRows.length > 0;
+        const { totalQty, share: mathematicalShare } = deriveShare(ours, theirs);
+        const share = hasCompetitorObservation ? mathematicalShare : null;
+
+        // The list names who supplies this clinic *now*; the averages above are
+        // the window. Showing three months of rows would double-count a product
+        // the rep recorded in each of them.
+        const currentMonthRows = monthlyRows.filter((row) => row.month === currentMonth);
+
         return {
           definitionId: def.id,
           key: def.key,
           label: def.label,
-          potentialQuantity,
-          atlasmedMonthlyAvgQty,
-          /** Fraction 0–1+ (e.g. 0.3 = 30%). Null when potential missing. */
-          penetration,
+          /** Ours, from orders — monthly average over the window. */
+          atlasmedMonthlyAvgQty: ours,
+          /** Theirs, as recorded by the rep — monthly average over the window. */
+          competitorMonthlyQty: theirs,
+          /** The observed market: ours + theirs. */
+          totalMarketQty: totalQty,
+          /**
+           * Our share of the market, 0–1, or null when the market is unknown.
+           *
+           * Null in two cases, and they are the same principle twice:
+           *   - nothing at all is known, so there is no denominator
+           *   - we have orders but **no competitor observation**, so the market
+           *     size is unknown. Reporting 100% there would claim we own the
+           *     whole market on no evidence
+           *
+           * 0% is reserved for what it actually means: a known market we sell
+           * nothing into.
+           */
+          share,
+          /** The month the competitor rows below belong to. */
+          month: currentMonth,
+          competitors: currentMonthRows.map((c) => ({
+            productId: c.productId,
+            productName: c.productName,
+            quantity: c.quantity,
+            metricQuantity: c.metricQuantity,
+            updatedAt: c.updatedAt.toISOString(),
+          })),
         };
       }),
     };
   }
 }
 
-export class PatchFacilityPotentialsUseCase {
-  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+/**
+ * Records what a clinic uses of one competitor product, for one metric.
+ *
+ * The rep supplies only a number. Which product comes from the picker, and the
+ * linha comes from the definition — never from the caller — so a usage row
+ * cannot pair a profile in one linha with a metric in another.
+ */
+export class SetFacilityProductUsageUseCase {
+  constructor(
+    private readonly deps: {
+      potentialRepository: PotentialRepository;
+      /** Optional so existing callers and tests are unaffected. */
+      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+    },
+  ) {}
 
   async execute(input: {
     facilityId: number;
     verticalId: number;
+    definitionId: number;
+    productId: number;
+    quantity: number;
+    /** The month observed. Defaults to the current month in São Paulo. */
+    month?: MonthKey;
     userId: number;
     scope: ScopeContext;
-    values: Array<{ definitionId: number; quantity: number | null }>;
+    now?: Date;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
 
-    if (!input.values.length) {
+    if (!Number.isFinite(input.quantity) || input.quantity < 0) {
       throw new ValidationError([
-        { field: "values", message: "values must not be empty" },
+        { field: "quantity", message: "quantity must be a non-negative number" },
       ]);
     }
 
-    const definitions = await this.deps.potentialRepository.listDefinitions({
+    const currentMonth = monthKeyAt(input.now ?? new Date());
+    const month = input.month ?? currentMonth;
+    // A rep can correct an earlier month, but not record the future — there is
+    // nothing to observe yet, and a future row would silently enter the window
+    // as soon as the calendar caught up.
+    if (month > currentMonth) {
+      throw new ValidationError([
+        { field: "month", message: "cannot record usage for a future month" },
+      ]);
+    }
+
+    const definition = await this.deps.potentialRepository.findDefinitionById(
+      input.definitionId,
+    );
+    if (!definition || definition.deletedAt) {
+      throw new ResourceNotFoundError("PotentialDefinition", input.definitionId);
+    }
+    if (definition.verticalId !== input.verticalId) {
+      throw new ValidationError([
+        {
+          field: "definitionId",
+          message: "definition does not belong to this Linha",
+        },
+      ]);
+    }
+
+    const profileId = await this.deps.potentialRepository.findProfileId({
+      facilityId: input.facilityId,
       verticalId: input.verticalId,
     });
-    const allowed = new Set(definitions.map((d) => d.id));
-
-    for (const row of input.values) {
-      if (!allowed.has(row.definitionId)) {
-        throw new ValidationError([
-          {
-            field: "definitionId",
-            message: `definition ${row.definitionId} not in vertical`,
-          },
-        ]);
-      }
-      if (row.quantity === null) {
-        await this.deps.potentialRepository.deleteFacilityValue({
-          facilityId: input.facilityId,
-          definitionId: row.definitionId,
-        });
-        continue;
-      }
-      if (!Number.isFinite(row.quantity) || row.quantity < 0) {
-        throw new ValidationError([
-          { field: "quantity", message: "quantity must be a non-negative number" },
-        ]);
-      }
-      await this.deps.potentialRepository.upsertFacilityValue({
-        facilityId: input.facilityId,
-        definitionId: row.definitionId,
-        quantity: row.quantity,
-        updatedByUserId: input.userId,
-      });
+    if (profileId == null) {
+      throw new ResourceNotFoundError(
+        "FacilityVerticalProfile",
+        `${input.facilityId}:${input.verticalId}`,
+      );
     }
+
+    // A non-competitor product is refused by the composite foreign key, but
+    // failing here names the reason instead of surfacing a constraint error.
+    await this.deps.potentialRepository.upsertUsage({
+      profileId,
+      definitionId: input.definitionId,
+      verticalId: definition.verticalId,
+      productId: input.productId,
+      month,
+      quantity: input.quantity,
+      updatedByUserId: input.userId,
+    });
+
+    // Synchronous, not enqueued (spec 0013 §4.4): the rep is looking at the
+    // number they just changed, so it must be right when the screen redraws.
+    // Order writes enqueue instead — an importer upserting tens of orders would
+    // otherwise recompute the same profile dozens of times.
+    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
 
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,
       verticalId: input.verticalId,
       scope: input.scope,
+      now: input.now,
+    });
+  }
+}
+
+export class RemoveFacilityProductUsageUseCase {
+  constructor(
+    private readonly deps: {
+      potentialRepository: PotentialRepository;
+      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+    },
+  ) {}
+
+  async execute(input: {
+    facilityId: number;
+    verticalId: number;
+    definitionId: number;
+    productId: number;
+    /** The month to clear. Defaults to the current month in São Paulo. */
+    month?: MonthKey;
+    scope: ScopeContext;
+    now?: Date;
+  }) {
+    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertVerticalAccess(input.scope, input.verticalId);
+
+    const month = input.month ?? monthKeyAt(input.now ?? new Date());
+
+    const profileId = await this.deps.potentialRepository.findProfileId({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+    });
+    if (profileId == null) {
+      throw new ResourceNotFoundError(
+        "FacilityVerticalProfile",
+        `${input.facilityId}:${input.verticalId}`,
+      );
+    }
+
+    // Deletes one month, never the product's whole history — removing what the
+    // rep sees today must not silently erase what was true in March.
+    const removed = await this.deps.potentialRepository.deleteUsage({
+      profileId,
+      definitionId: input.definitionId,
+      productId: input.productId,
+      month,
+    });
+    if (!removed) {
+      throw new ResourceNotFoundError(
+        "FacilityProductUsage",
+        `${input.definitionId}:${input.productId}:${month}`,
+      );
+    }
+
+    // Removing a competitor changes the denominator, so the snapshot is stale
+    // the instant the row goes. Same reasoning as the write above.
+    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
+
+    return new ListFacilityPotentialsUseCase(this.deps).execute({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+      scope: input.scope,
+      now: input.now,
     });
   }
 }
@@ -270,23 +473,39 @@ export class LinkProductPotentialUseCase {
         },
       ]);
     }
+    // The definition's vertical is the link's vertical — it is never supplied by
+    // the caller. The composite FK would reject a disagreement anyway; passing
+    // it from here means the two can never disagree in the first place.
     await this.deps.potentialRepository.linkProduct({
       productId: input.productId,
       definitionId: input.definitionId,
+      verticalId: definition.verticalId,
     });
-    return { productId: input.productId, definitionId: input.definitionId };
+    return {
+      productId: input.productId,
+      definitionId: input.definitionId,
+      verticalId: definition.verticalId,
+    };
   }
 }
 
 export class UnlinkProductPotentialUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
-  async execute(input: { productId: number; scope: ScopeContext }) {
-    const link = await this.deps.potentialRepository.findLinkByProductId(
-      input.productId,
-    );
+  async execute(input: {
+    productId: number;
+    definitionId: number;
+    scope: ScopeContext;
+  }) {
+    const link = await this.deps.potentialRepository.findLink({
+      productId: input.productId,
+      definitionId: input.definitionId,
+    });
     if (!link) {
-      throw new ResourceNotFoundError("ProductPotentialLink", input.productId);
+      throw new ResourceNotFoundError(
+        "ProductPotentialLink",
+        `${input.productId}:${input.definitionId}`,
+      );
     }
     const definition = await this.deps.potentialRepository.findDefinitionById(
       link.definitionId,
@@ -295,7 +514,10 @@ export class UnlinkProductPotentialUseCase {
       throw new ResourceNotFoundError("PotentialDefinition", link.definitionId);
     }
     assertVerticalAccess(input.scope, definition.verticalId);
-    await this.deps.potentialRepository.unlinkProduct(input.productId);
+    await this.deps.potentialRepository.unlinkProduct({
+      productId: input.productId,
+      definitionId: input.definitionId,
+    });
     return { ok: true };
   }
 }

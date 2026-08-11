@@ -5,13 +5,22 @@ import 'dart:typed_data';
 import 'package:atlasmed_mobile_app/core/json/crm_id.dart';
 
 import 'package:crypto/crypto.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show compute;
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/cadastro_upload_limits.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_upload_transport.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+
+/// Sign-and-upload passes over the parts still missing. Each round re-signs,
+/// so this bounds how many times a resumed upload may re-derive fresh URLs
+/// before the file (never the package) is reported as failed.
+const int _maxMultipartRounds = 3;
+
+String _sha256Hex(Uint8List bytes) => sha256.convert(bytes).toString();
 
 class FacilityCadastroException implements Exception {
   const FacilityCadastroException([this.message]);
@@ -43,9 +52,6 @@ class FacilityCadastroChecklist {
     this.billingEmail,
     this.commercialStatus,
     this.conformityStatus,
-    this.submissionId,
-    this.submissionStatus,
-    this.submissionVersion,
   });
 
   final int facilityId;
@@ -53,44 +59,11 @@ class FacilityCadastroChecklist {
   final String? billingEmail;
   final String? commercialStatus;
   final String? conformityStatus;
-  final int? submissionId;
-  final String? submissionStatus;
-  final int? submissionVersion;
   final List<EstablishmentDocument> documents;
   final int pendingAction;
 
   List<EstablishmentDocument> get fileDocuments =>
       documents.where((d) => !d.isBillingEmail).toList(growable: false);
-
-  bool get isDraftPackage =>
-      submissionStatus == null ||
-      submissionStatus == 'DRAFT' ||
-      submissionStatus == 'CHANGES_REQUESTED';
-
-  bool get isUnderReview => submissionStatus == 'UNDER_REVIEW';
-
-  bool get canSubmitPackage {
-    if (submissionId == null || submissionId! <= 0) return false;
-    if (!isDraftPackage) return false;
-    final files = fileDocuments;
-    if (files.isEmpty) return false;
-    return files.every(
-      (d) =>
-          d.files.isNotEmpty &&
-          d.allFilesReady &&
-          (d.status == EstablishmentDocumentStatus.ready ||
-              d.status == EstablishmentDocumentStatus.approved),
-    );
-  }
-
-  bool get hasDraftToDelete =>
-      submissionId != null && submissionId! > 0 && isDraftPackage;
-
-  bool get showPackageSubmitBar =>
-      isDraftPackage &&
-      submissionId != null &&
-      submissionId! > 0 &&
-      fileDocuments.isNotEmpty;
 
   int get readyDocumentCount => fileDocuments
       .where(
@@ -137,17 +110,22 @@ EstablishmentDocumentStatus _mapDocumentStatus({
 
 class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     with SessionEnvironmentMixin<FacilityCadastroChecklist> {
-  FacilityCadastroRepository(this.facilityId, {RepositoryHttpClient? client})
-    : _client = client,
-      super(
-        endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro',
-        ),
-        name: 'FacilityCadastroRepository',
-      );
+  FacilityCadastroRepository(
+    this.facilityId, {
+    RepositoryHttpClient? client,
+    CadastroUploadTransport? uploadTransport,
+  }) : _client = client,
+       _transport = uploadTransport ?? CadastroUploadTransport(),
+       super(
+         endpoint: Uri.parse(
+           '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro',
+         ),
+         name: 'FacilityCadastroRepository',
+       );
 
   final int facilityId;
   final RepositoryHttpClient? _client;
+  final CadastroUploadTransport _transport;
 
   @override
   RepositoryHttpClient get client => _client ?? super.client;
@@ -235,6 +213,14 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
           currentApproved: approvedRaw != null
               ? CadastroApprovedSummary.fromJson(approvedRaw)
               : null,
+          requiresValidityDate: item['requiresValidityDate'] as bool? ?? false,
+          uploadLimits: CadastroUploadLimits.fromRequirementJson(item),
+          validUntil: item['validUntil'] as String?,
+          // Derived by the server at read time (ADR 0008 §4) — parsed, never
+          // recomputed here.
+          expiry: CadastroExpiry.fromJson(
+            item['expiry'] as Map<String, dynamic>?,
+          ),
           files: files,
           title:
               item['name'] as String? ?? item['slug'] as String? ?? 'Documento',
@@ -285,9 +271,6 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       billingEmail: map['billingEmail'] as String?,
       commercialStatus: map['commercialStatus'] as String?,
       conformityStatus: map['conformityStatus'] as String?,
-      submissionId: readCrmIdOrNull(map['submissionId'], 'submissionId'),
-      submissionStatus: map['submissionStatus'] as String?,
-      submissionVersion: (map['submissionVersion'] as num?)?.toInt(),
       documents: docs,
       pendingAction:
           (counts?['pendingAction'] as num?)?.toInt() ??
@@ -316,35 +299,21 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     );
   }
 
-  Future<int> ensureDraftSubmission({int? verticalId}) async {
+  /// Opens (or returns) the document being worked on for this requirement.
+  Future<int> ensureDocument({
+    required int requirementId,
+    int? verticalId,
+  }) async {
     final uri = Uri.parse(
-      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions',
+      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/documents',
     );
     final map = await _jsonCall(
       uri: uri,
       method: RepositoryHttpMethod.post,
       body: {
+        'requirementId': requirementId,
         if (verticalId != null && (verticalId > 0)) 'verticalId': verticalId,
       },
-    );
-    final id = readCrmIdOrNull(map['id'], 'id');
-    if (id == null || (id <= 0)) {
-      throw const FacilityCadastroException('Falha ao criar rascunho.');
-    }
-    return id;
-  }
-
-  Future<int> ensureDocument({
-    required int submissionId,
-    required int requirementId,
-  }) async {
-    final uri = Uri.parse(
-      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions/$submissionId/documents',
-    );
-    final map = await _jsonCall(
-      uri: uri,
-      method: RepositoryHttpMethod.post,
-      body: {'requirementId': requirementId},
     );
     final id = readCrmIdOrNull(map['id'], 'id');
     if (id == null || (id <= 0)) {
@@ -353,26 +322,15 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     return id;
   }
 
-  Future<void> _putBytes(
-    String url,
-    List<int> bytes,
-    String contentType,
-  ) async {
-    final ioClient = http.Client();
-    try {
-      final response = await ioClient.put(
-        Uri.parse(url),
-        headers: {'Content-Type': contentType},
-        body: bytes,
-      );
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw FacilityCadastroException(
-          'Falha no upload direto (${response.statusCode})',
-        );
-      }
-    } finally {
-      ioClient.close();
-    }
+  /// Maps bytes-on-the-wire onto the progress band reserved for the transfer.
+  ///
+  /// `initiate` and `complete` own the ends of the bar. Progress is a property
+  /// of the transfer alone — server-side processing is deliberately not part
+  /// of it (spec 0011 §4.1: "Processando" is never shown).
+  static double _transferProgress(int sentBytes, int totalBytes) {
+    if (totalBytes <= 0) return 0.95;
+    final ratio = (sentBytes / totalBytes).clamp(0.0, 1.0);
+    return 0.05 + (0.90 * ratio);
   }
 
   Future<({int fileId, String status})> uploadFileToDocument({
@@ -382,7 +340,11 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     int? position,
     void Function(double progress)? onProgress,
   }) async {
-    final checksum = sha256.convert(file.bytes).toString();
+    final bytes = file.bytes is Uint8List
+        ? file.bytes as Uint8List
+        : Uint8List.fromList(file.bytes);
+    // Hashing 20 MB blocks the UI isolate for hundreds of milliseconds.
+    final checksum = await compute(_sha256Hex, bytes);
     onProgress?.call(0.05);
     final initiateUri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/documents/$documentId/files/initiate',
@@ -393,7 +355,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       body: {
         'filename': file.name,
         'contentType': file.contentType,
-        'sizeBytes': file.bytes.length,
+        'sizeBytes': bytes.length,
         'checksum': checksum,
         'role': role,
         // ignore: use_null_aware_elements — value-nullable map entry, not key-nullable.
@@ -412,9 +374,14 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       if (uploadUrl == null) {
         throw const FacilityCadastroException('URL de upload ausente.');
       }
-      onProgress?.call(0.2);
-      await _putBytes(uploadUrl, file.bytes, file.contentType);
-      onProgress?.call(0.85);
+      await _transport.put(
+        url: Uri.parse(uploadUrl),
+        body: bytes,
+        contentType: file.contentType,
+        onSent: (sent) =>
+            onProgress?.call(_transferProgress(sent, bytes.length)),
+      );
+      onProgress?.call(0.95);
       final completeUri = Uri.parse(
         '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/uploads/complete',
       );
@@ -446,43 +413,84 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     final signUri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/uploads/$uploadSessionId/parts/sign',
     );
-    final signed = await _jsonCall(
-      uri: signUri,
-      method: RepositoryHttpMethod.post,
-      body: {'partNumbers': partNumbers},
-    );
-    final parts = (signed['parts'] as List<dynamic>? ?? const [])
-        .cast<Map<String, dynamic>>();
 
-    final completed = <Map<String, dynamic>>[];
-    for (var i = 0; i < parts.length; i++) {
-      final part = parts[i];
-      final partNumber = (part['partNumber'] as num).toInt();
-      final uploadUrl = part['uploadUrl'] as String;
-      final start = (partNumber - 1) * partSize;
-      final end = start + partSize > file.bytes.length
-          ? file.bytes.length
-          : start + partSize;
-      final chunk = file.bytes.sublist(start, end);
-      final ioClient = http.Client();
+    // A part already stored is never sent again. Each round re-signs only what
+    // is still missing, which is both the resume path (connectivity returns,
+    // the remaining parts continue) and the fix for a signature that expired
+    // while earlier parts were moving.
+    final storedParts = <int, Map<String, dynamic>>{};
+    var bytesStored = 0;
+    CadastroUploadTransportException? lastTransportFailure;
+
+    for (var round = 0; round < _maxMultipartRounds; round++) {
+      final missing = partNumbers
+          .where((n) => !storedParts.containsKey(n))
+          .toList(growable: false);
+      if (missing.isEmpty) break;
+
       try {
-        final response = await ioClient.put(Uri.parse(uploadUrl), body: chunk);
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          throw FacilityCadastroException(
-            'Falha na parte $partNumber (${response.statusCode})',
+        final signed = await _jsonCall(
+          uri: signUri,
+          method: RepositoryHttpMethod.post,
+          body: {'partNumbers': missing},
+        );
+        final parts = (signed['parts'] as List<dynamic>? ?? const [])
+            .cast<Map<String, dynamic>>();
+
+        for (final part in parts) {
+          final partNumber = (part['partNumber'] as num).toInt();
+          final uploadUrl = part['uploadUrl'] as String;
+          final start = (partNumber - 1) * partSize;
+          final end = start + partSize > bytes.length
+              ? bytes.length
+              : start + partSize;
+          final chunk = Uint8List.sublistView(bytes, start, end);
+
+          final response = await _transport.put(
+            url: Uri.parse(uploadUrl),
+            body: chunk,
+            onSent: (sent) => onProgress?.call(
+              _transferProgress(bytesStored + sent, bytes.length),
+            ),
           );
+
+          // Dart lowercases response header keys; the lowercase lookup is the
+          // one that hits. The uppercase fallback stays for a client that does
+          // not (ADR 0008 records D-13 as a non-defect).
+          final etag =
+              (response.headers['etag'] ?? response.headers['ETag'] ?? '')
+                  .replaceAll('"', '');
+          if (etag.isEmpty) {
+            // Completing without it would 422 after the bytes moved and leave
+            // a multipart nothing aborts. Fail here, where it is legible.
+            throw FacilityCadastroException(
+              'Parte $partNumber aceita sem ETag; upload não pode ser concluído.',
+            );
+          }
+          storedParts[partNumber] = {
+            'partNumber': partNumber,
+            'etag': etag,
+            'sizeBytes': chunk.length,
+          };
+          bytesStored += chunk.length;
+          onProgress?.call(_transferProgress(bytesStored, bytes.length));
         }
-        final etag = response.headers['etag'] ?? response.headers['ETag'] ?? '';
-        completed.add({
-          'partNumber': partNumber,
-          'etag': etag.replaceAll('"', ''),
-          'sizeBytes': chunk.length,
-        });
-        onProgress?.call(0.15 + (0.7 * (i + 1) / parts.length));
-      } finally {
-        ioClient.close();
+      } on CadastroUploadTransportException catch (error) {
+        lastTransportFailure = error;
+        // Parts already stored survive; the next round resumes from here.
       }
     }
+
+    if (storedParts.length != totalParts) {
+      throw FacilityCadastroException(
+        lastTransportFailure?.message ??
+            'Upload interrompido: ${storedParts.length} de $totalParts partes enviadas.',
+      );
+    }
+
+    final completed = partNumbers
+        .map((n) => storedParts[n]!)
+        .toList(growable: false);
 
     final completeUri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/uploads/complete',
@@ -523,10 +531,9 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     if (files.isEmpty) {
       throw const FacilityCadastroException('Nenhum arquivo para enviar.');
     }
-    final submissionId = await ensureDraftSubmission(verticalId: verticalId);
     final documentId = await ensureDocument(
-      submissionId: submissionId,
       requirementId: requirementId,
+      verticalId: verticalId,
     );
 
     // Append after any existing pages (API also coerces position if omitted).
@@ -568,18 +575,12 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     );
   }
 
-  Future<void> deleteDraft(int submissionId) async {
+  /// Discards one unsent document and the files behind it.
+  Future<void> deleteDocument(int documentId) async {
     final uri = Uri.parse(
-      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions/$submissionId',
+      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/documents/$documentId',
     );
     await _jsonCall(uri: uri, method: RepositoryHttpMethod.delete);
-  }
-
-  Future<void> submitPackage(int submissionId) async {
-    final uri = Uri.parse(
-      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/submissions/$submissionId/submit',
-    );
-    await _jsonCall(uri: uri, method: RepositoryHttpMethod.post);
   }
 
   Future<List<CadastroRequirementSubmission>> listRequirementSubmissions(
@@ -597,9 +598,16 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         .toList(growable: false);
   }
 
+  /// Sends one requirement for review.
+  ///
+  /// [validUntil] is `YYYY-MM-DD` and must be present exactly where the
+  /// requirement declares a validity: the API rejects the submit without one,
+  /// and rejects one sent for a requirement that declares none (spec 0011
+  /// §3.3), so the field is omitted rather than sent null.
   Future<Map<String, dynamic>> submitRequirement({
     required int requirementId,
     int? documentId,
+    String? validUntil,
   }) async {
     final uri = Uri.parse(
       '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/requirements/$requirementId/submit',
@@ -609,6 +617,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       method: RepositoryHttpMethod.post,
       body: {
         if (documentId != null && (documentId > 0)) 'documentId': documentId,
+        if (validUntil != null && validUntil.isNotEmpty)
+          'validUntil': validUntil,
       },
     );
   }

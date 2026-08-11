@@ -21,6 +21,7 @@ import {
   AssignFacilityVerticalRepUseCase,
   DeactivateFacilityVerticalUseCase,
   ListFacilityVerticalRepAssignmentsUseCase,
+  ListOutOfTerritoryAssignmentsUseCase,
   UnassignFacilityVerticalRepUseCase,
 } from "./application/use-cases/facility-vertical-rep.use-cases";
 import {
@@ -30,27 +31,22 @@ import {
 } from "./application/use-cases/conformity.use-cases";
 import {
   ApproveFacilityCadastroRecordUseCase,
-  DownloadFacilityCadastroFileUseCase,
   GetFacilityCadastroChecklistUseCase,
   ListCadastroSubmissionsUseCase,
   RejectFacilityCadastroRecordUseCase,
-  SubmitFacilityCadastroDocumentUseCase,
   UpdateFacilityBillingEmailUseCase,
 } from "./application/use-cases/facility-cadastro.use-cases";
 import {
   CompleteCadastroFileUploadUseCase,
-  CreateCadastroSubmissionDocumentUseCase,
-  DeleteDraftCadastroSubmissionUseCase,
-  EnsureDraftCadastroSubmissionUseCase,
+  CreateCadastroDocumentUseCase,
+  DeleteCadastroDocumentUseCase,
   GetCadastroFileSignedUrlUseCase,
   InitiateCadastroFileUploadUseCase,
-  ListCadastroPackageSubmissionsUseCase,
   ListCadastroRequirementSubmissionsUseCase,
   ReorderCadastroDocumentFilesUseCase,
   ReviewCadastroDocumentUseCase,
   SignCadastroUploadPartsUseCase,
   SubmitCadastroRequirementUseCase,
-  SubmitCadastroSubmissionUseCase,
 } from "./application/use-cases/cadastro-submission.use-cases";
 import { FacilityCadastroCompletionService } from "./application/services/facility-cadastro-completion.service";
 import {
@@ -70,9 +66,12 @@ import {
 } from "./application/use-cases/facility-photo.use-cases";
 import {
   territoryMembershipService,
+  territoryRepositories,
 } from "../territory/composition";
 import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
+import { FacilityLocationService } from "./application/services/facility-location.service";
+import { DrizzleFacilityLocationRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-location.repository";
 import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
 import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
@@ -100,7 +99,6 @@ const facilityCadastroCompletionService = new FacilityCadastroCompletionService(
 const facilityCadastroDeps = {
   facilityRepository: facilityRepositories.facility,
   conformityRepository: facilityRepositories.conformity,
-  storage: facilityPhotoStorage,
   completionService: facilityCadastroCompletionService,
   cadastroRepository: facilityRepositories.cadastroSubmission,
 };
@@ -129,6 +127,21 @@ async function handleFacilityLocationChanged(facilityId: number): Promise<void> 
   await facilityGeocodingService.ensureCoordinatesPersisted(facilityId);
   await territoryMembershipService.assignFacilityById(facilityId);
 }
+
+/**
+ * Spec 0009 R5: the single owner of every location write. Scripts included —
+ * `geocode-facilities.ts` used to UPDATE the column directly, so the clinics it
+ * moved never had their membership recomputed (D-18).
+ */
+export const facilityLocationService = new FacilityLocationService({
+  locationRepository: new DrizzleFacilityLocationRepository(),
+  geocodingService: facilityGeocodingService,
+  coverage: territoryRepositories.spatial,
+  onLocationChanged: async (facilityId) => {
+    await territoryMembershipService.assignFacilityById(facilityId);
+    await upsertFacilitySearchDocument(facilityId);
+  },
+});
 
 async function handleFacilityChanged(facilityId: number): Promise<void> {
   await upsertFacilitySearchDocument(facilityId);
@@ -194,6 +207,11 @@ export const facilityUseCases = {
     }),
   listVerticalRepAssignments: () =>
     new ListFacilityVerticalRepAssignmentsUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+    }),
+  // Spec 0009 R2: overrides are reportable, or they are just an untracked hole.
+  listOutOfTerritoryAssignments: () =>
+    new ListOutOfTerritoryAssignmentsUseCase({
       repAssignmentRepository: facilityRepositories.verticalRepAssignment,
     }),
   assignVerticalRep: () =>
@@ -300,13 +318,6 @@ export const facilityUseCases = {
     new GetFacilityCadastroChecklistUseCase(facilityCadastroDeps),
   updateFacilityBillingEmail: () =>
     new UpdateFacilityBillingEmailUseCase(facilityCadastroDeps),
-  submitFacilityCadastroDocument: () =>
-    new SubmitFacilityCadastroDocumentUseCase(facilityCadastroDeps),
-  downloadFacilityCadastroFile: () =>
-    new DownloadFacilityCadastroFileUseCase({
-      conformityRepository: facilityRepositories.conformity,
-      storage: facilityPhotoStorage,
-    }),
   approveFacilityCadastroRecord: () =>
     new ApproveFacilityCadastroRecordUseCase(facilityCadastroDeps),
   rejectFacilityCadastroRecord: () =>
@@ -317,10 +328,8 @@ export const facilityUseCases = {
       facilityRepository: facilityRepositories.facility,
       cadastroRepository: facilityRepositories.cadastroSubmission,
     }),
-  ensureDraftCadastroSubmission: () =>
-    new EnsureDraftCadastroSubmissionUseCase(cadastroSubmissionDeps),
-  createCadastroSubmissionDocument: () =>
-    new CreateCadastroSubmissionDocumentUseCase(cadastroSubmissionDeps),
+  createCadastroDocument: () =>
+    new CreateCadastroDocumentUseCase(cadastroSubmissionDeps),
   initiateCadastroFileUpload: () =>
     new InitiateCadastroFileUploadUseCase(cadastroSubmissionDeps),
   signCadastroUploadParts: () =>
@@ -331,18 +340,14 @@ export const facilityUseCases = {
     new ReorderCadastroDocumentFilesUseCase(cadastroSubmissionDeps),
   getCadastroFileSignedUrl: () =>
     new GetCadastroFileSignedUrlUseCase(cadastroSubmissionDeps),
-  submitCadastroSubmission: () =>
-    new SubmitCadastroSubmissionUseCase(cadastroSubmissionDeps),
   submitCadastroRequirement: () =>
     new SubmitCadastroRequirementUseCase(cadastroSubmissionDeps),
   listCadastroRequirementSubmissions: () =>
     new ListCadastroRequirementSubmissionsUseCase(cadastroSubmissionDeps),
-  deleteDraftCadastroSubmission: () =>
-    new DeleteDraftCadastroSubmissionUseCase(cadastroSubmissionDeps),
+  deleteCadastroDocument: () =>
+    new DeleteCadastroDocumentUseCase(cadastroSubmissionDeps),
   reviewCadastroDocument: () =>
     new ReviewCadastroDocumentUseCase(cadastroSubmissionDeps),
-  listCadastroPackageSubmissions: () =>
-    new ListCadastroPackageSubmissionsUseCase(cadastroSubmissionDeps),
   listFacilityVisits: () =>
     new ListFacilityVisitsUseCase({
       visitRepository: facilityRepositories.visit,

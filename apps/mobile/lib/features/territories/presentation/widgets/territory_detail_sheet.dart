@@ -73,7 +73,10 @@ class TerritoryDetailSheet extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 18),
-            _DetailRow(label: 'Código', value: territory.code),
+            // The "Código" row is gone with the column it displayed
+            // (spec 0009 R9). It showed a second identifier nothing maintained;
+            // the name above and the type below carry what it was standing in for.
+            _DetailRow(label: 'Identificador', value: territory.slug),
             if (territory.assignedUserId != null)
               _AssignedUserRow(
                 label: isManagerZone

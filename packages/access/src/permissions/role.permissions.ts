@@ -51,8 +51,16 @@ export function applyRoleAbilities(
       can("create", "FIELD_SUGGESTION");
       can("read", "FIELD_SUGGESTION");
       can("update", "FIELD_SUGGESTION");
-      can("read", "CADASTRO_SUBMISSION");
-      can("update", "CADASTRO_SUBMISSION");
+      // Cadastro review is back-office work — OPS and ADMIN only (ADR 0008).
+      // A MANAGER still uploads and submits documents for their clinics; that
+      // uses `update FACILITY`, not this subject.
+      //
+      // This is enforced by `requirePermission` on the review routes. It does
+      // *not* hide anything in the client: `canReadCadastroSubmissions` is
+      // exported but has no consumer, and nothing navigates to the review
+      // screen at all today.
+      cannot("read", "CADASTRO_SUBMISSION");
+      cannot("update", "CADASTRO_SUBMISSION");
       break;
 
     case "REP":

@@ -95,6 +95,25 @@ function buildUseCases(
     territoryTypeRepository,
     spatialRepository,
     containmentService: {} as TerritoryContainmentService,
+    // Spec 0009 R1: creation runs inside the transaction port. The fake hands
+    // back the same repositories, so these scope tests still exercise the real
+    // ordering without needing a database.
+    transactionPort: {
+      run: async (fn: (deps: never) => Promise<unknown>) =>
+        fn({
+          territoryRepository,
+          territoryTypeRepository,
+          spatialRepository,
+          boundaryWriter: {
+            commitBoundaryChange: async () => ({
+              endedAssignmentCount: 0,
+              repPatchCount: 0,
+            }),
+          },
+          lockTerritory: async () => true,
+        } as never),
+    } as never,
+    buildContainmentService: () => ({}) as TerritoryContainmentService,
   });
 }
 

@@ -5,19 +5,33 @@ import {
   ListDefinitionProductsUseCase,
   ListFacilityPotentialsUseCase,
   ListPotentialDefinitionsUseCase,
-  PatchFacilityPotentialsUseCase,
+  SetFacilityProductUsageUseCase,
+  RemoveFacilityProductUsageUseCase,
   SoftDeletePotentialDefinitionUseCase,
   UnlinkProductPotentialUseCase,
   UpdatePotentialDefinitionUseCase,
 } from "./application/use-cases/potential.use-cases";
+import { RecomputeMetricSnapshotsUseCase } from "./application/use-cases/recompute-metric-snapshots.use-case";
 
 const potentialRepository = new DrizzlePotentialRepository();
+const recomputeSnapshots = new RecomputeMetricSnapshotsUseCase();
 
 const deps = { potentialRepository };
 
+/**
+ * A rep's edit recomputes inline (spec 0013 §4.4), so the number is correct when
+ * the screen redraws. Order writes enqueue instead — see the orders module.
+ */
+const writeDeps = {
+  potentialRepository,
+  recomputeSnapshots: (input: { profileId: number; months: string[] }) =>
+    recomputeSnapshots.execute(input),
+};
+
 export const potentialUseCases = {
   listFacilityPotentials: () => new ListFacilityPotentialsUseCase(deps),
-  patchFacilityPotentials: () => new PatchFacilityPotentialsUseCase(deps),
+  setFacilityProductUsage: () => new SetFacilityProductUsageUseCase(writeDeps),
+  removeFacilityProductUsage: () => new RemoveFacilityProductUsageUseCase(writeDeps),
   listDefinitions: () => new ListPotentialDefinitionsUseCase(deps),
   createDefinition: () => new CreatePotentialDefinitionUseCase(deps),
   updateDefinition: () => new UpdatePotentialDefinitionUseCase(deps),

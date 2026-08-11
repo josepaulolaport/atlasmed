@@ -40,6 +40,12 @@ disabled**.
 
 ## 2. Target architecture
 
+> ⚠️ **Amended by ADR 0008 (2026-08-10).** The flow below is right except for one step: there is
+> no `worker → verify` stage. With hashing and derivatives removed, verification is a single
+> `HEAD`, so it happens in the request that triggers it and the per-file Temporal workflow is
+> deleted. The sweep stays and becomes a Temporal *schedule*. §2.1's storage-port requirements are
+> almost entirely closed already by #199/#202 — see the ADR for what is left.
+
 ```
 client → POST /uploads/initiate      → presigned PUT (+ multipart part URLs)
 client → PUT directly to object store        (bytes never traverse the API)
@@ -98,15 +104,20 @@ Requirements:
 ## 3. Data model
 
 ### 3.1 Cadastro keys on the profile
-Per spec 0010 §1.6. `cadastro_submissions` keys on `facility_vertical_profile_id`, replacing
-`facility_id` + nullable `vertical_id`. The "one DRAFT per facility" partial unique index becomes
-**one DRAFT per profile**. `FacilityCadastroCompletionService` computes per profile and writes
+
+> ⚠️ **Superseded by ADR 0007 (2026-08-10), implemented in migration `0084`.** There is no
+> package to key on: `cadastro_submissions` is deleted. The **document** carries
+> `facility_id` plus a nullable `facility_vertical_profile_id` (null = facility-scoped), and
+> uniqueness is `(facility_id, requirement_id, version)`. The "one DRAFT per …" partial index —
+> in either form — is gone, which is what closes D-16.
+
+`FacilityCadastroCompletionService` computes per profile and writes
 `facility_vertical_profiles.conformity_status` (renamed from `commercial_status`);
-`facilities.conformity_status` is removed.
+`facilities.conformity_status` is removed. That part stands.
 
 **`file_assets` stays facility-scoped — deliberately.** Under §3.2 a facility-scoped requirement
 is satisfied once for every profile, so the same physical object must be able to back documents
-in two profiles. Submissions move to the profile; files stay with the facility.
+in two profiles. Documents carry the profile; files stay with the facility.
 
 ### 3.2 Requirement scoping
 `conformity_requirements.vertical_id` **null = facility-scoped** (satisfied once, counts for
@@ -115,6 +126,11 @@ every profile of that facility — CNPJ card, contrato social); **non-null = ver
 (D-49).
 
 ### 3.3 Validity / expiry
+
+> ⚠️ **Amended by ADR 0008.** `requires_validity_date` and `valid_until` stand. Reviving
+> `EXPIRING_SOON` does not: the warning is **derived at read time** from `valid_until`, and only
+> on the document in the cadastro screen. The clinic-level status in Explorar is untouched —
+> deriving it there would mean evaluating every document of every clinic inside the list query.
 - `conformity_requirements.requires_validity_date boolean` — declares whether a validity date
   applies. A CNPJ card does not expire; an alvará does.
 - Document-level nullable `valid_until date`.
@@ -196,14 +212,25 @@ actors are the assigned rep, their manager and OPS — collaboration, not conten
 
 ## 5. Submit & review
 
-**Delete the package-submit path.** `submitPackage` / `canSubmitPackage` are dead client code
-with no callers, and the two paths enforce `requiresFrontAndBack` differently — strict at
-`:840-848`, lenient at `:1201-1214`. Mobile calls only the per-requirement path. One path, one
-rule.
+> ⚠️ **Amended by ADR 0007 (2026-08-10).** "Delete the package-submit path" below is correct and
+> goes further: the package itself is deleted. The `CHANGES_REQUESTED` clone in §6 is not wrapped
+> in a transaction — it is removed, which is what actually closes D-16. Optimistic concurrency
+> (§4.5) moves to the document; it was never implemented, so nothing is lost.
 
-**Scope the review queue.** `GET /cadastro/packages` and `GET /cadastro/submissions` never call
-`assertResourceInScope`; MANAGER and OPS currently get a **global** queue across all territories
-(D-07). Scope both to the reviewer's territory and vertical.
+**Delete the package-submit path.** ✅ Done in migration `0084` — the whole package went with it.
+`submitPackage` / `canSubmitPackage` were dead client code with no callers, and the two paths
+enforced `requiresFrontAndBack` differently — strict at `:840-848`, lenient at `:1201-1214`. Only
+the per-requirement path remains. One path, one rule.
+
+**Scope the review queue.** `GET /cadastro/packages` is deleted (it had no consumer).
+`GET /cadastro/submissions` still never calls `assertResourceInScope`; reviewers get a **global**
+queue across all territories (D-07, still open).
+
+> ⚠️ **Amended by ADR 0008.** MANAGER loses cadastro review entirely — it is back-office work, so
+> **OPS and ADMIN only**, enforced server-side by `requirePermission` on the review routes.
+> (`canReadCadastroSubmissions` exists but has no consumer, and nothing navigates to the review
+> screen today — so nothing in the client changes.) The queue is facility-scoped for the roles that
+> keep it; ADMIN stays global.
 
 **Delete the legacy download route.** `GET /facilities/cadastro/files/*`
 (`facilities.route.ts:407-432`) has `auth` only — no `requirePermission`, no scope — and its use
@@ -222,6 +249,11 @@ where the requirement declares one.
 ---
 
 ## 6. Retention
+
+> ⚠️ **Amended by ADR 0008.** Purge deletes **files only**; the `submission_documents` row is kept
+> with its status, version and reviewer comment, so the history of what was rejected survives.
+> Note the vocabulary below predates ADR 0007 — "packages" are per-document versions now, and the
+> `CHANGES_REQUESTED` clone flagged at the end of this section no longer exists to wrap.
 
 | State | Policy |
 |---|---|

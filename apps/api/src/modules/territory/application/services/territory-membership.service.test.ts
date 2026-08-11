@@ -10,9 +10,9 @@ const ZONE_TERRITORY_ID = 1;
 function createClinicWriter(overrides: Record<string, unknown> = {}) {
   return {
     updateProfileTerritoryMemberships: mock(async () => {}),
-    setProfileTerritory: mock(async () => {}),
+    recomputeManagerZoneMembership: mock(async () => ({ changed: [], ambiguous: [] })),
     findClinicsForMembership: mock(async () => []),
-    findClinicsWithoutConsultant: mock(async () => []),
+    findClinicsNeedingRep: mock(async () => ({ rows: [], total: 0 })),
     ...overrides,
   };
 }
@@ -147,46 +147,56 @@ describe("TerritoryMembershipService", () => {
     expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, []);
   });
 
-  it("scopes boundary recompute to bounding box and currently assigned clinics", async () => {
-    const assignedClinic: ClinicMembershipTarget = {
-      id: 10,
-      lat: 1,
-      lng: 1,
-      managerZoneId: LEAF_TERRITORY_ID,
-    };
-    const bboxClinic: ClinicMembershipTarget = {
-      id: 11,
-      lat: 2,
-      lng: 2,
-      managerZoneId: null,
-    };
+  // The "scopes boundary recompute to bounding box and currently assigned
+  // clinics" test was deleted with the per-clinic loop it described. Which
+  // profiles a boundary change affects, and which zone wins, is now decided by
+  // one SQL statement — a fake writer asserting it would only be re-stating the
+  // fake. It is proved against a database in
+  // `drizzle-facility-membership.recompute.db.test.ts`.
 
-    const clinicWriter = createClinicWriter({
-      findClinicsForMembership: mock(async (params?: { territoryIds?: number[]; boundingBox?: unknown }) => {
-        if (params?.territoryIds) return [assignedClinic];
-        if (params?.boundingBox) return [bboxClinic];
-        return [];
-      }),
-    });
+  /**
+   * Spec 0009 R4, the half P5-5 could not reach: `assignClinicByGeo` computed
+   * ambiguity into a boolean nobody read, so a clinic covered by two
+   * same-vertical zones lost its membership silently.
+   */
+  it("reports a clinic covered by two same-vertical zones, and still clears it", async () => {
+    const clinicWriter = createClinicWriter();
+    const recordAmbiguousMatch = mock((_source: string, _count: number) => {});
+    const logAmbiguousMatch = mock((_match: unknown) => {});
 
     const service = new TerritoryMembershipService({
       spatialRepository: {
-        getBoundaryBoundingBox: mock(async () => ({
-          minLng: 0,
-          minLat: 0,
-          maxLng: 3,
-          maxLat: 3,
-        })),
-        findContainingClinicAssignmentTerritoryIds: mock(async () => []),
+        findContainingClinicAssignmentTerritoryIds: mock(async () => [
+          { id: 7, verticalId: 1 },
+          { id: 8, verticalId: 1 },
+          // A second vertical matched cleanly and must be unaffected.
+          { id: 9, verticalId: 2 },
+        ]),
       } as never,
       territoryRepository: {} as never,
       clinicWriter,
+      recordAmbiguousMatch,
+      logAmbiguousMatch,
     });
 
-    const result = await service.recomputeForTerritoryBoundary(LEAF_TERRITORY_ID);
+    await service.assignClinicByGeo({
+      id: CLINIC_ID,
+      lat: -23.5,
+      lng: -46.6,
+      managerZoneId: null,
+    });
 
-    expect(result.processed).toBe(2);
-    expect(clinicWriter.findClinicsForMembership).toHaveBeenCalledTimes(2);
+    expect(recordAmbiguousMatch).toHaveBeenCalledWith("clinic_recompute", 1);
+    expect(logAmbiguousMatch).toHaveBeenCalledWith({
+      facilityId: CLINIC_ID,
+      verticalId: 1,
+      zoneIds: [7, 8],
+    });
+    // Membership still clears for the ambiguous vertical — no single owner can
+    // be derived — while the unambiguous one is written as normal.
+    expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, [
+      { verticalId: 2, managerZoneId: 9 },
+    ]);
   });
 
   it("excludes the given territory when re-matching a clinic by geo", async () => {

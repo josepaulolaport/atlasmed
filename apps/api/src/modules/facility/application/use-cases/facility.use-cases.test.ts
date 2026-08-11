@@ -73,6 +73,7 @@ function fakeRepository(
     findVerticalProfilesByFacilityIds: async () => new Map(),
     updateVerticalProfileCommercialStatus: async () => {},
     ensureVerticalProfile: async () => ({
+      id: 901,
       verticalId: 1,
       commercialStatus: null,
       isActive: true,

@@ -414,7 +414,10 @@ class _DefinitionProductsScreenState extends State<_DefinitionProductsScreen> {
 
   Future<void> _unlink(LinkedPotentialProduct p) async {
     try {
-      await widget.repo.unlinkProduct(p.productId);
+      await widget.repo.unlinkProduct(
+        productId: p.productId,
+        definitionId: widget.definition.id,
+      );
       await _load();
     } catch (_) {
       if (!mounted) return;

@@ -269,10 +269,15 @@ export class DrizzleProductRepository implements ProductRepository {
     );
 
     return db.transaction(async (tx) => {
+      // Scoped like every read in this repository. Without `IS_OWN` the product
+      // endpoint could edit a competitor's row — the reads were scoped when
+      // competitor products merged into this table (#226) and the writes were
+      // not, so `PUT /products/:id` reached rows the same repository refused to
+      // return.
       const [product] = await tx
         .update(products)
         .set({ ...cleanData, updatedAt: new Date() })
-        .where(eq(products.id, id))
+        .where(and(eq(products.id, id), IS_OWN))
         .returning(productColumns);
       if (!product) throw new Error("Product not found");
 

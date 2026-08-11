@@ -4,6 +4,11 @@ export * from "./schema/public/index";
 export * from "./schema/audit/index";
 export * from "./schema/ops/index";
 export * from "./types/geometry";
+export {
+  createMetricSnapshotStore,
+  listAllProfileIds,
+  listProfilesWithChangedInputs,
+} from "./queries/metric-snapshot-store";
 
 // Explicit enum value types for backward-compat
 import {
@@ -25,7 +30,6 @@ import {
   facilityLegalDocumentTypeEnum,
   orderStatusEnum,
   orderTypeEnum,
-  cadastroSubmissionStatusEnum,
   cadastroDocumentStatusEnum,
   cadastroFileAssetStatusEnum,
   cadastroDocumentFileRoleEnum,
@@ -54,8 +58,6 @@ export type FacilityLegalDocumentType =
   (typeof facilityLegalDocumentTypeEnum.enumValues)[number];
 export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
 export type OrderType = (typeof orderTypeEnum.enumValues)[number];
-export type CadastroSubmissionStatus =
-  (typeof cadastroSubmissionStatusEnum.enumValues)[number];
 export type CadastroDocumentStatus =
   (typeof cadastroDocumentStatusEnum.enumValues)[number];
 export type CadastroFileAssetStatus =
