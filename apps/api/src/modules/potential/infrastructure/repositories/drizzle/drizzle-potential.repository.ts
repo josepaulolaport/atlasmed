@@ -1,4 +1,5 @@
 import {
+  facilityMetricSnapshots,
   facilityProductUsage,
   facilityVerticalProfiles,
   orderItems,
@@ -14,6 +15,8 @@ import { APPLICATION_TIMEZONE, type MonthKey } from "@atlasmed/facility-insights
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   DefinitionMonthQtySum,
+  MetricSnapshotWrite,
+  ProfileRecord,
   FacilityProductUsageRecord,
   PotentialDefinitionRecord,
   PotentialRepository,
@@ -138,6 +141,83 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       )
       .limit(1);
     return row?.id ?? null;
+  }
+
+  /** The clinic and linha a profile belongs to — the recompute handler's entry point. */
+  async findProfileById(profileId: number): Promise<ProfileRecord | null> {
+    const [row] = await this.database
+      .select({
+        id: facilityVerticalProfiles.id,
+        facilityId: facilityVerticalProfiles.facilityId,
+        verticalId: facilityVerticalProfiles.verticalId,
+      })
+      .from(facilityVerticalProfiles)
+      .where(eq(facilityVerticalProfiles.id, profileId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /**
+   * Writes the computed rows, replacing whatever was there.
+   *
+   * A whole-row replacement, never a delta: that is what makes at-least-once
+   * delivery safe, and what lets the sweep and the trigger race without either
+   * corrupting the other (spec 0013 §4.4).
+   */
+  async upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void> {
+    if (rows.length === 0) return;
+    await this.database
+      .insert(facilityMetricSnapshots)
+      .values(
+        rows.map((row) => ({
+          facilityVerticalProfileId: row.profileId,
+          definitionId: row.definitionId,
+          verticalId: row.verticalId,
+          month: row.month,
+          oursQty: row.oursQty.toFixed(2),
+          theirsQty: row.theirsQty.toFixed(2),
+          computedAt: row.computedAt,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [
+          facilityMetricSnapshots.facilityVerticalProfileId,
+          facilityMetricSnapshots.definitionId,
+          facilityMetricSnapshots.month,
+        ],
+        set: {
+          oursQty: sql`excluded.ours_qty`,
+          theirsQty: sql`excluded.theirs_qty`,
+          computedAt: sql`excluded.computed_at`,
+        },
+      });
+  }
+
+  /**
+   * Which (definition, month) pairs already have a snapshot.
+   *
+   * The handler needs this to zero a row whose inputs have since disappeared —
+   * an order deleted or a usage row removed. Recomputing only the pairs that
+   * still have inputs would leave the old figure standing, which is the quiet
+   * kind of wrong.
+   */
+  async listMetricSnapshotKeys(input: {
+    profileId: number;
+    months: MonthKey[];
+  }): Promise<Array<{ definitionId: number; month: MonthKey }>> {
+    if (input.months.length === 0) return [];
+    return this.database
+      .select({
+        definitionId: facilityMetricSnapshots.definitionId,
+        month: facilityMetricSnapshots.month,
+      })
+      .from(facilityMetricSnapshots)
+      .where(
+        and(
+          eq(facilityMetricSnapshots.facilityVerticalProfileId, input.profileId),
+          inArray(facilityMetricSnapshots.month, input.months),
+        ),
+      );
   }
 
   /**

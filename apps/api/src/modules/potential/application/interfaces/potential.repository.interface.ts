@@ -41,6 +41,29 @@ export type DefinitionMonthQtySum = DefinitionQtySum & {
   month: MonthKey;
 };
 
+export type ProfileRecord = {
+  id: number;
+  facilityId: number;
+  verticalId: number;
+};
+
+/**
+ * One computed snapshot row.
+ *
+ * `computedAt` is supplied by the caller rather than defaulted in SQL: the sweep
+ * needs to compare it against input timestamps, and a value the handler chooses
+ * is one the tests can pin.
+ */
+export type MetricSnapshotWrite = {
+  profileId: number;
+  definitionId: number;
+  verticalId: number;
+  month: MonthKey;
+  oursQty: number;
+  theirsQty: number;
+  computedAt: Date;
+};
+
 export interface PotentialRepository {
   listDefinitions(input: {
     verticalId: number;
@@ -67,6 +90,17 @@ export interface PotentialRepository {
     facilityId: number;
     verticalId: number;
   }): Promise<number | null>;
+
+  findProfileById(profileId: number): Promise<ProfileRecord | null>;
+
+  /** Replaces whole rows — never a delta, so re-running is safe. */
+  upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void>;
+
+  /** Existing (definition, month) pairs, so vanished inputs can be zeroed. */
+  listMetricSnapshotKeys(input: {
+    profileId: number;
+    months: MonthKey[];
+  }): Promise<Array<{ definitionId: number; month: MonthKey }>>;
 
   /** Competitor quantities for the given months. */
   listUsage(input: {
