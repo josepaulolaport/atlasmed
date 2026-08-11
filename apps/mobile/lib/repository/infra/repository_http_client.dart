@@ -33,6 +33,23 @@ abstract class RepositoryHttpClient {
   }
 }
 
+/// Replaces credential header values with a marker.
+///
+/// Header maps end up in exception messages, logs and crash reports. Only the
+/// presence of a credential is ever useful there — a 401 whose cause is a
+/// missing `Authorization` header reads identically to one with a rejected
+/// token unless the difference is printed.
+Map<String, String> redactHeaders(Map<String, String> headers) {
+  const sensitive = {'authorization', 'cookie', 'set-cookie', 'idempotency-key'};
+
+  return {
+    for (final entry in headers.entries)
+      entry.key: sensitive.contains(entry.key.toLowerCase())
+          ? '<redacted>'
+          : entry.value,
+  };
+}
+
 /// {@template repository_http_response}
 /// A class that represents the response from a HTTP request.
 /// {@endtemplate}
@@ -42,6 +59,7 @@ class RepositoryHttpResponse {
     required this.statusCode,
     required this.headers,
     required this.body,
+    this.requestHeaders = const {},
   });
 
   /// The status code of the response.
@@ -52,6 +70,11 @@ class RepositoryHttpResponse {
 
   /// The body of the response.
   final String body;
+
+  /// The headers the client actually sent, including the ones it injected
+  /// itself. [RepositoryHttpRequest] is built before the bearer token is
+  /// attached, so it cannot answer whether the request was authenticated.
+  final Map<String, String> requestHeaders;
 
   @override
   String toString() {
@@ -94,7 +117,11 @@ class RepositoryHttpRequest {
 
   @override
   String toString() {
-    return 'RepositoryHttpRequest{url: $url, headers: $headers}';
+    return 'RepositoryHttpRequest{'
+        'method: ${method.name.toUpperCase()}, '
+        'url: $url, '
+        'headers: ${redactHeaders(headers)}'
+        '}';
   }
 }
 

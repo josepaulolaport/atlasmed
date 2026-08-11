@@ -162,8 +162,6 @@ export class LoginUseCase {
     const session = await this.deps.sessionService.create({
       userId: user.id,
 
-      userRole: user.role.name as any,
-
       ipAddress: params.ipAddress || undefined,
 
       userAgent: params.userAgent || undefined,
