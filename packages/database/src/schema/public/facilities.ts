@@ -320,12 +320,23 @@ export const facilityVerticalRepAssignments = pgTable(
   "facility_vertical_rep_assignments",
   {
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
-      .notNull()
-      .references(() => facilityVerticalProfiles.id, { onDelete: "cascade" }),
-    userId: bigint("user_id", { mode: "number" })
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /*
+     * Invariant I5: rep assignment rows are never deleted — ending one sets
+     * `ended_at`. Both of these were ON DELETE CASCADE, which meant deleting a
+     * user or a vertical profile erased their entire assignment history: no
+     * `ended_at`, no `end_reason`, no `ended_by_user_id`, no row.
+     *
+     * That contradicted the invariant the rest of spec 0009 is built on. R1
+     * reorders validate-before-destroy precisely because an ended assignment
+     * cannot be restored by re-creating it — and underneath, two foreign keys
+     * could delete the history outright.
+     *
+     * RESTRICT costs nothing today: nothing in the codebase hard-deletes a user
+     * or a profile. Users carry `deleted_at`, profiles carry `is_active`. It
+     * turns "you may not do this" from a convention into a rule.
+     */
+    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" }).notNull(),
+    userId: bigint("user_id", { mode: "number" }).notNull(),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     endedAt: timestamp("ended_at"),
     assignedByUserId: bigint("assigned_by_user_id", { mode: "number" }).references(() => users.id, {
@@ -371,6 +382,23 @@ export const facilityVerticalRepAssignments = pgTable(
      * its `fk` suffix), and a truncated name is one a later DROP CONSTRAINT
      * cannot find.
      */
+    /*
+     * Named explicitly for the same reason as the override FK below: Drizzle's
+     * derived name for the profile FK is 95 characters, and Postgres stored it
+     * truncated at 63. The generated migration then tried to DROP the *full*
+     * name — a constraint that does not exist — which would have failed on
+     * apply. Short explicit names make the file and the database agree.
+     */
+    foreignKey({
+      name: "fvra_profile_id_fk",
+      columns: [t.facilityVerticalProfileId],
+      foreignColumns: [facilityVerticalProfiles.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "fvra_user_id_fk",
+      columns: [t.userId],
+      foreignColumns: [users.id],
+    }).onDelete("restrict"),
     foreignKey({
       name: "fvra_ended_by_user_id_fk",
       columns: [t.endedByUserId],
@@ -388,6 +416,17 @@ export const facilityVerticalRepAssignments = pgTable(
     check(
       "facility_vertical_rep_assignments_ended_at_gte_started_at_check",
       sql`${t.endedAt} IS NULL OR ${t.endedAt} >= ${t.startedAt}`,
+    ),
+    /*
+     * Spec 0009 R2: an override records who and why, or it is not an override.
+     * The use case always writes both, but nothing stopped a script or a
+     * backfill writing a reason with no author — and the out-of-territory
+     * report would then answer "why" and not "who", which is the exact gap
+     * `ended_by_user_id` was added to close elsewhere in this table.
+     */
+    check(
+      "fvra_override_reason_and_author_together_check",
+      sql`(${t.overrideReason} IS NULL) = (${t.overrideByUserId} IS NULL)`,
     ),
   ],
 );
