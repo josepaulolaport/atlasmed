@@ -35,6 +35,36 @@ export interface ManagerZoneMembershipRecompute {
   ambiguous: AmbiguousManagerZoneMatch[];
 }
 
+/**
+ * Why a clinic is waiting for a rep — and, because the reasons differ in whose
+ * problem they are, who can see it.
+ *
+ * | | | |
+ * |---|---|---|
+ * | `no_consultant` | it has a zone, nobody is assigned | that zone's manager |
+ * | `ambiguous_zone` | two same-vertical zones cover it, so membership cleared (I3 violated) | **every** competing zone's manager |
+ * | `no_zone` | no zone covers it | ADMIN — it is in nobody's geography |
+ *
+ * `ambiguous_zone` surfacing for *both* managers is the point: neither can
+ * assume the other owns it, which is the pressure that gets the overlap fixed.
+ */
+export type UnassignedClinicReason = "no_consultant" | "ambiguous_zone" | "no_zone";
+
+export interface UnassignedClinic {
+  facilityId: number;
+  facilityVerticalProfileId: number;
+  verticalId: number;
+  displayName: string;
+  lat: number | null;
+  lng: number | null;
+  reason: UnassignedClinicReason;
+  /** The assigned zone. Null unless the reason is `no_consultant`. */
+  managerZoneId: number | null;
+  managerZoneName: string | null;
+  /** Zones covering the clinic when none is assigned — the contested ones. */
+  candidateZoneIds: number[];
+}
+
 export interface ClinicMembershipWriter {
   updateProfileTerritoryMemberships(
     facilityId: number,
@@ -64,22 +94,23 @@ export interface ClinicMembershipWriter {
   }): Promise<ClinicMembershipTarget[]>;
 
   /**
-   * Spec 0006: clinics in manager zones with no active primary consultant.
-   * When managerZoneIds is omitted/empty and global is true, all zones.
+   * Clinics that need a rep, and why.
+   *
+   * Spec 0009 R4 asks for the ambiguous case to be distinguishable here rather
+   * than merged into "unassigned". It could not be: the previous query returned
+   * only profiles that already *had* a manager zone, so a clinic with none —
+   * whether contested by two zones or covered by none — never appeared at all.
+   *
+   * Scoping follows from the reason (see {@link UnassignedClinicReason}). One row
+   * per profile, not per facility: a clinic can need a rep in one vertical and
+   * have one in another, and collapsing that loses rows.
    */
-  findClinicsWithoutConsultant(params: {
+  findClinicsNeedingRep(params: {
     managerZoneIds?: number[];
     global: boolean;
-  }): Promise<
-    Array<{
-      id: number;
-      displayName: string;
-      lat: number | null;
-      lng: number | null;
-      managerZoneId: number;
-      managerZoneName: string | null;
-    }>
-  >;
+    offset: number;
+    limit: number;
+  }): Promise<{ rows: UnassignedClinic[]; total: number }>;
 }
 
 interface Dependencies {

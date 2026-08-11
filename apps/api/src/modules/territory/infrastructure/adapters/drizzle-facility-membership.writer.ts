@@ -12,6 +12,8 @@ import type {
   ClinicMembershipTarget,
   ClinicMembershipWriter,
   ManagerZoneMembershipRecompute,
+  UnassignedClinic,
+  UnassignedClinicReason,
 } from "../../application/services/territory-membership.service";
 
 export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
@@ -247,85 +249,136 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
     return rows;
   }
 
-  async findClinicsWithoutConsultant(params: {
+  async findClinicsNeedingRep(params: {
     managerZoneIds?: number[];
     global: boolean;
-  }): Promise<
-    Array<{
-      id: number;
-      displayName: string;
-      lat: number | null;
-      lng: number | null;
-      managerZoneId: number;
-      managerZoneName: string | null;
-    }>
-  > {
-    if (!params.global && !params.managerZoneIds?.length) {
-      return [];
+    offset: number;
+    limit: number;
+  }): Promise<{ rows: UnassignedClinic[]; total: number }> {
+    const zoneIds = params.managerZoneIds ?? [];
+    if (!params.global && zoneIds.length === 0) {
+      return { rows: [], total: 0 };
     }
 
-    const zoneFilter =
-      !params.global && params.managerZoneIds?.length
-        ? inArray(facilityVerticalProfiles.managerZoneId, params.managerZoneIds)
-        : sql`${facilityVerticalProfiles.managerZoneId} IS NOT NULL`;
+    // Paginated in SQL. The previous version fetched every matching clinic and
+    // sliced in memory, so each page cost a full scan — tolerable for a queue
+    // someone checks occasionally, not for a performance screen loaded per
+    // manager. `count(*) OVER ()` keeps the total exact without a second query.
+    // Bound as a comma-separated string and parsed in SQL: the driver cannot
+    // encode a JS array against an explicit `::bigint[]` cast. Values are ids
+    // resolved from the caller's scope, and non-numbers are dropped before they
+    // reach the query.
+    const zoneIdCsv = zoneIds.filter((id) => Number.isFinite(id)).join(",");
 
-    const rows = await this.database
-      .select({
-        id: facilities.id,
-        displayName: facilities.displayName,
-        lat: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
-        lng: sql<number | null>`ST_X(${facilities.location}::geometry)`,
-        managerZoneId: facilityVerticalProfiles.managerZoneId,
-        managerZoneName: territories.name,
-      })
-      .from(facilities)
-      .innerJoin(
-        facilityVerticalProfiles,
-        and(
-          eq(facilityVerticalProfiles.facilityId, facilities.id),
-          eq(facilityVerticalProfiles.isActive, true),
-          zoneFilter,
-        ),
-      )
-      .leftJoin(
-        territories,
-        eq(territories.id, facilityVerticalProfiles.managerZoneId),
-      )
-      .where(
-        and(
-          isNull(facilities.deactivatedAt),
-          sql`NOT EXISTS (
+    const rows = (await this.database.execute(sql`
+      WITH scope AS (
+        SELECT COALESCE(
+          string_to_array(NULLIF(${zoneIdCsv}, ''), ',')::bigint[],
+          ARRAY[]::bigint[]
+        ) AS zone_ids
+      ),
+      candidate AS (
+        SELECT
+          fvp.id AS profile_id,
+          fvp.facility_id,
+          fvp.vertical_id,
+          fvp.manager_zone_id,
+          f.name AS display_name,
+          f.location
+        FROM facility_vertical_profiles fvp
+        INNER JOIN facilities f
+          ON f.id = fvp.facility_id
+          AND f.deactivated_at IS NULL
+        WHERE fvp.is_active = true
+          AND NOT EXISTS (
             SELECT 1
-            FROM ${facilityVerticalRepAssignments}
-            WHERE ${facilityVerticalRepAssignments.facilityVerticalProfileId} = ${facilityVerticalProfiles.id}
-              AND ${facilityVerticalRepAssignments.endedAt} IS NULL
-          )`,
-        ),
-      );
-
-    const seen = new Set<number>();
-    const unique: Array<{
-      id: number;
-      displayName: string;
+            FROM facility_vertical_rep_assignments fvra
+            WHERE fvra.facility_vertical_profile_id = fvp.id
+              AND fvra.ended_at IS NULL
+          )
+      ),
+      -- Which zones cover a clinic that has none assigned. This is the same
+      -- ST_Covers predicate the membership recompute uses, so "contested" here
+      -- means exactly what it means there.
+      covering AS (
+        SELECT c.profile_id, array_agg(t.id ORDER BY t.id) AS zone_ids
+        FROM candidate c
+        INNER JOIN territories t
+          ON t.is_active = true
+          AND t.boundary IS NOT NULL
+          AND t.vertical_id = c.vertical_id
+          AND t.territory_type_id = (
+            SELECT id FROM territory_types WHERE slug = ${MANAGER_ZONE_TYPE_SLUG}
+          )
+          AND ST_Covers(t.boundary, c.location::geometry)
+        WHERE c.manager_zone_id IS NULL
+          AND c.location IS NOT NULL
+        GROUP BY c.profile_id
+      ),
+      classified AS (
+        SELECT
+          c.*,
+          COALESCE(cv.zone_ids, ARRAY[]::bigint[]) AS candidate_zone_ids,
+          CASE
+            WHEN c.manager_zone_id IS NOT NULL THEN 'no_consultant'
+            WHEN COALESCE(array_length(cv.zone_ids, 1), 0) >= 2 THEN 'ambiguous_zone'
+            ELSE 'no_zone'
+          END AS reason
+        FROM candidate c
+        LEFT JOIN covering cv ON cv.profile_id = c.profile_id
+      )
+      SELECT
+        cl.profile_id,
+        cl.facility_id,
+        cl.vertical_id,
+        cl.display_name,
+        ST_Y(cl.location::geometry) AS lat,
+        ST_X(cl.location::geometry) AS lng,
+        cl.reason,
+        cl.manager_zone_id,
+        cl.candidate_zone_ids,
+        z.name AS manager_zone_name,
+        count(*) OVER () AS total
+      FROM classified cl
+      LEFT JOIN territories z ON z.id = cl.manager_zone_id
+      -- Visibility, not filtering-after-the-fact: a manager sees a clinic that
+      -- is in one of their zones, or that one of their zones covers when no zone
+      -- owns it. A clinic nothing covers reaches only a global caller — there is
+      -- no manager it could belong to.
+      CROSS JOIN scope s
+      WHERE ${params.global}
+        OR cl.manager_zone_id = ANY(s.zone_ids)
+        OR cl.candidate_zone_ids && s.zone_ids
+      ORDER BY cl.facility_id, cl.profile_id
+      LIMIT ${params.limit} OFFSET ${params.offset}
+    `)) as Array<{
+      profile_id: string;
+      facility_id: string;
+      vertical_id: string;
+      display_name: string;
       lat: number | null;
       lng: number | null;
-      managerZoneId: number;
-      managerZoneName: string | null;
-    }> = [];
+      reason: UnassignedClinicReason;
+      manager_zone_id: string | null;
+      candidate_zone_ids: string[];
+      manager_zone_name: string | null;
+      total: string;
+    }>;
 
-    for (const row of rows) {
-      if (!row.managerZoneId || seen.has(row.id)) continue;
-      seen.add(row.id);
-      unique.push({
-        id: row.id,
-        displayName: row.displayName,
-        lat: row.lat,
-        lng: row.lng,
-        managerZoneId: row.managerZoneId,
-        managerZoneName: row.managerZoneName,
-      });
-    }
-
-    return unique;
+    return {
+      total: rows.length > 0 ? Number(rows[0]!.total) : 0,
+      rows: rows.map((row) => ({
+        facilityId: Number(row.facility_id),
+        facilityVerticalProfileId: Number(row.profile_id),
+        verticalId: Number(row.vertical_id),
+        displayName: row.display_name,
+        lat: row.lat == null ? null : Number(row.lat),
+        lng: row.lng == null ? null : Number(row.lng),
+        reason: row.reason,
+        managerZoneId: row.manager_zone_id == null ? null : Number(row.manager_zone_id),
+        managerZoneName: row.manager_zone_name,
+        candidateZoneIds: row.candidate_zone_ids.map(Number),
+      })),
+    };
   }
 }
