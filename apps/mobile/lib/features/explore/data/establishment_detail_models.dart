@@ -881,6 +881,77 @@ class CadastroApprovedSummary {
   }
 }
 
+/// The expiry state of a Cadastro document, exactly as the server derived it.
+///
+/// Derived server-side at read time from `valid_until` and never stored
+/// (ADR 0008 §4/§6), so the client must not recompute it: two clocks — the
+/// device's, possibly wrong or in another timezone, and the server's — would
+/// disagree about "vence hoje" and the rep would see a different answer from
+/// the reviewer looking at the same document.
+class CadastroExpiry {
+  const CadastroExpiry({
+    required this.validUntil,
+    required this.daysRemaining,
+    required this.status,
+  });
+
+  /// `YYYY-MM-DD`, the shape the API stores and returns.
+  final String validUntil;
+
+  /// Whole calendar days until [validUntil]; negative once it has passed.
+  final int daysRemaining;
+
+  /// `VALID` | `EXPIRING_SOON` | `EXPIRED`.
+  final String status;
+
+  bool get isExpired => status == 'EXPIRED';
+  bool get isExpiringSoon => status == 'EXPIRING_SOON';
+
+  /// Short rep-facing label. Uses the server's numbers verbatim.
+  String get label {
+    if (isExpired) {
+      final days = -daysRemaining;
+      if (days == 0) return 'Vencido';
+      return 'Vencido há $days ${days == 1 ? 'dia' : 'dias'}';
+    }
+    if (daysRemaining == 0) return 'Vence hoje';
+    return 'Vence em $daysRemaining ${daysRemaining == 1 ? 'dia' : 'dias'}';
+  }
+
+  static CadastroExpiry? fromJson(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    final validUntil = json['validUntil'] as String?;
+    final status = json['status'] as String?;
+    final daysRemaining = (json['daysRemaining'] as num?)?.toInt();
+    if (validUntil == null || status == null || daysRemaining == null) {
+      return null;
+    }
+    return CadastroExpiry(
+      validUntil: validUntil,
+      daysRemaining: daysRemaining,
+      status: status,
+    );
+  }
+}
+
+/// The `YYYY-MM-DD` the submit endpoint accepts. Built from the local calendar
+/// date the rep picked — a validity is a calendar fact, so no timezone shift.
+String cadastroIsoDate(DateTime date) {
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '${date.year.toString().padLeft(4, '0')}-$month-$day';
+}
+
+/// `dd/MM/yyyy` for display; `null` when the date is absent or unparseable.
+String? formatCadastroDate(String? isoDate) {
+  if (isoDate == null || isoDate.isEmpty) return null;
+  final parsed = DateTime.tryParse(isoDate);
+  if (parsed == null) return null;
+  final month = parsed.month.toString().padLeft(2, '0');
+  final day = parsed.day.toString().padLeft(2, '0');
+  return '$day/$month/${parsed.year}';
+}
+
 /// One registration document requirement (e.g. "Identidade")
 /// and its current review state — the "Cadastro" section.
 class EstablishmentDocument {
@@ -896,6 +967,9 @@ class EstablishmentDocument {
     this.latestSubmittedStatus,
     this.latestSubmittedAt,
     this.currentApproved,
+    this.requiresValidityDate = false,
+    this.validUntil,
+    this.expiry,
     this.files = const [],
     this.submittedAt,
     this.fileName,
@@ -926,6 +1000,18 @@ class EstablishmentDocument {
   final String? latestSubmittedStatus;
   final DateTime? latestSubmittedAt;
   final CadastroApprovedSummary? currentApproved;
+
+  /// Whether this requirement declares a validity date. The rep must supply one
+  /// at submit exactly where it is true — the API rejects the submit otherwise,
+  /// and rejects a date sent where it is false (spec 0011 §3.3).
+  final bool requiresValidityDate;
+
+  /// `YYYY-MM-DD` already recorded on the working document, if any.
+  final String? validUntil;
+
+  /// Server-derived expiry of the document in force. Null when the requirement
+  /// has no validity or nothing has been submitted with one yet.
+  final CadastroExpiry? expiry;
 
   /// Ordered physical files for this logical document.
   final List<CadastroDocumentFile> files;
@@ -1006,6 +1092,9 @@ class EstablishmentDocument {
     String? latestSubmittedStatus,
     DateTime? latestSubmittedAt,
     CadastroApprovedSummary? currentApproved,
+    bool? requiresValidityDate,
+    String? validUntil,
+    CadastroExpiry? expiry,
     List<CadastroDocumentFile>? files,
     DateTime? submittedAt,
     String? fileName,
@@ -1029,6 +1118,9 @@ class EstablishmentDocument {
           latestSubmittedStatus ?? this.latestSubmittedStatus,
       latestSubmittedAt: latestSubmittedAt ?? this.latestSubmittedAt,
       currentApproved: currentApproved ?? this.currentApproved,
+      requiresValidityDate: requiresValidityDate ?? this.requiresValidityDate,
+      validUntil: validUntil ?? this.validUntil,
+      expiry: expiry ?? this.expiry,
       files: files ?? this.files,
       submittedAt: submittedAt ?? this.submittedAt,
       fileName: fileName ?? this.fileName,
