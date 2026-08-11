@@ -29,37 +29,70 @@ const listFacilityPotentialsRoute = new Elysia()
     },
   );
 
-const patchFacilityPotentialsRoute = new Elysia()
+// The rep records one competitor product at a time — the picker supplies the
+// product, the rep types only a quantity (spec 0013 §6).
+const setFacilityProductUsageRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
-  .patch(
-    "/facilities/:id/potentials",
+  .put(
+    "/facilities/:id/potentials/:definitionId/usage/:productId",
     async ({ params, body, getScope, getUserId }) => {
       const [scope, userId] = await Promise.all([getScope(), getUserId()]);
-      return potentialUseCases.patchFacilityPotentials().execute({
+      return potentialUseCases.setFacilityProductUsage().execute({
         facilityId: params.id,
         verticalId: body.verticalId,
+        definitionId: params.definitionId,
+        productId: params.productId,
+        quantity: body.quantity,
         userId,
         scope,
-        values: body.values,
       });
     },
     {
       detail: {
-        summary: "Update facility potential quantities for a Linha",
+        summary: "Set a competitor product's monthly quantity for a metric",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
-      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+        productId: t.Number({ minimum: 1 }),
+      }),
       body: t.Object({
         verticalId: t.Number({ minimum: 1 }),
-        values: t.Array(
-          t.Object({
-            definitionId: t.Number({ minimum: 1 }),
-            quantity: t.Union([t.Number(), t.Null()]),
-          }),
-        ),
+        quantity: t.Number({ minimum: 0 }),
       }),
+    },
+  );
+
+const removeFacilityProductUsageRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .delete(
+    "/facilities/:id/potentials/:definitionId/usage/:productId",
+    async ({ params, query, getScope }) => {
+      const scope = await getScope();
+      return potentialUseCases.removeFacilityProductUsage().execute({
+        facilityId: params.id,
+        verticalId: query.verticalId,
+        definitionId: params.definitionId,
+        productId: params.productId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Remove a competitor product from a metric",
+        tags: ["Potential"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+        productId: t.Number({ minimum: 1 }),
+      }),
+      query: t.Object({ verticalId: t.Number({ minimum: 1 }) }),
     },
   );
 
@@ -241,7 +274,8 @@ const unlinkProductRoute = new Elysia()
 
 export const potentialRoute = new Elysia()
   .use(listFacilityPotentialsRoute)
-  .use(patchFacilityPotentialsRoute)
+  .use(setFacilityProductUsageRoute)
+  .use(removeFacilityProductUsageRoute)
   .use(listDefinitionsRoute)
   .use(createDefinitionRoute)
   .use(updateDefinitionRoute)

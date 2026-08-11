@@ -8,11 +8,15 @@ export type PotentialDefinitionRecord = {
   updatedAt: Date;
 };
 
-export type FacilityPotentialValueRecord = {
-  facilityId: number;
+/** One competitor product's monthly quantity at a clinic, for one metric. */
+export type FacilityProductUsageRecord = {
   definitionId: number;
+  productId: number;
+  productName: string;
+  /** Product units, exactly as the rep entered them. */
   quantity: number;
-  updatedByUserId: number | null;
+  /** quantity × the product's `metric_units` — comparable with our own side. */
+  metricQuantity: number;
   updatedAt: Date;
 };
 
@@ -49,22 +53,32 @@ export interface PotentialRepository {
 
   softDeleteDefinition(id: number): Promise<boolean>;
 
-  listFacilityValues(input: {
+  /** The commercial unit a clinic's linha corresponds to, or null. */
+  findProfileId(input: {
     facilityId: number;
-    definitionIds: number[];
-  }): Promise<FacilityPotentialValueRecord[]>;
+    verticalId: number;
+  }): Promise<number | null>;
 
-  upsertFacilityValue(input: {
-    facilityId: number;
+  listUsage(input: {
+    profileId: number;
+    definitionIds: number[];
+  }): Promise<FacilityProductUsageRecord[]>;
+
+  /** Replaces the quantity for this (profile, definition, product). */
+  upsertUsage(input: {
+    profileId: number;
     definitionId: number;
+    verticalId: number;
+    productId: number;
     quantity: number;
     updatedByUserId: number;
   }): Promise<void>;
 
-  deleteFacilityValue(input: {
-    facilityId: number;
+  deleteUsage(input: {
+    profileId: number;
     definitionId: number;
-  }): Promise<void>;
+    productId: number;
+  }): Promise<boolean>;
 
   /**
    * Sum SALE item qty over rolling window, keyed by definition.

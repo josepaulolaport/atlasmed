@@ -610,6 +610,20 @@
       "when": 1786403476413,
       "tag": "0086_potential_links_per_vertical",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1786411170008,
+      "tag": "0087_facility_product_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1786411218862,
+      "tag": "0088_retire_legacy_potential_tables",
+      "breakpoints": true
     }
   ]
 }
