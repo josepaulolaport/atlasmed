@@ -107,8 +107,11 @@ async function seedAssignedClinic(tx: Tx) {
   );
   const facility = await one<{ id: number }>(
     tx.execute(sql`
-      INSERT INTO facilities (name, legal_document_type, state_id, municipality_id)
-      VALUES ('T-R1 Clinic', 'CNPJ', ${state.id}, ${municipality.id}) RETURNING id
+      INSERT INTO facilities (name, legal_document_type, state_id, municipality_id, location)
+      VALUES ('T-R1 Clinic', 'CNPJ', ${state.id}, ${municipality.id},
+              -- Inside VALID_SQUARE. Spec 0009 R5: every clinic has a position.
+              ST_SetSRID(ST_MakePoint(10.5, 10.5), 4326))
+      RETURNING id
     `)
   );
   const profile = await one<{ id: number }>(

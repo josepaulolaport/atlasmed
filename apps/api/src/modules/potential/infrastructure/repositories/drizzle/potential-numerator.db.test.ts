@@ -11,6 +11,7 @@ import {
   products,
   states,
 } from "@atlasmed/database";
+import { sql } from "drizzle-orm";
 import { monthBounds, monthKeyAt } from "@atlasmed/facility-insights";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzlePotentialRepository } from "./drizzle-potential.repository";
@@ -47,6 +48,8 @@ async function seedScenario(tx: Tx, suffix: string) {
       legalDocumentType: "CNPJ",
       stateId: state!.id,
       municipalityId: municipality!.id,
+      // Spec 0009 R5: every clinic has a position.
+      location: sql`ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326)`,
     })
     .returning({ id: facilities.id });
   const [vertical] = await tx

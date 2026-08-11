@@ -921,7 +921,18 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       ]);
     }
 
-    const hasCoords = data.lat != null && data.lng != null;
+    // Spec 0009 R5: `facilities.location` is NOT NULL, so a create without a
+    // position is rejected here rather than by Postgres — the caller gets a
+    // field-level validation error instead of a constraint violation.
+    if (data.lat == null || data.lng == null) {
+      throw new ValidationError([
+        { field: "lat", message: "Clinic coordinates are required" },
+      ]);
+    }
+    // Captured before the transaction: narrowing of a property does not survive
+    // into the callback below.
+    const { lat, lng } = { lat: data.lat, lng: data.lng };
+
     // Facility + first vertical profile are one unit: a facility without a
     // profile is invisible to every non-global scope (spec 0010 §1.2/§1.7).
     // ensureVerticalProfile is not reused here — it closes over the `db`
@@ -936,9 +947,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           municipalityId: data.municipalityId,
           legalDocumentType: data.legalDocumentType,
           legalDocument: normalizeLegalDocument(data.legalDocument ?? null),
-          ...(hasCoords
-            ? { location: locationPointSql(data.lat!, data.lng!) }
-            : {}),
+          location: locationPointSql(lat, lng),
         })
         .returning({ id: facilities.id });
 
