@@ -35,7 +35,19 @@ function parseInclude(value: string | undefined): { boundary?: boolean } {
   return { boundary: requested.has("boundary") };
 }
 
-export const territoriesRoute = new Elysia()
+/**
+ * One instance per permission, never one chain with guards sprinkled through it.
+ *
+ * `requirePermission` installs `onBeforeHandle({ as: "scoped" })`, which applies
+ * to every route registered later in the same chain. This file used to declare
+ * all fifteen routes on a single chain with eleven guards interleaved, so each
+ * route silently required every permission named above it: `GET /territories/:id`
+ * demanded `create` and `update`, the boundary reads demanded `delete`, and
+ * everything past the `manage` guard was ADMIN-only. A MANAGER holds
+ * read/create/update on TERRITORY and could not fetch a boundary; OPS holds read
+ * and could not fetch a single territory.
+ */
+const territoryReadRoutes = new Elysia()
   .use(auth)
   .use(requirePermission("read", "TERRITORY"))
   .get(
@@ -69,55 +81,12 @@ export const territoriesRoute = new Elysia()
       }),
     }
   )
-  .use(requirePermission("read", "TERRITORY"))
   .get("/territory-types", async () => {
     return territoryUseCases.listTerritoryTypes().listTypes();
   })
-  .use(requirePermission("read", "TERRITORY"))
   .get("/territory-types/:id", async ({ params }) => {
     return territoryUseCases.getTerritoryType().getType(parseId(params.id, "TerritoryType"));
   })
-  .use(requirePermission("create", "TERRITORY"))
-  .post(
-    "/territory-types",
-    async ({ body, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.createTerritoryType().createType(body);
-    },
-    {
-      body: t.Object({
-        slug: t.String(),
-        name: t.String(),
-        description: t.Optional(t.String()),
-        canHaveBoundary: t.Optional(t.Boolean()),
-        blockSiblingOverlap: t.Optional(t.Boolean()),
-      }),
-    }
-  )
-  .use(requirePermission("update", "TERRITORY"))
-  .patch(
-    "/territory-types/:id",
-    async ({ params, body, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.updateTerritoryType().updateType(parseId(params.id, "TerritoryType"), body);
-    },
-    {
-      body: t.Object({
-        name: t.Optional(t.String()),
-        description: t.Optional(t.Union([t.String(), t.Null()])),
-        canHaveBoundary: t.Optional(t.Boolean()),
-        blockSiblingOverlap: t.Optional(t.Boolean()),
-        isActive: t.Optional(t.Boolean()),
-      }),
-    }
-  )
-  .use(requirePermission("read", "TERRITORY"))
   .get(
     "/territories/:id",
     async ({ params, query, getScope }) => {
@@ -143,6 +112,91 @@ export const territoriesRoute = new Elysia()
       }),
     }
   )
+  .get("/territories/:id/boundary", async ({ params, getScope }) => {
+    const territoryId = parseId(params.id, "Territory");
+    const scope = await getScope();
+    const boundary = await territoryUseCases.getBoundary().getBoundary({
+      territoryId,
+      scope,
+    });
+    if (!boundary) {
+      return new Response(null, { status: 204 });
+    }
+    return boundary;
+  })
+  .get(
+    "/territories/unassigned-facilities",
+    async ({ query, getScope }) => {
+      const scope = await getScope();
+      return territoryUseCases.listUnassignedFacilities().listUnassignedFacilities({
+        scope,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+        managerZoneId: parseOptionalId(query.managerZoneId),
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+        managerZoneId: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "List clinics in manager zones without a primary consultant",
+        tags: ["Territory"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const territoryCreateRoutes = new Elysia()
+  .use(auth)
+  .use(requirePermission("create", "TERRITORY"))
+  .post(
+    "/territory-types",
+    async ({ body, getUser }) => {
+      const user = await getUser();
+      if (!isAdminRole(user.role.name as Role)) {
+        throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
+      }
+      return territoryUseCases.createTerritoryType().createType(body);
+    },
+    {
+      body: t.Object({
+        slug: t.String(),
+        name: t.String(),
+        description: t.Optional(t.String()),
+        canHaveBoundary: t.Optional(t.Boolean()),
+        blockSiblingOverlap: t.Optional(t.Boolean()),
+      }),
+    }
+  );
+
+const territoryUpdateRoutes = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "TERRITORY"))
+  .patch(
+    "/territory-types/:id",
+    async ({ params, body, getUser }) => {
+      const user = await getUser();
+      if (!isAdminRole(user.role.name as Role)) {
+        throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
+      }
+      return territoryUseCases.updateTerritoryType().updateType(parseId(params.id, "TerritoryType"), body);
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        canHaveBoundary: t.Optional(t.Boolean()),
+        blockSiblingOverlap: t.Optional(t.Boolean()),
+        isActive: t.Optional(t.Boolean()),
+      }),
+    }
+  );
+
+const territoryCreateTerritoryRoute = new Elysia()
+  .use(auth)
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territories",
@@ -188,7 +242,10 @@ export const territoriesRoute = new Elysia()
         ),
       }),
     }
-  )
+  );
+
+const territoryMutationRoutes = new Elysia()
+  .use(auth)
   .use(requirePermission("update", "TERRITORY"))
   .patch(
     "/territories/:id",
@@ -210,28 +267,6 @@ export const territoriesRoute = new Elysia()
       }),
     }
   )
-  .use(requirePermission("delete", "TERRITORY"))
-  .delete("/territories/:id", async ({ params, getUser }) => {
-    const user = await getUser();
-    if (!isAdminRole(user.role.name as Role)) {
-      throw new InsufficientPermissionsError(["territory:delete"], [`role:${user.role.name}`]);
-    }
-    return territoryUseCases.deleteTerritory().deleteTerritory(parseId(params.id, "Territory"));
-  })
-  .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id/boundary", async ({ params, getScope }) => {
-    const territoryId = parseId(params.id, "Territory");
-    const scope = await getScope();
-    const boundary = await territoryUseCases.getBoundary().getBoundary({
-      territoryId,
-      scope,
-    });
-    if (!boundary) {
-      return new Response(null, { status: 204 });
-    }
-    return boundary;
-  })
-  .use(requirePermission("update", "TERRITORY"))
   .post(
     "/territories/:id/boundary/impact",
     async ({ params, body, getScope }) => {
@@ -291,7 +326,21 @@ export const territoriesRoute = new Elysia()
       territoryId: parseId(params.id, "Territory"),
       scope,
     });
-  })
+  });
+
+const territoryDeleteRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "TERRITORY"))
+  .delete("/territories/:id", async ({ params, getUser }) => {
+    const user = await getUser();
+    if (!isAdminRole(user.role.name as Role)) {
+      throw new InsufficientPermissionsError(["territory:delete"], [`role:${user.role.name}`]);
+    }
+    return territoryUseCases.deleteTerritory().deleteTerritory(parseId(params.id, "Territory"));
+  });
+
+const territoryManageRoute = new Elysia()
+  .use(auth)
   .use(requirePermission("manage", "TERRITORY"))
   .post("/territories/recompute-membership", async ({ getUser }) => {
     const user = await getUser();
@@ -299,32 +348,16 @@ export const territoriesRoute = new Elysia()
       throw new InsufficientPermissionsError(["territory:manage"], [`role:${user.role.name}`]);
     }
     return territoryUseCases.recomputeMembership().recomputeMembership();
-  })
-  .use(requirePermission("read", "TERRITORY"))
-  .get(
-    "/territories/unassigned-facilities",
-    async ({ query, getScope }) => {
-      const scope = await getScope();
-      return territoryUseCases.listUnassignedFacilities().listUnassignedFacilities({
-        scope,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
-        managerZoneId: parseOptionalId(query.managerZoneId),
-      });
-    },
-    {
-      query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-        managerZoneId: t.Optional(t.String()),
-      }),
-      detail: {
-        summary: "List clinics in manager zones without a primary consultant",
-        tags: ["Territory"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
+  });
+
+export const territoriesRoute = new Elysia()
+  .use(territoryReadRoutes)
+  .use(territoryCreateRoutes)
+  .use(territoryCreateTerritoryRoute)
+  .use(territoryUpdateRoutes)
+  .use(territoryMutationRoutes)
+  .use(territoryDeleteRoute)
+  .use(territoryManageRoute);
 
 // Spec 0009 R7: `PATCH /facilities/:id/territory` and
 // `POST /facilities/:id/territory/unlock-geo` are gone. Zone membership is

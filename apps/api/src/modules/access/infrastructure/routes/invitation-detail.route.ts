@@ -3,7 +3,11 @@ import { Role, updateInvitationSchema } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
-export const invitationDetailRoute = new Elysia({
+// One instance per permission. `requirePermission` installs a scoped
+// `onBeforeHandle` on the chain it is used in, so a guard declared mid-chain
+// also runs for every route below it — `/invites/:id` would have demanded
+// `read USER` on top of its own `update INVITATION`.
+const getInvitationRoute = new Elysia({
   detail: {
     tags: ["Users"],
   },
@@ -26,7 +30,14 @@ export const invitationDetailRoute = new Elysia({
         security: [{ bearerAuth: [] }],
       },
     },
-  )
+  );
+
+const updateInvitationRoute = new Elysia({
+  detail: {
+    tags: ["Users"],
+  },
+})
+  .use(auth)
   .use(requirePermission("update", "INVITATION"))
   .patch(
     "/invites/:id",
@@ -89,3 +100,7 @@ export const invitationDetailRoute = new Elysia({
       }),
     },
   );
+
+export const invitationDetailRoute = new Elysia()
+  .use(getInvitationRoute)
+  .use(updateInvitationRoute);

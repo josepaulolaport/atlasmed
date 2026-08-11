@@ -7,7 +7,7 @@ import {
 import { accessUseCases, accessRepositories, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
-export const userAssignmentsRoute = new Elysia({
+const userAssignmentMutationsRoute = new Elysia({
   detail: {
     tags: ["Users"],
   },
@@ -163,7 +163,23 @@ export const userAssignmentsRoute = new Elysia({
         verticalId: t.String({ description: "Business vertical ID" }),
       }),
     },
-  )
+  );
+
+/**
+ * Who is assigned to a territory. Its own instance, and deliberately so.
+ *
+ * `requirePermission` installs a scoped `onBeforeHandle`, so declaring this
+ * guard at the end of the chain above made the route demand `manage USER` as
+ * well — a permission only ADMIN holds. A MANAGER picking a zone has
+ * `read TERRITORY` and got a 403 the client never surfaced: it treats any
+ * non-200 as "nobody assigned", so occupied zones simply looked free.
+ */
+const territoryAssignmentsRoute = new Elysia({
+  detail: {
+    tags: ["Users"],
+  },
+})
+  .use(auth)
   .use(requirePermission("read", "TERRITORY"))
   .get(
     "/territories/:id/assignments",
@@ -171,3 +187,7 @@ export const userAssignmentsRoute = new Elysia({
       return accessUseCases.getTerritoryAssignments().execute(params.id);
     },
   );
+
+export const userAssignmentsRoute = new Elysia()
+  .use(userAssignmentMutationsRoute)
+  .use(territoryAssignmentsRoute);
