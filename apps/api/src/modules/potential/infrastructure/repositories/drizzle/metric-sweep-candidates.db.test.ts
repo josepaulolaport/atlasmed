@@ -11,7 +11,7 @@ import {
   states,
 } from "@atlasmed/database";
 import { listAllProfileIds, listProfilesWithChangedInputs } from "@atlasmed/database";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 
 /**
@@ -44,6 +44,8 @@ async function seedProfiles(tx: Tx, suffix: string, count: number) {
       legalDocumentType: "CNPJ",
       stateId: state!.id,
       municipalityId: municipality!.id,
+      // Spec 0009 R5: every clinic has a position.
+      location: sql`ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326)`,
     })
     .returning({ id: facilities.id });
 
