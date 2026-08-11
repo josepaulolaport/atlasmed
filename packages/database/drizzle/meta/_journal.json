@@ -673,6 +673,13 @@
       "when": 1786426014799,
       "tag": "0095_assignment_history_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1786467971171,
+      "tag": "0096_ortopedia_managers_and_zone_geometry",
+      "breakpoints": true
     }
   ]
 }
