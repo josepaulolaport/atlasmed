@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
@@ -148,7 +149,8 @@ class CartState {
 }
 
 // ── Cart notifier ────────────────────────────────────────────
-class CartNotifier extends StateNotifier<CartState> {
+class CartNotifier extends StateNotifier<CartState>
+    with DisposeSafeStateWrites<CartState> {
   CartNotifier() : super(const CartState());
 
   void addItem({
