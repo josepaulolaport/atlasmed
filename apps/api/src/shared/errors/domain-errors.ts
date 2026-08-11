@@ -312,6 +312,30 @@ export class BoundaryImpactSetChangedError extends AppError {
   }
 }
 
+/**
+ * Spec 0009 R5: moving a clinic would leave rep assignments outside their
+ * patch. A conflict rather than a validation failure — the request is
+ * well-formed, the world just disagrees with it — and it carries who would be
+ * stranded so the caller can decide, rather than guess.
+ */
+export class FacilityCoverageLossError extends AppError {
+  constructor(
+    losingCoverage: Array<{
+      facilityVerticalProfileId: number;
+      verticalId: number;
+      userId: number;
+      userName: string;
+    }>
+  ) {
+    super(
+      "FACILITY_COVERAGE_LOSS",
+      409,
+      "Moving this clinic leaves rep assignments outside their patch",
+      { losingCoverage },
+    );
+  }
+}
+
 // ============================================================================
 // Gone Errors (410)
 // ============================================================================

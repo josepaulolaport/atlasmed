@@ -19,6 +19,9 @@ const CLIENT_SAFE_CONTEXT_KEYS: Record<string, readonly string[]> = {
   // caller can only re-preview and diff by hand. Safe to expose: these are the
   // ids of clinics the caller just previewed, under their own scope.
   BOUNDARY_IMPACT_SET_CHANGED: ["added", "removed"],
+  // Spec 0009 R5: the reviewer has to see *which* reps a move would strand
+  // before deciding, so the list is part of the client-facing payload.
+  FACILITY_COVERAGE_LOSS: ["losingCoverage"],
 };
 
 export abstract class AppError extends Error {
