@@ -138,6 +138,14 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return row?.id ?? null;
   }
 
+  /** Stored snapshots — delegated, so the read path and the sweep agree. */
+  async listMetricSnapshots(input: {
+    profileId: number;
+    months: MonthKey[];
+  }) {
+    return createMetricSnapshotStore(this.database).listExisting(input);
+  }
+
   /**
    * Competitor quantities for the given months.
    *

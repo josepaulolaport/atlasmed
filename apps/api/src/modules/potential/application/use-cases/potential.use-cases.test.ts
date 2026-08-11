@@ -37,6 +37,7 @@ function createRepository(
     updateDefinition: async () => null,
     softDeleteDefinition: async () => false,
     findProfileId: async () => 1,
+    listMetricSnapshots: async () => [],
     listUsage: async () => [],
     upsertUsage: async () => undefined,
     deleteUsage: async () => true,

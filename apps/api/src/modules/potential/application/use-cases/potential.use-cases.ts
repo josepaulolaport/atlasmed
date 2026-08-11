@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 import {
+  addMonths,
   averageMonthly,
   deriveShare,
   monthBounds,
@@ -36,6 +37,17 @@ function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
   if (!assigned.includes(verticalId)) {
     throw new ForbiddenError();
   }
+}
+
+/**
+ * The months one edit invalidates.
+ *
+ * An edit belongs to a single month, but the displayed figure averages a
+ * trailing window — so the months after it change too. Recomputing only the
+ * edited month would leave the visible number stale.
+ */
+function windowFor(month: MonthKey): MonthKey[] {
+  return trailingMonths(addMonths(month, MONTHS_IN_WINDOW - 1), MONTHS_IN_WINDOW);
 }
 
 function slugKey(raw: string): string {
@@ -75,25 +87,42 @@ export class ListFacilityPotentialsUseCase {
       verticalId: input.verticalId,
     });
 
+    // Snapshots are the stored answer (spec 0013 §4.4). They are a *cache*,
+    // though, and one that starts empty: §4.4 also rules out backfilling
+    // history, so on the day this ships no profile has a row yet.
+    //
+    // So this reads through rather than switching outright — on a miss it
+    // computes from the inputs, exactly as before. It deliberately does **not**
+    // populate on read: a write on the read path turns every clinic screen into
+    // a writer, and the sweep fills the gap within the hour anyway.
+    const snapshots =
+      profileId == null
+        ? []
+        : await this.deps.potentialRepository.listMetricSnapshots({ profileId, months });
+
     const [usage, qtySums] = await Promise.all([
       profileId == null
         ? Promise.resolve([])
         : this.deps.potentialRepository.listUsage({ profileId, definitionIds, months }),
-      this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
-        facilityId: input.facilityId,
-        verticalId: input.verticalId,
-        definitionIds,
-        rangeStart: windowStart,
-        rangeEnd: windowEnd,
-      }),
+      snapshots.length > 0
+        ? Promise.resolve([])
+        : this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
+            facilityId: input.facilityId,
+            verticalId: input.verticalId,
+            definitionIds,
+            rangeStart: windowStart,
+            rangeEnd: windowEnd,
+          }),
     ]);
 
     // Ours: sum each month in the window, then divide by the window — months
     // with no orders are real zeros, not missing data.
     const oursByDef = new Map<number, number>();
-    for (const row of qtySums) {
-      oursByDef.set(row.definitionId, (oursByDef.get(row.definitionId) ?? 0) + row.totalQty);
+    for (const row of snapshots.length > 0 ? snapshots : qtySums) {
+      const qty = "oursQty" in row ? row.oursQty : row.totalQty;
+      oursByDef.set(row.definitionId, (oursByDef.get(row.definitionId) ?? 0) + qty);
     }
+    const servedFromSnapshots = snapshots.length > 0;
 
     const usageByDef = new Map<number, typeof usage>();
     for (const row of usage) {
@@ -110,8 +139,12 @@ export class ListFacilityPotentialsUseCase {
         // Both sides average over the same window, or the ratio compares a
         // three-month total against a one-month figure.
         const ours = averageMonthly([oursByDef.get(def.id) ?? 0], MONTHS_IN_WINDOW);
+        // From the snapshot when we have one, so ours and theirs come from the
+        // same computation rather than one stored and one recomputed.
         const theirs = averageMonthly(
-          monthlyRows.map((row) => row.metricQuantity),
+          servedFromSnapshots
+            ? snapshots.filter((row) => row.definitionId === def.id).map((row) => row.theirsQty)
+            : monthlyRows.map((row) => row.metricQuantity),
           MONTHS_IN_WINDOW,
         );
         const { totalQty, share } = deriveShare(ours, theirs);
@@ -164,7 +197,13 @@ export class ListFacilityPotentialsUseCase {
  * cannot pair a profile in one linha with a metric in another.
  */
 export class SetFacilityProductUsageUseCase {
-  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+  constructor(
+    private readonly deps: {
+      potentialRepository: PotentialRepository;
+      /** Optional so existing callers and tests are unaffected. */
+      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+    },
+  ) {}
 
   async execute(input: {
     facilityId: number;
@@ -236,6 +275,12 @@ export class SetFacilityProductUsageUseCase {
       updatedByUserId: input.userId,
     });
 
+    // Synchronous, not enqueued (spec 0013 §4.4): the rep is looking at the
+    // number they just changed, so it must be right when the screen redraws.
+    // Order writes enqueue instead — an importer upserting tens of orders would
+    // otherwise recompute the same profile dozens of times.
+    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
+
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,
       verticalId: input.verticalId,
@@ -246,7 +291,12 @@ export class SetFacilityProductUsageUseCase {
 }
 
 export class RemoveFacilityProductUsageUseCase {
-  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+  constructor(
+    private readonly deps: {
+      potentialRepository: PotentialRepository;
+      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+    },
+  ) {}
 
   async execute(input: {
     facilityId: number;
@@ -288,6 +338,10 @@ export class RemoveFacilityProductUsageUseCase {
         `${input.definitionId}:${input.productId}:${month}`,
       );
     }
+
+    // Removing a competitor changes the denominator, so the snapshot is stale
+    // the instant the row goes. Same reasoning as the write above.
+    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
 
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,

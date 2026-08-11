@@ -1,4 +1,4 @@
-import type { MonthKey } from "@atlasmed/facility-insights";
+import type { MonthKey, StoredSnapshotCell } from "@atlasmed/facility-insights";
 
 export type PotentialDefinitionRecord = {
   id: number;
@@ -68,6 +68,18 @@ export interface PotentialRepository {
     verticalId: number;
   }): Promise<number | null>;
 
+
+  /**
+   * Stored snapshots for the given months.
+   *
+   * The read path treats these as a cache and falls back to computing from the
+   * inputs when a profile has none — snapshots begin at the current month with
+   * no backfill (spec 0013 §4.4), so "absent" is normal, not an error.
+   */
+  listMetricSnapshots(input: {
+    profileId: number;
+    months: MonthKey[];
+  }): Promise<StoredSnapshotCell[]>;
 
   /** Competitor quantities for the given months. */
   listUsage(input: {

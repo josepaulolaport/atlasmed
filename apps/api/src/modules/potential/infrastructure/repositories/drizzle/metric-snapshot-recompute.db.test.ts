@@ -17,6 +17,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzlePotentialRepository } from "./drizzle-potential.repository";
 import { RecomputeMetricSnapshotsUseCase } from "../../../application/use-cases/recompute-metric-snapshots.use-case";
+import { ListFacilityPotentialsUseCase } from "../../../application/use-cases/potential.use-cases";
 
 /**
  * The recompute handler, against a real Postgres (spec 0013 §4.4).
@@ -409,6 +410,59 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
 
       expect((await readSnapshot(tx, scenario.profileId, "2026-03-01"))?.oursQty).toBe("8.00");
       expect(await readSnapshot(tx, scenario.profileId, "2026-04-01")).toBeUndefined();
+    });
+  });
+});
+
+describe.skipIf(!dbUp)("read path over snapshots (database)", () => {
+  test("serves the stored snapshot once one exists, and the live inputs before that", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "READ");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-READ",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "9",
+        orderedAt: new Date("2026-03-10T12:00:00.000Z"),
+      });
+
+      const repository = new DrizzlePotentialRepository(tx as never);
+      const now = new Date("2026-03-20T12:00:00.000Z");
+      const list = new ListFacilityPotentialsUseCase({ potentialRepository: repository });
+      const scope = {
+        isGlobal: true,
+        assignedVerticalIds: [scenario.verticalId],
+      } as never;
+
+      // Before any snapshot exists the read falls back to the inputs, so the
+      // screen is not blank on the day this ships.
+      const beforeSnapshot = await list.execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope,
+        now,
+      });
+      expect(beforeSnapshot.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
+
+      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({
+        profileId: scenario.profileId,
+        months: ["2026-01-01", "2026-02-01", "2026-03-01"],
+      });
+
+      const afterSnapshot = await list.execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope,
+        now,
+      });
+      // Same answer from the cache — 9 in one month over a three-month window.
+      expect(afterSnapshot.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
+      expect(afterSnapshot.items[0]?.share).toBe(1);
     });
   });
 });
