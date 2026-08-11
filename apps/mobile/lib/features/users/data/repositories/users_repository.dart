@@ -10,8 +10,8 @@ import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
 /// Port for the admin user-management data source.
 ///
 /// Method signatures mirror the real `/api/v1/access` endpoints (see
-/// `apps/api/src/modules/access`) so a future HTTP-backed implementation is
-/// a drop-in replacement for [MockUsersRepository].
+/// `apps/api/src/modules/access`); `HttpUsersRepository` is the only
+/// implementation.
 abstract interface class UsersRepository {
   /// `GET /access/users?page=&limit=&search=&role=&status=&sortBy=&sortDir=`
   Future<UsersPage> getUsers({
@@ -63,18 +63,6 @@ abstract interface class UsersRepository {
 
   /// `PATCH /access/users/:id/role`
   Future<void> changeUserRole(int userId, int roleId);
-
-  /// `POST /access/users/:id/territories`
-  Future<void> assignTerritory(int userId, int territoryId);
-
-  /// `DELETE /access/users/:id/territories/:territoryId`
-  Future<void> revokeTerritory(int userId, int territoryId);
-
-  /// `POST /access/users/:id/verticals`
-  Future<void> assignVertical(int userId, int verticalId);
-
-  /// `DELETE /access/users/:id/verticals/:verticalId`
-  Future<void> revokeVertical(int userId, int verticalId);
 
   /// `GET /access/roles`
   Future<List<UserRole>> getRoles();

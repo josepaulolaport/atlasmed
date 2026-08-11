@@ -209,44 +209,6 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> assignTerritory(int userId, int territoryId) async {
-    final response = await _send(
-      _accessUri('/users/$userId/territories'),
-      method: RepositoryHttpMethod.post,
-      body: {'territoryId': territoryId},
-    );
-    _throwIfError(response);
-  }
-
-  @override
-  Future<void> revokeTerritory(int userId, int territoryId) async {
-    final response = await _send(
-      _accessUri('/users/$userId/territories/$territoryId'),
-      method: RepositoryHttpMethod.delete,
-    );
-    _throwIfError(response);
-  }
-
-  @override
-  Future<void> assignVertical(int userId, int verticalId) async {
-    final response = await _send(
-      _accessUri('/users/$userId/verticals'),
-      method: RepositoryHttpMethod.post,
-      body: {'verticalId': verticalId},
-    );
-    _throwIfError(response);
-  }
-
-  @override
-  Future<void> revokeVertical(int userId, int verticalId) async {
-    final response = await _send(
-      _accessUri('/users/$userId/verticals/$verticalId'),
-      method: RepositoryHttpMethod.delete,
-    );
-    _throwIfError(response);
-  }
-
-  @override
   Future<List<UserRole>> getRoles() async {
     final response = await _get(_accessUri('/roles'));
     _throwIfError(response);
