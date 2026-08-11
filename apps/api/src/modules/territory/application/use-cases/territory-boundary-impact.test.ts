@@ -166,12 +166,19 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
       facilityId: number;
       managerZoneId: number | null;
     }>;
+    ambiguous?: Array<{
+      facilityVerticalProfileId: number;
+      facilityId: number;
+      verticalId: number;
+      zoneIds: number[];
+    }>;
   }) {
     const onBoundaryChanged = mock(async () => {});
     const onMembershipRecomputed = mock(async (_facilityIds: number[]) => {});
+    const onAmbiguousManagerZones = mock((_matches: unknown[]) => {});
     const recomputeManagerZoneMembership = mock(async () => ({
       changed: options.membershipChanged ?? [],
-      ambiguous: [],
+      ambiguous: options.ambiguous ?? [],
     }));
     const writer = createFakeBoundaryWriter({
       failBoundaryWrite: options.failBoundaryWrite,
@@ -229,6 +236,7 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
       buildContainmentService: (repos) => new TerritoryContainmentService(repos),
       onBoundaryChanged,
       onMembershipRecomputed,
+      onAmbiguousManagerZones,
     });
 
     return {
@@ -236,6 +244,7 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
       writer,
       onBoundaryChanged,
       onMembershipRecomputed,
+      onAmbiguousManagerZones,
       recomputeManagerZoneMembership,
     };
   }
@@ -387,6 +396,50 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
     });
 
     expect(onMembershipRecomputed).toHaveBeenCalledWith([101, 102]);
+  });
+
+  /**
+   * Spec 0009 R4. `resolveVerticalMatches` computed ambiguity and nothing ever
+   * read it, so a clinic covered by two same-vertical zones disappeared from
+   * both managers' views leaving no trace — a data-integrity violation that hid
+   * its own evidence.
+   */
+  it("reports clinics left covered by two zones", async () => {
+    const ambiguous = [
+      {
+        facilityVerticalProfileId: 501,
+        facilityId: 101,
+        verticalId: 2,
+        zoneIds: [MANAGER_ZONE_ID, 11],
+      },
+    ];
+    const { useCases, onAmbiguousManagerZones } = buildUseCases({
+      orphanedPatches: [],
+      ambiguous,
+    });
+
+    await useCases.saveBoundary({
+      territoryId: MANAGER_ZONE_ID,
+      scope: globalScope as never,
+      geoJson,
+      acceptedFacilityIds: [impactedClinic.facilityId],
+    });
+
+    // Both competing zone ids travel with it: "which two" is the first question.
+    expect(onAmbiguousManagerZones).toHaveBeenCalledWith(ambiguous);
+  });
+
+  it("reports no ambiguity when there is none", async () => {
+    const { useCases, onAmbiguousManagerZones } = buildUseCases({ orphanedPatches: [] });
+
+    await useCases.saveBoundary({
+      territoryId: MANAGER_ZONE_ID,
+      scope: globalScope as never,
+      geoJson,
+      acceptedFacilityIds: [impactedClinic.facilityId],
+    });
+
+    expect(onAmbiguousManagerZones).not.toHaveBeenCalled();
   });
 
   it("publishes nothing to search when the save fails", async () => {

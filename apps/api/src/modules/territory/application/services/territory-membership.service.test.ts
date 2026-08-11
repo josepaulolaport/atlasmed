@@ -154,6 +154,51 @@ describe("TerritoryMembershipService", () => {
   // fake. It is proved against a database in
   // `drizzle-facility-membership.recompute.db.test.ts`.
 
+  /**
+   * Spec 0009 R4, the half P5-5 could not reach: `assignClinicByGeo` computed
+   * ambiguity into a boolean nobody read, so a clinic covered by two
+   * same-vertical zones lost its membership silently.
+   */
+  it("reports a clinic covered by two same-vertical zones, and still clears it", async () => {
+    const clinicWriter = createClinicWriter();
+    const recordAmbiguousMatch = mock((_source: string, _count: number) => {});
+    const logAmbiguousMatch = mock((_match: unknown) => {});
+
+    const service = new TerritoryMembershipService({
+      spatialRepository: {
+        findContainingClinicAssignmentTerritoryIds: mock(async () => [
+          { id: 7, verticalId: 1 },
+          { id: 8, verticalId: 1 },
+          // A second vertical matched cleanly and must be unaffected.
+          { id: 9, verticalId: 2 },
+        ]),
+      } as never,
+      territoryRepository: {} as never,
+      clinicWriter,
+      recordAmbiguousMatch,
+      logAmbiguousMatch,
+    });
+
+    await service.assignClinicByGeo({
+      id: CLINIC_ID,
+      lat: -23.5,
+      lng: -46.6,
+      managerZoneId: null,
+    });
+
+    expect(recordAmbiguousMatch).toHaveBeenCalledWith("clinic_recompute", 1);
+    expect(logAmbiguousMatch).toHaveBeenCalledWith({
+      facilityId: CLINIC_ID,
+      verticalId: 1,
+      zoneIds: [7, 8],
+    });
+    // Membership still clears for the ambiguous vertical — no single owner can
+    // be derived — while the unambiguous one is written as normal.
+    expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, [
+      { verticalId: 2, managerZoneId: 9 },
+    ]);
+  });
+
   it("excludes the given territory when re-matching a clinic by geo", async () => {
     const clinicWriter = createClinicWriter();
     const findContainingClinicAssignmentTerritoryIds = mock(async () => [
