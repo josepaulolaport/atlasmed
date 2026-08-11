@@ -208,37 +208,4 @@ export const productVerticalsRelations = relations(productVerticals, ({ one }) =
   }),
 }));
 
-export const facilityCompetitorProductStandards = pgTable(
-  "facility_competitor_product_standards",
-  {
-    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    facilityId: bigint("facility_id", { mode: "number" }).notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    competitorProductId: bigint("competitor_product_id", { mode: "number" }).notNull().references(() => products.id, { onDelete: "restrict" }),
-    /** Pinned to COMPETITOR by the composite foreign key below. Never written. */
-    competitorOwnership: productOwnershipEnum("competitor_ownership")
-      .notNull()
-      .generatedAlwaysAs(sql`'COMPETITOR'::product_ownership`),
-    standardizedQuantity: bigint("standardized_quantity", { mode: "number" }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
-  },
-  (t) => [
-    uniqueIndex("facility_competitor_product_standards_pair_uidx").on(t.facilityId, t.competitorProductId),
-    index("facility_competitor_product_standards_facility_idx").on(t.facilityId),
-    index("facility_competitor_product_standards_competitor_idx").on(t.competitorProductId),
-    // A clinic's "standard" is what it uses *instead of* ours, so only a
-    // competitor row belongs here. Retired by P4-2 in favour of
-    // `facility_product_usage`; constrained meanwhile because it is live.
-    foreignKey({
-      name: "facility_competitor_standards_competitor_fk",
-      columns: [t.competitorProductId, t.competitorOwnership],
-      foreignColumns: [products.id, products.ownership],
-    }).onDelete("restrict"),
-  ]
-);
-
-export const facilityCompetitorProductStandardsRelations = relations(facilityCompetitorProductStandards, ({ one }) => ({
-  facility: one(facilities, { fields: [facilityCompetitorProductStandards.facilityId], references: [facilities.id] }),
-  competitorProduct: one(products, { fields: [facilityCompetitorProductStandards.competitorProductId], references: [products.id] }),
-}));
 

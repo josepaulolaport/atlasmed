@@ -5,7 +5,8 @@ import {
   ListDefinitionProductsUseCase,
   ListFacilityPotentialsUseCase,
   ListPotentialDefinitionsUseCase,
-  PatchFacilityPotentialsUseCase,
+  SetFacilityProductUsageUseCase,
+  RemoveFacilityProductUsageUseCase,
   SoftDeletePotentialDefinitionUseCase,
   UnlinkProductPotentialUseCase,
   UpdatePotentialDefinitionUseCase,
@@ -17,7 +18,8 @@ const deps = { potentialRepository };
 
 export const potentialUseCases = {
   listFacilityPotentials: () => new ListFacilityPotentialsUseCase(deps),
-  patchFacilityPotentials: () => new PatchFacilityPotentialsUseCase(deps),
+  setFacilityProductUsage: () => new SetFacilityProductUsageUseCase(deps),
+  removeFacilityProductUsage: () => new RemoveFacilityProductUsageUseCase(deps),
   listDefinitions: () => new ListPotentialDefinitionsUseCase(deps),
   createDefinition: () => new CreatePotentialDefinitionUseCase(deps),
   updateDefinition: () => new UpdatePotentialDefinitionUseCase(deps),

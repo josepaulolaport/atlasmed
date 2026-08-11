@@ -45,11 +45,15 @@ export class ListFacilityPotentialsUseCase {
       verticalId: input.verticalId,
     });
     const definitionIds = definitions.map((d) => d.id);
-    const [values, qtySums] = await Promise.all([
-      this.deps.potentialRepository.listFacilityValues({
-        facilityId: input.facilityId,
-        definitionIds,
-      }),
+    const profileId = await this.deps.potentialRepository.findProfileId({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+    });
+
+    const [usage, qtySums] = await Promise.all([
+      profileId == null
+        ? Promise.resolve([])
+        : this.deps.potentialRepository.listUsage({ profileId, definitionIds }),
       this.deps.potentialRepository.sumAtlasmedQtyByDefinition({
         facilityId: input.facilityId,
         verticalId: input.verticalId,
@@ -58,84 +62,163 @@ export class ListFacilityPotentialsUseCase {
       }),
     ]);
 
-    const valueByDef = new Map(values.map((v) => [v.definitionId, v.quantity]));
     const qtyByDef = new Map(qtySums.map((q) => [q.definitionId, q.totalQty]));
+    const usageByDef = new Map<number, typeof usage>();
+    for (const row of usage) {
+      const list = usageByDef.get(row.definitionId) ?? [];
+      list.push(row);
+      usageByDef.set(row.definitionId, list);
+    }
 
     return {
       verticalId: input.verticalId,
       items: definitions.map((def) => {
-        const potentialQuantity = valueByDef.get(def.id) ?? null;
         const sumQty = qtyByDef.get(def.id) ?? 0;
-        const atlasmedMonthlyAvgQty = sumQty / MONTHS_IN_WINDOW;
-        const penetration =
-          potentialQuantity != null && potentialQuantity > 0
-            ? atlasmedMonthlyAvgQty / potentialQuantity
-            : null;
+        const ours = sumQty / MONTHS_IN_WINDOW;
+        const competitors = usageByDef.get(def.id) ?? [];
+        const theirs = competitors.reduce((sum, c) => sum + c.metricQuantity, 0);
+        const total = ours + theirs;
+
         return {
           definitionId: def.id,
           key: def.key,
           label: def.label,
-          potentialQuantity,
-          atlasmedMonthlyAvgQty,
-          /** Fraction 0–1+ (e.g. 0.3 = 30%). Null when potential missing. */
-          penetration,
+          /** Ours, from orders — monthly average over the window. */
+          atlasmedMonthlyAvgQty: ours,
+          /** Theirs, as recorded by the rep. */
+          competitorMonthlyQty: theirs,
+          /** The observed market: ours + theirs. */
+          totalMarketQty: total,
+          /**
+           * Our share of the observed market, 0–1.
+           *
+           * Null — never 0 — when nothing is known (spec 0013 §4.3). "We sell
+           * nothing here" and "we have no information" must stay
+           * distinguishable, and a 0 would read as the first while meaning the
+           * second. A clinic with orders and no competitor data is genuinely
+           * 100%: everything we can see of that market is ours.
+           */
+          share: total > 0 ? ours / total : null,
+          competitors: competitors.map((c) => ({
+            productId: c.productId,
+            productName: c.productName,
+            quantity: c.quantity,
+            metricQuantity: c.metricQuantity,
+            updatedAt: c.updatedAt.toISOString(),
+          })),
         };
       }),
     };
   }
 }
 
-export class PatchFacilityPotentialsUseCase {
+/**
+ * Records what a clinic uses of one competitor product, for one metric.
+ *
+ * The rep supplies only a number. Which product comes from the picker, and the
+ * linha comes from the definition — never from the caller — so a usage row
+ * cannot pair a profile in one linha with a metric in another.
+ */
+export class SetFacilityProductUsageUseCase {
   constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
 
   async execute(input: {
     facilityId: number;
     verticalId: number;
+    definitionId: number;
+    productId: number;
+    quantity: number;
     userId: number;
     scope: ScopeContext;
-    values: Array<{ definitionId: number; quantity: number | null }>;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
 
-    if (!input.values.length) {
+    if (!Number.isFinite(input.quantity) || input.quantity < 0) {
       throw new ValidationError([
-        { field: "values", message: "values must not be empty" },
+        { field: "quantity", message: "quantity must be a non-negative number" },
       ]);
     }
 
-    const definitions = await this.deps.potentialRepository.listDefinitions({
+    const definition = await this.deps.potentialRepository.findDefinitionById(
+      input.definitionId,
+    );
+    if (!definition || definition.deletedAt) {
+      throw new ResourceNotFoundError("PotentialDefinition", input.definitionId);
+    }
+    if (definition.verticalId !== input.verticalId) {
+      throw new ValidationError([
+        {
+          field: "definitionId",
+          message: "definition does not belong to this Linha",
+        },
+      ]);
+    }
+
+    const profileId = await this.deps.potentialRepository.findProfileId({
+      facilityId: input.facilityId,
       verticalId: input.verticalId,
     });
-    const allowed = new Set(definitions.map((d) => d.id));
+    if (profileId == null) {
+      throw new ResourceNotFoundError(
+        "FacilityVerticalProfile",
+        `${input.facilityId}:${input.verticalId}`,
+      );
+    }
 
-    for (const row of input.values) {
-      if (!allowed.has(row.definitionId)) {
-        throw new ValidationError([
-          {
-            field: "definitionId",
-            message: `definition ${row.definitionId} not in vertical`,
-          },
-        ]);
-      }
-      if (row.quantity === null) {
-        await this.deps.potentialRepository.deleteFacilityValue({
-          facilityId: input.facilityId,
-          definitionId: row.definitionId,
-        });
-        continue;
-      }
-      if (!Number.isFinite(row.quantity) || row.quantity < 0) {
-        throw new ValidationError([
-          { field: "quantity", message: "quantity must be a non-negative number" },
-        ]);
-      }
-      await this.deps.potentialRepository.upsertFacilityValue({
-        facilityId: input.facilityId,
-        definitionId: row.definitionId,
-        quantity: row.quantity,
-        updatedByUserId: input.userId,
-      });
+    // A non-competitor product is refused by the composite foreign key, but
+    // failing here names the reason instead of surfacing a constraint error.
+    await this.deps.potentialRepository.upsertUsage({
+      profileId,
+      definitionId: input.definitionId,
+      verticalId: definition.verticalId,
+      productId: input.productId,
+      quantity: input.quantity,
+      updatedByUserId: input.userId,
+    });
+
+    return new ListFacilityPotentialsUseCase(this.deps).execute({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+      scope: input.scope,
+    });
+  }
+}
+
+export class RemoveFacilityProductUsageUseCase {
+  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+
+  async execute(input: {
+    facilityId: number;
+    verticalId: number;
+    definitionId: number;
+    productId: number;
+    scope: ScopeContext;
+  }) {
+    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertVerticalAccess(input.scope, input.verticalId);
+
+    const profileId = await this.deps.potentialRepository.findProfileId({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+    });
+    if (profileId == null) {
+      throw new ResourceNotFoundError(
+        "FacilityVerticalProfile",
+        `${input.facilityId}:${input.verticalId}`,
+      );
+    }
+
+    const removed = await this.deps.potentialRepository.deleteUsage({
+      profileId,
+      definitionId: input.definitionId,
+      productId: input.productId,
+    });
+    if (!removed) {
+      throw new ResourceNotFoundError(
+        "FacilityProductUsage",
+        `${input.definitionId}:${input.productId}`,
+      );
     }
 
     return new ListFacilityPotentialsUseCase(this.deps).execute({

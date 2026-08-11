@@ -10,6 +10,7 @@ import {
   numeric,
   index,
   uniqueIndex,
+  unique,
   check,
   foreignKey,
 } from "drizzle-orm/pg-core";
@@ -258,6 +259,10 @@ export const facilityVerticalProfiles = pgTable(
       t.facilityId,
       t.verticalId
     ),
+    // Redundant beside the primary key, but a composite foreign key can only
+    // reference a unique constraint. `facility_product_usage` uses it to hold a
+    // usage row's profile and its definition in the same linha.
+    unique("facility_vertical_profiles_id_vertical_id_key").on(t.id, t.verticalId),
     index("facility_vertical_profiles_conformity_status_idx").on(t.conformityStatus),
     index("facility_vertical_profiles_facility_id_idx").on(t.facilityId),
     index("facility_vertical_profiles_vertical_id_idx").on(t.verticalId),
