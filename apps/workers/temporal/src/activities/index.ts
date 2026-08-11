@@ -2,6 +2,10 @@ import { wrapActivity } from "../instrumentation/wrap-activity";
 
 import { rebuildSearchIndexActivity as rebuildSearchIndexActivityImpl } from "./search-rebuild.activities";
 import { sweepCadastroUploadsActivity as sweepCadastroUploadsActivityImpl } from "./cadastro-sweep.activities";
+import {
+  logMetricSnapshotLifecycle as logMetricSnapshotLifecycleImpl,
+  recalculateMetricSnapshotsBatch as recalculateMetricSnapshotsBatchImpl,
+} from "./metric-snapshot.activities";
 
 import {
   logPurchaseRecurrenceLifecycle as logPurchaseRecurrenceLifecycleImpl,
@@ -58,4 +62,14 @@ export const finishEmultecImportRunActivity = wrapActivity(
 export const sweepCadastroUploadsActivity = wrapActivity(
   "sweepCadastroUploads",
   sweepCadastroUploadsActivityImpl
+);
+
+export const recalculateMetricSnapshotsBatch = wrapActivity(
+  "recalculateMetricSnapshotsBatch",
+  recalculateMetricSnapshotsBatchImpl
+);
+
+export const logMetricSnapshotLifecycle = wrapActivity(
+  "logMetricSnapshotLifecycle",
+  logMetricSnapshotLifecycleImpl
 );

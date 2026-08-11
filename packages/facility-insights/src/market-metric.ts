@@ -180,11 +180,65 @@ export function deriveShare(
   return { totalQty, share: totalQty > 0 ? oursQty / totalQty : null };
 }
 
+/** Days in the rolling window the headline figure is computed over. */
+export const ROLLING_WINDOW_DAYS = 90;
+
+/** The nominal month length used to turn a day-rate into a monthly rate. */
+export const DAYS_PER_MONTH = 30;
+
 /**
- * The trailing monthly mean over a fixed window.
+ * The half-open rolling window `[end - days, end)`.
+ *
+ * Used for the figure the rep actually reads. Calendar months are the wrong unit
+ * there: on the 5th of a month, a trailing three *calendar* months divides two
+ * full months plus five days by three, so the number is understated at the start
+ * of every month and climbs through it — a clinic selling steadily looks like it
+ * is recovering, purely from the calendar.
+ *
+ * Snapshots stay per calendar month regardless: "March versus April" is only
+ * answerable if months are what you stored. The two windows answer different
+ * questions and are not meant to agree exactly.
+ */
+export function rollingWindow(
+  end: Date,
+  days: number = ROLLING_WINDOW_DAYS,
+): { start: Date; end: Date } {
+  if (!Number.isFinite(days) || days <= 0) {
+    throw new MarketMetricValidationError(
+      "INVALID_WINDOW",
+      `Rolling window must be a positive number of days, received ${days}`,
+    );
+  }
+  return { start: new Date(end.getTime() - days * 86_400_000), end };
+}
+
+/**
+ * A monthly rate from a quantity observed over a number of days.
+ *
+ * Normalising by the days actually covered is the whole point: no partial period
+ * is ever divided as though it were whole.
+ */
+export function monthlyRateFromDays(
+  quantity: number,
+  days: number = ROLLING_WINDOW_DAYS,
+): number {
+  if (!Number.isFinite(days) || days <= 0) {
+    throw new MarketMetricValidationError(
+      "INVALID_WINDOW",
+      `Rolling window must be a positive number of days, received ${days}`,
+    );
+  }
+  return (quantity / days) * DAYS_PER_MONTH;
+}
+
+/**
+ * The trailing monthly mean over a fixed window of months.
+ *
+ * Still used for month-keyed figures — the rep's competitor quantities are
+ * already monthly *rates*, so they are averaged, never day-normalised.
  *
  * Divides by the window, not by the number of months supplied — a clinic that
- * ordered in one of the last three months averages over three, because the two
+ * recorded in one of the last three months averages over three, because the two
  * silent months are real zeros rather than missing data.
  */
 export function averageMonthly(

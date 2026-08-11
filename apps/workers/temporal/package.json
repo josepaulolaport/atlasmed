@@ -12,7 +12,8 @@
     "schedule:emultec-order-import": "bun src/scripts/ensure-emultec-order-import-schedule.ts",
     "start:emultec-order-import": "bun src/scripts/start-emultec-order-import.ts",
     "sync:emultec-products": "bun src/scripts/sync-emultec-products.ts",
-    "import:emultec-orders": "bun src/scripts/import-emultec-orders.ts"
+    "import:emultec-orders": "bun src/scripts/import-emultec-orders.ts",
+    "schedule:metric-snapshot": "bun src/scripts/ensure-metric-snapshot-schedule.ts"
   },
   "dependencies": {
     "@atlasmed/config": "workspace:*",
