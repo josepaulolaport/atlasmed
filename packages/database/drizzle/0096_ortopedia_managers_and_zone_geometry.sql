@@ -4,10 +4,16 @@
 -- so it reaches production through the deploy path rather than a script someone has to
 -- remember to run.
 --
--- Three things happen here, and the order matters:
+-- Two things happen here, and the order matters:
 --   1. every manager zone and rep patch is redrawn from `states.boundary`
---   2. a sixth zone, "Resto do Brasil", is created for the states none of them covered
---   3. three MANAGER users are created and assigned those zones
+--   2. three MANAGER users are created and assigned those zones
+--
+-- The five zones cover the twelve states that hold clinics, not the whole country. A
+-- clinic created in one of the other fifteen (BA, MG, RS, SC, GO, MT, MS, ES and the
+-- rest of the Nordeste) therefore lands with no manager zone — spec 0009's `no_zone`
+-- case, which surfaces on the unassigned roster. Adding a "rest of Brazil" zone to catch
+-- them was considered and rejected: those states hold no clinics and nobody works them,
+-- so the zone would exist only to anticipate an expansion that has not happened.
 --
 -- ⚠️ CONFIRM THE THREE EMAIL ADDRESSES BEFORE MERGING. They follow the convention every
 -- existing user uses (`jose.carlos.gondim@atlasmed.com.br`), but they were inferred, not
@@ -27,7 +33,8 @@
 
 -- ── 1. Redraw every zone and patch from the state boundaries ────────────────────
 --
--- Why all six polygons and not the two that were wrong: the existing zones were drawn
+-- Why all ten polygons (five zones, five patches) and not the two that were wrong:
+-- the existing zones were drawn
 -- from a coarser source than `states`, and they disagree with it in both directions. On
 -- the 2026-08-10 snapshot that left 151 of 1443 profiles (10.5%) recording a
 -- `manager_zone_id` whose boundary does not contain the clinic —
@@ -47,7 +54,7 @@
 -- Redrawing *only* the two broken zones was tried and rejected: the state polygons do
 -- not overlap each other (0 m²), but a redrawn RJ overlaps the still-coarse "Sao Paulo"
 -- zone by 46 km², and a redrawn Norte overlaps "Distrito Federal e Tocantins" by
--- 165 km² — a fresh violation of spec 0009 I3. One source for all six, or none.
+-- 165 km² — a fresh violation of spec 0009 I3. One source for all ten, or none.
 --
 -- Maranhão joins Norte rather than a Nordeste zone because Jose Carlos Gondim already
 -- works those 104 clinics: the recorded data was right and the boundary was wrong.
@@ -75,34 +82,7 @@ UPDATE territories t
    -- Idempotent: the second run finds the geometry already equal and changes nothing.
    AND (t.boundary IS NULL OR NOT ST_Equals(t.boundary, g.geom));
 
--- ── 2. "Resto do Brasil" — the states no zone covered ───────────────────────────
---
--- Fifteen states (AL, BA, CE, ES, GO, MG, MS, MT, PB, PE, PI, RN, RS, SC, SE) sat
--- outside every zone. They hold no clinics today, which is exactly why this is cheap to
--- add now: without it the first clinic created in Bahia falls into spec 0009's `no_zone`
--- state — no manager, no rep, and visible only on the unassigned roster. With it, that
--- clinic lands under a manager the moment it is created.
---
--- It gets no patch. There is no rep to hold one, and an empty patch would claim coverage
--- that nobody provides.
-
-INSERT INTO territories (name, slug, vertical_id, territory_type_id, is_active, boundary)
-SELECT 'Resto do Brasil',
-       'orto-mz-resto-brasil',
-       v.id,
-       (SELECT id FROM territory_types WHERE slug = 'manager_zone'),
-       true,
-       ST_Multi(ST_Union(s.boundary))
-  FROM business_verticals v, states s
- WHERE v.code = 'ORTOPEDIA'
-   AND s.abbreviation NOT IN ('RJ','SP','PR','DF','TO','AC','AM','AP','PA','RO','RR','MA')
-   AND NOT EXISTS (
-     SELECT 1 FROM territories t
-      WHERE t.vertical_id = v.id AND t.slug = 'orto-mz-resto-brasil'
-   )
- GROUP BY v.id;
-
--- ── 3. The three managers ───────────────────────────────────────────────────────
+-- ── 2. The three managers ───────────────────────────────────────────────────────
 --
 -- Created ACTIVE with an unusable password, which is the only shape that works against
 -- the auth code as it stands:
@@ -133,12 +113,12 @@ SELECT v.email, v.username, v.first_name, v.last_name, 'ACTIVE', false, v.passwo
  WHERE EXISTS (SELECT 1 FROM roles WHERE name = 'MANAGER')
    AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.email) = lower(v.email));
 
--- ── 4. Assign the zones ─────────────────────────────────────────────────────────
+-- ── 3. Assign the zones ─────────────────────────────────────────────────────────
 --
--- Pedro takes Rio de Janeiro, Marcelo takes São Paulo, and Silvio takes everything else:
--- Paraná, Distrito Federal e Tocantins, Norte, and the new Resto do Brasil. Membership is
--- territory-derived throughout (spec 0009), so this is what makes each rep report to a
--- manager — there is no `users.manager_id` to set.
+-- Pedro takes Rio de Janeiro, Marcelo takes São Paulo, and Silvio takes the remaining
+-- three: Paraná, Distrito Federal e Tocantins and Norte. Membership is territory-derived
+-- throughout (spec 0009), so this is what makes each rep report to a manager — there is
+-- no `users.manager_id` to set.
 
 INSERT INTO user_territory_assignments (user_id, territory_id)
 SELECT u.id, t.id
@@ -147,15 +127,14 @@ SELECT u.id, t.id
     ('marcelo.moreno@atlasmed.com.br', 'orto-mz-sp'),
     ('silvio.vieira@atlasmed.com.br',  'orto-mz-pr'),
     ('silvio.vieira@atlasmed.com.br',  'orto-mz-df-to'),
-    ('silvio.vieira@atlasmed.com.br',  'orto-mz-no'),
-    ('silvio.vieira@atlasmed.com.br',  'orto-mz-resto-brasil')
+    ('silvio.vieira@atlasmed.com.br',  'orto-mz-no')
   ) AS a(email, zone_slug)
   JOIN users u ON lower(u.email) = lower(a.email)
   JOIN territories t ON t.slug = a.zone_slug
    AND t.vertical_id = (SELECT id FROM business_verticals WHERE code = 'ORTOPEDIA')
  ON CONFLICT (user_id, territory_id) DO NOTHING;
 
--- ── 5. Re-derive clinic membership where the geometry now says otherwise ────────
+-- ── 4. Re-derive clinic membership where the geometry now says otherwise ────────
 --
 -- The boundaries moved, so the denormalised `manager_zone_id` has to catch up. On the
 -- snapshot this changes nothing — the 151 mismatched rows are mismatched precisely
