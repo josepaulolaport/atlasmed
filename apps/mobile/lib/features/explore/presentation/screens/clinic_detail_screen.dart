@@ -723,19 +723,14 @@ class _ClinicDetailContent extends ConsumerWidget {
                           }
                         },
                       ),
-                    QuickActionItem(
-                      icon: CircleAvatar(
-                        backgroundColor: AppColors.navyBright.createSecondary(),
-                        radius: 18,
-                        child: const Icon(
-                          Icons.note_add_rounded,
-                          size: 18,
-                          color: AppColors.navyBright,
-                        ),
-                      ),
-                      label: const Text('Pedido'),
-                      onTap: () => const NewOrderRoute().push(context),
-                    ),
+                    // A "Pedido" action used to sit here, opening /orders/new
+                    // with no clinic and no interaction. Checkout requires both
+                    // — `canConfirm` wants a clinic plus either an interaction
+                    // or a doctor — and its clinic and doctor pickers are still
+                    // stubs over empty lists. So the rep chose products, filled
+                    // a cart, and hit a wall at the last step with nothing to
+                    // select. An order belongs to an interaction; it is started
+                    // from the interaction screen, which passes all three.
                   ],
                 ),
                 ClinicTopShortcutsSection(
