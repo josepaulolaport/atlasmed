@@ -72,6 +72,8 @@ async function seed(input: { maxFiles: number }): Promise<Fixture> {
       legalDocumentType: "CNPJ",
       stateId: state!.id,
       municipalityId: municipality!.id,
+      // Spec 0009 R5: every clinic has a position.
+      location: sql`ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326)`,
     })
     .returning({ id: facilities.id });
 

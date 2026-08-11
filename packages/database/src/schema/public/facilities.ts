@@ -64,7 +64,14 @@ export const facilities = pgTable(
     stateId: integer("state_id").notNull(),
     /** Admin geography FK → municipalities.id; mun∈state via composite FK. */
     municipalityId: integer("municipality_id").notNull(),
-    location: geometryPoint("location"),
+    /**
+     * Spec 0009 R5. Required: the whole ownership model is geometric — a clinic
+     * with no point cannot sit in a manager zone, cannot be checked against a
+     * rep's patch, and cannot satisfy I2. It is not a partially-filled record but
+     * one the model has no meaning for, so the database refuses it rather than
+     * leaving every reader to handle a state that should not exist.
+     */
+    location: geometryPoint("location").notNull(),
 
     // --- Contact ---
     phoneNumber: text("phone_number"),

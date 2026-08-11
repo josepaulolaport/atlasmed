@@ -8,6 +8,7 @@ import {
   states,
   submissionDocuments,
 } from "@atlasmed/database";
+import { sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 
 /**
@@ -46,6 +47,8 @@ async function seedFacility(tx: Parameters<Parameters<typeof withRollback>[0]>[0
       legalDocumentType: "CNPJ",
       stateId: state!.id,
       municipalityId: municipality!.id,
+      // Spec 0009 R5: every clinic has a position.
+      location: sql`ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326)`,
     })
     .returning({ id: facilities.id });
   return facility!.id;

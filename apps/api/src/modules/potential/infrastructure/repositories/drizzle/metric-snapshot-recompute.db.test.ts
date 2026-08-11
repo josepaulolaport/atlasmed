@@ -13,7 +13,7 @@ import {
   products,
   states,
 } from "@atlasmed/database";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzlePotentialRepository } from "./drizzle-potential.repository";
 import { RecomputeMetricSnapshotsUseCase } from "../../../application/use-cases/recompute-metric-snapshots.use-case";
@@ -46,6 +46,8 @@ async function seedScenario(tx: Tx, suffix: string) {
       legalDocumentType: "CNPJ",
       stateId: state!.id,
       municipalityId: municipality!.id,
+      // Spec 0009 R5: every clinic has a position.
+      location: sql`ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326)`,
     })
     .returning({ id: facilities.id });
   const [vertical] = await tx
