@@ -88,6 +88,17 @@ interface Dependencies {
   clinicWriter: ClinicMembershipWriter;
   /** Keep Meili `territoryIds` in sync after zone membership writes. */
   onClinicMembershipChanged?: (facilityId: number) => Promise<void>;
+  /**
+   * Spec 0009 R4 reporting. Injected rather than imported so this service stays
+   * free of the metrics and logging singletons, as the rest of the application
+   * layer here is.
+   */
+  recordAmbiguousMatch?: (source: "clinic_recompute", count: number) => void;
+  logAmbiguousMatch?: (match: {
+    facilityId: number;
+    verticalId: number;
+    zoneIds: number[];
+  }) => void;
 }
 
 export class TerritoryMembershipService {
@@ -122,7 +133,23 @@ export class TerritoryMembershipService {
       { excludeTerritoryId: options?.excludeTerritoryId }
     );
 
-    const { singleMatches } = this.resolveVerticalMatches(matches);
+    const { singleMatches, ambiguousMatches } = this.resolveVerticalMatches(matches);
+
+    // Spec 0009 R4. Until now `hasAmbiguousMatch` was computed and had no
+    // consumer at all: a clinic covered by two same-vertical zones vanished from
+    // both managers' views with nothing recorded anywhere. Membership still
+    // clears — no single owner can be derived — but it no longer does so quietly.
+    if (ambiguousMatches.length > 0) {
+      this.deps.recordAmbiguousMatch?.("clinic_recompute", ambiguousMatches.length);
+      for (const ambiguous of ambiguousMatches) {
+        this.deps.logAmbiguousMatch?.({
+          facilityId: clinic.id,
+          verticalId: ambiguous.verticalId,
+          zoneIds: ambiguous.zoneIds,
+        });
+      }
+    }
+
     await this.deps.clinicWriter.updateProfileTerritoryMemberships(
       clinic.id,
       singleMatches.map((match) => ({
@@ -204,9 +231,15 @@ export class TerritoryMembershipService {
     return this.deps.clinicWriter.recomputeManagerZoneMembership(territoryId);
   }
 
+  /**
+   * Exactly one covering zone per vertical wins; zero or several resolve to no
+   * membership. Returns *which* verticals were ambiguous and which zones
+   * competed — the previous `hasAmbiguousMatch: boolean` could not say either,
+   * which is part of why nothing consumed it.
+   */
   private resolveVerticalMatches(matches: ClinicAssignmentTerritoryMatch[]): {
     singleMatches: ClinicAssignmentTerritoryMatch[];
-    hasAmbiguousMatch: boolean;
+    ambiguousMatches: Array<{ verticalId: number; zoneIds: number[] }>;
   } {
     const matchesByVerticalId = new Map<number, ClinicAssignmentTerritoryMatch[]>();
     for (const match of matches) {
@@ -216,15 +249,18 @@ export class TerritoryMembershipService {
     }
 
     const singleMatches: ClinicAssignmentTerritoryMatch[] = [];
-    let hasAmbiguousMatch = false;
-    for (const verticalMatches of matchesByVerticalId.values()) {
+    const ambiguousMatches: Array<{ verticalId: number; zoneIds: number[] }> = [];
+    for (const [verticalId, verticalMatches] of matchesByVerticalId) {
       if (verticalMatches.length === 1) {
         singleMatches.push(verticalMatches[0]!);
       } else {
-        hasAmbiguousMatch = true;
+        ambiguousMatches.push({
+          verticalId,
+          zoneIds: verticalMatches.map((match) => match.id),
+        });
       }
     }
 
-    return { singleMatches, hasAmbiguousMatch };
+    return { singleMatches, ambiguousMatches };
   }
 }
