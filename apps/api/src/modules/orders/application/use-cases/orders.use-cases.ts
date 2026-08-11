@@ -4,8 +4,10 @@ import {
   Role,
   type ScopeContext,
 } from "@atlasmed/access";
+import { monthKeyAt } from "@atlasmed/facility-insights";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import { ValidationError } from "../../../../shared/errors";
+import { logger } from "../../../../infrastructure/logging/logger";
 import type {
   CreateOrderItemInput,
   OrderDetailRecord,
@@ -214,8 +216,57 @@ export class GetOrderUseCase {
   }
 }
 
+/**
+ * Enqueues the market-metric recompute for a profile (spec 0013 §4.4).
+ *
+ * A port, not the Temporal client: the order module has no business knowing what
+ * carries the request, and a use-case test must be able to make it fail.
+ */
+export interface MetricSnapshotRecomputeQueue {
+  enqueue(input: { facilityVerticalProfileId: number; months: string[] }): Promise<unknown>;
+}
+
 export class CreateOrderUseCase {
-  constructor(private readonly deps: { orderRepository: OrderRepository }) {}
+  constructor(
+    private readonly deps: {
+      orderRepository: OrderRepository;
+      metricSnapshotQueue?: MetricSnapshotRecomputeQueue;
+    }
+  ) {}
+
+  /**
+   * Order writes enqueue rather than recompute inline (spec 0013 §4.4): the
+   * Emultec importer writes tens of orders per run and must not carry the
+   * metric's cost, and the same profile would otherwise be recomputed once per
+   * order.
+   *
+   * Only the order's own month can have moved — snapshots store month facts, and
+   * the trailing average is derived from them at read time.
+   *
+   * A failure here never fails the order. The write is committed and correct;
+   * the snapshot is derived, and the hourly reconciliation sweep is what makes
+   * it right. But it is logged: a trigger that keeps failing must be visible,
+   * because the sweep would otherwise repair the number and hide the fault.
+   */
+  private async enqueueMetricSnapshotRecompute(order: OrderDetailRecord): Promise<void> {
+    const queue = this.deps.metricSnapshotQueue;
+    if (!queue) return;
+
+    const month = monthKeyAt(order.orderedAt ?? order.createdAt);
+    try {
+      await queue.enqueue({
+        facilityVerticalProfileId: order.facilityVerticalProfileId,
+        months: [month],
+      });
+    } catch (error) {
+      logger.error("facility_metric_snapshot.trigger_enqueue_failed", {
+        orderId: order.id,
+        facilityVerticalProfileId: order.facilityVerticalProfileId,
+        month,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   async execute(input: {
     facilityId: number;
@@ -321,6 +372,8 @@ export class CreateOrderUseCase {
       orderedAt: input.orderedAt ? new Date(input.orderedAt) : new Date(),
       items,
     });
+
+    await this.enqueueMetricSnapshotRecompute(order);
 
     return serializeOrder(order);
   }

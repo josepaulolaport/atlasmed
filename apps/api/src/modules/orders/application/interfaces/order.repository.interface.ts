@@ -44,6 +44,11 @@ export interface OrderDetailRecord {
   id: number;
   idAvulsaEmultec: number | null;
   verticalId: number;
+  /**
+   * The profile the order belongs to (spec 0010 §4). Not serialized to clients —
+   * it is what the metric snapshot recompute is keyed on (spec 0013 §4.4).
+   */
+  facilityVerticalProfileId: number;
   facility: OrderIdentity;
   person: OrderIdentity | null;
   seller: OrderIdentity | null;
