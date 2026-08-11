@@ -260,6 +260,16 @@ export class GetFacilityCadastroChecklistUseCase {
           // Derived here, never stored (ADR 0008 §4). The date on the document
           // is the truth; this is a function of it and today, so it cannot go
           // stale and no nightly job can stop writing it.
+          // The upload limits travel with the checklist so the client can refuse
+          // an oversized file before any request (spec 0011 §7). They were only
+          // on the POST /documents response, which meant the client had to
+          // create a document just to learn them — a read with a side effect,
+          // leaving an empty DRAFT behind whenever the file was then rejected.
+          allowedMimeTypes: requirement.allowedMimeTypes,
+          maxFiles: requirement.maxFiles,
+          maxFileSizeBytes: requirement.maxFileSizeBytes,
+          maxCombinedSizeBytes: requirement.maxCombinedSizeBytes,
+          requiresFrontAndBack: requirement.requiresFrontAndBack,
           requiresValidityDate: requirement.requiresValidityDate,
           validUntil: workingDoc?.validUntil ?? undefined,
           expiry: deriveExpiry(
