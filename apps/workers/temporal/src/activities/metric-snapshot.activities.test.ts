@@ -80,6 +80,52 @@ describe("recalculateMetricSnapshotsBatch", () => {
     expect(result.processed).toBe(2);
   });
 
+  test("TRIGGER recomputes exactly the profiles it was given, querying for none", async () => {
+    let queried = false;
+    const recomputed: number[] = [];
+    const activity = createMetricSnapshotBatchActivity({
+      store: createStore({
+        listAllProfileIds: async () => {
+          queried = true;
+          return [99];
+        },
+        listChangedProfileIds: async () => {
+          queried = true;
+          return [99];
+        },
+        recompute: async ({ profileId }) => {
+          recomputed.push(profileId);
+          return { written: 1, differed: 0 };
+        },
+      }),
+    });
+
+    const result = await activity({
+      mode: "TRIGGER",
+      cursor: null,
+      limit: 500,
+      months: ["2026-03-01"],
+      profileIds: [42],
+    });
+
+    expect(queried).toBe(false);
+    expect(recomputed).toEqual([42]);
+    expect(result.processed).toBe(1);
+    // A caller-supplied list has no page after it — a cursor would make the
+    // workflow ask for the same ids forever.
+    expect(result.nextCursor).toBeNull();
+  });
+
+  test("TRIGGER without profiles is refused rather than recomputing nothing quietly", async () => {
+    const activity = createMetricSnapshotBatchActivity({ store: createStore() });
+    await expect(
+      activity({ mode: "TRIGGER", cursor: null, limit: 500, months: MONTHS, profileIds: [] }),
+    ).rejects.toMatchObject({ nonRetryable: true });
+    await expect(
+      activity({ mode: "TRIGGER", cursor: null, limit: 500, months: MONTHS }),
+    ).rejects.toMatchObject({ nonRetryable: true });
+  });
+
   test("RECONCILE without a window fails without retrying", async () => {
     const activity = createMetricSnapshotBatchActivity({ store: createStore() });
     // Retrying a malformed input just burns attempts, so this must be

@@ -42,8 +42,10 @@ export interface MetricSnapshotWorkflowTotals {
 
 export interface MetricSnapshotWorkflowInput {
   mode: MetricSnapshotMode;
-  /** Explicit months. BACKFILL requires them; RECONCILE derives its window. */
+  /** Explicit months. BACKFILL and TRIGGER require them; RECONCILE derives its window. */
   months?: string[];
+  /** TRIGGER only: the profiles an order write named. */
+  profileIds?: number[];
   cursor?: number | null;
   since?: string;
   until?: string;
@@ -52,6 +54,21 @@ export interface MetricSnapshotWorkflowInput {
 }
 
 export type MetricSnapshotWorkflowResult = MetricSnapshotWorkflowTotals;
+
+const LIFECYCLE_ACTIONS: Record<MetricSnapshotMode, { started: string; completed: string }> = {
+  RECONCILE: {
+    started: "facility_metric_snapshot.reconcile_started",
+    completed: "facility_metric_snapshot.reconcile_completed",
+  },
+  BACKFILL: {
+    started: "facility_metric_snapshot.backfill_started",
+    completed: "facility_metric_snapshot.backfill_completed",
+  },
+  TRIGGER: {
+    started: "facility_metric_snapshot.trigger_started",
+    completed: "facility_metric_snapshot.trigger_completed",
+  },
+};
 
 interface WorkflowDependencies {
   recalculate(input: MetricSnapshotBatchInput): Promise<MetricSnapshotBatchResult>;
@@ -92,10 +109,7 @@ export async function runMetricSnapshotWorkflow(
 
   if (!input.lifecycleStartedAt) {
     await dependencies.logLifecycle({
-      action:
-        input.mode === "BACKFILL"
-          ? "facility_metric_snapshot.backfill_started"
-          : "facility_metric_snapshot.reconcile_started",
+      action: LIFECYCLE_ACTIONS[input.mode].started,
       mode: input.mode,
       months,
       ...totals,
@@ -110,6 +124,7 @@ export async function runMetricSnapshotWorkflow(
       limit: PAGE_SIZE,
       months,
       ...(input.mode === "RECONCILE" ? { since, until } : {}),
+      ...(input.mode === "TRIGGER" ? { profileIds: input.profileIds ?? [] } : {}),
     });
     totals.processed += page.processed;
     totals.written += page.written;
@@ -134,10 +149,7 @@ export async function runMetricSnapshotWorkflow(
   }
 
   await dependencies.logLifecycle({
-    action:
-      input.mode === "BACKFILL"
-        ? "facility_metric_snapshot.backfill_completed"
-        : "facility_metric_snapshot.reconcile_completed",
+    action: LIFECYCLE_ACTIONS[input.mode].completed,
     mode: input.mode,
     months,
     ...totals,
