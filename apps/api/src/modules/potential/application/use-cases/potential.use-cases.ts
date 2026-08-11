@@ -11,8 +11,9 @@ import {
   addMonths,
   averageMonthly,
   deriveShare,
-  monthBounds,
   monthKeyAt,
+  monthlyRateFromDays,
+  rollingWindow,
   trailingMonths,
   type MonthKey,
 } from "@atlasmed/facility-insights";
@@ -73,10 +74,13 @@ export class ListFacilityPotentialsUseCase {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
 
-    const currentMonth = monthKeyAt(input.now ?? new Date());
+    const now = input.now ?? new Date();
+    const currentMonth = monthKeyAt(now);
+    // The rep's competitor figures are month-keyed, so the window still names
+    // months for them — but ours is a rolling day window (spec 0013 §4.3), which
+    // is what stops a partial month from dragging the number down.
     const months = trailingMonths(currentMonth, MONTHS_IN_WINDOW);
-    const windowStart = monthBounds(months[0]!).start;
-    const windowEnd = monthBounds(currentMonth).end;
+    const window = rollingWindow(now);
 
     const definitions = await this.deps.potentialRepository.listDefinitions({
       verticalId: input.verticalId,
@@ -87,42 +91,26 @@ export class ListFacilityPotentialsUseCase {
       verticalId: input.verticalId,
     });
 
-    // Snapshots are the stored answer (spec 0013 §4.4). They are a *cache*,
-    // though, and one that starts empty: §4.4 also rules out backfilling
-    // history, so on the day this ships no profile has a row yet.
-    //
-    // So this reads through rather than switching outright — on a miss it
-    // computes from the inputs, exactly as before. It deliberately does **not**
-    // populate on read: a write on the read path turns every clinic screen into
-    // a writer, and the sweep fills the gap within the hour anyway.
-    const snapshots =
-      profileId == null
-        ? []
-        : await this.deps.potentialRepository.listMetricSnapshots({ profileId, months });
-
     const [usage, qtySums] = await Promise.all([
       profileId == null
         ? Promise.resolve([])
         : this.deps.potentialRepository.listUsage({ profileId, definitionIds, months }),
-      snapshots.length > 0
-        ? Promise.resolve([])
-        : this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
-            facilityId: input.facilityId,
-            verticalId: input.verticalId,
-            definitionIds,
-            rangeStart: windowStart,
-            rangeEnd: windowEnd,
-          }),
+      // Live from orders, not from snapshots: snapshots are per calendar month
+      // and a day window cannot be derived from month facts. They keep serving
+      // history and the aggregate views (spec 0013 §4.5).
+      this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
+        facilityId: input.facilityId,
+        verticalId: input.verticalId,
+        definitionIds,
+        rangeStart: window.start,
+        rangeEnd: window.end,
+      }),
     ]);
 
-    // Ours: sum each month in the window, then divide by the window — months
-    // with no orders are real zeros, not missing data.
     const oursByDef = new Map<number, number>();
-    for (const row of snapshots.length > 0 ? snapshots : qtySums) {
-      const qty = "oursQty" in row ? row.oursQty : row.totalQty;
-      oursByDef.set(row.definitionId, (oursByDef.get(row.definitionId) ?? 0) + qty);
+    for (const row of qtySums) {
+      oursByDef.set(row.definitionId, (oursByDef.get(row.definitionId) ?? 0) + row.totalQty);
     }
-    const servedFromSnapshots = snapshots.length > 0;
 
     const usageByDef = new Map<number, typeof usage>();
     for (const row of usage) {
@@ -136,15 +124,13 @@ export class ListFacilityPotentialsUseCase {
       items: definitions.map((def) => {
         const monthlyRows = usageByDef.get(def.id) ?? [];
 
-        // Both sides average over the same window, or the ratio compares a
-        // three-month total against a one-month figure.
-        const ours = averageMonthly([oursByDef.get(def.id) ?? 0], MONTHS_IN_WINDOW);
-        // From the snapshot when we have one, so ours and theirs come from the
-        // same computation rather than one stored and one recomputed.
+        // Ours: a quantity observed over the window, normalised to a month.
+        const ours = monthlyRateFromDays(oursByDef.get(def.id) ?? 0);
+        // Theirs: the rep already answers "quantas por mês", so these are rates
+        // and are averaged, never day-normalised. Normalising them would divide
+        // a rate by time and produce nonsense.
         const theirs = averageMonthly(
-          servedFromSnapshots
-            ? snapshots.filter((row) => row.definitionId === def.id).map((row) => row.theirsQty)
-            : monthlyRows.map((row) => row.metricQuantity),
+          monthlyRows.map((row) => row.metricQuantity),
           MONTHS_IN_WINDOW,
         );
         const { totalQty, share } = deriveShare(ours, theirs);

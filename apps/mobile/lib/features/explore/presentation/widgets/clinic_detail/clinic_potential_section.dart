@@ -1,4 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_potential_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/competitor_quantity_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_linha_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_potential_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
@@ -92,7 +94,19 @@ class ClinicPotentialSection extends ConsumerWidget {
                     for (var i = 0; i < page.items.length; i++) ...[
                       if (i > 0)
                         const Divider(height: 20, color: AppColors.gray100),
-                      _PotentialRow(item: page.items[i]),
+                      _PotentialRow(
+                        item: page.items[i],
+                        onEdit: canEdit
+                            ? (existing) => _editCompetitor(
+                                context,
+                                ref,
+                                facilityId: facilityId,
+                                verticalId: verticalId,
+                                item: page.items[i],
+                                existing: existing,
+                              )
+                            : null,
+                      ),
                     ],
                   ],
                 ),
@@ -104,10 +118,58 @@ class ClinicPotentialSection extends ConsumerWidget {
   }
 }
 
+/// Opens the quantity sheet and refreshes the section from the response.
+///
+/// The server returns the recomputed page, so nothing re-fetches and risks
+/// showing a different answer than the one the write produced.
+Future<void> _editCompetitor(
+  BuildContext context,
+  WidgetRef ref, {
+  required int facilityId,
+  required int verticalId,
+  required FacilityPotentialItem item,
+  CompetitorUsage? existing,
+}) async {
+  final repository = FacilityPotentialRepository(
+    facilityId: facilityId,
+    verticalId: verticalId,
+  );
+  try {
+    final updated = await showModalBottomSheet<FacilityPotentialsPage>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => CompetitorQuantitySheet(
+        definitionLabel: item.label,
+        definitionId: item.definitionId,
+        repository: repository,
+        existing: existing,
+      ),
+    );
+    if (updated != null) {
+      ref.invalidate(
+        facilityPotentialsProvider((
+          facilityId: facilityId,
+          verticalId: verticalId,
+        )),
+      );
+    }
+  } finally {
+    repository.dispose();
+  }
+}
+
 class _PotentialRow extends StatelessWidget {
-  const _PotentialRow({required this.item});
+  const _PotentialRow({required this.item, this.onEdit});
 
   final FacilityPotentialItem item;
+
+  /// Null when the user may not edit this clinic — the affordance disappears
+  /// rather than appearing and failing.
+  final void Function(CompetitorUsage? existing)? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +185,10 @@ class _PotentialRow extends StatelessWidget {
             color: AppColors.navyDeep,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
+        // Two rows of two rather than four across: at 360dp the four-column
+        // layout truncated every label to an ellipsis, so the numbers had no
+        // readable captions.
         Row(
           children: [
             Expanded(
@@ -138,6 +203,11 @@ class _PotentialRow extends StatelessWidget {
                 value: _fmtQty(item.competitorMonthlyQty),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
             Expanded(
               child: _Metric(
                 label: 'Mercado total',
@@ -155,7 +225,131 @@ class _PotentialRow extends StatelessWidget {
             ),
           ],
         ),
+        _CompetitorTable(competitors: item.competitors, onEdit: onEdit),
       ],
+    );
+  }
+}
+
+/// Who makes up "Concorrentes/mês", and how much of it each one is.
+///
+/// The server has always sent this list; nothing rendered it, so the competitor
+/// figure was a lump sum the rep could not check or correct.
+class _CompetitorTable extends StatelessWidget {
+  const _CompetitorTable({required this.competitors, this.onEdit});
+
+  final List<CompetitorUsage> competitors;
+  final void Function(CompetitorUsage? existing)? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    if (competitors.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Nenhum concorrente registrado neste mês.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.3,
+                color: AppColors.gray500,
+              ),
+            ),
+            if (onEdit != null)
+              TextButton(
+                onPressed: () => onEdit!(null),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Adicionar concorrente'),
+              ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Divider(height: 1, color: AppColors.gray100),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Produto concorrente',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.gray500,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              Text(
+                'Qtd/mês',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.gray500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+          for (final competitor in competitors) ...[
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: onEdit == null ? null : () => onEdit!(competitor),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      competitor.productName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.3,
+                        color: AppColors.navyDeep,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    // The rep's own number, in the units they typed it in — the
+                    // metric-unit conversion belongs to the totals above, not
+                    // here, or they cannot recognise what they entered.
+                    _fmtQty(competitor.quantity),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.navyDeep,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (onEdit != null)
+            TextButton(
+              onPressed: () => onEdit!(null),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                alignment: Alignment.centerLeft,
+                minimumSize: const Size(0, 34),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('Adicionar concorrente'),
+            ),
+        ],
+      ),
     );
   }
 }

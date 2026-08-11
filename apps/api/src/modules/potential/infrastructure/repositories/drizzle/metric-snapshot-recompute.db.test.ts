@@ -414,8 +414,8 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
   });
 });
 
-describe.skipIf(!dbUp)("read path over snapshots (database)", () => {
-  test("serves the stored snapshot once one exists, and the live inputs before that", async () => {
+describe.skipIf(!dbUp)("read path rolling window (database)", () => {
+  test("the monthly rate does not shift with where in the month it is read", async () => {
     await withRollback(async (tx) => {
       const scenario = await seedScenario(tx, "READ");
       const ourProduct = await seedProduct(tx, scenario, {
@@ -439,30 +439,27 @@ describe.skipIf(!dbUp)("read path over snapshots (database)", () => {
         assignedVerticalIds: [scenario.verticalId],
       } as never;
 
-      // Before any snapshot exists the read falls back to the inputs, so the
-      // screen is not blank on the day this ships.
-      const beforeSnapshot = await list.execute({
+      // 9 units inside a 90-day window, normalised to a month: 9/90*30 = 3.
+      // The point is that it does not change with where in the month "now"
+      // falls — a partial calendar month would have understated it.
+      const result = await list.execute({
         facilityId: scenario.facilityId,
         verticalId: scenario.verticalId,
         scope,
         now,
       });
-      expect(beforeSnapshot.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
+      expect(result.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
+      expect(result.items[0]?.share).toBe(1);
 
-      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({
-        profileId: scenario.profileId,
-        months: ["2026-01-01", "2026-02-01", "2026-03-01"],
-      });
-
-      const afterSnapshot = await list.execute({
+      // Same order read from the 1st of the month rather than the 20th: the
+      // rolling window is unchanged in length, so the rate is unchanged.
+      const earlyInMonth = await list.execute({
         facilityId: scenario.facilityId,
         verticalId: scenario.verticalId,
         scope,
-        now,
+        now: new Date("2026-04-01T12:00:00.000Z"),
       });
-      // Same answer from the cache — 9 in one month over a three-month window.
-      expect(afterSnapshot.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
-      expect(afterSnapshot.items[0]?.share).toBe(1);
+      expect(earlyInMonth.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
     });
   });
 });

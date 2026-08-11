@@ -16,6 +16,10 @@ export type {
 } from "./purchase-recurrence";
 export {
   APPLICATION_TIMEZONE,
+  DAYS_PER_MONTH,
+  ROLLING_WINDOW_DAYS,
+  monthlyRateFromDays,
+  rollingWindow,
   MarketMetricValidationError,
   addMonths,
   averageMonthly,
