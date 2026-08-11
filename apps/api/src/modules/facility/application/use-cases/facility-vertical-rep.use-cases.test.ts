@@ -35,6 +35,8 @@ function record(
     endedAt: null,
     assignedByUserId: 99,
     endReason: null,
+    overrideReason: null,
+    overrideByUserId: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     ...overrides,
@@ -48,6 +50,7 @@ function fakeRepo(
     findByFacilityVertical: async () => [],
     findCurrentByFacilityVertical: async () => null,
     findActiveFacilityIdsByUserId: async () => [],
+    findOutOfTerritoryAssignments: async () => ({ rows: [], total: 0 }),
     assign: async () => ({
       assignment: record(),
       previousUserId: null,
@@ -91,6 +94,97 @@ describe("AssignFacilityVerticalRepUseCase", () => {
     expect(assign).toHaveBeenCalledTimes(1);
     expect(onChanged).toHaveBeenCalledWith([7, 8]);
     expect(onFacilityChanged).toHaveBeenCalledWith(1);
+  });
+
+  /**
+   * Spec 0009 R2. I2 becomes "a patch covers the clinic **or** the assignment
+   * carries an override". The informal market needs the second half; the record
+   * is what makes it acceptable.
+   */
+  it("an override replaces the patch-coverage check and is recorded", async () => {
+    const assign = mock(async () => ({
+      assignment: record({ userId: 7, overrideReason: "Cliente histórico" }),
+      previousUserId: null,
+      wasIdempotent: false,
+    }));
+    const assertAssigneeCoversFacility = mock(async () => {
+      throw new Error("coverage must not be consulted when an override is given");
+    });
+
+    const uc = new AssignFacilityVerticalRepUseCase({
+      repAssignmentRepository: fakeRepo({ assign }),
+      assertVerticalActive: async () => {},
+      assertAssigneeHasVertical: async () => {},
+      assertAssigneeCoversFacility,
+      onRepAssignmentChanged: async () => {},
+      onFacilityChanged: async () => {},
+    });
+
+    const result = await uc.execute({
+      facilityId: 1,
+      verticalId: 10,
+      userId: 7,
+      assignedByUserId: 99,
+      scope: scope(),
+      role: "MANAGER",
+      overrideReason: "  Cliente histórico  ",
+    });
+
+    expect(assertAssigneeCoversFacility).not.toHaveBeenCalled();
+    // Who overrode is the actor — R2 is about reportability, so the record has
+    // to name someone, and it is whoever made the assignment.
+    expect(assign).toHaveBeenCalledWith(
+      expect.objectContaining({
+        overrideReason: "Cliente histórico",
+        overrideByUserId: 99,
+      })
+    );
+    expect(result.overrideReason).toBe("Cliente histórico");
+  });
+
+  it("still enforces patch coverage when no override is given", async () => {
+    const assertAssigneeCoversFacility = mock(async () => {
+      throw new ValidationError([{ field: "userId", message: "not covered" }]);
+    });
+    const uc = new AssignFacilityVerticalRepUseCase({
+      repAssignmentRepository: fakeRepo({}),
+      assertVerticalActive: async () => {},
+      assertAssigneeHasVertical: async () => {},
+      assertAssigneeCoversFacility,
+    });
+
+    await expect(
+      uc.execute({
+        facilityId: 1,
+        verticalId: 10,
+        userId: 7,
+        assignedByUserId: 99,
+        scope: scope(),
+        role: "MANAGER",
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+    expect(assertAssigneeCoversFacility).toHaveBeenCalled();
+  });
+
+  it("refuses a blank override — an override must say why", async () => {
+    const uc = new AssignFacilityVerticalRepUseCase({
+      repAssignmentRepository: fakeRepo({}),
+      assertVerticalActive: async () => {},
+      assertAssigneeHasVertical: async () => {},
+      assertAssigneeCoversFacility: async () => {},
+    });
+
+    await expect(
+      uc.execute({
+        facilityId: 1,
+        verticalId: 10,
+        userId: 7,
+        assignedByUserId: 99,
+        scope: scope(),
+        role: "MANAGER",
+        overrideReason: "   ",
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("rejects assignee without vertical membership", async () => {

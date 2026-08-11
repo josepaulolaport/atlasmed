@@ -7,14 +7,14 @@ describe("serializeBoundaryResolution", () => {
       serializeBoundaryResolution({
         mode: "rep_patch",
         managerTerritoryId: 1,
-        managerZoneCandidates: [{ id: 1, code: "ZONE-1", name: "Zone 1" }],
+        managerZoneCandidates: [{ id: 1, slug: "ZONE-1", name: "Zone 1" }],
         clinicRecomputeEnqueued: true,
       })
     ).toEqual({
       success: true,
       mode: "rep_patch",
       managerTerritoryId: 1,
-      managerZoneCandidates: [{ id: 1, code: "ZONE-1", name: "Zone 1" }],
+      managerZoneCandidates: [{ id: 1, slug: "ZONE-1", name: "Zone 1" }],
       clinicRecomputeEnqueued: true,
     });
   });

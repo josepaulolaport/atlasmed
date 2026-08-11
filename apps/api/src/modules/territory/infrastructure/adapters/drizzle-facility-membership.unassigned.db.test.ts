@@ -71,8 +71,8 @@ async function seed(tx: Tx) {
       (
         await one<{ id: number }>(
           tx.execute(sql`
-            INSERT INTO territories (name, slug, code, territory_type_id, vertical_id, boundary)
-            VALUES (${slug}, ${slug}, ${slug}, ${zoneType.id}, ${verticalId},
+            INSERT INTO territories (name, slug, territory_type_id, vertical_id, boundary)
+            VALUES (${slug}, ${slug}, ${zoneType.id}, ${verticalId},
                     ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(boundary)}), 4326))
             RETURNING id
           `)

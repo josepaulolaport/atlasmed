@@ -14,7 +14,8 @@ import { OperationNotAllowedError } from "../../../../shared/errors";
 
 export interface ManagerZoneCandidate {
   id: number;
-  code: string;
+  /** Spec 0009 R9: `code` is gone; the slug is the readable identifier. */
+  slug: string;
   name: string;
 }
 
@@ -67,7 +68,7 @@ export class TerritoryContainmentService {
       throw new OperationNotAllowedError(
         "save_boundary",
         `Boundary overlaps sibling territories: ${overlapping
-          .map((c) => `${c.code} (${formatOverlapArea(c.overlapSquareMeters)})`)
+          .map((c) => `${c.slug} (${formatOverlapArea(c.overlapSquareMeters)})`)
           .join(", ")}`
       );
     }
@@ -93,7 +94,7 @@ export class TerritoryContainmentService {
       throw new OperationNotAllowedError(
         "save_boundary",
         `Rep patch must be inside exactly one manager zone; found ${candidates.length}: ${candidates
-          .map((c) => c.code)
+          .map((c) => c.slug)
           .join(", ")}`
       );
     }
@@ -117,7 +118,7 @@ export class TerritoryContainmentService {
       throw new OperationNotAllowedError(
         "save_boundary",
         `Manager zone boundary no longer contains rep patches: ${orphans
-          .map((p) => p.code)
+          .map((p) => p.slug)
           .join(", ")}`
       );
     }

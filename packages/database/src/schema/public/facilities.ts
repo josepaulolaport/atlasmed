@@ -332,6 +332,25 @@ export const facilityVerticalRepAssignments = pgTable(
       onDelete: "set null",
     }),
     endReason: text("end_reason"),
+    /**
+     * Spec 0009 R5/R2: who ended it. `end_reason` recorded *why* and nothing
+     * recorded *who* — and manager-zone boundary edits are ADMIN-only, so an
+     * admin's redraw ended rep assignments a manager had made, untraceably.
+     * Nullable with no backfill: we genuinely do not know for existing rows.
+     */
+    endedByUserId: bigint("ended_by_user_id", { mode: "number" }),
+    /**
+     * Spec 0009 R2. The informal market requires assigning a rep outside their
+     * patch, so I2 becomes "a patch covers the clinic **or** this is set".
+     *
+     * Modelled on the assignment rather than as an exception type, because the
+     * override is a property of *this* rep holding *this* clinic — and because
+     * recompute must be able to see it. An overridden assignment is skipped by
+     * de-assignment sweeps and excluded from boundary-impact sets: an override
+     * that a recompute can erase is not an override.
+     */
+    overrideReason: text("override_reason"),
+    overrideByUserId: bigint("override_by_user_id", { mode: "number" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
@@ -340,6 +359,28 @@ export const facilityVerticalRepAssignments = pgTable(
       t.facilityVerticalProfileId,
       t.endedAt,
     ),
+    /** The out-of-territory report: active overrides, newest first. */
+    index("facility_vertical_rep_assignments_override_idx")
+      .on(t.overrideByUserId)
+      .where(sql`${t.overrideReason} IS NOT NULL AND ${t.endedAt} IS NULL`),
+    /*
+     * Named explicitly. Drizzle's derived name for the override FK would be
+     * `facility_vertical_rep_assignments_override_by_user_id_users_id_fk` — 65
+     * characters, which Postgres silently truncates to 63. This table already
+     * carries two such casualties (`..._assigned_by_user_id_users_id_`, missing
+     * its `fk` suffix), and a truncated name is one a later DROP CONSTRAINT
+     * cannot find.
+     */
+    foreignKey({
+      name: "fvra_ended_by_user_id_fk",
+      columns: [t.endedByUserId],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "fvra_override_by_user_id_fk",
+      columns: [t.overrideByUserId],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
     index("facility_vertical_rep_assignments_user_id_ended_at_idx").on(t.userId, t.endedAt),
     uniqueIndex("facility_vertical_rep_assignments_profile_active_uidx")
       .on(t.facilityVerticalProfileId)

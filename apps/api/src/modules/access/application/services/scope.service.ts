@@ -39,15 +39,22 @@ export class ScopeService {
     await scopeCacheService.invalidate(userId);
   }
 
+  /**
+   * Spec 0009 R9: `findManagerIdByUserId` is gone, and with it a branch that
+   * had not run since migration 0006.
+   *
+   * It looked like "also invalidate this user's manager", but the implementation
+   * was a hardcoded `return null` — `users.manager_id` was dropped when the
+   * hierarchy became territory-derived. So the intent was never delivered, and
+   * the dead `if` made it look as though it were.
+   *
+   * The intent is covered where it belongs: a territory assignment change
+   * invalidates everyone related to the affected territories via
+   * `invalidateScopeForTerritories`, which resolves managers from the territory
+   * graph rather than from a column that no longer exists.
+   */
   async invalidateForTerritoryAssignmentChange(userId: number): Promise<void> {
-    const userIdsToInvalidate = new Set<number>([userId]);
-    const managerId = await this.scopeRepository.findManagerIdByUserId(userId);
-
-    if (managerId) {
-      userIdsToInvalidate.add(managerId);
-    }
-
-    await scopeCacheService.invalidateMany([...userIdsToInvalidate]);
+    await scopeCacheService.invalidateMany([userId]);
   }
 
   async invalidateForManagerChange(params: {
