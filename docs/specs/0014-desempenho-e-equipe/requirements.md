@@ -222,17 +222,27 @@ user's call rather than a bug.
   list reps who sit under no listed manager. This is a data and modelling
   question, so it is not decided here.
 - **Only `unit_type` of §5's five filters is in the UI.** The API takes all
-  five; the filter bar renders one — and the unit-type catalog is empty in
-  production, so the bar currently renders nothing at all. §5 argues that
-  `manager`/`rep` filters are "the reason nested dashboard segments are
-  unnecessary", and that argument is not yet backed by shipped UI.
+  five; the filter bar renders one. That one does work — the catalog holds 39
+  types and 91 subtypes and every one of the 1443 facilities carries a
+  `unit_type_id`, so item 14 ships a filter with real options. The gap is the
+  other four, and §5 argues that `manager`/`rep` are "the reason nested
+  dashboard segments are unnecessary" — an argument not yet backed by shipped
+  UI.
 
-**Not built:** route-level HTTP integration tests for the new endpoints. The dashboard
-module's routes import `composition` directly rather than taking injected use cases, so
-they cannot be mounted the way `orders-http.integration.test.ts` mounts its factory.
-Coverage is unit-level (scope resolution, every metric, the roster) plus query-shape
-assertions on the emitted SQL. Converting the routes to the factory pattern is the
-follow-up.
+**Route tests: built after review.** They were the follow-up this section named, and
+the orders 500 (§8.2) is the argument for why they could not stay a follow-up — the
+whole failure lived in the one layer nothing exercised. `dashboard.route.ts` and
+`team.route.ts` now take injected use cases with `auth` as the default plugin, the
+shape `orders.route.ts` established, and `dashboard-http.integration.test.ts` mounts
+them: every metric endpoint answers, every filter survives into the request, an unknown
+metric key and an oversized page are refused at the route layer, a domain refusal
+arrives as 403 rather than 500, and `/team/reps-without-patch` is not shadowed by the
+roster route.
+
+One tool had to be widened for it: `route-security.registry.test.ts` recognised the
+injected-plugin form only as the literal `authPlugin: any = auth`, so the better-typed
+`authPlugin: typeof auth = auth` read as unguarded. It now matches any annotation whose
+default is production `auth`, and still rejects an injected plugin with no default.
 
 ## 9. Deferred
 

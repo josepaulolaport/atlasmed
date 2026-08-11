@@ -24,53 +24,72 @@ const SORT_KEYS: TeamSortKey[] = [
   "unassigned-clinics",
 ];
 
-export const teamRoute = new Elysia({ prefix: "/team" })
-  .use(auth)
-  .use(requirePermission("read", "USER"))
-  .get(
-    "/reps-without-patch",
-    async ({ getUser }) => {
-      const actor = await getUser();
-      return dashboardUseCases
-        .listRepsWithoutPatch()
-        .execute({ viewerRole: actor.role.name });
-    },
-    {
-      detail: {
-        summary:
-          "REPs with no active patch — no manager, no team, no clinics (spec 0009 R8)",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
+type Executable = { execute(input: never): Promise<unknown> };
+
+export interface TeamHttpUseCases {
+  listTeam(): Executable;
+  listRepsWithoutPatch(): Executable;
+}
+
+const teamRoutes = (useCases: TeamHttpUseCases, authPlugin: typeof auth) =>
+  new Elysia({ prefix: "/team" })
+    .use(authPlugin)
+    .use(requirePermission("read", "USER"))
+    // Declared before `""` on purpose: a literal segment must not be shadowed
+    // by the roster route.
+    .get(
+      "/reps-without-patch",
+      async ({ getUser }) => {
+        const actor = await getUser();
+        return useCases
+          .listRepsWithoutPatch()
+          .execute({ viewerRole: actor.role.name } as never);
       },
-    },
-  )
-  .get(
-    "",
-    async ({ query, getScope, getUser }) => {
-      const actor = await getUser();
-      const scope = await getScope();
-      return dashboardUseCases.listTeam().execute({
-        viewerId: actor.id,
-        viewerRole: actor.role.name,
-        scope,
-        verticalId: query.verticalId ?? null,
-        managerId: query.managerId ?? null,
-        sortBy: query.sortBy as TeamSortKey | undefined,
-        order: query.order as "asc" | "desc" | undefined,
-      });
-    },
-    {
-      detail: {
-        summary:
-          "Equipe — a manager's reps, or (ADMIN) managers and one manager's team",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
+      {
+        detail: {
+          summary:
+            "REPs with no active patch — no manager, no team, no clinics (spec 0009 R8)",
+          tags: ["Dashboard"],
+          security: [{ bearerAuth: [] }],
+        },
       },
-      query: t.Object({
-        verticalId: t.Optional(t.Number({ minimum: 1 })),
-        managerId: t.Optional(t.Number({ minimum: 1 })),
-        sortBy: t.Optional(t.Union(SORT_KEYS.map((key) => t.Literal(key)))),
-        order: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
-      }),
-    },
-  );
+    )
+    .get(
+      "",
+      async ({ query, getScope, getUser }) => {
+        const actor = await getUser();
+        const scope = await getScope();
+        return useCases.listTeam().execute({
+          viewerId: actor.id,
+          viewerRole: actor.role.name,
+          scope,
+          verticalId: query.verticalId ?? null,
+          managerId: query.managerId ?? null,
+          sortBy: query.sortBy as TeamSortKey | undefined,
+          order: query.order as "asc" | "desc" | undefined,
+        } as never);
+      },
+      {
+        detail: {
+          summary:
+            "Equipe — a manager's reps, or (ADMIN) managers and one manager's team",
+          tags: ["Dashboard"],
+          security: [{ bearerAuth: [] }],
+        },
+        query: t.Object({
+          verticalId: t.Optional(t.Number({ minimum: 1 })),
+          managerId: t.Optional(t.Number({ minimum: 1 })),
+          sortBy: t.Optional(t.Union(SORT_KEYS.map((key) => t.Literal(key)))),
+          order: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
+        }),
+      },
+    );
+
+export function createTeamRoutes(
+  useCases: TeamHttpUseCases = dashboardUseCases,
+  authPlugin: typeof auth = auth,
+) {
+  return teamRoutes(useCases, authPlugin);
+}
+
+export const teamRoute = createTeamRoutes();

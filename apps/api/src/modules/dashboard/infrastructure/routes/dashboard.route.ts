@@ -67,140 +67,122 @@ const METRIC_KEYS: DashboardMetricKey[] = [
   "bucket-never-bought",
 ];
 
-export const dashboardRoute = new Elysia({ prefix: "/dashboard" })
-  .use(auth)
-  .use(requirePermission("read", "FACILITY"))
-  .get(
-    "/metrics/assigned-clinics",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getAssignedClinics()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary: "Clínicas atribuídas — profiles in the caller's scope",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
+type Executable = { execute(input: never): Promise<unknown> };
+
+/**
+ * The use cases these routes need, as an injectable contract.
+ *
+ * Taking them as an argument rather than importing `composition` at module load
+ * is what makes the routes mountable in a test — the pattern `orders.route.ts`
+ * established. Without it the only coverage possible was unit-level, which is
+ * how `GET /dashboard/metrics/orders` shipped as a 500 that no test could see
+ * (spec 0014 §8.2).
+ */
+export interface DashboardHttpUseCases {
+  getAssignedClinics(): Executable;
+  getCoverage(): Executable;
+  getPurchaseBuckets(): Executable;
+  getCadastroCompletion(): Executable;
+  getOrders(): Executable;
+  getPenetration(): Executable;
+  getUnassignedClinics(): Executable;
+  getTerritory(): Executable;
+  listMetricClinics(): Executable;
+}
+
+/**
+ * The seven metric endpoints, plus the territory card.
+ *
+ * Each is the same three steps — resolve the actor, collapse query into a
+ * request, hand it to one use case — so they are declared as data rather than
+ * written out eight times. A metric that forgot `toRequest` would answer for a
+ * scope nobody asked for, and there is no way to forget it here.
+ */
+const METRIC_ENDPOINTS: Array<{
+  path: string;
+  useCase: keyof DashboardHttpUseCases;
+  summary: string;
+}> = [
+  {
+    path: "/metrics/assigned-clinics",
+    useCase: "getAssignedClinics",
+    summary: "Clínicas atribuídas — profiles in the caller's scope",
+  },
+  {
+    path: "/metrics/coverage",
+    useCase: "getCoverage",
+    summary: "Cobertura — clinics that have ever bought, over the denominator",
+  },
+  {
+    path: "/metrics/purchase-buckets",
+    useCase: "getPurchaseBuckets",
+    summary: "Distribuição por bucket do funil de compra",
+  },
+  {
+    path: "/metrics/cadastro-completion",
+    useCase: "getCadastroCompletion",
+    summary: "Taxa de cadastro completo (conformity_status = REGISTERED)",
+  },
+  {
+    path: "/metrics/orders",
+    useCase: "getOrders",
+    summary: "Pedidos — counts for the trailing week and the current month",
+  },
+  {
+    path: "/metrics/penetration",
+    useCase: "getPenetration",
+    summary:
+      "Penetração média por métrica — mean share across clinics where it is calculated",
+  },
+  {
+    path: "/metrics/unassigned-clinics",
+    useCase: "getUnassignedClinics",
+    summary:
+      "Clínicas não atribuídas — in scope with no active rep (manager/admin)",
+  },
+  {
+    path: "/territory",
+    useCase: "getTerritory",
+    summary: "Territory card — boundaries and headline counts for the scope",
+  },
+];
+
+const dashboardMetricRoutes = (
+  useCases: DashboardHttpUseCases,
+  authPlugin: typeof auth,
+) => {
+  let routes = new Elysia({ prefix: "/dashboard" })
+    .use(authPlugin)
+    .use(requirePermission("read", "FACILITY"));
+
+  for (const endpoint of METRIC_ENDPOINTS) {
+    routes = routes.get(
+      endpoint.path,
+      async ({ query, getScope, getUser }) =>
+        useCases[endpoint.useCase]().execute(
+          toRequest(query, await getUser(), await getScope()) as never,
+        ),
+      {
+        detail: {
+          summary: endpoint.summary,
+          tags: ["Dashboard"],
+          security: [{ bearerAuth: [] }],
+        },
+        query: metricQuery,
       },
-      query: metricQuery,
-    },
-  )
-  .get(
-    "/metrics/coverage",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getCoverage()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary: "Cobertura — clinics that have ever bought, over the denominator",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: metricQuery,
-    },
-  )
-  .get(
-    "/metrics/purchase-buckets",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getPurchaseBuckets()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary: "Distribuição por bucket do funil de compra",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: metricQuery,
-    },
-  )
-  .get(
-    "/metrics/cadastro-completion",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getCadastroCompletion()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary: "Taxa de cadastro completo (conformity_status = REGISTERED)",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: metricQuery,
-    },
-  )
-  .get(
-    "/metrics/orders",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getOrders()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary: "Pedidos — counts for the trailing week and the current month",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: metricQuery,
-    },
-  )
-  .get(
-    "/metrics/penetration",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getPenetration()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary:
-          "Penetração média por métrica — mean share across clinics where it is calculated",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: metricQuery,
-    },
-  )
-  .get(
-    "/metrics/unassigned-clinics",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getUnassignedClinics()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary: "Clínicas não atribuídas — in scope with no active rep (manager/admin)",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: metricQuery,
-    },
-  )
-  .get(
-    "/territory",
-    async ({ query, getScope, getUser }) =>
-      dashboardUseCases
-        .getTerritory()
-        .execute(toRequest(query, await getUser(), await getScope())),
-    {
-      detail: {
-        summary: "Territory card — boundaries and headline counts for the scope",
-        tags: ["Dashboard"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: metricQuery,
-    },
-  )
-  .get(
+    ) as typeof routes;
+  }
+
+  return routes.get(
     "/metrics/:metric/clinics",
     async ({ params, query, getScope, getUser }) => {
       const metric = params.metric as DashboardMetricKey;
-      return dashboardUseCases.listMetricClinics().execute({
+      return useCases.listMetricClinics().execute({
         ...toRequest(query, await getUser(), await getScope()),
         metric,
         page: query.page ?? 1,
         limit: query.limit ?? 25,
-      });
+      } as never);
     },
     {
       detail: {
@@ -220,3 +202,13 @@ export const dashboardRoute = new Elysia({ prefix: "/dashboard" })
       ]),
     },
   );
+};
+
+export function createDashboardRoutes(
+  useCases: DashboardHttpUseCases = dashboardUseCases,
+  authPlugin: typeof auth = auth,
+) {
+  return dashboardMetricRoutes(useCases, authPlugin);
+}
+
+export const dashboardRoute = createDashboardRoutes();
