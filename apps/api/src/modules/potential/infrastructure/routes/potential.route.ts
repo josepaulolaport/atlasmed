@@ -44,6 +44,7 @@ const setFacilityProductUsageRoute = new Elysia()
         definitionId: params.definitionId,
         productId: params.productId,
         quantity: body.quantity,
+        month: body.month,
         userId,
         scope,
       });
@@ -62,6 +63,9 @@ const setFacilityProductUsageRoute = new Elysia()
       body: t.Object({
         verticalId: t.Number({ minimum: 1 }),
         quantity: t.Number({ minimum: 0 }),
+        // Optional so the client can stay silent and mean "this month" — which
+        // is what the picker does. Present when the rep corrects an earlier one.
+        month: t.Optional(t.String({ pattern: "^\\d{4}-\\d{2}-01$" })),
       }),
     },
   );
@@ -78,12 +82,13 @@ const removeFacilityProductUsageRoute = new Elysia()
         verticalId: query.verticalId,
         definitionId: params.definitionId,
         productId: params.productId,
+        month: query.month,
         scope,
       });
     },
     {
       detail: {
-        summary: "Remove a competitor product from a metric",
+        summary: "Remove a competitor product from a metric, for one month",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
@@ -92,7 +97,12 @@ const removeFacilityProductUsageRoute = new Elysia()
         definitionId: t.Number({ minimum: 1 }),
         productId: t.Number({ minimum: 1 }),
       }),
-      query: t.Object({ verticalId: t.Number({ minimum: 1 }) }),
+      query: t.Object({
+        verticalId: t.Number({ minimum: 1 }),
+        // Defaults to the current month. A delete clears one month, never the
+        // product's whole history.
+        month: t.Optional(t.String({ pattern: "^\\d{4}-\\d{2}-01$" })),
+      }),
     },
   );
 

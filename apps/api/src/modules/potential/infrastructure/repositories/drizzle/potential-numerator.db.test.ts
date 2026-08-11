@@ -11,6 +11,7 @@ import {
   products,
   states,
 } from "@atlasmed/database";
+import { monthBounds, monthKeyAt } from "@atlasmed/facility-insights";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzlePotentialRepository } from "./drizzle-potential.repository";
 
@@ -122,8 +123,43 @@ async function seedOrderLine(
   });
 }
 
-/** Far enough back that "since" never excludes the seeded orders. */
-const SINCE = new Date(Date.now() - 90 * 86_400_000);
+async function seedOrderLineAt(
+  tx: Tx,
+  input: {
+    profileId: number;
+    productId: number;
+    quantity: string;
+    orderedAt: Date;
+  }
+) {
+  const [order] = await tx
+    .insert(orders)
+    .values({
+      facilityVerticalProfileId: input.profileId,
+      orderedAt: input.orderedAt,
+      type: "SALE",
+      status: "APPROVED",
+    })
+    .returning({ id: orders.id });
+  await tx.insert(orderItems).values({
+    orderId: order!.id,
+    productId: input.productId,
+    quantity: input.quantity,
+  });
+}
+
+/**
+ * The calendar month the seeded orders land in.
+ *
+ * `seedOrderLine` stamps `new Date()`, so the window under test is whichever
+ * São Paulo month that instant belongs to — derived the same way production
+ * derives it rather than assumed to be "now minus 90 days".
+ */
+function currentMonthRange() {
+  const month = monthKeyAt(new Date());
+  const { start, end } = monthBounds(month);
+  return { rangeStart: start, rangeEnd: end };
+}
 
 describe.skipIf(!dbUp)("penetration numerator (database)", () => {
   test("ten boxes of five count as fifty, not ten", async () => {
@@ -141,11 +177,11 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
 
       const [sum] = await new DrizzlePotentialRepository(
         tx as never
-      ).sumAtlasmedQtyByDefinition({
+      ).sumAtlasmedQtyByDefinitionAndMonth({
         facilityId: scenario.facilityId,
         verticalId: scenario.verticalId,
         definitionIds: [scenario.definitionId],
-        since: SINCE,
+        ...currentMonthRange(),
       });
 
       // Spec 0013 §9.1, the headline acceptance criterion.
@@ -183,11 +219,11 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
 
       const [sum] = await new DrizzlePotentialRepository(
         tx as never
-      ).sumAtlasmedQtyByDefinition({
+      ).sumAtlasmedQtyByDefinitionAndMonth({
         facilityId: scenario.facilityId,
         verticalId: scenario.verticalId,
         definitionIds: [scenario.definitionId],
-        since: SINCE,
+        ...currentMonthRange(),
       });
 
       expect(sum?.totalQty).toBe(10);
@@ -237,15 +273,120 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
 
       const [sum] = await new DrizzlePotentialRepository(
         tx as never
-      ).sumAtlasmedQtyByDefinition({
+      ).sumAtlasmedQtyByDefinitionAndMonth({
         facilityId: orto.facilityId,
         verticalId: orto.verticalId,
         definitionIds: [orto.definitionId],
-        since: SINCE,
+        ...currentMonthRange(),
       });
 
       // 4, not 13 — the Dermatologia order belongs to the other metric.
       expect(sum?.totalQty).toBe(4);
+    });
+  });
+
+  test("an order is counted in its São Paulo month, not its UTC month", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "TZ");
+      const productId = await seedLinkedProduct(tx, scenario, "T-TIMEZONE", "1");
+
+      // 1 April 01:00 UTC is 31 March 22:00 in São Paulo. The rep who entered
+      // it would call this a March order, and so must we.
+      await seedOrderLineAt(tx, {
+        profileId: scenario.profileId,
+        productId,
+        quantity: "6",
+        orderedAt: new Date("2026-04-01T01:00:00.000Z"),
+      });
+
+      const march = monthBounds("2026-03-01");
+      const april = monthBounds("2026-04-01");
+
+      const inMarch = await new DrizzlePotentialRepository(
+        tx as never
+      ).sumAtlasmedQtyByDefinitionAndMonth({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        definitionIds: [scenario.definitionId],
+        rangeStart: march.start,
+        rangeEnd: march.end,
+      });
+      const inApril = await new DrizzlePotentialRepository(
+        tx as never
+      ).sumAtlasmedQtyByDefinitionAndMonth({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        definitionIds: [scenario.definitionId],
+        rangeStart: april.start,
+        rangeEnd: april.end,
+      });
+
+      expect(inMarch[0]?.totalQty).toBe(6);
+      expect(inMarch[0]?.month).toBe("2026-03-01");
+      expect(inApril).toHaveLength(0);
+    });
+  });
+
+  test("a future-dated order does not leak into the current month", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "FUT");
+      const productId = await seedLinkedProduct(tx, scenario, "T-FUTURE", "1");
+
+      // The window this replaced had no upper bound, so this counted.
+      await seedOrderLineAt(tx, {
+        profileId: scenario.profileId,
+        productId,
+        quantity: "99",
+        orderedAt: new Date(Date.now() + 90 * 86_400_000),
+      });
+
+      const sums = await new DrizzlePotentialRepository(
+        tx as never
+      ).sumAtlasmedQtyByDefinitionAndMonth({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        definitionIds: [scenario.definitionId],
+        ...currentMonthRange(),
+      });
+
+      expect(sums).toHaveLength(0);
+    });
+  });
+
+  test("each month is reported separately, so a window can be averaged", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "MUL");
+      const productId = await seedLinkedProduct(tx, scenario, "T-MULTI-MONTH", "1");
+
+      await seedOrderLineAt(tx, {
+        profileId: scenario.profileId,
+        productId,
+        quantity: "10",
+        orderedAt: new Date("2026-01-15T12:00:00.000Z"),
+      });
+      await seedOrderLineAt(tx, {
+        profileId: scenario.profileId,
+        productId,
+        quantity: "20",
+        orderedAt: new Date("2026-03-15T12:00:00.000Z"),
+      });
+
+      const sums = await new DrizzlePotentialRepository(
+        tx as never
+      ).sumAtlasmedQtyByDefinitionAndMonth({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        definitionIds: [scenario.definitionId],
+        rangeStart: monthBounds("2026-01-01").start,
+        rangeEnd: monthBounds("2026-03-01").end,
+      });
+
+      // February is absent rather than zero — the read path supplies the zero,
+      // because "no orders" and "no row" must average the same way.
+      const byMonth = new Map(sums.map((row) => [row.month, row.totalQty]));
+      expect(byMonth.get("2026-01-01")).toBe(10);
+      expect(byMonth.get("2026-03-01")).toBe(20);
+      expect(byMonth.has("2026-02-01")).toBe(false);
     });
   });
 });
