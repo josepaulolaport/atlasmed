@@ -202,7 +202,6 @@ Widget _app(
   _InteractionRepository repository,
   _NotesRepository notes, {
   _MutationRepository? mutations,
-  VoidCallback? onNewOrder,
   VoidCallback? onReschedule,
   VoidCallback? onCancel,
 }) => ProviderScope(
@@ -219,7 +218,6 @@ Widget _app(
     theme: AppTheme.light,
     home: InteractionScreen(
       interactionId: 1,
-      onNewOrder: onNewOrder,
       onReschedule: onReschedule,
       onCancel: onCancel,
     ),
