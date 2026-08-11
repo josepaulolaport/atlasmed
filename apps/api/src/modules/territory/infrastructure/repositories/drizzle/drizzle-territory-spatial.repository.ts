@@ -9,6 +9,7 @@ import type {
   ClinicAssignmentTerritoryMatch,
   SiblingOverlapConflict,
   ManagerZoneCandidate,
+  AssignmentLosingCoverage,
 } from "../../../application/interfaces/territory-spatial.repository.interface";
 import { OperationNotAllowedError } from "../../../../../shared/errors";
 import {
@@ -184,6 +185,69 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     return rows.map((row) => ({
       id: Number(row.id),
       verticalId: Number(row.vertical_id),
+    }));
+  }
+
+  async findAssignmentsLosingPatchCoverage(input: {
+    facilityId: number;
+    lat: number;
+    lng: number;
+  }): Promise<AssignmentLosingCoverage[]> {
+    const rows = (await this.database.execute(sql`
+      WITH proposed AS (
+        SELECT ST_SetSRID(ST_MakePoint(${input.lng}, ${input.lat}), 4326) AS geom
+      )
+      SELECT
+        fvp.id AS facility_vertical_profile_id,
+        fvp.vertical_id,
+        fvra.user_id,
+        COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS user_name
+      FROM facility_vertical_profiles fvp
+      INNER JOIN facilities f ON f.id = fvp.facility_id
+      INNER JOIN facility_vertical_rep_assignments fvra
+        ON fvra.facility_vertical_profile_id = fvp.id
+        AND fvra.ended_at IS NULL
+      INNER JOIN users u ON u.id = fvra.user_id
+      CROSS JOIN proposed
+      WHERE fvp.facility_id = ${input.facilityId}
+        AND fvp.is_active = true
+        AND f.location IS NOT NULL
+        -- Valid today: one of this rep's patches covers where the clinic stands.
+        AND EXISTS (
+          SELECT 1
+          FROM user_territory_assignments uta
+          INNER JOIN territories t ON t.id = uta.territory_id
+          INNER JOIN territory_types tt ON tt.id = t.territory_type_id
+          WHERE uta.user_id = fvra.user_id
+            AND t.is_active = true
+            AND t.boundary IS NOT NULL
+            AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+            AND ST_Covers(t.boundary, f.location::geometry)
+        )
+        -- Invalid at the destination: none of them covers where it is going.
+        AND NOT EXISTS (
+          SELECT 1
+          FROM user_territory_assignments uta
+          INNER JOIN territories t ON t.id = uta.territory_id
+          INNER JOIN territory_types tt ON tt.id = t.territory_type_id
+          WHERE uta.user_id = fvra.user_id
+            AND t.is_active = true
+            AND t.boundary IS NOT NULL
+            AND tt.slug = ${REP_PATCH_TYPE_SLUG}
+            AND ST_Covers(t.boundary, proposed.geom)
+        )
+    `)) as Array<{
+      facility_vertical_profile_id: string;
+      vertical_id: string;
+      user_id: string;
+      user_name: string;
+    }>;
+
+    return rows.map((row) => ({
+      facilityVerticalProfileId: Number(row.facility_vertical_profile_id),
+      verticalId: Number(row.vertical_id),
+      userId: Number(row.user_id),
+      userName: row.user_name,
     }));
   }
 
