@@ -205,6 +205,59 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
     });
   });
 
+  test("reports how many rows actually moved, so a lost trigger is visible", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "DIFF");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-DIFF",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "5",
+        orderedAt: new Date("2026-03-10T12:00:00.000Z"),
+      });
+
+      const useCase = new RecomputeMetricSnapshotsUseCase({
+        potentialRepository: new DrizzlePotentialRepository(tx as never),
+      });
+
+      // First run: the row is new, so it counts as a difference.
+      const first = await useCase.execute({
+        profileId: scenario.profileId,
+        months: ["2026-03-01"],
+      });
+      expect(first.written).toBe(1);
+      expect(first.differed).toBe(1);
+
+      // Nothing changed in between — a sweep here must report a clean run,
+      // otherwise "differed" is noise and nobody will trust it.
+      const second = await useCase.execute({
+        profileId: scenario.profileId,
+        months: ["2026-03-01"],
+      });
+      expect(second.written).toBe(1);
+      expect(second.differed).toBe(0);
+
+      // An order lands without the trigger firing. The sweep must notice.
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "7",
+        orderedAt: new Date("2026-03-11T12:00:00.000Z"),
+      });
+      const third = await useCase.execute({
+        profileId: scenario.profileId,
+        months: ["2026-03-01"],
+      });
+      expect(third.differed).toBe(1);
+      expect((await readSnapshot(tx, scenario.profileId, "2026-03-01"))?.oursQty).toBe("12.00");
+    });
+  });
+
   test("the database computes total and share, so no writer can disagree", async () => {
     await withRollback(async (tx) => {
       const scenario = await seedScenario(tx, "SHARE");

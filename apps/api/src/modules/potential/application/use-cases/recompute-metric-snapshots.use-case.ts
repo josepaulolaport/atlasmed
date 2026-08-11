@@ -33,14 +33,14 @@ export class RecomputeMetricSnapshotsUseCase {
     computedAt?: Date;
   }): Promise<RecomputeResult> {
     if (input.months.length === 0) {
-      return { profileId: input.profileId, written: 0, months: [] };
+      return { profileId: input.profileId, written: 0, differed: 0, months: [] };
     }
 
     const profile = await this.deps.potentialRepository.findProfileById(input.profileId);
     if (!profile) {
       // Not an error: a profile can be deleted between a trigger being enqueued
       // and the handler running. There is simply nothing left to compute.
-      return { profileId: input.profileId, written: 0, months: [] };
+      return { profileId: input.profileId, written: 0, differed: 0, months: [] };
     }
 
     const months = [...new Set(input.months)].sort();
@@ -49,7 +49,7 @@ export class RecomputeMetricSnapshotsUseCase {
     });
     const definitionIds = definitions.map((definition) => definition.id);
     if (definitionIds.length === 0) {
-      return { profileId: input.profileId, written: 0, months };
+      return { profileId: input.profileId, written: 0, differed: 0, months };
     }
 
     // One range spanning every requested month, then bucketed in memory — the
@@ -58,7 +58,7 @@ export class RecomputeMetricSnapshotsUseCase {
     const rangeStart = monthBounds(months[0]!).start;
     const rangeEnd = monthBounds(months[months.length - 1]!).end;
 
-    const [qtySums, usage, existingKeys] = await Promise.all([
+    const [qtySums, usage, existing] = await Promise.all([
       this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
         facilityId: profile.facilityId,
         verticalId: profile.verticalId,
@@ -71,7 +71,7 @@ export class RecomputeMetricSnapshotsUseCase {
         definitionIds,
         months,
       }),
-      this.deps.potentialRepository.listMetricSnapshotKeys({
+      this.deps.potentialRepository.listMetricSnapshotValues({
         profileId: profile.id,
         months,
       }),
@@ -96,35 +96,56 @@ export class RecomputeMetricSnapshotsUseCase {
     // an order deleted, a usage row removed. Recomputing only the cells that
     // still have inputs would leave yesterday's figure standing and report
     // success.
-    const cells = new Set<string>([...ours.keys(), ...theirs.keys()]);
-    for (const key of existingKeys) {
-      if (requested.has(key.month)) cells.add(cellKey(key.definitionId, key.month));
+    const stored = new Map<string, { oursQty: number; theirsQty: number }>();
+    for (const row of existing) {
+      if (requested.has(row.month)) {
+        stored.set(cellKey(row.definitionId, row.month), {
+          oursQty: row.oursQty,
+          theirsQty: row.theirsQty,
+        });
+      }
     }
+
+    const cells = new Set<string>([...ours.keys(), ...theirs.keys(), ...stored.keys()]);
 
     const computedAt = input.computedAt ?? new Date();
     const rows: MetricSnapshotWrite[] = [];
+    // Counts rows whose *value* moved, not rows we touched. A nonzero count on a
+    // reconciliation run means the stored figure was stale — which is to say a
+    // trigger was lost. Reporting it is the difference between a sweep that
+    // heals silently and one that tells you the trigger is unreliable.
+    let differed = 0;
     for (const cell of cells) {
       const { definitionId, month } = parseCellKey(cell);
+      const oursQty = ours.get(cell) ?? 0;
+      const theirsQty = theirs.get(cell) ?? 0;
+      const before = stored.get(cell);
+      if (!before || before.oursQty !== oursQty || before.theirsQty !== theirsQty) {
+        differed += 1;
+      }
       rows.push({
         profileId: profile.id,
         definitionId,
         verticalId: profile.verticalId,
         month,
-        oursQty: ours.get(cell) ?? 0,
-        theirsQty: theirs.get(cell) ?? 0,
+        oursQty,
+        theirsQty,
         computedAt,
       });
     }
 
     await this.deps.potentialRepository.upsertMetricSnapshots(rows);
 
-    return { profileId: profile.id, written: rows.length, months };
+    return { profileId: profile.id, written: rows.length, differed, months };
   }
 }
 
 export type RecomputeResult = {
   profileId: number;
+  /** Rows written, changed or not. */
   written: number;
+  /** Rows whose value actually moved — a lost trigger's fingerprint. */
+  differed: number;
   months: MonthKey[];
 };
 

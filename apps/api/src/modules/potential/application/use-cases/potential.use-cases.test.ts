@@ -39,7 +39,7 @@ function createRepository(
     findProfileId: async () => 1,
     findProfileById: async () => null,
     upsertMetricSnapshots: async () => undefined,
-    listMetricSnapshotKeys: async () => [],
+    listMetricSnapshotValues: async () => [],
     listUsage: async () => [],
     upsertUsage: async () => undefined,
     deleteUsage: async () => true,
