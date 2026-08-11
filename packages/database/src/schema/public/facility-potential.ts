@@ -9,11 +9,13 @@ import {
   bigint,
   primaryKey,
   foreignKey,
+  check,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { businessVerticals } from "./business-verticals";
-import { facilities } from "./facilities";
+import { facilityVerticalProfiles } from "./facilities";
 import { products } from "./catalog";
+import { productOwnershipEnum } from "./enums";
 import { users } from "./users";
 
 /**
@@ -45,14 +47,45 @@ export const productPotentialDefinitions = pgTable(
   ],
 );
 
-/** Monthly potential quantity entered by REP/admin for a facility + definition. */
-export const facilityPotentialValues = pgTable(
-  "facility_potential_values",
+/**
+ * What a clinic uses of each *competitor* product, per metric, per month
+ * (spec 0013 §4.1). The rep picks the product and types one number.
+ *
+ * This is the market denominator, and it replaces
+ * `facility_potential_values.quantity` — a single hand-entered guess at the
+ * whole market that penetração divided by. Two sources for one number produce
+ * disagreements nobody can resolve; an itemised list of who supplies what does
+ * not.
+ *
+ * Also replaces `facility_competitor_product_standards`, which was
+ * facility-scoped rather than per-linha, unlinked to any metric, and carried a
+ * single `standardized_quantity` that nothing read.
+ *
+ * `vertical_id` is denormalised to carry one invariant the schema could not
+ * otherwise state: **a usage row's profile and its definition must be in the
+ * same linha.** Two composite foreign keys reference that single column, so the
+ * two sides cannot disagree.
+ */
+export const facilityProductUsage = pgTable(
+  "facility_product_usage",
   {
-    facilityId: bigint("facility_id", { mode: "number" })
-      .notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    definitionId: bigint("definition_id", { mode: "number" })
-      .notNull().references(() => productPotentialDefinitions.id, { onDelete: "cascade" }),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    facilityVerticalProfileId: bigint("facility_vertical_profile_id", { mode: "number" })
+      .notNull(),
+    definitionId: bigint("definition_id", { mode: "number" }).notNull(),
+    /** Equal to both the profile's and the definition's vertical; FKs enforce it. */
+    verticalId: bigint("vertical_id", { mode: "number" }).notNull(),
+    productId: bigint("product_id", { mode: "number" }).notNull(),
+    /** Pinned to COMPETITOR by the composite foreign key below. Never written. */
+    productOwnership: productOwnershipEnum("product_ownership")
+      .notNull()
+      .generatedAlwaysAs(sql`'COMPETITOR'::product_ownership`),
+    /**
+     * Product units per month, as the rep entered it — multiplied by
+     * `products.metric_units` at read time, exactly like our own order lines
+     * (spec 0013 §4.3). Never pre-multiplied on write: the packaging factor is
+     * catalogue data and may be corrected later.
+     */
     quantity: numeric("quantity", { precision: 14, scale: 2 }).notNull(),
     updatedByUserId: bigint("updated_by_user_id", { mode: "number" }).references(() => users.id, {
       onDelete: "set null",
@@ -61,9 +94,38 @@ export const facilityPotentialValues = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
-    unique("facility_potential_values_pk").on(t.facilityId, t.definitionId),
-    index("facility_potential_values_facility_id_idx").on(t.facilityId),
-    index("facility_potential_values_definition_id_idx").on(t.definitionId),
+    // One quantity per competitor product per metric per clinic-linha. The same
+    // product may appear under two metrics (spec 0013 §7 defers whether the
+    // picker should offer that; storage stays capable).
+    unique("facility_product_usage_profile_definition_product_key").on(
+      t.facilityVerticalProfileId,
+      t.definitionId,
+      t.productId,
+    ),
+    index("facility_product_usage_profile_idx").on(t.facilityVerticalProfileId),
+    index("facility_product_usage_definition_idx").on(t.definitionId),
+    index("facility_product_usage_product_idx").on(t.productId),
+    foreignKey({
+      name: "facility_product_usage_profile_vertical_fk",
+      columns: [t.facilityVerticalProfileId, t.verticalId],
+      foreignColumns: [facilityVerticalProfiles.id, facilityVerticalProfiles.verticalId],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "facility_product_usage_definition_vertical_fk",
+      columns: [t.definitionId, t.verticalId],
+      foreignColumns: [productPotentialDefinitions.id, productPotentialDefinitions.verticalId],
+    }).onDelete("cascade"),
+    // Orders are authoritative for our own quantities, so only a competitor's
+    // product can be recorded by hand (spec 0013 §2.1).
+    foreignKey({
+      name: "facility_product_usage_competitor_fk",
+      columns: [t.productId, t.productOwnership],
+      foreignColumns: [products.id, products.ownership],
+    }).onDelete("restrict"),
+    check(
+      "facility_product_usage_quantity_non_negative",
+      sql`${t.quantity} >= 0`,
+    ),
   ],
 );
 
@@ -115,24 +177,29 @@ export const productPotentialDefinitionsRelations = relations(
       fields: [productPotentialDefinitions.verticalId],
       references: [businessVerticals.id],
     }),
-    facilityValues: many(facilityPotentialValues),
+    usage: many(facilityProductUsage),
     productLinks: many(productPotentialLinks),
   }),
 );
 
-export const facilityPotentialValuesRelations = relations(
-  facilityPotentialValues,
+
+export const facilityProductUsageRelations = relations(
+  facilityProductUsage,
   ({ one }) => ({
-    facility: one(facilities, {
-      fields: [facilityPotentialValues.facilityId],
-      references: [facilities.id],
+    profile: one(facilityVerticalProfiles, {
+      fields: [facilityProductUsage.facilityVerticalProfileId],
+      references: [facilityVerticalProfiles.id],
     }),
     definition: one(productPotentialDefinitions, {
-      fields: [facilityPotentialValues.definitionId],
+      fields: [facilityProductUsage.definitionId],
       references: [productPotentialDefinitions.id],
     }),
+    product: one(products, {
+      fields: [facilityProductUsage.productId],
+      references: [products.id],
+    }),
     updatedBy: one(users, {
-      fields: [facilityPotentialValues.updatedByUserId],
+      fields: [facilityProductUsage.updatedByUserId],
       references: [users.id],
     }),
   }),

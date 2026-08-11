@@ -138,7 +138,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Potencial & share'), findsOneWidget);
+    expect(find.text('Potencial de mercado'), findsOneWidget);
     expect(
       find.text('Selecione uma linha comercial para ver o potencial.'),
       findsOneWidget,
@@ -191,9 +191,10 @@ void main() {
           definitionId: 1,
           key: 'procedimentos',
           label: 'Procedimentos mensais',
-          potentialQuantity: 120,
           atlasmedMonthlyAvgQty: 48,
-          penetration: 0.4,
+          competitorMonthlyQty: 72,
+          totalMarketQty: 120,
+          share: 0.4,
         ),
       ],
     );
@@ -226,9 +227,15 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Procedimentos mensais'), findsOneWidget);
     expect(find.text('40%'), findsOneWidget);
+    // The metrics sit below the section title and survive a 320px screen at
+    // 1.4x text without overflowing — `takeException` above is what proves the
+    // no-overflow half. The old assertion anchored on an "Editar potencial"
+    // button that wrote facility_potential_values; that surface is rebuilt as a
+    // competitor picker in P4-5.
     expect(
-      tester.getTopLeft(find.text('Editar potencial')).dy,
-      greaterThan(tester.getTopLeft(find.text('Potencial & share')).dy),
+      tester.getTopLeft(find.text('Procedimentos mensais')).dy,
+      greaterThan(tester.getTopLeft(find.text('Potencial de mercado')).dy),
     );
+    expect(find.text('Mercado total'), findsOneWidget);
   });
 }

@@ -1,5 +1,5 @@
 import {
-  facilityPotentialValues,
+  facilityProductUsage,
   facilityVerticalProfiles,
   orderItems,
   orders,
@@ -13,7 +13,7 @@ import type { Database } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   DefinitionQtySum,
-  FacilityPotentialValueRecord,
+  FacilityProductUsageRecord,
   PotentialDefinitionRecord,
   PotentialRepository,
   ProductPotentialLinkRecord,
@@ -121,47 +121,89 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return Boolean(row);
   }
 
-  async listFacilityValues(input: {
+  /** Resolves the commercial unit a clinic's linha corresponds to. */
+  async findProfileId(input: {
     facilityId: number;
-    definitionIds: number[];
-  }): Promise<FacilityPotentialValueRecord[]> {
-    if (input.definitionIds.length === 0) return [];
-    const rows = await this.database
-      .select()
-      .from(facilityPotentialValues)
+    verticalId: number;
+  }): Promise<number | null> {
+    const [row] = await this.database
+      .select({ id: facilityVerticalProfiles.id })
+      .from(facilityVerticalProfiles)
       .where(
         and(
-          eq(facilityPotentialValues.facilityId, input.facilityId),
-          inArray(facilityPotentialValues.definitionId, input.definitionIds),
+          eq(facilityVerticalProfiles.facilityId, input.facilityId),
+          eq(facilityVerticalProfiles.verticalId, input.verticalId),
         ),
-      );
+      )
+      .limit(1);
+    return row?.id ?? null;
+  }
+
+  async listUsage(input: {
+    profileId: number;
+    definitionIds: number[];
+  }): Promise<FacilityProductUsageRecord[]> {
+    if (input.definitionIds.length === 0) return [];
+    const rows = await this.database
+      .select({
+        definitionId: facilityProductUsage.definitionId,
+        productId: facilityProductUsage.productId,
+        productName: products.name,
+        quantity: facilityProductUsage.quantity,
+        metricUnits: products.metricUnits,
+        updatedAt: facilityProductUsage.updatedAt,
+      })
+      .from(facilityProductUsage)
+      .innerJoin(products, eq(products.id, facilityProductUsage.productId))
+      .where(
+        and(
+          eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
+          inArray(facilityProductUsage.definitionId, input.definitionIds),
+        ),
+      )
+      .orderBy(asc(products.name));
+
     return rows.map((row) => ({
-      facilityId: row.facilityId,
       definitionId: row.definitionId,
+      productId: row.productId,
+      productName: row.productName,
+      /** Product units, as the rep entered them. */
       quantity: Number(row.quantity),
-      updatedByUserId: row.updatedByUserId,
+      /** Metric units — quantity × the product's packaging factor. */
+      metricQuantity: Number(row.quantity) * Number(row.metricUnits),
       updatedAt: row.updatedAt,
     }));
   }
 
-  async upsertFacilityValue(input: {
-    facilityId: number;
+  /**
+   * Sets one competitor quantity, replacing any previous figure for the same
+   * (profile, definition, product). The rep supplies only the number; the
+   * vertical comes from the definition, so the two composite foreign keys
+   * cannot disagree.
+   */
+  async upsertUsage(input: {
+    profileId: number;
     definitionId: number;
+    verticalId: number;
+    productId: number;
     quantity: number;
     updatedByUserId: number;
   }): Promise<void> {
     await this.database
-      .insert(facilityPotentialValues)
+      .insert(facilityProductUsage)
       .values({
-        facilityId: input.facilityId,
+        facilityVerticalProfileId: input.profileId,
         definitionId: input.definitionId,
+        verticalId: input.verticalId,
+        productId: input.productId,
         quantity: String(input.quantity),
         updatedByUserId: input.updatedByUserId,
       })
       .onConflictDoUpdate({
         target: [
-          facilityPotentialValues.facilityId,
-          facilityPotentialValues.definitionId,
+          facilityProductUsage.facilityVerticalProfileId,
+          facilityProductUsage.definitionId,
+          facilityProductUsage.productId,
         ],
         set: {
           quantity: String(input.quantity),
@@ -171,18 +213,22 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       });
   }
 
-  async deleteFacilityValue(input: {
-    facilityId: number;
+  async deleteUsage(input: {
+    profileId: number;
     definitionId: number;
-  }): Promise<void> {
-    await this.database
-      .delete(facilityPotentialValues)
+    productId: number;
+  }): Promise<boolean> {
+    const deleted = await this.database
+      .delete(facilityProductUsage)
       .where(
         and(
-          eq(facilityPotentialValues.facilityId, input.facilityId),
-          eq(facilityPotentialValues.definitionId, input.definitionId),
+          eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
+          eq(facilityProductUsage.definitionId, input.definitionId),
+          eq(facilityProductUsage.productId, input.productId),
         ),
-      );
+      )
+      .returning({ id: facilityProductUsage.id });
+    return deleted.length > 0;
   }
 
   /**
