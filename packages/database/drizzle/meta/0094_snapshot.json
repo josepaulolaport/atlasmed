@@ -1,6 +1,6 @@
 {
-  "id": "77ba50f2-229f-49e8-acb4-36d1941144d4",
-  "prevId": "c76ff08e-9503-4bb9-a5b8-8b2fd4085b7e",
+  "id": "dff51592-6066-5173-9f96-eb9633184640",
+  "prevId": "c44a84a9-2d92-441c-bb22-88fae2f2d0e6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1503,12 +1503,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "vertical_id": {
           "name": "vertical_id",
           "type": "bigint",
@@ -1567,27 +1561,6 @@
             },
             {
               "expression": "slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "territories_vertical_id_code_uidx": {
-          "name": "territories_vertical_id_code_uidx",
-          "columns": [
-            {
-              "expression": "vertical_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "code",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1878,12 +1851,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "assigned_by": {
-          "name": "assigned_by",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1977,19 +1944,6 @@
             "id"
           ],
           "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "user_territory_assignments_assigned_by_users_id_fk": {
-          "name": "user_territory_assignments_assigned_by_users_id_fk",
-          "tableFrom": "user_territory_assignments",
-          "tableTo": "users",
-          "columnsFrom": [
-            "assigned_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -5408,6 +5362,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "ended_by_user_id": {
+          "name": "ended_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "override_reason": {
+          "name": "override_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "override_by_user_id": {
+          "name": "override_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -5441,6 +5413,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "facility_vertical_rep_assignments_override_idx": {
+          "name": "facility_vertical_rep_assignments_override_idx",
+          "columns": [
+            {
+              "expression": "override_by_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"facility_vertical_rep_assignments\".\"override_reason\" IS NOT NULL AND \"facility_vertical_rep_assignments\".\"ended_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -5516,6 +5504,32 @@
           "tableTo": "users",
           "columnsFrom": [
             "assigned_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "fvra_ended_by_user_id_fk": {
+          "name": "fvra_ended_by_user_id_fk",
+          "tableFrom": "facility_vertical_rep_assignments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "ended_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "fvra_override_by_user_id_fk": {
+          "name": "fvra_override_by_user_id_fk",
+          "tableFrom": "facility_vertical_rep_assignments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "override_by_user_id"
           ],
           "columnsTo": [
             "id"
@@ -7483,6 +7497,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "uploaded_by_user_id": {
+          "name": "uploaded_by_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "purge_after": {
+          "name": "purge_after",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "uploaded_at": {
           "name": "uploaded_at",
           "type": "timestamp",
@@ -7555,6 +7581,22 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "file_assets_purge_after_idx": {
+          "name": "file_assets_purge_after_idx",
+          "columns": [
+            {
+              "expression": "purge_after",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"file_assets\".\"purge_after\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -7569,6 +7611,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "file_assets_uploaded_by_user_id_users_id_fk": {
+          "name": "file_assets_uploaded_by_user_id_users_id_fk",
+          "tableFrom": "file_assets",
+          "tableTo": "users",
+          "columnsFrom": [
+            "uploaded_by_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
