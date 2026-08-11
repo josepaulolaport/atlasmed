@@ -2,6 +2,7 @@ import {
   pgTable,
   text,
   timestamp,
+  date,
   integer,
   bigint,
   index,
@@ -53,6 +54,14 @@ export const submissionDocuments = pgTable(
       { onDelete: "set null" }
     ),
     submittedAt: timestamp("submitted_at"),
+    /**
+     * When the document stops being valid evidence — null where the requirement
+     * declares no validity (`conformity_requirements.requires_validity_date`).
+     *
+     * A date, not a timestamp: an alvará expires on a calendar day, and storing
+     * it as an instant would drag a timezone into a fact that has none.
+     */
+    validUntil: date("valid_until"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
