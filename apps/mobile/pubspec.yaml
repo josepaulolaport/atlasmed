@@ -52,6 +52,12 @@ dependencies:
   crypto: ^3.0.6
   meta: ^1.16.0
 
+  # JPEG encoding for cadastro uploads. dart:ui decodes (including HEIC via the
+  # platform codec) but only encodes PNG, which is what inflated a 2 MB photo
+  # into a 20 MB upload. Already resolved transitively — this only makes the
+  # direct use explicit.
+  image: ^4.8.0
+
   cupertino_http: ">=2.3.0 <2.4.0"
 
   dartz: ^0.10.1
