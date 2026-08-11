@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/agend
 import 'package:atlasmed_mobile_app/features/agenda/presentation/providers/interaction_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/order_creation_enabled.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
@@ -521,8 +522,9 @@ class _ActionsCard extends StatelessWidget {
     final busy = command != null;
     final isRecurring = detail.recurrence != CalendarRecurrence.none;
     final canOrder =
-        detail.status == InteractionStatus.scheduled ||
-        detail.status == InteractionStatus.inProgress;
+        kOrderCreationEnabled &&
+        (detail.status == InteractionStatus.scheduled ||
+            detail.status == InteractionStatus.inProgress);
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
