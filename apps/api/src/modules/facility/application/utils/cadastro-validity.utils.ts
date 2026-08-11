@@ -1,3 +1,5 @@
+import { APPLICATION_TIMEZONE } from "@atlasmed/facility-insights";
+
 /**
  * Validity dates on cadastro documents (spec 0011 §3.3, ADR 0008 §4 and §6).
  *
@@ -45,20 +47,35 @@ export function isValidIsoDate(value: string): boolean {
 }
 
 /**
+ * The civil date at `instant`, `YYYY-MM-DD`, in the timezone the business runs
+ * in. `en-CA` is the locale whose short date format is already ISO.
+ *
+ * Which day "today" is depends on where you are standing, and everyone reading
+ * these documents is standing in Brazil. Asking the server's UTC clock instead
+ * answers for a different day between 21:00 and midnight local, every day.
+ */
+function civilDate(instant: Date, timeZone: string = APPLICATION_TIMEZONE): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
+}
+
+/**
  * Days from `today` until `validUntil`, counted in whole calendar days.
  *
- * Both sides are pinned to UTC midnight deliberately. A validity is a calendar
- * fact — an alvará expires on a day, not at an instant — so comparing a date to
- * a timestamp would make the answer depend on the server's clock time and shift
- * "expires today" by one either side of midnight.
+ * Both sides are pinned to UTC midnight of their *civil* date. A validity is a
+ * calendar fact — an alvará expires on a day, not at an instant — so comparing
+ * a date to a timestamp would make the answer depend on the clock time the
+ * request happened to land at. Anchoring both at midnight keeps the subtraction
+ * whole-day, and reading the civil date in [APPLICATION_TIMEZONE] keeps it the
+ * same day the rep holding the document would name.
  */
 export function daysUntil(validUntil: string, today: Date): number {
   const end = Date.parse(`${validUntil}T00:00:00.000Z`);
-  const start = Date.UTC(
-    today.getUTCFullYear(),
-    today.getUTCMonth(),
-    today.getUTCDate()
-  );
+  const start = Date.parse(`${civilDate(today)}T00:00:00.000Z`);
   return Math.round((end - start) / MS_PER_DAY);
 }
 
