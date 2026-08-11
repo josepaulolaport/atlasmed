@@ -7,6 +7,8 @@ import {
   deriveShare,
   monthBounds,
   monthKeyAt,
+  monthlyRateFromDays,
+  rollingWindow,
   trailingMonths,
 } from "./market-metric";
 
@@ -167,5 +169,33 @@ describe("averageMonthly", () => {
 describe("APPLICATION_TIMEZONE", () => {
   it("is São Paulo, because the rep's months are the product's months", () => {
     expect(APPLICATION_TIMEZONE).toBe("America/Sao_Paulo");
+  });
+});
+
+describe("rolling window", () => {
+  it("is half-open and exactly the requested number of days", () => {
+    const { start, end } = rollingWindow(new Date("2026-03-05T12:00:00.000Z"), 90);
+    expect(end.toISOString()).toBe("2026-03-05T12:00:00.000Z");
+    expect((end.getTime() - start.getTime()) / 86_400_000).toBe(90);
+  });
+
+  it("does not understate a steady clinic early in the month", () => {
+    // The defect this replaces: on the 5th, three *calendar* months divides two
+    // full months plus five days by three. A clinic selling 30/month reads ~21.
+    const calendarStyle = averageMonthly([30, 30, 5], 3);
+    const rolling = monthlyRateFromDays(90, 90);
+    expect(calendarStyle).toBeCloseTo(21.67, 1);
+    expect(rolling).toBe(30);
+  });
+
+  it("normalises by the days actually covered", () => {
+    expect(monthlyRateFromDays(90, 90)).toBe(30);
+    expect(monthlyRateFromDays(45, 90)).toBe(15);
+    expect(monthlyRateFromDays(0, 90)).toBe(0);
+  });
+
+  it("rejects a non-positive window", () => {
+    expect(() => rollingWindow(new Date(), 0)).toThrow(MarketMetricValidationError);
+    expect(() => monthlyRateFromDays(1, 0)).toThrow(MarketMetricValidationError);
   });
 });

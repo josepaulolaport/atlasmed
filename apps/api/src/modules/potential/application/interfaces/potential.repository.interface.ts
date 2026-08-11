@@ -1,4 +1,4 @@
-import type { MonthKey } from "@atlasmed/facility-insights";
+import type { MonthKey, StoredSnapshotCell } from "@atlasmed/facility-insights";
 
 export type PotentialDefinitionRecord = {
   id: number;
@@ -41,29 +41,6 @@ export type DefinitionMonthQtySum = DefinitionQtySum & {
   month: MonthKey;
 };
 
-export type ProfileRecord = {
-  id: number;
-  facilityId: number;
-  verticalId: number;
-};
-
-/**
- * One computed snapshot row.
- *
- * `computedAt` is supplied by the caller rather than defaulted in SQL: the sweep
- * needs to compare it against input timestamps, and a value the handler chooses
- * is one the tests can pin.
- */
-export type MetricSnapshotWrite = {
-  profileId: number;
-  definitionId: number;
-  verticalId: number;
-  month: MonthKey;
-  oursQty: number;
-  theirsQty: number;
-  computedAt: Date;
-};
-
 export interface PotentialRepository {
   listDefinitions(input: {
     verticalId: number;
@@ -91,16 +68,18 @@ export interface PotentialRepository {
     verticalId: number;
   }): Promise<number | null>;
 
-  findProfileById(profileId: number): Promise<ProfileRecord | null>;
 
-  /** Replaces whole rows — never a delta, so re-running is safe. */
-  upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void>;
-
-  /** Existing (definition, month) pairs, so vanished inputs can be zeroed. */
-  listMetricSnapshotKeys(input: {
+  /**
+   * Stored snapshots for the given months.
+   *
+   * The read path treats these as a cache and falls back to computing from the
+   * inputs when a profile has none — snapshots begin at the current month with
+   * no backfill (spec 0013 §4.4), so "absent" is normal, not an error.
+   */
+  listMetricSnapshots(input: {
     profileId: number;
     months: MonthKey[];
-  }): Promise<Array<{ definitionId: number; month: MonthKey }>>;
+  }): Promise<StoredSnapshotCell[]>;
 
   /** Competitor quantities for the given months. */
   listUsage(input: {

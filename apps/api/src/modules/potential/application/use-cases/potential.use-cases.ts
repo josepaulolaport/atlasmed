@@ -8,10 +8,12 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 import {
+  addMonths,
   averageMonthly,
   deriveShare,
-  monthBounds,
   monthKeyAt,
+  monthlyRateFromDays,
+  rollingWindow,
   trailingMonths,
   type MonthKey,
 } from "@atlasmed/facility-insights";
@@ -38,6 +40,17 @@ function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
   }
 }
 
+/**
+ * The months one edit invalidates.
+ *
+ * An edit belongs to a single month, but the displayed figure averages a
+ * trailing window — so the months after it change too. Recomputing only the
+ * edited month would leave the visible number stale.
+ */
+function windowFor(month: MonthKey): MonthKey[] {
+  return trailingMonths(addMonths(month, MONTHS_IN_WINDOW - 1), MONTHS_IN_WINDOW);
+}
+
 function slugKey(raw: string): string {
   return raw
     .trim()
@@ -61,10 +74,13 @@ export class ListFacilityPotentialsUseCase {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
 
-    const currentMonth = monthKeyAt(input.now ?? new Date());
+    const now = input.now ?? new Date();
+    const currentMonth = monthKeyAt(now);
+    // The rep's competitor figures are month-keyed, so the window still names
+    // months for them — but ours is a rolling day window (spec 0013 §4.3), which
+    // is what stops a partial month from dragging the number down.
     const months = trailingMonths(currentMonth, MONTHS_IN_WINDOW);
-    const windowStart = monthBounds(months[0]!).start;
-    const windowEnd = monthBounds(currentMonth).end;
+    const window = rollingWindow(now);
 
     const definitions = await this.deps.potentialRepository.listDefinitions({
       verticalId: input.verticalId,
@@ -79,17 +95,18 @@ export class ListFacilityPotentialsUseCase {
       profileId == null
         ? Promise.resolve([])
         : this.deps.potentialRepository.listUsage({ profileId, definitionIds, months }),
+      // Live from orders, not from snapshots: snapshots are per calendar month
+      // and a day window cannot be derived from month facts. They keep serving
+      // history and the aggregate views (spec 0013 §4.5).
       this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
         facilityId: input.facilityId,
         verticalId: input.verticalId,
         definitionIds,
-        rangeStart: windowStart,
-        rangeEnd: windowEnd,
+        rangeStart: window.start,
+        rangeEnd: window.end,
       }),
     ]);
 
-    // Ours: sum each month in the window, then divide by the window — months
-    // with no orders are real zeros, not missing data.
     const oursByDef = new Map<number, number>();
     for (const row of qtySums) {
       oursByDef.set(row.definitionId, (oursByDef.get(row.definitionId) ?? 0) + row.totalQty);
@@ -107,14 +124,24 @@ export class ListFacilityPotentialsUseCase {
       items: definitions.map((def) => {
         const monthlyRows = usageByDef.get(def.id) ?? [];
 
-        // Both sides average over the same window, or the ratio compares a
-        // three-month total against a one-month figure.
-        const ours = averageMonthly([oursByDef.get(def.id) ?? 0], MONTHS_IN_WINDOW);
+        // Ours: a quantity observed over the window, normalised to a month.
+        const ours = monthlyRateFromDays(oursByDef.get(def.id) ?? 0);
+        // Theirs: the rep already answers "quantas por mês", so these are rates
+        // and are averaged, never day-normalised. Normalising them would divide
+        // a rate by time and produce nonsense.
         const theirs = averageMonthly(
           monthlyRows.map((row) => row.metricQuantity),
           MONTHS_IN_WINDOW,
         );
-        const { totalQty, share } = deriveShare(ours, theirs);
+        // A share needs a denominator we actually know. With no competitor
+        // observation at all the market is *unknown*, not "all ours" — reporting
+        // 100% would assert we own it on zero evidence. This is the same
+        // null-versus-zero rule spec 0013 §4.3 applies to "no sales", carried to
+        // the other operand: `theirs = 0` because the rep recorded a zero is a
+        // fact; `theirs = 0` because nobody has asked is not.
+        const hasCompetitorObservation = monthlyRows.length > 0;
+        const { totalQty, share: mathematicalShare } = deriveShare(ours, theirs);
+        const share = hasCompetitorObservation ? mathematicalShare : null;
 
         // The list names who supplies this clinic *now*; the averages above are
         // the window. Showing three months of rows would double-count a product
@@ -132,13 +159,16 @@ export class ListFacilityPotentialsUseCase {
           /** The observed market: ours + theirs. */
           totalMarketQty: totalQty,
           /**
-           * Our share of the observed market, 0–1.
+           * Our share of the market, 0–1, or null when the market is unknown.
            *
-           * Null — never 0 — when nothing is known (spec 0013 §4.3). "We sell
-           * nothing here" and "we have no information" must stay
-           * distinguishable, and a 0 would read as the first while meaning the
-           * second. A clinic with orders and no competitor data is genuinely
-           * 100%: everything we can see of that market is ours.
+           * Null in two cases, and they are the same principle twice:
+           *   - nothing at all is known, so there is no denominator
+           *   - we have orders but **no competitor observation**, so the market
+           *     size is unknown. Reporting 100% there would claim we own the
+           *     whole market on no evidence
+           *
+           * 0% is reserved for what it actually means: a known market we sell
+           * nothing into.
            */
           share,
           /** The month the competitor rows below belong to. */
@@ -164,7 +194,13 @@ export class ListFacilityPotentialsUseCase {
  * cannot pair a profile in one linha with a metric in another.
  */
 export class SetFacilityProductUsageUseCase {
-  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+  constructor(
+    private readonly deps: {
+      potentialRepository: PotentialRepository;
+      /** Optional so existing callers and tests are unaffected. */
+      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+    },
+  ) {}
 
   async execute(input: {
     facilityId: number;
@@ -236,6 +272,12 @@ export class SetFacilityProductUsageUseCase {
       updatedByUserId: input.userId,
     });
 
+    // Synchronous, not enqueued (spec 0013 §4.4): the rep is looking at the
+    // number they just changed, so it must be right when the screen redraws.
+    // Order writes enqueue instead — an importer upserting tens of orders would
+    // otherwise recompute the same profile dozens of times.
+    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
+
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,
       verticalId: input.verticalId,
@@ -246,7 +288,12 @@ export class SetFacilityProductUsageUseCase {
 }
 
 export class RemoveFacilityProductUsageUseCase {
-  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+  constructor(
+    private readonly deps: {
+      potentialRepository: PotentialRepository;
+      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+    },
+  ) {}
 
   async execute(input: {
     facilityId: number;
@@ -288,6 +335,10 @@ export class RemoveFacilityProductUsageUseCase {
         `${input.definitionId}:${input.productId}:${month}`,
       );
     }
+
+    // Removing a competitor changes the denominator, so the snapshot is stale
+    // the instant the row goes. Same reasoning as the write above.
+    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
 
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,

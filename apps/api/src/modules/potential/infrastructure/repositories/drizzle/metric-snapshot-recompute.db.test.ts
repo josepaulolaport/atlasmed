@@ -13,10 +13,12 @@ import {
   products,
   states,
 } from "@atlasmed/database";
+import { monthKeyAt } from "@atlasmed/facility-insights";
 import { and, eq, sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzlePotentialRepository } from "./drizzle-potential.repository";
 import { RecomputeMetricSnapshotsUseCase } from "../../../application/use-cases/recompute-metric-snapshots.use-case";
+import { ListFacilityPotentialsUseCase } from "../../../application/use-cases/potential.use-cases";
 
 /**
  * The recompute handler, against a real Postgres (spec 0013 §4.4).
@@ -171,9 +173,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         quantity: "25",
       });
 
-      const useCase = new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      });
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
 
       const computedAt = new Date("2026-04-01T00:00:00.000Z");
       await useCase.execute({
@@ -202,6 +202,57 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         .from(facilityMetricSnapshots)
         .where(eq(facilityMetricSnapshots.facilityVerticalProfileId, scenario.profileId));
       expect(all).toHaveLength(1);
+    });
+  });
+
+  test("reports how many rows actually moved, so a lost trigger is visible", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "DIFF");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-DIFF",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "5",
+        orderedAt: new Date("2026-03-10T12:00:00.000Z"),
+      });
+
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
+
+      // First run: the row is new, so it counts as a difference.
+      const first = await useCase.execute({
+        profileId: scenario.profileId,
+        months: ["2026-03-01"],
+      });
+      expect(first.written).toBe(1);
+      expect(first.differed).toBe(1);
+
+      // Nothing changed in between — a sweep here must report a clean run,
+      // otherwise "differed" is noise and nobody will trust it.
+      const second = await useCase.execute({
+        profileId: scenario.profileId,
+        months: ["2026-03-01"],
+      });
+      expect(second.written).toBe(1);
+      expect(second.differed).toBe(0);
+
+      // An order lands without the trigger firing. The sweep must notice.
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "7",
+        orderedAt: new Date("2026-03-11T12:00:00.000Z"),
+      });
+      const third = await useCase.execute({
+        profileId: scenario.profileId,
+        months: ["2026-03-01"],
+      });
+      expect(third.differed).toBe(1);
+      expect((await readSnapshot(tx, scenario.profileId, "2026-03-01"))?.oursQty).toBe("12.00");
     });
   });
 
@@ -236,9 +287,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         quantity: "10",
       });
 
-      await new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      }).execute({ profileId: scenario.profileId, months: ["2026-03-01"] });
+      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({ profileId: scenario.profileId, months: ["2026-03-01"] });
 
       const row = await readSnapshot(tx, scenario.profileId, "2026-03-01");
       expect(row?.totalQty).toBe("40.00");
@@ -263,9 +312,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-03-10T12:00:00.000Z"),
       });
 
-      await new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      }).execute({ profileId: scenario.profileId, months: ["2026-02-01", "2026-03-01"] });
+      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({ profileId: scenario.profileId, months: ["2026-02-01", "2026-03-01"] });
 
       // February has no inputs, so no row is written — absence is the "unknown".
       expect(await readSnapshot(tx, scenario.profileId, "2026-02-01")).toBeUndefined();
@@ -289,9 +336,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-03-10T12:00:00.000Z"),
       });
 
-      const useCase = new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      });
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
       await useCase.execute({ profileId: scenario.profileId, months: ["2026-03-01"] });
       expect((await readSnapshot(tx, scenario.profileId, "2026-03-01"))?.oursQty).toBe("12.00");
 
@@ -330,9 +375,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-02-10T12:00:00.000Z"),
       });
 
-      const useCase = new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      });
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
       await useCase.execute({
         profileId: scenario.profileId,
         months: ["2026-01-01", "2026-02-01"],
@@ -364,12 +407,183 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-04-01T01:00:00.000Z"),
       });
 
-      await new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      }).execute({ profileId: scenario.profileId, months: ["2026-03-01", "2026-04-01"] });
+      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({ profileId: scenario.profileId, months: ["2026-03-01", "2026-04-01"] });
 
       expect((await readSnapshot(tx, scenario.profileId, "2026-03-01"))?.oursQty).toBe("8.00");
       expect(await readSnapshot(tx, scenario.profileId, "2026-04-01")).toBeUndefined();
+    });
+  });
+});
+
+describe.skipIf(!dbUp)("read path rolling window (database)", () => {
+  test("the monthly rate does not shift with where in the month it is read", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "READ");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-READ",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "9",
+        orderedAt: new Date("2026-03-10T12:00:00.000Z"),
+      });
+
+      const repository = new DrizzlePotentialRepository(tx as never);
+      const now = new Date("2026-03-20T12:00:00.000Z");
+      const list = new ListFacilityPotentialsUseCase({ potentialRepository: repository });
+      const scope = {
+        isGlobal: true,
+        assignedVerticalIds: [scenario.verticalId],
+      } as never;
+
+      // 9 units inside a 90-day window, normalised to a month: 9/90*30 = 3.
+      // The point is that it does not change with where in the month "now"
+      // falls — a partial calendar month would have understated it.
+      const result = await list.execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope,
+        now,
+      });
+      expect(result.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
+      // No competitor observation, so the market size is unknown — not 100%.
+      expect(result.items[0]?.share).toBeNull();
+
+      // Same order read from the 1st of the month rather than the 20th: the
+      // rolling window is unchanged in length, so the rate is unchanged.
+      const earlyInMonth = await list.execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope,
+        now: new Date("2026-04-01T12:00:00.000Z"),
+      });
+      expect(earlyInMonth.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
+    });
+  });
+});
+
+describe.skipIf(!dbUp)("share only exists when the market is known (database)", () => {
+  test("orders but no competitor observation reports unknown, not 100%", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "UNK");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-UNK",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "90",
+        orderedAt: new Date(),
+      });
+
+      const list = new ListFacilityPotentialsUseCase({
+        potentialRepository: new DrizzlePotentialRepository(tx as never),
+      });
+      const scope = { isGlobal: true, assignedVerticalIds: [scenario.verticalId] } as never;
+
+      const result = await list.execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope,
+      });
+
+      // We sell into this clinic and know nothing about the competition. That is
+      // not 100% — it is "we have not asked".
+      expect(result.items[0]?.atlasmedMonthlyAvgQty).toBeGreaterThan(0);
+      expect(result.items[0]?.share).toBeNull();
+    });
+  });
+
+  test("a recorded competitor makes the share real again", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "KNOWN");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-KNOWN-OURS",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      const theirProduct = await seedProduct(tx, scenario, {
+        name: "S-KNOWN-THEIRS",
+        metricUnits: "1",
+        ownership: "COMPETITOR",
+        link: false,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "90",
+        orderedAt: new Date(),
+      });
+      await tx.insert(facilityProductUsage).values({
+        facilityVerticalProfileId: scenario.profileId,
+        definitionId: scenario.definitionId,
+        verticalId: scenario.verticalId,
+        productId: theirProduct,
+        month: monthKeyAt(new Date()),
+        quantity: "60",
+      });
+
+      const result = await new ListFacilityPotentialsUseCase({
+        potentialRepository: new DrizzlePotentialRepository(tx as never),
+      }).execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope: { isGlobal: true, assignedVerticalIds: [scenario.verticalId] } as never,
+      });
+
+      // 90 units over 90 days = 30/month ours; 60/3 = 20/month theirs.
+      expect(result.items[0]?.share).toBeCloseTo(30 / 50, 4);
+    });
+  });
+
+  test("a recorded zero is a fact, so the share is 100% and not unknown", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "ZERO");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-ZERO-OURS",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      const theirProduct = await seedProduct(tx, scenario, {
+        name: "S-ZERO-THEIRS",
+        metricUnits: "1",
+        ownership: "COMPETITOR",
+        link: false,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "90",
+        orderedAt: new Date(),
+      });
+      // The rep looked and reported none — an observation, not an absence.
+      await tx.insert(facilityProductUsage).values({
+        facilityVerticalProfileId: scenario.profileId,
+        definitionId: scenario.definitionId,
+        verticalId: scenario.verticalId,
+        productId: theirProduct,
+        month: monthKeyAt(new Date()),
+        quantity: "0",
+      });
+
+      const result = await new ListFacilityPotentialsUseCase({
+        potentialRepository: new DrizzlePotentialRepository(tx as never),
+      }).execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope: { isGlobal: true, assignedVerticalIds: [scenario.verticalId] } as never,
+      });
+
+      expect(result.items[0]?.share).toBe(1);
     });
   });
 });

@@ -4,6 +4,11 @@ export * from "./schema/public/index";
 export * from "./schema/audit/index";
 export * from "./schema/ops/index";
 export * from "./types/geometry";
+export {
+  createMetricSnapshotStore,
+  listAllProfileIds,
+  listProfilesWithChangedInputs,
+} from "./queries/metric-snapshot-store";
 
 // Explicit enum value types for backward-compat
 import {

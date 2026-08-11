@@ -1,22 +1,17 @@
 import {
-  facilityMetricSnapshots,
   facilityProductUsage,
   facilityVerticalProfiles,
-  orderItems,
-  orders,
   productPotentialDefinitions,
   productPotentialLinks,
   productVerticals,
   products,
 } from "@atlasmed/database";
-import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
-import type { Database } from "@atlasmed/database";
-import { APPLICATION_TIMEZONE, type MonthKey } from "@atlasmed/facility-insights";
+import { createMetricSnapshotStore, type Database } from "@atlasmed/database";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import type { MonthKey } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   DefinitionMonthQtySum,
-  MetricSnapshotWrite,
-  ProfileRecord,
   FacilityProductUsageRecord,
   PotentialDefinitionRecord,
   PotentialRepository,
@@ -143,81 +138,12 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return row?.id ?? null;
   }
 
-  /** The clinic and linha a profile belongs to — the recompute handler's entry point. */
-  async findProfileById(profileId: number): Promise<ProfileRecord | null> {
-    const [row] = await this.database
-      .select({
-        id: facilityVerticalProfiles.id,
-        facilityId: facilityVerticalProfiles.facilityId,
-        verticalId: facilityVerticalProfiles.verticalId,
-      })
-      .from(facilityVerticalProfiles)
-      .where(eq(facilityVerticalProfiles.id, profileId))
-      .limit(1);
-    return row ?? null;
-  }
-
-  /**
-   * Writes the computed rows, replacing whatever was there.
-   *
-   * A whole-row replacement, never a delta: that is what makes at-least-once
-   * delivery safe, and what lets the sweep and the trigger race without either
-   * corrupting the other (spec 0013 §4.4).
-   */
-  async upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void> {
-    if (rows.length === 0) return;
-    await this.database
-      .insert(facilityMetricSnapshots)
-      .values(
-        rows.map((row) => ({
-          facilityVerticalProfileId: row.profileId,
-          definitionId: row.definitionId,
-          verticalId: row.verticalId,
-          month: row.month,
-          oursQty: row.oursQty.toFixed(2),
-          theirsQty: row.theirsQty.toFixed(2),
-          computedAt: row.computedAt,
-        })),
-      )
-      .onConflictDoUpdate({
-        target: [
-          facilityMetricSnapshots.facilityVerticalProfileId,
-          facilityMetricSnapshots.definitionId,
-          facilityMetricSnapshots.month,
-        ],
-        set: {
-          oursQty: sql`excluded.ours_qty`,
-          theirsQty: sql`excluded.theirs_qty`,
-          computedAt: sql`excluded.computed_at`,
-        },
-      });
-  }
-
-  /**
-   * Which (definition, month) pairs already have a snapshot.
-   *
-   * The handler needs this to zero a row whose inputs have since disappeared —
-   * an order deleted or a usage row removed. Recomputing only the pairs that
-   * still have inputs would leave the old figure standing, which is the quiet
-   * kind of wrong.
-   */
-  async listMetricSnapshotKeys(input: {
+  /** Stored snapshots — delegated, so the read path and the sweep agree. */
+  async listMetricSnapshots(input: {
     profileId: number;
     months: MonthKey[];
-  }): Promise<Array<{ definitionId: number; month: MonthKey }>> {
-    if (input.months.length === 0) return [];
-    return this.database
-      .select({
-        definitionId: facilityMetricSnapshots.definitionId,
-        month: facilityMetricSnapshots.month,
-      })
-      .from(facilityMetricSnapshots)
-      .where(
-        and(
-          eq(facilityMetricSnapshots.facilityVerticalProfileId, input.profileId),
-          inArray(facilityMetricSnapshots.month, input.months),
-        ),
-      );
+  }) {
+    return createMetricSnapshotStore(this.database).listExisting(input);
   }
 
   /**
@@ -333,84 +259,22 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   /**
-   * Penetration numerator.
+   * Our quantity per (metric, calendar month), in metric units.
    *
-   * Previously filtered `orders.facility_id` alone and ignored the vertical
-   * entirely, so a clinic active in two linhas counted *every* linha's sales
-   * toward each one's penetration. Spec 0010 §4 predicted this would be fixed by
-   * the re-keying, and it is: orders now carry the profile, and the profile is
-   * what a vertical means.
+   * Delegates to the shared store in `@atlasmed/database`: the reconciliation
+   * sweep runs the identical query from the Temporal worker, and this query is
+   * not plumbing — it encodes ADR 0003's eligible statuses and types, the
+   * `metric_units` multiplication and the São Paulo month boundary, every one of
+   * which was silently wrong at some point before P4-1.
    */
   async sumAtlasmedQtyByDefinitionAndMonth(input: {
     facilityId: number;
     verticalId: number;
     definitionIds: number[];
-    /** Inclusive lower bound — the UTC instant of local midnight on the 1st. */
     rangeStart: Date;
-    /** Exclusive upper bound — the same instant for the month after the last. */
     rangeEnd: Date;
   }): Promise<DefinitionMonthQtySum[]> {
-    if (input.definitionIds.length === 0) return [];
-    const rows = await this.database
-      .select({
-        definitionId: productPotentialLinks.definitionId,
-        // `ordered_at` is `timestamp without time zone` holding UTC, so it is
-        // interpreted as UTC and then read in São Paulo — the same two-step the
-        // purchase-recurrence query uses. Grouping in UTC would file an order
-        // taken 31 March 22:00 local under April.
-        month: sql<string>`(date_trunc('month', ${orders.orderedAt} at time zone 'UTC' at time zone ${sql.raw(`'${APPLICATION_TIMEZONE}'`)}))::date`,
-        // Metric units, not product units (spec 0013 §4.2). Summing quantity raw
-        // counted a box of five as one, so ten boxes read as ten ampoules
-        // instead of fifty. Every share figure was understated by the packaging
-        // factor, plausibly enough that nobody noticed.
-        totalQty: sql<string>`coalesce(sum(${orderItems.quantity} * ${products.metricUnits}), 0)`,
-      })
-      .from(orderItems)
-      .innerJoin(orders, eq(orders.id, orderItems.orderId))
-      .innerJoin(products, eq(products.id, orderItems.productId))
-      .innerJoin(
-        facilityVerticalProfiles,
-        eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
-      )
-      .innerJoin(
-        productPotentialLinks,
-        and(
-          eq(productPotentialLinks.productId, orderItems.productId),
-          // The link is per (product, vertical) since 0086, so the join must
-          // name the vertical too — otherwise a product sold in two linhas
-          // contributes its quantity to both metrics.
-          eq(productPotentialLinks.verticalId, facilityVerticalProfiles.verticalId),
-        ),
-      )
-      .where(
-        and(
-          eq(facilityVerticalProfiles.facilityId, input.facilityId),
-          eq(facilityVerticalProfiles.verticalId, input.verticalId),
-          // SALE and CONSIGNMENT, per ADR 0003 and spec 0013 §4.3. This query
-          // filtered SALE only while the funnel counted both, so consigned
-          // stock was invisible here and visible there.
-          inArray(orders.type, ["SALE", "CONSIGNMENT"]),
-          inArray(orders.status, ["APPROVED", "INVOICED"]),
-          // Half-open calendar month, São Paulo boundaries (spec 0013 §4.3).
-          // This replaced `ordered_at >= now() - 90 days`, which had no upper
-          // bound at all — future-dated orders counted toward the current
-          // figure — and which made the value depend on the clock, so the same
-          // month could never be recomputed to the same number.
-          gte(orders.orderedAt, input.rangeStart),
-          lt(orders.orderedAt, input.rangeEnd),
-          inArray(productPotentialLinks.definitionId, input.definitionIds),
-        ),
-      )
-      .groupBy(
-        productPotentialLinks.definitionId,
-        sql`date_trunc('month', ${orders.orderedAt} at time zone 'UTC' at time zone ${sql.raw(`'${APPLICATION_TIMEZONE}'`)})`,
-      );
-
-    return rows.map((row) => ({
-      definitionId: row.definitionId,
-      month: row.month,
-      totalQty: Number(row.totalQty),
-    }));
+    return createMetricSnapshotStore(this.database).sumOurs(input);
   }
 
   /**

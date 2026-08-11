@@ -659,6 +659,20 @@
       "when": 1786422991835,
       "tag": "0093_cadastro_attribution_and_retention",
       "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1786422992835,
+      "tag": "0094_seed_ortopedia_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1786426014799,
+      "tag": "0095_assignment_history_integrity",
+      "breakpoints": true
     }
   ]
 }
