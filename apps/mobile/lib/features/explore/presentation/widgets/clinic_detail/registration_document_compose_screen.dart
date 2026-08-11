@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/cadastro_upload_limits.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_cadastro_provider.dart';
@@ -53,6 +54,10 @@ class _ComposeItem {
   _ItemPhase phase;
   double progress;
   int? fileAssetId;
+
+  /// Size on disk, known only for files uploaded as-is (PDFs). Null for images,
+  /// whose bytes are replaced by normalisation before upload.
+  int? sizeBytes;
 
   bool get isBusy =>
       phase == _ItemPhase.queued ||
@@ -105,11 +110,39 @@ class _RegistrationDocumentComposeScreenState
   int? _documentId;
   Timer? _pollTimer;
   int _idSeq = 0;
+  CadastroUploadLimits? _limits;
+  bool _limitsWarned = false;
+
+  /// Validity the rep entered, where the requirement declares one (§3.3).
+  DateTime? _validUntil;
 
   bool get _hasItems => _items.isNotEmpty;
   bool get _allReady =>
       _hasItems && _items.every((i) => i.phase == _ItemPhase.ready);
   bool get _anyBusy => _items.any((i) => i.isBusy) || _uploading;
+
+  /// The checklist row for this requirement, as the server last described it.
+  EstablishmentDocument? _findDocument(FacilityCadastroChecklist? checklist) {
+    if (checklist == null) return null;
+    for (final doc in checklist.documents) {
+      if (doc.requirementId == widget.requirementId ||
+          doc.id == widget.requirementId) {
+        return doc;
+      }
+    }
+    return null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // A date already recorded on the working document is the rep's own earlier
+    // answer, not the reviewer's — offer it back rather than making them retype.
+    final existing = _findDocument(
+      ref.read(facilityCadastroProvider(widget.facilityId)).valueOrNull,
+    )?.validUntil;
+    if (existing != null) _validUntil = DateTime.tryParse(existing);
+  }
 
   @override
   void dispose() {
@@ -322,16 +355,132 @@ class _RegistrationDocumentComposeScreenState
       );
     }
     if (created.isEmpty) return;
-    setState(() => _items.addAll(created));
-    for (final item in created) {
+
+    final accepted = await _acceptWithinLimits(created);
+    if (accepted.isEmpty || !mounted) return;
+    setState(() => _items.addAll(accepted));
+    for (final item in accepted) {
       unawaited(_enqueueUpload(item));
     }
   }
 
+  /// Drops the picked files the API would refuse at `initiate`, telling the rep
+  /// which limit they hit — before a single byte is uploaded (spec 0011 §7).
+  Future<List<_ComposeItem>> _acceptWithinLimits(
+    List<_ComposeItem> candidates,
+  ) async {
+    final limits = await _uploadLimits();
+    if (limits == null) return candidates;
+
+    final sizes = <int, int>{};
+    for (final item in candidates) {
+      final size = await _fileSize(item.localPath);
+      sizes[item.id] = size;
+      if (item.isPdf) item.sizeBytes = size;
+    }
+
+    final rejections = preflightCadastroUpload(
+      limits: limits,
+      candidates: [
+        for (final item in candidates)
+          CadastroUploadCandidate(
+            fileName: item.fileName,
+            mimeType: item.mimeType,
+            sizeBytes: sizes[item.id] ?? 0,
+            isImage: !item.isPdf,
+          ),
+      ],
+      existingFileCount: _items.length,
+      existingKnownBytes: _knownAttachedBytes,
+    );
+
+    if (rejections.isEmpty) return candidates;
+
+    final rejected = rejections.map((r) => r.index).toSet();
+    if (mounted) {
+      final first = rejections.first;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            rejections.length == 1
+                ? '${first.fileName}: ${first.message}'
+                : '${rejections.length} arquivos recusados. '
+                      '${first.fileName}: ${first.message}',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    return [
+      for (var i = 0; i < candidates.length; i++)
+        if (!rejected.contains(i)) candidates[i],
+    ];
+  }
+
+  /// Bytes already attached whose size will not change before upload. Images
+  /// are re-encoded, so they are left out rather than counted at a size the
+  /// server will never see.
+  int get _knownAttachedBytes => _items
+      .where((i) => i.isPdf)
+      .fold(0, (sum, item) => sum + (item.sizeBytes ?? 0));
+
+  Future<int> _fileSize(String path) async {
+    try {
+      return await File(path).length();
+    } catch (_) {
+      // Unknown size: let the server be the judge rather than refusing a file
+      // we simply failed to stat.
+      return 0;
+    }
+  }
+
+  /// Limits for this requirement, fetched once and cached for the screen.
+  Future<CadastroUploadLimits?> _uploadLimits() async {
+    final cached = _limits;
+    if (cached != null) return cached;
+    try {
+      final limits = await ref
+          .read(facilityCadastroControllerProvider(widget.facilityId))
+          .loadUploadLimits(widget.requirementId);
+      if (limits != null) _limits = limits;
+      if (limits == null) _warnLimitsUnavailable();
+      return limits;
+    } catch (_) {
+      // Never silently skip the check: say the limits are unknown, then let the
+      // upload proceed — the API enforces them regardless.
+      _warnLimitsUnavailable();
+      return null;
+    }
+  }
+
+  void _warnLimitsUnavailable() {
+    if (_limitsWarned || !mounted) return;
+    _limitsWarned = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Não foi possível conferir os limites deste documento agora. '
+          'O envio pode ser recusado pelo servidor.',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Watched, not read: the checklist is what declares whether this document
+    // has a validity, and it may still be loading when the screen opens.
+    final watched = ref
+        .watch(facilityCadastroProvider(widget.facilityId))
+        .valueOrNull;
+    final needsValidity = _findDocument(watched)?.requiresValidityDate ?? false;
     final canPick = !_pickingLocked && !_submitting;
-    final canSend = _allReady && !_anyBusy && !_submitting;
+    final canSend =
+        _allReady &&
+        !_anyBusy &&
+        !_submitting &&
+        (!needsValidity || _validUntil != null);
 
     return PopScope(
       canPop: false,
@@ -392,6 +541,13 @@ class _RegistrationDocumentComposeScreenState
                 ),
               ],
             ),
+            if (needsValidity) ...[
+              const SizedBox(height: 20),
+              _ValidityDateCard(
+                validUntil: _validUntil,
+                onPick: _submitting ? null : _pickValidUntil,
+              ),
+            ],
             const SizedBox(height: 20),
             if (!_hasItems) const _EmptyComposeCard(),
             if (_hasItems) ...[
@@ -485,9 +641,11 @@ class _RegistrationDocumentComposeScreenState
                         : Text(
                             _anyBusy
                                 ? 'Processando…'
-                                : _hasItems
-                                ? 'Enviar'
-                                : 'Adicione um arquivo',
+                                : !_hasItems
+                                ? 'Adicione um arquivo'
+                                : needsValidity && _validUntil == null
+                                ? 'Informe a validade'
+                                : 'Enviar',
                           ),
                   ),
                 ),
@@ -499,8 +657,32 @@ class _RegistrationDocumentComposeScreenState
     );
   }
 
+  /// Calendar picker for the validity. Past dates are unreachable because the
+  /// API refuses a submit whose validity has already expired (§3.3).
+  Future<void> _pickValidUntil() async {
+    final today = DateTime.now();
+    final firstDate = DateTime(today.year, today.month, today.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _validUntil != null && !_validUntil!.isBefore(firstDate)
+          ? _validUntil!
+          : firstDate,
+      firstDate: firstDate,
+      lastDate: DateTime(today.year + 20, today.month, today.day),
+      helpText: 'Válido até',
+      cancelText: 'Cancelar',
+      confirmText: 'Confirmar',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _validUntil = picked);
+  }
+
   Future<void> _submitForReview() async {
     if (!_allReady || _submitting) return;
+    // Sent only where the requirement declares a validity: the API rejects a
+    // date on a requirement that has none. `needsValidity` gates the button, so
+    // a date can only exist here when it was asked for.
+    final validUntil = _validUntil;
     setState(() => _submitting = true);
     try {
       await ref
@@ -508,6 +690,7 @@ class _RegistrationDocumentComposeScreenState
           .submitRequirement(
             requirementId: widget.requirementId,
             documentId: _documentId,
+            validUntil: validUntil == null ? null : cadastroIsoDate(validUntil),
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -729,6 +912,70 @@ class _ActionChip extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Validity input, shown only where the requirement declares one.
+class _ValidityDateCard extends StatelessWidget {
+  const _ValidityDateCard({required this.validUntil, required this.onPick});
+
+  final DateTime? validUntil;
+  final VoidCallback? onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final chosen = validUntil;
+    final label = chosen == null
+        ? 'Selecionar data'
+        : formatCadastroDate(cadastroIsoDate(chosen))!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: chosen == null ? AppColors.amber : AppColors.gray200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'VALIDADE',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+              color: AppColors.gray400,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Este documento vence. Informe a data de validade impressa nele '
+            'para enviar.',
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.35,
+              color: AppColors.gray500,
+            ),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: onPick,
+            icon: const Icon(Icons.event_outlined, size: 18),
+            label: Text(label),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.navyBright,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

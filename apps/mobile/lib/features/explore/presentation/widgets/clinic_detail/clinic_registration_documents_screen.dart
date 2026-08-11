@@ -260,6 +260,53 @@ class _BillingEmailSheetState extends State<_BillingEmailSheet> {
   }
 }
 
+/// The expiry warning, straight from the server's derived `expiry` block.
+///
+/// Nothing here is computed from the date: `status` and `daysRemaining` arrive
+/// derived (ADR 0008 §4), so a device with a wrong clock cannot disagree with
+/// the reviewer about whether a licence is still valid.
+class _ExpiryLine extends StatelessWidget {
+  const _ExpiryLine({required this.expiry});
+
+  final CadastroExpiry expiry;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = expiry.isExpired
+        ? AppColors.red
+        : expiry.isExpiringSoon
+        ? AppColors.amber
+        : AppColors.gray500;
+    final formatted = formatCadastroDate(expiry.validUntil);
+    return Row(
+      children: [
+        Icon(
+          expiry.isExpired
+              ? Icons.error_outline
+              : expiry.isExpiringSoon
+              ? Icons.schedule_outlined
+              : Icons.verified_outlined,
+          size: 13,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            formatted == null ? expiry.label : '${expiry.label} · $formatted',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _DocumentTypeCard extends StatelessWidget {
   const _DocumentTypeCard({required this.document, required this.onTap});
 
@@ -363,6 +410,10 @@ class _DocumentTypeCard extends StatelessWidget {
                             : FontWeight.w400,
                       ),
                     ),
+                    if (document.expiry != null) ...[
+                      const SizedBox(height: 4),
+                      _ExpiryLine(expiry: document.expiry!),
+                    ],
                   ],
                 ),
               ),
