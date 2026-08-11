@@ -4,6 +4,7 @@ import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories
 import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
 import { DrizzleTerritoryBoundaryWriter } from "./infrastructure/adapters/drizzle-territory-boundary.writer";
+import { DrizzleTerritoryTransactionPort } from "./infrastructure/ports/drizzle-territory-transaction.port";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { DrizzleScopeRepository } from "../access/infrastructure/repositories/drizzle/drizzle-scope.repository";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
@@ -112,7 +113,7 @@ const territoryCrud = new TerritoryCrudUseCases({
 
 const territoryTypeCrud = new TerritoryTypeUseCases(territoryRepositories.territoryType);
 
-const territoryBoundaryWriter = new DrizzleTerritoryBoundaryWriter();
+const territoryTransactionPort = new DrizzleTerritoryTransactionPort();
 
 function createBoundaryUseCases() {
   return new TerritoryBoundaryUseCases({
@@ -120,7 +121,10 @@ function createBoundaryUseCases() {
     territoryTypeRepository: territoryRepositories.territoryType,
     spatialRepository: territoryRepositories.spatial,
     containmentService: territoryContainmentService,
-    boundaryWriter: territoryBoundaryWriter,
+    transactionPort: territoryTransactionPort,
+    // Spec 0009 R1: the save path re-binds containment to the transaction's own
+    // repositories, so it checks the snapshot it is about to mutate.
+    buildContainmentService: (repos) => new TerritoryContainmentService(repos),
     onBoundaryChanged: onTerritoryBoundaryChanged,
     onManagerTerritoryChanged: onManagerTerritoryChanged,
   });
@@ -154,28 +158,12 @@ export const territoryUseCases = {
   deleteBoundary: () => createBoundaryUseCases(),
   recomputeMembership: () =>
     new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
       onFacilityChanged: upsertFacilitySearchDocument,
     }),
   listUnassignedFacilities: () =>
     new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
-      membershipService: territoryMembershipService,
-      clinicWriter: facilityMembershipWriter,
-      onFacilityChanged: upsertFacilitySearchDocument,
-    }),
-  adminOverrideClinicTerritory: () =>
-    new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
-      membershipService: territoryMembershipService,
-      clinicWriter: facilityMembershipWriter,
-      onFacilityChanged: upsertFacilitySearchDocument,
-    }),
-  unlockClinicGeo: () =>
-    new TerritoryMembershipUseCases({
-      territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
       clinicWriter: facilityMembershipWriter,
       onFacilityChanged: upsertFacilitySearchDocument,

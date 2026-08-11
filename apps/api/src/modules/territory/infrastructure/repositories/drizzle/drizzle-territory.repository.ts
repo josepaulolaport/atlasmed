@@ -1,5 +1,6 @@
 import type { Role } from "@atlasmed/access";
 import { db } from "../../../../../infrastructure/database/db";
+import type { AnyDatabase } from "@atlasmed/database";
 import {
   territories,
   territoryTypes,
@@ -57,8 +58,15 @@ function fromJoinedRow(row: TerritoryJoinedRow): TerritoryRecord {
 }
 
 export class DrizzleTerritoryRepository implements TerritoryRepository {
+  /**
+ * Accepts a transaction handle so spec 0009 R1 can validate a boundary inside
+ * the same transaction that later mutates it. Defaults to the shared pool, so
+ * every existing caller is unchanged.
+ */
+  constructor(private readonly database: AnyDatabase = db) {}
+
   private async findOneWithType(id: number): Promise<TerritoryRecord | null> {
-    const rows = await db
+    const rows = await this.database
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
@@ -75,7 +83,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     if (verticalId) {
       conditions.push(eq(territories.verticalId, verticalId));
     }
-    const rows = await db
+    const rows = await this.database
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
@@ -88,7 +96,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     if (verticalId) {
       conditions.push(eq(territories.verticalId, verticalId));
     }
-    const rows = await db
+    const rows = await this.database
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
@@ -100,7 +108,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     if (ids.length === 0) {
       return [];
     }
-    const rows = await db
+    const rows = await this.database
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
@@ -113,7 +121,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     if (verticalId) {
       conditions.push(eq(territories.verticalId, verticalId));
     }
-    const rows = await db
+    const rows = await this.database
       .select({ territories, territoryTypes })
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
@@ -130,7 +138,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     if (verticalId) {
       conditions.push(eq(territories.verticalId, verticalId));
     }
-    const rows = await db
+    const rows = await this.database
       .select({ territories, territoryTypes })
       .from(territories)
       .innerJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
@@ -140,7 +148,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
   }
 
   async countRepPatchesByManagerZone(managerTerritoryId: number): Promise<number> {
-    const [result] = await db
+    const [result] = await this.database
       .select({ count: sql<number>`count(*)` })
       .from(territories)
       .innerJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
@@ -155,7 +163,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
   }
 
   async countClinics(territoryId: number): Promise<number> {
-    const [result] = await db
+    const [result] = await this.database
       .select({
         count: sql<number>`count(DISTINCT ${facilities.id})`,
       })
@@ -197,7 +205,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
   }
 
   async create(input: CreateTerritoryInput): Promise<TerritoryRecord> {
-    const [inserted] = await db
+    const [inserted] = await this.database
       .insert(territories)
       .values({
         name: input.name,
@@ -219,7 +227,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       isActive?: boolean;
     }
   ): Promise<TerritoryRecord> {
-    await db
+    await this.database
       .update(territories)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(territories.id, id));
@@ -231,7 +239,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       return [];
     }
 
-    const rows = await db
+    const rows = await this.database
       .select({ id: territories.id })
       .from(territories)
       .innerJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))

@@ -17,12 +17,6 @@ export interface ClinicMembershipWriter {
     memberships: Array<{ verticalId: number; managerZoneId: number | null }>
   ): Promise<void>;
 
-  /** Set one vertical profile's manager zone without clearing other verticals. */
-  setProfileTerritory(
-    facilityId: number,
-    verticalId: number,
-    managerZoneId: number | null,
-  ): Promise<void>;
 
   findClinicsForMembership(params?: {
     facilityIds?: number[];

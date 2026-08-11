@@ -1,17 +1,14 @@
 import type { ScopeContext } from "@atlasmed/access";
-import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryMembershipService } from "../services/territory-membership.service";
 import type { ClinicMembershipWriter } from "../services/territory-membership.service";
-import {
-  OperationNotAllowedError,
-  ResourceNotFoundError,
-} from "../../../../shared/errors";
-import { isManagerZoneType } from "../constants/territory-roles.constants";
 
 interface Dependencies {
-  territoryRepository: TerritoryRepository;
   membershipService: TerritoryMembershipService;
   clinicWriter: ClinicMembershipWriter;
+  /**
+   * Kept for the search reindex on membership change. The admin zone override
+   * that also used it is gone (spec 0009 R7).
+   */
   onFacilityChanged?: (facilityId: number) => Promise<void>;
 }
 
@@ -88,45 +85,4 @@ export class TerritoryMembershipUseCases {
     };
   }
 
-  async adminOverrideClinicTerritory(input: {
-    facilityId: number;
-    territoryId: number;
-    reason?: string;
-  }) {
-    const territory = await this.deps.territoryRepository.findById(input.territoryId);
-    if (!territory?.isActive) {
-      throw new ResourceNotFoundError("Territory", input.territoryId);
-    }
-
-    const type = territory.territoryType;
-    if (!type || !isManagerZoneType(type)) {
-      throw new OperationNotAllowedError(
-        "override_clinic_territory",
-        "Clinics can only be assigned to manager zone territories"
-      );
-    }
-
-    await this.deps.clinicWriter.setProfileTerritory(
-      input.facilityId,
-      territory.verticalId,
-      input.territoryId,
-    );
-    await this.deps.onFacilityChanged?.(input.facilityId);
-
-    return { success: true };
-  }
-
-  async unlockClinicGeo(input: { facilityId: number }) {
-    const clinics = await this.deps.clinicWriter.findClinicsForMembership({
-      facilityIds: [input.facilityId],
-    });
-    const clinic = clinics[0];
-    if (!clinic) {
-      throw new ResourceNotFoundError("Clinic", input.facilityId);
-    }
-
-    await this.deps.membershipService.assignClinicByGeo(clinic);
-
-    return { success: true };
-  }
 }

@@ -1,4 +1,5 @@
 import { db } from "../../../../infrastructure/database/db";
+import type { AnyDatabase } from "@atlasmed/database";
 import {
   facilityVerticalRepAssignments,
   territories,
@@ -16,8 +17,14 @@ import type {
 /**
  * Spec 0009 R1: ending rep assignments and rewriting the boundary happen in one
  * transaction, so a geometry rejected by PostGIS rolls the de-assignments back.
+ *
+ * Given a transaction handle it joins that transaction instead of opening its
+ * own — which is what lets the caller validate and mutate under one snapshot.
+ * Constructed bare, it still opens its own, so the create path is unaffected.
  */
 export class DrizzleTerritoryBoundaryWriter implements TerritoryBoundaryWriter {
+  constructor(private readonly database: AnyDatabase = db) {}
+
   async commitBoundaryChange(
     command: BoundaryCommitCommand
   ): Promise<BoundaryCommitResult> {
@@ -30,10 +37,17 @@ export class DrizzleTerritoryBoundaryWriter implements TerritoryBoundaryWriter {
 
     const geoJsonString = JSON.stringify(command.boundary);
 
-    return db.transaction(async (tx) => {
+    const run = async (tx: AnyDatabase): Promise<BoundaryCommitResult> => {
       let endedAssignmentCount = 0;
 
-      if (command.endAssignmentsForProfileIds.length > 0) {
+      /**
+       * Spec 0009 R1: the destructive step, deferred until the geometry has
+       * been accepted. Ending assignments first and relying on rollback is the
+       * right outcome in the wrong order — it locks rows on a change that may
+       * never be allowed to happen.
+       */
+      const endAssignments = async () => {
+        if (command.endAssignmentsForProfileIds.length === 0) return;
         const ended = await tx
           .update(facilityVerticalRepAssignments)
           .set({
@@ -51,9 +65,8 @@ export class DrizzleTerritoryBoundaryWriter implements TerritoryBoundaryWriter {
             )
           )
           .returning({ id: facilityVerticalRepAssignments.id });
-
         endedAssignmentCount = ended.length;
-      }
+      };
 
       const validation = (await tx.execute(sql`
         SELECT
@@ -63,13 +76,13 @@ export class DrizzleTerritoryBoundaryWriter implements TerritoryBoundaryWriter {
 
       if (!validation[0]?.is_valid) {
         if (!command.repairInvalid) {
-          // Rolls back the de-assignments above.
           throw new OperationNotAllowedError(
             "save_boundary",
             validation[0]?.reason ?? "Invalid geometry"
           );
         }
 
+        await endAssignments();
         await tx.execute(sql`
           UPDATE territories
           SET boundary = ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)),
@@ -77,6 +90,7 @@ export class DrizzleTerritoryBoundaryWriter implements TerritoryBoundaryWriter {
           WHERE id = ${command.territoryId}
         `);
       } else {
+        await endAssignments();
         await tx.execute(sql`
           UPDATE territories
           SET boundary = ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326),
@@ -112,6 +126,13 @@ export class DrizzleTerritoryBoundaryWriter implements TerritoryBoundaryWriter {
       }
 
       return { endedAssignmentCount, repPatchCount };
-    });
+    };
+
+    // Always open a scope on whatever handle we hold. At the top level that is
+    // a transaction; nested inside the caller's (the spec 0009 R1 save path) it
+    // is a SAVEPOINT. Either way the failed de-assignment unwinds here rather
+    // than relying on an owner we may not have — and the rethrow still aborts
+    // the outer transaction, so the whole save is all-or-nothing.
+    return this.database.transaction(run);
   }
 }
