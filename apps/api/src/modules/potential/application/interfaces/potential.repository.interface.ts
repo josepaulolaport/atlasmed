@@ -41,37 +41,6 @@ export type DefinitionMonthQtySum = DefinitionQtySum & {
   month: MonthKey;
 };
 
-export type ProfileRecord = {
-  id: number;
-  facilityId: number;
-  verticalId: number;
-};
-
-/**
- * One computed snapshot row.
- *
- * `computedAt` is supplied by the caller rather than defaulted in SQL: the sweep
- * needs to compare it against input timestamps, and a value the handler chooses
- * is one the tests can pin.
- */
-/** A snapshot as currently stored, in metric units. */
-export type StoredMetricSnapshot = {
-  definitionId: number;
-  month: MonthKey;
-  oursQty: number;
-  theirsQty: number;
-};
-
-export type MetricSnapshotWrite = {
-  profileId: number;
-  definitionId: number;
-  verticalId: number;
-  month: MonthKey;
-  oursQty: number;
-  theirsQty: number;
-  computedAt: Date;
-};
-
 export interface PotentialRepository {
   listDefinitions(input: {
     verticalId: number;
@@ -99,30 +68,6 @@ export interface PotentialRepository {
     verticalId: number;
   }): Promise<number | null>;
 
-  findProfileById(profileId: number): Promise<ProfileRecord | null>;
-
-  /** The sweep's candidate set: profiles whose inputs changed in [since, until). */
-  listProfilesWithChangedInputs(input: {
-    since: Date;
-    until: Date;
-    afterProfileId: number;
-    limit: number;
-  }): Promise<number[]>;
-
-  /** The backfill's candidate set: every profile, keyset-paged. */
-  listAllProfileIds(input: {
-    afterProfileId: number;
-    limit: number;
-  }): Promise<number[]>;
-
-  /** Replaces whole rows — never a delta, so re-running is safe. */
-  upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void>;
-
-  /** Existing snapshots, so vanished inputs can be zeroed and changes counted. */
-  listMetricSnapshotValues(input: {
-    profileId: number;
-    months: MonthKey[];
-  }): Promise<StoredMetricSnapshot[]>;
 
   /** Competitor quantities for the given months. */
   listUsage(input: {

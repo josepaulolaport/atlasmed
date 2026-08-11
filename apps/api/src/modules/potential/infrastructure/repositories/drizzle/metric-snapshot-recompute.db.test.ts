@@ -169,9 +169,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         quantity: "25",
       });
 
-      const useCase = new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      });
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
 
       const computedAt = new Date("2026-04-01T00:00:00.000Z");
       await useCase.execute({
@@ -219,9 +217,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-03-10T12:00:00.000Z"),
       });
 
-      const useCase = new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      });
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
 
       // First run: the row is new, so it counts as a difference.
       const first = await useCase.execute({
@@ -287,9 +283,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         quantity: "10",
       });
 
-      await new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      }).execute({ profileId: scenario.profileId, months: ["2026-03-01"] });
+      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({ profileId: scenario.profileId, months: ["2026-03-01"] });
 
       const row = await readSnapshot(tx, scenario.profileId, "2026-03-01");
       expect(row?.totalQty).toBe("40.00");
@@ -314,9 +308,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-03-10T12:00:00.000Z"),
       });
 
-      await new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      }).execute({ profileId: scenario.profileId, months: ["2026-02-01", "2026-03-01"] });
+      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({ profileId: scenario.profileId, months: ["2026-02-01", "2026-03-01"] });
 
       // February has no inputs, so no row is written — absence is the "unknown".
       expect(await readSnapshot(tx, scenario.profileId, "2026-02-01")).toBeUndefined();
@@ -340,9 +332,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-03-10T12:00:00.000Z"),
       });
 
-      const useCase = new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      });
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
       await useCase.execute({ profileId: scenario.profileId, months: ["2026-03-01"] });
       expect((await readSnapshot(tx, scenario.profileId, "2026-03-01"))?.oursQty).toBe("12.00");
 
@@ -381,9 +371,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-02-10T12:00:00.000Z"),
       });
 
-      const useCase = new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      });
+      const useCase = new RecomputeMetricSnapshotsUseCase({ database: tx as never });
       await useCase.execute({
         profileId: scenario.profileId,
         months: ["2026-01-01", "2026-02-01"],
@@ -415,9 +403,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
         orderedAt: new Date("2026-04-01T01:00:00.000Z"),
       });
 
-      await new RecomputeMetricSnapshotsUseCase({
-        potentialRepository: new DrizzlePotentialRepository(tx as never),
-      }).execute({ profileId: scenario.profileId, months: ["2026-03-01", "2026-04-01"] });
+      await new RecomputeMetricSnapshotsUseCase({ database: tx as never }).execute({ profileId: scenario.profileId, months: ["2026-03-01", "2026-04-01"] });
 
       expect((await readSnapshot(tx, scenario.profileId, "2026-03-01"))?.oursQty).toBe("8.00");
       expect(await readSnapshot(tx, scenario.profileId, "2026-04-01")).toBeUndefined();

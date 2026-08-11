@@ -10,9 +10,9 @@ import {
   products,
   states,
 } from "@atlasmed/database";
+import { listAllProfileIds, listProfilesWithChangedInputs } from "@atlasmed/database";
 import { eq } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
-import { DrizzlePotentialRepository } from "./drizzle-potential.repository";
 
 /**
  * The reconciliation sweep's candidate query (spec 0013 §4.4).
@@ -82,7 +82,7 @@ describe.skipIf(!dbUp)("metric sweep candidates (database)", () => {
       await seedOrderAt(tx, before, new Date("2026-05-01T12:00:00.000Z"));
       await seedOrderAt(tx, after, new Date("2026-05-20T12:00:00.000Z"));
 
-      const found = await new DrizzlePotentialRepository(tx as never).listProfilesWithChangedInputs({
+      const found = await listProfilesWithChangedInputs(tx as never, {
         since: new Date("2026-05-05T00:00:00.000Z"),
         until: new Date("2026-05-15T00:00:00.000Z"),
         afterProfileId: 0,
@@ -105,15 +105,14 @@ describe.skipIf(!dbUp)("metric sweep candidates (database)", () => {
       await seedOrderAt(tx, atStart, since);
       await seedOrderAt(tx, atEnd, until);
 
-      const repository = new DrizzlePotentialRepository(tx as never);
-      const thisRun = await repository.listProfilesWithChangedInputs({
+      const thisRun = await listProfilesWithChangedInputs(tx as never, {
         since,
         until,
         afterProfileId: 0,
         limit: 500,
       });
       // The next run starts where this one stopped.
-      const nextRun = await repository.listProfilesWithChangedInputs({
+      const nextRun = await listProfilesWithChangedInputs(tx as never, {
         since: until,
         until: new Date("2026-05-25T00:00:00.000Z"),
         afterProfileId: 0,
@@ -167,7 +166,7 @@ describe.skipIf(!dbUp)("metric sweep candidates (database)", () => {
         updatedAt: new Date("2026-05-10T12:00:00.000Z"),
       });
 
-      const found = await new DrizzlePotentialRepository(tx as never).listProfilesWithChangedInputs({
+      const found = await listProfilesWithChangedInputs(tx as never, {
         since: new Date("2026-05-05T00:00:00.000Z"),
         until: new Date("2026-05-15T00:00:00.000Z"),
         afterProfileId: 0,
@@ -188,11 +187,10 @@ describe.skipIf(!dbUp)("metric sweep candidates (database)", () => {
         await seedOrderAt(tx, profileId, stamp);
       }
 
-      const repository = new DrizzlePotentialRepository(tx as never);
       const collected: number[] = [];
       let after = 0;
       for (let page = 0; page < 10; page += 1) {
-        const batch = await repository.listProfilesWithChangedInputs({
+        const batch = await listProfilesWithChangedInputs(tx as never, {
           since: new Date("2026-05-05T00:00:00.000Z"),
           until: new Date("2026-05-15T00:00:00.000Z"),
           afterProfileId: after,
@@ -212,12 +210,11 @@ describe.skipIf(!dbUp)("metric sweep candidates (database)", () => {
   test("listAllProfileIds pages every profile without a window", async () => {
     await withRollback(async (tx) => {
       const { profileIds } = await seedProfiles(tx, "ALL", 3);
-      const repository = new DrizzlePotentialRepository(tx as never);
 
       const collected: number[] = [];
       let after = Math.min(...profileIds) - 1;
       for (let page = 0; page < 10; page += 1) {
-        const batch = await repository.listAllProfileIds({ afterProfileId: after, limit: 2 });
+        const batch = await listAllProfileIds(tx as never, { afterProfileId: after, limit: 2 });
         if (batch.length === 0) break;
         collected.push(...batch);
         after = batch[batch.length - 1]!;
