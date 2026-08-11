@@ -38,6 +38,8 @@ function createRepository(
     softDeleteDefinition: async () => false,
     findProfileId: async () => 1,
     findProfileById: async () => null,
+    listProfilesWithChangedInputs: async () => [],
+    listAllProfileIds: async () => [],
     upsertMetricSnapshots: async () => undefined,
     listMetricSnapshotValues: async () => [],
     listUsage: async () => [],
