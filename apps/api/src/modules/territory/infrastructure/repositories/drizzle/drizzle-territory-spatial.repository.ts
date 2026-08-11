@@ -230,7 +230,10 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         )
         SELECT
           f.id AS facility_id,
-          f.display_name AS facility_name,
+          -- f.name, not f.display_name: the Drizzle field is displayName but it
+          -- maps to the name column (facilities.ts:43). Raw SQL gets no such
+          -- translation, and display_name has never existed.
+          f.name AS facility_name,
           fvp.id AS facility_vertical_profile_id,
           fvra.user_id AS consultant_user_id,
           COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS consultant_name
@@ -277,7 +280,8 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       )
       SELECT
         f.id AS facility_id,
-        f.display_name AS facility_name,
+        -- See the manager-zone branch above: the column is name, not display_name.
+        f.name AS facility_name,
         fvp.id AS facility_vertical_profile_id,
         fvra.user_id AS consultant_user_id,
         COALESCE(u.first_name || ' ' || u.last_name, u.email, fvra.user_id::text) AS consultant_name
