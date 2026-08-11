@@ -1,5 +1,9 @@
 import type { AddressParts, FacilityGeocodingService } from "./facility-geocoding.service";
 import type { AssignmentLosingCoverage } from "../../../territory/application/interfaces/territory-spatial.repository.interface";
+import {
+  FacilityCoverageLossError,
+  ValidationError,
+} from "../../../../shared/errors";
 
 /**
  * The one place a clinic's position is decided and written.
@@ -50,15 +54,6 @@ interface Dependencies {
   onLocationChanged: (facilityId: number) => Promise<void>;
 }
 
-export class FacilityLocationError extends Error {
-  constructor(
-    message: string,
-    readonly reason: "unresolvable" | "coverage_not_accepted"
-  ) {
-    super(message);
-    this.name = "FacilityLocationError";
-  }
-}
 
 export class FacilityLocationService {
   constructor(private readonly deps: Dependencies) {}
@@ -98,10 +93,13 @@ export class FacilityLocationService {
       }
     }
 
-    throw new FacilityLocationError(
-      "Could not resolve a position from the address, and no coordinates were supplied",
-      "unresolvable"
-    );
+    throw new ValidationError([
+      {
+        field: "address",
+        message:
+          "Could not resolve a position from the address, and no coordinates were supplied",
+      },
+    ]);
   }
 
   /**
@@ -142,10 +140,7 @@ export class FacilityLocationService {
     });
 
     if (delta.losingCoverage.length > 0 && !input.acceptCoverageLoss) {
-      throw new FacilityLocationError(
-        `Moving this clinic leaves ${delta.losingCoverage.length} rep assignment(s) outside their patch`,
-        "coverage_not_accepted"
-      );
+      throw new FacilityCoverageLossError(delta.losingCoverage);
     }
 
     await this.deps.locationRepository.saveLocation({

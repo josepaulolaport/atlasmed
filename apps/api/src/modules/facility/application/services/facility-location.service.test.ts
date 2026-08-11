@@ -1,8 +1,9 @@
 import { describe, expect, it, mock } from "bun:test";
+import { FacilityLocationService } from "./facility-location.service";
 import {
-  FacilityLocationError,
-  FacilityLocationService,
-} from "./facility-location.service";
+  FacilityCoverageLossError,
+  ValidationError,
+} from "../../../../shared/errors";
 import type { AssignmentLosingCoverage } from "../../../territory/application/interfaces/territory-spatial.repository.interface";
 
 const FACILITY_ID = 7;
@@ -92,7 +93,7 @@ describe("FacilityLocationService", () => {
 
     await expect(
       service.resolve({ address: { city: "Nowhere" } })
-    ).rejects.toBeInstanceOf(FacilityLocationError);
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   /**
@@ -127,9 +128,11 @@ describe("FacilityLocationService", () => {
       losingCoverage: [STRANDED],
     });
 
+    // 409 with the affected assignments, not a bare failure: the reviewer has to
+    // see *who* would be stranded before deciding.
     await expect(
       service.applyLocation({ facilityId: FACILITY_ID, lat: 40, lng: 40 })
-    ).rejects.toMatchObject({ reason: "coverage_not_accepted" });
+    ).rejects.toBeInstanceOf(FacilityCoverageLossError);
 
     expect(saveLocation).not.toHaveBeenCalled();
     expect(onLocationChanged).not.toHaveBeenCalled();

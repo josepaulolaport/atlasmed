@@ -200,6 +200,12 @@ export class ApproveFieldSuggestionUseCase {
     userId: number;
     scope: ScopeContext;
     resolutionNote?: string;
+    /**
+     * Spec 0009 R5: approving a location change that would strand a rep needs
+     * the reviewer to say so. Without it the approval is refused with the list
+     * of affected assignments, and nothing is written.
+     */
+    acceptCoverageLoss?: boolean;
   }) {
     const suggestion = await this.deps.fieldSuggestionRepository.findById(
       input.suggestionId
@@ -228,10 +234,14 @@ export class ApproveFieldSuggestionUseCase {
         ]);
       }
 
+      // Applied before the suggestion is marked APPROVED: a refused coverage
+      // loss must leave the suggestion PENDING, so the reviewer can come back to
+      // it rather than find it approved with nothing applied.
       const result = await this.deps.applyService.applyFieldChange({
         facilityId: suggestion.facilityId,
         fieldKey: suggestion.fieldKey,
         proposedValue: suggestion.proposedValue,
+        acceptCoverageLoss: input.acceptCoverageLoss,
       });
       geocoded = result.geocoded;
     }

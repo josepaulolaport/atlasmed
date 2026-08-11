@@ -3,10 +3,8 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 import type { FacilityRepository } from "../../../facility/application/interfaces/facility.repository.interface";
-import type {
-  AddressParts,
-  FacilityGeocodingService,
-} from "../../../facility/application/services/facility-geocoding.service";
+import type { AddressParts } from "../../../facility/application/services/facility-geocoding.service";
+import type { FacilityLocationService } from "../../../facility/application/services/facility-location.service";
 import {
   normalizeLegalDocument,
   validateLegalDocument,
@@ -57,12 +55,45 @@ function parseAddress(value: unknown): AddressParts {
   };
 }
 
+/**
+ * A proposed pin, validated before it can ever reach the map. Out-of-range
+ * values are rejected here rather than becoming a point somewhere impossible.
+ */
+function parseCoordinates(value: unknown): { lat: number; lng: number } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ValidationError([
+      { field: "proposedValue", message: "Coordinates must be an object" },
+    ]);
+  }
+
+  const obj = value as Record<string, unknown>;
+  const lat = Number(obj.lat);
+  const lng = Number(obj.lng);
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    throw new ValidationError([
+      { field: "proposedValue", message: "lat must be a number between -90 and 90" },
+    ]);
+  }
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    throw new ValidationError([
+      { field: "proposedValue", message: "lng must be a number between -180 and 180" },
+    ]);
+  }
+
+  return { lat, lng };
+}
+
 export class FieldSuggestionApplyService {
   constructor(
     private readonly deps: {
       facilityRepository: FacilityRepository;
-      facilityGeocodingService: FacilityGeocodingService;
-      onFacilityLocationChanged?: (facilityId: number) => Promise<void>;
+      /**
+       * Spec 0009 R5: the one owner of every location write. It geocodes,
+       * computes the coverage delta, writes, and recomputes membership — none of
+       * which this service should be doing itself.
+       */
+      locationService: FacilityLocationService;
     }
   ) {}
 
@@ -91,6 +122,8 @@ export class FieldSuggestionApplyService {
       }
       case "address":
         return parseAddress(proposedValue);
+      case "coordinates":
+        return parseCoordinates(proposedValue);
     }
   }
 
@@ -98,27 +131,50 @@ export class FieldSuggestionApplyService {
     facilityId: number;
     fieldKey: FieldSuggestionFieldKey;
     proposedValue: unknown;
+    /**
+     * The reviewer has seen which reps the move would strand and accepts it.
+     * Without this a stranding move is refused with the list (R5).
+     */
+    acceptCoverageLoss?: boolean;
   }): Promise<{ geocoded: boolean }> {
     const validated = this.validateProposedValue(input.fieldKey, input.proposedValue);
 
+    // Spec 0009 R5: both location edits go through the choke point. This service
+    // used to geocode and write lat/lng itself via applyApprovedFieldUpdates —
+    // it was the fourth writer of `facilities.location`, and the one that could
+    // move a clinic out of its rep's patch on an approval with nothing checked.
     if (input.fieldKey === "address") {
       const address = validated as AddressParts;
-      const coords = await this.deps.facilityGeocodingService.geocodeAddress(address);
-      if (!coords) {
-        throw new OperationNotAllowedError(
-          "approve_field_suggestion",
-          "Não foi possível geocodificar o endereço sugerido"
-        );
-      }
 
-      await this.deps.facilityRepository.applyApprovedFieldUpdates(input.facilityId, {
-        ...address,
-        lat: coords.lat,
-        lng: coords.lng,
+      await this.deps.locationService.applyLocation({
+        facilityId: input.facilityId,
+        address,
+        acceptCoverageLoss: input.acceptCoverageLoss,
       });
 
-      await this.deps.onFacilityLocationChanged?.(input.facilityId);
+      // The address text itself is still the suggestion's payload; the point is
+      // derived from it by the location service.
+      await this.deps.facilityRepository.applyApprovedFieldUpdates(
+        input.facilityId,
+        address
+      );
+
       return { geocoded: true };
+    }
+
+    if (input.fieldKey === "coordinates") {
+      const { lat, lng } = validated as { lat: number; lng: number };
+
+      // Reverse geocoding inside the service keeps the stored address describing
+      // where the clinic now is, rather than where it used to be (decision 4).
+      await this.deps.locationService.applyLocation({
+        facilityId: input.facilityId,
+        lat,
+        lng,
+        acceptCoverageLoss: input.acceptCoverageLoss,
+      });
+
+      return { geocoded: false };
     }
 
     if (
