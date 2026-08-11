@@ -434,23 +434,28 @@ class _RegistrationDocumentComposeScreenState
     }
   }
 
-  /// Limits for this requirement, fetched once and cached for the screen.
+  /// Limits for this requirement, read from the checklist the screen already has.
+  ///
+  /// These used to be fetched with a POST to `/cadastro/documents`, which is
+  /// get-or-create: reading the limits created a draft, so picking a file that
+  /// preflight then rejected still left an empty document behind. The checklist
+  /// carries them now, so the check costs no request and has no side effect.
   Future<CadastroUploadLimits?> _uploadLimits() async {
     final cached = _limits;
     if (cached != null) return cached;
-    try {
-      final limits = await ref
-          .read(facilityCadastroControllerProvider(widget.facilityId))
-          .loadUploadLimits(widget.requirementId);
-      if (limits != null) _limits = limits;
-      if (limits == null) _warnLimitsUnavailable();
+
+    final limits = _findDocument(
+      ref.read(facilityCadastroProvider(widget.facilityId)).valueOrNull,
+    )?.uploadLimits;
+    if (limits != null) {
+      _limits = limits;
       return limits;
-    } catch (_) {
-      // Never silently skip the check: say the limits are unknown, then let the
-      // upload proceed — the API enforces them regardless.
-      _warnLimitsUnavailable();
-      return null;
     }
+
+    // Never silently skip the check: say the limits are unknown, then let the
+    // upload proceed — the API enforces them regardless.
+    _warnLimitsUnavailable();
+    return null;
   }
 
   void _warnLimitsUnavailable() {

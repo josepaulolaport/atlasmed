@@ -214,6 +214,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
               ? CadastroApprovedSummary.fromJson(approvedRaw)
               : null,
           requiresValidityDate: item['requiresValidityDate'] as bool? ?? false,
+          uploadLimits: CadastroUploadLimits.fromRequirementJson(item),
           validUntil: item['validUntil'] as String?,
           // Derived by the server at read time (ADR 0008 §4) — parsed, never
           // recomputed here.
@@ -595,33 +596,6 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         .map(CadastroRequirementSubmission.fromJson)
         .where((s) => s.documentId > 0)
         .toList(growable: false);
-  }
-
-  /// The upload limits this requirement declares.
-  ///
-  /// They ride on the working-document response, which is the only place the
-  /// API publishes them — the checklist does not carry them. Opening the
-  /// document is idempotent (it returns the existing working row), and the
-  /// upload path opens it again anyway, so asking here costs one round trip on
-  /// the first pick and buys refusing an oversized file before uploading it.
-  Future<CadastroUploadLimits?> loadRequirementUploadLimits({
-    required int requirementId,
-    int? verticalId,
-  }) async {
-    final uri = Uri.parse(
-      '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/cadastro/documents',
-    );
-    final map = await _jsonCall(
-      uri: uri,
-      method: RepositoryHttpMethod.post,
-      body: {
-        'requirementId': requirementId,
-        if (verticalId != null && (verticalId > 0)) 'verticalId': verticalId,
-      },
-    );
-    return CadastroUploadLimits.fromRequirementJson(
-      map['requirement'] as Map<String, dynamic>?,
-    );
   }
 
   /// Sends one requirement for review.

@@ -1,5 +1,6 @@
 // Domain models for establishment detail sections (Spec 0005).
 
+import 'package:atlasmed_mobile_app/features/explore/data/cadastro_upload_limits.dart';
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
@@ -968,6 +969,7 @@ class EstablishmentDocument {
     this.latestSubmittedAt,
     this.currentApproved,
     this.requiresValidityDate = false,
+    this.uploadLimits,
     this.validUntil,
     this.expiry,
     this.files = const [],
@@ -1005,6 +1007,14 @@ class EstablishmentDocument {
   /// at submit exactly where it is true — the API rejects the submit otherwise,
   /// and rejects a date sent where it is false (spec 0011 §3.3).
   final bool requiresValidityDate;
+
+  /// Upload limits for this requirement, straight from the checklist.
+  ///
+  /// They arrive with the checklist the screen already loads, so a file can be
+  /// refused before any request (spec 0011 §7). They used to be reachable only
+  /// by POSTing to `/cadastro/documents`, which meant reading them created a
+  /// draft — a read with a side effect.
+  final CadastroUploadLimits? uploadLimits;
 
   /// `YYYY-MM-DD` already recorded on the working document, if any.
   final String? validUntil;
@@ -1093,6 +1103,7 @@ class EstablishmentDocument {
     DateTime? latestSubmittedAt,
     CadastroApprovedSummary? currentApproved,
     bool? requiresValidityDate,
+    CadastroUploadLimits? uploadLimits,
     String? validUntil,
     CadastroExpiry? expiry,
     List<CadastroDocumentFile>? files,
@@ -1119,6 +1130,7 @@ class EstablishmentDocument {
       latestSubmittedAt: latestSubmittedAt ?? this.latestSubmittedAt,
       currentApproved: currentApproved ?? this.currentApproved,
       requiresValidityDate: requiresValidityDate ?? this.requiresValidityDate,
+      uploadLimits: uploadLimits ?? this.uploadLimits,
       validUntil: validUntil ?? this.validUntil,
       expiry: expiry ?? this.expiry,
       files: files ?? this.files,

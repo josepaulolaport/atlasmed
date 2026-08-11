@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/cadastro_upload_limits.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_upload_normalize.dart';
@@ -124,23 +123,6 @@ class FacilityCadastroController {
     final repo = FacilityCadastroRepository(facilityId);
     try {
       return await repo.listRequirementSubmissions(requirementId);
-    } finally {
-      repo.dispose();
-    }
-  }
-
-  /// Upload limits for one requirement, or null when the API did not publish
-  /// them. Null means "cannot preflight", never "no limit".
-  Future<CadastroUploadLimits?> loadUploadLimits(int requirementId) async {
-    final verticalId = await _ref.read(
-      effectiveFacilityVerticalIdProvider.future,
-    );
-    final repo = FacilityCadastroRepository(facilityId);
-    try {
-      return await repo.loadRequirementUploadLimits(
-        requirementId: requirementId,
-        verticalId: verticalId,
-      );
     } finally {
       repo.dispose();
     }
