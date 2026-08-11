@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import type { CadastroDocumentFileRole } from "@atlasmed/database";
@@ -8,7 +8,6 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 import { storageService } from "../../../../infrastructure/storage/storage.service";
-import { startCadastroFileUploadedWorkflow } from "../../../../infrastructure/temporal/temporal.client";
 import type { ConformityRepository } from "../interfaces/conformity.repository.interface";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import type {
@@ -21,54 +20,6 @@ import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils
 
 const DEFAULT_PART_SIZE = 10 * 1024 * 1024;
 const UPLOAD_TTL_MS = 6 * 60 * 60 * 1000;
-
-function detectCadastroMime(bytes: Uint8Array): string | null {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return "image/jpeg";
-  }
-  if (
-    bytes.length >= 8 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) {
-    return "image/png";
-  }
-  if (
-    bytes.length >= 12 &&
-    bytes[0] === 0x52 &&
-    bytes[1] === 0x49 &&
-    bytes[2] === 0x46 &&
-    bytes[3] === 0x46 &&
-    bytes[8] === 0x57 &&
-    bytes[9] === 0x45 &&
-    bytes[10] === 0x42 &&
-    bytes[11] === 0x50
-  ) {
-    return "image/webp";
-  }
-  if (
-    bytes.length >= 5 &&
-    bytes[0] === 0x25 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x44 &&
-    bytes[3] === 0x46
-  ) {
-    return "application/pdf";
-  }
-  return null;
-}
-
-function countPdfPages(bytes: Uint8Array): number | null {
-  try {
-    const text = Buffer.from(bytes).toString("latin1");
-    const matches = text.match(/\/Type\s*\/Page\b/g);
-    return matches ? matches.length : null;
-  } catch {
-    return null;
-  }
-}
 
 async function markDocumentReadyIfAllFilesReady(
   repo: CadastroSubmissionRepository,
@@ -91,12 +42,29 @@ async function markDocumentReadyIfAllFilesReady(
   }
 }
 
-const INCOMPLETE_UPLOAD_STATUSES = new Set(["PENDING_UPLOAD", "UPLOADING"]);
+/**
+ * Every non-terminal file-asset status (D-14).
+ *
+ * READY and FAILED are the terminal pair; everything else means an attempt that
+ * stopped somewhere in the middle. This set used to be PENDING_UPLOAD and
+ * UPLOADING only, so a process that died between the UPLOADED write and the
+ * verification that follows it stranded the file in a state no sweep and no UI
+ * could clear. The comment this replaces recorded that the same class of bug had
+ * already reached production once and that the fix stopped one status short —
+ * enumerate the terminal states instead, so a new status is swept by default
+ * rather than forgotten by default.
+ */
+const TERMINAL_UPLOAD_STATUSES = new Set(["READY", "FAILED"]);
 
 /**
- * Drop abandoned initiate→PUT attempts that never finished.
+ * Drop abandoned upload attempts that never reached a terminal state.
  * Those ghosts block submit ("Aguarde o processamento…") even when later
  * uploads succeeded (e.g. after a storage outage).
+ *
+ * Verification is synchronous now (ADR 0008), so UPLOADED is transient inside a
+ * single `/uploads/complete` request: a file still sitting in it by submit time
+ * is one whose request died between the two writes, which is the same kind of
+ * ghost as a PUT that never happened.
  */
 async function pruneIncompleteDocumentUploads(
   repo: CadastroSubmissionRepository,
@@ -105,62 +73,59 @@ async function pruneIncompleteDocumentUploads(
   const files = await repo.listDocumentFiles(documentId);
   for (const file of files) {
     const status = file.fileAsset?.status;
-    if (!status || !INCOMPLETE_UPLOAD_STATUSES.has(status)) continue;
+    if (status && TERMINAL_UPLOAD_STATUSES.has(status)) continue;
     await repo.deleteDocumentFileByFileAssetId(file.fileAssetId);
   }
 }
 
-/** Validate uploaded bytes and mark the file READY (or FAILED). */
-async function processUploadedCadastroFile(input: {
+/**
+ * Ask the store whether the upload landed, and mark the file READY or FAILED
+ * from its answer. The store is the authority; the client only triggers the
+ * question (ADR 0008).
+ *
+ * What this replaces: a full byte download to hash, sniff and then re-upload
+ * two byte-identical copies under `/thumb` and `/preview` keys — all on the
+ * request thread. No client ever asked for those variants, so it cost three
+ * times the storage and the rep's latency for nothing.
+ *
+ * What is deliberately *not* checked any more:
+ *
+ * - **The checksum.** It was compared against `input.checksum ?? asset.sha256`,
+ *   both of which the client supplied. Hashing bytes to confirm they match the
+ *   hash the same client sent proves the transfer was faithful, not that the
+ *   file is what it claims.
+ * - **The magic number.** The presigned PUT pins Content-Type, so a file whose
+ *   bytes disagree with its declared type is still served as the declared type,
+ *   which `allowedMimeTypes` already restricted to images and PDFs at initiate.
+ *   The cost of dropping the sniff is that a corrupt file is caught by the
+ *   reviewer instead of at upload; the benefit is that no byte crosses the API.
+ *
+ * The byte count is kept, and is the one claim here the store can actually
+ * contradict: it is measured server-side and catches a truncated or swapped
+ * object, including one that would breach the size limit checked at initiate.
+ */
+async function verifyUploadedCadastroFile(input: {
   repo: CadastroSubmissionRepository;
   asset: FileAssetRecord;
-  checksum?: string;
 }): Promise<{ status: "READY" | "FAILED"; errorMessage?: string }> {
   const { repo, asset } = input;
   try {
-    const bytes = await storageService.download(asset.objectKey);
-    if (bytes.length === 0) {
-      throw new Error("Object empty or missing");
+    const head = await storageService.headObject(asset.objectKey);
+    if (!head.exists) {
+      throw new Error("Objeto não encontrado no storage");
     }
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const expected = input.checksum ?? asset.sha256;
-    if (expected && expected !== sha256) {
-      throw new Error("Checksum mismatch");
-    }
-
-    const detected = detectCadastroMime(bytes);
-    if (!detected) {
-      throw new Error("Unsupported or unrecognized file type");
-    }
-    const declared = asset.declaredMimeType.toLowerCase();
-    const declaredNorm = declared === "image/jpg" ? "image/jpeg" : declared;
-    // Allow image/* family mismatch after client re-encode (e.g. HEIC→PNG).
-    const bothImages =
-      declaredNorm.startsWith("image/") && detected.startsWith("image/");
-    if (detected !== declaredNorm && !bothImages) {
-      throw new Error(`MIME mismatch: declared ${declared}, detected ${detected}`);
-    }
-
-    const pageCount =
-      detected === "application/pdf" ? (countPdfPages(bytes) ?? 1) : 1;
-
-    let previewObjectKey: string | null = null;
-    let thumbObjectKey: string | null = null;
-    if (detected.startsWith("image/")) {
-      previewObjectKey = asset.objectKey.replace(/\/original$/, "/preview");
-      thumbObjectKey = asset.objectKey.replace(/\/original$/, "/thumb");
-      await storageService.upload(previewObjectKey, bytes, detected);
-      await storageService.upload(thumbObjectKey, bytes, detected);
+    if (
+      typeof head.contentLength === "number" &&
+      head.contentLength !== asset.sizeBytes
+    ) {
+      throw new Error(
+        `Tamanho divergente: ${asset.sizeBytes} bytes declarados, ${head.contentLength} armazenados`
+      );
     }
 
     await repo.updateFileAsset({
       id: asset.id,
       status: "READY",
-      sha256,
-      detectedMimeType: detected,
-      pageCount,
-      previewObjectKey,
-      thumbObjectKey,
       processedAt: new Date(),
       errorCode: null,
       errorMessage: null,
@@ -172,7 +137,7 @@ async function processUploadedCadastroFile(input: {
     await repo.updateFileAsset({
       id: asset.id,
       status: "FAILED",
-      errorCode: "PROCESSING_FAILED",
+      errorCode: "VERIFICATION_FAILED",
       errorMessage: message,
       processedAt: new Date(),
     });
@@ -602,13 +567,6 @@ export class CompleteCadastroFileUploadUseCase {
         status: "COMPLETED",
         completedAt: new Date(),
       });
-    } else {
-      const head = await storageService.headObject(asset.objectKey);
-      if (!head.exists) {
-        throw new ValidationError([
-          { field: "fileId", message: "Upload não encontrado no storage" },
-        ]);
-      }
     }
 
     const uploaded = await this.deps.cadastroRepository.updateFileAsset({
@@ -620,36 +578,19 @@ export class CompleteCadastroFileUploadUseCase {
       errorMessage: null,
     });
 
-    await this.deps.cadastroRepository.updateFileAsset({
-      id: asset.id,
-      status: "PROCESSING",
-    });
-
-    // Process inline so READY does not depend on a running Temporal worker.
-    // Temporal is still started best-effort for audit / eventual worker path.
-    const processed = await processUploadedCadastroFile({
+    // Both branches verify against the store. The multipart branch used to skip
+    // the check entirely: a successful CompleteMultipartUpload says the parts
+    // were assembled, not that the result is the object the client promised, so
+    // it is exactly the branch where an assembled-but-wrong size can appear.
+    const verified = await verifyUploadedCadastroFile({
       repo: this.deps.cadastroRepository,
       asset: uploaded,
-      checksum: input.checksum,
     });
-
-    let workflowId: string | null = null;
-    try {
-      const started = await startCadastroFileUploadedWorkflow({
-        fileAssetId: asset.id,
-        bucket: asset.bucket,
-        objectKey: asset.objectKey,
-      });
-      workflowId = started.workflowId;
-    } catch {
-      // Worker optional when inline processing already finished.
-    }
 
     return {
       fileId: asset.id,
-      status: processed.status,
-      workflowId,
-      errorMessage: processed.errorMessage,
+      status: verified.status,
+      errorMessage: verified.errorMessage,
     };
   }
 }

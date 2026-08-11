@@ -30,11 +30,9 @@ import {
 } from "./application/use-cases/conformity.use-cases";
 import {
   ApproveFacilityCadastroRecordUseCase,
-  DownloadFacilityCadastroFileUseCase,
   GetFacilityCadastroChecklistUseCase,
   ListCadastroSubmissionsUseCase,
   RejectFacilityCadastroRecordUseCase,
-  SubmitFacilityCadastroDocumentUseCase,
   UpdateFacilityBillingEmailUseCase,
 } from "./application/use-cases/facility-cadastro.use-cases";
 import {
@@ -97,7 +95,6 @@ const facilityCadastroCompletionService = new FacilityCadastroCompletionService(
 const facilityCadastroDeps = {
   facilityRepository: facilityRepositories.facility,
   conformityRepository: facilityRepositories.conformity,
-  storage: facilityPhotoStorage,
   completionService: facilityCadastroCompletionService,
   cadastroRepository: facilityRepositories.cadastroSubmission,
 };
@@ -297,13 +294,6 @@ export const facilityUseCases = {
     new GetFacilityCadastroChecklistUseCase(facilityCadastroDeps),
   updateFacilityBillingEmail: () =>
     new UpdateFacilityBillingEmailUseCase(facilityCadastroDeps),
-  submitFacilityCadastroDocument: () =>
-    new SubmitFacilityCadastroDocumentUseCase(facilityCadastroDeps),
-  downloadFacilityCadastroFile: () =>
-    new DownloadFacilityCadastroFileUseCase({
-      conformityRepository: facilityRepositories.conformity,
-      storage: facilityPhotoStorage,
-    }),
   approveFacilityCadastroRecord: () =>
     new ApproveFacilityCadastroRecordUseCase(facilityCadastroDeps),
   rejectFacilityCadastroRecord: () =>
