@@ -283,6 +283,16 @@ export const personFacilityOccupations = pgTable(
       t.personFacilityId,
       t.occupationId
     ),
+    /**
+     * At most one primary occupation per association, matching the identical
+     * guards already on `person_professional_registrations` and
+     * `person_healthcare_profile_specialties`. Without it this was the only one of
+     * the three `is_primary` groups where the "exactly one primary" rule lived
+     * solely in application code.
+     */
+    uniqueIndex("person_facility_occupations_primary_uidx")
+      .on(t.personFacilityId)
+      .where(sql`${t.isPrimary}`),
     index("person_facility_occupations_person_facility_id_idx").on(t.personFacilityId),
     index("person_facility_occupations_occupation_id_idx").on(t.occupationId),
   ]
