@@ -220,9 +220,14 @@ void main() {
                 size: Size(320, 800),
                 textScaler: TextScaler.linear(1.4),
               ),
+              // Scrollable, because that is how the section is mounted: a
+              // SliverToBoxAdapter child, never height-bounded. Without this the
+              // test asserts a vertical limit the real screen does not impose.
               child: SizedBox(
                 width: 320,
-                child: ClinicPotentialSection(facilityId: 1, canEdit: true),
+                child: SingleChildScrollView(
+                  child: ClinicPotentialSection(facilityId: 1, canEdit: true),
+                ),
               ),
             ),
           ),

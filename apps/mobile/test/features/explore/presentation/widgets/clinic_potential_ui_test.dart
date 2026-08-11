@@ -26,17 +26,20 @@ void main() {
     home: Scaffold(body: SingleChildScrollView(child: child)),
   );
 
-  FacilityPotentialItem item({List<CompetitorUsage> competitors = const []}) =>
-      FacilityPotentialItem(
-        definitionId: 1,
-        key: 'ampolas_mes',
-        label: 'Ampolas por mês',
-        atlasmedMonthlyAvgQty: 30,
-        competitorMonthlyQty: 10,
-        totalMarketQty: 40,
-        share: 0.75,
-        competitors: competitors,
-      );
+  FacilityPotentialItem item({
+    List<CompetitorUsage> competitors = const [],
+    List<OurProductUsage> ourProducts = const [],
+  }) => FacilityPotentialItem(
+    definitionId: 1,
+    key: 'ampolas_mes',
+    label: 'Ampolas por mês',
+    atlasmedMonthlyAvgQty: 30,
+    competitorMonthlyQty: 10,
+    totalMarketQty: 40,
+    share: 0.75,
+    competitors: competitors,
+    ourProducts: ourProducts,
+  );
 
   CompetitorUsage usage(String name, double quantity) => CompetitorUsage(
     productId: name.hashCode,
@@ -147,10 +150,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // "Nothing recorded" and "failed to load" must not look identical.
-    expect(
-      find.text('Nenhuma outra marca registrada neste mês.'),
-      findsOneWidget,
-    );
+    expect(find.text('Nenhuma outra marca registrada.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -208,5 +208,134 @@ void main() {
     const section = ClinicPotentialSection(facilityId: 1, canEdit: false);
     expect(section.canEdit, isFalse);
     expect(section.facilityId, 1);
+  });
+
+  group('our own products', () {
+    OurProductUsage ours(String name, double qty) => OurProductUsage(
+      productId: name.hashCode,
+      productName: name,
+      metricQuantity: qty,
+    );
+
+    testWidgets('are listed with their monthly average', (tester) async {
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        host(
+          PotentialRowHarness(
+            item: item(ourProducts: [ours('Nosso A', 18), ours('Nosso B', 12)]),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nosso produto'), findsOneWidget);
+      expect(find.text('Nosso A'), findsOneWidget);
+      expect(find.text('Nosso B'), findsOneWidget);
+      expect(find.text('18'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('offer nothing to tap — they come from orders', (tester) async {
+      // The competitor rows are editable and ours are not. A row that looks
+      // interactive and does nothing is worse than one that looks inert.
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        host(
+          PotentialRowHarness(item: item(ourProducts: [ours('Nosso A', 18)])),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final row = find.ancestor(
+        of: find.text('Nosso A'),
+        matching: find.byType(InkWell),
+      );
+      expect(row, findsNothing);
+    });
+
+    testWidgets('say so when this clinic bought nothing of ours', (
+      tester,
+    ) async {
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(host(PotentialRowHarness(item: item())));
+      await tester.pumpAndSettle();
+
+      // "Nothing sold" and "not loaded" must not look the same.
+      expect(
+        find.text('Nenhum produto nosso vendido neste período.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('competitor quantities read in metric units', (tester) async {
+      // 3 units of a product worth 20 metric units each is 60, and 60 is what
+      // the total above says. The row used to show 3.
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        host(
+          PotentialRowHarness(
+            item: item(
+              competitors: [
+                CompetitorUsage(
+                  productId: 1,
+                  productName: 'Marca X',
+                  quantity: 3,
+                  metricQuantity: 60,
+                  updatedAt: DateTime.utc(2026, 3, 10),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('60'), findsOneWidget);
+      expect(find.text('3'), findsNothing);
+    });
+
+    testWidgets('each list says what period it covers', (tester) async {
+      // Ours is a 90-day average, theirs is what stands recorded. Two lists of
+      // the same shape must not imply the same period.
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        host(
+          PotentialRowHarness(
+            item: item(
+              ourProducts: [ours('Nosso A', 18)],
+              competitors: [
+                CompetitorUsage(
+                  productId: 1,
+                  productName: 'Marca X',
+                  quantity: 3,
+                  metricQuantity: 60,
+                  updatedAt: DateTime.utc(2026, 3, 10),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Média/mês'), findsOneWidget);
+      expect(find.text('Registrado/mês'), findsOneWidget);
+      expect(find.text('(média últimos 3 meses)'), findsOneWidget);
+    });
   });
 }

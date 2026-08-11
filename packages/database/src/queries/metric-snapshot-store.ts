@@ -252,6 +252,141 @@ export async function listAllProfileIds(
 }
 
 /**
+ * Our own quantity for a metric, broken down by product, over a date range.
+ *
+ * The same joins and predicates as `sumOurs` — ADR 0003's eligible order types
+ * and statuses, the `metric_units` multiplication, and the per-linha link join —
+ * grouped by product instead of by month. `sumOurs` answers "how much of this
+ * metric did we sell"; this answers "which of our products was that".
+ *
+ * Deliberately a sibling rather than a parameter on `sumOurs`: that one feeds
+ * the snapshot sweep, which stores month facts, and a shape that varies by
+ * argument is how a caller ends up writing the wrong rows.
+ */
+export async function sumOursByProduct(
+  database: AnyDatabase,
+  input: {
+    facilityId: number;
+    verticalId: number;
+    definitionIds: number[];
+    rangeStart: Date;
+    rangeEnd: Date;
+  },
+): Promise<
+  Array<{ definitionId: number; productId: number; productName: string; totalQty: number }>
+> {
+  if (input.definitionIds.length === 0) return [];
+  const rows = await database
+    .select({
+      definitionId: productPotentialLinks.definitionId,
+      // products.id, not orderItems.productId: the column is still nullable
+      // (spec 0013 §5 makes it NOT NULL), and the inner join already excludes
+      // the null rows anyway.
+      productId: products.id,
+      productName: products.name,
+      totalQty: sql<string>`coalesce(sum(${orderItems.quantity} * ${products.metricUnits}), 0)`,
+    })
+    .from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .innerJoin(products, eq(products.id, orderItems.productId))
+    .innerJoin(
+      facilityVerticalProfiles,
+      eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
+    )
+    .innerJoin(
+      productPotentialLinks,
+      and(
+        eq(productPotentialLinks.productId, orderItems.productId),
+        eq(productPotentialLinks.verticalId, facilityVerticalProfiles.verticalId),
+      ),
+    )
+    .where(
+      and(
+        eq(facilityVerticalProfiles.facilityId, input.facilityId),
+        eq(facilityVerticalProfiles.verticalId, input.verticalId),
+        inArray(orders.type, ["SALE", "CONSIGNMENT"]),
+        inArray(orders.status, ["APPROVED", "INVOICED"]),
+        gte(orders.orderedAt, input.rangeStart),
+        lt(orders.orderedAt, input.rangeEnd),
+        inArray(productPotentialLinks.definitionId, input.definitionIds),
+      ),
+    )
+    .groupBy(productPotentialLinks.definitionId, products.id, products.name);
+
+  return rows.map((row) => ({
+    definitionId: row.definitionId,
+    productId: row.productId,
+    productName: row.productName,
+    totalQty: Number(row.totalQty),
+  }));
+}
+
+/**
+ * The competitor quantity standing for each product of a metric — the newest
+ * row per (definition, product), whatever month it was recorded in.
+ *
+ * The rep answers "quantas por mês", so a recorded figure *is* a monthly rate
+ * and stays true until they replace it. Averaging the last three months divided
+ * a single observation by three and called the two silent months zeros, which
+ * is the "confident, wrong number" spec 0013 §4.4 refuses for exactly this
+ * operand. Months are still stored — they are the history the snapshots and the
+ * §4.5 trend are built from — but the clinic screen reads the standing figure.
+ *
+ * `DISTINCT ON` keeps this one query rather than a fetch-then-reduce; ordering
+ * by month then updatedAt breaks the tie when a rep corrects a month twice.
+ */
+export async function latestTheirsByProduct(
+  database: AnyDatabase,
+  input: { profileId: number; definitionIds: number[] },
+): Promise<
+  Array<{
+    definitionId: number;
+    productId: number;
+    productName: string;
+    quantity: number;
+    metricQuantity: number;
+    updatedAt: Date;
+  }>
+> {
+  if (input.definitionIds.length === 0) return [];
+  const rows = (await database.execute(sql`
+    SELECT DISTINCT ON (u.definition_id, u.product_id)
+      u.definition_id   AS definition_id,
+      u.product_id      AS product_id,
+      p.name            AS product_name,
+      u.quantity        AS quantity,
+      p.metric_units    AS metric_units,
+      u.updated_at      AS updated_at
+    FROM facility_product_usage u
+    JOIN products p ON p.id = u.product_id
+    WHERE u.facility_vertical_profile_id = ${input.profileId}
+      AND u.definition_id IN (${sql.join(
+        input.definitionIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})
+    ORDER BY u.definition_id, u.product_id, u.month DESC, u.updated_at DESC
+  `)) as Array<{
+    definition_id: number | string;
+    product_id: number | string;
+    product_name: string;
+    quantity: string;
+    metric_units: string;
+    updated_at: Date | string;
+  }>;
+
+  return rows.map((row) => ({
+    definitionId: Number(row.definition_id),
+    productId: Number(row.product_id),
+    productName: row.product_name,
+    quantity: Number(row.quantity),
+    // Symmetric with our own side: product units are stored, the packaging
+    // factor is applied at read time.
+    metricQuantity: Number(row.quantity) * Number(row.metric_units),
+    updatedAt: row.updated_at instanceof Date ? row.updated_at : new Date(row.updated_at),
+  }));
+}
+
+/**
  * The calendar month an order belongs to, in São Paulo.
  *
  * `ordered_at` is `timestamp without time zone` holding UTC, so it is

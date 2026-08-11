@@ -6,8 +6,10 @@ export * from "./schema/ops/index";
 export * from "./types/geometry";
 export {
   createMetricSnapshotStore,
+  latestTheirsByProduct,
   listAllProfileIds,
   listProfilesWithChangedInputs,
+  sumOursByProduct,
 } from "./queries/metric-snapshot-store";
 
 // Explicit enum value types for backward-compat

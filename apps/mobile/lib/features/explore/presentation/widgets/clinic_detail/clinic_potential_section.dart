@@ -215,6 +215,9 @@ class _PotentialRow extends StatelessWidget {
                   icon: Icons.apartment_rounded,
                   label: 'AtlasMed/mês',
                   value: _fmtQty(item.atlasmedMonthlyAvgQty),
+                  // Ours is a 90-day window normalised to a month, so the tile
+                  // is an average and not "what we sold last month".
+                  caption: '(média últimos 3 meses)',
                 ),
               ),
               const SizedBox(width: 8),
@@ -245,6 +248,7 @@ class _PotentialRow extends StatelessWidget {
             ],
           ),
         ),
+        _OurProductsTable(products: item.ourProducts),
         _CompetitorTable(competitors: item.competitors, onEdit: onEdit),
       ],
     );
@@ -255,6 +259,124 @@ class _PotentialRow extends StatelessWidget {
 ///
 /// The server has always sent this list; nothing rendered it, so the competitor
 /// figure was a lump sum the rep could not check or correct.
+/// Which of our own products this clinic buys, and how much of each.
+///
+/// Read-only by nature: it comes from orders, so there is nothing to add, edit
+/// or remove and no row is a tap target. Same shape as the competitor table
+/// below it so the two read as one comparison, and the same units, so they can
+/// be compared at all.
+class _OurProductsTable extends StatelessWidget {
+  const _OurProductsTable({required this.products});
+
+  final List<OurProductUsage> products;
+
+  @override
+  Widget build(BuildContext context) {
+    if (products.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 14),
+        child: Text(
+          'Nenhum produto nosso vendido neste período.',
+          style: TextStyle(fontSize: 13, height: 1.3, color: AppColors.gray500),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _TableHeader(
+            left: 'Nosso produto',
+            // Says what the column is, because it is not the same period as the
+            // competitor column below.
+            right: 'Média/mês',
+          ),
+          const SizedBox(height: 8),
+          for (final product in products) ...[
+            _ProductQuantityRow(
+              name: product.productName,
+              quantity: product.metricQuantity,
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A product name and its quantity, bordered, non-interactive.
+class _ProductQuantityRow extends StatelessWidget {
+  const _ProductQuantityRow({required this.name, required this.quantity});
+
+  final String name;
+  final double quantity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.gray200),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          const _IconBadge(icon: Icons.medication_liquid_outlined, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.3,
+                fontWeight: FontWeight.w700,
+                color: AppColors.navyDeep,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            _fmtQty(quantity),
+            style: const TextStyle(
+              fontSize: 14,
+              height: 1.3,
+              fontWeight: FontWeight.w700,
+              color: AppColors.navyDeep,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The two-column caption above a product list.
+class _TableHeader extends StatelessWidget {
+  const _TableHeader({required this.left, required this.right});
+
+  final String left;
+  final String right;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      color: AppColors.gray500,
+      letterSpacing: 0.2,
+    );
+    return Row(
+      children: [
+        Expanded(child: Text(left, style: style)),
+        Text(right, style: style),
+      ],
+    );
+  }
+}
+
 class _CompetitorTable extends StatelessWidget {
   const _CompetitorTable({required this.competitors, this.onEdit});
 
@@ -270,7 +392,7 @@ class _CompetitorTable extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Nenhuma outra marca registrada neste mês.',
+              'Nenhuma outra marca registrada.',
               style: TextStyle(
                 fontSize: 13,
                 height: 1.3,
@@ -291,29 +413,12 @@ class _CompetitorTable extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Produto de outra marca',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.gray500,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-              Text(
-                'Qtd/mês',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.gray500,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
+          // "Registrado" not "/mês": this is what stands recorded for each
+          // product, whereas ours above is a 90-day average. Two lists that look
+          // alike must say what period each covers.
+          const _TableHeader(
+            left: 'Produto de outra marca',
+            right: 'Registrado/mês',
           ),
           const SizedBox(height: 8),
           for (final competitor in competitors) ...[
@@ -370,10 +475,11 @@ class _CompetitorRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                // The rep's own number, in the units they typed it in — the
-                // metric-unit conversion belongs to the totals above, not
-                // here, or they cannot recognise what they entered.
-                _fmtQty(competitor.quantity),
+                // Metric units, matching the total above and our own table.
+                // These rows previously showed the rep's typed number, which
+                // meant two columns of the same name held two different units
+                // and neither list added up to its total.
+                _fmtQty(competitor.metricQuantity),
                 style: const TextStyle(
                   fontSize: 14,
                   height: 1.3,
@@ -448,11 +554,15 @@ class _MetricTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.caption,
   });
 
   final IconData icon;
   final String label;
   final String value;
+
+  /// Says what the number is, where the label alone would leave it ambiguous.
+  final String? caption;
 
   @override
   Widget build(BuildContext context) {
@@ -493,6 +603,17 @@ class _MetricTile extends StatelessWidget {
               color: AppColors.navyDeep,
             ),
           ),
+          if (caption != null)
+            Text(
+              caption!,
+              style: const TextStyle(
+                fontSize: 10,
+                height: 1.2,
+                fontWeight: FontWeight.w500,
+                color: AppColors.gray400,
+              ),
+              maxLines: 2,
+            ),
         ],
       ),
     );

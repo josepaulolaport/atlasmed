@@ -225,6 +225,37 @@ ours_monthly = (Σ ours[M-N+1 … M]) ÷ N
 > It also removes a live distortion: dividing by a constant 3 understated any clinic with fewer
 > than three months of orders by up to 3×.
 
+> **Amendment 2026-08-11 — a competitor figure is a standing rate, not a month to average.**
+> The distortion named directly above was fixed for `ours` and left in place for `theirs`:
+> the read computed `theirs = (Σ theirs[M-N+1 … M]) ÷ N`, so a rep who recorded one competitor at
+> 100/mês saw 33. The two months nobody had surveyed were counted as hard zeros — precisely the
+> "confident, wrong number" §4.4 refuses when it forbids backfilling months with no usage rows, and
+> precisely the distinction the read already honoured for the *all*-empty case by nulling the share.
+>
+> The rep answers **quantas por mês**, so what they enter *is* the monthly rate. It holds until they
+> replace it. The clinic screen therefore reads the **newest row per (definition, product)** and
+> sums across products:
+>
+> ```
+> theirs_now = Σ over products of latest(facility_product_usage.quantity) × products.metric_units
+> ```
+>
+> Same product recorded again → replaces. Different product → adds. A figure recorded long ago still
+> counts, per §6 — `updated_at` remains the only signal that it is old.
+>
+> **`facility_product_usage` is unchanged**, month key and all. The month rows are still the history
+> the snapshots and the §4.5 trend are built from; `theirs[M]` above still describes a *stored month*.
+> What changed is the read behind the clinic screen, which asks a different question: not "what was
+> true in each of the last three months" but "what is true now".
+
+> **Amendment 2026-08-11 — our own quantity is shown per product.** §6 gave the rep our total and
+> the competitor products behind theirs, with no way to see which of our products made up our own
+> number. The read now also returns `ourProducts`: the same 90-day window, grouped by product and
+> normalised to a month, largest first, listing only products actually sold in the window.
+>
+> It is derived from orders, so it is read-only — there is nothing to add, edit or remove. With the
+> competitor change above, both lists now sum to the total above them; neither did before.
+
 - **N configurable, default 3**, a single global constant (`MONTHS_IN_WINDOW`) — not
   per-definition, not database-backed. It now lives on the **read** path, where a presentation
   constant belongs. Revisit only when two metrics genuinely need different windows.
@@ -388,8 +419,9 @@ Section renamed **"Potencial de mercado"** (from `'Potencial & share'`,
 old string and will fail.
 
 **Rep, on the clinic screen:** sees each metric for the active linha with our quantity (read-only,
-from orders), the competitor products already recorded with their quantities, the market total and
-our share. Adds a competitor product — chosen from those equivalent to our products in that metric
+from orders) **broken down by product**, the competitor products already recorded with their
+quantities, the market total and our share. Both product lists are in metric units and each states
+the period it covers — ours the 90-day average, theirs what stands recorded. Adds a competitor product — chosen from those equivalent to our products in that metric
 — and enters a quantity. Edits or removes quantities.
 
 Each entered quantity shows **"atualizado em <data>"**. Stale figures still count as current

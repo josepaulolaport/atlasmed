@@ -91,14 +91,29 @@ export class ListFacilityPotentialsUseCase {
       verticalId: input.verticalId,
     });
 
-    const [usage, qtySums] = await Promise.all([
+    const [usage, qtySums, ourProductSums] = await Promise.all([
+      // The standing figure per competitor product, newest row wins. Not the
+      // month series: the rep answers "quantas por mês", so what they entered is
+      // already a rate and holds until they replace it.
       profileId == null
         ? Promise.resolve([])
-        : this.deps.potentialRepository.listUsage({ profileId, definitionIds, months }),
+        : this.deps.potentialRepository.listLatestUsageByProduct({
+            profileId,
+            definitionIds,
+          }),
       // Live from orders, not from snapshots: snapshots are per calendar month
       // and a day window cannot be derived from month facts. They keep serving
       // history and the aggregate views (spec 0013 §4.5).
       this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
+        facilityId: input.facilityId,
+        verticalId: input.verticalId,
+        definitionIds,
+        rangeStart: window.start,
+        rangeEnd: window.end,
+      }),
+      // The same window, broken down by product, so the rows on screen explain
+      // the total above them instead of merely sitting near it.
+      this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndProduct({
         facilityId: input.facilityId,
         verticalId: input.verticalId,
         definitionIds,
@@ -119,34 +134,48 @@ export class ListFacilityPotentialsUseCase {
       usageByDef.set(row.definitionId, list);
     }
 
+    const ourProductsByDef = new Map<number, typeof ourProductSums>();
+    for (const row of ourProductSums) {
+      const list = ourProductsByDef.get(row.definitionId) ?? [];
+      list.push(row);
+      ourProductsByDef.set(row.definitionId, list);
+    }
+
     return {
       verticalId: input.verticalId,
       items: definitions.map((def) => {
-        const monthlyRows = usageByDef.get(def.id) ?? [];
+        const standingRows = usageByDef.get(def.id) ?? [];
 
         // Ours: a quantity observed over the window, normalised to a month.
         const ours = monthlyRateFromDays(oursByDef.get(def.id) ?? 0);
-        // Theirs: the rep already answers "quantas por mês", so these are rates
-        // and are averaged, never day-normalised. Normalising them would divide
-        // a rate by time and produce nonsense.
-        const theirs = averageMonthly(
-          monthlyRows.map((row) => row.metricQuantity),
-          MONTHS_IN_WINDOW,
-        );
+        // Theirs: the sum of what stands recorded for each competitor product.
+        //
+        // Not an average over the window. A rep who records one product at
+        // 100/mês means 100/mês; dividing by three months called the two they
+        // never surveyed hard zeros and showed 33 — the "confident, wrong
+        // number" §4.4 refuses for this very operand. Different products add;
+        // the same product replaces, which is what the newest-row read gives.
+        const theirs = standingRows.reduce((sum, row) => sum + row.metricQuantity, 0);
         // A share needs a denominator we actually know. With no competitor
         // observation at all the market is *unknown*, not "all ours" — reporting
         // 100% would assert we own it on zero evidence. This is the same
         // null-versus-zero rule spec 0013 §4.3 applies to "no sales", carried to
         // the other operand: `theirs = 0` because the rep recorded a zero is a
         // fact; `theirs = 0` because nobody has asked is not.
-        const hasCompetitorObservation = monthlyRows.length > 0;
+        const hasCompetitorObservation = standingRows.length > 0;
         const { totalQty, share: mathematicalShare } = deriveShare(ours, theirs);
         const share = hasCompetitorObservation ? mathematicalShare : null;
 
-        // The list names who supplies this clinic *now*; the averages above are
-        // the window. Showing three months of rows would double-count a product
-        // the rep recorded in each of them.
-        const currentMonthRows = monthlyRows.filter((row) => row.month === currentMonth);
+        // Our own side of the same window, largest first. These sum to
+        // `atlasmedMonthlyAvgQty` above, as the competitor rows now sum to
+        // `competitorMonthlyQty`.
+        const ourProducts = (ourProductsByDef.get(def.id) ?? [])
+          .map((row) => ({
+            productId: row.productId,
+            productName: row.productName,
+            metricQuantity: monthlyRateFromDays(row.totalQty),
+          }))
+          .sort((a, b) => b.metricQuantity - a.metricQuantity);
 
         return {
           definitionId: def.id,
@@ -154,7 +183,10 @@ export class ListFacilityPotentialsUseCase {
           label: def.label,
           /** Ours, from orders — monthly average over the window. */
           atlasmedMonthlyAvgQty: ours,
-          /** Theirs, as recorded by the rep — monthly average over the window. */
+          /**
+           * Theirs, as recorded by the rep — the sum of the figure standing for
+           * each competitor product, not an average over months.
+           */
           competitorMonthlyQty: theirs,
           /** The observed market: ours + theirs. */
           totalMarketQty: totalQty,
@@ -171,15 +203,25 @@ export class ListFacilityPotentialsUseCase {
            * nothing into.
            */
           share,
-          /** The month the competitor rows below belong to. */
+          /**
+           * The current month, still sent for the write path: an edit records
+           * against a month even though the read no longer averages them.
+           */
           month: currentMonth,
-          competitors: currentMonthRows.map((c) => ({
+          /**
+           * What stands recorded per competitor product. These sum to
+           * `competitorMonthlyQty`; `updatedAt` is the only signal a figure is
+           * old, since a stale one still counts (spec 0013 §6).
+           */
+          competitors: standingRows.map((c) => ({
             productId: c.productId,
             productName: c.productName,
             quantity: c.quantity,
             metricQuantity: c.metricQuantity,
             updatedAt: c.updatedAt.toISOString(),
           })),
+          /** Ours, per product, over the same window as `atlasmedMonthlyAvgQty`. */
+          ourProducts,
         };
       }),
     };

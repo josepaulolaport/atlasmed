@@ -539,8 +539,12 @@ describe.skipIf(!dbUp)("share only exists when the market is known (database)", 
         scope: { isGlobal: true, assignedVerticalIds: [scenario.verticalId] } as never,
       });
 
-      // 90 units over 90 days = 30/month ours; 60/3 = 20/month theirs.
-      expect(result.items[0]?.share).toBeCloseTo(30 / 50, 4);
+      // 90 units over 90 days = 30/month ours. Theirs is 60: the rep answers
+      // "quantas por mês", so the figure they recorded is the monthly rate and
+      // is taken as it stands. It used to be divided by the three-month window
+      // — 20/month — which called the two months nobody surveyed hard zeros.
+      expect(result.items[0]?.competitorMonthlyQty).toBeCloseTo(60, 4);
+      expect(result.items[0]?.share).toBeCloseTo(30 / 90, 4);
     });
   });
 

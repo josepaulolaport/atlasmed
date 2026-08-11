@@ -36,6 +36,33 @@ class CompetitorUsage {
   }
 }
 
+/// One of our own products and what this clinic buys of it.
+///
+/// Derived from orders over the same window as [FacilityPotentialItem.
+/// atlasmedMonthlyAvgQty], so these rows add up to it. Nothing here is
+/// editable — there is no rep-entered figure behind it.
+class OurProductUsage {
+  const OurProductUsage({
+    required this.productId,
+    required this.productName,
+    required this.metricQuantity,
+  });
+
+  final int productId;
+  final String productName;
+
+  /// Metric units per month, already normalised from the window.
+  final double metricQuantity;
+
+  factory OurProductUsage.fromJson(Map<String, dynamic> json) {
+    return OurProductUsage(
+      productId: readCrmId(json['productId'], 'productId'),
+      productName: json['productName'] as String? ?? '',
+      metricQuantity: _numOrNull(json['metricQuantity']) ?? 0,
+    );
+  }
+}
+
 class FacilityPotentialItem {
   const FacilityPotentialItem({
     required this.definitionId,
@@ -46,6 +73,7 @@ class FacilityPotentialItem {
     required this.totalMarketQty,
     this.share,
     this.competitors = const [],
+    this.ourProducts = const [],
   });
 
   final int definitionId;
@@ -67,8 +95,12 @@ class FacilityPotentialItem {
 
   final List<CompetitorUsage> competitors;
 
+  /// Ours, per product, over the same window as [atlasmedMonthlyAvgQty].
+  final List<OurProductUsage> ourProducts;
+
   factory FacilityPotentialItem.fromJson(Map<String, dynamic> json) {
     final raw = json['competitors'];
+    final rawOurs = json['ourProducts'];
     return FacilityPotentialItem(
       definitionId: readCrmId(json['definitionId'], 'definitionId'),
       key: json['key'] as String? ?? '',
@@ -83,6 +115,15 @@ class FacilityPotentialItem {
                 .map(
                   (row) =>
                       CompetitorUsage.fromJson(Map<String, dynamic>.from(row)),
+                )
+                .toList(growable: false)
+          : const [],
+      ourProducts: rawOurs is List
+          ? rawOurs
+                .whereType<Map>()
+                .map(
+                  (row) =>
+                      OurProductUsage.fromJson(Map<String, dynamic>.from(row)),
                 )
                 .toList(growable: false)
           : const [],

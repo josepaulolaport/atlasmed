@@ -6,7 +6,7 @@ import {
   productVerticals,
   products,
 } from "@atlasmed/database";
-import { createMetricSnapshotStore, type Database } from "@atlasmed/database";
+import { createMetricSnapshotStore, latestTheirsByProduct, sumOursByProduct, type Database } from "@atlasmed/database";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { MonthKey } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
@@ -275,6 +275,23 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     rangeEnd: Date;
   }): Promise<DefinitionMonthQtySum[]> {
     return createMetricSnapshotStore(this.database).sumOurs(input);
+  }
+
+  async sumAtlasmedQtyByDefinitionAndProduct(input: {
+    facilityId: number;
+    verticalId: number;
+    definitionIds: number[];
+    rangeStart: Date;
+    rangeEnd: Date;
+  }) {
+    return sumOursByProduct(this.database, input);
+  }
+
+  async listLatestUsageByProduct(input: {
+    profileId: number;
+    definitionIds: number[];
+  }) {
+    return latestTheirsByProduct(this.database, input);
   }
 
   /**

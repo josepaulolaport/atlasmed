@@ -88,6 +88,28 @@ export interface PotentialRepository {
     months: MonthKey[];
   }): Promise<FacilityProductUsageRecord[]>;
 
+  /**
+   * The competitor quantity standing for each product of a metric — the newest
+   * recorded row per product, whatever month it carries.
+   *
+   * A figure the rep entered *is* a monthly rate and holds until they replace
+   * it, so this is what the clinic screen shows and totals. `listUsage` still
+   * serves the month-keyed history behind the snapshots.
+   */
+  listLatestUsageByProduct(input: {
+    profileId: number;
+    definitionIds: number[];
+  }): Promise<LatestCompetitorUsageRecord[]>;
+
+  /** Our own quantity over a date range, broken down by product. */
+  sumAtlasmedQtyByDefinitionAndProduct(input: {
+    facilityId: number;
+    verticalId: number;
+    definitionIds: number[];
+    rangeStart: Date;
+    rangeEnd: Date;
+  }): Promise<AtlasmedProductQtySum[]>;
+
   /** Replaces the quantity for this (profile, definition, product, month). */
   upsertUsage(input: {
     profileId: number;
@@ -151,4 +173,23 @@ export interface PotentialRepository {
     productId: number;
     definitionId: number;
   }): Promise<{ productId: number; definitionId: number; verticalId: number } | null>;
+}
+
+export interface LatestCompetitorUsageRecord {
+  definitionId: number;
+  productId: number;
+  productName: string;
+  /** Product units, as the rep entered them. */
+  quantity: number;
+  /** quantity × products.metric_units — comparable with our own side. */
+  metricQuantity: number;
+  updatedAt: Date;
+}
+
+export interface AtlasmedProductQtySum {
+  definitionId: number;
+  productId: number;
+  productName: string;
+  /** Metric units over the requested range, not yet normalised to a month. */
+  totalQty: number;
 }
