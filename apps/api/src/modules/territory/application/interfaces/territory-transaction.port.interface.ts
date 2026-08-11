@@ -2,6 +2,7 @@ import type { TerritoryRepository } from "./territory.repository.interface";
 import type { TerritoryTypeRepository } from "./territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "./territory-spatial.repository.interface";
 import type { TerritoryBoundaryWriter } from "./territory-boundary.writer.interface";
+import type { ClinicMembershipWriter } from "../services/territory-membership.service";
 
 /**
  * The same collaborators, bound to one transaction.
@@ -16,6 +17,11 @@ export interface TransactionalTerritoryDeps {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   boundaryWriter: TerritoryBoundaryWriter;
+  /**
+   * Spec 0009 R6: derived manager-zone membership is recomputed inside the same
+   * transaction that rewrote the geometry, so the two cannot disagree.
+   */
+  membershipWriter: ClinicMembershipWriter;
   /**
    * Takes a row lock on the territory, so two admins saving the same boundary
    * serialise instead of interleaving. Returns false if the row is gone.

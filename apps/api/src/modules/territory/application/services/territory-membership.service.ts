@@ -11,11 +11,50 @@ export interface ClinicMembershipTarget {
   managerZoneId: number | null;
 }
 
+/** One profile whose derived manager zone changed. */
+export interface ManagerZoneMembershipChange {
+  facilityVerticalProfileId: number;
+  facilityId: number;
+  managerZoneId: number | null;
+}
+
+/**
+ * A profile covered by more than one same-vertical manager zone. Its membership
+ * is set to NULL because no single owner can be derived — spec 0009 R4 requires
+ * this to be loud rather than a silent disappearance from both zones.
+ */
+export interface AmbiguousManagerZoneMatch {
+  facilityVerticalProfileId: number;
+  facilityId: number;
+  verticalId: number;
+  zoneIds: number[];
+}
+
+export interface ManagerZoneMembershipRecompute {
+  changed: ManagerZoneMembershipChange[];
+  ambiguous: AmbiguousManagerZoneMatch[];
+}
+
 export interface ClinicMembershipWriter {
   updateProfileTerritoryMemberships(
     facilityId: number,
     memberships: Array<{ verticalId: number; managerZoneId: number | null }>
   ): Promise<void>;
+
+  /**
+   * Recomputes derived manager-zone membership for every profile a territory's
+   * boundary can affect, in one statement.
+   *
+   * Spec 0009 R6. The per-clinic loop this replaces cost two round-trips per
+   * clinic — ~2500 for a national recompute — which is why the work was pushed
+   * onto a queue and HTTP 200 stopped meaning "membership is updated". Set-based
+   * it measures ~21 ms against the production snapshot, so it can run inside the
+   * boundary transaction: geometry and the membership it implies now commit
+   * together or not at all.
+   */
+  recomputeManagerZoneMembership(
+    territoryId: number
+  ): Promise<ManagerZoneMembershipRecompute>;
 
 
   findClinicsForMembership(params?: {
@@ -150,33 +189,19 @@ export class TerritoryMembershipService {
     return { processed: clinics.length, updated };
   }
 
-  async recomputeForTerritoryBoundary(territoryId: number): Promise<{ processed: number }> {
-    const clinicsById = new Map<number, ClinicMembershipTarget>();
-
-    const assignedToTerritory = await this.deps.clinicWriter.findClinicsForMembership({
-      territoryIds: [territoryId],
-    });
-    for (const clinic of assignedToTerritory) {
-      clinicsById.set(clinic.id, clinic);
-    }
-
-    const boundingBox = await this.deps.spatialRepository.getBoundaryBoundingBox(territoryId);
-    if (boundingBox) {
-      const inBoundingBox = await this.deps.clinicWriter.findClinicsForMembership({
-        boundingBox,
-      });
-      for (const clinic of inBoundingBox) {
-        clinicsById.set(clinic.id, clinic);
-      }
-    }
-
-    let processed = 0;
-    for (const clinic of clinicsById.values()) {
-      await this.assignClinicByGeo(clinic, { notifySearch: false });
-      processed += 1;
-    }
-
-    return { processed };
+  /**
+   * Delegates to the one set-based statement so the queued path and the
+   * transactional path in `saveBoundary` apply the same rule. Two
+   * implementations of "which zone owns this clinic" would drift.
+   */
+  async recomputeForTerritoryBoundary(
+    territoryId: number
+  ): Promise<ManagerZoneMembershipRecompute> {
+    // Deliberately does not touch the search index, matching the loop it
+    // replaces (which passed `notifySearch: false`): Meili's `territoryIds`
+    // catch up on the periodic rebuild, not here. Syncing inline would put N
+    // HTTP calls to an external service on this path.
+    return this.deps.clinicWriter.recomputeManagerZoneMembership(territoryId);
   }
 
   private resolveVerticalMatches(matches: ClinicAssignmentTerritoryMatch[]): {
