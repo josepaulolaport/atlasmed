@@ -15,10 +15,10 @@
 -- them was considered and rejected: those states hold no clinics and nobody works them,
 -- so the zone would exist only to anticipate an expansion that has not happened.
 --
--- ⚠️ CONFIRM THE THREE EMAIL ADDRESSES BEFORE MERGING. They follow the convention every
--- existing user uses (`jose.carlos.gondim@atlasmed.com.br`), but they were inferred, not
--- given. A wrong address means the password-reset link that activates the account goes
--- somewhere else.
+-- The three addresses are `firstname.lastname@atlasmed.com`, confirmed 2026-08-11.
+-- Note the domain differs from every existing user, who are all `@atlasmed.com.br`;
+-- that is deliberate, not a typo inherited from the older rows. It matters because the
+-- password-reset link is how each of these accounts is activated at all.
 --
 -- IDEMPOTENT throughout: every insert is guarded and every update is a no-op on second
 -- run, so a partial failure can be retried.
@@ -103,11 +103,11 @@ INSERT INTO users (email, username, first_name, last_name, status, email_verifie
 SELECT v.email, v.username, v.first_name, v.last_name, 'ACTIVE', false, v.password_hash,
        (SELECT id FROM roles WHERE name = 'MANAGER')
   FROM (VALUES
-    ('pedro.poggian@atlasmed.com.br',  'pedro.poggian',  'Pedro',   'Poggian',
+    ('pedro.poggian@atlasmed.com',  'pedro.poggian',  'Pedro',   'Poggian',
      '$argon2id$v=19$m=65536,t=3,p=4$YyBe7bSgJRGIr7ZfL9JPBA$NN3iSqTGY4J5Ou1SacWfN/Mr8wqxu+mwLQ/stkZmOTI'),
-    ('marcelo.moreno@atlasmed.com.br', 'marcelo.moreno', 'Marcelo', 'Moreno',
+    ('marcelo.moreno@atlasmed.com', 'marcelo.moreno', 'Marcelo', 'Moreno',
      '$argon2id$v=19$m=65536,t=3,p=4$+MDR+dli1l24+iLkRL9hWQ$khWd/LYkkJmO3pdg1X1i/93Ag1p19ThEds/swpiwzw8'),
-    ('silvio.vieira@atlasmed.com.br',  'silvio.vieira',  'Silvio',  'Vieira',
+    ('silvio.vieira@atlasmed.com',  'silvio.vieira',  'Silvio',  'Vieira',
      '$argon2id$v=19$m=65536,t=3,p=4$FT5EBJhlwAu6UEYk4Dzehg$Kn9NCJ940WzqwAU2MtTNzPaGJ34+tqzJBTgXKBRanNg')
   ) AS v(email, username, first_name, last_name, password_hash)
  WHERE EXISTS (SELECT 1 FROM roles WHERE name = 'MANAGER')
@@ -123,11 +123,11 @@ SELECT v.email, v.username, v.first_name, v.last_name, 'ACTIVE', false, v.passwo
 INSERT INTO user_territory_assignments (user_id, territory_id)
 SELECT u.id, t.id
   FROM (VALUES
-    ('pedro.poggian@atlasmed.com.br',  'orto-mz-rj'),
-    ('marcelo.moreno@atlasmed.com.br', 'orto-mz-sp'),
-    ('silvio.vieira@atlasmed.com.br',  'orto-mz-pr'),
-    ('silvio.vieira@atlasmed.com.br',  'orto-mz-df-to'),
-    ('silvio.vieira@atlasmed.com.br',  'orto-mz-no')
+    ('pedro.poggian@atlasmed.com',  'orto-mz-rj'),
+    ('marcelo.moreno@atlasmed.com', 'orto-mz-sp'),
+    ('silvio.vieira@atlasmed.com',  'orto-mz-pr'),
+    ('silvio.vieira@atlasmed.com',  'orto-mz-df-to'),
+    ('silvio.vieira@atlasmed.com',  'orto-mz-no')
   ) AS a(email, zone_slug)
   JOIN users u ON lower(u.email) = lower(a.email)
   JOIN territories t ON t.slug = a.zone_slug
