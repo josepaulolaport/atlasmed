@@ -78,6 +78,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
       _territoryUri('/territories', {
         'type': territoryTypeSlug,
         'format': 'flat',
+        'include': 'boundary',
         if (verticalId != null) 'verticalId': verticalId.toString(),
       }),
     );
@@ -92,33 +93,35 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<Territory?> getTerritoryById(int id) async {
-    final response = await _get(_territoryUri('/territories/$id'));
+    final response = await _get(
+      _territoryUri('/territories/$id', {'include': 'boundary'}),
+    );
     if (response.statusCode == 404) return null;
     _throwIfError(response);
     return _hydrateTerritory(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
+  /// Builds a [Territory] from a list row that carries its own geometry.
+  ///
+  /// The caller passes `include=boundary`, so the geometry arrives with the row
+  /// instead of costing one request each. A row whose `boundary` is null is
+  /// skipped: [Territory] models a drawable area and the surfaces built on this
+  /// method are maps, so there is nothing to place. That is a real limitation,
+  /// not an error — `territory_types.can_have_boundary` makes a boundary-less
+  /// territory legitimate, and such a territory is simply invisible here.
   Future<Territory?> _hydrateTerritory(Map<String, dynamic> row) async {
     final id = readCrmId(row['id'], 'id');
-    final results = await Future.wait([
-      _get(_territoryUri('/territories/$id/boundary')),
-      (row['assignedUserCount'] as num? ?? 0) > 0
-          ? _get(_accessUri('/territories/$id/assignments'))
-          : Future.value(null),
-    ]);
 
-    final boundaryResponse = results[0]!;
-    if (boundaryResponse.statusCode == 204 || boundaryResponse.body.isEmpty) {
-      return null;
-    }
-    _throwIfError(boundaryResponse);
-    final boundary = TerritoryGeometry.tryFromGeoJson(
-      jsonDecode(boundaryResponse.body) as Map<String, dynamic>,
-    );
+    final rawBoundary = row['boundary'] as Map<String, dynamic>?;
+    if (rawBoundary == null) return null;
+    final boundary = TerritoryGeometry.tryFromGeoJson(rawBoundary);
     if (boundary == null) return null;
 
+    final assignmentsResponse = (row['assignedUserCount'] as num? ?? 0) > 0
+        ? await _get(_accessUri('/territories/$id/assignments'))
+        : null;
+
     int? assignedUserId;
-    final assignmentsResponse = results[1];
     if (assignmentsResponse != null && assignmentsResponse.statusCode == 200) {
       final entries = jsonDecode(assignmentsResponse.body) as List<dynamic>;
       if (entries.isNotEmpty) {

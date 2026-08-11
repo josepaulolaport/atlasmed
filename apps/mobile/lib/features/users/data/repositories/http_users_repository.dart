@@ -20,13 +20,18 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 
 /// Real `/api/v1/access` implementation of [UsersRepository].
 class HttpUsersRepository implements UsersRepository {
-  HttpUsersRepository({String? baseUrl})
-    : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+  /// [client] is injectable so the request shape can be driven in tests without
+  /// a network, matching the other HTTP repositories.
+  HttpUsersRepository({String? baseUrl, RepositoryHttpClient? client})
+    : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+      _client =
+          client ??
+          createPlatformHttpClient(
+            tokenBuilder: SessionEnvironment.instance.tokenBuilder,
+          );
 
   final String _baseUrl;
-  final RepositoryHttpClient _client = createPlatformHttpClient(
-    tokenBuilder: SessionEnvironment.instance.tokenBuilder,
-  );
+  final RepositoryHttpClient _client;
 
   Uri _accessUri(String path, [Map<String, String>? query]) =>
       Uri.parse('$_baseUrl/api/v1/access$path').replace(queryParameters: query);
@@ -260,6 +265,7 @@ class HttpUsersRepository implements UsersRepository {
       _territoryUri('/territories', {
         'type': 'manager_zone',
         'format': 'flat',
+        'include': 'boundary',
         if (verticalId != null) 'verticalId': verticalId.toString(),
       }),
     );
@@ -268,26 +274,16 @@ class HttpUsersRepository implements UsersRepository {
     final rows = (decoded['data'] as List<dynamic>)
         .cast<Map<String, dynamic>>();
 
-    final options = <TerritoryOption>[];
-    for (final row in rows) {
-      final id = readCrmId(row['id'], 'id');
-      final boundaryResponse = await _get(
-        _territoryUri('/territories/$id/boundary'),
-      );
-      TerritoryGeometry? boundary;
-      if (boundaryResponse.statusCode == 200 &&
-          boundaryResponse.body.isNotEmpty) {
-        boundary = TerritoryGeometry.tryFromGeoJson(
-          jsonDecode(boundaryResponse.body) as Map<String, dynamic>,
-        );
-      }
-      final assignedCount = (row['assignedUserCount'] as num?)?.toInt() ?? 0;
-      final isOccupied = assignedCount > 0;
-      final assigneeName = isOccupied
-          ? await getTerritoryAssigneeName(id)
-          : null;
-      options.add(
-        TerritoryOption(
+    // Only occupied zones need a name, and those lookups are independent of
+    // each other — awaiting them one at a time made the picker's first paint
+    // scale with the number of occupied zones.
+    return Future.wait(
+      rows.map((row) async {
+        final id = readCrmId(row['id'], 'id');
+        final assignedCount = (row['assignedUserCount'] as num?)?.toInt() ?? 0;
+        final isOccupied = assignedCount > 0;
+        final boundary = _boundaryFromRow(row);
+        return TerritoryOption(
           id: id,
           name: row['name'] as String,
           verticalId:
@@ -295,11 +291,21 @@ class HttpUsersRepository implements UsersRepository {
           centroid: boundary?.labelAnchor,
           boundary: boundary,
           isOccupied: isOccupied,
-          assignedUserName: assigneeName,
-        ),
-      );
-    }
-    return options;
+          assignedUserName: isOccupied
+              ? await getTerritoryAssigneeName(id)
+              : null,
+        );
+      }),
+    );
+  }
+
+  /// Geometry embedded by `include=boundary`. Null is a real answer — a
+  /// territory type may declare `canHaveBoundary: false` — so the option is
+  /// still returned, simply without an area to draw.
+  TerritoryGeometry? _boundaryFromRow(Map<String, dynamic> row) {
+    final raw = row['boundary'] as Map<String, dynamic>?;
+    if (raw == null) return null;
+    return TerritoryGeometry.tryFromGeoJson(raw);
   }
 
   @override
@@ -330,6 +336,7 @@ class HttpUsersRepository implements UsersRepository {
       _territoryUri('/territories', {
         'type': 'patch',
         'format': 'flat',
+        'include': 'boundary',
         'managerTerritoryId': managerZoneId.toString(),
         if (verticalId != null) 'verticalId': verticalId.toString(),
       }),
@@ -341,21 +348,11 @@ class HttpUsersRepository implements UsersRepository {
 
     final options = <TerritoryOption>[];
     for (final row in rows) {
-      final id = readCrmId(row['id'], 'id');
-      final boundaryResponse = await _get(
-        _territoryUri('/territories/$id/boundary'),
-      );
-      TerritoryGeometry? boundary;
-      if (boundaryResponse.statusCode == 200 &&
-          boundaryResponse.body.isNotEmpty) {
-        boundary = TerritoryGeometry.tryFromGeoJson(
-          jsonDecode(boundaryResponse.body) as Map<String, dynamic>,
-        );
-      }
+      final boundary = _boundaryFromRow(row);
       final assignedCount = (row['assignedUserCount'] as num?)?.toInt() ?? 0;
       options.add(
         TerritoryOption(
-          id: id,
+          id: readCrmId(row['id'], 'id'),
           name: row['name'] as String,
           verticalId:
               readCrmIdOrNull(row['verticalId'], 'verticalId') ?? verticalId,

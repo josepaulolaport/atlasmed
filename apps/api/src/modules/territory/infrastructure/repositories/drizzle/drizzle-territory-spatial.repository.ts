@@ -41,6 +41,33 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     return JSON.parse(raw) as GeoJsonGeometry;
   }
 
+  async getBoundariesAsGeoJson(
+    territoryIds: number[]
+  ): Promise<Map<number, GeoJsonGeometry>> {
+    if (territoryIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.database.execute(sql`
+      SELECT id, ST_AsGeoJSON(boundary)::text AS geojson
+      FROM territories
+      WHERE id IN (${sql.join(
+        territoryIds.map((id) => sql`${id}`),
+        sql`, `
+      )})
+        AND boundary IS NOT NULL
+    `) as Array<{ id: number | string; geojson: string | null }>;
+
+    const boundaries = new Map<number, GeoJsonGeometry>();
+    for (const row of rows) {
+      if (!row.geojson) {
+        continue;
+      }
+      boundaries.set(Number(row.id), JSON.parse(row.geojson) as GeoJsonGeometry);
+    }
+    return boundaries;
+  }
+
   async saveBoundary(
     territoryId: number,
     geoJson: GeoJsonGeometry,

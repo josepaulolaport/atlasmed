@@ -22,6 +22,19 @@ function parseOptionalId(value: string | undefined): number | undefined {
   return parseId(value, "ID");
 }
 
+/**
+ * Unknown names are ignored rather than rejected: `include` is additive, and a
+ * newer client asking for something this build does not serve should get the
+ * rest of the response, not a 422.
+ */
+function parseInclude(value: string | undefined): { boundary?: boolean } {
+  if (!value) return {};
+  const requested = new Set(
+    value.split(",").map((part) => part.trim().toLowerCase())
+  );
+  return { boundary: requested.has("boundary") };
+}
+
 export const territoriesRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "TERRITORY"))
@@ -29,6 +42,7 @@ export const territoriesRoute = new Elysia()
     "/territories",
     async ({ query, getScope }) => {
       const scope = await getScope();
+      const include = parseInclude(query.include);
       return territoryUseCases.listTerritories().listTerritories(
         query.format === "tree" ? "tree" : "flat",
         scope,
@@ -36,7 +50,8 @@ export const territoriesRoute = new Elysia()
           typeSlug: query.type,
           managerTerritoryId: parseOptionalId(query.managerTerritoryId),
           verticalId: parseOptionalId(query.verticalId),
-        }
+        },
+        include
       );
     },
     {
@@ -45,6 +60,12 @@ export const territoriesRoute = new Elysia()
         type: t.Optional(t.String({ description: "Filter by territory type slug (e.g. manager_zone, patch)" })),
         managerTerritoryId: t.Optional(t.String({ description: "Filter patches by manager zone territory ID" })),
         verticalId: t.Optional(t.String({ description: "Filter territories by business vertical" })),
+        include: t.Optional(
+          t.String({
+            description:
+              "Comma-separated extras to embed per territory. Supported: boundary (GeoJSON, null when the territory has none).",
+          })
+        ),
       }),
     }
   )
@@ -97,18 +118,31 @@ export const territoriesRoute = new Elysia()
     }
   )
   .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id", async ({ params, getScope }) => {
-    const territoryId = parseId(params.id, "Territory");
-    const scope = await getScope();
-    const territory = await territoryUseCases
-      .getTerritory()
-      .getTerritory(territoryId, scope);
-    if (!territory) {
-      throw new ResourceNotFoundError("Territory", territoryId);
+  .get(
+    "/territories/:id",
+    async ({ params, query, getScope }) => {
+      const territoryId = parseId(params.id, "Territory");
+      const scope = await getScope();
+      const territory = await territoryUseCases
+        .getTerritory()
+        .getTerritory(territoryId, scope, parseInclude(query.include));
+      if (!territory) {
+        throw new ResourceNotFoundError("Territory", territoryId);
+      }
+      assertManagerReadableTerritory(scope, territoryId);
+      return territory;
+    },
+    {
+      query: t.Object({
+        include: t.Optional(
+          t.String({
+            description:
+              "Comma-separated extras. Supported: boundary (GeoJSON, null when the territory has none).",
+          })
+        ),
+      }),
     }
-    assertManagerReadableTerritory(scope, territoryId);
-    return territory;
-  })
+  )
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territories",
