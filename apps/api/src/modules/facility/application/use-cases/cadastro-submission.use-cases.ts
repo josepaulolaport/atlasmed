@@ -360,19 +360,38 @@ export class InitiateCadastroFileUploadUseCase {
       ]);
     }
 
-    const currentCount = await this.deps.cadastroRepository.countDocumentFiles(
-      document.id
-    );
-    if (currentCount >= req.maxFiles) {
+    const fileId = randomUUID();
+    const objectKey = `facilities/${input.facilityId}/documents/${document.id}/v${document.version}/files/${fileId}/original`;
+
+    // Limits, position and both inserts happen together under a lock on the
+    // document (D-15). Checking the limits here and inserting afterwards is
+    // what made them bypassable: two uploads read the same counts and both
+    // passed. The repository returns a verdict rather than throwing so the
+    // mapping to an HTTP error stays here.
+    const attached = await this.deps.cadastroRepository.attachFileToDocument({
+      documentId: document.id,
+      facilityId: input.facilityId,
+      bucket: storageService.bucket(),
+      objectKey,
+      originalFilename: input.filename,
+      declaredMimeType: mime,
+      sizeBytes: input.sizeBytes,
+      sha256: input.checksum ?? null,
+      role: input.role ?? "PAGE",
+      position: input.position,
+      maxFiles: req.maxFiles,
+      maxCombinedSizeBytes: req.maxCombinedSizeBytes,
+    });
+
+    if (attached.outcome === "document_missing") {
+      throw new ResourceNotFoundError("SubmissionDocument", document.id);
+    }
+    if (attached.outcome === "max_files_exceeded") {
       throw new ValidationError([
         { field: "files", message: `Máximo de ${req.maxFiles} arquivos` },
       ]);
     }
-
-    const currentSize = await this.deps.cadastroRepository.sumDocumentFileSizes(
-      document.id
-    );
-    if (currentSize + input.sizeBytes > req.maxCombinedSizeBytes) {
+    if (attached.outcome === "max_combined_size_exceeded") {
       throw new ValidationError([
         {
           field: "sizeBytes",
@@ -381,31 +400,7 @@ export class InitiateCadastroFileUploadUseCase {
       ]);
     }
 
-    const fileId = randomUUID();
-    const objectKey = `facilities/${input.facilityId}/documents/${document.id}/v${document.version}/files/${fileId}/original`;
-
-    const asset = await this.deps.cadastroRepository.createFileAsset({
-      facilityId: input.facilityId,
-      bucket: storageService.bucket(),
-      objectKey,
-      originalFilename: input.filename,
-      declaredMimeType: mime,
-      sizeBytes: input.sizeBytes,
-      sha256: input.checksum ?? null,
-      status: "PENDING_UPLOAD",
-    });
-
-    const position =
-      input.position ??
-      (await this.deps.cadastroRepository.nextDocumentFilePosition(document.id));
-    const role = input.role ?? "PAGE";
-
-    await this.deps.cadastroRepository.createDocumentFile({
-      submissionDocumentId: document.id,
-      fileAssetId: asset.id,
-      position,
-      role,
-    });
+    const asset = attached.asset;
 
     const useMultipart = input.sizeBytes > DEFAULT_PART_SIZE;
     const expiresAt = new Date(Date.now() + UPLOAD_TTL_MS);
