@@ -652,6 +652,13 @@
       "when": 1786421346699,
       "tag": "0092_territory_ownership_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1786422991835,
+      "tag": "0093_cadastro_attribution_and_retention",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,13 @@ import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.
 import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 
 const DEFAULT_PART_SIZE = 10 * 1024 * 1024;
+/**
+ * How long a rejected document's files survive (spec 0011 §6).
+ *
+ * One week: long enough for a rep to see what was wrong and re-shoot the
+ * document, short enough that refused evidence is not kept indefinitely.
+ */
+const REJECTED_FILE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const UPLOAD_TTL_MS = 6 * 60 * 60 * 1000;
 
 async function markDocumentReadyIfAllFilesReady(
@@ -157,6 +164,7 @@ function serializeFile(file: {
   id: number;
   position: number;
   role: string;
+  uploadedByName?: string | null;
   fileAsset?: {
     id: number;
     originalFilename: string;
@@ -186,6 +194,9 @@ function serializeFile(file: {
     errorCode: asset?.errorCode ?? undefined,
     errorMessage: asset?.errorMessage ?? undefined,
     objectKey: asset?.objectKey,
+    // "Enviado por Maria · há 2h" — the shared draft is only legible if a rep
+    // can see which of them, or which manager, sent a given file.
+    uploadedByName: file.uploadedByName ?? undefined,
   };
 }
 
@@ -426,6 +437,8 @@ export class InitiateCadastroFileUploadUseCase {
     checksum?: string;
     role?: CadastroDocumentFileRole;
     position?: number;
+    /** Recorded on the asset so a shared draft is legible (spec 0011 §3.4). */
+    userId: number;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     if (!storageService.isConfigured()) {
@@ -483,6 +496,7 @@ export class InitiateCadastroFileUploadUseCase {
       position: input.position,
       maxFiles: req.maxFiles,
       maxCombinedSizeBytes: req.maxCombinedSizeBytes,
+      uploadedByUserId: input.userId,
     });
 
     if (attached.outcome === "document_missing") {
@@ -876,6 +890,24 @@ export class ReviewCadastroDocumentUseCase {
       reviewComment: input.comment ?? null,
       ...(validUntil !== undefined ? { validUntil } : {}),
     });
+
+    // Retention (ADR 0008 §5). Rejected and superseded evidence keeps its row —
+    // status, version and the reviewer's comment survive, so "v2 — Reprovado —
+    // <comment>" still renders — but the bytes go after a week. Approved
+    // evidence is never deleted, and clearing the date matters: a document
+    // rejected and later approved must not keep a purge date from the earlier
+    // verdict.
+    if (input.decision === "REJECTED") {
+      await this.deps.cadastroRepository.setPurgeAfterForDocument({
+        documentId: document.id,
+        purgeAfter: new Date(Date.now() + REJECTED_FILE_RETENTION_MS),
+      });
+    } else if (input.decision === "APPROVED") {
+      await this.deps.cadastroRepository.setPurgeAfterForDocument({
+        documentId: document.id,
+        purgeAfter: null,
+      });
+    }
 
     // Approving one document can complete a linha. Completion is evaluated for
     // the linha this document belongs to; a facility-scoped document (no

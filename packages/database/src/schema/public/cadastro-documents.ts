@@ -106,6 +106,32 @@ export const fileAssets = pgTable(
     height: bigint("height", { mode: "number" }),
     errorCode: text("error_code"),
     errorMessage: text("error_message"),
+    /**
+     * Who uploaded this file (spec 0011 §3.4). Set at `initiate`.
+     *
+     * The draft belongs to the profile, not to a person: the assigned rep,
+     * their manager and OPS can all contribute to the same document, and until
+     * now nobody could tell which of them sent a given file. `set null` on
+     * delete because the file outlives the account — losing the attribution is
+     * acceptable, losing the evidence is not.
+     */
+    uploadedByUserId: bigint("uploaded_by_user_id", { mode: "number" }).references(
+      () => users.id,
+      { onDelete: "set null" }
+    ),
+    /**
+     * When the bytes may be deleted — null means never (spec 0011 §6).
+     *
+     * Set when a document is rejected or superseded, cleared if it becomes
+     * approved. The sweep deletes the object and this row; the
+     * `submission_documents` row survives with its status, version and reviewer
+     * comment, so "v2 — Reprovado — <comment>" still renders with no files to
+     * open (ADR 0008 §5).
+     *
+     * The application drives this rather than an object-lifecycle rule, because
+     * lifecycle rules cannot see submission state.
+     */
+    purgeAfter: timestamp("purge_after"),
     uploadedAt: timestamp("uploaded_at"),
     processedAt: timestamp("processed_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -115,6 +141,15 @@ export const fileAssets = pgTable(
     index("file_assets_facility_id_idx").on(t.facilityId),
     index("file_assets_status_idx").on(t.status),
     uniqueIndex("file_assets_object_key_uidx").on(t.objectKey),
+    /**
+     * The retention sweep's index. Partial, because null means "never delete"
+     * and that is the overwhelming majority of rows — approved evidence is kept
+     * forever. Without it, every sweep tick full-scans `file_assets` to find
+     * the handful of rows that are due.
+     */
+    index("file_assets_purge_after_idx")
+      .on(t.purgeAfter)
+      .where(sql`${t.purgeAfter} IS NOT NULL`),
   ]
 );
 

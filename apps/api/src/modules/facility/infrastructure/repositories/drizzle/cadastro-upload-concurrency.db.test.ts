@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq, inArray, sql } from "drizzle-orm";
 import {
   conformityRequirements,
@@ -21,7 +21,8 @@ import { DrizzleCadastroSubmissionRepository } from "./drizzle-cadastro-submissi
  * concurrency, and everything inside a single transaction is serialised by
  * definition — the harness that keeps every other DB test clean would quietly
  * make the race impossible to observe. Two genuinely concurrent calls need two
- * connections, so this seeds committed rows and removes them in `afterAll`.
+ * connections, so this commits its fixtures and purges them by name instead,
+ * before *and* after the run — see `purgeFixtures`.
  *
  * **Why it seeds its own facility.** A database migrated from empty has no
  * states, municipalities, facilities or requirements — CI is exactly that. A
@@ -42,17 +43,41 @@ interface Fixture {
   municipalityId: number;
 }
 
+/**
+ * A suffix no other fixture in this process — or a leftover from an earlier run
+ * — can repeat.
+ *
+ * The first version of this used `Math.random() % 100` for the state
+ * abbreviation, which draws from a hundred values against a UNIQUE index. Three
+ * states per run is a ~3% collision on a clean database, and it got worse with
+ * use: a collision aborts the run mid-way, cleanup does not complete, and every
+ * stranded row permanently consumes one of the hundred values. So the failure
+ * rate climbed on any machine that had run the suite a few times, while staying
+ * at zero on a freshly cloned one — which is exactly how it was reported.
+ *
+ * A timestamp gives cross-run uniqueness, the counter gives within-run
+ * uniqueness (two fixtures can be seeded inside the same millisecond), and the
+ * random tail covers two suites running against one database.
+ */
+let fixtureCounter = 0;
+function uniqueSuffix(): string {
+  fixtureCounter += 1;
+  const random = Math.floor(Math.random() * 1_000_000);
+  return `${Date.now().toString(36)}-${fixtureCounter}-${random.toString(36)}`;
+}
+
 async function seed(input: { maxFiles: number }): Promise<Fixture> {
-  const suffix = Math.floor(Math.random() * 1_000_000);
-  // ids are GENERATED ALWAYS identities; `ibge_id` and `abbreviation` are the
-  // NOT NULL columns a real row carries, and both are unique in practice, so
-  // they are suffixed rather than fixed.
+  const suffix = uniqueSuffix();
+  // ids are GENERATED ALWAYS identities. `ibge_id` and `abbreviation` are NOT
+  // NULL and both carry a UNIQUE index, so both take the full suffix —
+  // `abbreviation` is `text`, not a two-character code, so nothing here needs
+  // to be truncated into a small space.
   const [state] = await db
     .insert(states)
     .values({
       name: `${MARK}-${suffix}`,
-      ibgeId: `T${suffix}`,
-      abbreviation: `${suffix % 100}`.padStart(2, "T"),
+      ibgeId: `T-${suffix}`,
+      abbreviation: `T-${suffix}`,
     })
     .returning({ id: states.id });
 
@@ -106,14 +131,6 @@ async function seed(input: { maxFiles: number }): Promise<Fixture> {
   };
 }
 
-const created: Fixture[] = [];
-
-async function seedTracked(input: { maxFiles: number }): Promise<Fixture> {
-  const fixture = await seed(input);
-  created.push(fixture);
-  return fixture;
-}
-
 function attach(fixture: Fixture, n: number, sizeBytes = 100) {
   return repository.attachFileToDocument({
     documentId: fixture.documentId,
@@ -124,26 +141,54 @@ function attach(fixture: Fixture, n: number, sizeBytes = 100) {
     declaredMimeType: "image/jpeg",
     sizeBytes,
     role: "PAGE",
+    // Null: this test is about concurrency, and seeding a user would drag in a
+    // role fixture the empty CI database does not have.
+    uploadedByUserId: null,
     maxFiles: 1,
     maxCombinedSizeBytes: 1_000_000,
   });
 }
 
-afterAll(async () => {
-  for (const f of created) {
-    await db.delete(documentFiles).where(eq(documentFiles.submissionDocumentId, f.documentId));
-    await db.delete(submissionDocuments).where(eq(submissionDocuments.id, f.documentId));
-    await db.delete(fileAssets).where(eq(fileAssets.facilityId, f.facilityId));
-    await db.delete(facilities).where(eq(facilities.id, f.facilityId));
-    await db.delete(conformityRequirements).where(eq(conformityRequirements.id, f.requirementId));
-    await db.delete(municipalities).where(eq(municipalities.id, f.municipalityId));
-    await db.delete(states).where(eq(states.id, f.stateId));
-  }
-});
+/**
+ * Removes every fixture this file has ever left behind, not just this run's.
+ *
+ * Two properties matter. It runs *before* seeding as well as after, so a run
+ * that died mid-way — killed suite, failed assertion, dropped connection —
+ * cannot leave rows that poison later runs. And it deletes by the `MARK`
+ * prefix rather than by remembered ids, so it also collects fixtures whose ids
+ * were never recorded because the seed itself failed part-way through.
+ *
+ * Order follows the foreign keys inward-out. `document_files` is ON DELETE
+ * restrict from `file_assets`, so the links must go first.
+ */
+async function purgeFixtures(): Promise<void> {
+  const marked = sql`${facilities.displayName} like ${`${MARK}%`}`;
+
+  await db.delete(documentFiles).where(
+    sql`${documentFiles.submissionDocumentId} in (
+      select id from submission_documents where title = ${MARK}
+    )`
+  );
+  await db.delete(submissionDocuments).where(eq(submissionDocuments.title, MARK));
+  await db.delete(fileAssets).where(
+    sql`${fileAssets.facilityId} in (select id from facilities where ${marked})`
+  );
+  await db.delete(facilities).where(marked);
+  await db
+    .delete(conformityRequirements)
+    .where(sql`${conformityRequirements.slug} like ${`${MARK}%`}`);
+  await db
+    .delete(municipalities)
+    .where(sql`${municipalities.name} like ${`${MARK}%`}`);
+  await db.delete(states).where(sql`${states.name} like ${`${MARK}%`}`);
+}
+
+beforeAll(purgeFixtures);
+afterAll(purgeFixtures);
 
 describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
   test("two at once never collide on position and never orphan an asset", async () => {
-    const fixture = await seedTracked({ maxFiles: 10 });
+    const fixture = await seed({ maxFiles: 10 });
 
     // Ten at once, all racing for the next position. Before the fix each read
     // the same max(position) and the losers hit
@@ -160,6 +205,7 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
           declaredMimeType: "image/jpeg",
           sizeBytes: 100,
           role: "PAGE",
+          uploadedByUserId: null,
           maxFiles: 10,
           maxCombinedSizeBytes: 1_000_000,
         })
@@ -188,7 +234,7 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
   });
 
   test("maxFiles holds under concurrency instead of being read then raced", async () => {
-    const fixture = await seedTracked({ maxFiles: 1 });
+    const fixture = await seed({ maxFiles: 1 });
 
     // Both see zero files if the check is a plain read-then-insert, so both
     // pass it and the document ends up with two files against a limit of one.
@@ -215,7 +261,7 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
   });
 
   test("maxCombinedSizeBytes holds under concurrency too", async () => {
-    const fixture = await seedTracked({ maxFiles: 10 });
+    const fixture = await seed({ maxFiles: 10 });
 
     // 600k + 600k against a 1M combined limit: exactly one may land.
     const results = await Promise.all([
@@ -228,6 +274,9 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
         declaredMimeType: "image/jpeg",
         sizeBytes: 600_000,
         role: "PAGE",
+      // Null: this test is about concurrency, and seeding a user would drag in a
+      // role fixture the empty CI database does not have.
+      uploadedByUserId: null,
         maxFiles: 10,
         maxCombinedSizeBytes: 1_000_000,
       }),
@@ -240,6 +289,9 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
         declaredMimeType: "image/jpeg",
         sizeBytes: 600_000,
         role: "PAGE",
+      // Null: this test is about concurrency, and seeding a user would drag in a
+      // role fixture the empty CI database does not have.
+      uploadedByUserId: null,
         maxFiles: 10,
         maxCombinedSizeBytes: 1_000_000,
       }),
@@ -268,6 +320,9 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
       declaredMimeType: "image/jpeg",
       sizeBytes: 10,
       role: "PAGE",
+      // Null: this test is about concurrency, and seeding a user would drag in a
+      // role fixture the empty CI database does not have.
+      uploadedByUserId: null,
       maxFiles: 10,
       maxCombinedSizeBytes: 1_000_000,
     });
