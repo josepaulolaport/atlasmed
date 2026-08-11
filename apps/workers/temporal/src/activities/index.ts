@@ -1,7 +1,6 @@
 import { wrapActivity } from "../instrumentation/wrap-activity";
 
 import { rebuildSearchIndexActivity as rebuildSearchIndexActivityImpl } from "./search-rebuild.activities";
-import { processCadastroFileUploadedActivity as processCadastroFileUploadedActivityImpl } from "./cadastro-file-processing.activities";
 
 import {
   logPurchaseRecurrenceLifecycle as logPurchaseRecurrenceLifecycleImpl,
@@ -28,11 +27,6 @@ export const logPurchaseRecurrenceLifecycle = wrapActivity(
 export const rebuildSearchIndexActivity = wrapActivity(
   "rebuildSearchIndex",
   rebuildSearchIndexActivityImpl
-);
-
-export const processCadastroFileUploadedActivity = wrapActivity(
-  "processCadastroFileUploaded",
-  processCadastroFileUploadedActivityImpl
 );
 
 export const importEmultecOrdersPageActivity = wrapActivity(
