@@ -10,6 +10,18 @@ export interface OverlappingTerritory {
   code: string;
 }
 
+/**
+ * An active rep assignment that a proposed move would invalidate: one of the
+ * rep's patches covers the clinic where it stands, and none covers where it is
+ * going (spec 0009 R5, invariant I2).
+ */
+export interface AssignmentLosingCoverage {
+  facilityVerticalProfileId: number;
+  verticalId: number;
+  userId: number;
+  userName: string;
+}
+
 export interface ClinicAssignmentTerritoryMatch {
   id: number;
   verticalId: number;
@@ -58,6 +70,18 @@ export interface TerritorySpatialRepository {
     lat: number,
     options?: { excludeTerritoryId?: number }
   ): Promise<ClinicAssignmentTerritoryMatch[]>;
+
+  /**
+   * Spec 0009 R5: the coverage delta for a proposed move. Only assignments that
+   * would *become* invalid — an assignment whose rep never covered the clinic is
+   * already an override or already broken, and warning about it every time a pin
+   * moves is the alert fatigue the requirement calls out.
+   */
+  findAssignmentsLosingPatchCoverage(input: {
+    facilityId: number;
+    lat: number;
+    lng: number;
+  }): Promise<AssignmentLosingCoverage[]>;
 
   /** Spec 0006: true if user has an active rep patch covering the facility point. */
   userHasRepPatchCoveringFacility(

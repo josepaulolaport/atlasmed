@@ -65,9 +65,12 @@ import {
 } from "./application/use-cases/facility-photo.use-cases";
 import {
   territoryMembershipService,
+  territoryRepositories,
 } from "../territory/composition";
 import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
+import { FacilityLocationService } from "./application/services/facility-location.service";
+import { DrizzleFacilityLocationRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-location.repository";
 import { PurchaseRecurrenceService } from "./application/services/purchase-recurrence.service";
 import { DrizzleFacilityPurchaseRecurrenceRepository } from "./infrastructure/repositories/drizzle/facility-purchase-recurrence.repository";
 import { upsertFacilitySearchDocument } from "../../infrastructure/search/facility-search-index.service";
@@ -123,6 +126,21 @@ async function handleFacilityLocationChanged(facilityId: number): Promise<void> 
   await facilityGeocodingService.ensureCoordinatesPersisted(facilityId);
   await territoryMembershipService.assignFacilityById(facilityId);
 }
+
+/**
+ * Spec 0009 R5: the single owner of every location write. Scripts included —
+ * `geocode-facilities.ts` used to UPDATE the column directly, so the clinics it
+ * moved never had their membership recomputed (D-18).
+ */
+export const facilityLocationService = new FacilityLocationService({
+  locationRepository: new DrizzleFacilityLocationRepository(),
+  geocodingService: facilityGeocodingService,
+  coverage: territoryRepositories.spatial,
+  onLocationChanged: async (facilityId) => {
+    await territoryMembershipService.assignFacilityById(facilityId);
+    await upsertFacilitySearchDocument(facilityId);
+  },
+});
 
 async function handleFacilityChanged(facilityId: number): Promise<void> {
   await upsertFacilitySearchDocument(facilityId);
