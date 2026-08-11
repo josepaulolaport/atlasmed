@@ -400,6 +400,86 @@ export class DrizzleCadastroSubmissionRepository
     return mapFileAsset(row!);
   }
 
+  async attachFileToDocument(input: {
+    documentId: number;
+    facilityId: number;
+    bucket: string;
+    objectKey: string;
+    originalFilename: string;
+    declaredMimeType: string;
+    sizeBytes: number;
+    sha256?: string | null;
+    role: DocumentFileRecord["role"];
+    position?: number;
+    maxFiles: number;
+    maxCombinedSizeBytes: number;
+  }) {
+    return db.transaction(async (tx) => {
+      // The lock is on the parent document because that is the scope of every
+      // quantity below: the file count, the combined size and the position
+      // sequence are all per-document. Concurrent uploads into *different*
+      // documents never touch the same row and do not contend.
+      const [document] = await tx
+        .select({ id: submissionDocuments.id })
+        .from(submissionDocuments)
+        .where(eq(submissionDocuments.id, input.documentId))
+        .for("update");
+
+      if (!document) return { outcome: "document_missing" as const };
+
+      // One pass for all three quantities, inside the lock, so they cannot
+      // disagree with each other or go stale before the insert.
+      const [totals] = await tx
+        .select({
+          files: count(),
+          combinedSize: sql<number>`coalesce(sum(${fileAssets.sizeBytes}), 0)`,
+          maxPosition: sql<number>`coalesce(max(${documentFiles.position}), 0)`,
+        })
+        .from(documentFiles)
+        .innerJoin(fileAssets, eq(documentFiles.fileAssetId, fileAssets.id))
+        .where(eq(documentFiles.submissionDocumentId, input.documentId));
+
+      const currentFiles = Number(totals?.files ?? 0);
+      const currentSize = Number(totals?.combinedSize ?? 0);
+
+      if (currentFiles >= input.maxFiles) {
+        return { outcome: "max_files_exceeded" as const };
+      }
+      if (currentSize + input.sizeBytes > input.maxCombinedSizeBytes) {
+        return { outcome: "max_combined_size_exceeded" as const };
+      }
+
+      const [assetRow] = await tx
+        .insert(fileAssets)
+        .values({
+          facilityId: input.facilityId,
+          bucket: input.bucket,
+          objectKey: input.objectKey,
+          originalFilename: input.originalFilename,
+          declaredMimeType: input.declaredMimeType,
+          sizeBytes: input.sizeBytes,
+          sha256: input.sha256 ?? null,
+          status: "PENDING_UPLOAD",
+        })
+        .returning();
+
+      const position = input.position ?? Number(totals?.maxPosition ?? 0) + 1;
+
+      await tx.insert(documentFiles).values({
+        submissionDocumentId: input.documentId,
+        fileAssetId: assetRow!.id,
+        position,
+        role: input.role,
+      });
+
+      return {
+        outcome: "attached" as const,
+        asset: mapFileAsset(assetRow!),
+        position,
+      };
+    });
+  }
+
   async listDocumentFiles(documentId: number) {
     const rows = await db
       .select({
