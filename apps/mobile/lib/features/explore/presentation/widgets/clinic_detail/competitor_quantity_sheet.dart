@@ -126,6 +126,63 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
     }
   }
 
+  /// Clears this competitor's quantity for the current month.
+  ///
+  /// The product picker is deliberately locked while editing — a different
+  /// product is a different row, not an edit — so removal is the only way to
+  /// correct a row recorded against the wrong product. Without it the rep's
+  /// only escape is a quantity of 0, which is a claim about the clinic
+  /// ("uses none") rather than the absence of one.
+  Future<void> _remove() async {
+    final existing = widget.existing;
+    if (existing == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remover concorrente?'),
+        content: Text(
+          'A quantidade de ${existing.productName} registrada neste mês será '
+          'apagada. Os meses anteriores não mudam.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      final page = await widget.repository.removeCompetitor(
+        definitionId: widget.definitionId,
+        productId: existing.productId,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(page);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = error is FacilityPotentialException
+            ? error.message
+            : 'Não foi possível remover o concorrente.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -134,7 +191,10 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SafeArea(
         top: false,
-        child: Padding(
+        // Scrollable because the keyboard is open for most of this sheet's
+        // life: with the inset applied the actions at the bottom would
+        // otherwise sit below the viewport, present but untappable.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -242,6 +302,13 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                       )
                     : const Text('Salvar'),
               ),
+              if (widget.existing != null)
+                TextButton(
+                  key: const Key('competitor-quantity-remove'),
+                  onPressed: _saving ? null : _remove,
+                  style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                  child: const Text('Remover concorrente'),
+                ),
             ],
           ),
         ),
