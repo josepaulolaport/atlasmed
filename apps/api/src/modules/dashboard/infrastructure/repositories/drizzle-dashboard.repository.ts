@@ -150,7 +150,26 @@ export function buildScopedProfilesQuery(filter: DashboardProfileFilter) {
     .where(and(...profileScopeConditions(filter)));
 }
 
-export type DashboardFilterOption = { id: number; label: string };
+/**
+ * One choice in a filter drawer, and — for the nested facets — what it belongs
+ * to (spec 0014 §5).
+ *
+ * `parentIds` is what lets selection cascade rather than only options: picking
+ * the *city* of Rio de Janeiro selects the state of Rio de Janeiro with it, and
+ * deselecting that state drops every municipality inside it. Without the link
+ * the client would have to infer parentage from the option lists, which it
+ * cannot do — the lists it holds are already narrowed, so a municipality whose
+ * state was filtered out would have no discoverable parent at all.
+ *
+ * A municipality has exactly one state. A rep may hold patches under two
+ * managers (spec 0009), so `parentIds` is a list, and a rep is dropped only when
+ * *none* of their managers is still selected.
+ */
+export type DashboardFilterOption = {
+  id: number;
+  label: string;
+  parentIds?: number[];
+};
 
 export class DrizzleDashboardRepository {
   /**
@@ -175,19 +194,34 @@ export class DrizzleDashboardRepository {
     return rows;
   }
 
-  /** Municipalities with clinics in scope — narrowed by the state facet. */
+  /**
+   * Municipalities with clinics in scope, each carrying its state.
+   *
+   * The state comes from `facilities.state_id` rather than from the
+   * municipality row, so the parent is the one the clinic is actually filtered
+   * by — if those two ever disagreed, cascading on the other would deselect a
+   * municipality that the state filter still matches.
+   */
   async listMunicipalityOptions(
     filter: DashboardProfileFilter,
   ): Promise<DashboardFilterOption[]> {
     const rows = await db
-      .selectDistinct({ id: municipalities.id, label: municipalities.name })
+      .selectDistinct({
+        id: municipalities.id,
+        label: municipalities.name,
+        stateId: facilities.stateId,
+      })
       .from(facilityVerticalProfiles)
       .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
       .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
       .where(and(...profileScopeConditions(filter)))
       .orderBy(municipalities.name);
 
-    return rows;
+    return rows.map((row) => ({
+      id: row.id,
+      label: row.label,
+      parentIds: [row.stateId],
+    }));
   }
 
   /**
@@ -222,25 +256,57 @@ export class DrizzleDashboardRepository {
     }));
   }
 
-  /** Reps holding an open assignment on a clinic in this scope. */
+  /**
+   * Reps holding an open assignment on a clinic in this scope, each carrying
+   * the managers they report to.
+   *
+   * Parentage is territory-derived like everything else in spec 0009 — patch →
+   * its manager zone → whoever holds that zone — never `users.manager_id`. A
+   * rep with patches under two managers therefore has two parents, and stays
+   * selected while either one is.
+   */
   async listRepOptions(
     filter: DashboardProfileFilter,
   ): Promise<DashboardFilterOption[]> {
     const scoped = buildScopedProfilesQuery(filter);
 
     const rows = await db.execute(sql`
-      SELECT DISTINCT u.id AS id,
-             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.email) AS label
+      SELECT u.id AS id,
+             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.email) AS label,
+             -- Filtered on the role join rather than on mgr.id: the role is a
+             -- LEFT JOIN, so a non-MANAGER holding that zone still has an id
+             -- and would otherwise be offered as somebody's manager.
+             COALESCE(
+               ARRAY_AGG(DISTINCT mgr.id) FILTER (WHERE mgr_role.id IS NOT NULL),
+               ARRAY[]::bigint[]
+             ) AS parent_ids
         FROM ${facilityVerticalRepAssignments} a
         JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
+        LEFT JOIN user_territory_assignments patch_uta ON patch_uta.user_id = u.id
+        LEFT JOIN territories patch
+          ON patch.id = patch_uta.territory_id AND patch.is_active
+        LEFT JOIN territory_types patch_tt
+          ON patch_tt.id = patch.territory_type_id AND patch_tt.slug = 'patch'
+        LEFT JOIN user_territory_assignments zone_uta
+          ON zone_uta.territory_id = patch.manager_territory_id
+        LEFT JOIN users mgr ON mgr.id = zone_uta.user_id AND mgr.deleted_at IS NULL
+        LEFT JOIN roles mgr_role ON mgr_role.id = mgr.role_id AND mgr_role.name = 'MANAGER'
        WHERE a.facility_vertical_profile_id IN (${scoped})
          AND a.ended_at IS NULL
+       GROUP BY u.id, u.first_name, u.last_name, u.email
        ORDER BY label
     `);
 
-    return (rows as unknown as Array<{ id: number | string; label: string }>).map((row) => ({
+    return (
+      rows as unknown as Array<{
+        id: number | string;
+        label: string;
+        parent_ids: Array<number | string>;
+      }>
+    ).map((row) => ({
       id: Number(row.id),
       label: row.label,
+      parentIds: (row.parent_ids ?? []).map(Number),
     }));
   }
 
