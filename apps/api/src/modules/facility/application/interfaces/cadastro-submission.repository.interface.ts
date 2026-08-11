@@ -168,6 +168,47 @@ export interface CadastroSubmissionRepository {
     processedAt?: Date | null;
   }): Promise<FileAssetRecord>;
 
+  /**
+   * Adds one file to a document atomically: limit checks, position allocation,
+   * the `file_assets` row and the `document_files` link, all under a lock on
+   * the parent document (D-15, spec 0011 §4.4).
+   *
+   * Every part of this used to be a separate read-then-write. Two uploads to
+   * one document read the same count, the same total size and the same next
+   * position, so `maxFiles` and `maxCombinedSizeBytes` were both bypassable and
+   * the loser hit a raw unique violation on `document_files_document_position_uidx`
+   * — surfacing as a 500.
+   *
+   * Worse, the `file_assets` row was inserted *before* the link, so the loser
+   * left an asset with no `document_files` row: invisible to the checklist,
+   * invisible to the prune, and holding bytes nobody could reach. Doing both
+   * inserts in one transaction makes that orphan unrepresentable rather than
+   * something to clean up afterwards.
+   *
+   * Limits come from the caller because they live on the requirement, and the
+   * verdict is returned rather than thrown so the decision about which HTTP
+   * error to raise stays in the use case.
+   */
+  attachFileToDocument(input: {
+    documentId: number;
+    facilityId: number;
+    bucket: string;
+    objectKey: string;
+    originalFilename: string;
+    declaredMimeType: string;
+    sizeBytes: number;
+    sha256?: string | null;
+    role: CadastroDocumentFileRole;
+    position?: number;
+    maxFiles: number;
+    maxCombinedSizeBytes: number;
+  }): Promise<
+    | { outcome: "attached"; asset: FileAssetRecord; position: number }
+    | { outcome: "document_missing" }
+    | { outcome: "max_files_exceeded" }
+    | { outcome: "max_combined_size_exceeded" }
+  >;
+
   listDocumentFiles(documentId: number): Promise<DocumentFileRecord[]>;
   findDocumentFileByFileAssetId(
     fileAssetId: number
