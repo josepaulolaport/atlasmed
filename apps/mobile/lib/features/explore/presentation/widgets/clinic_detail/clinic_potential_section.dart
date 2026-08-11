@@ -202,38 +202,48 @@ class _PotentialRow extends StatelessWidget {
         // Two rows of two rather than four across: at 360dp the four-column
         // layout truncated every label to an ellipsis, so the numbers had no
         // readable captions.
-        Row(
-          children: [
-            Expanded(
-              child: _MetricTile(
-                icon: Icons.apartment_rounded,
-                label: 'AtlasMed/mês',
-                value: _fmtQty(item.atlasmedMonthlyAvgQty),
+        // IntrinsicHeight, not CrossAxisAlignment.stretch: the card lives in a
+        // scroll view, so the Row's height is unbounded and stretch has nothing
+        // to stretch to. Both tiles take the height of the taller one, so a
+        // caption that wraps does not leave its neighbour short.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _MetricTile(
+                  icon: Icons.apartment_rounded,
+                  label: 'AtlasMed/mês',
+                  value: _fmtQty(item.atlasmedMonthlyAvgQty),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _MetricTile(
-                icon: Icons.groups_outlined,
-                label: 'Outras marcas/mês',
-                value: _fmtQty(item.competitorMonthlyQty),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MetricTile(
+                  icon: Icons.groups_outlined,
+                  label: 'Outras marcas/mês',
+                  value: _fmtQty(item.competitorMonthlyQty),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricTile(
-                icon: Icons.pie_chart_outline_rounded,
-                label: 'Mercado total',
-                value: _fmtQty(item.totalMarketQty),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _MetricTile(
+                  icon: Icons.pie_chart_outline_rounded,
+                  label: 'Mercado total',
+                  value: _fmtQty(item.totalMarketQty),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: _ShareTile(share: item.share)),
-          ],
+              const SizedBox(width: 8),
+              Expanded(child: _ShareTile(share: item.share)),
+            ],
+          ),
         ),
         _CompetitorTable(competitors: item.competitors, onEdit: onEdit),
       ],
@@ -457,6 +467,12 @@ class _MetricTile extends StatelessWidget {
         children: [
           _IconBadge(icon: icon),
           const SizedBox(height: 8),
+          // Wraps rather than ellipsises. Going from four tiles across to two
+          // was meant to stop these captions truncating, and it did not:
+          // "Mercado total" still lost its tail at 360dp, and every caption did
+          // at a large text scale. A number under a caption reading "Mercado
+          // tot…" is the failure this layout exists to prevent, and one that
+          // `find.text` cannot see — it matches an ellipsised widget happily.
           Text(
             label,
             style: const TextStyle(
@@ -465,8 +481,7 @@ class _MetricTile extends StatelessWidget {
               fontWeight: FontWeight.w500,
               color: AppColors.gray500,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: 3,
           ),
           const SizedBox(height: 4),
           Text(
@@ -501,7 +516,15 @@ class _ShareTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.gray200),
       ),
-      child: Row(
+      // Ring above caption, matching the three tiles beside it — the ring plays
+      // the part their icon and value play together.
+      //
+      // It used to sit beside the caption, which left "Participação" about
+      // 76dp at a 1.4x text scale on a 320dp screen. It is one word with
+      // nowhere to break, so no number of lines would have helped and it
+      // rendered as "Participaç…".
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 44,
@@ -520,19 +543,16 @@ class _ShareTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'Participação',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.25,
-                fontWeight: FontWeight.w500,
-                color: AppColors.gray500,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 8),
+          const Text(
+            'Participação',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.25,
+              fontWeight: FontWeight.w500,
+              color: AppColors.gray500,
             ),
+            maxLines: 3,
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_potential_section.dart'
@@ -13,6 +14,13 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 /// so the assertions here are about overflow and presence, not about pixels.
 void main() {
   const narrowPhone = Size(360, 780);
+
+  const kMetricLabels = [
+    'AtlasMed/mês',
+    'Outras marcas/mês',
+    'Mercado total',
+    'Participação',
+  ];
 
   Widget host(Widget child) => MaterialApp(
     home: Scaffold(body: SingleChildScrollView(child: child)),
@@ -46,14 +54,55 @@ void main() {
     await tester.pumpWidget(host(PotentialRowHarness(item: item())));
     await tester.pumpAndSettle();
 
-    // All four captions present and none of them replaced by an ellipsis.
-    for (final label in const [
-      'AtlasMed/mês',
-      'Outras marcas/mês',
-      'Mercado total',
-      'Participação',
-    ]) {
+    // Present *and* whole. `find.text` matches an ellipsised widget just as
+    // happily as an intact one, so asserting presence alone is what let
+    // "Mercado total" render as "Mercado tot…" here for as long as it did.
+    // `didExceedMaxLines` is the question actually being asked.
+    for (final label in kMetricLabels) {
       expect(find.text(label), findsOneWidget, reason: '$label should render');
+      expect(
+        tester
+            .renderObject<RenderParagraph>(find.text(label))
+            .didExceedMaxLines,
+        isFalse,
+        reason: '$label is truncated at 360dp',
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the metric labels survive a large text scale', (tester) async {
+    // 320dp at 1.4x is the combination that truncated every caption, not just
+    // the long one.
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(320, 800),
+              textScaler: TextScaler.linear(1.4),
+            ),
+            child: SingleChildScrollView(
+              child: PotentialRowHarness(item: item()),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final label in kMetricLabels) {
+      expect(
+        tester
+            .renderObject<RenderParagraph>(find.text(label))
+            .didExceedMaxLines,
+        isFalse,
+        reason: '$label is truncated at 320dp / 1.4x',
+      );
     }
     expect(tester.takeException(), isNull);
   });
