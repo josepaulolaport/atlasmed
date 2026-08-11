@@ -21,38 +21,41 @@ void main() {
     expect(printed, isNot(contains('header.payload.signature')));
   });
 
-  test('an unexpected status reports whether the request was authenticated', () {
-    final unauthenticated = UnexpectedStatusCodeException(
-      sent: RepositoryHttpRequest(
-        url: Uri.parse('https://example.test/api/v1/facilities'),
-      ),
-      received: const RepositoryHttpResponse(
-        statusCode: 401,
-        headers: {},
-        body: '{"error":{"code":"UNAUTHORIZED"}}',
-      ),
-    );
+  test(
+    'an unexpected status reports whether the request was authenticated',
+    () {
+      final unauthenticated = UnexpectedStatusCodeException(
+        sent: RepositoryHttpRequest(
+          url: Uri.parse('https://example.test/api/v1/facilities'),
+        ),
+        received: const RepositoryHttpResponse(
+          statusCode: 401,
+          headers: {},
+          body: '{"error":{"code":"UNAUTHORIZED"}}',
+        ),
+      );
 
-    final authenticated = UnexpectedStatusCodeException(
-      sent: RepositoryHttpRequest(
-        url: Uri.parse('https://example.test/api/v1/facilities'),
-      ),
-      received: const RepositoryHttpResponse(
-        statusCode: 401,
-        headers: {},
-        body: '{"error":{"code":"UNAUTHORIZED"}}',
-        requestHeaders: {'Authorization': 'Bearer header.payload.signature'},
-      ),
-    );
+      final authenticated = UnexpectedStatusCodeException(
+        sent: RepositoryHttpRequest(
+          url: Uri.parse('https://example.test/api/v1/facilities'),
+        ),
+        received: const RepositoryHttpResponse(
+          statusCode: 401,
+          headers: {},
+          body: '{"error":{"code":"UNAUTHORIZED"}}',
+          requestHeaders: {'Authorization': 'Bearer header.payload.signature'},
+        ),
+      );
 
-    expect(unauthenticated.toString(), contains('sentHeaders: {}'));
-    expect(
-      authenticated.toString(),
-      contains('sentHeaders: {Authorization: <redacted>}'),
-    );
-    expect(
-      authenticated.toString(),
-      isNot(contains('header.payload.signature')),
-    );
-  });
+      expect(unauthenticated.toString(), contains('sentHeaders: {}'));
+      expect(
+        authenticated.toString(),
+        contains('sentHeaders: {Authorization: <redacted>}'),
+      );
+      expect(
+        authenticated.toString(),
+        isNot(contains('header.payload.signature')),
+      );
+    },
+  );
 }
