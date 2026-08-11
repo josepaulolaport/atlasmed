@@ -131,12 +131,14 @@ class FacilityCadastroController {
   Future<void> submitRequirement({
     required int requirementId,
     int? documentId,
+    String? validUntil,
   }) async {
     final repo = FacilityCadastroRepository(facilityId);
     try {
       await repo.submitRequirement(
         requirementId: requirementId,
         documentId: documentId,
+        validUntil: validUntil,
       );
       await refresh();
     } finally {
