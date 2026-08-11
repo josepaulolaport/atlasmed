@@ -412,36 +412,6 @@ const updateFacilityBillingEmailRoute = new Elysia()
     }
   );
 
-const downloadFacilityCadastroFileRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "FACILITY"))
-  .get(
-    "/facilities/cadastro/files/*",
-    async ({ params, set, getScope }) => {
-      const key = params["*"];
-      if (typeof key !== "string") {
-        throw new ValidationError([
-          { field: "key", message: "Invalid cadastro file key" },
-        ]);
-      }
-      const scope = await getScope();
-      const result = await facilityUseCases.downloadFacilityCadastroFile().execute({
-        storageKey: key,
-        scope,
-      });
-      set.headers["content-type"] = result.contentType;
-      set.headers["cache-control"] = "private, max-age=3600";
-      return result.bytes;
-    },
-    {
-      detail: {
-        summary: "Download a Cadastro document by storage key",
-        tags: ["Facilities"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
-
 const approveFacilityCadastroRecordRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CADASTRO_SUBMISSION"))
@@ -912,7 +882,6 @@ export const facilitiesRoute = new Elysia()
   .use(updateFacilityNoteRoute)
   .use(deleteFacilityNoteRoute)
   .use(downloadFacilityPhotoRoute)
-  .use(downloadFacilityCadastroFileRoute)
   .use(listFacilityPhotosRoute)
   .use(uploadFacilityPhotoRoute)
   .use(listVerticalRepAssignmentsRoute)
