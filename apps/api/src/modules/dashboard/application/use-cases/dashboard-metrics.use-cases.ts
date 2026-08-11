@@ -11,6 +11,7 @@ import { ForbiddenError } from "../../../../shared/errors";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import type {
   DashboardClinicRow,
+  DashboardFilterOption,
   DashboardPenetrationRow,
   DrizzleDashboardRepository,
   PurchaseStatusBuckets,
@@ -22,6 +23,7 @@ import {
   resolveSingleVerticalId,
   resolveSubject,
   type DashboardDirectoryPort,
+  type DashboardFacet,
   type DashboardFilters,
   type DashboardProfileFilter,
   type DashboardSubject,
@@ -70,8 +72,21 @@ interface Dependencies {
 abstract class DashboardMetricUseCase {
   constructor(protected readonly deps: Dependencies) {}
 
+  /**
+   * The same scope, but with one facet's own selection left out — the predicate
+   * behind that facet's option list (spec 0014 §5). Null when the scope resolves
+   * to nothing, in which case there are no options to offer.
+   */
+  protected async resolveFor(
+    request: DashboardMetricRequest,
+    offering: DashboardFacet,
+  ): Promise<DashboardProfileFilter | null> {
+    return (await this.resolve(request, offering)).filter;
+  }
+
   protected async resolve(
     request: DashboardMetricRequest,
+    offering?: DashboardFacet,
   ): Promise<DashboardMetricContext> {
     const accessibleVerticalIds = resolveVerticalIds({
       role: request.viewerRole,
@@ -105,6 +120,7 @@ abstract class DashboardMetricUseCase {
       denominator,
       filters: request.filters,
       directory: this.deps.directory,
+      offering,
     });
 
     return {
@@ -299,6 +315,73 @@ export class GetUnassignedClinicsMetricUseCase extends DashboardMetricUseCase {
     return {
       verticalId: context.verticalId,
       value: await this.deps.repository.countProfilesWithoutRep(context.filter),
+    };
+  }
+}
+
+/**
+ * The options every filter drawer can currently offer (spec 0014 §5).
+ *
+ * Each list is computed over the scoped clinic set with **every filter except
+ * its own** applied, which is what makes the drawers progressive: choose São
+ * Paulo and the municipality list becomes the municipalities of São Paulo that
+ * actually hold clinics you can see. Choose a manager and the rep list becomes
+ * their reps.
+ *
+ * A facet omitting its own selection is not a detail — if picking São Paulo
+ * collapsed the state list to São Paulo, there would be no way to add Rio, and
+ * the drawer would let you make one choice and then trap you in it.
+ *
+ * `unitTypes` is outside the faceting in both directions: it is the whole
+ * catalogue whatever else is selected, and selecting one narrows nothing.
+ */
+export class GetFilterOptionsUseCase extends DashboardMetricUseCase {
+  constructor(
+    deps: Dependencies & { listUnitTypes: () => Promise<DashboardFilterOption[]> },
+  ) {
+    super(deps);
+    this.listUnitTypes = deps.listUnitTypes;
+  }
+
+  private readonly listUnitTypes: () => Promise<DashboardFilterOption[]>;
+
+  async execute(request: DashboardMetricRequest): Promise<{
+    verticalId: number;
+    states: DashboardFilterOption[];
+    municipalities: DashboardFilterOption[];
+    managers: DashboardFilterOption[];
+    reps: DashboardFilterOption[];
+    unitTypes: DashboardFilterOption[];
+  }> {
+    const [context, unitTypes] = await Promise.all([
+      this.resolve(request),
+      this.listUnitTypes(),
+    ]);
+
+    const facet = async (
+      offering: DashboardFacet,
+      list: (filter: DashboardProfileFilter) => Promise<DashboardFilterOption[]>,
+    ) => {
+      const resolved = await this.resolveFor(request, offering);
+      return resolved ? list(resolved) : [];
+    };
+
+    const [states, municipalities, managers, reps] = await Promise.all([
+      facet("state", (f) => this.deps.repository.listStateOptions(f)),
+      facet("municipality", (f) =>
+        this.deps.repository.listMunicipalityOptions(f),
+      ),
+      facet("manager", (f) => this.deps.repository.listManagerOptions(f)),
+      facet("rep", (f) => this.deps.repository.listRepOptions(f)),
+    ]);
+
+    return {
+      verticalId: context.verticalId,
+      states,
+      municipalities,
+      managers,
+      reps,
+      unitTypes,
     };
   }
 }

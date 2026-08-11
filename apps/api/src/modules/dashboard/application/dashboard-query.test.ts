@@ -167,11 +167,97 @@ describe("buildProfileFilter", () => {
       filter: {
         verticalId: 1,
         zoneIds: [11],
-        repUserId: null,
-        stateId: null,
-        municipalityId: null,
-        unitTypeId: null,
+        repUserIds: null,
+        stateIds: null,
+        municipalityIds: null,
+        unitTypeIds: null,
       },
+    });
+  });
+
+  it("unions the zones of several managers, then intersects with the viewer's", async () => {
+    const zonesByManager: Record<number, number[]> = { 2: [11], 3: [12, 99] };
+    const resolved = await buildProfileFilter({
+      verticalId: 1,
+      denominator: { kind: "zones", zoneIds: [11, 12] },
+      filters: { managerIds: [2, 3] },
+      directory: directory({
+        findManagerZoneIds: async ({ userId }) => zonesByManager[userId] ?? [],
+      }),
+    });
+
+    // 11 ∪ 12 ∪ 99, intersected with the viewer's [11, 12]: picking two managers
+    // widens the selection against each other but can never reach past the scope
+    // the viewer already had — zone 99 is not theirs to see.
+    expect(resolved).toEqual({
+      empty: false,
+      filter: expect.objectContaining({ zoneIds: [11, 12] }),
+    });
+  });
+
+  it("accepts several reps at once", async () => {
+    const resolved = await buildProfileFilter({
+      verticalId: 1,
+      denominator: { kind: "global" },
+      filters: { repIds: [5, 6] },
+      directory: directory(),
+    });
+
+    expect(resolved).toEqual({
+      empty: false,
+      filter: expect.objectContaining({ repUserIds: [5, 6] }),
+    });
+  });
+
+  it("merges the singular filter with the plural one", async () => {
+    // Installed builds still send `stateId`; the new drawer sends `stateIds`.
+    // Both have to land in the same predicate, without duplicating a value that
+    // appears in each.
+    const resolved = await buildProfileFilter({
+      verticalId: 1,
+      denominator: { kind: "global" },
+      filters: { stateId: 35, stateIds: [33, 35] },
+      directory: directory(),
+    });
+
+    expect(resolved).toEqual({
+      empty: false,
+      filter: expect.objectContaining({ stateIds: [33, 35] }),
+    });
+  });
+
+  it("leaves out the facet being offered, so its own list is not collapsed", async () => {
+    // Spec 0014 §5: if picking São Paulo collapsed the state list to São Paulo,
+    // there would be no way to add Rio as a second value.
+    const resolved = await buildProfileFilter({
+      verticalId: 1,
+      denominator: { kind: "global" },
+      filters: { stateIds: [35], municipalityIds: [3550308] },
+      directory: directory(),
+      offering: "state",
+    });
+
+    expect(resolved).toEqual({
+      empty: false,
+      filter: expect.objectContaining({
+        stateIds: null,
+        municipalityIds: [3550308],
+      }),
+    });
+  });
+
+  it("keeps unit type applied even when offering a facet — it is outside the faceting", async () => {
+    const resolved = await buildProfileFilter({
+      verticalId: 1,
+      denominator: { kind: "global" },
+      filters: { unitTypeIds: [4] },
+      directory: directory(),
+      offering: "state",
+    });
+
+    expect(resolved).toEqual({
+      empty: false,
+      filter: expect.objectContaining({ unitTypeIds: [4] }),
     });
   });
 
@@ -224,10 +310,10 @@ describe("buildProfileFilter", () => {
       filter: {
         verticalId: 1,
         zoneIds: null,
-        repUserId: null,
-        stateId: 35,
-        municipalityId: 3550308,
-        unitTypeId: 4,
+        repUserIds: null,
+        stateIds: [35],
+        municipalityIds: [3550308],
+        unitTypeIds: [4],
       },
     });
   });

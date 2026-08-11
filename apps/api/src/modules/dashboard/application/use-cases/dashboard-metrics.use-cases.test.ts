@@ -102,7 +102,7 @@ describe("dashboard metrics — scope (spec 0014 §3, §7.3)", () => {
       directory: fakeDirectory(),
     }).execute(request(rep));
 
-    expect(seen[0]).toMatchObject({ repUserId: 5, zoneIds: null });
+    expect(seen[0]).toMatchObject({ repUserIds: [5], zoneIds: null });
   });
 
   it("measures a manager on the clinics in their zones", async () => {
@@ -112,7 +112,7 @@ describe("dashboard metrics — scope (spec 0014 §3, §7.3)", () => {
       directory: fakeDirectory({ findManagerZoneIds: async () => [11, 12] }),
     }).execute(request(manager));
 
-    expect(seen[0]).toMatchObject({ zoneIds: [11, 12], repUserId: null });
+    expect(seen[0]).toMatchObject({ zoneIds: [11, 12], repUserIds: null });
   });
 
   it("scopes to a rep when a manager opens that rep's desempenho (§7.6)", async () => {
@@ -132,7 +132,7 @@ describe("dashboard metrics — scope (spec 0014 §3, §7.3)", () => {
       }),
     );
 
-    expect(seen[0]).toMatchObject({ repUserId: 5, zoneIds: null });
+    expect(seen[0]).toMatchObject({ repUserIds: [5], zoneIds: null });
   });
 
   it("answers zero — without querying — when the scope resolves to nothing", async () => {

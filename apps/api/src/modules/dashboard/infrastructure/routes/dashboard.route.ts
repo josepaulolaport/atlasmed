@@ -15,6 +15,14 @@ import type {
  * This replaces `GET /dashboard/summary`, which blocked on its slowest query
  * and returned a cross-vertical national aggregate to every ADMIN.
  */
+/**
+ * Filters are multi-select (spec 0014 §5), so each arrives as a comma-separated
+ * list. The singular forms are kept beside them and merged: they are what
+ * shipped, installed mobile builds still send them, and dropping them would make
+ * every already-installed app filter by nothing at all — silently.
+ */
+const idList = t.Optional(t.String({ pattern: "^[0-9]+(,[0-9]+)*$" }));
+
 const metricQuery = t.Object({
   verticalId: t.Optional(t.Number({ minimum: 1 })),
   /** Spec 0014 §2: whose desempenho. Omitted means the caller's own. */
@@ -24,6 +32,11 @@ const metricQuery = t.Object({
   repId: t.Optional(t.Number({ minimum: 1 })),
   stateId: t.Optional(t.Number({ minimum: 1 })),
   municipalityId: t.Optional(t.Number({ minimum: 1 })),
+  unitTypeIds: idList,
+  managerIds: idList,
+  repIds: idList,
+  stateIds: idList,
+  municipalityIds: idList,
 });
 
 type MetricQuery = {
@@ -34,7 +47,18 @@ type MetricQuery = {
   repId?: number;
   stateId?: number;
   municipalityId?: number;
+  unitTypeIds?: string;
+  managerIds?: string;
+  repIds?: string;
+  stateIds?: string;
+  municipalityIds?: string;
 };
+
+/** The pattern above guarantees digits, so this cannot produce NaN. */
+function idsOf(raw: string | undefined): number[] | null {
+  if (!raw) return null;
+  return raw.split(",").map(Number);
+}
 
 function toRequest(
   query: MetricQuery,
@@ -53,6 +77,11 @@ function toRequest(
       repId: query.repId ?? null,
       stateId: query.stateId ?? null,
       municipalityId: query.municipalityId ?? null,
+      unitTypeIds: idsOf(query.unitTypeIds),
+      managerIds: idsOf(query.managerIds),
+      repIds: idsOf(query.repIds),
+      stateIds: idsOf(query.stateIds),
+      municipalityIds: idsOf(query.municipalityIds),
     },
   };
 }
@@ -87,6 +116,7 @@ export interface DashboardHttpUseCases {
   getPenetration(): Executable;
   getUnassignedClinics(): Executable;
   getTerritory(): Executable;
+  getFilterOptions(): Executable;
   listMetricClinics(): Executable;
 }
 
@@ -144,6 +174,12 @@ const METRIC_ENDPOINTS: Array<{
     path: "/territory",
     useCase: "getTerritory",
     summary: "Territory card — boundaries and headline counts for the scope",
+  },
+  {
+    path: "/filter-options",
+    useCase: "getFilterOptions",
+    summary:
+      "Options each filter drawer can offer, given the scope and the other filters",
   },
 ];
 

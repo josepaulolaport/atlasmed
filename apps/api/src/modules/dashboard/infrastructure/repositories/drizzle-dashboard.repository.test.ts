@@ -14,10 +14,10 @@ function filter(
   return {
     verticalId: 1,
     zoneIds: null,
-    repUserId: null,
-    stateId: null,
-    municipalityId: null,
-    unitTypeId: null,
+    repUserIds: null,
+    stateIds: null,
+    municipalityIds: null,
+    unitTypeIds: null,
     ...overrides,
   };
 }
@@ -25,7 +25,7 @@ function filter(
 const scopes: Array<{ name: string; filter: DashboardProfileFilter }> = [
   { name: "global (admin)", filter: filter() },
   { name: "manager zones", filter: filter({ zoneIds: [7, 9] }) },
-  { name: "rep assignment", filter: filter({ repUserId: 42 }) },
+  { name: "rep assignment", filter: filter({ repUserIds: [42] }) },
 ];
 
 describe("dashboard scope predicate", () => {
@@ -55,7 +55,7 @@ describe("dashboard scope predicate", () => {
   });
 
   it("scopes a rep by an open assignment, not by zone", () => {
-    const { sql } = buildScopedProfilesQuery(filter({ repUserId: 42 })).toSQL();
+    const { sql } = buildScopedProfilesQuery(filter({ repUserIds: [42] })).toSQL();
     expect(sql).toContain(`facility_vertical_rep_assignments`);
     expect(sql).toContain(`"ended_at" is null`);
     expect(sql).not.toContain(`"manager_zone_id" in`);
@@ -63,11 +63,18 @@ describe("dashboard scope predicate", () => {
 
   it("applies geography and unit-type filters to the same predicate", () => {
     const { sql } = buildScopedProfilesQuery(
-      filter({ stateId: 35, municipalityId: 3550308, unitTypeId: 4 }),
+      filter({
+        stateIds: [35, 33],
+        municipalityIds: [3550308],
+        unitTypeIds: [4],
+      }),
     ).toSQL();
 
-    expect(sql).toContain(`"facilities"."state_id" = `);
-    expect(sql).toContain(`"facilities"."municipality_id" = `);
-    expect(sql).toContain(`"facilities"."unit_type_id" = `);
+    // Multi-select throughout (spec 0014 §5), so every one of them is an `in`
+    // even when only one value is chosen — a filter that silently became `=`
+    // on a single value would work until someone picked a second.
+    expect(sql).toContain(`"facilities"."state_id" in `);
+    expect(sql).toContain(`"facilities"."municipality_id" in `);
+    expect(sql).toContain(`"facilities"."unit_type_id" in `);
   });
 });

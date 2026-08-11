@@ -5,6 +5,7 @@ import {
   GetCadastroCompletionMetricUseCase,
   GetCoverageMetricUseCase,
   GetDashboardTerritoryUseCase,
+  GetFilterOptionsUseCase,
   GetOrdersMetricUseCase,
   GetPenetrationMetricUseCase,
   GetPurchaseBucketsMetricUseCase,
@@ -33,6 +34,19 @@ export const dashboardUseCases = {
   getUnassignedClinics: () => new GetUnassignedClinicsMetricUseCase(deps),
   getTerritory: () => new GetDashboardTerritoryUseCase(deps),
   listMetricClinics: () => new ListMetricClinicsUseCase(deps),
+  getFilterOptions: () =>
+    new GetFilterOptionsUseCase({
+      ...deps,
+      // The unit-type catalogue is owned by the facility module (spec 0014
+      // item 14) and is deliberately not re-derived here: two lists of the same
+      // catalogue would eventually disagree, and this one sits outside the
+      // faceting anyway, so there is nothing to narrow it against.
+      listUnitTypes: async () => {
+        const { facilityUseCases } = await import("../facility/composition");
+        const { data } = await facilityUseCases.listUnitTypes().execute();
+        return data.map((row) => ({ id: row.id, label: row.name }));
+      },
+    }),
   listTeam: () =>
     new ListTeamUseCase({
       teamRepository,

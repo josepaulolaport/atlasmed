@@ -34,10 +34,10 @@ function filter(
   return {
     verticalId: 1,
     zoneIds: null,
-    repUserId: null,
-    stateId: null,
-    municipalityId: null,
-    unitTypeId: null,
+    repUserIds: null,
+    stateIds: null,
+    municipalityIds: null,
+    unitTypeIds: null,
     ...overrides,
   };
 }
@@ -131,6 +131,45 @@ describe.skipIf(!dbUp)("dashboard queries (database)", () => {
         await directory.findManagerZoneIds({ userId: 1, verticalId: 1 }),
       ),
     ).toBe(true);
+  });
+
+  test("every filter facet offers only what exists in scope", async () => {
+    const [states, municipalities, managers, reps] = await Promise.all([
+      repository.listStateOptions(filter()),
+      repository.listMunicipalityOptions(filter()),
+      repository.listManagerOptions(filter()),
+      repository.listRepOptions(filter()),
+    ]);
+
+    for (const list of [states, municipalities, managers, reps]) {
+      for (const option of list) {
+        expect(Number.isInteger(option.id)).toBe(true);
+        // `COALESCE(..., email)` exists so a user with no name is still
+        // pickable; an unlabelled option is an option nobody can choose.
+        expect(option.label.length).toBeGreaterThan(0);
+      }
+    }
+
+    // A municipality can only exist inside a state that also has clinics here,
+    // so the geography facets can never contradict each other.
+    if (municipalities.length > 0) expect(states.length).toBeGreaterThan(0);
+  });
+
+  test("narrowing one facet narrows the ones below it", async () => {
+    const allStates = await repository.listStateOptions(filter());
+    if (allStates.length === 0) return;
+
+    const wide = await repository.listMunicipalityOptions(filter());
+    const narrow = await repository.listMunicipalityOptions(
+      filter({ stateIds: [allStates[0]!.id] }),
+    );
+
+    // Spec 0014 §5: choose a state and the municipality drawer offers that
+    // state's municipalities. Narrowing that widened the list would mean the
+    // predicate was being ignored.
+    expect(narrow.length).toBeLessThanOrEqual(wide.length);
+    const wideIds = new Set(wide.map((o) => o.id));
+    for (const option of narrow) expect(wideIds.has(option.id)).toBe(true);
   });
 
   test("the territory card reads boundaries as GeoJSON", async () => {

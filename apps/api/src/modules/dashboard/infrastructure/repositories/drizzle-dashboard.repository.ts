@@ -62,8 +62,8 @@ function liveFacility() {
   return isNull(facilities.deactivatedAt);
 }
 
-/** An open rep assignment on this profile, held by `userId`. */
-function hasOpenAssignmentTo(userId: number) {
+/** An open rep assignment on this profile, held by one of `userIds`. */
+function hasOpenAssignmentTo(userIds: number[]) {
   return exists(
     db
       .select({ one: sql`1` })
@@ -74,7 +74,7 @@ function hasOpenAssignmentTo(userId: number) {
             facilityVerticalRepAssignments.facilityVerticalProfileId,
             facilityVerticalProfiles.id,
           ),
-          eq(facilityVerticalRepAssignments.userId, userId),
+          inArray(facilityVerticalRepAssignments.userId, userIds),
           isNull(facilityVerticalRepAssignments.endedAt),
         ),
       ),
@@ -119,17 +119,17 @@ export function profileScopeConditions(filter: DashboardProfileFilter): SQL[] {
       inArray(facilityVerticalProfiles.managerZoneId, filter.zoneIds),
     );
   }
-  if (filter.repUserId !== null) {
-    conditions.push(hasOpenAssignmentTo(filter.repUserId));
+  if (filter.repUserIds !== null) {
+    conditions.push(hasOpenAssignmentTo(filter.repUserIds));
   }
-  if (filter.stateId !== null) {
-    conditions.push(eq(facilities.stateId, filter.stateId));
+  if (filter.stateIds !== null) {
+    conditions.push(inArray(facilities.stateId, filter.stateIds));
   }
-  if (filter.municipalityId !== null) {
-    conditions.push(eq(facilities.municipalityId, filter.municipalityId));
+  if (filter.municipalityIds !== null) {
+    conditions.push(inArray(facilities.municipalityId, filter.municipalityIds));
   }
-  if (filter.unitTypeId !== null) {
-    conditions.push(eq(facilities.unitTypeId, filter.unitTypeId));
+  if (filter.unitTypeIds !== null) {
+    conditions.push(inArray(facilities.unitTypeId, filter.unitTypeIds));
   }
 
   return conditions;
@@ -150,7 +150,100 @@ export function buildScopedProfilesQuery(filter: DashboardProfileFilter) {
     .where(and(...profileScopeConditions(filter)));
 }
 
+export type DashboardFilterOption = { id: number; label: string };
+
 export class DrizzleDashboardRepository {
+  /**
+   * The states that actually have clinics in this scope (spec 0014 §5).
+   *
+   * Not "the 27 states of Brazil": a manager whose zones are Paraná and Norte
+   * has no business being offered Bahia, and an option that can only ever
+   * return zero clinics is not a filter, it is a dead end the user has to
+   * discover by tapping it.
+   */
+  async listStateOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const rows = await db
+      .selectDistinct({ id: states.id, label: states.name })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .innerJoin(states, eq(states.id, facilities.stateId))
+      .where(and(...profileScopeConditions(filter)))
+      .orderBy(states.name);
+
+    return rows;
+  }
+
+  /** Municipalities with clinics in scope — narrowed by the state facet. */
+  async listMunicipalityOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const rows = await db
+      .selectDistinct({ id: municipalities.id, label: municipalities.name })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .innerJoin(municipalities, eq(municipalities.id, facilities.municipalityId))
+      .where(and(...profileScopeConditions(filter)))
+      .orderBy(municipalities.name);
+
+    return rows;
+  }
+
+  /**
+   * Managers who own a zone holding clinics in this scope.
+   *
+   * Derived through `manager_zone_id` rather than from the user table, so the
+   * list is the managers who actually have something here — the same
+   * territory-derived definition the roster uses (spec 0009).
+   */
+  async listManagerOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const scoped = db
+      .select({ zoneId: facilityVerticalProfiles.managerZoneId })
+      .from(facilityVerticalProfiles)
+      .innerJoin(facilities, eq(facilities.id, facilityVerticalProfiles.facilityId))
+      .where(and(...profileScopeConditions(filter)));
+
+    const rows = await db.execute(sql`
+      SELECT DISTINCT u.id AS id,
+             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.email) AS label
+        FROM ${userTerritoryAssignments} uta
+        JOIN users u ON u.id = uta.user_id AND u.deleted_at IS NULL
+        JOIN roles r ON r.id = u.role_id AND r.name = 'MANAGER'
+       WHERE uta.territory_id IN (${scoped})
+       ORDER BY label
+    `);
+
+    return (rows as unknown as Array<{ id: number | string; label: string }>).map((row) => ({
+      id: Number(row.id),
+      label: row.label,
+    }));
+  }
+
+  /** Reps holding an open assignment on a clinic in this scope. */
+  async listRepOptions(
+    filter: DashboardProfileFilter,
+  ): Promise<DashboardFilterOption[]> {
+    const scoped = buildScopedProfilesQuery(filter);
+
+    const rows = await db.execute(sql`
+      SELECT DISTINCT u.id AS id,
+             COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.email) AS label
+        FROM ${facilityVerticalRepAssignments} a
+        JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
+       WHERE a.facility_vertical_profile_id IN (${scoped})
+         AND a.ended_at IS NULL
+       ORDER BY label
+    `);
+
+    return (rows as unknown as Array<{ id: number | string; label: string }>).map((row) => ({
+      id: Number(row.id),
+      label: row.label,
+    }));
+  }
+
   /** Clínicas atribuídas — the denominator every ratio below divides by. */
   async countProfiles(filter: DashboardProfileFilter): Promise<number> {
     const [row] = await db

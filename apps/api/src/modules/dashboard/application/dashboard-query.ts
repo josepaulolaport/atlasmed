@@ -19,12 +19,35 @@ export type DashboardDenominator =
   /** Profiles whose derived manager zone is one of these. */
   | { kind: "zones"; zoneIds: number[] };
 
+/**
+ * The filter set (spec 0014 §5), every value multi-select.
+ *
+ * Singular and plural are both accepted and merged. The singular names are what
+ * shipped, and installed mobile builds still send them; dropping them would
+ * make every already-installed app filter by nothing at all, silently, which is
+ * worse than the small ugliness of carrying both for a release.
+ */
 export interface DashboardFilters {
   unitTypeId?: number | null;
   managerId?: number | null;
   repId?: number | null;
   stateId?: number | null;
   municipalityId?: number | null;
+  unitTypeIds?: number[] | null;
+  managerIds?: number[] | null;
+  repIds?: number[] | null;
+  stateIds?: number[] | null;
+  municipalityIds?: number[] | null;
+}
+
+/** Merges the singular and plural forms of one filter into a distinct list. */
+function selected(
+  one: number | null | undefined,
+  many: number[] | null | undefined,
+): number[] {
+  const values = [...(many ?? [])];
+  if (one != null) values.push(one);
+  return [...new Set(values)];
 }
 
 /**
@@ -40,12 +63,25 @@ export type DashboardProfileFilter = {
   verticalId: number;
   /** Null = unrestricted. Empty array = nothing matches (a manager with no zones). */
   zoneIds: number[] | null;
-  /** Null = unrestricted; otherwise requires an open assignment to this user. */
-  repUserId: number | null;
-  stateId: number | null;
-  municipalityId: number | null;
-  unitTypeId: number | null;
+  /** Null = unrestricted; otherwise requires an open assignment to one of these users. */
+  repUserIds: number[] | null;
+  stateIds: number[] | null;
+  municipalityIds: number[] | null;
+  unitTypeIds: number[] | null;
 };
+
+/**
+ * Which facet is being *offered* rather than applied (spec 0014 §5).
+ *
+ * A facet never restricts its own option list. If picking São Paulo collapsed
+ * the state list to São Paulo, there would be no way to add Rio as a second
+ * value — the drawer would let you make exactly one choice and then trap you in
+ * it. So each list is computed with every filter applied *except* its own.
+ *
+ * `unitType` is absent on purpose: it sits outside faceting in both directions,
+ * so its options are the whole catalogue and it never narrows anything else.
+ */
+export type DashboardFacet = "state" | "municipality" | "manager" | "rep";
 
 export interface DashboardSubject {
   userId: number;
@@ -192,30 +228,57 @@ export async function buildProfileFilter(input: {
   denominator: DashboardDenominator;
   filters: DashboardFilters;
   directory: DashboardDirectoryPort;
+  /** Omit this facet's own selection — used to build its option list. */
+  offering?: DashboardFacet;
 }): Promise<ResolvedDashboardQuery> {
+  const managerIds =
+    input.offering === "manager"
+      ? []
+      : selected(input.filters.managerId, input.filters.managerIds);
+  const repIds =
+    input.offering === "rep"
+      ? []
+      : selected(input.filters.repId, input.filters.repIds);
+  const stateIds =
+    input.offering === "state"
+      ? []
+      : selected(input.filters.stateId, input.filters.stateIds);
+  const municipalityIds =
+    input.offering === "municipality"
+      ? []
+      : selected(input.filters.municipalityId, input.filters.municipalityIds);
+  // Never omitted: unit type sits outside faceting in both directions.
+  const unitTypeIds = selected(input.filters.unitTypeId, input.filters.unitTypeIds);
+
   let zoneIds: number[] | null =
     input.denominator.kind === "zones" ? input.denominator.zoneIds : null;
-  let repUserId: number | null =
-    input.denominator.kind === "rep" ? input.denominator.userId : null;
+  let repUserIds: number[] | null =
+    input.denominator.kind === "rep" ? [input.denominator.userId] : null;
 
-  if (input.filters.managerId != null) {
-    const filterZoneIds = await input.directory.findManagerZoneIds({
-      userId: input.filters.managerId,
-      verticalId: input.verticalId,
-    });
+  if (managerIds.length > 0) {
+    // Several managers widen each other — their zones union — but the result is
+    // still intersected with the viewer's own, so a filter can never reach past
+    // the scope the viewer already had.
+    const zoneLists = await Promise.all(
+      managerIds.map((userId) =>
+        input.directory.findManagerZoneIds({ userId, verticalId: input.verticalId }),
+      ),
+    );
+    const filterZoneIds = [...new Set(zoneLists.flat())];
     zoneIds =
       zoneIds === null
         ? filterZoneIds
         : zoneIds.filter((id) => filterZoneIds.includes(id));
   }
 
-  if (input.filters.repId != null) {
-    // Two different reps cannot both hold a profile: the schema allows exactly
-    // one open assignment per profile.
-    if (repUserId !== null && repUserId !== input.filters.repId) {
-      return { empty: true };
-    }
-    repUserId = input.filters.repId;
+  if (repIds.length > 0) {
+    repUserIds =
+      repUserIds === null
+        ? repIds
+        : repUserIds.filter((id) => repIds.includes(id));
+    // A rep viewing their own dashboard, filtered to somebody else: the answer
+    // is nothing, and saying nothing is correct.
+    if (repUserIds.length === 0) return { empty: true };
   }
 
   if (zoneIds !== null && zoneIds.length === 0) {
@@ -227,10 +290,10 @@ export async function buildProfileFilter(input: {
     filter: {
       verticalId: input.verticalId,
       zoneIds,
-      repUserId,
-      stateId: input.filters.stateId ?? null,
-      municipalityId: input.filters.municipalityId ?? null,
-      unitTypeId: input.filters.unitTypeId ?? null,
+      repUserIds,
+      stateIds: stateIds.length > 0 ? stateIds : null,
+      municipalityIds: municipalityIds.length > 0 ? municipalityIds : null,
+      unitTypeIds: unitTypeIds.length > 0 ? unitTypeIds : null,
     },
   };
 }

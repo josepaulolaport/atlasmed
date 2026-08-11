@@ -70,6 +70,7 @@ function dashboardUseCases(
     getUnassignedClinics: stub,
     getTerritory: stub,
     listMetricClinics: stub,
+    getFilterOptions: stub,
     ...overrides,
   } as DashboardHttpUseCases;
 }
@@ -116,8 +117,70 @@ describe("dashboard HTTP routes", () => {
         repId: 5,
         stateId: 33,
         municipalityId: 3304557,
+        unitTypeIds: null,
+        managerIds: null,
+        repIds: null,
+        stateIds: null,
+        municipalityIds: null,
       },
     });
+  });
+
+  it("parses the multi-select lists the drawers send", async () => {
+    const execute = mock(async () => ({ verticalId: 1, value: 0 }));
+    const response = await dashboardApp(
+      dashboardUseCases({ getAssignedClinics: () => ({ execute }) }),
+    ).handle(
+      new Request(
+        "http://localhost/dashboard/metrics/assigned-clinics" +
+          "?verticalId=1&stateIds=33,35&repIds=5,6",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: expect.objectContaining({
+          stateIds: [33, 35],
+          repIds: [5, 6],
+        }),
+      }),
+    );
+  });
+
+  it("rejects a list that is not ids", async () => {
+    // The parser trusts the schema's digit pattern, so the schema has to be the
+    // thing that refuses `stateIds=1;DROP` rather than `Number()` quietly
+    // producing NaN and the predicate matching nothing.
+    const response = await dashboardApp(dashboardUseCases()).handle(
+      new Request(
+        "http://localhost/dashboard/metrics/assigned-clinics?stateIds=abc",
+      ),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("offers filter options for every facet", async () => {
+    const execute = mock(async () => ({
+      verticalId: 1,
+      states: [],
+      municipalities: [],
+      managers: [],
+      reps: [],
+      unitTypes: [],
+    }));
+    const response = await dashboardApp(
+      dashboardUseCases({ getFilterOptions: () => ({ execute }) }),
+    ).handle(
+      new Request("http://localhost/dashboard/filter-options?verticalId=1&stateIds=35"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: expect.objectContaining({ stateIds: [35] }),
+      }),
+    );
   });
 
   it("defaults the linha and the subject to null rather than guessing", async () => {
