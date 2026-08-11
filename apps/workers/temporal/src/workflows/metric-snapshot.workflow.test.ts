@@ -107,6 +107,27 @@ describe("runMetricSnapshotWorkflow", () => {
     expect(call!.until).toBeUndefined();
   });
 
+  test("TRIGGER carries the named profiles and months through, and sends no window", async () => {
+    const harness = createDependencies([page({ processed: 1, written: 1, nextCursor: null })]);
+
+    await runMetricSnapshotWorkflow(
+      { mode: "TRIGGER", profileIds: [42], months: ["2026-03-01"] },
+      harness.dependencies,
+    );
+
+    expect(harness.calls).toHaveLength(1);
+    expect(harness.calls[0]!.profileIds).toEqual([42]);
+    expect(harness.calls[0]!.months).toEqual(["2026-03-01"]);
+    expect(harness.calls[0]!.since).toBeUndefined();
+    expect(harness.calls[0]!.until).toBeUndefined();
+    // Named as a trigger in the log, not as a sweep — otherwise a reconcile
+    // count would include every order write.
+    expect(harness.logs.map((log) => log.action)).toEqual([
+      "facility_metric_snapshot.trigger_started",
+      "facility_metric_snapshot.trigger_completed",
+    ]);
+  });
+
   test("reports differed, so a lost trigger reaches the log instead of being healed quietly", async () => {
     const harness = createDependencies([
       page({ processed: 5, written: 15, differed: 4, nextCursor: 9 }),

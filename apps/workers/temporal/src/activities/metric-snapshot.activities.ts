@@ -14,7 +14,17 @@ import {
 import { getDb } from "../infrastructure/db";
 import { logger } from "../logger";
 
-export type MetricSnapshotMode = "RECONCILE" | "BACKFILL";
+/**
+ * RECONCILE — profiles whose inputs changed inside a watermark window.
+ * BACKFILL  — every profile, paged.
+ * TRIGGER   — exactly the profiles named by the caller, one page, no paging.
+ *
+ * TRIGGER exists because a write to one order should recompute one profile.
+ * Selection is the only difference: the recompute itself is the same pure
+ * function of stored state, so a triggered run and a swept run of the same
+ * (profile, month) produce the same row (spec 0013 §4.4).
+ */
+export type MetricSnapshotMode = "RECONCILE" | "BACKFILL" | "TRIGGER";
 
 export interface MetricSnapshotBatchInput {
   mode: MetricSnapshotMode;
@@ -25,6 +35,8 @@ export interface MetricSnapshotBatchInput {
   /** RECONCILE only: the half-open watermark window. */
   since?: string;
   until?: string;
+  /** TRIGGER only: the profiles to recompute. No query decides this. */
+  profileIds?: number[];
 }
 
 export interface MetricSnapshotFailure {
@@ -92,6 +104,16 @@ export function createMetricSnapshotBatchActivity(dependencies: {
       // Non-retryable: retrying a malformed input just burns attempts.
       throw ApplicationFailure.nonRetryable(message, "MetricSnapshotValidationFailure");
     }
+    if (input.mode === "TRIGGER" && (input.profileIds?.length ?? 0) === 0) {
+      const message = "TRIGGER requires at least one profileId";
+      logger.error("facility_metric_snapshot.batch_validation_failed", {
+        mode: input.mode,
+        message,
+      });
+      // Non-retryable, and loud: a trigger that resolved no profile is a caller
+      // bug, and recomputing nothing must never look like recomputing something.
+      throw ApplicationFailure.nonRetryable(message, "MetricSnapshotValidationFailure");
+    }
     if (input.months.length === 0) {
       throw ApplicationFailure.nonRetryable(
         "months must not be empty",
@@ -101,30 +123,34 @@ export function createMetricSnapshotBatchActivity(dependencies: {
 
     const cursor = input.cursor ?? 0;
     let profileIds: number[];
-    try {
-      profileIds =
-        input.mode === "BACKFILL"
-          ? await dependencies.store.listAllProfileIds({ afterProfileId: cursor, limit: input.limit })
-          : await dependencies.store.listChangedProfileIds({
-              since: new Date(input.since!),
-              until: new Date(input.until!),
-              afterProfileId: cursor,
-              limit: input.limit,
-            });
-    } catch (error) {
-      const failure = { profileId: null, message: errorMessage(error) };
-      logger.error("facility_metric_snapshot.page_selection_failed", {
-        mode: input.mode,
-        cursor: input.cursor ?? undefined,
-        failure,
-      });
-      // Retryable: a page-selection failure is almost always transient, and
-      // giving up would silently stop reconciling.
-      throw ApplicationFailure.retryable(
-        `Metric snapshot page selection failed: ${failure.message}`,
-        "MetricSnapshotDatabaseFailure",
-        [failure],
-      );
+    if (input.mode === "TRIGGER") {
+      profileIds = input.profileIds ?? [];
+    } else {
+      try {
+        profileIds =
+          input.mode === "BACKFILL"
+            ? await dependencies.store.listAllProfileIds({ afterProfileId: cursor, limit: input.limit })
+            : await dependencies.store.listChangedProfileIds({
+                since: new Date(input.since!),
+                until: new Date(input.until!),
+                afterProfileId: cursor,
+                limit: input.limit,
+              });
+      } catch (error) {
+        const failure = { profileId: null, message: errorMessage(error) };
+        logger.error("facility_metric_snapshot.page_selection_failed", {
+          mode: input.mode,
+          cursor: input.cursor ?? undefined,
+          failure,
+        });
+        // Retryable: a page-selection failure is almost always transient, and
+        // giving up would silently stop reconciling.
+        throw ApplicationFailure.retryable(
+          `Metric snapshot page selection failed: ${failure.message}`,
+          "MetricSnapshotDatabaseFailure",
+          [failure],
+        );
+      }
     }
 
     const computedAt = dependencies.now?.() ?? new Date();
@@ -151,7 +177,12 @@ export function createMetricSnapshotBatchActivity(dependencies: {
       }
     }
 
-    const nextCursor = profileIds.length > 0 ? profileIds[profileIds.length - 1]! : null;
+    // TRIGGER has no page after this one: its profiles came from the caller, not
+    // from a keyset scan, so continuing would re-read the same ids forever.
+    const nextCursor =
+      input.mode === "TRIGGER" || profileIds.length === 0
+        ? null
+        : profileIds[profileIds.length - 1]!;
 
     return {
       processed: profileIds.length,
