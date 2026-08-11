@@ -133,7 +133,15 @@ export class ListFacilityPotentialsUseCase {
           monthlyRows.map((row) => row.metricQuantity),
           MONTHS_IN_WINDOW,
         );
-        const { totalQty, share } = deriveShare(ours, theirs);
+        // A share needs a denominator we actually know. With no competitor
+        // observation at all the market is *unknown*, not "all ours" — reporting
+        // 100% would assert we own it on zero evidence. This is the same
+        // null-versus-zero rule spec 0013 §4.3 applies to "no sales", carried to
+        // the other operand: `theirs = 0` because the rep recorded a zero is a
+        // fact; `theirs = 0` because nobody has asked is not.
+        const hasCompetitorObservation = monthlyRows.length > 0;
+        const { totalQty, share: mathematicalShare } = deriveShare(ours, theirs);
+        const share = hasCompetitorObservation ? mathematicalShare : null;
 
         // The list names who supplies this clinic *now*; the averages above are
         // the window. Showing three months of rows would double-count a product
@@ -151,13 +159,16 @@ export class ListFacilityPotentialsUseCase {
           /** The observed market: ours + theirs. */
           totalMarketQty: totalQty,
           /**
-           * Our share of the observed market, 0–1.
+           * Our share of the market, 0–1, or null when the market is unknown.
            *
-           * Null — never 0 — when nothing is known (spec 0013 §4.3). "We sell
-           * nothing here" and "we have no information" must stay
-           * distinguishable, and a 0 would read as the first while meaning the
-           * second. A clinic with orders and no competitor data is genuinely
-           * 100%: everything we can see of that market is ours.
+           * Null in two cases, and they are the same principle twice:
+           *   - nothing at all is known, so there is no denominator
+           *   - we have orders but **no competitor observation**, so the market
+           *     size is unknown. Reporting 100% there would claim we own the
+           *     whole market on no evidence
+           *
+           * 0% is reserved for what it actually means: a known market we sell
+           * nothing into.
            */
           share,
           /** The month the competitor rows below belong to. */

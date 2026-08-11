@@ -13,6 +13,7 @@ import {
   products,
   states,
 } from "@atlasmed/database";
+import { monthKeyAt } from "@atlasmed/facility-insights";
 import { and, eq, sql } from "drizzle-orm";
 import { isDatabaseReachable, withRollback } from "../../../../../test-utils/db-harness";
 import { DrizzlePotentialRepository } from "./drizzle-potential.repository";
@@ -449,7 +450,8 @@ describe.skipIf(!dbUp)("read path rolling window (database)", () => {
         now,
       });
       expect(result.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
-      expect(result.items[0]?.share).toBe(1);
+      // No competitor observation, so the market size is unknown — not 100%.
+      expect(result.items[0]?.share).toBeNull();
 
       // Same order read from the 1st of the month rather than the 20th: the
       // rolling window is unchanged in length, so the rate is unchanged.
@@ -460,6 +462,128 @@ describe.skipIf(!dbUp)("read path rolling window (database)", () => {
         now: new Date("2026-04-01T12:00:00.000Z"),
       });
       expect(earlyInMonth.items[0]?.atlasmedMonthlyAvgQty).toBeCloseTo(3, 6);
+    });
+  });
+});
+
+describe.skipIf(!dbUp)("share only exists when the market is known (database)", () => {
+  test("orders but no competitor observation reports unknown, not 100%", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "UNK");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-UNK",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "90",
+        orderedAt: new Date(),
+      });
+
+      const list = new ListFacilityPotentialsUseCase({
+        potentialRepository: new DrizzlePotentialRepository(tx as never),
+      });
+      const scope = { isGlobal: true, assignedVerticalIds: [scenario.verticalId] } as never;
+
+      const result = await list.execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope,
+      });
+
+      // We sell into this clinic and know nothing about the competition. That is
+      // not 100% — it is "we have not asked".
+      expect(result.items[0]?.atlasmedMonthlyAvgQty).toBeGreaterThan(0);
+      expect(result.items[0]?.share).toBeNull();
+    });
+  });
+
+  test("a recorded competitor makes the share real again", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "KNOWN");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-KNOWN-OURS",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      const theirProduct = await seedProduct(tx, scenario, {
+        name: "S-KNOWN-THEIRS",
+        metricUnits: "1",
+        ownership: "COMPETITOR",
+        link: false,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "90",
+        orderedAt: new Date(),
+      });
+      await tx.insert(facilityProductUsage).values({
+        facilityVerticalProfileId: scenario.profileId,
+        definitionId: scenario.definitionId,
+        verticalId: scenario.verticalId,
+        productId: theirProduct,
+        month: monthKeyAt(new Date()),
+        quantity: "60",
+      });
+
+      const result = await new ListFacilityPotentialsUseCase({
+        potentialRepository: new DrizzlePotentialRepository(tx as never),
+      }).execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope: { isGlobal: true, assignedVerticalIds: [scenario.verticalId] } as never,
+      });
+
+      // 90 units over 90 days = 30/month ours; 60/3 = 20/month theirs.
+      expect(result.items[0]?.share).toBeCloseTo(30 / 50, 4);
+    });
+  });
+
+  test("a recorded zero is a fact, so the share is 100% and not unknown", async () => {
+    await withRollback(async (tx) => {
+      const scenario = await seedScenario(tx, "ZERO");
+      const ourProduct = await seedProduct(tx, scenario, {
+        name: "S-ZERO-OURS",
+        metricUnits: "1",
+        ownership: "OWN",
+        link: true,
+      });
+      const theirProduct = await seedProduct(tx, scenario, {
+        name: "S-ZERO-THEIRS",
+        metricUnits: "1",
+        ownership: "COMPETITOR",
+        link: false,
+      });
+      await seedOrder(tx, {
+        profileId: scenario.profileId,
+        productId: ourProduct,
+        quantity: "90",
+        orderedAt: new Date(),
+      });
+      // The rep looked and reported none — an observation, not an absence.
+      await tx.insert(facilityProductUsage).values({
+        facilityVerticalProfileId: scenario.profileId,
+        definitionId: scenario.definitionId,
+        verticalId: scenario.verticalId,
+        productId: theirProduct,
+        month: monthKeyAt(new Date()),
+        quantity: "0",
+      });
+
+      const result = await new ListFacilityPotentialsUseCase({
+        potentialRepository: new DrizzlePotentialRepository(tx as never),
+      }).execute({
+        facilityId: scenario.facilityId,
+        verticalId: scenario.verticalId,
+        scope: { isGlobal: true, assignedVerticalIds: [scenario.verticalId] } as never,
+      });
+
+      expect(result.items[0]?.share).toBe(1);
     });
   });
 });
