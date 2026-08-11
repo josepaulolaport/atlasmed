@@ -102,9 +102,16 @@ export interface CadastroSubmissionRepository {
     requirementId: number;
     excludeDraft?: boolean;
   }): Promise<SubmissionDocumentRecord[]>;
-  /** Ops review queue: documents across facilities by document status. */
+  /**
+   * Ops review queue: documents across facilities by document status.
+   *
+   * `facilityIds` restricts the queue to what the reviewer may see. Omitting it
+   * means unrestricted, which only a global scope may ask for. An empty array
+   * is a real restriction — see nothing — never a shorthand for everything.
+   */
   listDocumentsForReview(input: {
     status: CadastroDocumentStatus[];
+    facilityIds?: number[];
     page: number;
     limit: number;
   }): Promise<{
