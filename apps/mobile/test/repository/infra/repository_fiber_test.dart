@@ -44,20 +44,17 @@ void main() {
   test('a failure with no joiner is not reported twice', () async {
     final uncaught = <Object>[];
 
-    await runZonedGuarded(
-      () async {
-        final fiber = RepositoryFiber<int>();
+    await runZonedGuarded(() async {
+      final fiber = RepositoryFiber<int>();
 
-        await expectLater(
-          fiber.run(() async => throw StateError('boom')),
-          throwsStateError,
-        );
+      await expectLater(
+        fiber.run(() async => throw StateError('boom')),
+        throwsStateError,
+      );
 
-        // Unobserved completer errors reach the zone on a later turn.
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      },
-      (error, stackTrace) => uncaught.add(error),
-    );
+      // Unobserved completer errors reach the zone on a later turn.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }, (error, stackTrace) => uncaught.add(error));
 
     expect(uncaught, isEmpty);
   });

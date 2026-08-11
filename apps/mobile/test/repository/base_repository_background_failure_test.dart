@@ -8,8 +8,7 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 import 'package:flutter_test/flutter_test.dart';
 
 class _MemoryCacheStorage extends RepositoryCacheStorage {
-  _MemoryCacheStorage([Map<String, String>? seed])
-    : _entries = {...?seed};
+  _MemoryCacheStorage([Map<String, String>? seed]) : _entries = {...?seed};
 
   final Map<String, String> _entries;
 
@@ -39,7 +38,8 @@ class _FailingRepository extends Repository<String> {
     : super(endpoint: Uri.parse('https://example.test/thing'), name: 'Failing');
 
   @override
-  Future<String?> resolve() async => throw const _UnreachableEndpointException();
+  Future<String?> resolve() async =>
+      throw const _UnreachableEndpointException();
 
   @override
   String fromJson(String json) => json;
@@ -50,25 +50,22 @@ void main() {
     BaseRepository.storage = _MemoryCacheStorage();
 
     final uncaught = <Object>[];
-    await runZonedGuarded(
-      () async {
-        final repository = _FailingRepository();
-        addTearDown(repository.dispose);
+    await runZonedGuarded(() async {
+      final repository = _FailingRepository();
+      addTearDown(repository.dispose);
 
-        final failure = repository.failures.first;
-        final streamError = repository.stream.first
-            .then<Object?>((_) => null)
-            .onError<Object>((error, _) => error);
+      final failure = repository.failures.first;
+      final streamError = repository.stream.first
+          .then<Object?>((_) => null)
+          .onError<Object>((error, _) => error);
 
-        expect(await streamError, isA<_UnreachableEndpointException>());
-        expect((await failure).trigger, 'hydration');
-        expect(repository.lastFailure, isNotNull);
-        expect(repository.currentValue, isNull);
+      expect(await streamError, isA<_UnreachableEndpointException>());
+      expect((await failure).trigger, 'hydration');
+      expect(repository.lastFailure, isNotNull);
+      expect(repository.currentValue, isNull);
 
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      },
-      (error, stackTrace) => uncaught.add(error),
-    );
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }, (error, stackTrace) => uncaught.add(error));
 
     expect(uncaught, isEmpty);
   });
@@ -80,33 +77,30 @@ void main() {
     });
 
     final uncaught = <Object>[];
-    await runZonedGuarded(
-      () async {
-        final repository = _FailingRepository();
-        addTearDown(repository.dispose);
+    await runZonedGuarded(() async {
+      final repository = _FailingRepository();
+      addTearDown(repository.dispose);
 
-        final states = <RepositoryState<String>>[];
-        final streamErrors = <Object>[];
-        final subscription = repository.stream.listen(
-          states.add,
-          onError: streamErrors.add,
-        );
-        addTearDown(subscription.cancel);
+      final states = <RepositoryState<String>>[];
+      final streamErrors = <Object>[];
+      final subscription = repository.stream.listen(
+        states.add,
+        onError: streamErrors.add,
+      );
+      addTearDown(subscription.cancel);
 
-        final failures = <RepositoryFailure>[];
-        final failureSubscription = repository.failures.listen(failures.add);
-        addTearDown(failureSubscription.cancel);
+      final failures = <RepositoryFailure>[];
+      final failureSubscription = repository.failures.listen(failures.add);
+      addTearDown(failureSubscription.cancel);
 
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
-        expect(repository.currentValue, 'cached body');
-        expect(streamErrors, isEmpty);
-        expect(states.single, isA<RepositoryStateReady<String>>());
-        expect(failures.single.trigger, 'hydration');
-        expect(repository.lastFailure, isNotNull);
-      },
-      (error, stackTrace) => uncaught.add(error),
-    );
+      expect(repository.currentValue, 'cached body');
+      expect(streamErrors, isEmpty);
+      expect(states.single, isA<RepositoryStateReady<String>>());
+      expect(failures.single.trigger, 'hydration');
+      expect(repository.lastFailure, isNotNull);
+    }, (error, stackTrace) => uncaught.add(error));
 
     expect(uncaught, isEmpty);
   });
