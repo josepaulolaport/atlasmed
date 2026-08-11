@@ -11,6 +11,7 @@ import {
 } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { InvalidInviteError, ResourceConflictError, ResourceNotFoundError } from "../../../../../shared/errors";
+import { isPostgresUniqueViolation } from "../../../../../shared/utils/postgres-unique-violation";
 
 import type {
   InviteRepository,
@@ -33,9 +34,30 @@ async function fetchInviteWithRole(inviteId: number) {
 }
 
 export class DrizzleInviteRepository implements InviteRepository {
+  /**
+   * The caller checks for a live invitation first, but check-then-insert is not
+   * atomic: two overlapping requests both find nothing and both insert. A
+   * partial unique index on PENDING invitations is what actually holds the rule,
+   * so the loser of that race is translated back into the same conflict the
+   * pre-check raises rather than escaping as an opaque 500.
+   */
   async create(params: CreateInviteParams) {
     await this.cleanupExpired();
 
+    try {
+      return await this.insertInvite(params);
+    } catch (error) {
+      if (isPostgresUniqueViolation(error)) {
+        throw new ResourceConflictError(
+          "Invitation",
+          "A pending invitation already exists for this user"
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async insertInvite(params: CreateInviteParams) {
     const inviteId = await db.transaction(async (tx) => {
       const [inserted] = await tx
         .insert(invitations)

@@ -5,7 +5,7 @@ import {
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceConflictError } from "../../../../../shared/errors";
-import { isPostgresUniqueViolation } from "../../../../person/infrastructure/repositories/drizzle/postgres-unique-violation";
+import { isPostgresUniqueViolation } from "../../../../../shared/utils/postgres-unique-violation";
 import type {
   FacilityVerticalRepAssignmentRecord,
   FacilityVerticalRepAssignmentRepository,
