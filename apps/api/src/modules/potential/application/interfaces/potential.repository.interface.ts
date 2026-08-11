@@ -101,6 +101,20 @@ export interface PotentialRepository {
 
   findProfileById(profileId: number): Promise<ProfileRecord | null>;
 
+  /** The sweep's candidate set: profiles whose inputs changed in [since, until). */
+  listProfilesWithChangedInputs(input: {
+    since: Date;
+    until: Date;
+    afterProfileId: number;
+    limit: number;
+  }): Promise<number[]>;
+
+  /** The backfill's candidate set: every profile, keyset-paged. */
+  listAllProfileIds(input: {
+    afterProfileId: number;
+    limit: number;
+  }): Promise<number[]>;
+
   /** Replaces whole rows — never a delta, so re-running is safe. */
   upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void>;
 

@@ -9,7 +9,8 @@ import {
   productVerticals,
   products,
 } from "@atlasmed/database";
-import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { union } from "drizzle-orm/pg-core";
 import type { Database } from "@atlasmed/database";
 import { APPLICATION_TIMEZONE, type MonthKey } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
@@ -142,6 +143,80 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       )
       .limit(1);
     return row?.id ?? null;
+  }
+
+  /**
+   * Profiles whose inputs changed inside a window — the sweep's candidate set.
+   *
+   * A watermark, not a scan. Spec 0013 §4.4 is explicit that recomputing every
+   * profile every run does not hold up, so this reads the two input tables by
+   * their `updated_at` indexes and unions the profile ids:
+   *
+   *   orders                  → orders_updated_at_profile_id_idx (updated_at, profile)
+   *   facility_product_usage  → facility_product_usage_updated_at_idx (updated_at)
+   *
+   * Half-open `[since, until)` so a row landing exactly on a boundary is picked
+   * up by exactly one run — a closed interval would recompute it twice, which is
+   * harmless but makes `differed` lie about how often triggers are lost.
+   *
+   * Keyset paging on the profile id, not OFFSET: the sweep runs while writes are
+   * landing, and OFFSET silently skips rows when the underlying set shifts.
+   */
+  async listProfilesWithChangedInputs(input: {
+    since: Date;
+    until: Date;
+    afterProfileId: number;
+    limit: number;
+  }): Promise<number[]> {
+    const changedByOrders = this.database
+      .selectDistinct({ profileId: orders.facilityVerticalProfileId })
+      .from(orders)
+      .where(
+        and(
+          gte(orders.updatedAt, input.since),
+          lt(orders.updatedAt, input.until),
+          isNotNull(orders.facilityVerticalProfileId),
+          gt(orders.facilityVerticalProfileId, input.afterProfileId),
+        ),
+      );
+
+    const changedByUsage = this.database
+      .selectDistinct({ profileId: facilityProductUsage.facilityVerticalProfileId })
+      .from(facilityProductUsage)
+      .where(
+        and(
+          gte(facilityProductUsage.updatedAt, input.since),
+          lt(facilityProductUsage.updatedAt, input.until),
+          gt(facilityProductUsage.facilityVerticalProfileId, input.afterProfileId),
+        ),
+      );
+
+    const rows = await union(changedByOrders, changedByUsage)
+      .orderBy(asc(orders.facilityVerticalProfileId))
+      .limit(input.limit);
+
+    return rows.map((row) => Number(row.profileId)).filter((id) => Number.isFinite(id));
+  }
+
+  /**
+   * Every profile, paged — the backfill's candidate set.
+   *
+   * Deliberately separate from the watermark query rather than the same query
+   * with a null window: "recompute everything" and "recompute what changed" are
+   * different intentions, and collapsing them makes it possible to trigger a
+   * full rebuild by passing the wrong argument.
+   */
+  async listAllProfileIds(input: {
+    afterProfileId: number;
+    limit: number;
+  }): Promise<number[]> {
+    const rows = await this.database
+      .select({ id: facilityVerticalProfiles.id })
+      .from(facilityVerticalProfiles)
+      .where(gt(facilityVerticalProfiles.id, input.afterProfileId))
+      .orderBy(asc(facilityVerticalProfiles.id))
+      .limit(input.limit);
+    return rows.map((row) => row.id);
   }
 
   /** The clinic and linha a profile belongs to — the recompute handler's entry point. */
