@@ -12,7 +12,7 @@ function createClinicWriter(overrides: Record<string, unknown> = {}) {
     updateProfileTerritoryMemberships: mock(async () => {}),
     recomputeManagerZoneMembership: mock(async () => ({ changed: [], ambiguous: [] })),
     findClinicsForMembership: mock(async () => []),
-    findClinicsWithoutConsultant: mock(async () => []),
+    findClinicsNeedingRep: mock(async () => ({ rows: [], total: 0 })),
     ...overrides,
   };
 }
