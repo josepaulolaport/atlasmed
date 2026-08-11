@@ -116,13 +116,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             else ...[
               DashboardFilterBar(scope: scope),
               const SizedBox(height: 12),
-              _MetricGrid(scope: scope, canSeeUnassigned: canSeeUnassigned),
-              const SizedBox(height: 12),
-              _PenetrationCard(scope: scope),
-              const SizedBox(height: 12),
+              // The two cards that were already here keep the top of the
+              // screen: this is the view reps open every day, and spec 0014
+              // added metrics to it rather than replacing what they read first.
               _DonutSection(scope: scope),
               const SizedBox(height: 12),
               _TerritorySection(scope: scope),
+              const SizedBox(height: 12),
+              _MetricGrid(scope: scope, canSeeUnassigned: canSeeUnassigned),
+              const SizedBox(height: 12),
+              _PenetrationCard(scope: scope),
             ],
           ],
         ),
