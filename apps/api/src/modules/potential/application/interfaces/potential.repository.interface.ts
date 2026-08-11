@@ -1,3 +1,5 @@
+import type { MonthKey } from "@atlasmed/facility-insights";
+
 export type PotentialDefinitionRecord = {
   id: number;
   verticalId: number;
@@ -8,11 +10,13 @@ export type PotentialDefinitionRecord = {
   updatedAt: Date;
 };
 
-/** One competitor product's monthly quantity at a clinic, for one metric. */
+/** One competitor product's quantity at a clinic, for one metric, in one month. */
 export type FacilityProductUsageRecord = {
   definitionId: number;
   productId: number;
   productName: string;
+  /** The month this observation is about. */
+  month: MonthKey;
   /** Product units, exactly as the rep entered them. */
   quantity: number;
   /** quantity × the product's `metric_units` — comparable with our own side. */
@@ -30,6 +34,34 @@ export type ProductPotentialLinkRecord = {
 export type DefinitionQtySum = {
   definitionId: number;
   totalQty: number;
+};
+
+/** Our quantity for one metric in one calendar month, in metric units. */
+export type DefinitionMonthQtySum = DefinitionQtySum & {
+  month: MonthKey;
+};
+
+export type ProfileRecord = {
+  id: number;
+  facilityId: number;
+  verticalId: number;
+};
+
+/**
+ * One computed snapshot row.
+ *
+ * `computedAt` is supplied by the caller rather than defaulted in SQL: the sweep
+ * needs to compare it against input timestamps, and a value the handler chooses
+ * is one the tests can pin.
+ */
+export type MetricSnapshotWrite = {
+  profileId: number;
+  definitionId: number;
+  verticalId: number;
+  month: MonthKey;
+  oursQty: number;
+  theirsQty: number;
+  computedAt: Date;
 };
 
 export interface PotentialRepository {
@@ -59,17 +91,31 @@ export interface PotentialRepository {
     verticalId: number;
   }): Promise<number | null>;
 
+  findProfileById(profileId: number): Promise<ProfileRecord | null>;
+
+  /** Replaces whole rows — never a delta, so re-running is safe. */
+  upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void>;
+
+  /** Existing (definition, month) pairs, so vanished inputs can be zeroed. */
+  listMetricSnapshotKeys(input: {
+    profileId: number;
+    months: MonthKey[];
+  }): Promise<Array<{ definitionId: number; month: MonthKey }>>;
+
+  /** Competitor quantities for the given months. */
   listUsage(input: {
     profileId: number;
     definitionIds: number[];
+    months: MonthKey[];
   }): Promise<FacilityProductUsageRecord[]>;
 
-  /** Replaces the quantity for this (profile, definition, product). */
+  /** Replaces the quantity for this (profile, definition, product, month). */
   upsertUsage(input: {
     profileId: number;
     definitionId: number;
     verticalId: number;
     productId: number;
+    month: MonthKey;
     quantity: number;
     updatedByUserId: number;
   }): Promise<void>;
@@ -78,20 +124,27 @@ export interface PotentialRepository {
     profileId: number;
     definitionId: number;
     productId: number;
+    month: MonthKey;
   }): Promise<boolean>;
 
   /**
-   * Sum SALE item qty over rolling window, keyed by definition.
+   * Sum eligible order-item quantities (× `metric_units`) for **one calendar
+   * month**, keyed by definition.
+   *
+   * The bounds are supplied rather than derived from the clock: that is what
+   * lets the same month be recomputed to the same number, which the snapshot
+   * cache depends on (spec 0013 §4.3).
    *
    * `verticalId` is required, not optional: without it this summed every linha's
    * orders into each linha's penetration (spec 0010 §4).
    */
-  sumAtlasmedQtyByDefinition(input: {
+  sumAtlasmedQtyByDefinitionAndMonth(input: {
     facilityId: number;
     verticalId: number;
     definitionIds: number[];
-    since: Date;
-  }): Promise<DefinitionQtySum[]>;
+    rangeStart: Date;
+    rangeEnd: Date;
+  }): Promise<DefinitionMonthQtySum[]>;
 
   /** Replaces the product's link within `verticalId`; other linhas untouched. */
   linkProduct(input: {

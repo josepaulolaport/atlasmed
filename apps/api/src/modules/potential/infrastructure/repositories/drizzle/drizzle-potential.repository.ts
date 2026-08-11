@@ -1,4 +1,5 @@
 import {
+  facilityMetricSnapshots,
   facilityProductUsage,
   facilityVerticalProfiles,
   orderItems,
@@ -8,11 +9,14 @@ import {
   productVerticals,
   products,
 } from "@atlasmed/database";
-import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import type { Database } from "@atlasmed/database";
+import { APPLICATION_TIMEZONE, type MonthKey } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
-  DefinitionQtySum,
+  DefinitionMonthQtySum,
+  MetricSnapshotWrite,
+  ProfileRecord,
   FacilityProductUsageRecord,
   PotentialDefinitionRecord,
   PotentialRepository,
@@ -139,16 +143,102 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return row?.id ?? null;
   }
 
+  /** The clinic and linha a profile belongs to — the recompute handler's entry point. */
+  async findProfileById(profileId: number): Promise<ProfileRecord | null> {
+    const [row] = await this.database
+      .select({
+        id: facilityVerticalProfiles.id,
+        facilityId: facilityVerticalProfiles.facilityId,
+        verticalId: facilityVerticalProfiles.verticalId,
+      })
+      .from(facilityVerticalProfiles)
+      .where(eq(facilityVerticalProfiles.id, profileId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /**
+   * Writes the computed rows, replacing whatever was there.
+   *
+   * A whole-row replacement, never a delta: that is what makes at-least-once
+   * delivery safe, and what lets the sweep and the trigger race without either
+   * corrupting the other (spec 0013 §4.4).
+   */
+  async upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void> {
+    if (rows.length === 0) return;
+    await this.database
+      .insert(facilityMetricSnapshots)
+      .values(
+        rows.map((row) => ({
+          facilityVerticalProfileId: row.profileId,
+          definitionId: row.definitionId,
+          verticalId: row.verticalId,
+          month: row.month,
+          oursQty: row.oursQty.toFixed(2),
+          theirsQty: row.theirsQty.toFixed(2),
+          computedAt: row.computedAt,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [
+          facilityMetricSnapshots.facilityVerticalProfileId,
+          facilityMetricSnapshots.definitionId,
+          facilityMetricSnapshots.month,
+        ],
+        set: {
+          oursQty: sql`excluded.ours_qty`,
+          theirsQty: sql`excluded.theirs_qty`,
+          computedAt: sql`excluded.computed_at`,
+        },
+      });
+  }
+
+  /**
+   * Which (definition, month) pairs already have a snapshot.
+   *
+   * The handler needs this to zero a row whose inputs have since disappeared —
+   * an order deleted or a usage row removed. Recomputing only the pairs that
+   * still have inputs would leave the old figure standing, which is the quiet
+   * kind of wrong.
+   */
+  async listMetricSnapshotKeys(input: {
+    profileId: number;
+    months: MonthKey[];
+  }): Promise<Array<{ definitionId: number; month: MonthKey }>> {
+    if (input.months.length === 0) return [];
+    return this.database
+      .select({
+        definitionId: facilityMetricSnapshots.definitionId,
+        month: facilityMetricSnapshots.month,
+      })
+      .from(facilityMetricSnapshots)
+      .where(
+        and(
+          eq(facilityMetricSnapshots.facilityVerticalProfileId, input.profileId),
+          inArray(facilityMetricSnapshots.month, input.months),
+        ),
+      );
+  }
+
+  /**
+   * Competitor quantities for the given months.
+   *
+   * `months` is explicit rather than "the latest": the read path averages a
+   * trailing window and the recompute handler wants exactly one month, and
+   * neither should be expressed as a `LIMIT` over an implicit ordering.
+   */
   async listUsage(input: {
     profileId: number;
     definitionIds: number[];
+    months: MonthKey[];
   }): Promise<FacilityProductUsageRecord[]> {
-    if (input.definitionIds.length === 0) return [];
+    if (input.definitionIds.length === 0 || input.months.length === 0) return [];
     const rows = await this.database
       .select({
         definitionId: facilityProductUsage.definitionId,
         productId: facilityProductUsage.productId,
         productName: products.name,
+        month: facilityProductUsage.month,
         quantity: facilityProductUsage.quantity,
         metricUnits: products.metricUnits,
         updatedAt: facilityProductUsage.updatedAt,
@@ -159,14 +249,16 @@ export class DrizzlePotentialRepository implements PotentialRepository {
         and(
           eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
           inArray(facilityProductUsage.definitionId, input.definitionIds),
+          inArray(facilityProductUsage.month, input.months),
         ),
       )
-      .orderBy(asc(products.name));
+      .orderBy(asc(facilityProductUsage.month), asc(products.name));
 
     return rows.map((row) => ({
       definitionId: row.definitionId,
       productId: row.productId,
       productName: row.productName,
+      month: row.month,
       /** Product units, as the rep entered them. */
       quantity: Number(row.quantity),
       /** Metric units — quantity × the product's packaging factor. */
@@ -177,15 +269,20 @@ export class DrizzlePotentialRepository implements PotentialRepository {
 
   /**
    * Sets one competitor quantity, replacing any previous figure for the same
-   * (profile, definition, product). The rep supplies only the number; the
-   * vertical comes from the definition, so the two composite foreign keys
-   * cannot disagree.
+   * (profile, definition, product, month). The rep supplies only the number; the
+   * vertical comes from the definition, so the two composite foreign keys cannot
+   * disagree.
+   *
+   * The month is part of the key because the rep's answer is an observation
+   * about a month (spec 0013 §4.1, amended 2026-08-11) — overwriting it would
+   * silently rewrite what was true in every earlier month.
    */
   async upsertUsage(input: {
     profileId: number;
     definitionId: number;
     verticalId: number;
     productId: number;
+    month: MonthKey;
     quantity: number;
     updatedByUserId: number;
   }): Promise<void> {
@@ -196,6 +293,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
         definitionId: input.definitionId,
         verticalId: input.verticalId,
         productId: input.productId,
+        month: input.month,
         quantity: String(input.quantity),
         updatedByUserId: input.updatedByUserId,
       })
@@ -204,6 +302,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
           facilityProductUsage.facilityVerticalProfileId,
           facilityProductUsage.definitionId,
           facilityProductUsage.productId,
+          facilityProductUsage.month,
         ],
         set: {
           quantity: String(input.quantity),
@@ -217,6 +316,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     profileId: number;
     definitionId: number;
     productId: number;
+    month: MonthKey;
   }): Promise<boolean> {
     const deleted = await this.database
       .delete(facilityProductUsage)
@@ -225,6 +325,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
           eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
           eq(facilityProductUsage.definitionId, input.definitionId),
           eq(facilityProductUsage.productId, input.productId),
+          eq(facilityProductUsage.month, input.month),
         ),
       )
       .returning({ id: facilityProductUsage.id });
@@ -240,16 +341,24 @@ export class DrizzlePotentialRepository implements PotentialRepository {
    * the re-keying, and it is: orders now carry the profile, and the profile is
    * what a vertical means.
    */
-  async sumAtlasmedQtyByDefinition(input: {
+  async sumAtlasmedQtyByDefinitionAndMonth(input: {
     facilityId: number;
     verticalId: number;
     definitionIds: number[];
-    since: Date;
-  }): Promise<DefinitionQtySum[]> {
+    /** Inclusive lower bound — the UTC instant of local midnight on the 1st. */
+    rangeStart: Date;
+    /** Exclusive upper bound — the same instant for the month after the last. */
+    rangeEnd: Date;
+  }): Promise<DefinitionMonthQtySum[]> {
     if (input.definitionIds.length === 0) return [];
     const rows = await this.database
       .select({
         definitionId: productPotentialLinks.definitionId,
+        // `ordered_at` is `timestamp without time zone` holding UTC, so it is
+        // interpreted as UTC and then read in São Paulo — the same two-step the
+        // purchase-recurrence query uses. Grouping in UTC would file an order
+        // taken 31 March 22:00 local under April.
+        month: sql<string>`(date_trunc('month', ${orders.orderedAt} at time zone 'UTC' at time zone ${sql.raw(`'${APPLICATION_TIMEZONE}'`)}))::date`,
         // Metric units, not product units (spec 0013 §4.2). Summing quantity raw
         // counted a box of five as one, so ten boxes read as ten ampoules
         // instead of fifty. Every share figure was understated by the packaging
@@ -282,14 +391,24 @@ export class DrizzlePotentialRepository implements PotentialRepository {
           // stock was invisible here and visible there.
           inArray(orders.type, ["SALE", "CONSIGNMENT"]),
           inArray(orders.status, ["APPROVED", "INVOICED"]),
-          gte(orders.orderedAt, input.since),
+          // Half-open calendar month, São Paulo boundaries (spec 0013 §4.3).
+          // This replaced `ordered_at >= now() - 90 days`, which had no upper
+          // bound at all — future-dated orders counted toward the current
+          // figure — and which made the value depend on the clock, so the same
+          // month could never be recomputed to the same number.
+          gte(orders.orderedAt, input.rangeStart),
+          lt(orders.orderedAt, input.rangeEnd),
           inArray(productPotentialLinks.definitionId, input.definitionIds),
         ),
       )
-      .groupBy(productPotentialLinks.definitionId);
+      .groupBy(
+        productPotentialLinks.definitionId,
+        sql`date_trunc('month', ${orders.orderedAt} at time zone 'UTC' at time zone ${sql.raw(`'${APPLICATION_TIMEZONE}'`)})`,
+      );
 
     return rows.map((row) => ({
       definitionId: row.definitionId,
+      month: row.month,
       totalQty: Number(row.totalQty),
     }));
   }
