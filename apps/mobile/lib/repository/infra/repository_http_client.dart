@@ -40,7 +40,12 @@ abstract class RepositoryHttpClient {
 /// missing `Authorization` header reads identically to one with a rejected
 /// token unless the difference is printed.
 Map<String, String> redactHeaders(Map<String, String> headers) {
-  const sensitive = {'authorization', 'cookie', 'set-cookie', 'idempotency-key'};
+  const sensitive = {
+    'authorization',
+    'cookie',
+    'set-cookie',
+    'idempotency-key',
+  };
 
   return {
     for (final entry in headers.entries)
