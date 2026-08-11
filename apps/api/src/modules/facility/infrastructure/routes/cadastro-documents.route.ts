@@ -46,12 +46,13 @@ const initiateFileUploadRoute = new Elysia()
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .post(
     "/facilities/:id/cadastro/documents/:documentId/files/initiate",
-    async ({ params, body, getScope }) => {
-      const scope = await getScope();
+    async ({ params, body, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
       return facilityUseCases.initiateCadastroFileUpload().execute({
         facilityId: params.id,
         documentId: params.documentId,
         scope,
+        userId,
         filename: body.filename,
         contentType: body.contentType,
         sizeBytes: body.sizeBytes,

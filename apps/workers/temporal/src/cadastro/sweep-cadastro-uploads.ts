@@ -1,9 +1,10 @@
 import {
   AbortMultipartUploadCommand,
+  DeleteObjectCommand,
   HeadObjectCommand,
   type S3Client,
 } from "@aws-sdk/client-s3";
-import { and, asc, eq, lt, notInArray } from "drizzle-orm";
+import { and, asc, eq, isNotNull, lt, notInArray } from "drizzle-orm";
 import {
   documentFiles,
   fileAssets,
@@ -77,6 +78,7 @@ export interface CadastroSweepReport {
   failed: number;
   deleted: number;
   sessionsAborted: number;
+  purged: number;
 }
 
 export interface SweepCadastroUploadsInput {
@@ -189,6 +191,7 @@ export async function sweepCadastroUploads(
     failed: 0,
     deleted: 0,
     sessionsAborted: 0,
+    purged: 0,
   };
 
   const stale = await db
@@ -260,6 +263,8 @@ export async function sweepCadastroUploads(
     limit,
   });
 
+  report.purged = await purgeExpiredFiles({ db, storage, bucket, now, limit });
+
   logger.info("cadastro.sweep.completed", { ...report });
   return report;
 }
@@ -326,4 +331,71 @@ async function abortExpiredSessions(input: {
   }
 
   return aborted;
+}
+
+/**
+ * Deletes files whose retention has run out (spec 0011 §6, ADR 0008 §5).
+ *
+ * `purge_after` is set when a document is rejected and cleared when it is
+ * approved, so this only ever finds refused evidence past its week. Approved
+ * documents carry null and are never selected — deleting those would destroy
+ * the proof a clinic was compliant at a point in time, which the design keeps
+ * deliberately.
+ *
+ * **The `submission_documents` row survives.** Only the bytes and the
+ * `file_assets` row go, so "v2 — Reprovado — <comment>" still renders with the
+ * status, version and reviewer comment intact; there is simply nothing to open.
+ *
+ * The application drives this rather than an object-lifecycle rule, because
+ * lifecycle rules cannot see submission state.
+ */
+async function purgeExpiredFiles(input: {
+  db: ReturnType<typeof getDb>;
+  storage: S3Client;
+  bucket: string;
+  now: Date;
+  limit: number;
+}): Promise<number> {
+  const due = await input.db
+    .select({
+      id: fileAssets.id,
+      objectKey: fileAssets.objectKey,
+      assetBucket: fileAssets.bucket,
+    })
+    .from(fileAssets)
+    .where(
+      and(isNotNull(fileAssets.purgeAfter), lt(fileAssets.purgeAfter, input.now))
+    )
+    .orderBy(asc(fileAssets.purgeAfter))
+    .limit(input.limit);
+
+  let purged = 0;
+  for (const asset of due) {
+    try {
+      await input.storage.send(
+        new DeleteObjectCommand({
+          Bucket: asset.assetBucket || input.bucket,
+          Key: asset.objectKey,
+        })
+      );
+    } catch (error) {
+      // The row is only dropped once the bytes are gone. Leaving it in place
+      // means the next tick retries; dropping it here would strand the object
+      // in the bucket with nothing left pointing at it.
+      logger.warn("cadastro.sweep.purge_object_failed", {
+        fileAssetId: asset.id,
+        objectKey: asset.objectKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      continue;
+    }
+
+    await input.db
+      .delete(documentFiles)
+      .where(eq(documentFiles.fileAssetId, asset.id));
+    await input.db.delete(fileAssets).where(eq(fileAssets.id, asset.id));
+    purged += 1;
+  }
+
+  return purged;
 }

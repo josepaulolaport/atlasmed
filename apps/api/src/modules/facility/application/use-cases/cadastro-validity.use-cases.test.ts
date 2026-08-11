@@ -217,6 +217,9 @@ function reviewUseCase(options: {
           requirement: req,
         }),
         createReviewDecision: async () => {},
+        // Retention is exercised in cadastro-retention.use-cases.test.ts; here
+        // it only needs to exist so the approval path can run.
+        setPurgeAfterForDocument: async () => {},
         updateDocumentStatus: update,
       },
     } as never),

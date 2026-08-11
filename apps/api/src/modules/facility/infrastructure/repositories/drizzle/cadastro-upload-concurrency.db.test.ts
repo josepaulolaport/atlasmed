@@ -124,6 +124,9 @@ function attach(fixture: Fixture, n: number, sizeBytes = 100) {
     declaredMimeType: "image/jpeg",
     sizeBytes,
     role: "PAGE",
+    // Null: this test is about concurrency, and seeding a user would drag in a
+    // role fixture the empty CI database does not have.
+    uploadedByUserId: null,
     maxFiles: 1,
     maxCombinedSizeBytes: 1_000_000,
   });
@@ -160,6 +163,7 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
           declaredMimeType: "image/jpeg",
           sizeBytes: 100,
           role: "PAGE",
+          uploadedByUserId: null,
           maxFiles: 10,
           maxCombinedSizeBytes: 1_000_000,
         })
@@ -228,6 +232,9 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
         declaredMimeType: "image/jpeg",
         sizeBytes: 600_000,
         role: "PAGE",
+      // Null: this test is about concurrency, and seeding a user would drag in a
+      // role fixture the empty CI database does not have.
+      uploadedByUserId: null,
         maxFiles: 10,
         maxCombinedSizeBytes: 1_000_000,
       }),
@@ -240,6 +247,9 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
         declaredMimeType: "image/jpeg",
         sizeBytes: 600_000,
         role: "PAGE",
+      // Null: this test is about concurrency, and seeding a user would drag in a
+      // role fixture the empty CI database does not have.
+      uploadedByUserId: null,
         maxFiles: 10,
         maxCombinedSizeBytes: 1_000_000,
       }),
@@ -268,6 +278,9 @@ describe.skipIf(!dbUp)("concurrent uploads into one cadastro document", () => {
       declaredMimeType: "image/jpeg",
       sizeBytes: 10,
       role: "PAGE",
+      // Null: this test is about concurrency, and seeding a user would drag in a
+      // role fixture the empty CI database does not have.
+      uploadedByUserId: null,
       maxFiles: 10,
       maxCombinedSizeBytes: 1_000_000,
     });

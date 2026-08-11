@@ -66,6 +66,10 @@ export interface FileAssetRecord {
   height: number | null;
   errorCode: string | null;
   errorMessage: string | null;
+  /** Who uploaded it (spec 0011 §3.4). Null for rows predating attribution. */
+  uploadedByUserId: number | null;
+  /** When the bytes may be deleted; null means never (spec 0011 §6). */
+  purgeAfter: Date | null;
   uploadedAt: Date | null;
   processedAt: Date | null;
   createdAt: Date;
@@ -80,6 +84,12 @@ export interface DocumentFileRecord {
   role: CadastroDocumentFileRole;
   createdAt: Date;
   fileAsset?: FileAssetRecord;
+  /**
+   * Display name of whoever uploaded the file — "Enviado por Maria" (spec 0011
+   * §7). Joined here rather than resolved per file by the caller, which would
+   * be one query per row.
+   */
+  uploadedByName?: string | null;
 }
 
 export interface UploadSessionRecord {
@@ -212,6 +222,12 @@ export interface CadastroSubmissionRepository {
     position?: number;
     maxFiles: number;
     maxCombinedSizeBytes: number;
+    /**
+     * Nullable here because the column is: rows predating attribution have
+     * none, and a deleted account nulls it. The *use case* always supplies a
+     * real id — every upload arrives on an authenticated route (spec 0011 §3.4).
+     */
+    uploadedByUserId: number | null;
   }): Promise<
     | { outcome: "attached"; asset: FileAssetRecord; position: number }
     | { outcome: "document_missing" }
@@ -220,6 +236,17 @@ export interface CadastroSubmissionRepository {
   >;
 
   listDocumentFiles(documentId: number): Promise<DocumentFileRecord[]>;
+  /**
+   * Schedules — or cancels — deletion of every file under a document.
+   *
+   * `null` clears the schedule, which is what approval does: approved evidence
+   * is kept forever, and a document that was rejected and later approved must
+   * not carry a stale purge date from its earlier verdict.
+   */
+  setPurgeAfterForDocument(input: {
+    documentId: number;
+    purgeAfter: Date | null;
+  }): Promise<void>;
   findDocumentFileByFileAssetId(
     fileAssetId: number
   ): Promise<DocumentFileRecord | null>;

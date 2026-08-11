@@ -89,6 +89,8 @@ function mapFileAsset(row: typeof fileAssets.$inferSelect): FileAssetRecord {
     height: row.height,
     errorCode: row.errorCode,
     errorMessage: row.errorMessage,
+    uploadedByUserId: row.uploadedByUserId,
+    purgeAfter: row.purgeAfter,
     uploadedAt: row.uploadedAt,
     processedAt: row.processedAt,
     createdAt: row.createdAt,
@@ -98,9 +100,11 @@ function mapFileAsset(row: typeof fileAssets.$inferSelect): FileAssetRecord {
 
 function mapDocumentFile(
   row: typeof documentFiles.$inferSelect,
-  asset?: typeof fileAssets.$inferSelect
+  asset?: typeof fileAssets.$inferSelect,
+  uploadedByName?: string | null
 ): DocumentFileRecord {
   return {
+    uploadedByName: uploadedByName ?? null,
     id: row.id,
     submissionDocumentId: row.submissionDocumentId,
     fileAssetId: row.fileAssetId,
@@ -417,6 +421,7 @@ export class DrizzleCadastroSubmissionRepository
     position?: number;
     maxFiles: number;
     maxCombinedSizeBytes: number;
+    uploadedByUserId: number | null;
   }) {
     return db.transaction(async (tx) => {
       // The lock is on the parent document because that is the scope of every
@@ -464,6 +469,7 @@ export class DrizzleCadastroSubmissionRepository
           sizeBytes: input.sizeBytes,
           sha256: input.sha256 ?? null,
           status: "PENDING_UPLOAD",
+          uploadedByUserId: input.uploadedByUserId,
         })
         .returning();
 
@@ -489,12 +495,46 @@ export class DrizzleCadastroSubmissionRepository
       .select({
         link: documentFiles,
         asset: fileAssets,
+        uploaderFirstName: users.firstName,
+        uploaderLastName: users.lastName,
+        uploaderUsername: users.username,
       })
       .from(documentFiles)
       .innerJoin(fileAssets, eq(documentFiles.fileAssetId, fileAssets.id))
+      // Left, not inner: a file whose uploader was deleted, or one uploaded
+      // before attribution existed, must still appear in the checklist.
+      .leftJoin(users, eq(fileAssets.uploadedByUserId, users.id))
       .where(eq(documentFiles.submissionDocumentId, documentId))
       .orderBy(documentFiles.position);
-    return rows.map((r) => mapDocumentFile(r.link, r.asset));
+    return rows.map((r) =>
+      mapDocumentFile(
+        r.link,
+        r.asset,
+        formatUserDisplayName({
+          firstName: r.uploaderFirstName,
+          lastName: r.uploaderLastName,
+          username: r.uploaderUsername,
+        })
+      )
+    );
+  }
+
+  async setPurgeAfterForDocument(input: {
+    documentId: number;
+    purgeAfter: Date | null;
+  }) {
+    // Scoped through the link table so only this document's files are touched;
+    // a facility-scoped asset shared by two documents is not collateral.
+    const links = await db
+      .select({ fileAssetId: documentFiles.fileAssetId })
+      .from(documentFiles)
+      .where(eq(documentFiles.submissionDocumentId, input.documentId));
+    if (links.length === 0) return;
+
+    await db
+      .update(fileAssets)
+      .set({ purgeAfter: input.purgeAfter })
+      .where(inArray(fileAssets.id, links.map((l) => l.fileAssetId)));
   }
 
   async findDocumentFileByFileAssetId(fileAssetId: number) {
