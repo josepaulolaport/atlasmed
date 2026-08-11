@@ -17,6 +17,7 @@ import type {
   DefinitionMonthQtySum,
   MetricSnapshotWrite,
   ProfileRecord,
+  StoredMetricSnapshot,
   FacilityProductUsageRecord,
   PotentialDefinitionRecord,
   PotentialRepository,
@@ -194,22 +195,25 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   /**
-   * Which (definition, month) pairs already have a snapshot.
+   * The snapshots that already exist for these months, with their values.
    *
-   * The handler needs this to zero a row whose inputs have since disappeared —
-   * an order deleted or a usage row removed. Recomputing only the pairs that
-   * still have inputs would leave the old figure standing, which is the quiet
-   * kind of wrong.
+   * Serves two jobs at once. The keys let the handler zero a row whose inputs
+   * have since disappeared — an order deleted, a usage row removed — because
+   * recomputing only the cells that still have inputs would leave the old figure
+   * standing. The values let it report how many rows it actually *changed*,
+   * which is the only signal that a trigger was lost.
    */
-  async listMetricSnapshotKeys(input: {
+  async listMetricSnapshotValues(input: {
     profileId: number;
     months: MonthKey[];
-  }): Promise<Array<{ definitionId: number; month: MonthKey }>> {
+  }): Promise<StoredMetricSnapshot[]> {
     if (input.months.length === 0) return [];
-    return this.database
+    const rows = await this.database
       .select({
         definitionId: facilityMetricSnapshots.definitionId,
         month: facilityMetricSnapshots.month,
+        oursQty: facilityMetricSnapshots.oursQty,
+        theirsQty: facilityMetricSnapshots.theirsQty,
       })
       .from(facilityMetricSnapshots)
       .where(
@@ -218,6 +222,12 @@ export class DrizzlePotentialRepository implements PotentialRepository {
           inArray(facilityMetricSnapshots.month, input.months),
         ),
       );
+    return rows.map((row) => ({
+      definitionId: row.definitionId,
+      month: row.month,
+      oursQty: Number(row.oursQty),
+      theirsQty: Number(row.theirsQty),
+    }));
   }
 
   /**

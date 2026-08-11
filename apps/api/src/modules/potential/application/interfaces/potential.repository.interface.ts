@@ -54,6 +54,14 @@ export type ProfileRecord = {
  * needs to compare it against input timestamps, and a value the handler chooses
  * is one the tests can pin.
  */
+/** A snapshot as currently stored, in metric units. */
+export type StoredMetricSnapshot = {
+  definitionId: number;
+  month: MonthKey;
+  oursQty: number;
+  theirsQty: number;
+};
+
 export type MetricSnapshotWrite = {
   profileId: number;
   definitionId: number;
@@ -96,11 +104,11 @@ export interface PotentialRepository {
   /** Replaces whole rows — never a delta, so re-running is safe. */
   upsertMetricSnapshots(rows: MetricSnapshotWrite[]): Promise<void>;
 
-  /** Existing (definition, month) pairs, so vanished inputs can be zeroed. */
-  listMetricSnapshotKeys(input: {
+  /** Existing snapshots, so vanished inputs can be zeroed and changes counted. */
+  listMetricSnapshotValues(input: {
     profileId: number;
     months: MonthKey[];
-  }): Promise<Array<{ definitionId: number; month: MonthKey }>>;
+  }): Promise<StoredMetricSnapshot[]>;
 
   /** Competitor quantities for the given months. */
   listUsage(input: {
