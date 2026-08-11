@@ -199,6 +199,14 @@ void main() {
       ],
     );
 
+    // The declared MediaQuery is 320x800; without this the surface stays at the
+    // 800x600 default and the section — which lives in a sliver on the real
+    // screen, so it is never height-bounded there — reports a vertical overflow
+    // that no user can hit. The horizontal fit is the invariant under test.
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
