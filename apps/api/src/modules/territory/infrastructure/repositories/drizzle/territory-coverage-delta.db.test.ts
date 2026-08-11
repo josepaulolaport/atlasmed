@@ -76,8 +76,8 @@ async function seed(tx: Tx, options: { repHasPatch: boolean }) {
   if (options.repHasPatch) {
     const patch = await one<{ id: number }>(
       tx.execute(sql`
-        INSERT INTO territories (name, slug, code, territory_type_id, vertical_id, boundary)
-        VALUES (${tag}, ${tag}, ${tag}, ${patchType.id}, ${vertical.id},
+        INSERT INTO territories (name, slug, territory_type_id, vertical_id, boundary)
+        VALUES (${tag}, ${tag}, ${patchType.id}, ${vertical.id},
                 ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(PATCH)}), 4326))
         RETURNING id
       `)

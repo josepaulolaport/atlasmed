@@ -20,7 +20,6 @@ class Territory {
   final int id;
   final String name;
   final String slug;
-  final String code;
   final int verticalId;
   final TerritoryType territoryType;
   final int? managerTerritoryId;
@@ -42,7 +41,6 @@ class Territory {
     required this.id,
     required this.name,
     required this.slug,
-    required this.code,
     required this.verticalId,
     required this.territoryType,
     this.managerTerritoryId,
@@ -65,7 +63,9 @@ class Territory {
       id: readCrmId(json['id'], 'id'),
       name: json['name'] as String,
       slug: json['slug'] as String,
-      code: json['code'] as String,
+      // `code` is no longer read. Spec 0009 R9 removed the stored column: it was
+      // a second identifier with no authorship rule, on rows `id` already
+      // identifies. The API still sends it for older builds.
       verticalId: readCrmId(json['verticalId'], 'verticalId'),
       territoryType: TerritoryType.fromJson(
         json['territoryType'] as Map<String, dynamic>,
@@ -100,7 +100,6 @@ class Territory {
       id: id,
       name: name ?? this.name,
       slug: slug,
-      code: code,
       verticalId: verticalId ?? this.verticalId,
       territoryType: territoryType,
       managerTerritoryId: identical(managerTerritoryId, _unset)

@@ -147,6 +147,11 @@ export class TerritoryBoundaryUseCases {
     scope: ScopeContext;
     geoJson: GeoJsonGeometry;
     acceptedFacilityIds?: number[];
+    /**
+     * Spec 0009 R2/R5: recorded on every assignment this edit ends. Separate
+     * from `scope`, which describes what the caller may reach, not who they are.
+     */
+    actorUserId?: number;
   }) {
     // Authorization reads the pool: it is about the caller, not the row, and
     // nothing it decides can be invalidated by a concurrent boundary save.
@@ -214,6 +219,10 @@ export class TerritoryBoundaryUseCases {
         toBoundaryCommitCommand(territory.id, plan, {
           endForProfileIds: impactedProfileIds,
           endReason: "boundary_impact",
+          // Spec 0009 R2/R5: the admin who redrew the zone. Manager-zone edits
+          // are ADMIN-only, so without this the manager whose reps were
+          // de-assigned has no way to find out who did it.
+          endedByUserId: input.actorUserId ?? null,
         })
       );
 

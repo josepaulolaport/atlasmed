@@ -266,6 +266,40 @@ const listVerticalRepAssignmentsRoute = new Elysia()
     },
   );
 
+/**
+ * Spec 0009 R2's acceptance criterion: an overridden assignment "appears in an
+ * out-of-territory report". Read permission on FACILITY, scoped by the caller's
+ * verticals — an override is outside the geometry by definition, so territory
+ * scope would hide exactly what the report exists to show.
+ */
+const listOutOfTerritoryAssignmentsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/facilities/out-of-territory-assignments",
+    async ({ query, getScope, getUser }) => {
+      const scope = await getScope();
+      const user = await getUser();
+      return facilityUseCases.listOutOfTerritoryAssignments().execute({
+        scope,
+        role: user.role.name,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "List rep assignments held outside the rep's patch, with who overrode and why",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+  );
+
 const assignVerticalRepRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
@@ -282,15 +316,23 @@ const assignVerticalRepRoute = new Elysia()
         assignedByUserId,
         scope,
         role: user.role.name,
+        overrideReason: body.overrideReason,
       });
     },
     {
       params: verticalPathParams,
       body: t.Object({
         userId: t.Number({ minimum: 1 }),
+        /**
+         * Spec 0009 R2: assigning a rep outside their patch is allowed when it
+         * is on the record. Omit it and the patch-coverage check (I2) applies as
+         * before.
+         */
+        overrideReason: t.Optional(t.String({ minLength: 1 })),
       }),
       detail: {
-        summary: "Assign or replace REP for facility vertical",
+        summary:
+          "Assign or replace REP for facility vertical (overrideReason assigns outside the rep's patch, on the record)",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
@@ -887,6 +929,7 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilityPhotosRoute)
   .use(uploadFacilityPhotoRoute)
   .use(listVerticalRepAssignmentsRoute)
+  .use(listOutOfTerritoryAssignmentsRoute)
   .use(assignVerticalRepRoute)
   .use(unassignVerticalRepRoute)
   .use(deactivateFacilityVerticalRoute)

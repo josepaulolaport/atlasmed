@@ -21,6 +21,7 @@ import {
   AssignFacilityVerticalRepUseCase,
   DeactivateFacilityVerticalUseCase,
   ListFacilityVerticalRepAssignmentsUseCase,
+  ListOutOfTerritoryAssignmentsUseCase,
   UnassignFacilityVerticalRepUseCase,
 } from "./application/use-cases/facility-vertical-rep.use-cases";
 import {
@@ -206,6 +207,11 @@ export const facilityUseCases = {
     }),
   listVerticalRepAssignments: () =>
     new ListFacilityVerticalRepAssignmentsUseCase({
+      repAssignmentRepository: facilityRepositories.verticalRepAssignment,
+    }),
+  // Spec 0009 R2: overrides are reportable, or they are just an untracked hole.
+  listOutOfTerritoryAssignments: () =>
+    new ListOutOfTerritoryAssignmentsUseCase({
       repAssignmentRepository: facilityRepositories.verticalRepAssignment,
     }),
   assignVerticalRep: () =>

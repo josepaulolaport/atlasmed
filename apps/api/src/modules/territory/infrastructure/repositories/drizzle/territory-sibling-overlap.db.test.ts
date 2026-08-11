@@ -90,8 +90,8 @@ async function seedZonePair(tx: Tx) {
       (
         await one<{ id: number }>(
           tx.execute(sql`
-            INSERT INTO territories (name, slug, code, territory_type_id, vertical_id, boundary)
-            VALUES (${slug}, ${slug}, ${slug.toUpperCase()}, ${zoneType.id}, ${verticalId},
+            INSERT INTO territories (name, slug, territory_type_id, vertical_id, boundary)
+            VALUES (${slug}, ${slug}, ${zoneType.id}, ${verticalId},
                     ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(boundary)}), 4326))
             RETURNING id
           `)
@@ -215,7 +215,7 @@ describe.skipIf(!dbUp)("sibling overlap epsilon (database)", () => {
         await buildService(tx)
           .assertSiblingOverlapAllowed(subject(seeded) as never, OVERLAPPING)
           .catch((error: Error) => {
-            expect(error.message).toContain("T-R3-EXISTING");
+            expect(error.message).toContain("t-r3-existing");
             expect(error.message).toMatch(/\d+ m²/);
           });
       });

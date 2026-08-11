@@ -65,8 +65,8 @@ async function seedAssignedClinic(tx: Tx, typeSlug: "manager_zone" | "patch") {
   );
   const territory = await one<{ id: number }>(
     tx.execute(sql`
-      INSERT INTO territories (name, slug, code, territory_type_id, vertical_id, boundary)
-      VALUES (${`t-imp-${typeSlug}`}, ${`t-imp-${typeSlug}`}, ${`T-IMP-${typeSlug}`},
+      INSERT INTO territories (name, slug, territory_type_id, vertical_id, boundary)
+      VALUES (${`t-imp-${typeSlug}`}, ${`t-imp-${typeSlug}`},
               ${territoryType.id}, ${vertical.id},
               ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(ZONE)}), 4326))
       RETURNING id

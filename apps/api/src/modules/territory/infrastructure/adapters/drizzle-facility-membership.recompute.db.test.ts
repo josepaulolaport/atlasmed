@@ -72,8 +72,8 @@ async function createZone(
 ): Promise<number> {
   const row = await one<{ id: number }>(
     tx.execute(sql`
-      INSERT INTO territories (name, slug, code, territory_type_id, vertical_id, boundary)
-      VALUES (${input.slug}, ${input.slug}, ${input.slug.toUpperCase()},
+      INSERT INTO territories (name, slug, territory_type_id, vertical_id, boundary)
+      VALUES (${input.slug}, ${input.slug},
               ${input.typeId}, ${input.verticalId},
               ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(input.boundary)}), 4326))
       RETURNING id

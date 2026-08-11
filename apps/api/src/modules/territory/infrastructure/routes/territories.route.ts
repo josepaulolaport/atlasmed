@@ -170,7 +170,9 @@ export const territoriesRoute = new Elysia()
       body: t.Object({
         name: t.Optional(t.String()),
         isActive: t.Optional(t.Boolean()),
-        reason: t.Optional(t.String()),
+        // Spec 0009 R9: `reason` is gone. It was accepted and discarded — never
+        // stored, never logged, never read. A field that looks like an audit
+        // trail and is not is worse than no field.
       }),
     }
   )
@@ -223,12 +225,15 @@ export const territoriesRoute = new Elysia()
   )
   .put(
     "/territories/:id/boundary",
-    async ({ params, body, getScope }) => {
+    async ({ params, body, getScope, getUserId }) => {
       const scope = await getScope();
+      // Spec 0009 R2/R5: recorded against any assignment this edit ends.
+      const actorUserId = await getUserId();
       const { acceptedFacilityIds, ...geoJson } = body;
       return territoryUseCases.saveBoundary().saveBoundary({
         territoryId: parseId(params.id, "Territory"),
         scope,
+        actorUserId,
         geoJson,
         acceptedFacilityIds: acceptedFacilityIds?.map((id) => parseId(id, "Facility")),
       });

@@ -43,7 +43,6 @@ Territory _territory({required int id, required List<MapCoordinate> ring}) {
     id: id,
     name: 'Território $id',
     slug: '$id',
-    code: '$id',
     verticalId: _verticalOncologiaId,
     territoryType: _managerZoneType,
     boundary: geometry,
@@ -126,7 +125,6 @@ class _FakeTerritoryRepository implements TerritoryRepository {
       id: territories.length + 100,
       name: draft.name,
       slug: draft.name,
-      code: draft.name,
       verticalId: draft.verticalId,
       territoryType: draft.kind == TerritoryKind.managerZone
           ? _managerZoneType
@@ -452,7 +450,6 @@ void main() {
         id: 3,
         name: 'Território legado',
         slug: '3',
-        code: '3',
         verticalId: _verticalOncologiaId,
         territoryType: _managerZoneType,
         boundary: TerritoryGeometry.multiPolygon([

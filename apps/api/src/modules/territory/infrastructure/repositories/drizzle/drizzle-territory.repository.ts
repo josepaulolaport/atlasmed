@@ -34,7 +34,6 @@ function mapTerritory(
     id: territory.id,
     name: territory.name,
     slug: territory.slug,
-    code: territory.code,
     verticalId: territory.verticalId,
     territoryTypeId: territory.territoryTypeId,
     territoryType: territory.territoryType ? mapType(territory.territoryType) : undefined,
@@ -91,18 +90,8 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
-  async findByCode(code: string, verticalId?: number): Promise<TerritoryRecord | null> {
-    const conditions = [eq(territories.code, code)];
-    if (verticalId) {
-      conditions.push(eq(territories.verticalId, verticalId));
-    }
-    const rows = await this.database
-      .select({ territories, territoryTypes })
-      .from(territories)
-      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
-      .where(and(...conditions));
-    return rows[0] ? fromJoinedRow(rows[0]) : null;
-  }
+  // `findByCode` is gone with the column (spec 0009 R9). It had no callers —
+  // territories are looked up by id or by slug.
 
   async findByIds(ids: number[]): Promise<TerritoryRecord[]> {
     if (ids.length === 0) {
@@ -126,7 +115,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       .from(territories)
       .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
       .where(and(...conditions))
-      .orderBy(asc(territories.code));
+      .orderBy(asc(territories.slug));
     return rows.map(fromJoinedRow);
   }
 
@@ -210,7 +199,6 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       .values({
         name: input.name,
         slug: input.slug,
-        code: input.code ?? input.slug.toUpperCase(),
         verticalId: input.verticalId,
         territoryTypeId: input.territoryTypeId,
         managerTerritoryId: input.managerTerritoryId ?? null,

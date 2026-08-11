@@ -56,7 +56,6 @@ export class AssignUserTerritoryUseCase {
     await this.deps.scopeRepository.assignTerritory({
       userId: params.targetUserId,
       territoryId: params.territoryId,
-      assignedBy: params.assignedBy,
     });
 
     await this.deps.scopeService.invalidateForTerritoryAssignmentChange(params.targetUserId);

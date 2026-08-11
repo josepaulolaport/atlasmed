@@ -1,13 +1,13 @@
 export interface SiblingOverlapConflict {
   id: number;
-  code: string;
+  slug: string;
   /** Absolute intersection area. Spec 0009 R3 judges overlap in m², not as a share. */
   overlapSquareMeters: number;
 }
 
 export interface OverlappingTerritory {
   id: number;
-  code: string;
+  slug: string;
 }
 
 /**
@@ -41,7 +41,7 @@ export interface GeoJsonGeometry {
 
 export interface ManagerZoneCandidate {
   id: number;
-  code: string;
+  slug: string;
   name: string;
 }
 
@@ -121,7 +121,7 @@ export interface TerritorySpatialRepository {
   findRepPatchesOutsideManagerZone(input: {
     managerZoneId: number;
     managerZoneGeoJson: GeoJsonGeometry;
-  }): Promise<Array<{ id: number; code: string }>>;
+  }): Promise<Array<{ id: number; slug: string }>>;
 
   updateBoundaryMetadata(territoryId: number): Promise<void>;
 }

@@ -72,11 +72,9 @@ export const userAssignmentsRoute = new Elysia({
     {
       body: t.Object({
         verticalId: t.String({ description: "Business vertical ID to assign to the user" }),
-        managerId: t.Optional(
-          t.Union([t.String(), t.Null()], {
-            description: "Per-vertical reporting manager (REP)",
-          }),
-        ),
+        // Spec 0009 R9: `managerId` is gone. Dead since migration 0044 dropped
+        // per-vertical reporting managers — the hierarchy is territory-derived,
+        // so a manager cannot be asserted here. It was accepted and discarded.
       }),
     },
   )

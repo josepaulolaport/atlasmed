@@ -87,8 +87,8 @@ async function seedAssignedClinic(tx: Tx) {
   );
   const territory = await one<{ id: number }>(
     tx.execute(sql`
-      INSERT INTO territories (name, slug, code, territory_type_id, vertical_id, boundary)
-      VALUES ('T-R1 Zone', 't-r1-zone', 'T-R1-ZONE', ${zoneType.id}, ${vertical.id},
+      INSERT INTO territories (name, slug, territory_type_id, vertical_id, boundary)
+      VALUES ('T-R1 Zone', 't-r1-zone', ${zoneType.id}, ${vertical.id},
               ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(VALID_SQUARE)}), 4326))
       RETURNING id
     `)
@@ -208,6 +208,48 @@ describe.skipIf(!dbUp)("boundary save atomicity (database)", () => {
       ).rejects.toThrow();
 
       expect(await assignmentEndedAt(tx, seeded.assignmentId)).toBeNull();
+    });
+  });
+
+  /**
+   * Spec 0009 R2/R5: `end_reason` recorded why an assignment ended and nothing
+   * recorded who. Manager-zone edits are ADMIN-only, so an admin's redraw ended
+   * assignments a manager had made, untraceably.
+   */
+  test("de-assignment records who ended it, not only why", async () => {
+    await withRollback(async (tx) => {
+      const seeded = await seedAssignedClinic(tx);
+      const writer = new DrizzleTerritoryBoundaryWriter(tx as never);
+
+      // A different user from the rep: the point is that the *editor* is
+      // recorded, not the person losing the clinic.
+      const actorRows = (await tx.execute(sql`
+        INSERT INTO users (email, username, password_hash, role_id)
+        SELECT 'admin-redraw@example.test', 'admin-redraw', 'x', role_id
+        FROM users WHERE id = (
+          SELECT user_id FROM facility_vertical_rep_assignments WHERE id = ${seeded.assignmentId}
+        )
+        RETURNING id
+      `)) as Array<{ id: number }>;
+      const actorUserId = Number(actorRows[0]!.id);
+
+      await writer.commitBoundaryChange({
+        territoryId: seeded.territoryId,
+        boundary: VALID_SQUARE,
+        endAssignmentsForProfileIds: [seeded.profileId],
+        endReason: "boundary_impact",
+        endedByUserId: actorUserId,
+        repairInvalid: false,
+        countRepPatches: false,
+      });
+
+      const rows = (await tx.execute(sql`
+        SELECT end_reason, ended_by_user_id
+        FROM facility_vertical_rep_assignments WHERE id = ${seeded.assignmentId}
+      `)) as Array<{ end_reason: string; ended_by_user_id: string | null }>;
+
+      expect(rows[0]!.end_reason).toBe("boundary_impact");
+      expect(Number(rows[0]!.ended_by_user_id)).toBe(actorUserId);
     });
   });
 
