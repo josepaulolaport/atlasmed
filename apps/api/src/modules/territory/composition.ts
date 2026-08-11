@@ -18,6 +18,7 @@ import { upsertFacilitySearchDocument } from "../../infrastructure/search/facili
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 import { isManagerZoneType } from "./application/constants/territory-roles.constants";
 import { logger } from "../../infrastructure/logging/logger";
+import { metricsService } from "../../infrastructure/monitoring/metrics.service";
 
 export const territoryRepositories = {
   territory: new DrizzleTerritoryRepository(),
@@ -37,6 +38,15 @@ const territoryMembershipService = new TerritoryMembershipService({
   clinicWriter: facilityMembershipWriter,
   onClinicMembershipChanged: async (facilityId) => {
     await upsertFacilitySearchDocument(facilityId);
+  },
+  recordAmbiguousMatch: (source, count) =>
+    metricsService.recordAmbiguousManagerZone(source, count),
+  logAmbiguousMatch: (match) => {
+    logger.warn("Clinic covered by more than one manager zone; membership cleared", {
+      facilityId: match.facilityId,
+      verticalId: match.verticalId,
+      zoneIds: match.zoneIds.join(","),
+    });
   },
 });
 
@@ -215,6 +225,18 @@ function createBoundaryUseCases() {
     onBoundaryChanged: onSavedBoundaryCommitted,
     onManagerTerritoryChanged: onManagerTerritoryChanged,
     onMembershipRecomputed: enqueueSearchSyncForFacilities,
+    onAmbiguousManagerZones: (matches) => {
+      metricsService.recordAmbiguousManagerZone("boundary_save", matches.length);
+      for (const match of matches) {
+        // Both zone ids in the line: the operator's next question is "which two".
+        logger.warn("Clinic covered by more than one manager zone; membership cleared", {
+          facilityId: match.facilityId,
+          facilityVerticalProfileId: match.facilityVerticalProfileId,
+          verticalId: match.verticalId,
+          zoneIds: match.zoneIds.join(","),
+        });
+      }
+    },
   });
 }
 
