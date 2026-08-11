@@ -16,6 +16,10 @@ final canManageUsersProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canManageUsers),
 );
 
+final canReadTeamProvider = Provider<bool>(
+  (ref) => _roleFlag(ref, canReadTeam),
+);
+
 final canManageUserAdminProvider = Provider<bool>(
   (ref) => _roleFlag(ref, canManageUserAdmin),
 );

@@ -1,22 +1,130 @@
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/data/repositories/dashboard_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
+import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Optional Linha filter. `null` = all assigned (backend scopes via token).
+/// The linha the screen is showing.
+///
+/// Never null once options resolve, and never "todas": spec 0014 §3 forbids
+/// mixing two linhas in one number, so the selector has no union option and the
+/// ADMIN special case that produced "Brasil · visão geral" is gone.
 final dashboardSelectedVerticalIdProvider = StateProvider<int?>((ref) => null);
 
-/// Repository keyed by optional filter (`null` / empty = union).
-final dashboardRepositoryProvider = Provider.autoDispose
-    .family<DashboardRepository, int?>((ref, verticalId) {
-      final repo = DashboardRepository(verticalId: verticalId);
-      ref.onDispose(repo.dispose);
-      return repo;
+/// Whose desempenho is on screen — null is the signed-in user's own.
+final dashboardSubjectUserIdProvider = StateProvider<int?>((ref) => null);
+
+/// The active filter set (spec 0014 §5), applied uniformly to every metric.
+final dashboardFiltersProvider = StateProvider<DashboardScopeArgs?>(
+  (ref) => null,
+);
+
+final dashboardVerticalOptionsProvider = FutureProvider<List<BusinessVertical>>(
+  (ref) => ref.watch(currentUserFacilityVerticalOptionsProvider.future),
+);
+
+/// The scope every metric request shares. Null until a linha is known — no
+/// metric may be fetched before then, because there is no correct answer.
+final dashboardScopeArgsProvider = Provider<DashboardScopeArgs?>((ref) {
+  final verticalId = ref.watch(dashboardSelectedVerticalIdProvider);
+  if (verticalId == null) return null;
+
+  final filters = ref.watch(dashboardFiltersProvider);
+  return DashboardScopeArgs(
+    verticalId: verticalId,
+    subjectUserId: ref.watch(dashboardSubjectUserIdProvider),
+    unitTypeId: filters?.unitTypeId,
+    managerId: filters?.managerId,
+    repId: filters?.repId,
+    stateId: filters?.stateId,
+    municipalityId: filters?.municipalityId,
+  );
+});
+
+/// One autodisposing repository per (metric, scope) so a filter change starts a
+/// fresh request and the old one is torn down rather than raced.
+AutoDisposeProviderFamily<Repository<T>, DashboardScopeArgs> _metricFamily<T>(
+  Repository<T> Function(DashboardScopeArgs args) build,
+) {
+  return Provider.autoDispose.family<Repository<T>, DashboardScopeArgs>((
+    ref,
+    args,
+  ) {
+    final repository = build(args);
+    ref.onDispose(repository.dispose);
+    return repository;
+  });
+}
+
+final assignedClinicsMetricProvider = _metricFamily<DashboardCountMetric>(
+  assignedClinicsRepository,
+);
+final coverageMetricProvider = _metricFamily<DashboardRatioMetric>(
+  coverageRepository,
+);
+final purchaseBucketsMetricProvider = _metricFamily<DashboardBuckets>(
+  purchaseBucketsRepository,
+);
+final cadastroCompletionMetricProvider = _metricFamily<DashboardRatioMetric>(
+  cadastroCompletionRepository,
+);
+final ordersMetricProvider = _metricFamily<DashboardOrdersMetric>(
+  ordersRepository,
+);
+final penetrationMetricProvider = _metricFamily<DashboardPenetrationMetric>(
+  penetrationRepository,
+);
+final unassignedClinicsMetricProvider = _metricFamily<DashboardCountMetric>(
+  unassignedClinicsRepository,
+);
+final dashboardTerritoryProvider = _metricFamily<DashboardTerritory>(
+  territoryRepository,
+);
+
+class MetricClinicsArgs {
+  const MetricClinicsArgs({
+    required this.metric,
+    required this.scope,
+    this.page = 1,
+    this.limit = 25,
+  });
+
+  final String metric;
+  final DashboardScopeArgs scope;
+  final int page;
+  final int limit;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MetricClinicsArgs &&
+      other.metric == metric &&
+      other.scope == scope &&
+      other.page == page &&
+      other.limit == limit;
+
+  @override
+  int get hashCode => Object.hash(metric, scope, page, limit);
+}
+
+final metricClinicsProvider = Provider.autoDispose
+    .family<Repository<DashboardClinicPage>, MetricClinicsArgs>((ref, args) {
+      final repository = metricClinicsRepository(
+        metric: args.metric,
+        args: args.scope,
+        page: args.page,
+        limit: args.limit,
+      );
+      ref.onDispose(repository.dispose);
+      return repository;
     });
 
-/// Vertical options for the chip selector (only shown when 2+).
-final dashboardVerticalOptionsProvider = FutureProvider<List<BusinessVertical>>(
-  (ref) {
-    return ref.watch(currentUserFacilityVerticalOptionsProvider.future);
-  },
-);
+/// The unit-type catalog. Empty in production until the catalog is loaded — the
+/// filter then renders with no options rather than with unlabelled ids.
+final unitTypeOptionsProvider =
+    Provider.autoDispose<Repository<List<UnitTypeOption>>>((ref) {
+      final repository = UnitTypesRepository();
+      ref.onDispose(repository.dispose);
+      return repository;
+    });

@@ -279,6 +279,35 @@ export class ListClinicalFocusesUseCase {
   }
 }
 
+/**
+ * The unit-type catalog (spec 0014 item 14) — what makes the `unit_type`
+ * dashboard filter possible at all.
+ *
+ * Returns the catalog whether or not it is populated. Both tables are empty in
+ * production today (`0055` dropped the old catalogs and `0056` recreated them
+ * empty), and an empty list is the honest answer: the client renders a filter
+ * with no options rather than a filter whose options are unlabelled ids.
+ */
+export class ListUnitTypesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute() {
+    const catalog = await this.deps.facilityRepository.listUnitTypeCatalog();
+    return {
+      data: catalog.map((row) => ({
+        id: row.id,
+        cnesId: row.cnesId,
+        name: row.name,
+        subtypes: row.subtypes.map((subtype) => ({
+          id: subtype.id,
+          cnesId: subtype.cnesId,
+          name: subtype.name,
+        })),
+      })),
+    };
+  }
+}
+
 export class GetFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 

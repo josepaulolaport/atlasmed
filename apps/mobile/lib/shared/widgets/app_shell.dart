@@ -334,6 +334,15 @@ const appNavigationItems = <AppNavigationItem>[
     icon: Icons.layers_outlined,
     visibleFor: canReadTerritories,
   ),
+  // Spec 0014 §6. `Usuários` below stays admin-only and unrelated: this is the
+  // roster a manager works from, not the user-administration surface.
+  AppNavigationItem(
+    branchIndex: 11,
+    label: 'Equipe',
+    route: '/team',
+    icon: Icons.groups_outlined,
+    visibleFor: canReadTeam,
+  ),
   AppNavigationItem(
     branchIndex: 5,
     label: 'Usuários',

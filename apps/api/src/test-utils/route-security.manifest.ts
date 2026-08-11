@@ -35,6 +35,7 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/catalog/infrastructure/routes/competitor-products.route.ts": "auth+permission",
   "modules/catalog/infrastructure/routes/product-comparisons.route.ts": "auth+permission",
   "modules/dashboard/infrastructure/routes/dashboard.route.ts": "auth+permission",
+  "modules/dashboard/infrastructure/routes/team.route.ts": "auth+permission",
   "modules/facility/infrastructure/routes/cadastro-documents.route.ts": "auth+permission",
   "modules/facility/infrastructure/routes/facilities.route.ts": "auth+permission",
   "modules/facility/infrastructure/routes/map-facilities.route.ts": "auth+permission",

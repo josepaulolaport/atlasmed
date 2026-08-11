@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_summary.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_metrics.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
@@ -13,9 +13,18 @@ import 'package:atlasmed_mobile_app/router/routes.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
 class DashboardTerritoryCard extends StatelessWidget {
-  const DashboardTerritoryCard({super.key, required this.data});
+  const DashboardTerritoryCard({
+    super.key,
+    required this.data,
+    this.coveragePercent,
+  });
 
-  final DashboardTerritorySummary data;
+  final DashboardTerritory data;
+
+  /// Cobertura, which now loads as its own metric (spec 0014 §4) and may not
+  /// have arrived yet. Null hides the coverage stat rather than showing a 0
+  /// that would read as "you covered nothing".
+  final int? coveragePercent;
 
   @override
   Widget build(BuildContext context) {
@@ -55,11 +64,11 @@ class DashboardTerritoryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (data.mode == TerritoryMode.overview)
+          if (data.mode == TerritoryMode.global && data.features.isEmpty)
             _TerritoryMiniMap(
-              // Admin overview: Brazil basemap only — no territory polygons.
+              // Nothing to outline: basemap only.
               features: const [],
-              label: data.label ?? 'Brasil · visão geral',
+              label: data.label ?? 'Toda a linha',
             )
           else if (data.mode.showMap && data.features.isNotEmpty)
             _TerritoryMiniMap(
@@ -91,50 +100,54 @@ class DashboardTerritoryCard extends StatelessWidget {
               _Stat(value: '${data.clinicCount}', label: 'clínicas'),
               _vDivider(),
               _Stat(value: '${data.doctorCount}', label: 'médicos'),
-              _vDivider(),
-              _Stat(
-                value: '${data.coveragePercent}%',
-                label: 'cobertura',
-                valueColor: const Color(0xFF16a373),
-              ),
+              if (coveragePercent != null) ...[
+                _vDivider(),
+                _Stat(
+                  value: '$coveragePercent%',
+                  label: 'cobertura',
+                  valueColor: const Color(0xFF16a373),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF4b5563),
-                    ),
-                    children: [
-                      const TextSpan(text: 'Você cobriu '),
-                      TextSpan(
-                        text: '${data.coveragePercent}%',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF16a373),
-                        ),
+          if (coveragePercent != null) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF4b5563),
                       ),
-                      const TextSpan(text: ' da sua região'),
-                    ],
+                      children: [
+                        const TextSpan(text: 'Você cobriu '),
+                        TextSpan(
+                          text: '$coveragePercent%',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF16a373),
+                          ),
+                        ),
+                        const TextSpan(text: ' da sua região'),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: (data.coveragePercent.clamp(0, 100)) / 100,
-              minHeight: 6,
-              backgroundColor: const Color(0xFFe5e7eb),
-              color: const Color(0xFF16a373),
+              ],
             ),
-          ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: (coveragePercent!.clamp(0, 100)) / 100,
+                minHeight: 6,
+                backgroundColor: const Color(0xFFe5e7eb),
+                color: const Color(0xFF16a373),
+              ),
+            ),
+          ],
         ],
       ),
     );

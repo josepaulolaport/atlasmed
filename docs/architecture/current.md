@@ -25,7 +25,25 @@ Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Flutter mobile ap
 - `catalog`: products.
 - `orders`: orders linked to facilities (and optionally `person_id`).
 - `field-suggestions`: user-submitted Não Conformidades (`field_suggestions`).
-- `dashboard`, `maps`, `potential`, `search-sync`, `sessions`, `user`, `visits`.
+- `dashboard`: Desempenho metrics and the Equipe roster (spec 0014). One endpoint per
+  metric under `/dashboard/metrics/*`, each taking the same scope + filter parameters and
+  each with a per-clinic breakdown at `/dashboard/metrics/:metric/clinics`; plus
+  `/dashboard/territory` and `/team`. `GET /dashboard/summary` is **gone** — it blocked on
+  its slowest query and returned an unbounded cross-vertical aggregate to every ADMIN.
+- `maps`, `potential`, `search-sync`, `sessions`, `user`, `visits`.
+
+### Dashboard scoping
+
+Every metric pins **exactly one vertical** and derives its denominator from the subject's
+role, not from `scope.facilityIds`: REP → clinics assigned to them, MANAGER → clinics in
+their zones, ADMIN/OPS → the whole vertical. `subjectUserId` re-scopes to another person
+(MANAGER may target their own reps only, ADMIN anyone), which is what backs the mobile
+"Ver desempenho" entry from a profile. This is where `analyticsFacilityIds`,
+`analyticsEffectiveTerritoryIds` and `reportAssignedTerritoryIds` stop being dead code.
+
+`GET /facilities/unit-types` exposes the unit-type catalog with its subtypes so the
+`unit_type` filter has resolvable names (spec 0014 item 14). Both tables are empty in
+production, so the filter currently renders with no options.
 
 
 ## Mobile Architecture

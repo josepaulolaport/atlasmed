@@ -97,9 +97,25 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     patterns: ["assertResourceInScope"],
   },
 
-  "modules/dashboard/application/get-dashboard-summary.use-case.ts": {
-    kind: "repo-filter",
-    patterns: ["facilityIds", "isGlobal"],
+  /**
+   * Spec 0014 §3: the denominator is derived from the subject's role, not from
+   * `scope.facilityIds`. Enforcement is the shared `resolve()` step — every
+   * metric runs it before it can reach a repository, and it pins the vertical,
+   * authorizes the subject and builds the predicate in one place.
+   */
+  "modules/dashboard/application/use-cases/dashboard-metrics.use-cases.ts": {
+    kind: "domain-policy",
+    patterns: ["resolveSubject", "buildProfileFilter", "resolveVerticalIds"],
+  },
+  /**
+   * The roster is scoped by role, not by facility ids: a manager sees their own
+   * reps (derived from their zones) and nothing else, an admin sees managers,
+   * and a REP is refused outright. Per-member metric values go back through the
+   * metric use cases above, which re-authorize each subject.
+   */
+  "modules/dashboard/application/use-cases/team.use-cases.ts": {
+    kind: "domain-policy",
+    patterns: ["findManagerZoneIds", "ForbiddenError", "resolveVerticalIds"],
   },
 
   "modules/field-suggestions/application/use-cases/field-suggestion.use-cases.ts": {

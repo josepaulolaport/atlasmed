@@ -6,6 +6,14 @@ import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 bool canManageUsers(UserRoleName role) =>
     role == UserRoleName.admin || role == UserRoleName.manager;
 
+/// Equipe (spec 0014 §6): a manager sees their reps, an admin sees managers.
+/// A REP has no team, so the roster is hidden from them entirely — the API
+/// refuses it too, which is where the rule is actually enforced.
+bool canReadTeam(UserRoleName role) =>
+    role == UserRoleName.admin ||
+    role == UserRoleName.manager ||
+    role == UserRoleName.ops;
+
 /// Role change, grants, profile edit, territory/sector assignment replace.
 bool canManageUserAdmin(UserRoleName role) => role == UserRoleName.admin;
 

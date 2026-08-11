@@ -17,8 +17,11 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalo
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/potential_definitions_admin_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/product_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/data/models/dashboard_scope_args.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/metric_clinics_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/purchase_bucket_facilities_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/team_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
@@ -259,6 +262,12 @@ class ForgotSuccessRoute extends GoRouteData with $ForgotSuccessRoute {
         TypedGoRoute<ProfileRoute>(path: '/profile'),
       ],
     ),
+    // Appended rather than inserted next to Territórios: a branch's position is
+    // its `branchIndex`, so slotting it mid-list would silently renumber every
+    // branch after it. Display order lives in `appNavigationItems`.
+    TypedStatefulShellBranch<TeamBranch>(
+      routes: <TypedRoute<RouteData>>[TypedGoRoute<TeamRoute>(path: '/team')],
+    ),
   ],
 )
 class AppShellRoute extends StatefulShellRouteData {
@@ -318,12 +327,24 @@ class ProfileBranch extends StatefulShellBranchData {
   const ProfileBranch();
 }
 
+class TeamBranch extends StatefulShellBranchData {
+  const TeamBranch();
+}
+
 class DashboardRoute extends GoRouteData with $DashboardRoute {
   const DashboardRoute();
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       const NoTransitionPage(child: DashboardScreen());
+}
+
+class TeamRoute extends GoRouteData with $TeamRoute {
+  const TeamRoute();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      const NoTransitionPage(child: TeamScreen());
 }
 
 class ExploreRoute extends GoRouteData with $ExploreRoute {
@@ -476,6 +497,107 @@ class AgendaOccurrenceEditRoute extends GoRouteData
     }
     return AgendaEditorRouteGuard(
       target: CalendarEditorTarget.editingOccurrence(occurrence),
+    );
+  }
+}
+
+/// Desempenho scoped to another person (spec 0014 §2, "Ver desempenho").
+///
+/// The same screen as the `/dashboard` tab — one screen, three entry points,
+/// three scopes — pushed over the shell so the viewer keeps their own tab state.
+@TypedGoRoute<SubjectDashboardRoute>(path: '/team/member/:subjectUserId')
+class SubjectDashboardRoute extends GoRouteData with $SubjectDashboardRoute {
+  const SubjectDashboardRoute({
+    required this.subjectUserId,
+    @TypedQueryParameter(name: 'subjectName') this.subjectName,
+  });
+
+  final int subjectUserId;
+  final String? subjectName;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return DashboardScreen(
+      subjectUserId: subjectUserId,
+      subjectName: subjectName,
+    );
+  }
+}
+
+/// One manager's team, from the ADMIN roster (spec 0014 §6).
+@TypedGoRoute<TeamMemberRoute>(path: '/team/manager/:managerId')
+class TeamMemberRoute extends GoRouteData with $TeamMemberRoute {
+  const TeamMemberRoute({
+    required this.managerId,
+    @TypedQueryParameter(name: 'managerName') this.managerName,
+  });
+
+  final int managerId;
+  final String? managerName;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return TeamScreen(managerId: managerId, managerName: managerName);
+  }
+}
+
+@TypedGoRoute<RepsWithoutPatchRoute>(path: '/team/reps-without-patch')
+class RepsWithoutPatchRoute extends GoRouteData with $RepsWithoutPatchRoute {
+  const RepsWithoutPatchRoute();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const RepsWithoutPatchScreen();
+}
+
+/// A metric card's per-clinic breakdown (spec 0014 §4.1).
+///
+/// Carries the whole scope in the URL because the breakdown must answer for the
+/// same population the card counted — a drill-down that dropped a filter would
+/// list clinics the number never included.
+@TypedGoRoute<MetricClinicsRoute>(path: '/dashboard/metrics/:metric/clinics')
+class MetricClinicsRoute extends GoRouteData with $MetricClinicsRoute {
+  const MetricClinicsRoute({
+    required this.metric,
+    @TypedQueryParameter(name: 'verticalId') required this.verticalId,
+    @TypedQueryParameter(name: 'subjectUserId') this.subjectUserId,
+    @TypedQueryParameter(name: 'unitTypeId') this.unitTypeId,
+    @TypedQueryParameter(name: 'managerId') this.managerId,
+    @TypedQueryParameter(name: 'repId') this.repId,
+    @TypedQueryParameter(name: 'stateId') this.stateId,
+    @TypedQueryParameter(name: 'municipalityId') this.municipalityId,
+  });
+
+  final String metric;
+  final int verticalId;
+  final int? subjectUserId;
+  final int? unitTypeId;
+  final int? managerId;
+  final int? repId;
+  final int? stateId;
+  final int? municipalityId;
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    return MetricClinicsScreen(
+      metric: metric,
+      scope: DashboardScopeArgs(
+        verticalId: verticalId,
+        subjectUserId: subjectUserId,
+        unitTypeId: unitTypeId,
+        managerId: managerId,
+        repId: repId,
+        stateId: stateId,
+        municipalityId: municipalityId,
+      ),
     );
   }
 }

@@ -62,6 +62,7 @@ function fakeRepository(
     findAllByIds: async () => [],
     findById: async () => null,
     listClinicalFocusCatalog: async () => [],
+    listUnitTypeCatalog: async () => [],
     create: async () => facilityRecord(100),
     update: async () => facilityRecord(101),
     softDelete: async () => {},

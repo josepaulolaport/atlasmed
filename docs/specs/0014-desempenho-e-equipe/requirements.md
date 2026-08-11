@@ -1,6 +1,6 @@
 # Spec 0014 — Desempenho & Equipe
 
-**Status:** Accepted (2026-08-10)
+**Status:** Implemented (2026-08-11)
 **Depends on:** spec 0009 (ownership), spec 0010 (profile as commercial hub), spec 0013
 (market metrics)
 
@@ -141,6 +141,53 @@ instead of silent.
 
 D-53 (deactivated facilities in counts). Consumes the previously-dead
 `analyticsFacilityIds` / `analyticsEffectiveTerritoryIds` / `reportAssignedTerritoryIds`.
+
+## 8.1 As built (2026-08-11)
+
+Everything in §2–§6 ships, plus item 14, which §5 named as the blocker for the `unit_type`
+filter. Three things are worth writing down because they are decisions the spec did not
+make:
+
+- **Penetração média is per metric, not one number.** §4 lists it as a single card, but a
+  linha may define several metrics and a product carries one `metric_units` value per
+  metric (spec 0013 §4.2) — so summing `ampolas_mes` and `prp` would be arithmetic on
+  incompatible quantities. The endpoint returns one row per definition and the card renders
+  one row each. The Equipe leaderboard sorts by the first definition, and says so.
+- **The card reports `clinicsCounted` beside the mean.** §4 requires ignoring clinics with
+  no calculable share; it does not say the user should be told how many that was. A mean
+  over 3 of 200 clinics is a real number about very little, and the gap is the honest part.
+- **Pedidos "semana" is the trailing seven days**, not a calendar week — there is no
+  week-start convention in this product to inherit, and inventing one would make Monday's
+  number collapse for reasons nobody asked about. "Mês" is the calendar month in
+  `America/São_Paulo`, matching every other bucketed figure. Both counts apply ADR 0003
+  eligibility (`APPROVED`/`INVOICED`, `SALE`/`CONSIGNMENT`); counting every row would count
+  `DRAFT` and `REJECTED` orders as commercial activity.
+
+**Penetração média renders empty, and will until spec 0013's P4 triggers land.** It reads
+`facility_metric_snapshots`, and **nothing in production writes that table**:
+`RecomputeMetricSnapshotsUseCase` exists, is correct and is tested, but its only call sites
+are in `metric-snapshot-recompute.db.test.ts` — it is absent from `potentialUseCases`, from
+every route and from every workflow. The endpoint is correct; the number is `—` because
+there is nothing to average, which is the right thing for it to say.
+
+The usage *writer* does exist — `PUT /facilities/:id/potentials/:definitionId/usage/:productId`
+upserts `facility_product_usage` — it simply does not recompute afterwards, so the clinic
+screen (which computes live from orders + usage) is right while the snapshot stays unwritten.
+The mobile picker that would call it has no call sites either.
+
+**Do not wire the recompute into the usage write on its own.** §4.4 has three triggers, and
+rule 1 — order writes enqueue a recompute — is missing too. Wiring only rules 2 and 3 would
+snapshot exactly the profiles where a rep recorded competitor data and none of the profiles
+that have orders and no competitor data. Those are the `share = 100%` clinics (spec 0013
+§9.2), so omitting them drags the aggregate mean down systematically: not an empty number, a
+plausible wrong one. Picker, triggers and the reconciliation sweep have to land together.
+
+**Not built:** route-level HTTP integration tests for the new endpoints. The dashboard
+module's routes import `composition` directly rather than taking injected use cases, so
+they cannot be mounted the way `orders-http.integration.test.ts` mounts its factory.
+Coverage is unit-level (scope resolution, every metric, the roster) plus query-shape
+assertions on the emitted SQL. Converting the routes to the factory pattern is the
+follow-up.
 
 ## 9. Deferred
 

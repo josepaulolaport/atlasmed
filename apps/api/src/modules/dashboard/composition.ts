@@ -1,8 +1,50 @@
 import { DrizzleDashboardRepository } from "./infrastructure/repositories/drizzle-dashboard.repository";
-import { GetDashboardSummaryUseCase } from "./application/get-dashboard-summary.use-case";
+import { DrizzleDashboardDirectoryRepository } from "./infrastructure/repositories/drizzle-dashboard-directory.repository";
+import {
+  GetAssignedClinicsMetricUseCase,
+  GetCadastroCompletionMetricUseCase,
+  GetCoverageMetricUseCase,
+  GetDashboardTerritoryUseCase,
+  GetOrdersMetricUseCase,
+  GetPenetrationMetricUseCase,
+  GetPurchaseBucketsMetricUseCase,
+  GetUnassignedClinicsMetricUseCase,
+  ListMetricClinicsUseCase,
+} from "./application/use-cases/dashboard-metrics.use-cases";
 
-const dashboardRepository = new DrizzleDashboardRepository();
+import { DrizzleTeamRepository } from "./infrastructure/repositories/drizzle-team.repository";
+import {
+  ListRepsWithoutPatchUseCase,
+  ListTeamUseCase,
+} from "./application/use-cases/team.use-cases";
+
+const repository = new DrizzleDashboardRepository();
+const directory = new DrizzleDashboardDirectoryRepository();
+const teamRepository = new DrizzleTeamRepository();
+const deps = { repository, directory };
 
 export const dashboardUseCases = {
-  getSummary: () => new GetDashboardSummaryUseCase(dashboardRepository),
+  getAssignedClinics: () => new GetAssignedClinicsMetricUseCase(deps),
+  getCoverage: () => new GetCoverageMetricUseCase(deps),
+  getPurchaseBuckets: () => new GetPurchaseBucketsMetricUseCase(deps),
+  getCadastroCompletion: () => new GetCadastroCompletionMetricUseCase(deps),
+  getOrders: () => new GetOrdersMetricUseCase(deps),
+  getPenetration: () => new GetPenetrationMetricUseCase(deps),
+  getUnassignedClinics: () => new GetUnassignedClinicsMetricUseCase(deps),
+  getTerritory: () => new GetDashboardTerritoryUseCase(deps),
+  listMetricClinics: () => new ListMetricClinicsUseCase(deps),
+  listTeam: () =>
+    new ListTeamUseCase({
+      teamRepository,
+      directory,
+      metrics: {
+        assignedClinics: new GetAssignedClinicsMetricUseCase(deps),
+        coverage: new GetCoverageMetricUseCase(deps),
+        cadastroCompletion: new GetCadastroCompletionMetricUseCase(deps),
+        orders: new GetOrdersMetricUseCase(deps),
+        penetration: new GetPenetrationMetricUseCase(deps),
+        unassignedClinics: new GetUnassignedClinicsMetricUseCase(deps),
+      },
+    }),
+  listRepsWithoutPatch: () => new ListRepsWithoutPatchUseCase({ teamRepository }),
 };

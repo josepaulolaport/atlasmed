@@ -79,6 +79,24 @@ const listClinicalFocusesRoute = new Elysia()
     },
   );
 
+const listUnitTypesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY"))
+  .get(
+    "/facilities/unit-types",
+    async () => {
+      return facilityUseCases.listUnitTypes().execute();
+    },
+    {
+      detail: {
+        summary:
+          "List the unit-type catalog with subtypes (resolves facilities.unitTypeId for filters)",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+  );
+
 const createFacilityRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "FACILITY"))
@@ -917,6 +935,8 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilitiesRoute)
   // Before `/facilities/:id` so `clinical-focuses` is not captured as an id.
   .use(listClinicalFocusesRoute)
+  // Same reason — `unit-types` must not be routed as `/facilities/:id`.
+  .use(listUnitTypesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
   .use(updateFacilityRoute)

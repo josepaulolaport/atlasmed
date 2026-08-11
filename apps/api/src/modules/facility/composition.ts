@@ -14,6 +14,7 @@ import {
   GetFacilityUseCase,
   ListFacilitiesUseCase,
   ListClinicalFocusesUseCase,
+  ListUnitTypesUseCase,
   UpdateFacilityUseCase,
 } from "./application/use-cases/facility.use-cases";
 import { ListMapFacilityPointsUseCase } from "./application/use-cases/list-map-facility-points.use-case";
@@ -168,6 +169,7 @@ export const facilityUseCases = {
     }),
   listClinicalFocuses: () =>
     new ListClinicalFocusesUseCase(facilityMembershipDeps),
+  listUnitTypes: () => new ListUnitTypesUseCase(facilityMembershipDeps),
   getFacility: () => new GetFacilityUseCase(facilityMembershipDeps),
   createFacility: () => new CreateFacilityUseCase(facilityMembershipDeps),
   updateFacility: () => new UpdateFacilityUseCase(facilityMembershipDeps),
