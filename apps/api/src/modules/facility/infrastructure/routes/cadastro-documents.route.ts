@@ -268,6 +268,7 @@ const reviewDocumentRoute = new Elysia()
         comment: body.comment,
         reasonCode: body.reasonCode,
         flaggedFileAssetIds: body.flaggedFileAssetIds,
+        validUntil: body.validUntil,
       });
     },
     {
@@ -289,6 +290,10 @@ const reviewDocumentRoute = new Elysia()
         comment: t.Optional(t.String({ maxLength: 2000 })),
         reasonCode: t.Optional(t.String({ maxLength: 64 })),
         flaggedFileAssetIds: t.Optional(t.Array(t.Number({ minimum: 1 }))),
+        /** Reviewer's confirm-or-correct, on approval only (ADR 0008 §6). */
+        validUntil: t.Optional(
+          t.String({ minLength: 10, maxLength: 10, pattern: "^\\d{4}-\\d{2}-\\d{2}$" })
+        ),
       }),
     }
   );
@@ -332,6 +337,7 @@ const submitRequirementRoute = new Elysia()
         userId,
         scope,
         documentId: body?.documentId,
+        validUntil: body?.validUntil,
       });
     },
     {
@@ -347,6 +353,10 @@ const submitRequirementRoute = new Elysia()
       body: t.Optional(
         t.Object({
           documentId: t.Optional(t.Number({ minimum: 1 })),
+          /** Required where the requirement declares one (spec 0011 §3.3). */
+          validUntil: t.Optional(
+            t.String({ minLength: 10, maxLength: 10, pattern: "^\\d{4}-\\d{2}-\\d{2}$" })
+          ),
         })
       ),
     }

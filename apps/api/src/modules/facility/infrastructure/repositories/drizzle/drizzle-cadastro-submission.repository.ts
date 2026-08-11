@@ -46,6 +46,7 @@ function mapDocument(
     status: row.status,
     version: row.version,
     reviewComment: row.reviewComment,
+    validUntil: row.validUntil,
     submittedByUserId: row.submittedByUserId,
     submittedAt: row.submittedAt,
     createdAt: row.createdAt,
@@ -62,6 +63,7 @@ function mapDocument(
           maxFileSizeBytes: requirement.maxFileSizeBytes,
           maxCombinedSizeBytes: requirement.maxCombinedSizeBytes,
           requiresFrontAndBack: requirement.requiresFrontAndBack,
+          requiresValidityDate: requirement.requiresValidityDate,
         }
       : undefined,
   };
@@ -311,6 +313,7 @@ export class DrizzleCadastroSubmissionRepository
     id: number;
     status: SubmissionDocumentRecord["status"];
     reviewComment?: string | null;
+    validUntil?: string | null;
     version?: number;
     submittedAt?: Date | null;
     submittedByUserId?: number | null;
@@ -322,6 +325,7 @@ export class DrizzleCadastroSubmissionRepository
         ...(input.reviewComment !== undefined
           ? { reviewComment: input.reviewComment }
           : {}),
+        ...(input.validUntil !== undefined ? { validUntil: input.validUntil } : {}),
         ...(input.version !== undefined ? { version: input.version } : {}),
         ...(input.submittedAt !== undefined
           ? { submittedAt: input.submittedAt }

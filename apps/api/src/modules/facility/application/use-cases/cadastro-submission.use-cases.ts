@@ -15,6 +15,7 @@ import type {
   FileAssetRecord,
 } from "../interfaces/cadastro-submission.repository.interface";
 import { FacilityCadastroCompletionService } from "../services/facility-cadastro-completion.service";
+import { daysUntil, isValidIsoDate } from "../utils/cadastro-validity.utils";
 import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
 import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 
@@ -205,6 +206,107 @@ const EDITABLE_DOCUMENT_STATUSES = new Set([
 
 function assertDocumentEditable(status: string) {
   if (!EDITABLE_DOCUMENT_STATUSES.has(status)) throw new ForbiddenError();
+}
+
+/**
+ * Validates the rep's validity date at submit and returns what to store.
+ *
+ * `undefined` means "leave the column alone"; `null` would clear it. A date is
+ * required exactly where the requirement declares one, and rejected where it
+ * does not — silently dropping a date the client sent would hide a client bug
+ * and lose data the rep typed.
+ */
+function assertValidityDateForSubmit(input: {
+  requiresValidityDate: boolean;
+  requirementName: string;
+  validUntil?: string | null;
+  today: Date;
+}): string | undefined {
+  const supplied = input.validUntil?.trim() || null;
+
+  if (!input.requiresValidityDate) {
+    if (supplied) {
+      throw new ValidationError([
+        {
+          field: "validUntil",
+          message: `${input.requirementName} não tem data de validade`,
+        },
+      ]);
+    }
+    return undefined;
+  }
+
+  if (!supplied) {
+    throw new ValidationError([
+      {
+        field: "validUntil",
+        message: `Informe a data de validade de ${input.requirementName}`,
+      },
+    ]);
+  }
+  if (!isValidIsoDate(supplied)) {
+    throw new ValidationError([
+      { field: "validUntil", message: "Data de validade inválida (AAAA-MM-DD)" },
+    ]);
+  }
+  // An already-expired document is not valid evidence, and a rep submitting one
+  // has almost certainly mistyped the year. Better a clear refusal now than an
+  // approval that the expiry warning immediately contradicts.
+  if (daysUntil(supplied, input.today) < 0) {
+    throw new ValidationError([
+      { field: "validUntil", message: "A data de validade já passou" },
+    ]);
+  }
+
+  return supplied;
+}
+
+/**
+ * The date to store when approving: the reviewer's correction if they made one,
+ * otherwise the rep's.
+ *
+ * Approval is the last point at which anyone looks at the document, so a
+ * requirement that declares a validity must not get past here without one —
+ * otherwise the expiry warning silently never fires for that clinic.
+ */
+function assertValidityDateForApproval(input: {
+  requiresValidityDate: boolean;
+  requirementName: string;
+  corrected?: string | null;
+  existing: string | null;
+}): string | undefined {
+  if (!input.requiresValidityDate) {
+    if (input.corrected) {
+      throw new ValidationError([
+        {
+          field: "validUntil",
+          message: `${input.requirementName} não tem data de validade`,
+        },
+      ]);
+    }
+    return undefined;
+  }
+
+  const chosen = input.corrected?.trim() || input.existing;
+  if (!chosen) {
+    throw new ValidationError([
+      {
+        field: "validUntil",
+        message: `Confirme a data de validade de ${input.requirementName}`,
+      },
+    ]);
+  }
+  if (!isValidIsoDate(chosen)) {
+    throw new ValidationError([
+      { field: "validUntil", message: "Data de validade inválida (AAAA-MM-DD)" },
+    ]);
+  }
+
+  // Deliberately no "must be in the future" check here. A reviewer correcting a
+  // date to one that has already passed is recording a fact about the document
+  // in front of them; the derived warning will show it as EXPIRED, which is the
+  // correct outcome rather than something to refuse.
+  return chosen;
 }
 
 async function serializeDocument(
@@ -719,6 +821,11 @@ export class ReviewCadastroDocumentUseCase {
     comment?: string;
     reasonCode?: string;
     flaggedFileAssetIds?: number[];
+    /**
+     * The reviewer's correction to the rep's date, on approval only. Omitted
+     * means "confirm what the rep entered" (ADR 0008 §6).
+     */
+    validUntil?: string | null;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const document = await this.deps.cadastroRepository.findDocumentById(
@@ -731,6 +838,20 @@ export class ReviewCadastroDocumentUseCase {
     if (document.status !== "UNDER_REVIEW" && document.status !== "SUBMITTED") {
       throw new ForbiddenError();
     }
+
+    // Confirm-or-correct, and only on approval: rejecting a document says
+    // nothing about when it expires, and writing a date onto a rejected row
+    // would put a validity on evidence that was refused.
+    const validUntil =
+      input.decision === "APPROVED"
+        ? assertValidityDateForApproval({
+            requiresValidityDate:
+              document.requirement?.requiresValidityDate ?? false,
+            requirementName: document.requirement?.name ?? document.title,
+            corrected: input.validUntil,
+            existing: document.validUntil,
+          })
+        : undefined;
 
     await this.deps.cadastroRepository.createReviewDecision({
       submissionDocumentId: document.id,
@@ -753,6 +874,7 @@ export class ReviewCadastroDocumentUseCase {
       id: document.id,
       status: input.decision,
       reviewComment: input.comment ?? null,
+      ...(validUntil !== undefined ? { validUntil } : {}),
     });
 
     // Approving one document can complete a linha. Completion is evaluated for
@@ -867,6 +989,8 @@ export class SubmitCadastroRequirementUseCase {
     userId: number;
     scope: ScopeContext;
     documentId?: number;
+    /** Required where the requirement declares one; rejected where it does not. */
+    validUntil?: string | null;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -941,6 +1065,13 @@ export class SubmitCadastroRequirementUseCase {
       }
     }
 
+    const validUntil = assertValidityDateForSubmit({
+      requiresValidityDate: requirement.requiresValidityDate,
+      requirementName: requirement.name,
+      validUntil: input.validUntil,
+      today: new Date(),
+    });
+
     // One write. Submitting this document leaves every other requirement for
     // this clinic still editable — under the package, this call froze them all.
     const updated = await this.deps.cadastroRepository.updateDocumentStatus({
@@ -948,6 +1079,7 @@ export class SubmitCadastroRequirementUseCase {
       status: "UNDER_REVIEW",
       submittedAt: new Date(),
       submittedByUserId: input.userId,
+      ...(validUntil !== undefined ? { validUntil } : {}),
     });
 
     return {
@@ -955,6 +1087,7 @@ export class SubmitCadastroRequirementUseCase {
       status: "UNDER_REVIEW" as const,
       version: updated.version,
       submittedAt: updated.submittedAt?.toISOString(),
+      validUntil: updated.validUntil ?? undefined,
     };
   }
 }
