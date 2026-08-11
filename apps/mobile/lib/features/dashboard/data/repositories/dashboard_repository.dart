@@ -159,24 +159,16 @@ class RepsWithoutPatchRepository extends Repository<List<TeamMember>>
   }
 }
 
-/// The unit-type catalog behind the `unit_type` filter (spec 0014 item 14).
-class UnitTypesRepository extends Repository<List<UnitTypeOption>>
-    with SessionEnvironmentMixin<List<UnitTypeOption>> {
-  UnitTypesRepository()
-    : super(
-        name: 'UnitTypesRepository',
-        endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/unit-types',
-        ),
-      );
-
-  @override
-  List<UnitTypeOption> fromJson(String json) {
-    final decoded = jsonDecode(json);
-    if (decoded is! Map<String, dynamic>) return const [];
-    return (decoded['data'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(UnitTypeOption.fromJson)
-        .toList(growable: false);
-  }
-}
+/// What each filter drawer can currently offer (spec 0014 §5).
+///
+/// Takes the whole scope, because the options are progressive: the request
+/// carries the filters already chosen, and the API answers each facet with
+/// every filter applied *except its own*. Re-fetched on every selection change,
+/// which is what keeps the drawers narrowing as the user goes.
+DashboardMetricRepository<DashboardFilterOptions> filterOptionsRepository(
+  DashboardScopeArgs args,
+) => DashboardMetricRepository(
+  path: '/dashboard/filter-options',
+  args: args,
+  parse: DashboardFilterOptions.fromJson,
+);

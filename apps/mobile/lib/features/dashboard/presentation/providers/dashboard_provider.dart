@@ -42,11 +42,11 @@ final dashboardScopeArgsProvider = Provider.family<DashboardScopeArgs?, int?>((
   return DashboardScopeArgs(
     verticalId: verticalId,
     subjectUserId: subjectUserId,
-    unitTypeId: filters?.unitTypeId,
-    managerId: filters?.managerId,
-    repId: filters?.repId,
-    stateId: filters?.stateId,
-    municipalityId: filters?.municipalityId,
+    unitTypeIds: filters?.unitTypeIds ?? const [],
+    managerIds: filters?.managerIds ?? const [],
+    repIds: filters?.repIds ?? const [],
+    stateIds: filters?.stateIds ?? const [],
+    municipalityIds: filters?.municipalityIds ?? const [],
   );
 });
 
@@ -127,11 +127,11 @@ final metricClinicsProvider = Provider.autoDispose
       return repository;
     });
 
-/// The unit-type catalog. Empty in production until the catalog is loaded — the
-/// filter then renders with no options rather than with unlabelled ids.
-final unitTypeOptionsProvider =
-    Provider.autoDispose<Repository<List<UnitTypeOption>>>((ref) {
-      final repository = UnitTypesRepository();
-      ref.onDispose(repository.dispose);
-      return repository;
-    });
+/// The options every drawer can offer, for the scope currently on screen.
+///
+/// Keyed by the whole scope, so changing any filter starts a fresh request and
+/// the lists re-narrow — that is the entire mechanism behind the progressive
+/// drawers (spec 0014 §5).
+final filterOptionsProvider = _metricFamily<DashboardFilterOptions>(
+  filterOptionsRepository,
+);

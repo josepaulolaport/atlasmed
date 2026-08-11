@@ -324,10 +324,12 @@ void _openBreakdown(
     metric: metric,
     verticalId: scope.verticalId,
     subjectUserId: scope.subjectUserId,
-    unitTypeId: scope.unitTypeId,
-    managerId: scope.managerId,
-    repId: scope.repId,
-    stateId: scope.stateId,
-    municipalityId: scope.municipalityId,
+    // Comma-separated in the URL: the breakdown must answer for the same
+    // population the card counted, so every filter travels with it.
+    unitTypeIds: scope.unitTypeIds.join(','),
+    managerIds: scope.managerIds.join(','),
+    repIds: scope.repIds.join(','),
+    stateIds: scope.stateIds.join(','),
+    municipalityIds: scope.municipalityIds.join(','),
   ).push(context);
 }

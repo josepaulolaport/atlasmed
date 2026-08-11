@@ -844,31 +844,11 @@ mixin $MetricClinicsRoute on GoRouteData {
           state.uri.queryParameters,
           int.tryParse,
         ),
-        unitTypeId: _$convertMapValue(
-          'unitTypeId',
-          state.uri.queryParameters,
-          int.tryParse,
-        ),
-        managerId: _$convertMapValue(
-          'managerId',
-          state.uri.queryParameters,
-          int.tryParse,
-        ),
-        repId: _$convertMapValue(
-          'repId',
-          state.uri.queryParameters,
-          int.tryParse,
-        ),
-        stateId: _$convertMapValue(
-          'stateId',
-          state.uri.queryParameters,
-          int.tryParse,
-        ),
-        municipalityId: _$convertMapValue(
-          'municipalityId',
-          state.uri.queryParameters,
-          int.tryParse,
-        ),
+        unitTypeIds: state.uri.queryParameters['unitTypeIds'],
+        managerIds: state.uri.queryParameters['managerIds'],
+        repIds: state.uri.queryParameters['repIds'],
+        stateIds: state.uri.queryParameters['stateIds'],
+        municipalityIds: state.uri.queryParameters['municipalityIds'],
       );
 
   MetricClinicsRoute get _self => this as MetricClinicsRoute;
@@ -880,12 +860,12 @@ mixin $MetricClinicsRoute on GoRouteData {
       'verticalId': _self.verticalId.toString(),
       if (_self.subjectUserId != null)
         'subjectUserId': _self.subjectUserId!.toString(),
-      if (_self.unitTypeId != null) 'unitTypeId': _self.unitTypeId!.toString(),
-      if (_self.managerId != null) 'managerId': _self.managerId!.toString(),
-      if (_self.repId != null) 'repId': _self.repId!.toString(),
-      if (_self.stateId != null) 'stateId': _self.stateId!.toString(),
-      if (_self.municipalityId != null)
-        'municipalityId': _self.municipalityId!.toString(),
+      if (_self.unitTypeIds != null) 'unitTypeIds': _self.unitTypeIds,
+      if (_self.managerIds != null) 'managerIds': _self.managerIds,
+      if (_self.repIds != null) 'repIds': _self.repIds,
+      if (_self.stateIds != null) 'stateIds': _self.stateIds,
+      if (_self.municipalityIds != null)
+        'municipalityIds': _self.municipalityIds,
     },
   );
 

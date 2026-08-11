@@ -15,50 +15,152 @@ void main() {
       const args = DashboardScopeArgs(
         verticalId: 1,
         subjectUserId: 5,
-        unitTypeId: 4,
-        managerId: 2,
-        repId: 7,
-        stateId: 35,
-        municipalityId: 3550308,
+        unitTypeIds: [4],
+        managerIds: [2],
+        repIds: [7, 8],
+        stateIds: [35, 33],
+        municipalityIds: [3550308],
       );
 
       expect(args.toQuery(), {
         'verticalId': '1',
         'subjectUserId': '5',
-        'unitTypeId': '4',
-        'managerId': '2',
-        'repId': '7',
-        'stateId': '35',
-        'municipalityId': '3550308',
+        'unitTypeIds': '4',
+        'managerIds': '2',
+        'repIds': '7,8',
+        'stateIds': '35,33',
+        'municipalityIds': '3550308',
       });
+    });
+
+    test('an empty filter is absent from the query, not sent as empty', () {
+      // `?stateIds=` would reach the API as a string that fails its digit
+      // pattern, turning "no filter" into a 400.
+      const args = DashboardScopeArgs(verticalId: 1);
+      expect(args.toQuery(), {'verticalId': '1'});
     });
 
     test('clearing filters keeps the linha and the subject', () {
       const args = DashboardScopeArgs(
         verticalId: 1,
         subjectUserId: 5,
-        stateId: 35,
+        stateIds: [35],
       );
       final cleared = args.cleared();
 
       expect(cleared.verticalId, 1);
       expect(cleared.subjectUserId, 5);
-      expect(cleared.stateId, isNull);
+      expect(cleared.stateIds, isEmpty);
       expect(cleared.hasFilters, isFalse);
     });
 
     test(
       'equality keys the metric providers, so a filter change refetches',
       () {
-        const a = DashboardScopeArgs(verticalId: 1, stateId: 35);
-        const b = DashboardScopeArgs(verticalId: 1, stateId: 35);
-        const c = DashboardScopeArgs(verticalId: 1, stateId: 41);
+        const a = DashboardScopeArgs(verticalId: 1, stateIds: [35]);
+        const b = DashboardScopeArgs(verticalId: 1, stateIds: [35]);
+        const c = DashboardScopeArgs(verticalId: 1, stateIds: [35, 41]);
 
         expect(a, b);
         expect(a.hashCode, b.hashCode);
+        // Adding a second state has to count as a different scope, or the
+        // cards would keep showing the answer to the previous question.
         expect(a, isNot(c));
       },
     );
+  });
+
+  group('cascadeSelection (spec 0014 §5)', () {
+    const rioCity = FilterOption(
+      id: 3304557,
+      label: 'Rio de Janeiro',
+      parentIds: [33],
+    );
+    const niteroi = FilterOption(
+      id: 3303302,
+      label: 'Niterói',
+      parentIds: [33],
+    );
+    const saoPaulo = FilterOption(
+      id: 3550308,
+      label: 'São Paulo',
+      parentIds: [35],
+    );
+
+    test('picking a city selects its state', () {
+      final result = cascadeSelection(
+        parentIds: const [],
+        childIds: const [3304557],
+        children: const [rioCity, niteroi, saoPaulo],
+        childChanged: true,
+      );
+
+      expect(result.parentIds, [33]);
+      expect(result.childIds, [3304557]);
+    });
+
+    test('clearing a state drops the cities inside it', () {
+      final result = cascadeSelection(
+        parentIds: const [],
+        childIds: const [3304557, 3550308],
+        children: const [rioCity, niteroi, saoPaulo],
+        childChanged: false,
+      );
+
+      expect(result.childIds, isEmpty);
+    });
+
+    test('keeps cities of the states that are still selected', () {
+      final result = cascadeSelection(
+        parentIds: const [35],
+        childIds: const [3304557, 3550308],
+        children: const [rioCity, niteroi, saoPaulo],
+        childChanged: false,
+      );
+
+      expect(result.childIds, [3550308]);
+    });
+
+    test('a rep under two managers survives losing one of them', () {
+      // Spec 0009 allows a rep to hold patches under two managers, so dropping
+      // them because one manager was cleared would remove clinics the other
+      // manager still owns.
+      const rep = FilterOption(id: 7, label: 'Ana', parentIds: [2, 3]);
+      final result = cascadeSelection(
+        parentIds: const [3],
+        childIds: const [7],
+        children: const [rep],
+        childChanged: false,
+      );
+
+      expect(result.childIds, [7]);
+    });
+
+    test('a child of unknown parentage is kept, never silently dropped', () {
+      // The option lists are already narrowed, so a municipality whose state
+      // was filtered out is simply absent from them. Dropping it would clear a
+      // filter the user can no longer see to put back.
+      final result = cascadeSelection(
+        parentIds: const [35],
+        childIds: const [9999999],
+        children: const [rioCity],
+        childChanged: false,
+      );
+
+      expect(result.childIds, [9999999]);
+    });
+
+    test('picking a rep selects every manager they report to', () {
+      const rep = FilterOption(id: 7, label: 'Ana', parentIds: [2, 3]);
+      final result = cascadeSelection(
+        parentIds: const [],
+        childIds: const [7],
+        children: const [rep],
+        childChanged: true,
+      );
+
+      expect(result.parentIds..sort(), [2, 3]);
+    });
   });
 
   group('metric parsing', () {

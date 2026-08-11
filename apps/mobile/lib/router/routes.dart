@@ -567,23 +567,36 @@ class MetricClinicsRoute extends GoRouteData with $MetricClinicsRoute {
     required this.metric,
     @TypedQueryParameter(name: 'verticalId') required this.verticalId,
     @TypedQueryParameter(name: 'subjectUserId') this.subjectUserId,
-    @TypedQueryParameter(name: 'unitTypeId') this.unitTypeId,
-    @TypedQueryParameter(name: 'managerId') this.managerId,
-    @TypedQueryParameter(name: 'repId') this.repId,
-    @TypedQueryParameter(name: 'stateId') this.stateId,
-    @TypedQueryParameter(name: 'municipalityId') this.municipalityId,
+    @TypedQueryParameter(name: 'unitTypeIds') this.unitTypeIds,
+    @TypedQueryParameter(name: 'managerIds') this.managerIds,
+    @TypedQueryParameter(name: 'repIds') this.repIds,
+    @TypedQueryParameter(name: 'stateIds') this.stateIds,
+    @TypedQueryParameter(name: 'municipalityIds') this.municipalityIds,
   });
 
   final String metric;
   final int verticalId;
   final int? subjectUserId;
-  final int? unitTypeId;
-  final int? managerId;
-  final int? repId;
-  final int? stateId;
-  final int? municipalityId;
+
+  /// Comma-separated ids. Strings rather than `List<int>` because go_router's
+  /// generator would encode a list as repeated `?stateIds=33&stateIds=35`,
+  /// while the API takes one comma-separated value.
+  final String? unitTypeIds;
+  final String? managerIds;
+  final String? repIds;
+  final String? stateIds;
+  final String? municipalityIds;
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
+
+  static List<int> _ids(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    return raw
+        .split(',')
+        .map(int.tryParse)
+        .whereType<int>()
+        .toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context, GoRouterState state) {
@@ -592,11 +605,11 @@ class MetricClinicsRoute extends GoRouteData with $MetricClinicsRoute {
       scope: DashboardScopeArgs(
         verticalId: verticalId,
         subjectUserId: subjectUserId,
-        unitTypeId: unitTypeId,
-        managerId: managerId,
-        repId: repId,
-        stateId: stateId,
-        municipalityId: municipalityId,
+        unitTypeIds: _ids(unitTypeIds),
+        managerIds: _ids(managerIds),
+        repIds: _ids(repIds),
+        stateIds: _ids(stateIds),
+        municipalityIds: _ids(municipalityIds),
       ),
     );
   }

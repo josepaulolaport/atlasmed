@@ -328,14 +328,119 @@ class TeamMember {
 }
 
 /// A unit type with its subtypes — the catalog behind the `unit_type` filter.
-class UnitTypeOption {
-  const UnitTypeOption({required this.id, required this.name});
+/// One choice in a filter drawer (spec 0014 §5).
+///
+/// [parentIds] is what lets selection cascade: a municipality carries its
+/// state, a rep carries the managers they report to. It is a list because a rep
+/// may hold patches under two managers (spec 0009), so they stay selected while
+/// either one is.
+class FilterOption {
+  const FilterOption({
+    required this.id,
+    required this.label,
+    this.parentIds = const [],
+  });
 
   final int id;
-  final String name;
+  final String label;
+  final List<int> parentIds;
 
-  factory UnitTypeOption.fromJson(Map<String, dynamic> json) => UnitTypeOption(
+  factory FilterOption.fromJson(Map<String, dynamic> json) => FilterOption(
     id: readCrmId(json['id'], 'id'),
-    name: json['name'] as String? ?? '',
+    // `name` is the unit-type catalogue's key; every faceted list uses `label`.
+    label: (json['label'] ?? json['name']) as String? ?? '',
+    parentIds: (json['parentIds'] as List<dynamic>? ?? const [])
+        .map((raw) => readCrmId(raw, 'parentId'))
+        .toList(growable: false),
+  );
+}
+
+/// What each drawer can currently offer, given the scope and the other filters.
+class DashboardFilterOptions {
+  const DashboardFilterOptions({
+    this.states = const [],
+    this.municipalities = const [],
+    this.managers = const [],
+    this.reps = const [],
+    this.unitTypes = const [],
+  });
+
+  final List<FilterOption> states;
+  final List<FilterOption> municipalities;
+  final List<FilterOption> managers;
+  final List<FilterOption> reps;
+  final List<FilterOption> unitTypes;
+
+  static List<FilterOption> _list(dynamic raw) =>
+      (raw as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(FilterOption.fromJson)
+          .toList(growable: false);
+
+  factory DashboardFilterOptions.fromJson(Map<String, dynamic> json) =>
+      DashboardFilterOptions(
+        states: _list(json['states']),
+        municipalities: _list(json['municipalities']),
+        managers: _list(json['managers']),
+        reps: _list(json['reps']),
+        unitTypes: _list(json['unitTypes']),
+      );
+}
+
+/// The result of touching one drawer, once the cascade has been applied.
+class CascadedSelection {
+  const CascadedSelection({required this.parentIds, required this.childIds});
+
+  final List<int> parentIds;
+  final List<int> childIds;
+}
+
+/// Selecting a child selects its parents; clearing a parent drops its children.
+///
+/// Picking the *city* of Rio de Janeiro means the state of Rio de Janeiro is
+/// part of what you are asking about, so the state selects with it — otherwise
+/// the two drawers give contradictory answers to the same question. Clearing
+/// the state has to drop the city, or the screen goes on filtering by a
+/// municipality the user believes they cleared.
+///
+/// A child survives its parent's removal when *another* of its parents is still
+/// selected — dead weight for geography, where a municipality has one state,
+/// but a rep may report to two managers and dropping them because one was
+/// cleared would be wrong.
+///
+/// A child whose parentage is unknown is kept. An unknown child is one the
+/// narrowed option list no longer carries, and silently dropping it would
+/// change a filter the user can no longer see to put back.
+CascadedSelection cascadeSelection({
+  required List<int> parentIds,
+  required List<int> childIds,
+  required List<FilterOption> children,
+  required bool childChanged,
+}) {
+  final byChild = {for (final child in children) child.id: child.parentIds};
+
+  if (childChanged) {
+    final parents = {...parentIds};
+    for (final childId in childIds) {
+      parents.addAll(byChild[childId] ?? const []);
+    }
+    return CascadedSelection(
+      parentIds: parents.toList(growable: false),
+      childIds: List.unmodifiable(childIds),
+    );
+  }
+
+  final parents = parentIds.toSet();
+  final kept = childIds
+      .where((childId) {
+        final owners = byChild[childId];
+        if (owners == null || owners.isEmpty) return true;
+        return owners.any(parents.contains);
+      })
+      .toList(growable: false);
+
+  return CascadedSelection(
+    parentIds: parents.toList(growable: false),
+    childIds: kept,
   );
 }

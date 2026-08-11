@@ -28,10 +28,10 @@ void main() {
       MetricClinicsRoute(
         metric: 'coverage',
         verticalId: 1,
-        stateId: 35,
-        repId: 7,
+        stateIds: '35,33',
+        repIds: '7',
       ).location,
-      '/dashboard/metrics/coverage/clinics?verticalId=1&repId=7&stateId=35',
+      '/dashboard/metrics/coverage/clinics?verticalId=1&repIds=7&stateIds=35%2C33',
     );
     expect(
       SubjectDashboardRoute(subjectUserId: 5, subjectName: 'Ana').location,
