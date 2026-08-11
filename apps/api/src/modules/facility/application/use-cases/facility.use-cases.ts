@@ -334,8 +334,12 @@ export class CreateFacilityUseCase {
     municipalityId: number;
     legalDocumentType: "CNPJ" | "CPF";
     legalDocument?: string | null;
-    lat?: number;
-    lng?: number;
+    /**
+     * Spec 0009 R5: required. `facilities.location` is NOT NULL, because a clinic
+     * with no point cannot be covered by a zone or a patch and so cannot be owned.
+     */
+    lat: number;
+    lng: number;
     /** Required unless the caller has exactly one accessible vertical. */
     verticalId?: number;
     scope: ScopeContext;
