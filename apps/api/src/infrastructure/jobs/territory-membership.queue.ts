@@ -5,7 +5,13 @@ import type { Worker } from "bullmq";
 export interface TerritoryMembershipJob {
   territoryId?: number;
   facilityIds?: number[];
-  reason: "boundary_change" | "manual_recompute" | "clinic_update";
+  /**
+   * `search_sync` carries clinics whose derived membership has *already* been
+   * rewritten — by the set-based recompute inside the boundary transaction — and
+   * only needs the search index caught up. It exists so that path does not have
+   * to re-run the geo matching per clinic just to reach the Meili upsert.
+   */
+  reason: "boundary_change" | "manual_recompute" | "clinic_update" | "search_sync";
 }
 
 const queue = createQueue<TerritoryMembershipJob>("territory-membership");

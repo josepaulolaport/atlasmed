@@ -10,6 +10,7 @@ const ZONE_TERRITORY_ID = 1;
 function createClinicWriter(overrides: Record<string, unknown> = {}) {
   return {
     updateProfileTerritoryMemberships: mock(async () => {}),
+    recomputeManagerZoneMembership: mock(async () => ({ changed: [], ambiguous: [] })),
     findClinicsForMembership: mock(async () => []),
     findClinicsWithoutConsultant: mock(async () => []),
     ...overrides,
@@ -146,47 +147,12 @@ describe("TerritoryMembershipService", () => {
     expect(clinicWriter.updateProfileTerritoryMemberships).toHaveBeenCalledWith(CLINIC_ID, []);
   });
 
-  it("scopes boundary recompute to bounding box and currently assigned clinics", async () => {
-    const assignedClinic: ClinicMembershipTarget = {
-      id: 10,
-      lat: 1,
-      lng: 1,
-      managerZoneId: LEAF_TERRITORY_ID,
-    };
-    const bboxClinic: ClinicMembershipTarget = {
-      id: 11,
-      lat: 2,
-      lng: 2,
-      managerZoneId: null,
-    };
-
-    const clinicWriter = createClinicWriter({
-      findClinicsForMembership: mock(async (params?: { territoryIds?: number[]; boundingBox?: unknown }) => {
-        if (params?.territoryIds) return [assignedClinic];
-        if (params?.boundingBox) return [bboxClinic];
-        return [];
-      }),
-    });
-
-    const service = new TerritoryMembershipService({
-      spatialRepository: {
-        getBoundaryBoundingBox: mock(async () => ({
-          minLng: 0,
-          minLat: 0,
-          maxLng: 3,
-          maxLat: 3,
-        })),
-        findContainingClinicAssignmentTerritoryIds: mock(async () => []),
-      } as never,
-      territoryRepository: {} as never,
-      clinicWriter,
-    });
-
-    const result = await service.recomputeForTerritoryBoundary(LEAF_TERRITORY_ID);
-
-    expect(result.processed).toBe(2);
-    expect(clinicWriter.findClinicsForMembership).toHaveBeenCalledTimes(2);
-  });
+  // The "scopes boundary recompute to bounding box and currently assigned
+  // clinics" test was deleted with the per-clinic loop it described. Which
+  // profiles a boundary change affects, and which zone wins, is now decided by
+  // one SQL statement — a fake writer asserting it would only be re-stating the
+  // fake. It is proved against a database in
+  // `drizzle-facility-membership.recompute.db.test.ts`.
 
   it("excludes the given territory when re-matching a clinic by geo", async () => {
     const clinicWriter = createClinicWriter();

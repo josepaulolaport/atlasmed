@@ -8,6 +8,7 @@ import { DrizzleTerritoryRepository } from "../repositories/drizzle/drizzle-terr
 import { DrizzleTerritoryTypeRepository } from "../repositories/drizzle/drizzle-territory-type.repository";
 import { DrizzleTerritorySpatialRepository } from "../repositories/drizzle/drizzle-territory-spatial.repository";
 import { DrizzleTerritoryBoundaryWriter } from "../adapters/drizzle-territory-boundary.writer";
+import { DrizzleClinicMembershipWriter } from "../adapters/drizzle-facility-membership.writer";
 
 /**
  * Runs a unit of territory work inside one transaction, handing the caller
@@ -27,6 +28,7 @@ export class DrizzleTerritoryTransactionPort implements TerritoryTransactionPort
         territoryTypeRepository: new DrizzleTerritoryTypeRepository(tx),
         spatialRepository: new DrizzleTerritorySpatialRepository(tx),
         boundaryWriter: new DrizzleTerritoryBoundaryWriter(tx),
+        membershipWriter: new DrizzleClinicMembershipWriter(tx),
         lockTerritory: async (territoryId: number) => {
           // FOR UPDATE, not an advisory lock: it blocks a second saver on the
           // same territory until this transaction ends, and releases on both

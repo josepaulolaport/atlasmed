@@ -1,5 +1,8 @@
 import { describe, expect, it, mock } from "bun:test";
-import { OperationNotAllowedError, ValidationError } from "../../../../shared/errors";
+import {
+  BoundaryImpactSetChangedError,
+  OperationNotAllowedError,
+} from "../../../../shared/errors";
 import { TerritoryContainmentService } from "../services/territory-containment.service";
 import type { BoundaryCommitCommand } from "../interfaces/territory-boundary.writer.interface";
 import {
@@ -14,29 +17,62 @@ describe("assertAcceptedImpactFacilityIds", () => {
   });
 
   it("rejects extra accepts when impact is empty", () => {
-    expect(() => assertAcceptedImpactFacilityIds([], [101])).toThrow(ValidationError);
+    expect(() => assertAcceptedImpactFacilityIds([], [101])).toThrow(
+      BoundaryImpactSetChangedError
+    );
   });
 
   it("requires accepts when impact is non-empty", () => {
     expect(() => assertAcceptedImpactFacilityIds([101], undefined)).toThrow(
-      ValidationError
+      BoundaryImpactSetChangedError
     );
-    expect(() => assertAcceptedImpactFacilityIds([101], [])).toThrow(ValidationError);
+    expect(() => assertAcceptedImpactFacilityIds([101], [])).toThrow(
+      BoundaryImpactSetChangedError
+    );
   });
 
   it("requires exact set match", () => {
     expect(() => assertAcceptedImpactFacilityIds([101, 102], [101])).toThrow(
-      ValidationError
+      BoundaryImpactSetChangedError
     );
     expect(() =>
       assertAcceptedImpactFacilityIds([101, 102], [101, 102, 103])
-    ).toThrow(ValidationError);
+    ).toThrow(BoundaryImpactSetChangedError);
     expect(() =>
       assertAcceptedImpactFacilityIds([101, 102], [101, 103])
-    ).toThrow(ValidationError);
+    ).toThrow(BoundaryImpactSetChangedError);
     expect(() =>
       assertAcceptedImpactFacilityIds([101, 102], [102, 101])
     ).not.toThrow();
+  });
+
+  /**
+   * Spec 0009 R6: the point of the new error is that the caller can re-prompt on
+   * what changed. A thrown 409 carrying no delta would be no better than the
+   * `ValidationError` it replaced.
+   */
+  it("reports both directions of the delta", () => {
+    // 102 appeared since the preview; 103 is no longer impacted.
+    const error = (() => {
+      try {
+        assertAcceptedImpactFacilityIds([101, 102], [101, 103]);
+      } catch (thrown) {
+        return thrown as BoundaryImpactSetChangedError;
+      }
+      throw new Error("expected a mismatch to throw");
+    })();
+
+    expect(error).toBeInstanceOf(BoundaryImpactSetChangedError);
+    expect(error.statusCode).toBe(409);
+    // Not `context`: `AppError.toClientJSON` drops context for any code not on
+    // its allowlist, so asserting the internal field would pass while the client
+    // received nothing.
+    expect(error.toClientJSON()).toEqual({
+      code: "BOUNDARY_IMPACT_SET_CHANGED",
+      message: expect.any(String),
+      added: [102],
+      removed: [103],
+    });
   });
 });
 
@@ -86,8 +122,8 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
    *
    * This proves the *use-case* side — that there is no longer any path which
    * ends assignments outside the boundary write, and that nothing is published
-   * when the write fails. It does not prove Postgres rolls back; `apps/api` has
-   * no real-database test harness (see report).
+   * when the write fails. That Postgres actually rolls back is proved separately
+   * in `territory-boundary-atomicity.db.test.ts`.
    */
   function createFakeBoundaryWriter(options: { failBoundaryWrite?: boolean }) {
     let activeProfileIds = new Set<number>([impactedClinic.facilityVerticalProfileId]);
@@ -125,8 +161,18 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
   function buildUseCases(options: {
     orphanedPatches: Array<{ id: number; code: string }>;
     failBoundaryWrite?: boolean;
+    membershipChanged?: Array<{
+      facilityVerticalProfileId: number;
+      facilityId: number;
+      managerZoneId: number | null;
+    }>;
   }) {
     const onBoundaryChanged = mock(async () => {});
+    const onMembershipRecomputed = mock(async (_facilityIds: number[]) => {});
+    const recomputeManagerZoneMembership = mock(async () => ({
+      changed: options.membershipChanged ?? [],
+      ambiguous: [],
+    }));
     const writer = createFakeBoundaryWriter({
       failBoundaryWrite: options.failBoundaryWrite,
     });
@@ -170,14 +216,28 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
             territoryTypeRepository,
             spatialRepository,
             boundaryWriter: writer,
+            // Spec 0009 R6: recomputed in-transaction. What it *computes* is
+            // SQL and is proved in
+            // `drizzle-facility-membership.recompute.db.test.ts`; here it only
+            // has to exist so the ordering under test is the real one.
+            membershipWriter: {
+              recomputeManagerZoneMembership: recomputeManagerZoneMembership,
+            },
             lockTerritory: async () => true,
           } as never),
       } as never,
       buildContainmentService: (repos) => new TerritoryContainmentService(repos),
       onBoundaryChanged,
+      onMembershipRecomputed,
     });
 
-    return { useCases, writer, onBoundaryChanged };
+    return {
+      useCases,
+      writer,
+      onBoundaryChanged,
+      onMembershipRecomputed,
+      recomputeManagerZoneMembership,
+    };
   }
 
   it("leaves rep assignments intact when child-patch containment fails", async () => {
@@ -212,7 +272,7 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
         geoJson,
         acceptedFacilityIds: [],
       })
-    ).rejects.toBeInstanceOf(ValidationError);
+    ).rejects.toBeInstanceOf(BoundaryImpactSetChangedError);
 
     expect(writer.commitBoundaryChange).not.toHaveBeenCalled();
     expect(writer.activeProfileIds()).toEqual([
@@ -225,21 +285,17 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
    * code path can end assignments outside the transaction, and nothing is
    * published for a change that failed.
    *
-   * What it does NOT prove: that Postgres rolls back. The rollback lives in
-   * `DrizzleTerritoryBoundaryWriter`, which has no test coverage — `apps/api`
-   * has no database-backed harness. Asserting the fake's post-failure state
-   * here would be circular: the fake's own `catch` performs the restore.
-   *
-   * Spec 0009 R1 requires an integration test. It does not exist yet. A real
-   * one seeds a territory with a child patch and an active assignment, calls
-   * `commitBoundaryChange` with a self-intersecting polygon, and asserts
-   * `ended_at IS NULL` still holds by querying the database.
+   * What it does NOT prove: that Postgres rolls back. Asserting the fake's
+   * post-failure state here would be circular — the fake's own `catch` performs
+   * the restore. R1's integration test lives in
+   * `territory-boundary-atomicity.db.test.ts`, against real rows.
    */
   it("routes both writes through one port call and publishes nothing on failure", async () => {
-    const { useCases, writer, onBoundaryChanged } = buildUseCases({
-      orphanedPatches: [],
-      failBoundaryWrite: true,
-    });
+    const { useCases, writer, onBoundaryChanged, recomputeManagerZoneMembership } =
+      buildUseCases({
+        orphanedPatches: [],
+        failBoundaryWrite: true,
+      });
 
     await expect(
       useCases.saveBoundary({
@@ -254,6 +310,9 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
     expect(writer.commitBoundaryChange).toHaveBeenCalledTimes(1);
     expect(writer.boundaryWritten()).toBe(false);
     expect(onBoundaryChanged).not.toHaveBeenCalled();
+    // Spec 0009 R6: membership follows the geometry. A boundary that was never
+    // written must not have had its membership recomputed against it.
+    expect(recomputeManagerZoneMembership).not.toHaveBeenCalled();
   });
 
   it("ends assignments and writes the boundary in a single writer call", async () => {
@@ -279,9 +338,10 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
   });
 
   it("ends assignments and writes the boundary when everything validates", async () => {
-    const { useCases, writer, onBoundaryChanged } = buildUseCases({
-      orphanedPatches: [],
-    });
+    const { useCases, writer, onBoundaryChanged, recomputeManagerZoneMembership } =
+      buildUseCases({
+        orphanedPatches: [],
+      });
 
     const result = await useCases.saveBoundary({
       territoryId: MANAGER_ZONE_ID,
@@ -294,5 +354,59 @@ describe("TerritoryBoundaryUseCases.saveBoundary validate-before-mutate", () => 
     expect(writer.boundaryWritten()).toBe(true);
     expect(onBoundaryChanged).toHaveBeenCalledWith(MANAGER_ZONE_ID);
     expect(result).toMatchObject({ mode: "manager_zone", repPatchCount: 3 });
+
+    // Spec 0009 R6: the recompute is part of the save, not a job queued after
+    // it. If this ever stops being called, HTTP 200 has gone back to meaning
+    // "geometry written, ownership unknown".
+    expect(recomputeManagerZoneMembership).toHaveBeenCalledWith(MANAGER_ZONE_ID);
+  });
+
+  /**
+   * Meili's `territoryIds` is a projection of manager-zone membership, and
+   * nothing else refreshes it after a boundary change — `fullSearchSyncWorkflow`
+   * runs only when an operator posts to `/sync`, on no schedule. If the changed
+   * set stops being published, search silently serves the old ownership until
+   * someone triggers a full rebuild by hand.
+   */
+  it("publishes the clinics whose membership changed, de-duplicated, after commit", async () => {
+    const { useCases, onMembershipRecomputed } = buildUseCases({
+      orphanedPatches: [],
+      membershipChanged: [
+        // Two profiles on one clinic: the search document is per facility.
+        { facilityVerticalProfileId: 501, facilityId: 101, managerZoneId: null },
+        { facilityVerticalProfileId: 502, facilityId: 101, managerZoneId: null },
+        { facilityVerticalProfileId: 503, facilityId: 102, managerZoneId: MANAGER_ZONE_ID },
+      ],
+    });
+
+    await useCases.saveBoundary({
+      territoryId: MANAGER_ZONE_ID,
+      scope: globalScope as never,
+      geoJson,
+      acceptedFacilityIds: [impactedClinic.facilityId],
+    });
+
+    expect(onMembershipRecomputed).toHaveBeenCalledWith([101, 102]);
+  });
+
+  it("publishes nothing to search when the save fails", async () => {
+    const { useCases, onMembershipRecomputed } = buildUseCases({
+      orphanedPatches: [],
+      failBoundaryWrite: true,
+      membershipChanged: [
+        { facilityVerticalProfileId: 501, facilityId: 101, managerZoneId: null },
+      ],
+    });
+
+    await expect(
+      useCases.saveBoundary({
+        territoryId: MANAGER_ZONE_ID,
+        scope: globalScope as never,
+        geoJson,
+        acceptedFacilityIds: [impactedClinic.facilityId],
+      })
+    ).rejects.toBeInstanceOf(OperationNotAllowedError);
+
+    expect(onMembershipRecomputed).not.toHaveBeenCalled();
   });
 });

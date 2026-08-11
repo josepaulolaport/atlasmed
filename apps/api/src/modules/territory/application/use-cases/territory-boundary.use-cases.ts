@@ -19,12 +19,14 @@ import {
   isRepPatchType,
 } from "../constants/territory-roles.constants";
 import {
+  BoundaryImpactSetChangedError,
   OperationNotAllowedError,
   ResourceNotFoundError,
-  ValidationError,
 } from "../../../../shared/errors";
 import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
 import { assertTerritorialJurisdiction } from "../services/territory-scope-policy.service";
+import type { AmbiguousManagerZoneMatch } from "../services/territory-membership.service";
+import { logger } from "../../../../infrastructure/logging/logger";
 
 interface Dependencies {
   territoryRepository: TerritoryRepository;
@@ -47,6 +49,12 @@ interface Dependencies {
   }) => TerritoryContainmentService;
   onBoundaryChanged?: (territoryId: number) => Promise<void>;
   onManagerTerritoryChanged?: (managerTerritoryId: number) => Promise<void>;
+  /**
+   * Clinics whose derived manager zone the save actually changed, published
+   * after commit so downstream projections (the search index) can catch up.
+   * Empty sets are not published.
+   */
+  onMembershipRecomputed?: (facilityIds: number[]) => Promise<void>;
 }
 
 export type BoundaryImpactClinic = {
@@ -57,55 +65,37 @@ export type BoundaryImpactClinic = {
   consultantName: string;
 };
 
-/** Spec 0006: accepted set must equal impact set exactly. */
+/**
+ * Spec 0006: the accepted set must equal the recomputed impact set exactly, in
+ * both directions — the client is not trusted, and a boundary saved against a
+ * stale preview fails closed.
+ *
+ * Spec 0009 R6: it fails with the **delta**. The previous version threw a bare
+ * `ValidationError` saying the sets did not match, which left the caller unable
+ * to tell a client bug from a concurrent edit, and with nothing to re-prompt on
+ * but a full re-preview.
+ */
 export function assertAcceptedImpactFacilityIds(
   impactedFacilityIds: number[],
   acceptedFacilityIds: number[] | undefined
 ): void {
-  if (impactedFacilityIds.length === 0) {
-    if (acceptedFacilityIds && acceptedFacilityIds.length > 0) {
-      throw new ValidationError([
-        {
-          field: "acceptedFacilityIds",
-          message: "No clinics require deassignment for this boundary change",
-        },
-      ]);
-    }
+  const impacted = new Set(impactedFacilityIds);
+  const accepted = new Set(acceptedFacilityIds ?? []);
+
+  const ascending = (a: number, b: number) => a - b;
+  // Impacted but not accepted: the caller has not agreed to these
+  // de-assignments — either it never saw them, or they appeared since.
+  const added = [...impacted].filter((id) => !accepted.has(id)).sort(ascending);
+  // Accepted but no longer impacted: agreeing to a de-assignment that would not
+  // happen is just as much a stale preview, and silently ignoring it would let
+  // the client believe it acted on a set the server never had.
+  const removed = [...accepted].filter((id) => !impacted.has(id)).sort(ascending);
+
+  if (added.length === 0 && removed.length === 0) {
     return;
   }
 
-  if (!acceptedFacilityIds || acceptedFacilityIds.length === 0) {
-    throw new ValidationError([
-      {
-        field: "acceptedFacilityIds",
-        message:
-          "Accept deassignment for every impacted clinic before saving the boundary",
-      },
-    ]);
-  }
-
-  const impacted = new Set(impactedFacilityIds);
-  const accepted = new Set(acceptedFacilityIds);
-
-  if (impacted.size !== accepted.size) {
-    throw new ValidationError([
-      {
-        field: "acceptedFacilityIds",
-        message: "Accepted clinics must match the full impact list exactly",
-      },
-    ]);
-  }
-
-  for (const id of impacted) {
-    if (!accepted.has(id)) {
-      throw new ValidationError([
-        {
-          field: "acceptedFacilityIds",
-          message: "Accepted clinics must match the full impact list exactly",
-        },
-      ]);
-    }
-  }
+  throw new BoundaryImpactSetChangedError({ added, removed });
 }
 
 export class TerritoryBoundaryUseCases {
@@ -165,7 +155,8 @@ export class TerritoryBoundaryUseCases {
     // still lets a concurrent save land in between, so the boundary that
     // commits is not the one that was checked — the de-assignments would roll
     // back correctly while the geometry that orphans a patch goes in anyway.
-    const { resolution, plan } = await this.deps.transactionPort.run(async (tx) => {
+    const { resolution, plan, ambiguous, changedFacilityIds } =
+      await this.deps.transactionPort.run(async (tx) => {
       if (!(await tx.lockTerritory(input.territoryId))) {
         throw new ResourceNotFoundError("Territory", input.territoryId);
       }
@@ -221,11 +212,51 @@ export class TerritoryBoundaryUseCases {
         })
       );
 
-      return { resolution: resolveBoundaryOutcome(plan, result), plan };
+      // Spec 0009 R6. Derived membership is recomputed here, after the geometry
+      // is written and inside the same transaction, so the two commit together.
+      // It used to be enqueued after commit, which meant HTTP 200 did not imply
+      // membership was updated, and a failed job left the zone and its clinics
+      // permanently disagreeing with nothing to say so.
+      //
+      // Only for manager zones: patch geometry does not decide zone membership.
+      let ambiguous: AmbiguousManagerZoneMatch[] = [];
+      let changedFacilityIds: number[] = [];
+      if (mode === "manager_zone") {
+        const recompute = await tx.membershipWriter.recomputeManagerZoneMembership(
+          territory.id
+        );
+        ambiguous = recompute.ambiguous;
+        changedFacilityIds = [...new Set(recompute.changed.map((c) => c.facilityId))];
+      }
+
+      return {
+        resolution: resolveBoundaryOutcome(plan, result),
+        plan,
+        ambiguous,
+        changedFacilityIds,
+      };
     });
+
+    // Spec 0009 R4 wants this loud. The full treatment — metric and a distinct
+    // `ambiguous_zone` reason in the unassigned queue — belongs to P5-3; leaving
+    // it entirely unreported in the meantime, when the recompute has just handed
+    // it to us, would be manufacturing the silence that requirement is about.
+    for (const match of ambiguous) {
+      logger.warn("Clinic covered by more than one manager zone; membership cleared", {
+        facilityId: match.facilityId,
+        facilityVerticalProfileId: match.facilityVerticalProfileId,
+        verticalId: match.verticalId,
+        zoneIds: match.zoneIds.join(","),
+        territoryId: input.territoryId,
+      });
+    }
 
     // Published only after commit, so no downstream job reads uncommitted rows
     // or reacts to a change that rolled back.
+    if (changedFacilityIds.length > 0) {
+      await this.deps.onMembershipRecomputed?.(changedFacilityIds);
+    }
+
     if (plan.mode === "rep_patch") {
       await this.deps.onBoundaryChanged?.(input.territoryId);
       await this.deps.onManagerTerritoryChanged?.(plan.managerTerritoryId);

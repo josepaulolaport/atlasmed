@@ -15,6 +15,10 @@ const CLIENT_SAFE_CONTEXT_KEYS: Record<string, readonly string[]> = {
   INVITE_EXPIRED: ["expiredAt"],
   CALENDAR_CONFLICT: ["conflicts"],
   CALENDAR_VERSION_CONFLICT: ["calendarId", "expectedVersion"],
+  // Spec 0009 R6: the delta is the entire point of this error — without it the
+  // caller can only re-preview and diff by hand. Safe to expose: these are the
+  // ids of clinics the caller just previewed, under their own scope.
+  BOUNDARY_IMPACT_SET_CHANGED: ["added", "removed"],
 };
 
 export abstract class AppError extends Error {
