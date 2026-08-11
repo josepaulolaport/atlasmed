@@ -32,6 +32,7 @@ function mapRequirement(row: RequirementRow): ConformityRequirementRecord {
     maxFileSizeBytes: row.maxFileSizeBytes,
     maxCombinedSizeBytes: row.maxCombinedSizeBytes,
     requiresFrontAndBack: row.requiresFrontAndBack,
+    requiresValidityDate: row.requiresValidityDate,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

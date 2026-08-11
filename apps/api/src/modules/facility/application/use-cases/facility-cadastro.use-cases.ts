@@ -17,6 +17,7 @@ import {
 import { resolveCadastroVerticalId } from "../utils/cadastro-vertical-inference.utils";
 import { resolveFacilityLegalDocumentType } from "../utils/facility-tax-id.utils";
 import { storageService } from "../../../../infrastructure/storage/storage.service";
+import { deriveExpiry } from "../utils/cadastro-validity.utils";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -153,7 +154,7 @@ function serializeDocumentFile(file: DocumentFileRecord) {
 export class GetFacilityCadastroChecklistUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: number; scope: ScopeContext }) {
+  async execute(input: { facilityId: number; scope: ScopeContext; now?: Date }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const facility = await this.deps.facilityRepository.findById(input.facilityId);
@@ -256,6 +257,15 @@ export class GetFacilityCadastroChecklistUseCase {
               }
             : undefined,
           files: files.map(serializeDocumentFile),
+          // Derived here, never stored (ADR 0008 §4). The date on the document
+          // is the truth; this is a function of it and today, so it cannot go
+          // stale and no nightly job can stop writing it.
+          requiresValidityDate: requirement.requiresValidityDate,
+          validUntil: workingDoc?.validUntil ?? undefined,
+          expiry: deriveExpiry(
+            (approvedEntry ?? workingDoc)?.validUntil,
+            input.now ?? new Date()
+          ) ?? undefined,
           record: record ? serializeRecord(record) : undefined,
         };
       })

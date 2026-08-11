@@ -22,6 +22,7 @@ export interface ConformityRequirementRecord {
   maxFileSizeBytes: number;
   maxCombinedSizeBytes: number;
   requiresFrontAndBack: boolean;
+  requiresValidityDate: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

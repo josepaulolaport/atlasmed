@@ -20,6 +20,14 @@ export interface SubmissionDocumentRecord {
   status: CadastroDocumentStatus;
   version: number;
   reviewComment: string | null;
+  /**
+   * When this document stops being valid evidence. Null where the requirement
+   * declares no validity (`requirement.requiresValidityDate`).
+   *
+   * The expiry warning is derived from this at read time — there is no stored
+   * EXPIRING_SOON status to keep in step (ADR 0008 §4).
+   */
+  validUntil: string | null;
   submittedByUserId: number | null;
   submittedAt: Date | null;
   createdAt: Date;
@@ -35,6 +43,7 @@ export interface SubmissionDocumentRecord {
     maxFileSizeBytes: number;
     maxCombinedSizeBytes: number;
     requiresFrontAndBack: boolean;
+    requiresValidityDate: boolean;
   };
 }
 
@@ -134,6 +143,7 @@ export interface CadastroSubmissionRepository {
     id: number;
     status: CadastroDocumentStatus;
     reviewComment?: string | null;
+    validUntil?: string | null;
     version?: number;
     submittedAt?: Date | null;
     submittedByUserId?: number | null;
