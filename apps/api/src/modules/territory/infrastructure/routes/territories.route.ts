@@ -149,7 +149,7 @@ const territoryReadRoutes = new Elysia()
     }
   );
 
-const territoryCreateRoutes = new Elysia()
+const territoryTypeCreateRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "TERRITORY"))
   .post(
@@ -172,7 +172,7 @@ const territoryCreateRoutes = new Elysia()
     }
   );
 
-const territoryUpdateRoutes = new Elysia()
+const territoryTypeUpdateRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "TERRITORY"))
   .patch(
@@ -195,7 +195,7 @@ const territoryUpdateRoutes = new Elysia()
     }
   );
 
-const territoryCreateTerritoryRoute = new Elysia()
+const territoryCreateRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "TERRITORY"))
   .post(
@@ -244,7 +244,7 @@ const territoryCreateTerritoryRoute = new Elysia()
     }
   );
 
-const territoryMutationRoutes = new Elysia()
+const territoryUpdateRoutes = new Elysia()
   .use(auth)
   .use(requirePermission("update", "TERRITORY"))
   .patch(
@@ -352,10 +352,10 @@ const territoryManageRoute = new Elysia()
 
 export const territoriesRoute = new Elysia()
   .use(territoryReadRoutes)
-  .use(territoryCreateRoutes)
-  .use(territoryCreateTerritoryRoute)
+  .use(territoryTypeCreateRoute)
+  .use(territoryCreateRoute)
+  .use(territoryTypeUpdateRoute)
   .use(territoryUpdateRoutes)
-  .use(territoryMutationRoutes)
   .use(territoryDeleteRoute)
   .use(territoryManageRoute);
 
