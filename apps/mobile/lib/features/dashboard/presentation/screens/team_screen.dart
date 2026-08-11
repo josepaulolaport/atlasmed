@@ -83,39 +83,55 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
               onTap: () => const RepsWithoutPatchRoute().push(context),
             ),
           Expanded(
-            child: RepositoryBuilder(
-              repository: ref.watch(teamProvider(args)),
-              builder: (context, members, repo) {
-                if (members == null) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (members.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Text(
-                        'Nenhuma pessoa nesta equipe.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6b7280),
+            child: RefreshIndicator(
+              color: AppColors.navyBright,
+              backgroundColor: Colors.white,
+              strokeWidth: 2.6,
+              onRefresh: () async => ref.invalidate(teamProvider(args)),
+              child: RepositoryBuilder(
+                repository: ref.watch(teamProvider(args)),
+                builder: (context, members, repo) {
+                  if (members == null) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (members.isEmpty) {
+                    // A ListView rather than a Center: an empty roster is
+                    // exactly when someone reaches for pull-to-refresh, and a
+                    // non-scrollable child never fires it.
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 64,
+                          ),
+                          child: Text(
+                            'Nenhuma pessoa nesta equipe.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF6b7280),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
+                    );
+                  }
+                  return ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: members.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) => _MemberTile(
+                      member: members[index],
+                      sortBy: _sortBy,
+                      isManagerRoster:
+                          widget.managerId == null &&
+                          role != UserRoleName.manager,
                     ),
                   );
-                }
-                return ListView.separated(
-                  itemCount: members.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) => _MemberTile(
-                    member: members[index],
-                    sortBy: _sortBy,
-                    isManagerRoster:
-                        widget.managerId == null &&
-                        role != UserRoleName.manager,
-                  ),
-                );
-              },
+                },
+              ),
             ),
           ),
         ],
@@ -245,38 +261,48 @@ class RepsWithoutPatchScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Representantes sem território')),
-      body: RepositoryBuilder(
-        repository: ref.watch(repsWithoutPatchProvider),
-        builder: (context, members, repo) {
-          if (members == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (members.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Todo representante tem um território.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Color(0xFF6b7280)),
-                ),
-              ),
-            );
-          }
-          return ListView.separated(
-            itemCount: members.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final member = members[index];
-              return ListTile(
-                title: Text(member.displayName),
-                subtitle: Text(member.email),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => UserDetailRoute(id: member.userId).push(context),
+      body: RefreshIndicator(
+        color: AppColors.navyBright,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.6,
+        onRefresh: () async => ref.invalidate(repsWithoutPatchProvider),
+        child: RepositoryBuilder(
+          repository: ref.watch(repsWithoutPatchProvider),
+          builder: (context, members, repo) {
+            if (members == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (members.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 64),
+                    child: Text(
+                      'Todo representante tem um território.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Color(0xFF6b7280)),
+                    ),
+                  ),
+                ],
               );
-            },
-          );
-        },
+            }
+            return ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: members.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final member = members[index];
+                return ListTile(
+                  title: Text(member.displayName),
+                  subtitle: Text(member.email),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => UserDetailRoute(id: member.userId).push(context),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

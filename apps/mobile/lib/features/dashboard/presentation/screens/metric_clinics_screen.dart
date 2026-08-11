@@ -41,56 +41,66 @@ class _MetricClinicsScreenState extends ConsumerState<MetricClinicsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(
-      metricClinicsProvider(
-        MetricClinicsArgs(
-          metric: widget.metric,
-          scope: widget.scope,
-          page: _page,
-        ),
-      ),
+    // One instance, used by both the watch and the refresh: two constructions
+    // could drift and leave pull-to-refresh invalidating a different page than
+    // the one on screen.
+    final args = MetricClinicsArgs(
+      metric: widget.metric,
+      scope: widget.scope,
+      page: _page,
     );
+    final repository = ref.watch(metricClinicsProvider(args));
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text(_metricTitles[widget.metric] ?? 'Clínicas')),
-      body: RepositoryBuilder(
-        repository: repository,
-        builder: (context, page, repo) {
-          if (page == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (page.data.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Nenhuma clínica neste recorte.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Color(0xFF6b7280)),
-                ),
-              ),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: page.data.length + 1,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              if (index == page.data.length) {
-                return _Pager(
-                  page: page,
-                  onChanged: (next) => setState(() => _page = next),
-                );
-              }
-              return _ClinicTile(
-                row: page.data[index],
-                verticalId: widget.scope.verticalId,
+      body: RefreshIndicator(
+        color: AppColors.navyBright,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.6,
+        onRefresh: () async => ref.invalidate(metricClinicsProvider(args)),
+        child: RepositoryBuilder(
+          repository: repository,
+          builder: (context, page, repo) {
+            if (page == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (page.data.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 64),
+                    child: Text(
+                      'Nenhuma clínica neste recorte.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Color(0xFF6b7280)),
+                    ),
+                  ),
+                ],
               );
-            },
-          );
-        },
+            }
+
+            return ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: page.data.length + 1,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                if (index == page.data.length) {
+                  return _Pager(
+                    page: page,
+                    onChanged: (next) => setState(() => _page = next),
+                  );
+                }
+                return _ClinicTile(
+                  row: page.data[index],
+                  verticalId: widget.scope.verticalId,
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
