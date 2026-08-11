@@ -81,7 +81,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
         _loadingProducts = false;
         // Named, not swallowed: without the list there is nothing to pick, and
         // a silent empty picker reads as "no competitors exist".
-        _error = 'Não foi possível carregar os produtos concorrentes.';
+        _error = 'Não foi possível carregar os produtos de outras marcas.';
       });
     }
   }
@@ -89,7 +89,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
   Future<void> _save() async {
     final productId = _selectedProductId;
     if (productId == null) {
-      setState(() => _error = 'Selecione um produto concorrente.');
+      setState(() => _error = 'Selecione um produto de outra marca.');
       return;
     }
     final quantity = double.tryParse(
@@ -140,7 +140,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remover concorrente?'),
+        title: const Text('Remover outra marca?'),
         content: Text(
           'A quantidade de ${existing.productName} registrada neste mês será '
           'apagada. Os meses anteriores não mudam.',
@@ -178,7 +178,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
         _saving = false;
         _error = error is FacilityPotentialException
             ? error.message
-            : 'Não foi possível remover o concorrente.';
+            : 'Não foi possível remover a marca.';
       });
     }
   }
@@ -213,7 +213,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
               const SizedBox(height: 16),
               Text(
                 widget.existing == null
-                    ? 'Adicionar concorrente'
+                    ? 'Adicionar outra marca'
                     : 'Editar quantidade',
                 style: const TextStyle(
                   fontSize: 17,
@@ -244,7 +244,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                   initialValue: _selectedProductId,
                   isExpanded: true,
                   decoration: const InputDecoration(
-                    labelText: 'Produto concorrente',
+                    labelText: 'Produto de outra marca',
                     border: OutlineInputBorder(),
                   ),
                   items: [
@@ -307,7 +307,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                   key: const Key('competitor-quantity-remove'),
                   onPressed: _saving ? null : _remove,
                   style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                  child: const Text('Remover concorrente'),
+                  child: const Text('Remover outra marca'),
                 ),
             ],
           ),

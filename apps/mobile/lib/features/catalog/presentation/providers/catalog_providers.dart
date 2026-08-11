@@ -37,7 +37,7 @@ final catalogPriceIndexProvider = FutureProvider<List<ComparisonRow>>((ref) {
 });
 
 /// Every competitor product in the catalog — backs the admin-only
-/// "gerenciar concorrentes" picker.
+/// "gerenciar outras marcas" picker.
 final catalogAllCompetitorsProvider = FutureProvider<List<CompetitorProduct>>((
   ref,
 ) {

@@ -49,7 +49,7 @@ void main() {
     // All four captions present and none of them replaced by an ellipsis.
     for (final label in const [
       'AtlasMed/mês',
-      'Concorrentes/mês',
+      'Outras marcas/mês',
       'Mercado total',
       'Participação',
     ]) {
@@ -69,10 +69,7 @@ void main() {
         host(
           PotentialRowHarness(
             item: item(
-              competitors: [
-                usage('Concorrente A 1%', 12),
-                usage('Concorrente B 2%', 3.5),
-              ],
+              competitors: [usage('Marca A 1%', 12), usage('Marca B 2%', 3.5)],
             ),
           ),
         ),
@@ -80,12 +77,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // The breakdown the server always sent and the widget used to drop.
-      expect(find.text('Concorrente A 1%'), findsOneWidget);
-      expect(find.text('Concorrente B 2%'), findsOneWidget);
+      expect(find.text('Marca A 1%'), findsOneWidget);
+      expect(find.text('Marca B 2%'), findsOneWidget);
       // In the units the rep typed, not metric units.
       expect(find.text('12'), findsOneWidget);
       expect(find.text('3.5'), findsOneWidget);
-      expect(find.text('Produto concorrente'), findsOneWidget);
+      expect(find.text('Produto de outra marca'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -102,7 +99,7 @@ void main() {
 
     // "Nothing recorded" and "failed to load" must not look identical.
     expect(
-      find.text('Nenhum concorrente registrado neste mês.'),
+      find.text('Nenhuma outra marca registrada neste mês.'),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);
@@ -150,7 +147,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Absent, not present-and-failing.
-    expect(find.text('Adicionar concorrente'), findsNothing);
+    expect(find.text('Adicionar outra marca'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

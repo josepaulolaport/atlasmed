@@ -18,7 +18,7 @@ class _FakeCatalogRepository extends CatalogRepository {
   Future<List<CompetitorProduct>> getAllCompetitorProducts() async => [
     CompetitorProduct(
       id: 9,
-      name: 'Concorrente A',
+      name: 'Marca A',
       manufacturer: 'Fabricante',
       countryOfOrigin: 'BR',
       price17: 0,
@@ -69,7 +69,7 @@ void main() {
 
   final usage = CompetitorUsage(
     productId: 9,
-    productName: 'Concorrente A',
+    productName: 'Marca A',
     quantity: 12,
     metricQuantity: 12,
     updatedAt: DateTime.utc(2026, 3, 10),
@@ -148,8 +148,8 @@ void main() {
 
     // Destructive and irreversible for that month, so it asks first, and names
     // what survives.
-    expect(find.text('Remover concorrente?'), findsOneWidget);
-    expect(find.textContaining('Concorrente A'), findsWidgets);
+    expect(find.text('Remover outra marca?'), findsOneWidget);
+    expect(find.textContaining('Marca A'), findsWidgets);
     expect(find.textContaining('meses anteriores'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(TextButton, 'Remover'));
@@ -186,7 +186,7 @@ void main() {
   testWidgets('a failed removal is stated, not swallowed', (tester) async {
     final repository = _RecordingPotentialRepository()
       ..failure = const FacilityPotentialException(
-        'Falha ao remover o concorrente (500)',
+        'Falha ao remover a marca (500)',
       );
     final showing = await openSheet(
       tester,
@@ -202,7 +202,7 @@ void main() {
     // Still open, with the reason on screen — a dismissed sheet would read as
     // success.
     expect(find.byType(CompetitorQuantitySheet), findsOneWidget);
-    expect(find.text('Falha ao remover o concorrente (500)'), findsOneWidget);
+    expect(find.text('Falha ao remover a marca (500)'), findsOneWidget);
 
     await dismiss(tester, showing);
   });

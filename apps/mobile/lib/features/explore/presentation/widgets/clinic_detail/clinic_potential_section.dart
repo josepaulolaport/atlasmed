@@ -215,7 +215,7 @@ class _PotentialRow extends StatelessWidget {
             Expanded(
               child: _MetricTile(
                 icon: Icons.groups_outlined,
-                label: 'Concorrentes/mês',
+                label: 'Outras marcas/mês',
                 value: _fmtQty(item.competitorMonthlyQty),
               ),
             ),
@@ -241,7 +241,7 @@ class _PotentialRow extends StatelessWidget {
   }
 }
 
-/// Who makes up "Concorrentes/mês", and how much of it each one is.
+/// Who makes up "Outras marcas/mês", and how much of it each one is.
 ///
 /// The server has always sent this list; nothing rendered it, so the competitor
 /// figure was a lump sum the rep could not check or correct.
@@ -260,7 +260,7 @@ class _CompetitorTable extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Nenhum concorrente registrado neste mês.',
+              'Nenhuma outra marca registrada neste mês.',
               style: TextStyle(
                 fontSize: 13,
                 height: 1.3,
@@ -285,7 +285,7 @@ class _CompetitorTable extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Produto concorrente',
+                  'Produto de outra marca',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -415,7 +415,7 @@ class _AddCompetitorButton extends StatelessWidget {
                 // Text here overflowed the row.
                 Flexible(
                   child: Text(
-                    'Adicionar concorrente',
+                    'Adicionar outra marca',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,

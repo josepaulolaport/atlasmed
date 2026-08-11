@@ -78,7 +78,7 @@ class FacilityPotentialRepository extends Repository<FacilityPotentialsPage>
         method: RepositoryHttpMethod.delete,
       ),
     );
-    return _decode(response, 'Falha ao remover o concorrente');
+    return _decode(response, 'Falha ao remover a marca');
   }
 
   FacilityPotentialsPage _decode(dynamic response, String failureMessage) {
