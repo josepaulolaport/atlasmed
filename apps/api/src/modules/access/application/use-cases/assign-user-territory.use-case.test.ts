@@ -62,7 +62,6 @@ describe("AssignUserTerritoryUseCase", () => {
     expect(scopeRepository.assignTerritory).toHaveBeenCalledWith({
       userId: fieldUser.id,
       territoryId: 1,
-      assignedBy: 1,
     });
     expect(scopeService.invalidateForTerritoryAssignmentChange).toHaveBeenCalledWith(
       fieldUser.id
@@ -80,7 +79,6 @@ describe("AssignUserTerritoryUseCase", () => {
     expect(scopeRepository.assignTerritory).toHaveBeenCalledWith({
       userId: managerUser.id,
       territoryId: 1,
-      assignedBy: 1,
     });
   });
 

@@ -53,6 +53,9 @@ export class DrizzleTerritoryBoundaryWriter implements TerritoryBoundaryWriter {
           .set({
             endedAt: new Date(),
             endReason: command.endReason,
+            // Spec 0009 R2/R5: why *and* who. A manager whose team shrank can
+            // now find out which admin's redraw did it.
+            endedByUserId: command.endedByUserId ?? null,
             updatedAt: new Date(),
           })
           .where(

@@ -197,11 +197,17 @@ async function enqueueSearchSyncForFacilities(facilityIds: number[]): Promise<vo
   }
 }
 
+const territoryTransactionPort = new DrizzleTerritoryTransactionPort();
+
 const territoryCrud = new TerritoryCrudUseCases({
   territoryRepository: territoryRepositories.territory,
   territoryTypeRepository: territoryRepositories.territoryType,
   spatialRepository: territoryRepositories.spatial,
   containmentService: territoryContainmentService,
+  // Spec 0009 R1: creation is now atomic too — the row and its geometry commit
+  // together, so a rejected boundary leaves no orphan territory.
+  transactionPort: territoryTransactionPort,
+  buildContainmentService: (repos) => new TerritoryContainmentService(repos),
   membershipService: territoryMembershipService,
   onTerritoryDeactivated: enqueueMembershipRecompute,
   onBoundaryChanged: onTerritoryBoundaryChanged,
@@ -209,8 +215,6 @@ const territoryCrud = new TerritoryCrudUseCases({
 });
 
 const territoryTypeCrud = new TerritoryTypeUseCases(territoryRepositories.territoryType);
-
-const territoryTransactionPort = new DrizzleTerritoryTransactionPort();
 
 function createBoundaryUseCases() {
   return new TerritoryBoundaryUseCases({

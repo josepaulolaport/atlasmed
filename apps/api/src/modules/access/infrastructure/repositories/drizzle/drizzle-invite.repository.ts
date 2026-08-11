@@ -401,7 +401,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           await tx.insert(userTerritoryAssignments).values({
             userId: user.id,
             territoryId: row.territoryId,
-            assignedBy: inviteLock.invitedByUserId,
           });
         }
 

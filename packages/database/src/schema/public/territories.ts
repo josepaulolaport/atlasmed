@@ -37,7 +37,18 @@ export const territories = pgTable(
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
-    code: text("code").notNull(),
+    /*
+     * `code` is gone (spec 0009 R9).
+     *
+     * It held values like `MZ-RJ` and `P-ELIANA-FERREIRA` — a type prefix plus a
+     * hand-shortened area — while `slug` held `orto-mz-rj`. That looked like
+     * curated data, and the abbreviations (RJ, NO, DF-TO) genuinely were not
+     * derivable from `name`. But nothing maintained the convention: the only
+     * writer set `code = slug.toUpperCase()`, so the first territory created
+     * through the API would have been `ORTO-MZ-RJ`, a shape no existing row
+     * used. A second unique key per vertical, on a display string with no
+     * authorship rule, identifying rows that `id` already identifies.
+     */
     /** Commercial vertical this territory row belongs to (zones/patches are per vertical). */
     verticalId: bigint("vertical_id", { mode: "number" })
       .notNull().references(() => businessVerticals.id, { onDelete: "restrict" }),
@@ -50,7 +61,6 @@ export const territories = pgTable(
   },
   (t) => [
     uniqueIndex("territories_vertical_id_slug_uidx").on(t.verticalId, t.slug),
-    uniqueIndex("territories_vertical_id_code_uidx").on(t.verticalId, t.code),
     /** Target for composite FKs that must match territory vertical. */
     unique("territories_id_vertical_id_uidx").on(t.id, t.verticalId),
     foreignKey({
@@ -78,7 +88,12 @@ export const userTerritoryAssignments = pgTable(
     id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
     userId: bigint("user_id", { mode: "number" }).notNull().references(() => users.id, { onDelete: "cascade" }),
     territoryId: bigint("territory_id", { mode: "number" }).notNull().references(() => territories.id, { onDelete: "restrict" }),
-    assignedBy: bigint("assigned_by", { mode: "number" }).references(() => users.id, { onDelete: "set null" }),
+    /*
+     * `assigned_by` is gone (spec 0009 R9). It was written on every assignment
+     * and read by nothing — not by a query, a serializer, or a report. The
+     * audit log already records who assigned whom, which is where that question
+     * gets answered.
+     */
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },

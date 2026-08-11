@@ -144,7 +144,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     const geoJsonString = JSON.stringify(geoJson);
 
     const rows = await this.database.execute(sql`
-      SELECT t.id, t.code
+      SELECT t.id, t.slug
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       WHERE t.id != ${territoryId}
@@ -153,9 +153,9 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.slug = ${REP_PATCH_TYPE_SLUG}
         AND ST_Intersects(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
         AND NOT ST_Touches(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
-    `) as Array<{ id: number; code: string }>;
+    `) as Array<{ id: number; slug: string }>;
 
-    return rows.map((row) => ({ id: Number(row.id), code: row.code }));
+    return rows.map((row) => ({ id: Number(row.id), slug: row.slug }));
   }
 
   /**
@@ -207,6 +207,9 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       INNER JOIN facility_vertical_rep_assignments fvra
         ON fvra.facility_vertical_profile_id = fvp.id
         AND fvra.ended_at IS NULL
+        -- Spec 0009 R2: an overridden assignment is already outside the
+        -- geometry on purpose, so moving the clinic cannot invalidate it.
+        AND fvra.override_reason IS NULL
       INNER JOIN users u ON u.id = fvra.user_id
       CROSS JOIN proposed
       WHERE fvp.facility_id = ${input.facilityId}
@@ -309,6 +312,10 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         INNER JOIN facility_vertical_rep_assignments fvra
           ON fvra.facility_vertical_profile_id = fvp.id
           AND fvra.ended_at IS NULL
+          -- Spec 0009 R2: an overridden assignment is deliberately outside the
+          -- geometry, so a boundary change is not evidence against it. An
+          -- override a recompute can erase is not an override.
+          AND fvra.override_reason IS NULL
         INNER JOIN users u ON u.id = fvra.user_id
         CROSS JOIN proposed
         WHERE f.deactivated_at IS NULL
@@ -359,6 +366,8 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         ON fvra.facility_vertical_profile_id = fvp.id
         AND fvra.ended_at IS NULL
         AND fvra.user_id = pr.user_id
+        -- Spec 0009 R2: see the manager-zone branch above.
+        AND fvra.override_reason IS NULL
       INNER JOIN users u ON u.id = fvra.user_id
       CROSS JOIN proposed
       WHERE f.deactivated_at IS NULL
@@ -406,7 +415,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       )
       SELECT
         t.id,
-        t.code,
+        t.slug,
         -- Spec 0009 R3: absolute area, not a share of the proposed polygon. As a
         -- ratio the same sliver read as negligible on a state and alarming on a
         -- city, which is backwards — an overlap is real or it is float noise,
@@ -427,11 +436,11 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.block_sibling_overlap = true
         AND ST_Intersects(t.boundary, child.geom)
         AND NOT ST_Touches(t.boundary, child.geom)
-    `) as Array<{ id: string; code: string; overlap_sq_m: number }>;
+    `) as Array<{ id: string; slug: string; overlap_sq_m: number }>;
 
     return rows.map((row) => ({
       id: Number(row.id),
-      code: row.code,
+      slug: row.slug,
       overlapSquareMeters: Number(row.overlap_sq_m),
     }));
   }
@@ -447,7 +456,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       WITH patch AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
-      SELECT t.id, t.code, t.name
+      SELECT t.id, t.slug, t.name
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       CROSS JOIN patch
@@ -457,11 +466,11 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND (${verticalId}::bigint IS NULL OR t.vertical_id = ${verticalId})
         AND ST_CoveredBy(patch.geom, t.boundary)
       ORDER BY ST_Area(t.boundary::geography) ASC
-    `) as Array<{ id: number; code: string; name: string }>;
+    `) as Array<{ id: number; slug: string; name: string }>;
 
     return rows.map((row) => ({
       id: Number(row.id),
-      code: row.code,
+      slug: row.slug,
       name: row.name,
     }));
   }
@@ -469,14 +478,14 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   async findRepPatchesOutsideManagerZone(input: {
     managerZoneId: number;
     managerZoneGeoJson: GeoJsonGeometry;
-  }): Promise<Array<{ id: number; code: string }>> {
+  }): Promise<Array<{ id: number; slug: string }>> {
     const geoJsonString = JSON.stringify(input.managerZoneGeoJson);
 
     const rows = await this.database.execute(sql`
       WITH zone AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
-      SELECT p.id, p.code
+      SELECT p.id, p.slug
       FROM territories p
       INNER JOIN territory_types tt ON tt.id = p.territory_type_id
       CROSS JOIN zone
@@ -485,9 +494,9 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND p.boundary IS NOT NULL
         AND tt.slug = ${REP_PATCH_TYPE_SLUG}
         AND NOT ST_CoveredBy(p.boundary, zone.geom)
-    `) as Array<{ id: number; code: string }>;
+    `) as Array<{ id: number; slug: string }>;
 
-    return rows.map((row) => ({ id: Number(row.id), code: row.code }));
+    return rows.map((row) => ({ id: Number(row.id), slug: row.slug }));
   }
 
   async updateBoundaryMetadata(territoryId: number): Promise<void> {

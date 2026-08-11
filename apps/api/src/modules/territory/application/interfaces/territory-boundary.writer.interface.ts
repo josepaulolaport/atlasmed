@@ -20,6 +20,8 @@ export interface BoundaryCommitCommand {
   /** Rep assignments to end in the same transaction. Empty means none. */
   endAssignmentsForProfileIds: number[];
   endReason: string;
+  /** Spec 0009 R2/R5: the actor whose boundary edit ended these assignments. */
+  endedByUserId?: number | null;
   /** rep_patch: resolved owning manager zone, written to the territory row. */
   managerTerritoryId?: number;
   /** manager_zone: read the child patch count inside the transaction. */
