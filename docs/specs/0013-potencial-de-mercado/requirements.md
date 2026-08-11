@@ -115,6 +115,18 @@ already used by `territories_id_vertical_id_uidx` and the manager-zone FK.
 | `facility_product_usage` | **rep** | (profile, definition, competitor product) → quantity |
 | `facility_metric_snapshot` | system | (profile, definition) → ours, theirs, total, share |
 
+> **Decisions 2026-08-10 — the rep's entry, and the usage key.**
+>
+> **The rep types only a number.** The competitor product comes from the picker; the number is the
+> quantity of *that product* per month — **product units, not metric units** — and is multiplied by
+> that product's `metric_units`, exactly like our side multiplies order lines. Symmetric by
+> construction. Since every product sits at `metric_units = 1` until an admin sets real values
+> (§4.2), the rep's number passes through unchanged today.
+>
+> **Uniqueness is (profile, definition, product).** The same competitor product may carry a
+> separate quantity under each metric it belongs to. The §7 ambiguity is a *picker* problem, not a
+> storage one — the schema stays capable and the UI decides what to offer.
+
 **`product_equivalences` is used only to populate the rep's picker.** It is not part of the
 metric's keying. A usage row, once created, stands on its own — so removing an equivalence does
 **not** change any clinic's numbers and does **not** trigger recalculation. Field-collected data
@@ -139,6 +151,21 @@ plausibly enough that nobody notices.
 Accepted constraint: a product carries one `metric_units` value, so every metric it belongs to
 must measure in the same unit. Revisit if that ever fails.
 
+> **Decision 2026-08-10 — the values are admin data, not something we derive.**
+> All 12 production products carry `metric_units = 1` (the `0082` default) and an empty `unit`
+> text column, so there is nothing in the database to infer a box size from. Three names appear
+> twice under different EAN codes (e.g. REVISCON 1.0% as `4064544000182` and `8718802047995`),
+> which are plausibly different presentations — but "plausibly" is not a basis for multiplying
+> revenue figures.
+>
+> Phase 4 therefore ships the **mechanism** and leaves every value at 1. Nothing is invented.
+> **Until an admin sets real values, the numerator remains understated exactly as it is today** —
+> acceptance criterion §9.1 is *not* met by P4-1 alone, and that is deliberate.
+>
+> **Required of the admin UI (not yet built):** an editable `metric_units` per product, presented
+> as "how many metric units is one unit of this product" with the unit label from the definition
+> (e.g. *ampolas*). This is the only place the value can come from.
+
 ### 4.3 Calculation
 
 ```
@@ -151,10 +178,16 @@ share          = ours_monthly ÷ total          (null when total = 0)
 
 - **N configurable, default 3.** Both sides must represent the same period — the rep enters a
   monthly figure, so ours must be a monthly average, not a 90-day sum.
+  **Decision 2026-08-10: N is a single global constant** (`MONTHS_IN_WINDOW`), not per-definition
+  and not database-backed. Changing it is a deploy and changes every metric at once. Revisit only
+  when two metrics genuinely need different windows — a column added later is a small migration,
+  a per-definition value nobody varies is permanent noise.
 - Eligible orders follow ADR 0003: `status ∈ (APPROVED, INVOICED)`, `type ∈ (SALE, CONSIGNMENT)`.
   **This corrects a live inconsistency** — the penetration query currently filters `type = 'SALE'`
   only while the funnel counts both.
 - **Written-off lines are included** (user decision).
+- **`CONSIGNMENT` is included** alongside `SALE` (user decision, 2026-08-10) — confirming the
+  §4.3 rule against the live query, which filters `type = 'SALE'` only.
 - Scoping is structural: orders key on `facility_vertical_profile_id` (spec 0010 §4), so the
   numerator no longer needs — and no longer silently omits — a vertical filter.
 - `share` is **null**, never `0`, when there is no data. "No sales" and "no information" must be
@@ -171,6 +204,48 @@ historical. Recomputed on:
 
 **Not** on equivalence changes (§4.1).
 
+> **Decision 2026-08-10 — asynchronous for orders, synchronous for the rep.**
+> A rep editing a quantity (2) or adding/removing a competitor product (3) recomputes **inline**,
+> so the number they just changed is correct when the screen redraws.
+>
+> Order writes (1) **enqueue** a recompute keyed on the affected profile, deduplicated. The Emultec
+> importer upserts tens of orders per run every ten minutes and would otherwise recompute the same
+> profile once per order, turning one import into dozens of identical recomputations — and putting
+> the metric's cost on the critical path of an importer that must stay a considerate guest of a
+> third-party database.
+>
+> The recompute must be **idempotent**: running it twice for the same (profile, definition, month)
+> produces the same row.
+>
+> **Decision 2026-08-10 — idempotency lives in the handler; correctness lives in a sweep.**
+>
+> The handler is a **pure function of stored state**: for one (profile, definition, month) it reads
+> the orders and usage rows, computes, and UPSERTs that single row. Never a delta, never an
+> increment. Run once or fifty times, concurrently or out of order, the row is identical. This is
+> what makes at-least-once delivery acceptable.
+>
+> Transport is `purchaseRecurrenceWorkflow`'s pattern — a Temporal workflow started from the API —
+> because an equivalent per-profile derived value already recomputes from orders that way, and one
+> convention should cover both.
+>
+> **But a Temporal start is a network call outside the database transaction.** Commit an order,
+> crash before starting the workflow, and that snapshot is never recomputed and nothing reports it.
+> A Postgres job table enqueued in the same transaction would close that specific hole, at the cost
+> of a second async mechanism — and it would still not survive a call site that simply forgets to
+> enqueue, or a script writing rows directly.
+>
+> So the trigger is **not** where correctness comes from. A **scheduled reconciliation sweep**
+> recomputes any (profile, month) whose inputs changed after the snapshot's `computed_at`, compared
+> against `max(orders.updated_at)` / `max(usage.updated_at)` for that profile. Consequences:
+>
+> - a lost trigger costs one sweep interval of staleness, not a permanently wrong number
+> - the trigger becomes a latency optimisation, not a correctness requirement
+> - the §4.4 backfill command is the same sweep over an explicit month range
+>
+> ⚠️ The sweep must not scan every profile every run — at ~14k clinics that does not hold up. It
+> keys on `computed_at` versus input timestamps, which needs an index, and the query plan must be
+> checked against real data rather than assumed.
+
 **Granularity: one row per (profile, definition, month).** Calendar months, not sliding windows.
 
 Rejected: a row per day. At ~14k clinics × N metrics that is ~15M rows a year, of which the
@@ -186,6 +261,15 @@ Calendar months instead:
 
 The current month is partial: show it as **parcial** alongside the last complete month, and plot
 only complete months.
+
+> **Decision 2026-08-10 — no historical backfill; snapshots begin at the current month.**
+> Backfilling from the 1131 existing orders would produce months with a real numerator and an
+> absent denominator (competitor quantities did not exist then), so every reconstructed month would
+> read as share = 100%. That is not history, it is an artefact that looks like history.
+>
+> A **backfill command must still exist**, idempotent and restricted to an explicit month range —
+> needed to repair a gap after an incident, and to populate history once competitor data has been
+> collected for a period. It is a tool, not part of the migration.
 
 ### 4.5 Historical view
 

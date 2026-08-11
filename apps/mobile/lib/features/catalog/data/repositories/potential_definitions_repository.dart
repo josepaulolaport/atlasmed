@@ -180,9 +180,15 @@ class PotentialDefinitionsRepository {
     _throwIfError(response);
   }
 
-  Future<void> unlinkProduct(int productId) async {
+  /// Unlinks one product from one metric. The definition is part of the path
+  /// because a product may be linked in several Linhas (spec 0013 §3), so the
+  /// product alone no longer identifies a link.
+  Future<void> unlinkProduct({
+    required int productId,
+    required int definitionId,
+  }) async {
     final response = await _send(
-      _uri('/products/$productId/potential-definition'),
+      _uri('/products/$productId/potential-definitions/$definitionId'),
       RepositoryHttpMethod.delete,
     );
     _throwIfError(response);

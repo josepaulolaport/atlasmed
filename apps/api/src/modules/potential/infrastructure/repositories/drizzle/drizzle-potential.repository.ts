@@ -9,6 +9,7 @@ import {
   products,
 } from "@atlasmed/database";
 import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import type { Database } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   DefinitionQtySum,
@@ -33,6 +34,13 @@ function mapDefinition(
 }
 
 export class DrizzlePotentialRepository implements PotentialRepository {
+  /**
+   * Injectable so the metric arithmetic can be asserted inside a rolled-back
+   * transaction against real rows. Defaults to the shared client, so every
+   * existing caller is unchanged.
+   */
+  constructor(private readonly database: Database = db) {}
+
   async listDefinitions(input: {
     verticalId: number;
     includeDeleted?: boolean;
@@ -43,7 +51,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     if (!input.includeDeleted) {
       conditions.push(isNull(productPotentialDefinitions.deletedAt));
     }
-    const rows = await db
+    const rows = await this.database
       .select()
       .from(productPotentialDefinitions)
       .where(and(...conditions))
@@ -54,7 +62,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   async findDefinitionById(
     id: number,
   ): Promise<PotentialDefinitionRecord | null> {
-    const [row] = await db
+    const [row] = await this.database
       .select()
       .from(productPotentialDefinitions)
       .where(eq(productPotentialDefinitions.id, id))
@@ -67,7 +75,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     key: string;
     label: string;
   }): Promise<PotentialDefinitionRecord> {
-    const [row] = await db
+    const [row] = await this.database
       .insert(productPotentialDefinitions)
       .values({
         verticalId: input.verticalId,
@@ -86,7 +94,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       updatedAt: new Date(),
     };
     if (input.label !== undefined) patch.label = input.label;
-    const [row] = await db
+    const [row] = await this.database
       .update(productPotentialDefinitions)
       .set(patch)
       .where(
@@ -100,7 +108,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   async softDeleteDefinition(id: number): Promise<boolean> {
-    const [row] = await db
+    const [row] = await this.database
       .update(productPotentialDefinitions)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(
@@ -118,7 +126,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     definitionIds: number[];
   }): Promise<FacilityPotentialValueRecord[]> {
     if (input.definitionIds.length === 0) return [];
-    const rows = await db
+    const rows = await this.database
       .select()
       .from(facilityPotentialValues)
       .where(
@@ -142,7 +150,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     quantity: number;
     updatedByUserId: number;
   }): Promise<void> {
-    await db
+    await this.database
       .insert(facilityPotentialValues)
       .values({
         facilityId: input.facilityId,
@@ -167,7 +175,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     facilityId: number;
     definitionId: number;
   }): Promise<void> {
-    await db
+    await this.database
       .delete(facilityPotentialValues)
       .where(
         and(
@@ -193,26 +201,40 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     since: Date;
   }): Promise<DefinitionQtySum[]> {
     if (input.definitionIds.length === 0) return [];
-    const rows = await db
+    const rows = await this.database
       .select({
         definitionId: productPotentialLinks.definitionId,
-        totalQty: sql<string>`coalesce(sum(${orderItems.quantity}), 0)`,
+        // Metric units, not product units (spec 0013 §4.2). Summing quantity raw
+        // counted a box of five as one, so ten boxes read as ten ampoules
+        // instead of fifty. Every share figure was understated by the packaging
+        // factor, plausibly enough that nobody noticed.
+        totalQty: sql<string>`coalesce(sum(${orderItems.quantity} * ${products.metricUnits}), 0)`,
       })
       .from(orderItems)
       .innerJoin(orders, eq(orders.id, orderItems.orderId))
+      .innerJoin(products, eq(products.id, orderItems.productId))
       .innerJoin(
         facilityVerticalProfiles,
         eq(facilityVerticalProfiles.id, orders.facilityVerticalProfileId),
       )
       .innerJoin(
         productPotentialLinks,
-        eq(productPotentialLinks.productId, orderItems.productId),
+        and(
+          eq(productPotentialLinks.productId, orderItems.productId),
+          // The link is per (product, vertical) since 0086, so the join must
+          // name the vertical too — otherwise a product sold in two linhas
+          // contributes its quantity to both metrics.
+          eq(productPotentialLinks.verticalId, facilityVerticalProfiles.verticalId),
+        ),
       )
       .where(
         and(
           eq(facilityVerticalProfiles.facilityId, input.facilityId),
           eq(facilityVerticalProfiles.verticalId, input.verticalId),
-          eq(orders.type, "SALE"),
+          // SALE and CONSIGNMENT, per ADR 0003 and spec 0013 §4.3. This query
+          // filtered SALE only while the funnel counted both, so consigned
+          // stock was invisible here and visible there.
+          inArray(orders.type, ["SALE", "CONSIGNMENT"]),
           inArray(orders.status, ["APPROVED", "INVOICED"]),
           gte(orders.orderedAt, input.since),
           inArray(productPotentialLinks.definitionId, input.definitionIds),
@@ -226,18 +248,28 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     }));
   }
 
+  /**
+   * Links a product to a metric, replacing whatever it was linked to *in that
+   * linha*. Its links in other linhas are untouched.
+   *
+   * The conflict target is (product_id, vertical_id) rather than the primary
+   * key: re-linking a product within a linha should move it to the new metric,
+   * not add a second one. That is precisely the rule 0086 put in the schema.
+   */
   async linkProduct(input: {
     productId: number;
     definitionId: number;
+    verticalId: number;
   }): Promise<void> {
-    await db
+    await this.database
       .insert(productPotentialLinks)
       .values({
         productId: input.productId,
         definitionId: input.definitionId,
+        verticalId: input.verticalId,
       })
       .onConflictDoUpdate({
-        target: productPotentialLinks.productId,
+        target: [productPotentialLinks.productId, productPotentialLinks.verticalId],
         set: {
           definitionId: input.definitionId,
           updatedAt: new Date(),
@@ -245,10 +277,18 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       });
   }
 
-  async unlinkProduct(productId: number): Promise<boolean> {
-    const deleted = await db
+  async unlinkProduct(input: {
+    productId: number;
+    definitionId: number;
+  }): Promise<boolean> {
+    const deleted = await this.database
       .delete(productPotentialLinks)
-      .where(eq(productPotentialLinks.productId, productId))
+      .where(
+        and(
+          eq(productPotentialLinks.productId, input.productId),
+          eq(productPotentialLinks.definitionId, input.definitionId),
+        ),
+      )
       .returning({ productId: productPotentialLinks.productId });
     return deleted.length > 0;
   }
@@ -256,7 +296,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   async listProductsForDefinition(
     definitionId: number,
   ): Promise<ProductPotentialLinkRecord[]> {
-    const rows = await db
+    const rows = await this.database
       .select({
         productId: productPotentialLinks.productId,
         definitionId: productPotentialLinks.definitionId,
@@ -274,7 +314,7 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     productId: number;
     verticalId: number;
   }): Promise<boolean> {
-    const [row] = await db
+    const [row] = await this.database
       .select({ id: productVerticals.id })
       .from(productVerticals)
       .where(
@@ -287,16 +327,28 @@ export class DrizzlePotentialRepository implements PotentialRepository {
     return Boolean(row);
   }
 
-  async findLinkByProductId(
-    productId: number,
-  ): Promise<{ productId: number; definitionId: number } | null> {
-    const [row] = await db
+  /**
+   * One specific link. Takes the definition as well as the product because a
+   * product may now be linked in several linhas — asking by product alone no
+   * longer identifies a row.
+   */
+  async findLink(input: {
+    productId: number;
+    definitionId: number;
+  }): Promise<{ productId: number; definitionId: number; verticalId: number } | null> {
+    const [row] = await this.database
       .select({
         productId: productPotentialLinks.productId,
         definitionId: productPotentialLinks.definitionId,
+        verticalId: productPotentialLinks.verticalId,
       })
       .from(productPotentialLinks)
-      .where(eq(productPotentialLinks.productId, productId))
+      .where(
+        and(
+          eq(productPotentialLinks.productId, input.productId),
+          eq(productPotentialLinks.definitionId, input.definitionId),
+        ),
+      )
       .limit(1);
     return row ?? null;
   }

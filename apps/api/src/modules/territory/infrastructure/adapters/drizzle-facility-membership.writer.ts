@@ -48,25 +48,6 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
     });
   }
 
-  async setProfileTerritory(
-    facilityId: number,
-    verticalId: number,
-    managerZoneId: number | null,
-  ): Promise<void> {
-    await db
-      .update(facilityVerticalProfiles)
-      .set({
-        managerZoneId,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(facilityVerticalProfiles.facilityId, facilityId),
-          eq(facilityVerticalProfiles.verticalId, verticalId),
-          eq(facilityVerticalProfiles.isActive, true),
-        ),
-      );
-  }
 
   async findClinicsForMembership(params?: {
     facilityIds?: number[];

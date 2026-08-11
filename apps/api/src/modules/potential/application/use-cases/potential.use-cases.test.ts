@@ -44,7 +44,7 @@ function createRepository(
     unlinkProduct: async () => false,
     listProductsForDefinition: async () => [],
     productBelongsToVertical: async () => false,
-    findLinkByProductId: async () => null,
+    findLink: async () => null,
     ...overrides,
   };
 }
@@ -84,15 +84,17 @@ describe("potential scope enforcement", () => {
     await expect(
       new UnlinkProductPotentialUseCase({
         potentialRepository: createRepository({
-          findLinkByProductId: async () => ({
+          findLink: async () => ({
             productId: 1,
             definitionId: 2,
+            verticalId: 1,
           }),
           findDefinitionById: async () => null,
           unlinkProduct,
         }),
       }).execute({
         productId: 1,
+        definitionId: 2,
         scope: { ...baseScope, assignedVerticalIds: [1] },
       }),
     ).rejects.toBeInstanceOf(ResourceNotFoundError);

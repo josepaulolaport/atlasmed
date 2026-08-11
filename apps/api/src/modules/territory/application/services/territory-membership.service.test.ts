@@ -10,7 +10,6 @@ const ZONE_TERRITORY_ID = 1;
 function createClinicWriter(overrides: Record<string, unknown> = {}) {
   return {
     updateProfileTerritoryMemberships: mock(async () => {}),
-    setProfileTerritory: mock(async () => {}),
     findClinicsForMembership: mock(async () => []),
     findClinicsWithoutConsultant: mock(async () => []),
     ...overrides,
