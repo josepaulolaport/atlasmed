@@ -148,6 +148,11 @@ function serializeDocumentFile(file: DocumentFileRecord) {
     fileName: file.fileAsset?.originalFilename,
     status: file.fileAsset?.status,
     contentType: file.fileAsset?.detectedMimeType ?? file.fileAsset?.declaredMimeType,
+    // "Enviado por Maria · há 2h" (spec 0011 §3.4, §7). The checklist is the
+    // screen a rep actually looks at, so omitting it here made attribution
+    // invisible even though the column was populated — the other serializer,
+    // in cadastro-submission.use-cases.ts, had it and this one did not.
+    uploadedByName: file.uploadedByName ?? undefined,
   };
 }
 

@@ -226,6 +226,8 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         role: "PAGE",
         fileName: "rg-frente.jpg",
         status: "READY",
+        // No uploader on this fixture — the field is present and empty.
+        uploadedByName: undefined,
         contentType: "image/jpeg",
       },
     ]);
@@ -348,6 +350,7 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
         fileAssetId: 900,
         position: 1,
         role: "PAGE",
+        uploadedByName: undefined,
         fileName: "aprovado.pdf",
         status: "READY",
         contentType: "application/pdf",
@@ -700,3 +703,63 @@ describe("RejectFacilityCadastroRecordUseCase", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
   });
 });
+
+/**
+ * Attribution has to reach the *checklist*, not just the compose response
+ * (spec 0011 §3.4, §7).
+ *
+ * There are two file serializers. `cadastro-submission.use-cases.ts` carries
+ * the uploader's name and this one did not, so the column was populated, the
+ * repository joined it, every unit test passed — and a rep still saw no
+ * "Enviado por". Only running the pipeline end to end caught it, which is why
+ * it is pinned here.
+ */
+describe("cadastro checklist — who uploaded each file", () => {
+  it("surfaces the uploader's name on the checklist", async () => {
+    const result = await new GetFacilityCadastroChecklistUseCase({
+      facilityRepository: {
+        findById: async () => facility({ legalDocumentType: "CPF" }),
+        findVerticalProfilesByFacilityIds: async () => new Map(),
+      } as unknown as FacilityRepository,
+      conformityRepository: {
+        findActiveRequirements: async () => [requirement(1, "identidade", "CPF")],
+        findRecordsByFacility: async () => [],
+      } as unknown as ConformityRepository,
+      completionService: {
+        evaluateAndApply: async () => ({ complete: false, commercialStatus: null }),
+      } as unknown as FacilityCadastroCompletionService,
+      cadastroRepository: {
+        findWorkingDocument: async () => ({
+          id: 42,
+          facilityId: 1,
+          requirementId: 1,
+          status: "DRAFT",
+          version: 1,
+          validUntil: null,
+        }),
+        listDocumentsForFacilityRequirement: async () => [],
+        listDocumentFiles: async () => [
+          {
+            id: 7,
+            fileAssetId: 7,
+            submissionDocumentId: 42,
+            position: 0,
+            role: "PAGE",
+            uploadedByName: "Maria Souza",
+            fileAsset: {
+              id: 7,
+              originalFilename: "rg.jpg",
+              declaredMimeType: "image/jpeg",
+              detectedMimeType: null,
+              status: "READY",
+            },
+          },
+        ],
+      } as never,
+    }).execute({ facilityId: 1, scope: globalScope });
+
+    const identidade = result.documents.find((d) => d.slug === "identidade")!;
+    expect(identidade.files[0]).toMatchObject({ uploadedByName: "Maria Souza" });
+  });
+});
+
