@@ -59,9 +59,42 @@ async function purge() {
   `);
   await db.execute(sql`delete from persons where last_name = ${MARK};`);
   await db.execute(sql`delete from facilities where name = ${MARK};`);
+  // Leaving these behind consumes a globally-unique ibge_id and abbreviation
+  // for every later suite on the same database.
+  await db.execute(
+    sql`delete from municipalities where name = 'T-CNES-SUGGEST City';`
+  );
+  await db.execute(sql`delete from states where name = 'T-CNES-SUGGEST UF';`);
 }
 
 async function seed(): Promise<Fixture> {
+  /**
+   * A database migrated from empty has no states and no municipalities, and CI
+   * is exactly that — the facility insert selected from an empty table, found
+   * nothing, and the fixture then dereferenced a facility that was never
+   * created. Reuse what exists, create only what is missing: `states` has a
+   * two-character UNIQUE abbreviation, so inventing one per run would collide
+   * on any database that already has the real 27.
+   */
+  /**
+   * `ibge_id` and `abbreviation` are both UNIQUE, and these values must not
+   * collide with another suite's fixture on a shared database. `'99'`/`'TT'`
+   * belong to `facility-purchase-recurrence.db.test.ts`, and taking `'99'` here
+   * made that suite fail — from a file that never mentions it.
+   */
+  await db.execute(sql`
+    insert into states (name, ibge_id, abbreviation)
+      select 'T-CNES-SUGGEST UF', '90', 'ZQ'
+       where not exists (select 1 from states);
+  `);
+  await db.execute(sql`
+    insert into municipalities (state_id, name, ibge_id)
+      select s.id, 'T-CNES-SUGGEST City', '9000001'
+        from states s
+       where not exists (select 1 from municipalities)
+       limit 1;
+  `);
+
   await db.execute(sql`
     insert into facilities (name, location, legal_document_type, state_id, municipality_id, cnes_code)
       select ${MARK}, ST_SetSRID(ST_MakePoint(-46.6, -23.5), 4326), 'CNPJ', m.state_id, m.id, ${CNES_CODE}
@@ -70,6 +103,12 @@ async function seed(): Promise<Fixture> {
   const [facility] = (await db.execute(sql`
     select id from facilities where name = ${MARK} limit 1;
   `)) as unknown as { id: number }[];
+  if (!facility) {
+    // Fail with the cause rather than a null dereference three lines later.
+    throw new Error(
+      "fixture facility was not created — is `municipalities` empty on this database?"
+    );
+  }
 
   await db.execute(sql`
     insert into registry.facilities (cnes_id, atlasmed_id, trade_name)

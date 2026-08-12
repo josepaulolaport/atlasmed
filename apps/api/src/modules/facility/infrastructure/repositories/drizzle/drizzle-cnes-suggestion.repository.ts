@@ -44,7 +44,20 @@ export interface CnesSuggestionContext {
   facilityHasCnesCode: boolean;
   /** That code resolves to a loaded registry facility. */
   facilityInRegistry: boolean;
-  /** Competence of the most recent successful load, e.g. `2026-05`. */
+  /**
+   * The registry holds anything at all.
+   *
+   * Answered from `registry.facilities` rather than from the run ledger. "Is
+   * there data" is a question about the data: a registry loaded by script — or
+   * by a run whose ledger row was pruned — is still loaded, and reporting it as
+   * empty told users nothing had been imported while 25 217 vínculos sat in the
+   * table.
+   */
+  registryHasData: boolean;
+  /**
+   * Competence of the most recent successful load, e.g. `2026-05`. Null when no
+   * run recorded one, which is a missing *label*, not missing data.
+   */
   loadedReference: string | null;
   loadedAt: Date | null;
 }
@@ -61,6 +74,7 @@ export class DrizzleCnesSuggestionRepository {
       select
         (f.cnes_code is not null)                          as facility_has_cnes_code,
         (rf.cnes_id is not null)                           as facility_in_registry,
+        (exists (select 1 from registry.facilities))       as registry_has_data,
         run.reference_year                                 as reference_year,
         run.reference_month                                as reference_month,
         run.promoted_at                                    as promoted_at
@@ -77,6 +91,7 @@ export class DrizzleCnesSuggestionRepository {
     `)) as unknown as {
       facility_has_cnes_code: boolean;
       facility_in_registry: boolean;
+      registry_has_data: boolean;
       reference_year: number | null;
       reference_month: number | null;
       promoted_at: Date | string | null;
@@ -87,6 +102,7 @@ export class DrizzleCnesSuggestionRepository {
       return {
         facilityHasCnesCode: false,
         facilityInRegistry: false,
+        registryHasData: false,
         loadedReference: null,
         loadedAt: null,
       };
@@ -100,6 +116,7 @@ export class DrizzleCnesSuggestionRepository {
     return {
       facilityHasCnesCode: row.facility_has_cnes_code === true,
       facilityInRegistry: row.facility_in_registry === true,
+      registryHasData: row.registry_has_data === true,
       loadedReference: reference,
       loadedAt: row.promoted_at ? new Date(row.promoted_at) : null,
     };

@@ -84,7 +84,11 @@ export class ListCnesSuggestionsUseCase {
     // registry, and saying "registry empty" there would send someone looking in
     // the wrong place.
     if (!context.facilityHasCnesCode) return empty("FACILITY_WITHOUT_CNES_CODE");
-    if (!context.loadedReference) return empty("REGISTRY_EMPTY");
+    // Keyed on the registry's contents, not on the run ledger. A load performed
+    // by script, or one whose ledger row was pruned, is still a load — reporting
+    // it as empty told users nothing had been imported while the tables were
+    // full. The competence is a label; its absence is not evidence of absence.
+    if (!context.registryHasData) return empty("REGISTRY_EMPTY");
     if (!context.facilityInRegistry) return empty("FACILITY_NOT_IN_REGISTRY");
 
     // One more than asked, so "there are more" is known rather than guessed.
