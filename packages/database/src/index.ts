@@ -6,7 +6,6 @@ export * from "./schema/ops/index";
 export * from "./types/geometry";
 export {
   createMetricSnapshotStore,
-  latestTheirsByProduct,
   listAllProfileIds,
   listTheirsStanding,
   listProfilesWithChangedInputs,
