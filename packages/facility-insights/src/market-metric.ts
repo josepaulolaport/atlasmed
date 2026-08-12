@@ -144,24 +144,6 @@ export function addMonths(month: MonthKey, delta: number): MonthKey {
 }
 
 /**
- * The `count` months ending at `month`, oldest first — the window the read path
- * averages over.
- */
-export function trailingMonths(month: MonthKey, count: number): MonthKey[] {
-  if (!Number.isInteger(count) || count < 1) {
-    throw new MarketMetricValidationError(
-      "INVALID_WINDOW",
-      `Window must be a positive whole number of months, received ${count}`,
-    );
-  }
-  const months: MonthKey[] = [];
-  for (let offset = count - 1; offset >= 0; offset -= 1) {
-    months.push(addMonths(month, -offset));
-  }
-  return months;
-}
-
-/**
  * The observed market and our share of it — the whole rule, in one place.
  *
  * There are two expressions of this rule and there can only ever be two: this

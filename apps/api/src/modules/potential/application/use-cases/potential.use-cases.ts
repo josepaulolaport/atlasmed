@@ -14,18 +14,6 @@ import {
 } from "@atlasmed/facility-insights";
 import type { PotentialRepository } from "../interfaces/potential.repository.interface";
 
-/**
- * How many calendar months the displayed monthly figure averages over.
- *
- * A **read-side** constant (spec 0013 §4.3): snapshots store the facts of one
- * month, and the window is applied when they are presented. Changing it is a
- * query change, not a data migration.
- *
- * It replaced a rolling 90-day sum divided by 3 — which had no upper bound, so
- * future-dated orders counted, and which depended on the clock, so the same
- * month could never be recomputed to the same number.
- */
-
 function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
   const assigned = scope.assignedVerticalIds ?? [];
   if (scope.isGlobal && assigned.length === 0) return;
@@ -83,9 +71,10 @@ export class ListFacilityPotentialsUseCase {
       profileId == null
         ? Promise.resolve([])
         : this.deps.potentialRepository.listNoOtherBrands({ profileId, definitionIds }),
-      // Live from orders, not from snapshots: snapshots are per calendar month
-      // and a day window cannot be derived from month facts. They keep serving
-      // history and the aggregate views (spec 0013 §4.5).
+      // Live from orders, not from the stored snapshot: the window moves with
+      // the calendar every day, and the snapshot is only rewritten when an
+      // input changes or the nightly pass runs. The screen must agree with the
+      // per-product rows below it, which are computed the same way.
       this.deps.potentialRepository.sumAtlasmedQtyByDefinition({
         facilityId: input.facilityId,
         verticalId: input.verticalId,

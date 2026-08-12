@@ -8,7 +8,6 @@ import {
   monthKeyAt,
   monthlyRateFromDays,
   rollingWindow,
-  trailingMonths,
 } from "./market-metric";
 
 describe("monthKeyAt", () => {
@@ -102,28 +101,6 @@ describe("addMonths", () => {
     let month = "2025-11-01";
     for (let step = 0; step < 14; step += 1) month = addMonths(month, 1);
     expect(month).toBe("2027-01-01");
-  });
-});
-
-describe("trailingMonths", () => {
-  it("returns the window oldest-first, ending at the requested month", () => {
-    expect(trailingMonths("2026-03-01", 3)).toEqual([
-      "2026-01-01",
-      "2026-02-01",
-      "2026-03-01",
-    ]);
-  });
-
-  it("crosses a year boundary", () => {
-    expect(trailingMonths("2026-01-01", 3)).toEqual([
-      "2025-11-01",
-      "2025-12-01",
-      "2026-01-01",
-    ]);
-  });
-
-  it("rejects a non-positive window", () => {
-    expect(() => trailingMonths("2026-03-01", 0)).toThrow(MarketMetricValidationError);
   });
 });
 

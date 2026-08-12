@@ -25,7 +25,6 @@ export {
   deriveShare,
   monthBounds,
   monthKeyAt,
-  trailingMonths,
 } from "./market-metric";
 export type {
   MarketMetricValidationErrorCode,
