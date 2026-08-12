@@ -47,9 +47,11 @@ services:
       - atlasmed-temporal
     x-caddy: |
       atlasmed-api.b1ixob.uncld.dev {
+        encode zstd gzip
         reverse_proxy {{upstreams 3000}}
       }
       api.tdomains.uk {
+        encode zstd gzip
         reverse_proxy {{upstreams 3000}}
       }
 
