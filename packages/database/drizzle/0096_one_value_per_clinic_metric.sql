@@ -24,8 +24,8 @@ WHERE a.facility_vertical_profile_id = b.facility_vertical_profile_id
 --> statement-breakpoint
 
 -- Zero stops being a quantity (§4.6): "they sell none here" is the
--- no_other_brands claim, which records who said it. Any existing zero row is
--- an anonymous version of that claim and is dropped rather than migrated.
+-- no_other_brands claim, which is dated. Any existing zero row is an undated
+-- version of that claim and is dropped rather than migrated.
 DELETE FROM facility_product_usage WHERE quantity <= 0;
 --> statement-breakpoint
 

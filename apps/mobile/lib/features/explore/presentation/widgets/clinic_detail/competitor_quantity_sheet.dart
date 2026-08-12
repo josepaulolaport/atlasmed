@@ -113,8 +113,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
       _quantity.text.trim().replaceAll(',', '.'),
     );
     // Strictly positive (§4.6). Zero is not a quantity: "não vendem aqui" is
-    // the "Nenhuma outra marca" option on the section, which records who said
-    // it and when.
+    // the "Nenhuma outra marca" option on the section, which is dated.
     if (quantity == null || quantity <= 0) {
       setState(
         () => _error = quantity == 0

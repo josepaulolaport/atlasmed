@@ -130,9 +130,9 @@ export const facilityProductUsage = pgTable(
       foreignColumns: [products.id, products.ownership],
     }).onDelete("restrict"),
     // Strictly positive (§4.6). A zero is not a quantity — "they sell none
-    // here" is the `no_other_brands` claim on the snapshot, which says who
-    // asserted it and when. A zero row would say the same thing anonymously
-    // and would keep the product in a list of what the clinic uses.
+    // here" is the `no_other_brands` claim on the snapshot, which is dated.
+    // A zero row would say the same thing undated and would keep the product
+    // in a list of what the clinic uses.
     check("facility_product_usage_quantity_positive", sql`${t.quantity} > 0`),
   ],
 );

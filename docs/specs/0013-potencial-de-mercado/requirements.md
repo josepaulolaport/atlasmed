@@ -450,6 +450,33 @@ The calculation uses raw quantities. `products.metric_units` is displayed, never
 > The constraint has moved out of the code and into catalogue discipline; nothing enforces it.
 > Revisit before the catalogue carries mixed units.
 
+#### Which other brands count toward a metric
+
+A metric's products are curated in one place only: the catalogue links **our** variants to the
+definition. There is no screen, route or use case that links a competitor product to a metric, and
+there should not be — it would be a second list to maintain, able to disagree with the first.
+
+So a competitor product counts toward a metric when it is the **equivalent of one of our products
+linked to that metric** — `product_equivalences`, maintained by the comparativo screen. Derived,
+never curated.
+
+The same derivation governs three things, deliberately:
+
+| surface | behaviour |
+|---|---|
+| the picker | offers exactly this set |
+| the write | refuses anything outside it |
+| the read | counts exactly this set |
+
+A picker that can offer what the write refuses produces error messages; a write that accepts what
+the read discards produces silence. Silence is what happened: the read once joined
+`product_potential_links` directly, which holds only our products, so **every** competitor quantity
+a rep recorded was filtered out of the answer. The write succeeded and the screen redrew unchanged.
+
+This is what §7 assumed from the start — both of its consequences below are consequences *of this
+rule*. The read deviated from it and nothing caught the deviation, because the database test seeded
+competitor products straight into `product_potential_links`, a shape production cannot produce.
+
 #### Zero is not a quantity
 
 A competitor quantity must be **greater than zero** — rejected at the API, by a database check, and
@@ -582,10 +609,12 @@ Dead UI to remove or wire: `ClinicProductsSection` ("Share na clínica") is neve
 
 ## 7. Deferred
 
-- A competitor product reachable from two of our products in **different** metrics is ambiguous.
-  Documented, not solved — revisit if it occurs.
-- Competitor products not equivalent to any of our products are unreachable in the picker and
-  their usage unrecordable. Accepted.
+- A competitor product reachable from two of our products in **different** metrics counts toward
+  both (§4.6). Resolved rather than deferred: it competes with us in both, so both should say so.
+  The read selects DISTINCT, so reaching the same metric by two routes is still one row.
+- Competitor products not equivalent to any of our products are unreachable in the picker and their
+  usage unrecordable (§4.6). Accepted: the rep is blocked until the catalogue maps the brand, which
+  is visible and fixable — unlike the figure silently vanishing, which is what happened instead.
 - JSONB product attributes (§2).
 - Any manual quantity for our own products (a clinic buying our product via a distributor
   understates our share). Orders are authoritative.

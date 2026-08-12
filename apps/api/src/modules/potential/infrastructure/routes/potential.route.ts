@@ -62,7 +62,7 @@ const setFacilityProductUsageRoute = new Elysia()
       body: t.Object({
         verticalId: t.Number({ minimum: 1 }),
         // Strictly positive (§4.6). Zero is not a quantity — "they sell none
-        // here" is the nenhuma-outra-marca claim, which records who said it.
+        // here" is the nenhuma-outra-marca claim, which is dated.
         quantity: t.Number({ exclusiveMinimum: 0 }),
       }),
     },
@@ -106,7 +106,8 @@ const removeFacilityProductUsageRoute = new Elysia()
  * The rep asserting that no other brand is sold at this clinic for this metric.
  *
  * A write, not a filter: it is the only thing that makes a 100% share
- * legitimate, so it carries who said it and when, exactly like a quantity.
+ * legitimate, so it carries the date it was asserted — a stale claim still
+ * counts, and that date is the only signal it is old.
  */
 const setNoOtherBrandsRoute = new Elysia()
   .use(auth)

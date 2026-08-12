@@ -308,19 +308,9 @@ class _PotentialRow extends StatelessWidget {
   }
 }
 
-/// Who makes up "Outras marcas/mês", and how much of it each one is.
-///
-/// The server has always sent this list; nothing rendered it, so the competitor
-/// figure was a lump sum the rep could not check or correct.
-/// Which of our own products this clinic buys, and how much of each.
-///
-/// Read-only by nature: it comes from orders, so there is nothing to add, edit
-/// or remove and no row is a tap target. Same shape as the competitor table
-/// below it so the two read as one comparison, and the same units, so they can
-/// be compared at all.
 /// "Nenhuma outra marca" — the rep saying the market here is genuinely empty.
 ///
-/// Only offered while the competitor list is empty: asserting it alongside
+/// Only offered while the list of other brands is empty: asserting it alongside
 /// recorded brands is a contradiction the database refuses outright, and
 /// resolving it by deleting the rep's own figures would be the screen throwing
 /// away work to satisfy a checkbox.
@@ -404,6 +394,12 @@ String _fmtDate(DateTime value) {
   return '$day/$month/${local.year}';
 }
 
+/// Which of our own products this clinic buys, and how much of each.
+///
+/// Read-only by nature: it comes from orders, so there is nothing to add, edit
+/// or remove and no row is a tap target. Same shape as the competitor table
+/// below it so the two read as one comparison, and the same units, so they can
+/// be compared at all.
 class _OurProductsTable extends StatelessWidget {
   const _OurProductsTable({required this.products});
 
@@ -516,6 +512,10 @@ class _TableHeader extends StatelessWidget {
   }
 }
 
+/// Who makes up "Outras marcas/mês", and how much of it each one is.
+///
+/// The server has always sent this list; nothing rendered it, so the competitor
+/// figure was a lump sum the rep could not check or correct.
 class _CompetitorTable extends StatelessWidget {
   const _CompetitorTable({required this.competitors, this.onEdit});
 

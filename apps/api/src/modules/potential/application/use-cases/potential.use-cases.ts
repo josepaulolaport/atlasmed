@@ -242,7 +242,7 @@ export class SetFacilityProductUsageUseCase {
     assertVerticalAccess(input.scope, input.verticalId);
 
     // Strictly positive (§4.6). Zero is not a quantity: "they sell none here" is
-    // the `noOtherBrands` claim, which records who said so and when. A zero row
+    // the `noOtherBrands` claim, which records when it was asserted. A zero row
     // would assert the same thing anonymously and keep the product in a list of
     // what the clinic uses.
     if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
