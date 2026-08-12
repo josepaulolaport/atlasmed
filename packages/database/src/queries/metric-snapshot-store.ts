@@ -1,7 +1,6 @@
 import { and, asc, eq, gt, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { union } from "drizzle-orm/pg-core";
 import {
-  APPLICATION_TIMEZONE,
   type MetricSnapshotStore,
   type MonthKey,
 } from "@atlasmed/facility-insights";
@@ -63,10 +62,9 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
       const rows = await database
         .select({
           definitionId: productPotentialLinks.definitionId,
-          month: monthExpression(orders.orderedAt),
-          // Metric units, not product units (spec 0013 §4.2). Summing raw
-          // counted a box of five as one.
-          totalQty: sql<string>`coalesce(sum(${orderItems.quantity} * ${products.metricUnits}), 0)`,
+          // Raw quantities: `products.metric_units` is an information field
+          // since §4.6, so a metric's products must share a unit.
+          totalQty: sql<string>`coalesce(sum(${orderItems.quantity}), 0)`,
         })
         .from(orderItems)
         .innerJoin(orders, eq(orders.id, orderItems.orderId))
@@ -79,9 +77,6 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
           productPotentialLinks,
           and(
             eq(productPotentialLinks.productId, orderItems.productId),
-            // Links are per (product, vertical) since 0086, so the join must name
-            // the vertical too — otherwise a product sold in two linhas
-            // contributes its quantity to both metrics.
             eq(productPotentialLinks.verticalId, facilityVerticalProfiles.verticalId),
           ),
         )
@@ -98,27 +93,36 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
             inArray(productPotentialLinks.definitionId, input.definitionIds),
           ),
         )
-        .groupBy(productPotentialLinks.definitionId, monthExpression(orders.orderedAt));
+        .groupBy(productPotentialLinks.definitionId);
 
       return rows.map((row) => ({
         definitionId: row.definitionId,
-        month: row.month as MonthKey,
         totalQty: Number(row.totalQty),
       }));
     },
 
-    async listTheirsHistory(input) {
+    async listTheirs(input) {
       if (input.definitionIds.length === 0) return [];
       const rows = await database
         .select({
           definitionId: facilityProductUsage.definitionId,
           productId: facilityProductUsage.productId,
-          month: facilityProductUsage.month,
+          productName: products.name,
           quantity: facilityProductUsage.quantity,
-          metricUnits: products.metricUnits,
+          updatedAt: facilityProductUsage.updatedAt,
         })
         .from(facilityProductUsage)
         .innerJoin(products, eq(products.id, facilityProductUsage.productId))
+        // Only products still linked to the metric count (§4.6), matching our
+        // own side, which has always joined this table. Rows for an unlinked
+        // product stay put and count again if it is relinked.
+        .innerJoin(
+          productPotentialLinks,
+          and(
+            eq(productPotentialLinks.productId, facilityProductUsage.productId),
+            eq(productPotentialLinks.definitionId, facilityProductUsage.definitionId),
+          ),
+        )
         .where(
           and(
             eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
@@ -129,31 +133,24 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
       return rows.map((row) => ({
         definitionId: row.definitionId,
         productId: row.productId,
-        month: row.month as MonthKey,
-        metricQuantity: Number(row.quantity) * Number(row.metricUnits),
+        productName: row.productName,
+        quantity: Number(row.quantity),
+        updatedAt: row.updatedAt,
       }));
     },
 
 
     async listExisting(input) {
-      if (input.months.length === 0) return [];
       const rows = await database
         .select({
           definitionId: facilityMetricSnapshots.definitionId,
-          month: facilityMetricSnapshots.month,
           oursQty: facilityMetricSnapshots.oursQty,
           theirsQty: facilityMetricSnapshots.theirsQty,
         })
         .from(facilityMetricSnapshots)
-        .where(
-          and(
-            eq(facilityMetricSnapshots.facilityVerticalProfileId, input.profileId),
-            inArray(facilityMetricSnapshots.month, input.months),
-          ),
-        );
+        .where(eq(facilityMetricSnapshots.facilityVerticalProfileId, input.profileId));
       return rows.map((row) => ({
         definitionId: row.definitionId,
-        month: row.month as MonthKey,
         oursQty: Number(row.oursQty),
         theirsQty: Number(row.theirsQty),
       }));
@@ -168,7 +165,6 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
             facilityVerticalProfileId: row.profileId,
             definitionId: row.definitionId,
             verticalId: row.verticalId,
-            month: row.month,
             oursQty: row.oursQty.toFixed(2),
             theirsQty: row.theirsQty.toFixed(2),
             computedAt: row.computedAt,
@@ -178,8 +174,10 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
           target: [
             facilityMetricSnapshots.facilityVerticalProfileId,
             facilityMetricSnapshots.definitionId,
-            facilityMetricSnapshots.month,
           ],
+          // Only the derived columns. `no_other_brands` and its provenance are
+          // a rep's claim living on this row (§4.6) — a recompute that wrote
+          // them would erase a person's assertion to refresh a cache.
           set: {
             oursQty: sql`excluded.ours_qty`,
             theirsQty: sql`excluded.theirs_qty`,
@@ -188,6 +186,20 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
         });
     },
   };
+}
+
+/**
+ * The quantity standing for each competitor product of a metric.
+ *
+ * Shares the store's join rules so the clinic screen and the recompute cannot
+ * disagree about which products belong to a metric — in particular that an
+ * unlinked product stops counting on both sides.
+ */
+export async function listTheirsStanding(
+  database: AnyDatabase,
+  input: { profileId: number; definitionIds: number[] },
+) {
+  return createMetricSnapshotStore(database).listTheirs(input);
 }
 
 /**
@@ -386,13 +398,3 @@ export async function latestTheirsByProduct(
   }));
 }
 
-/**
- * The calendar month an order belongs to, in São Paulo.
- *
- * `ordered_at` is `timestamp without time zone` holding UTC, so it is
- * interpreted as UTC and then read locally. Grouping in UTC would file an order
- * taken 31 March 22:00 local under April.
- */
-function monthExpression(column: typeof orders.orderedAt) {
-  return sql<string>`(date_trunc('month', ${column} at time zone 'UTC' at time zone ${sql.raw(`'${APPLICATION_TIMEZONE}'`)}))::date`;
-}

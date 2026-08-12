@@ -8,6 +8,7 @@ export {
   createMetricSnapshotStore,
   latestTheirsByProduct,
   listAllProfileIds,
+  listTheirsStanding,
   listProfilesWithChangedInputs,
   sumOursByProduct,
 } from "./queries/metric-snapshot-store";

@@ -673,6 +673,13 @@
       "when": 1786426014799,
       "tag": "0095_assignment_history_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1786559928078,
+      "tag": "0096_one_value_per_clinic_metric",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import {
   ListPotentialDefinitionsUseCase,
   SetFacilityProductUsageUseCase,
   RemoveFacilityProductUsageUseCase,
+  SetNoOtherBrandsUseCase,
   SoftDeletePotentialDefinitionUseCase,
   UnlinkProductPotentialUseCase,
   UpdatePotentialDefinitionUseCase,
@@ -24,7 +25,7 @@ const deps = { potentialRepository };
  */
 const writeDeps = {
   potentialRepository,
-  recomputeSnapshots: (input: { profileId: number; months: string[] }) =>
+  recomputeSnapshots: (input: { profileId: number }) =>
     recomputeSnapshots.execute(input),
 };
 
@@ -32,6 +33,7 @@ export const potentialUseCases = {
   listFacilityPotentials: () => new ListFacilityPotentialsUseCase(deps),
   setFacilityProductUsage: () => new SetFacilityProductUsageUseCase(writeDeps),
   removeFacilityProductUsage: () => new RemoveFacilityProductUsageUseCase(writeDeps),
+  setNoOtherBrands: () => new SetNoOtherBrandsUseCase(writeDeps),
   listDefinitions: () => new ListPotentialDefinitionsUseCase(deps),
   createDefinition: () => new CreatePotentialDefinitionUseCase(deps),
   updateDefinition: () => new UpdatePotentialDefinitionUseCase(deps),

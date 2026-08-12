@@ -89,20 +89,20 @@ export class ListFacilityPotentialsUseCase {
       verticalId: input.verticalId,
     });
 
-    const [usage, qtySums, ourProductSums] = await Promise.all([
+    const [usage, claims, qtySums, ourProductSums] = await Promise.all([
       // The standing figure per competitor product, newest row wins. Not the
       // month series: the rep answers "quantas por mês", so what they entered is
       // already a rate and holds until they replace it.
       profileId == null
         ? Promise.resolve([])
-        : this.deps.potentialRepository.listLatestUsageByProduct({
-            profileId,
-            definitionIds,
-          }),
+        : this.deps.potentialRepository.listUsage({ profileId, definitionIds }),
+      profileId == null
+        ? Promise.resolve([])
+        : this.deps.potentialRepository.listNoOtherBrands({ profileId, definitionIds }),
       // Live from orders, not from snapshots: snapshots are per calendar month
       // and a day window cannot be derived from month facts. They keep serving
       // history and the aggregate views (spec 0013 §4.5).
-      this.deps.potentialRepository.sumAtlasmedQtyByDefinitionAndMonth({
+      this.deps.potentialRepository.sumAtlasmedQtyByDefinition({
         facilityId: input.facilityId,
         verticalId: input.verticalId,
         definitionIds,
@@ -132,6 +132,8 @@ export class ListFacilityPotentialsUseCase {
       usageByDef.set(row.definitionId, list);
     }
 
+    const claimByDef = new Map(claims.map((row) => [row.definitionId, row]));
+
     const ourProductsByDef = new Map<number, typeof ourProductSums>();
     for (const row of ourProductSums) {
       const list = ourProductsByDef.get(row.definitionId) ?? [];
@@ -153,14 +155,14 @@ export class ListFacilityPotentialsUseCase {
         // never surveyed hard zeros and showed 33 — the "confident, wrong
         // number" §4.4 refuses for this very operand. Different products add;
         // the same product replaces, which is what the newest-row read gives.
-        const theirs = standingRows.reduce((sum, row) => sum + row.metricQuantity, 0);
-        // A share needs a denominator we actually know. With no competitor
-        // observation at all the market is *unknown*, not "all ours" — reporting
-        // 100% would assert we own it on zero evidence. This is the same
-        // null-versus-zero rule spec 0013 §4.3 applies to "no sales", carried to
-        // the other operand: `theirs = 0` because the rep recorded a zero is a
-        // fact; `theirs = 0` because nobody has asked is not.
-        const hasCompetitorObservation = standingRows.length > 0;
+        const theirs = standingRows.reduce((sum, row) => sum + row.quantity, 0);
+        // A share needs a denominator we actually know. An empty competitor
+        // list is only a *known* empty market when a rep has said so — that is
+        // what "nenhuma outra marca" asserts (§4.6). Without it the market is
+        // unknown, and reporting 100% would claim we own it on no evidence.
+        const claim = claimByDef.get(def.id);
+        const hasCompetitorObservation =
+          standingRows.length > 0 || claim?.noOtherBrands === true;
         const { totalQty, share: mathematicalShare } = deriveShare(ours, theirs);
         const share = hasCompetitorObservation ? mathematicalShare : null;
 
@@ -171,9 +173,9 @@ export class ListFacilityPotentialsUseCase {
           .map((row) => ({
             productId: row.productId,
             productName: row.productName,
-            metricQuantity: monthlyRateFromDays(row.totalQty),
+            quantity: monthlyRateFromDays(row.totalQty),
           }))
-          .sort((a, b) => b.metricQuantity - a.metricQuantity);
+          .sort((a, b) => b.quantity - a.quantity);
 
         return {
           definitionId: def.id,
@@ -215,11 +217,17 @@ export class ListFacilityPotentialsUseCase {
             productId: c.productId,
             productName: c.productName,
             quantity: c.quantity,
-            metricQuantity: c.metricQuantity,
             updatedAt: c.updatedAt.toISOString(),
           })),
           /** Ours, per product, over the same window as `atlasmedMonthlyAvgQty`. */
           ourProducts,
+          /**
+           * The rep's standing claim that no other brand is sold here, and when
+           * it was made — a stale claim still counts, so the date is the only
+           * signal that it is old (§6).
+           */
+          noOtherBrands: claim?.noOtherBrands ?? false,
+          noOtherBrandsSetAt: claim?.setAt?.toISOString() ?? null,
         };
       }),
     };
@@ -238,7 +246,7 @@ export class SetFacilityProductUsageUseCase {
     private readonly deps: {
       potentialRepository: PotentialRepository;
       /** Optional so existing callers and tests are unaffected. */
-      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+      recomputeSnapshots?: (input: { profileId: number }) => Promise<unknown>;
     },
   ) {}
 
@@ -248,8 +256,6 @@ export class SetFacilityProductUsageUseCase {
     definitionId: number;
     productId: number;
     quantity: number;
-    /** The month observed. Defaults to the current month in São Paulo. */
-    month?: MonthKey;
     userId: number;
     scope: ScopeContext;
     now?: Date;
@@ -257,20 +263,13 @@ export class SetFacilityProductUsageUseCase {
     assertResourceInScope(input.scope, "facility", input.facilityId);
     assertVerticalAccess(input.scope, input.verticalId);
 
-    if (!Number.isFinite(input.quantity) || input.quantity < 0) {
+    // Strictly positive (§4.6). Zero is not a quantity: "they sell none here" is
+    // the `noOtherBrands` claim, which records who said so and when. A zero row
+    // would assert the same thing anonymously and keep the product in a list of
+    // what the clinic uses.
+    if (!Number.isFinite(input.quantity) || input.quantity <= 0) {
       throw new ValidationError([
-        { field: "quantity", message: "quantity must be a non-negative number" },
-      ]);
-    }
-
-    const currentMonth = monthKeyAt(input.now ?? new Date());
-    const month = input.month ?? currentMonth;
-    // A rep can correct an earlier month, but not record the future — there is
-    // nothing to observe yet, and a future row would silently enter the window
-    // as soon as the calendar caught up.
-    if (month > currentMonth) {
-      throw new ValidationError([
-        { field: "month", message: "cannot record usage for a future month" },
+        { field: "quantity", message: "quantity must be greater than zero" },
       ]);
     }
 
@@ -307,16 +306,26 @@ export class SetFacilityProductUsageUseCase {
       definitionId: input.definitionId,
       verticalId: definition.verticalId,
       productId: input.productId,
-      month,
       quantity: input.quantity,
       updatedByUserId: input.userId,
+    });
+
+    // "No other brand is sold here" and this product cannot both be true, and a
+    // database check refuses the pair outright. Clearing it here means the rep
+    // is never asked to withdraw a claim before recording what they just saw.
+    await this.deps.potentialRepository.setNoOtherBrands({
+      profileId,
+      definitionId: input.definitionId,
+      verticalId: definition.verticalId,
+      value: false,
+      setByUserId: input.userId,
     });
 
     // Synchronous, not enqueued (spec 0013 §4.4): the rep is looking at the
     // number they just changed, so it must be right when the screen redraws.
     // Order writes enqueue instead — an importer upserting tens of orders would
     // otherwise recompute the same profile dozens of times.
-    await this.deps.recomputeSnapshots?.({ profileId, months: windowFor(month) });
+    await this.deps.recomputeSnapshots?.({ profileId });
 
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,
@@ -331,7 +340,7 @@ export class RemoveFacilityProductUsageUseCase {
   constructor(
     private readonly deps: {
       potentialRepository: PotentialRepository;
-      recomputeSnapshots?: (input: { profileId: number; months: MonthKey[] }) => Promise<unknown>;
+      recomputeSnapshots?: (input: { profileId: number }) => Promise<unknown>;
     },
   ) {}
 
@@ -361,25 +370,113 @@ export class RemoveFacilityProductUsageUseCase {
     // single standing figure and the months behind it are the dates it changed,
     // so clearing only the newest left the previous one standing and the product
     // reappeared with an older number on the next load.
-    const clearedMonths = await this.deps.potentialRepository.deleteUsageForProduct({
+    const removed = await this.deps.potentialRepository.deleteUsageForProduct({
       profileId,
       definitionId: input.definitionId,
       productId: input.productId,
     });
-    if (clearedMonths.length === 0) {
+    if (!removed) {
       throw new ResourceNotFoundError(
         "FacilityProductUsage",
         `${input.definitionId}:${input.productId}`,
       );
     }
 
-    // Removing a competitor changes the denominator, so every month it appeared
-    // in now has a stale snapshot — including months outside the current window,
-    // which the manager dashboards aggregate over (spec 0014 §4).
-    const staleMonths = [
-      ...new Set(clearedMonths.flatMap((cleared) => windowFor(cleared))),
-    ];
-    await this.deps.recomputeSnapshots?.({ profileId, months: staleMonths });
+    // Removing a competitor changes the denominator, so the stored value is
+    // stale the instant the row goes.
+    await this.deps.recomputeSnapshots?.({ profileId });
+
+    return new ListFacilityPotentialsUseCase(this.deps).execute({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+      scope: input.scope,
+      now: input.now,
+    });
+  }
+}
+
+/**
+ * Records or withdraws "nenhuma outra marca" for one metric at one clinic.
+ *
+ * The claim is what makes a 100% share legitimate (§4.6). Without it an empty
+ * competitor list means the market is *unknown*, not that we own it — so this is
+ * the difference between "nobody has asked" and "someone looked and there is
+ * nothing".
+ */
+export class SetNoOtherBrandsUseCase {
+  constructor(
+    private readonly deps: {
+      potentialRepository: PotentialRepository;
+      recomputeSnapshots?: (input: { profileId: number }) => Promise<unknown>;
+    },
+  ) {}
+
+  async execute(input: {
+    facilityId: number;
+    verticalId: number;
+    definitionId: number;
+    value: boolean;
+    userId: number;
+    scope: ScopeContext;
+    now?: Date;
+  }) {
+    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertVerticalAccess(input.scope, input.verticalId);
+
+    const definition = await this.deps.potentialRepository.findDefinitionById(
+      input.definitionId,
+    );
+    if (!definition || definition.deletedAt) {
+      throw new ResourceNotFoundError("PotentialDefinition", input.definitionId);
+    }
+    if (definition.verticalId !== input.verticalId) {
+      throw new ValidationError([
+        { field: "definitionId", message: "definition does not belong to this Linha" },
+      ]);
+    }
+
+    const profileId = await this.deps.potentialRepository.findProfileId({
+      facilityId: input.facilityId,
+      verticalId: input.verticalId,
+    });
+    if (profileId == null) {
+      throw new ResourceNotFoundError(
+        "FacilityVerticalProfile",
+        `${input.facilityId}:${input.verticalId}`,
+      );
+    }
+
+    // Only claimable about an empty list. Asserting "no other brand" while
+    // brands are recorded is a contradiction, and resolving it by deleting the
+    // rep's own figures would be the screen throwing away work to satisfy a
+    // checkbox.
+    if (input.value) {
+      const recorded = await this.deps.potentialRepository.listUsage({
+        profileId,
+        definitionIds: [input.definitionId],
+      });
+      if (recorded.length > 0) {
+        throw new ValidationError([
+          {
+            field: "value",
+            message:
+              "remove the recorded competitor products before declaring that none are sold",
+          },
+        ]);
+      }
+    }
+
+    await this.deps.potentialRepository.setNoOtherBrands({
+      profileId,
+      definitionId: input.definitionId,
+      verticalId: definition.verticalId,
+      value: input.value,
+      setByUserId: input.userId,
+    });
+
+    // The claim is an input to the share, so the stored value is stale until
+    // this runs — same reasoning as a quantity edit.
+    await this.deps.recomputeSnapshots?.({ profileId });
 
     return new ListFacilityPotentialsUseCase(this.deps).execute({
       facilityId: input.facilityId,

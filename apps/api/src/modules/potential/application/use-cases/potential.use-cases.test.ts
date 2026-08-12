@@ -3,12 +3,15 @@ import type { ScopeContext } from "@atlasmed/access";
 import {
   ForbiddenError,
   ResourceNotFoundError,
+  ValidationError,
 } from "../../../../shared/errors";
 import type { PotentialRepository } from "../interfaces/potential.repository.interface";
 import {
   ListFacilityPotentialsUseCase,
   ListPotentialDefinitionsUseCase,
   RemoveFacilityProductUsageUseCase,
+  SetFacilityProductUsageUseCase,
+  SetNoOtherBrandsUseCase,
   UnlinkProductPotentialUseCase,
 } from "./potential.use-cases";
 
@@ -41,10 +44,11 @@ function createRepository(
     findProfileId: async () => 1,
     listMetricSnapshots: async () => [],
     listUsage: async () => [],
-    listLatestUsageByProduct: async () => [],
+    listNoOtherBrands: async () => [],
+    setNoOtherBrands: async () => undefined,
     upsertUsage: async () => undefined,
-    deleteUsageForProduct: async () => ['2026-08-01'],
-    sumAtlasmedQtyByDefinitionAndMonth: async () => [],
+    deleteUsageForProduct: async () => true,
+    sumAtlasmedQtyByDefinition: async () => [],
     sumAtlasmedQtyByDefinitionAndProduct: async () => [],
     linkProduct: async () => undefined,
     unlinkProduct: async () => false,
@@ -129,7 +133,6 @@ describe("what a metric reports for a clinic", () => {
       productId,
       productName,
       quantity,
-      metricQuantity: quantity,
       updatedAt: new Date("2026-06-01T00:00:00.000Z"),
     };
   }
@@ -147,7 +150,7 @@ describe("what a metric reports for a clinic", () => {
     // The rep answers "quantas por mês", so 100 recorded once means 100 — not
     // 100/3 with two never-surveyed months counted as zeros.
     const page = await listFor({
-      listLatestUsageByProduct: async () => [usage(10, 'Marca A', 100)],
+      listUsage: async () => [usage(10, 'Marca A', 100)],
     });
 
     expect(page.items[0]!.competitorMonthlyQty).toBe(100);
@@ -155,7 +158,7 @@ describe("what a metric reports for a clinic", () => {
 
   it("adds different competitor products together", async () => {
     const page = await listFor({
-      listLatestUsageByProduct: async () => [
+      listUsage: async () => [
         usage(10, 'Marca A', 100),
         usage(11, 'Marca B', 40),
       ],
@@ -169,14 +172,14 @@ describe("what a metric reports for a clinic", () => {
     // The rows and the tile above them must agree; the read returns one
     // standing row per product, so summing the list reproduces the total.
     const page = await listFor({
-      listLatestUsageByProduct: async () => [
+      listUsage: async () => [
         usage(10, 'Marca A', 100),
         usage(11, 'Marca B', 40),
       ],
     });
 
     const item = page.items[0]!;
-    const summed = item.competitors.reduce((s, c) => s + c.metricQuantity, 0);
+    const summed = item.competitors.reduce((s, c) => s + c.quantity, 0);
     expect(summed).toBe(item.competitorMonthlyQty);
   });
 
@@ -184,8 +187,8 @@ describe("what a metric reports for a clinic", () => {
     // 90 days of orders normalised to a 30-day month: 300 over the window is
     // 100 a month.
     const page = await listFor({
-      sumAtlasmedQtyByDefinitionAndMonth: async () => [
-        { definitionId: 7, month: '2026-08-01', totalQty: 900 },
+      sumAtlasmedQtyByDefinition: async () => [
+        { definitionId: 7, totalQty: 900 },
       ],
       sumAtlasmedQtyByDefinitionAndProduct: async () => [
         { definitionId: 7, productId: 1, productName: 'Nosso A', totalQty: 600 },
@@ -196,7 +199,7 @@ describe("what a metric reports for a clinic", () => {
     const item = page.items[0]!;
     expect(item.atlasmedMonthlyAvgQty).toBe(300);
     expect(item.ourProducts.map((p) => p.productName)).toEqual(['Nosso A', 'Nosso B']);
-    const summed = item.ourProducts.reduce((s, p) => s + p.metricQuantity, 0);
+    const summed = item.ourProducts.reduce((s, p) => s + p.quantity, 0);
     expect(summed).toBeCloseTo(item.atlasmedMonthlyAvgQty, 6);
   });
 
@@ -217,9 +220,9 @@ describe("what a metric reports for a clinic", () => {
   it("still reports an unknown share when nobody has recorded a competitor", async () => {
     // Unchanged by the averaging fix: no observation is not a zero market.
     const page = await listFor({
-      listLatestUsageByProduct: async () => [],
-      sumAtlasmedQtyByDefinitionAndMonth: async () => [
-        { definitionId: 7, month: '2026-08-01', totalQty: 900 },
+      listUsage: async () => [],
+      sumAtlasmedQtyByDefinition: async () => [
+        { definitionId: 7, totalQty: 900 },
       ],
     });
 
@@ -239,7 +242,7 @@ describe("removing a competitor product", () => {
       listDefinitions: async () => [],
       deleteUsageForProduct: async (input) => {
         deletedFor = input;
-        return ['2026-06-01', '2026-08-01'];
+        return true;
       },
     });
 
@@ -256,17 +259,18 @@ describe("removing a competitor product", () => {
     expect(deletedFor).toEqual({ profileId: 1, definitionId: 7, productId: 10 });
   });
 
-  it("recomputes the snapshots of every month it touched", async () => {
-    // Months outside the current window still feed the manager aggregates, so
-    // leaving their snapshots behind would keep a removed competitor in them.
-    const recomputed: string[][] = [];
+  it("recomputes the stored value for the profile", async () => {
+    // The removal changes the denominator, so the stored value is stale the
+    // instant the row goes. One row per profile-metric now, so one recompute —
+    // there are no months to enumerate.
+    const recomputed: Array<{ profileId: number }> = [];
     await new RemoveFacilityProductUsageUseCase({
       potentialRepository: createRepository({
         listDefinitions: async () => [],
-        deleteUsageForProduct: async () => ['2026-01-01', '2026-08-01'],
+        deleteUsageForProduct: async () => true,
       }),
-      recomputeSnapshots: async ({ months }) => {
-        recomputed.push(months as string[]);
+      recomputeSnapshots: async (input) => {
+        recomputed.push(input);
         return undefined;
       },
     }).execute({
@@ -277,18 +281,14 @@ describe("removing a competitor product", () => {
       scope: globalScope,
     });
 
-    const months = recomputed.flat();
-    expect(months).toContain('2026-01-01');
-    expect(months).toContain('2026-08-01');
-    // Deduplicated: overlapping windows must not recompute a month twice.
-    expect(new Set(months).size).toBe(months.length);
+    expect(recomputed).toEqual([{ profileId: 1 }]);
   });
 
   it("reports not-found when the product was never recorded", async () => {
     await expect(
       new RemoveFacilityProductUsageUseCase({
         potentialRepository: createRepository({
-          deleteUsageForProduct: async () => [],
+          deleteUsageForProduct: async () => false,
         }),
       }).execute({
         facilityId: 1,
@@ -298,5 +298,153 @@ describe("removing a competitor product", () => {
         scope: globalScope,
       }),
     ).rejects.toBeInstanceOf(ResourceNotFoundError);
+  });
+});
+
+describe("zero is not a quantity, and the claim that replaces it", () => {
+  const globalScope: ScopeContext = { ...baseScope, isGlobal: true };
+  const definition = {
+    id: 7,
+    key: 'ampolas',
+    label: 'Ampolas por mês',
+    verticalId: 1,
+    deletedAt: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  };
+
+  function repo(overrides: Partial<PotentialRepository> = {}) {
+    return createRepository({
+      listDefinitions: async () => [definition],
+      findDefinitionById: async () => definition,
+      ...overrides,
+    });
+  }
+
+  it("refuses a competitor quantity of zero", async () => {
+    // "They sell none here" is a claim about the market, not a measurement of a
+    // product. Recorded as a zero it would be anonymous and would keep the
+    // product listed among what the clinic uses.
+    const upserted: unknown[] = [];
+    await expect(
+      new SetFacilityProductUsageUseCase({
+        potentialRepository: repo({
+          upsertUsage: async (input) => {
+            upserted.push(input);
+          },
+        }),
+      }).execute({
+        facilityId: 1,
+        verticalId: 1,
+        definitionId: 7,
+        productId: 10,
+        quantity: 0,
+        userId: 3,
+        scope: globalScope,
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+
+    expect(upserted).toEqual([]);
+  });
+
+  it("clears the claim when a competitor product is recorded", async () => {
+    // The two states contradict each other and a database check refuses the
+    // pair, so the rep must never be asked to withdraw the claim first.
+    const claims: Array<{ value: boolean }> = [];
+    await new SetFacilityProductUsageUseCase({
+      potentialRepository: repo({
+        setNoOtherBrands: async (input) => {
+          claims.push({ value: input.value });
+        },
+      }),
+    }).execute({
+      facilityId: 1,
+      verticalId: 1,
+      definitionId: 7,
+      productId: 10,
+      quantity: 12,
+      userId: 3,
+      scope: globalScope,
+    });
+
+    expect(claims).toEqual([{ value: false }]);
+  });
+
+  it("refuses the claim while competitor products are recorded", async () => {
+    // Resolving the contradiction by deleting the rep's own figures would be the
+    // screen throwing away work to satisfy a checkbox.
+    await expect(
+      new SetNoOtherBrandsUseCase({
+        potentialRepository: repo({
+          listUsage: async () => [
+            {
+              definitionId: 7,
+              productId: 10,
+              productName: 'Marca A',
+              quantity: 12,
+              updatedAt: new Date("2026-08-01T00:00:00.000Z"),
+            },
+          ],
+        }),
+      }).execute({
+        facilityId: 1,
+        verticalId: 1,
+        definitionId: 7,
+        value: true,
+        userId: 3,
+        scope: globalScope,
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("withdrawing the claim is always allowed", async () => {
+    // Turning it off asserts nothing, so an empty list is not a precondition.
+    const claims: Array<{ value: boolean }> = [];
+    await new SetNoOtherBrandsUseCase({
+      potentialRepository: repo({
+        listUsage: async () => [],
+        setNoOtherBrands: async (input) => {
+          claims.push({ value: input.value });
+        },
+      }),
+    }).execute({
+      facilityId: 1,
+      verticalId: 1,
+      definitionId: 7,
+      value: false,
+      userId: 3,
+      scope: globalScope,
+    });
+
+    expect(claims).toEqual([{ value: false }]);
+  });
+
+  it("reports no share for an empty market nobody has vouched for", async () => {
+    const page = await new ListFacilityPotentialsUseCase({
+      potentialRepository: repo({
+        listUsage: async () => [],
+        listNoOtherBrands: async () => [],
+        sumAtlasmedQtyByDefinition: async () => [{ definitionId: 7, totalQty: 900 }],
+      }),
+    }).execute({ facilityId: 1, verticalId: 1, scope: globalScope });
+
+    expect(page.items[0]!.share).toBeNull();
+    expect(page.items[0]!.noOtherBrands).toBe(false);
+  });
+
+  it("reports 100% once a rep has said there is nothing else", async () => {
+    const page = await new ListFacilityPotentialsUseCase({
+      potentialRepository: repo({
+        listUsage: async () => [],
+        listNoOtherBrands: async () => [
+          { definitionId: 7, noOtherBrands: true, setAt: new Date("2026-08-01T00:00:00.000Z") },
+        ],
+        sumAtlasmedQtyByDefinition: async () => [{ definitionId: 7, totalQty: 900 }],
+      }),
+    }).execute({ facilityId: 1, verticalId: 1, scope: globalScope });
+
+    expect(page.items[0]!.share).toBe(1);
+    expect(page.items[0]!.noOtherBrands).toBe(true);
+    expect(page.items[0]!.noOtherBrandsSetAt).toBe("2026-08-01T00:00:00.000Z");
   });
 });

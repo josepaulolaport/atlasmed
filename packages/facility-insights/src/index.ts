@@ -35,8 +35,9 @@ export type {
 export { recomputeMetricSnapshots } from "./metric-snapshot";
 export type {
   MetricSnapshotStore,
-  OursByDefinitionMonth,
+  OursByDefinition,
   ProfileForSnapshot,
+  TheirsByProduct,
   RecomputeMetricSnapshotsResult,
   SnapshotRowToWrite,
   StoredSnapshotCell,

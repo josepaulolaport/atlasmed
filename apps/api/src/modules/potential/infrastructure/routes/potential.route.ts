@@ -44,14 +44,13 @@ const setFacilityProductUsageRoute = new Elysia()
         definitionId: params.definitionId,
         productId: params.productId,
         quantity: body.quantity,
-        month: body.month,
         userId,
         scope,
       });
     },
     {
       detail: {
-        summary: "Set a competitor product's monthly quantity for a metric",
+        summary: "Set the quantity standing for a competitor product",
         tags: ["Potential"],
         security: [{ bearerAuth: [] }],
       },
@@ -62,10 +61,9 @@ const setFacilityProductUsageRoute = new Elysia()
       }),
       body: t.Object({
         verticalId: t.Number({ minimum: 1 }),
-        quantity: t.Number({ minimum: 0 }),
-        // Optional so the client can stay silent and mean "this month" — which
-        // is what the picker does. Present when the rep corrects an earlier one.
-        month: t.Optional(t.String({ pattern: "^\\d{4}-\\d{2}-01$" })),
+        // Strictly positive (§4.6). Zero is not a quantity — "they sell none
+        // here" is the nenhuma-outra-marca claim, which records who said it.
+        quantity: t.Number({ exclusiveMinimum: 0 }),
       }),
     },
   );
@@ -100,6 +98,45 @@ const removeFacilityProductUsageRoute = new Elysia()
         verticalId: t.Number({ minimum: 1 }),
         // No month: a competitor is removed from the metric outright. The
         // parameter was optional and no client ever sent it.
+      }),
+    },
+  );
+
+/**
+ * The rep asserting that no other brand is sold at this clinic for this metric.
+ *
+ * A write, not a filter: it is the only thing that makes a 100% share
+ * legitimate, so it carries who said it and when, exactly like a quantity.
+ */
+const setNoOtherBrandsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .put(
+    "/facilities/:id/potentials/:definitionId/no-other-brands",
+    async ({ params, body, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return potentialUseCases.setNoOtherBrands().execute({
+        facilityId: params.id,
+        verticalId: body.verticalId,
+        definitionId: params.definitionId,
+        value: body.value,
+        userId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Declare that no other brand is sold at this clinic for a metric",
+        tags: ["Potential"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({
+        id: t.Number({ minimum: 1 }),
+        definitionId: t.Number({ minimum: 1 }),
+      }),
+      body: t.Object({
+        verticalId: t.Number({ minimum: 1 }),
+        value: t.Boolean(),
       }),
     },
   );
@@ -284,6 +321,7 @@ export const potentialRoute = new Elysia()
   .use(listFacilityPotentialsRoute)
   .use(setFacilityProductUsageRoute)
   .use(removeFacilityProductUsageRoute)
+  .use(setNoOtherBrandsRoute)
   .use(listDefinitionsRoute)
   .use(createDefinitionRoute)
   .use(updateDefinitionRoute)

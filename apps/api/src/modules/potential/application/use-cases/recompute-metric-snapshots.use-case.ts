@@ -26,13 +26,11 @@ export class RecomputeMetricSnapshotsUseCase {
 
   async execute(input: {
     profileId: number;
-    months: MonthKey[];
     computedAt?: Date;
   }): Promise<RecomputeMetricSnapshotsResult> {
     const store = createMetricSnapshotStore(this.deps.database ?? db);
     return recomputeMetricSnapshots(store, {
       profileId: input.profileId,
-      months: input.months,
       computedAt: input.computedAt ?? new Date(),
     });
   }

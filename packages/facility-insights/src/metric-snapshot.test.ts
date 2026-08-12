@@ -1,125 +1,156 @@
 import { describe, expect, it } from "bun:test";
 import { recomputeMetricSnapshots } from "./metric-snapshot";
-import type { MetricSnapshotStore, SnapshotRowToWrite } from "./metric-snapshot";
-import type { MonthKey } from "./market-metric";
+import type {
+  MetricSnapshotStore,
+  SnapshotRowToWrite,
+  StoredSnapshotCell,
+  TheirsByProduct,
+} from "./metric-snapshot";
 
 /**
- * What a snapshot says a competitor was worth in a given month.
+ * One row per (clinic-linha, metric), saying what is true now (spec 0013 §4.6).
  *
- * A rep answers "quantas por mês" once and that figure holds until they replace
- * it. Reading only the rows filed under month M therefore reports zero for every
- * month after the one they happened to record in — and `theirs = 0` beside
- * `ours > 0` is a 100% share asserted on no evidence, which is the
- * "confident, wrong number" spec 0013 §4.4 refuses.
+ * Note what the store interface does not expose: the `no_other_brands` claim.
+ * It shares a row with these figures but it is a rep's assertion, not a derived
+ * value, so the algorithm has no way to read or write it — the guarantee is
+ * structural rather than a rule someone has to remember.
  */
 function createStore(options: {
-  theirs?: Array<{
-    definitionId: number;
-    productId: number;
-    month: MonthKey;
-    metricQuantity: number;
-  }>;
-  ours?: Array<{ definitionId: number; month: MonthKey; totalQty: number }>;
+  ours?: Array<{ definitionId: number; totalQty: number }>;
+  theirs?: TheirsByProduct[];
+  existing?: StoredSnapshotCell[];
   written?: SnapshotRowToWrite[];
+  definitionIds?: number[];
+  windows?: Array<{ start: Date; end: Date }>;
 }): MetricSnapshotStore {
   return {
     findProfile: async () => ({ id: 1, facilityId: 10, verticalId: 5 }),
-    listDefinitionIds: async () => [7],
-    sumOurs: async () => options.ours ?? [],
-    listTheirsHistory: async () => options.theirs ?? [],
-    listExisting: async () => [],
+    listDefinitionIds: async () => options.definitionIds ?? [7],
+    sumOurs: async (input) => {
+      options.windows?.push({ start: input.rangeStart, end: input.rangeEnd });
+      return options.ours ?? [];
+    },
+    listTheirs: async () => options.theirs ?? [],
+    listExisting: async () => options.existing ?? [],
     upsert: async (rows) => {
       options.written?.push(...rows);
     },
   };
 }
 
-const MONTHS: MonthKey[] = ["2026-06-01", "2026-07-01", "2026-08-01"];
+const NOW = new Date("2026-08-15T12:00:00.000Z");
 
-async function snapshotFor(options: Parameters<typeof createStore>[0]) {
-  const written: SnapshotRowToWrite[] = [];
-  await recomputeMetricSnapshots(createStore({ ...options, written }), {
-    profileId: 1,
-    months: MONTHS,
-    computedAt: new Date("2026-08-15T12:00:00.000Z"),
-  });
-  return written;
+function theirs(productId: number, quantity: number): TheirsByProduct {
+  return {
+    definitionId: 7,
+    productId,
+    productName: `Marca ${productId}`,
+    quantity,
+    updatedAt: new Date("2026-06-01T00:00:00.000Z"),
+  };
 }
 
-describe("what a snapshot says a competitor was worth", () => {
-  it("carries a figure forward into the months after it was recorded", async () => {
-    // Recorded once in June. July and August had no new record — that is not the
-    // same as the competitor having gone away.
-    const written = await snapshotFor({
-      theirs: [
-        { definitionId: 7, productId: 100, month: "2026-06-01", metricQuantity: 100 },
-      ],
-      ours: MONTHS.map((month) => ({ definitionId: 7, month, totalQty: 50 })),
+async function recompute(options: Parameters<typeof createStore>[0] = {}) {
+  const written: SnapshotRowToWrite[] = [];
+  const result = await recomputeMetricSnapshots(
+    createStore({ ...options, written }),
+    { profileId: 1, computedAt: NOW },
+  );
+  return { written, result };
+}
+
+describe("what a metric snapshot holds", () => {
+  it("writes one row per metric, with no month", async () => {
+    const { written } = await recompute({
+      ours: [{ definitionId: 7, totalQty: 900 }],
+      theirs: [theirs(100, 40)],
     });
 
-    const byMonth = new Map(written.map((row) => [row.month, row.theirsQty]));
-    expect(byMonth.get("2026-06-01")).toBe(100);
-    expect(byMonth.get("2026-07-01")).toBe(100);
-    expect(byMonth.get("2026-08-01")).toBe(100);
+    expect(written).toHaveLength(1);
+    expect(written[0]).not.toHaveProperty("month");
+    expect(written[0]!.definitionId).toBe(7);
   });
 
-  it("does not report a 100% share for the months with no new record", async () => {
-    const written = await snapshotFor({
-      theirs: [
-        { definitionId: 7, productId: 100, month: "2026-06-01", metricQuantity: 100 },
-      ],
-      ours: MONTHS.map((month) => ({ definitionId: 7, month, totalQty: 50 })),
-    });
+  it("normalises our 90-day window to a month", async () => {
+    // 900 over 90 days is 300 a month. The window is what makes the value move
+    // with the calendar, which is why a nightly pass exists.
+    const { written } = await recompute({ ours: [{ definitionId: 7, totalQty: 900 }] });
 
-    for (const row of written) {
-      expect(row.oursQty / (row.oursQty + row.theirsQty)).toBeCloseTo(1 / 3, 6);
-    }
+    expect(written[0]!.oursQty).toBeCloseTo(300, 6);
   });
 
-  it("takes the newest figure on or before the month, not the newest overall", async () => {
-    // Corrected downward in August. June must still read 100 — the correction
-    // was not in force yet — and August must read 40.
-    const written = await snapshotFor({
-      theirs: [
-        { definitionId: 7, productId: 100, month: "2026-06-01", metricQuantity: 100 },
-        { definitionId: 7, productId: 100, month: "2026-08-01", metricQuantity: 40 },
-      ],
-    });
+  it("measures that window from the instant it was given, not the wall clock", async () => {
+    const windows: Array<{ start: Date; end: Date }> = [];
+    await recompute({ windows });
 
-    const byMonth = new Map(written.map((row) => [row.month, row.theirsQty]));
-    expect(byMonth.get("2026-06-01")).toBe(100);
-    expect(byMonth.get("2026-07-01")).toBe(100);
-    expect(byMonth.get("2026-08-01")).toBe(40);
+    expect(windows).toHaveLength(1);
+    expect(windows[0]!.end).toEqual(NOW);
+    const days = (windows[0]!.end.getTime() - windows[0]!.start.getTime()) / 86_400_000;
+    expect(days).toBeCloseTo(90, 6);
   });
 
-  it("adds the standing figures of different products", async () => {
-    const written = await snapshotFor({
-      theirs: [
-        { definitionId: 7, productId: 100, month: "2026-06-01", metricQuantity: 100 },
-        { definitionId: 7, productId: 200, month: "2026-07-01", metricQuantity: 25 },
-      ],
-    });
+  it("sums the standing figure of every competitor product", async () => {
+    // Each is already a monthly rate; different products add.
+    const { written } = await recompute({ theirs: [theirs(100, 40), theirs(200, 25)] });
 
-    const byMonth = new Map(written.map((row) => [row.month, row.theirsQty]));
-    expect(byMonth.get("2026-06-01")).toBe(100);
-    // The second product joins the month it was recorded in, not before it.
-    expect(byMonth.get("2026-07-01")).toBe(125);
-    expect(byMonth.get("2026-08-01")).toBe(125);
+    expect(written[0]!.theirsQty).toBe(65);
   });
 
-  it("reports nothing for months before any competitor was ever recorded", async () => {
-    // Absence here is genuine: nobody had surveyed this clinic yet. The share
-    // rule that keeps 0 and unknown apart lives in the read, not here.
-    const written = await snapshotFor({
-      theirs: [
-        { definitionId: 7, productId: 100, month: "2026-08-01", metricQuantity: 100 },
-      ],
-      ours: MONTHS.map((month) => ({ definitionId: 7, month, totalQty: 50 })),
+  it("reports theirs as zero when no competitor product is recorded", async () => {
+    // Zero here means "nothing recorded". Whether that is a known-empty market
+    // or an unsurveyed one is the `no_other_brands` claim's job, and the share
+    // that depends on it is computed by the database, not here.
+    const { written } = await recompute({ ours: [{ definitionId: 7, totalQty: 900 }] });
+
+    expect(written[0]!.theirsQty).toBe(0);
+  });
+
+  it("corrects a metric whose inputs have all disappeared", async () => {
+    // The order was deleted, or the last competitor removed. Recomputing only
+    // metrics that still have inputs would leave yesterday's figure standing
+    // and report success.
+    const { written, result } = await recompute({
+      existing: [{ definitionId: 7, oursQty: 300, theirsQty: 40 }],
     });
 
-    const byMonth = new Map(written.map((row) => [row.month, row.theirsQty]));
-    expect(byMonth.get("2026-06-01")).toBe(0);
-    expect(byMonth.get("2026-07-01")).toBe(0);
-    expect(byMonth.get("2026-08-01")).toBe(100);
+    expect(written).toHaveLength(1);
+    expect(written[0]!.oursQty).toBe(0);
+    expect(written[0]!.theirsQty).toBe(0);
+    expect(result.differed).toBe(1);
+  });
+
+  it("counts a row as differed only when its value moved", async () => {
+    // `differed` is a lost trigger's fingerprint, so an unchanged recompute must
+    // report zero — otherwise the signal is noise.
+    const { result } = await recompute({
+      ours: [{ definitionId: 7, totalQty: 900 }],
+      theirs: [theirs(100, 40)],
+      existing: [{ definitionId: 7, oursQty: 300, theirsQty: 40 }],
+    });
+
+    expect(result.written).toBe(1);
+    expect(result.differed).toBe(0);
+  });
+
+  it("writes a row for every metric that has an input or a stored row", async () => {
+    // 7 has an order, 8 only a stored row whose inputs have gone. Both are
+    // written; a metric with neither is not invented.
+    const { written } = await recompute({
+      definitionIds: [7, 8, 9],
+      ours: [{ definitionId: 7, totalQty: 900 }],
+      existing: [{ definitionId: 8, oursQty: 10, theirsQty: 0 }],
+    });
+
+    expect(written.map((row) => row.definitionId).sort()).toEqual([7, 8]);
+  });
+
+  it("does nothing for a profile that has gone", async () => {
+    const store = createStore({});
+    const result = await recomputeMetricSnapshots(
+      { ...store, findProfile: async () => null },
+      { profileId: 1, computedAt: NOW },
+    );
+
+    expect(result).toEqual({ profileId: 1, written: 0, differed: 0 });
   });
 });

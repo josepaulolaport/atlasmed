@@ -1,6 +1,7 @@
 import {
   pgTable,
   text,
+  boolean,
   timestamp,
   numeric,
   date,
@@ -77,26 +78,16 @@ export const facilityProductUsage = pgTable(
     /** Equal to both the profile's and the definition's vertical; FKs enforce it. */
     verticalId: bigint("vertical_id", { mode: "number" }).notNull(),
     productId: bigint("product_id", { mode: "number" }).notNull(),
-    /**
-     * The calendar month this observation is *about*, pinned to its first day
-     * (spec 0013 §4.1, amended 2026-08-11). Boundaries are `America/São_Paulo`.
-     *
-     * The rep answers "quantas por mês", which is true *of a month*. Without
-     * this column today's figure silently became the answer for every month
-     * ever asked about — and since `ours` is exactly recomputable from
-     * `orders.ordered_at` forever, that asymmetry was the only thing standing
-     * between us and a snapshot table that rebuilds itself deterministically.
-     */
-    month: date("month", { mode: "string" }).notNull(),
     /** Pinned to COMPETITOR by the composite foreign key below. Never written. */
     productOwnership: productOwnershipEnum("product_ownership")
       .notNull()
       .generatedAlwaysAs(sql`'COMPETITOR'::product_ownership`),
     /**
-     * Product units per month, as the rep entered it — multiplied by
-     * `products.metric_units` at read time, exactly like our own order lines
-     * (spec 0013 §4.3). Never pre-multiplied on write: the packaging factor is
-     * catalogue data and may be corrected later.
+     * How many per month, in the product's own units, as the rep entered it.
+     *
+     * Not multiplied by anything on read: `products.metric_units` is an
+     * information field since spec 0013 §4.6, so a metric's products must all
+     * be measured in the same unit. Nothing enforces that — see §7.
      */
     quantity: numeric("quantity", { precision: 14, scale: 2 }).notNull(),
     updatedByUserId: bigint("updated_by_user_id", { mode: "number" }).references(() => users.id, {
@@ -106,14 +97,14 @@ export const facilityProductUsage = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
   },
   (t) => [
-    // One quantity per competitor product per metric per clinic-linha *per
-    // month*. The same product may appear under two metrics (spec 0013 §7
-    // defers whether the picker should offer that; storage stays capable).
-    unique("facility_product_usage_profile_definition_product_month_key").on(
+    // One quantity per competitor product per metric per clinic-linha. Not per
+    // month (§4.6): a rep answers "quantas por mês" once and the figure stands
+    // until they replace it, so a second row for the same product would be a
+    // second answer to a question with one answer.
+    unique("facility_product_usage_profile_definition_product_key").on(
       t.facilityVerticalProfileId,
       t.definitionId,
       t.productId,
-      t.month,
     ),
     index("facility_product_usage_profile_idx").on(t.facilityVerticalProfileId),
     index("facility_product_usage_definition_idx").on(t.definitionId),
@@ -138,17 +129,11 @@ export const facilityProductUsage = pgTable(
       columns: [t.productId, t.productOwnership],
       foreignColumns: [products.id, products.ownership],
     }).onDelete("restrict"),
-    check(
-      "facility_product_usage_quantity_non_negative",
-      sql`${t.quantity} >= 0`,
-    ),
-    // A month is its first day, always. Without this the same month could be
-    // written under 28 different keys and the unique constraint above would
-    // permit every one of them.
-    check(
-      "facility_product_usage_month_is_first_of_month",
-      sql`${t.month} = date_trunc('month', ${t.month}::timestamp)::date`,
-    ),
+    // Strictly positive (§4.6). A zero is not a quantity — "they sell none
+    // here" is the `no_other_brands` claim on the snapshot, which says who
+    // asserted it and when. A zero row would say the same thing anonymously
+    // and would keep the product in a list of what the clinic uses.
+    check("facility_product_usage_quantity_positive", sql`${t.quantity} > 0`),
   ],
 );
 
@@ -176,12 +161,22 @@ export const facilityMetricSnapshots = pgTable(
     definitionId: bigint("definition_id", { mode: "number" }).notNull(),
     /** Equal to both the profile's and the definition's vertical; FKs enforce it. */
     verticalId: bigint("vertical_id", { mode: "number" }).notNull(),
-    /** First day of the month, `America/São_Paulo` boundaries. */
-    month: date("month", { mode: "string" }).notNull(),
-    /** Ours for this month, in metric units. */
+    /** Ours: the 90-day window normalised to a month (§4.6). */
     oursQty: numeric("ours_qty", { precision: 14, scale: 2 }).notNull(),
-    /** Theirs for this month, in metric units. */
+    /** Theirs: the sum of the figure standing for each competitor product. */
     theirsQty: numeric("theirs_qty", { precision: 14, scale: 2 }).notNull(),
+    /**
+     * The rep's claim that no other brand is sold here for this metric.
+     *
+     * An **input**, living on a derived row — see §4.6. The recompute must
+     * never write these three columns; the check below and
+     * `metric-snapshot.test.ts` both exist to keep that true, because a cache
+     * that quietly eats a person's assertion is the worst kind of bug.
+     */
+    noOtherBrands: boolean("no_other_brands").notNull().default(false),
+    noOtherBrandsSetByUserId: bigint("no_other_brands_set_by_user_id", { mode: "number" }),
+    /** A stale claim still counts; the date is the only signal it is old (§6). */
+    noOtherBrandsSetAt: timestamp("no_other_brands_set_at"),
     /**
      * The observed market. Generated rather than written, so no writer can
      * disagree with the two columns it comes from.
@@ -192,13 +187,20 @@ export const facilityMetricSnapshots = pgTable(
     /**
      * Our share of the observed market, 0–1.
      *
-     * **Null, never 0, when nothing is known** (spec 0013 §4.3). Generated makes
-     * that structurally impossible to violate rather than a rule every writer
-     * has to remember: "we sell nothing here" and "we have no information" stay
-     * distinguishable because the database refuses to conflate them.
+     * **Null, never 0, when nothing is known** (§4.3, extended by §4.6). Two
+     * conditions, and the whole rule fits here because the claim lives on this
+     * row: there must be a market we know about — a recorded competitor, or the
+     * rep asserting there is none — and something in it to divide.
+     *
+     * Generated, so no writer can disagree with it. Without the
+     * `no_other_brands` half, a clinic nobody had surveyed reported 100%: we
+     * own everything, on no evidence.
      */
     share: numeric("share", { precision: 9, scale: 8 }).generatedAlwaysAs(
-      sql`case when ours_qty + theirs_qty > 0 then ours_qty / (ours_qty + theirs_qty) end`,
+      sql`case
+            when (no_other_brands or theirs_qty > 0) and ours_qty + theirs_qty > 0
+            then ours_qty / (ours_qty + theirs_qty)
+          end`,
     ),
     computedAt: timestamp("computed_at").notNull().defaultNow(),
   },
@@ -207,11 +209,12 @@ export const facilityMetricSnapshots = pgTable(
     // No surrogate id: a snapshot is not an addressable entity the way a rep's
     // usage row is, so a sequence here would be an unused column and a second
     // way to say the same thing.
+    // One row per clinic-linha per metric (§4.6). Not per month: the metric
+    // says what is true now, and nothing reads it as a series.
     primaryKey({
       name: "facility_metric_snapshots_pkey",
-      columns: [t.facilityVerticalProfileId, t.definitionId, t.month],
+      columns: [t.facilityVerticalProfileId, t.definitionId],
     }),
-    index("facility_metric_snapshots_month_idx").on(t.month),
     index("facility_metric_snapshots_computed_at_idx").on(t.computedAt),
     // Same invariant as facility_product_usage: a snapshot cannot pair a profile
     // in one linha with a metric in another.
@@ -225,9 +228,20 @@ export const facilityMetricSnapshots = pgTable(
       columns: [t.definitionId, t.verticalId],
       foreignColumns: [productPotentialDefinitions.id, productPotentialDefinitions.verticalId],
     }).onDelete("cascade"),
+    // "No other brand is sold here" and "here is a brand they sell" cannot both
+    // be true. The application clears the claim when a product is added; this
+    // makes the contradiction unrepresentable rather than merely unlikely.
+    // Named explicitly: the derived name ran past 63 characters and Postgres
+    // truncated it, leaving the database holding a constraint under a name the
+    // schema did not know.
+    foreignKey({
+      name: "facility_metric_snapshots_claim_user_fk",
+      columns: [t.noOtherBrandsSetByUserId],
+      foreignColumns: [users.id],
+    }).onDelete("set null"),
     check(
-      "facility_metric_snapshots_month_is_first_of_month",
-      sql`${t.month} = date_trunc('month', ${t.month}::timestamp)::date`,
+      "facility_metric_snapshots_no_other_brands_excludes_theirs",
+      sql`not ${t.noOtherBrands} or ${t.theirsQty} = 0`,
     ),
     check("facility_metric_snapshots_ours_non_negative", sql`${t.oursQty} >= 0`),
     check("facility_metric_snapshots_theirs_non_negative", sql`${t.theirsQty} >= 0`),
