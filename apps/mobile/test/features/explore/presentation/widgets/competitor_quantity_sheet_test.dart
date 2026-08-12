@@ -71,7 +71,6 @@ void main() {
     productId: 9,
     productName: 'Marca A',
     quantity: 12,
-    metricQuantity: 12,
     updatedAt: DateTime.utc(2026, 3, 10),
   );
 

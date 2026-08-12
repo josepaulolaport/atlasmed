@@ -81,6 +81,28 @@ class FacilityPotentialRepository extends Repository<FacilityPotentialsPage>
     return _decode(response, 'Falha ao remover a marca');
   }
 
+  /// Records or withdraws "nenhuma outra marca" for one metric.
+  ///
+  /// The server returns the recomputed page, so the section refreshes from the
+  /// same answer the write produced rather than asking again.
+  Future<FacilityPotentialsPage> setNoOtherBrands({
+    required int definitionId,
+    required bool value,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/potentials'
+          '/$definitionId/no-other-brands',
+        ),
+        method: RepositoryHttpMethod.put,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'verticalId': verticalId, 'value': value},
+      ),
+    );
+    return _decode(response, 'Falha ao salvar');
+  }
+
   FacilityPotentialsPage _decode(dynamic response, String failureMessage) {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw FacilityPotentialException(

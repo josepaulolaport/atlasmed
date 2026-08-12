@@ -95,8 +95,16 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
     final quantity = double.tryParse(
       _quantity.text.trim().replaceAll(',', '.'),
     );
-    if (quantity == null || quantity < 0) {
-      setState(() => _error = 'Informe uma quantidade válida.');
+    // Strictly positive (§4.6). Zero is not a quantity: "não vendem aqui" is
+    // the "Nenhuma outra marca" option on the section, which records who said
+    // it and when.
+    if (quantity == null || quantity <= 0) {
+      setState(
+        () => _error = quantity == 0
+            ? 'Para dizer que não há outras marcas, use a opção '
+                  '"Nenhuma outra marca".'
+            : 'Informe uma quantidade válida.',
+      );
       return;
     }
 

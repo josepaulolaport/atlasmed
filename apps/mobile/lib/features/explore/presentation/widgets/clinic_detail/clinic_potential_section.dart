@@ -101,6 +101,16 @@ class ClinicPotentialSection extends ConsumerWidget {
                         ),
                       _PotentialRow(
                         item: page.items[i],
+                        onNoOtherBrands: canEdit
+                            ? (value) => _setNoOtherBrands(
+                                context,
+                                ref,
+                                facilityId: facilityId,
+                                verticalId: verticalId,
+                                definitionId: page.items[i].definitionId,
+                                value: value,
+                              )
+                            : null,
                         onEdit: canEdit
                             ? (existing) => _editCompetitor(
                                 context,
@@ -167,10 +177,52 @@ Future<void> _editCompetitor(
   }
 }
 
+/// Records the rep's claim and refreshes the section from the response.
+Future<void> _setNoOtherBrands(
+  BuildContext context,
+  WidgetRef ref, {
+  required int facilityId,
+  required int verticalId,
+  required int definitionId,
+  required bool value,
+}) async {
+  final repository = FacilityPotentialRepository(
+    facilityId: facilityId,
+    verticalId: verticalId,
+  );
+  try {
+    await repository.setNoOtherBrands(definitionId: definitionId, value: value);
+    ref.invalidate(
+      facilityPotentialsProvider((
+        facilityId: facilityId,
+        verticalId: verticalId,
+      )),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    // Named, not swallowed: a checkbox that springs back with no explanation
+    // reads as the app being broken.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error is FacilityPotentialException && error.message != null
+              ? error.message!
+              : 'Não foi possível salvar.',
+        ),
+      ),
+    );
+  } finally {
+    repository.dispose();
+  }
+}
+
 class _PotentialRow extends StatelessWidget {
-  const _PotentialRow({required this.item, this.onEdit});
+  const _PotentialRow({required this.item, this.onEdit, this.onNoOtherBrands});
 
   final FacilityPotentialItem item;
+
+  /// Null when the user may not edit, exactly like [onEdit].
+  final void Function(bool value)? onNoOtherBrands;
 
   /// Null when the user may not edit this clinic — the affordance disappears
   /// rather than appearing and failing.
@@ -250,6 +302,7 @@ class _PotentialRow extends StatelessWidget {
         ),
         _OurProductsTable(products: item.ourProducts),
         _CompetitorTable(competitors: item.competitors, onEdit: onEdit),
+        _NoOtherBrandsClaim(item: item, onChanged: onNoOtherBrands),
       ],
     );
   }
@@ -265,6 +318,85 @@ class _PotentialRow extends StatelessWidget {
 /// or remove and no row is a tap target. Same shape as the competitor table
 /// below it so the two read as one comparison, and the same units, so they can
 /// be compared at all.
+/// "Nenhuma outra marca" — the rep saying the market here is genuinely empty.
+///
+/// Only offered while the competitor list is empty: asserting it alongside
+/// recorded brands is a contradiction the database refuses outright, and
+/// resolving it by deleting the rep's own figures would be the screen throwing
+/// away work to satisfy a checkbox.
+///
+/// It is the only thing that makes a 100% share legitimate. Without it an empty
+/// list means the market is unknown, which is why the share reads "—".
+class _NoOtherBrandsClaim extends StatelessWidget {
+  const _NoOtherBrandsClaim({required this.item, this.onChanged});
+
+  final FacilityPotentialItem item;
+  final void Function(bool value)? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final claimable = item.competitors.isEmpty;
+    if (!claimable && !item.noOtherBrands) return const SizedBox.shrink();
+
+    final setAt = item.noOtherBrandsSetAt;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: Checkbox(
+              key: const Key('potential-no-other-brands'),
+              value: item.noOtherBrands,
+              onChanged: onChanged == null
+                  ? null
+                  : (value) => onChanged!(value ?? false),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Nenhuma outra marca é vendida aqui',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.navyDeep,
+                  ),
+                ),
+                if (setAt != null)
+                  Text(
+                    // A stale claim still counts, so the date is the only
+                    // signal that it is old.
+                    'Informado em ${_fmtDate(setAt)}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.3,
+                      color: AppColors.gray500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _fmtDate(DateTime value) {
+  final local = value.toLocal();
+  final day = local.day.toString().padLeft(2, '0');
+  final month = local.month.toString().padLeft(2, '0');
+  return '$day/$month/${local.year}';
+}
+
 class _OurProductsTable extends StatelessWidget {
   const _OurProductsTable({required this.products});
 
@@ -297,7 +429,7 @@ class _OurProductsTable extends StatelessWidget {
           for (final product in products) ...[
             _ProductQuantityRow(
               name: product.productName,
-              quantity: product.metricQuantity,
+              quantity: product.quantity,
             ),
             const SizedBox(height: 8),
           ],
@@ -475,11 +607,10 @@ class _CompetitorRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                // Metric units, matching the total above and our own table.
-                // These rows previously showed the rep's typed number, which
-                // meant two columns of the same name held two different units
-                // and neither list added up to its total.
-                _fmtQty(competitor.metricQuantity),
+                // The rep's own number. Both sides of the market are counted the
+                // same way now — `metric_units` is an information field (§4.6) —
+                // so this is directly comparable with our column above.
+                _fmtQty(competitor.quantity),
                 style: const TextStyle(
                   fontSize: 14,
                   height: 1.3,
@@ -795,12 +926,21 @@ String _fmtQty(double? value) {
 /// stat tiles across 360dp and silently ellipsised every caption.
 @visibleForTesting
 class PotentialRowHarness extends StatelessWidget {
-  const PotentialRowHarness({super.key, required this.item, this.onEdit});
+  const PotentialRowHarness({
+    super.key,
+    required this.item,
+    this.onEdit,
+    this.onNoOtherBrands,
+  });
 
   final FacilityPotentialItem item;
   final void Function(CompetitorUsage? existing)? onEdit;
+  final void Function(bool value)? onNoOtherBrands;
 
   @override
-  Widget build(BuildContext context) =>
-      _PotentialRow(item: item, onEdit: onEdit);
+  Widget build(BuildContext context) => _PotentialRow(
+    item: item,
+    onEdit: onEdit,
+    onNoOtherBrands: onNoOtherBrands,
+  );
 }

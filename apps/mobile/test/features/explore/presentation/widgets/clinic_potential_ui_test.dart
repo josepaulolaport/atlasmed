@@ -29,6 +29,8 @@ void main() {
   FacilityPotentialItem item({
     List<CompetitorUsage> competitors = const [],
     List<OurProductUsage> ourProducts = const [],
+    bool noOtherBrands = false,
+    DateTime? noOtherBrandsSetAt,
   }) => FacilityPotentialItem(
     definitionId: 1,
     key: 'ampolas_mes',
@@ -39,13 +41,14 @@ void main() {
     share: 0.75,
     competitors: competitors,
     ourProducts: ourProducts,
+    noOtherBrands: noOtherBrands,
+    noOtherBrandsSetAt: noOtherBrandsSetAt,
   );
 
   CompetitorUsage usage(String name, double quantity) => CompetitorUsage(
     productId: name.hashCode,
     productName: name,
     quantity: quantity,
-    metricQuantity: quantity,
     updatedAt: DateTime.utc(2026, 3, 10),
   );
 
@@ -214,7 +217,7 @@ void main() {
     OurProductUsage ours(String name, double qty) => OurProductUsage(
       productId: name.hashCode,
       productName: name,
-      metricQuantity: qty,
+      quantity: qty,
     );
 
     testWidgets('are listed with their monthly average', (tester) async {
@@ -276,9 +279,9 @@ void main() {
       );
     });
 
-    testWidgets('competitor quantities read in metric units', (tester) async {
-      // 3 units of a product worth 20 metric units each is 60, and 60 is what
-      // the total above says. The row used to show 3.
+    testWidgets('both sides are counted the same way', (tester) async {
+      // `metric_units` is an information field since §4.6, so the rep's number
+      // and ours are directly comparable — no conversion, one unit.
       tester.view.physicalSize = narrowPhone;
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -287,12 +290,12 @@ void main() {
         host(
           PotentialRowHarness(
             item: item(
+              ourProducts: [ours('Nosso A', 18)],
               competitors: [
                 CompetitorUsage(
                   productId: 1,
                   productName: 'Marca X',
-                  quantity: 3,
-                  metricQuantity: 60,
+                  quantity: 60,
                   updatedAt: DateTime.utc(2026, 3, 10),
                 ),
               ],
@@ -303,7 +306,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('60'), findsOneWidget);
-      expect(find.text('3'), findsNothing);
+      expect(find.text('18'), findsOneWidget);
     });
 
     testWidgets('each list says what period it covers', (tester) async {
@@ -323,7 +326,6 @@ void main() {
                   productId: 1,
                   productName: 'Marca X',
                   quantity: 3,
-                  metricQuantity: 60,
                   updatedAt: DateTime.utc(2026, 3, 10),
                 ),
               ],
@@ -336,6 +338,76 @@ void main() {
       expect(find.text('Média/mês'), findsOneWidget);
       expect(find.text('Registrado/mês'), findsOneWidget);
       expect(find.text('(média últimos 3 meses)'), findsOneWidget);
+    });
+  });
+
+  group('"nenhuma outra marca"', () {
+    Future<void> pump(WidgetTester tester, FacilityPotentialItem value) async {
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        host(PotentialRowHarness(item: value, onNoOtherBrands: (_) {})),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('is offered while no other brand is recorded', (tester) async {
+      await pump(tester, item());
+
+      expect(
+        find.byKey(const Key('potential-no-other-brands')),
+        findsOneWidget,
+      );
+      expect(find.text('Nenhuma outra marca é vendida aqui'), findsOneWidget);
+    });
+
+    testWidgets('is withdrawn once a brand is recorded', (tester) async {
+      // The two states contradict each other, and offering the claim beside a
+      // recorded brand invites the rep to assert something the database refuses.
+      await pump(
+        tester,
+        item(
+          competitors: [
+            CompetitorUsage(
+              productId: 1,
+              productName: 'Marca X',
+              quantity: 60,
+              updatedAt: DateTime.utc(2026, 3, 10),
+            ),
+          ],
+        ),
+      );
+
+      expect(find.byKey(const Key('potential-no-other-brands')), findsNothing);
+    });
+
+    testWidgets('shows when the claim was made', (tester) async {
+      // A stale claim still counts, so the date is the only signal it is old.
+      await pump(
+        tester,
+        item(
+          noOtherBrands: true,
+          noOtherBrandsSetAt: DateTime.utc(2026, 3, 9, 12),
+        ),
+      );
+
+      expect(find.textContaining('Informado em'), findsOneWidget);
+      expect(find.textContaining('/2026'), findsOneWidget);
+    });
+
+    testWidgets('is not offered to a rep who may not edit', (tester) async {
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(host(PotentialRowHarness(item: item())));
+      await tester.pumpAndSettle();
+
+      final checkbox = tester.widget<Checkbox>(
+        find.byKey(const Key('potential-no-other-brands')),
+      );
+      // Present but inert, matching how the add affordance behaves.
+      expect(checkbox.onChanged, isNull);
     });
   });
 }

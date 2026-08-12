@@ -6,18 +6,17 @@ class CompetitorUsage {
     required this.productId,
     required this.productName,
     required this.quantity,
-    required this.metricQuantity,
     this.updatedAt,
   });
 
   final int productId;
   final String productName;
 
-  /// Product units, as the rep entered them.
+  /// Per month, in the product's own units, as the rep entered them.
+  ///
+  /// No conversion: `metric_units` is an information field since spec 0013
+  /// §4.6, so both sides of the market are counted the same way.
   final double quantity;
-
-  /// quantity × the product's metric_units — comparable with our own side.
-  final double metricQuantity;
 
   /// Drives "atualizado em <data>". A stale figure still counts as current
   /// (spec 0013 §6), so the date is the only signal that a number is old.
@@ -28,7 +27,6 @@ class CompetitorUsage {
       productId: readCrmId(json['productId'], 'productId'),
       productName: json['productName'] as String? ?? '',
       quantity: _numOrNull(json['quantity']) ?? 0,
-      metricQuantity: _numOrNull(json['metricQuantity']) ?? 0,
       updatedAt: json['updatedAt'] is String
           ? DateTime.tryParse(json['updatedAt'] as String)
           : null,
@@ -45,20 +43,20 @@ class OurProductUsage {
   const OurProductUsage({
     required this.productId,
     required this.productName,
-    required this.metricQuantity,
+    required this.quantity,
   });
 
   final int productId;
   final String productName;
 
-  /// Metric units per month, already normalised from the window.
-  final double metricQuantity;
+  /// Per month, normalised from the 90-day window.
+  final double quantity;
 
   factory OurProductUsage.fromJson(Map<String, dynamic> json) {
     return OurProductUsage(
       productId: readCrmId(json['productId'], 'productId'),
       productName: json['productName'] as String? ?? '',
-      metricQuantity: _numOrNull(json['metricQuantity']) ?? 0,
+      quantity: _numOrNull(json['quantity']) ?? 0,
     );
   }
 }
@@ -74,6 +72,8 @@ class FacilityPotentialItem {
     this.share,
     this.competitors = const [],
     this.ourProducts = const [],
+    this.noOtherBrands = false,
+    this.noOtherBrandsSetAt,
   });
 
   final int definitionId;
@@ -97,6 +97,17 @@ class FacilityPotentialItem {
 
   /// Ours, per product, over the same window as [atlasmedMonthlyAvgQty].
   final List<OurProductUsage> ourProducts;
+
+  /// The rep's standing claim that no other brand is sold here.
+  ///
+  /// The only thing that makes a 100% share legitimate (spec 0013 §4.6):
+  /// without it an empty competitor list means the market is *unknown*, not
+  /// that we own it.
+  final bool noOtherBrands;
+
+  /// When the claim was made. A stale claim still counts, so the date is the
+  /// only signal that it is old (§6).
+  final DateTime? noOtherBrandsSetAt;
 
   factory FacilityPotentialItem.fromJson(Map<String, dynamic> json) {
     final raw = json['competitors'];
@@ -127,6 +138,10 @@ class FacilityPotentialItem {
                 )
                 .toList(growable: false)
           : const [],
+      noOtherBrands: json['noOtherBrands'] as bool? ?? false,
+      noOtherBrandsSetAt: json['noOtherBrandsSetAt'] is String
+          ? DateTime.tryParse(json['noOtherBrandsSetAt'] as String)
+          : null,
     );
   }
 }
