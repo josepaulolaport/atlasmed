@@ -30,13 +30,8 @@ import 'package:atlasmed_mobile_app/features/location/presentation/screens/locat
 import 'package:atlasmed_mobile_app/features/map/presentation/screens/map_screen.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidade_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidades_list_screen.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
-import 'package:atlasmed_mobile_app/features/orders/presentation/screens/cart_screen.dart';
-import 'package:atlasmed_mobile_app/features/orders/presentation/screens/checkout_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/my_orders_screen.dart';
-import 'package:atlasmed_mobile_app/features/orders/presentation/screens/new_order_products_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_detail_screen.dart';
-import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_success_screen.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_tracking_screen.dart';
 import 'package:atlasmed_mobile_app/features/presentations/presentation/screens/presentations_screen.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profile_screen.dart';
@@ -695,75 +690,21 @@ class InteractionDetailRoute extends GoRouteData with $InteractionDetailRoute {
   }
 }
 
-@TypedGoRoute<NewOrderRoute>(
-  path: '/orders/new',
-  routes: [
-    TypedGoRoute<NewOrderCartRoute>(path: 'cart'),
-    TypedGoRoute<NewOrderCheckoutRoute>(path: 'checkout'),
-    TypedGoRoute<NewOrderSuccessRoute>(path: 'success'),
-  ],
-)
-class NewOrderRoute extends GoRouteData with $NewOrderRoute {
-  const NewOrderRoute({
-    @TypedQueryParameter(name: 'interactionId') this.interactionId,
-    @TypedQueryParameter(name: 'facilityId') this.facilityId,
-    @TypedQueryParameter(name: 'facilityName') this.facilityName,
-  });
-
-  final int? interactionId;
-  final int? facilityId;
-  final String? facilityName;
-
-  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) {
-    return NewOrderProductsScreen(
-      interactionId: interactionId,
-      facilityId: facilityId,
-      facilityName: facilityName,
-    );
-  }
-}
-
-class NewOrderCartRoute extends GoRouteData with $NewOrderCartRoute {
-  const NewOrderCartRoute();
-
-  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) => const CartScreen();
-}
-
-class NewOrderCheckoutRoute extends GoRouteData with $NewOrderCheckoutRoute {
-  const NewOrderCheckoutRoute();
-
-  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) =>
-      const CheckoutScreen();
-}
-
-class NewOrderSuccessRoute extends GoRouteData with $NewOrderSuccessRoute {
-  const NewOrderSuccessRoute({this.$extra});
-
-  final ApiOrderDetail? $extra;
-
-  static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
-
-  @override
-  Widget build(BuildContext context, GoRouterState state) {
-    if ($extra == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Não foi possível abrir a confirmação do pedido.'),
-        ),
-      );
-    }
-    return const OrderSuccessScreen();
-  }
-}
+/*
+ * Creating an order has no route.
+ *
+ * `/orders/new`, `/orders/new/cart`, `/orders/new/checkout` and
+ * `/orders/new/success` are withdrawn, not merely unreachable from the UI: an
+ * order is meant to belong to an interaction and that is not modelled yet, and
+ * checkout could never be completed anyway — it asks for a clinic plus an
+ * interaction or a doctor, and both of its pickers are stubs over empty lists.
+ *
+ * The screens behind them, the cart provider and the product order sheet are
+ * removed with them rather than left unreachable. Recover them from git when
+ * order-interactions are built.
+ *
+ * Reading orders is unaffected — see OrdersRoute and OrderDetailRoute below.
+ */
 
 @TypedGoRoute<OrderDetailRoute>(
   path: '/orders/:id',

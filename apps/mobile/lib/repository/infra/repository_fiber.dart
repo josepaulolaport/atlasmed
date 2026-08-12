@@ -37,17 +37,19 @@ class RepositoryFiber<Data> {
 
     try {
       log('[RepositoryFiber] Executing function $name');
-      final response = await fn();
-      log('[RepositoryFiber] Completing completer for $name');
-      newCompleter.complete(response);
-      return response;
-    } catch (e, stackTrace) {
+      newCompleter.complete(await fn());
+    } catch (error, stackTrace) {
       log('[RepositoryFiber] Completing completer with error for $name');
-      newCompleter.completeError(e, stackTrace);
-      rethrow;
+      newCompleter.completeError(error, stackTrace);
     } finally {
       log('[RepositoryFiber] Completing fiber $name');
       _completer = null;
     }
+
+    // The caller gets the completer's future rather than a rethrow: with a
+    // rethrow the completer's own future carried an error nobody listened to
+    // whenever no second caller had joined the fiber, and Dart reported it as
+    // an unhandled async error on top of the one the caller already saw.
+    return newCompleter.future;
   }
 }

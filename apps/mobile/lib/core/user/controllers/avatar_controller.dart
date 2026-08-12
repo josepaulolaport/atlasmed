@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,7 +20,8 @@ final avatarControllerProvider =
       return AvatarController(ref);
     });
 
-class AvatarController extends StateNotifier<AsyncValue<void>> {
+class AvatarController extends StateNotifier<AsyncValue<void>>
+    with DisposeSafeStateWrites<AsyncValue<void>> {
   AvatarController(this._ref) : super(const AsyncData(null));
 
   final Ref _ref;

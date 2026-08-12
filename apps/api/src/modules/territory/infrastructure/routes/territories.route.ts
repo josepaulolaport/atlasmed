@@ -22,13 +22,39 @@ function parseOptionalId(value: string | undefined): number | undefined {
   return parseId(value, "ID");
 }
 
-export const territoriesRoute = new Elysia()
+/**
+ * Unknown names are ignored rather than rejected: `include` is additive, and a
+ * newer client asking for something this build does not serve should get the
+ * rest of the response, not a 422.
+ */
+function parseInclude(value: string | undefined): { boundary?: boolean } {
+  if (!value) return {};
+  const requested = new Set(
+    value.split(",").map((part) => part.trim().toLowerCase())
+  );
+  return { boundary: requested.has("boundary") };
+}
+
+/**
+ * One instance per permission, never one chain with guards sprinkled through it.
+ *
+ * `requirePermission` installs `onBeforeHandle({ as: "scoped" })`, which applies
+ * to every route registered later in the same chain. This file used to declare
+ * all fifteen routes on a single chain with eleven guards interleaved, so each
+ * route silently required every permission named above it: `GET /territories/:id`
+ * demanded `create` and `update`, the boundary reads demanded `delete`, and
+ * everything past the `manage` guard was ADMIN-only. A MANAGER holds
+ * read/create/update on TERRITORY and could not fetch a boundary; OPS holds read
+ * and could not fetch a single territory.
+ */
+const territoryReadRoutes = new Elysia()
   .use(auth)
   .use(requirePermission("read", "TERRITORY"))
   .get(
     "/territories",
     async ({ query, getScope }) => {
       const scope = await getScope();
+      const include = parseInclude(query.include);
       return territoryUseCases.listTerritories().listTerritories(
         query.format === "tree" ? "tree" : "flat",
         scope,
@@ -36,7 +62,8 @@ export const territoriesRoute = new Elysia()
           typeSlug: query.type,
           managerTerritoryId: parseOptionalId(query.managerTerritoryId),
           verticalId: parseOptionalId(query.verticalId),
-        }
+        },
+        include
       );
     },
     {
@@ -45,17 +72,85 @@ export const territoriesRoute = new Elysia()
         type: t.Optional(t.String({ description: "Filter by territory type slug (e.g. manager_zone, patch)" })),
         managerTerritoryId: t.Optional(t.String({ description: "Filter patches by manager zone territory ID" })),
         verticalId: t.Optional(t.String({ description: "Filter territories by business vertical" })),
+        include: t.Optional(
+          t.String({
+            description:
+              "Comma-separated extras to embed per territory. Supported: boundary (GeoJSON, null when the territory has none).",
+          })
+        ),
       }),
     }
   )
-  .use(requirePermission("read", "TERRITORY"))
   .get("/territory-types", async () => {
     return territoryUseCases.listTerritoryTypes().listTypes();
   })
-  .use(requirePermission("read", "TERRITORY"))
   .get("/territory-types/:id", async ({ params }) => {
     return territoryUseCases.getTerritoryType().getType(parseId(params.id, "TerritoryType"));
   })
+  .get(
+    "/territories/:id",
+    async ({ params, query, getScope }) => {
+      const territoryId = parseId(params.id, "Territory");
+      const scope = await getScope();
+      const territory = await territoryUseCases
+        .getTerritory()
+        .getTerritory(territoryId, scope, parseInclude(query.include));
+      if (!territory) {
+        throw new ResourceNotFoundError("Territory", territoryId);
+      }
+      assertManagerReadableTerritory(scope, territoryId);
+      return territory;
+    },
+    {
+      query: t.Object({
+        include: t.Optional(
+          t.String({
+            description:
+              "Comma-separated extras. Supported: boundary (GeoJSON, null when the territory has none).",
+          })
+        ),
+      }),
+    }
+  )
+  .get("/territories/:id/boundary", async ({ params, getScope }) => {
+    const territoryId = parseId(params.id, "Territory");
+    const scope = await getScope();
+    const boundary = await territoryUseCases.getBoundary().getBoundary({
+      territoryId,
+      scope,
+    });
+    if (!boundary) {
+      return new Response(null, { status: 204 });
+    }
+    return boundary;
+  })
+  .get(
+    "/territories/unassigned-facilities",
+    async ({ query, getScope }) => {
+      const scope = await getScope();
+      return territoryUseCases.listUnassignedFacilities().listUnassignedFacilities({
+        scope,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+        managerZoneId: parseOptionalId(query.managerZoneId),
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+        managerZoneId: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "List clinics in manager zones without a primary consultant",
+        tags: ["Territory"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const territoryTypeCreateRoute = new Elysia()
+  .use(auth)
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territory-types",
@@ -75,7 +170,10 @@ export const territoriesRoute = new Elysia()
         blockSiblingOverlap: t.Optional(t.Boolean()),
       }),
     }
-  )
+  );
+
+const territoryTypeUpdateRoute = new Elysia()
+  .use(auth)
   .use(requirePermission("update", "TERRITORY"))
   .patch(
     "/territory-types/:id",
@@ -95,20 +193,10 @@ export const territoriesRoute = new Elysia()
         isActive: t.Optional(t.Boolean()),
       }),
     }
-  )
-  .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id", async ({ params, getScope }) => {
-    const territoryId = parseId(params.id, "Territory");
-    const scope = await getScope();
-    const territory = await territoryUseCases
-      .getTerritory()
-      .getTerritory(territoryId, scope);
-    if (!territory) {
-      throw new ResourceNotFoundError("Territory", territoryId);
-    }
-    assertManagerReadableTerritory(scope, territoryId);
-    return territory;
-  })
+  );
+
+const territoryCreateRoute = new Elysia()
+  .use(auth)
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territories",
@@ -154,7 +242,10 @@ export const territoriesRoute = new Elysia()
         ),
       }),
     }
-  )
+  );
+
+const territoryUpdateRoutes = new Elysia()
+  .use(auth)
   .use(requirePermission("update", "TERRITORY"))
   .patch(
     "/territories/:id",
@@ -176,28 +267,6 @@ export const territoriesRoute = new Elysia()
       }),
     }
   )
-  .use(requirePermission("delete", "TERRITORY"))
-  .delete("/territories/:id", async ({ params, getUser }) => {
-    const user = await getUser();
-    if (!isAdminRole(user.role.name as Role)) {
-      throw new InsufficientPermissionsError(["territory:delete"], [`role:${user.role.name}`]);
-    }
-    return territoryUseCases.deleteTerritory().deleteTerritory(parseId(params.id, "Territory"));
-  })
-  .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id/boundary", async ({ params, getScope }) => {
-    const territoryId = parseId(params.id, "Territory");
-    const scope = await getScope();
-    const boundary = await territoryUseCases.getBoundary().getBoundary({
-      territoryId,
-      scope,
-    });
-    if (!boundary) {
-      return new Response(null, { status: 204 });
-    }
-    return boundary;
-  })
-  .use(requirePermission("update", "TERRITORY"))
   .post(
     "/territories/:id/boundary/impact",
     async ({ params, body, getScope }) => {
@@ -257,7 +326,21 @@ export const territoriesRoute = new Elysia()
       territoryId: parseId(params.id, "Territory"),
       scope,
     });
-  })
+  });
+
+const territoryDeleteRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "TERRITORY"))
+  .delete("/territories/:id", async ({ params, getUser }) => {
+    const user = await getUser();
+    if (!isAdminRole(user.role.name as Role)) {
+      throw new InsufficientPermissionsError(["territory:delete"], [`role:${user.role.name}`]);
+    }
+    return territoryUseCases.deleteTerritory().deleteTerritory(parseId(params.id, "Territory"));
+  });
+
+const territoryManageRoute = new Elysia()
+  .use(auth)
   .use(requirePermission("manage", "TERRITORY"))
   .post("/territories/recompute-membership", async ({ getUser }) => {
     const user = await getUser();
@@ -265,32 +348,16 @@ export const territoriesRoute = new Elysia()
       throw new InsufficientPermissionsError(["territory:manage"], [`role:${user.role.name}`]);
     }
     return territoryUseCases.recomputeMembership().recomputeMembership();
-  })
-  .use(requirePermission("read", "TERRITORY"))
-  .get(
-    "/territories/unassigned-facilities",
-    async ({ query, getScope }) => {
-      const scope = await getScope();
-      return territoryUseCases.listUnassignedFacilities().listUnassignedFacilities({
-        scope,
-        page: query.page ? Number(query.page) : undefined,
-        limit: query.limit ? Number(query.limit) : undefined,
-        managerZoneId: parseOptionalId(query.managerZoneId),
-      });
-    },
-    {
-      query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-        managerZoneId: t.Optional(t.String()),
-      }),
-      detail: {
-        summary: "List clinics in manager zones without a primary consultant",
-        tags: ["Territory"],
-        security: [{ bearerAuth: [] }],
-      },
-    }
-  );
+  });
+
+export const territoriesRoute = new Elysia()
+  .use(territoryReadRoutes)
+  .use(territoryTypeCreateRoute)
+  .use(territoryCreateRoute)
+  .use(territoryTypeUpdateRoute)
+  .use(territoryUpdateRoutes)
+  .use(territoryDeleteRoute)
+  .use(territoryManageRoute);
 
 // Spec 0009 R7: `PATCH /facilities/:id/territory` and
 // `POST /facilities/:id/territory/unlock-geo` are gone. Zone membership is

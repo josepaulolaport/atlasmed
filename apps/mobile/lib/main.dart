@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:atlasmed_mobile_app/firebase_options.dart';
 import 'package:atlasmed_mobile_app/app.dart';
+import 'package:atlasmed_mobile_app/core/observability/error_handlers.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/repository/external/hive_repository_cache_storage.dart';
 
@@ -26,6 +27,10 @@ void main() async {
 
   // Inicializa o Firebase (configuração gerada pelo FlutterFire CLI)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Captura erros não tratados (síncronos e assíncronos) antes que virem
+  // apenas ruído no console.
+  await installErrorHandlers();
 
   // Inicializa o Hive (persistência local de sessão e cache)
   await Hive.initFlutter();

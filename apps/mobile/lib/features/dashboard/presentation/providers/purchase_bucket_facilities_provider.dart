@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/facility_entry.dart';
@@ -101,7 +102,8 @@ final purchaseBucketFacilitiesProvider = StateNotifierProvider.autoDispose
     });
 
 class PurchaseBucketFacilitiesNotifier
-    extends StateNotifier<PurchaseBucketFacilitiesState> {
+    extends StateNotifier<PurchaseBucketFacilitiesState>
+    with DisposeSafeStateWrites<PurchaseBucketFacilitiesState> {
   PurchaseBucketFacilitiesNotifier(this._ref, this.args)
     : super(const PurchaseBucketFacilitiesState());
 

@@ -3,13 +3,11 @@ import {
   APPLICATION_TIMEZONE,
   MarketMetricValidationError,
   addMonths,
-  averageMonthly,
   deriveShare,
   monthBounds,
   monthKeyAt,
   monthlyRateFromDays,
   rollingWindow,
-  trailingMonths,
 } from "./market-metric";
 
 describe("monthKeyAt", () => {
@@ -106,63 +104,45 @@ describe("addMonths", () => {
   });
 });
 
-describe("trailingMonths", () => {
-  it("returns the window oldest-first, ending at the requested month", () => {
-    expect(trailingMonths("2026-03-01", 3)).toEqual([
-      "2026-01-01",
-      "2026-02-01",
-      "2026-03-01",
-    ]);
-  });
-
-  it("crosses a year boundary", () => {
-    expect(trailingMonths("2026-01-01", 3)).toEqual([
-      "2025-11-01",
-      "2025-12-01",
-      "2026-01-01",
-    ]);
-  });
-
-  it("rejects a non-positive window", () => {
-    expect(() => trailingMonths("2026-03-01", 0)).toThrow(MarketMetricValidationError);
-  });
-});
-
 describe("deriveShare", () => {
   it("is null, never 0, when nothing is known", () => {
     // The distinction the whole metric rests on: no sales and no information
     // must not collapse into the same number.
-    expect(deriveShare(0, 0)).toEqual({ totalQty: 0, share: null });
+    expect(deriveShare(0, 0, false)).toEqual({ totalQty: 0, share: null });
   });
 
   it("is 0 when we genuinely sell nothing into a known market", () => {
-    expect(deriveShare(0, 40)).toEqual({ totalQty: 40, share: 0 });
+    expect(deriveShare(0, 40, false)).toEqual({ totalQty: 40, share: 0 });
   });
 
-  it("is 1 when everything observable is ours", () => {
-    // A clinic with orders and no competitor data is genuinely 100% of the
-    // market we can see — which is why backfilled history would read 100%.
-    expect(deriveShare(30, 0)).toEqual({ totalQty: 30, share: 1 });
+  it("is null when we have orders but nobody has looked at the market", () => {
+    // The §4.6 rule. Ours is 30 and theirs is 0, but that 0 means "nothing
+    // recorded", not "nothing there" — so 100% would be a claim to own a market
+    // no one has measured. This case read 1 before the claim existed, which is
+    // how every unsurveyed clinic reported that we owned it outright.
+    expect(deriveShare(30, 0, false)).toEqual({ totalQty: 30, share: null });
+  });
+
+  it("is 1 once a rep says there is no other brand here", () => {
+    // Same operands, one assertion added. The claim is what turns an unknown
+    // denominator into a known one.
+    expect(deriveShare(30, 0, true)).toEqual({ totalQty: 30, share: 1 });
+  });
+
+  it("is null with the claim but nothing at all to divide", () => {
+    // "No other brand here" and no orders either: the market is known to be
+    // empty, and our share of an empty market is not a number.
+    expect(deriveShare(0, 0, true)).toEqual({ totalQty: 0, share: null });
   });
 
   it("splits a mixed market", () => {
-    expect(deriveShare(30, 10)).toEqual({ totalQty: 40, share: 0.75 });
-  });
-});
-
-describe("averageMonthly", () => {
-  it("divides by the window, not by the months supplied", () => {
-    // One month of 30 across a three-month window is an average of 10 — the
-    // silent months are real zeros, not missing data.
-    expect(averageMonthly([30, 0, 0], 3)).toBe(10);
+    expect(deriveShare(30, 10, false)).toEqual({ totalQty: 40, share: 0.75 });
   });
 
-  it("treats an empty history as zero rather than dividing by zero", () => {
-    expect(averageMonthly([], 3)).toBe(0);
-  });
-
-  it("rejects a non-positive window", () => {
-    expect(() => averageMonthly([1], 0)).toThrow(MarketMetricValidationError);
+  it("does not need the claim once a competitor is recorded", () => {
+    // A recorded competitor *is* the observation; the claim adds nothing and,
+    // per the table's check constraint, cannot coexist with one anyway.
+    expect(deriveShare(30, 10, false)).toEqual(deriveShare(30, 10, true));
   });
 });
 
@@ -181,11 +161,12 @@ describe("rolling window", () => {
 
   it("does not understate a steady clinic early in the month", () => {
     // The defect this replaces: on the 5th, three *calendar* months divides two
-    // full months plus five days by three. A clinic selling 30/month reads ~21.
-    const calendarStyle = averageMonthly([30, 30, 5], 3);
-    const rolling = monthlyRateFromDays(90, 90);
+    // full months plus five days by three, so a clinic selling 30/month reads
+    // ~21 and appears to recover as the month fills in. Spelled out here rather
+    // than called, because the function that did it is gone.
+    const calendarStyle = [30, 30, 5].reduce((a, b) => a + b, 0) / 3;
     expect(calendarStyle).toBeCloseTo(21.67, 1);
-    expect(rolling).toBe(30);
+    expect(monthlyRateFromDays(90, 90)).toBe(30);
   });
 
   it("normalises by the days actually covered", () => {

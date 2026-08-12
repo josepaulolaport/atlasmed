@@ -61,6 +61,38 @@ function findUnguardedRoutes(content: string): string[] {
   return unguarded;
 }
 
+/**
+ * Returns the paths of routes that inherit a guard declared *after* them.
+ *
+ * `requirePermission` installs `onBeforeHandle({ as: "scoped" })`, so a guard
+ * applies to every route registered later in the same chain. Guards written
+ * before all of a chain's routes are therefore deliberate — several routes
+ * legitimately require two permissions at once. A guard written *between* two
+ * routes is not: it silently ANDs itself onto everything below, and the routes
+ * below never mention it.
+ *
+ * `territories.route.ts` accumulated eleven guards this way, which left its
+ * later reads requiring `delete` and then `manage` — ADMIN-only, for a GET.
+ */
+function findRoutesBelowALateGuard(content: string): string[] {
+  const trailing: string[] = [];
+
+  for (const chain of splitElysiaChains(content)) {
+    const firstRoute = ROUTE_DEFINITION.exec(chain)?.index;
+    ROUTE_DEFINITION.lastIndex = 0;
+    if (firstRoute === undefined) continue;
+
+    const lateGuard = chain.indexOf("requirePermission(", firstRoute);
+    if (lateGuard === -1) continue;
+
+    for (const match of chain.slice(lateGuard).matchAll(ROUTE_DEFINITION)) {
+      trailing.push(match[2]!);
+    }
+  }
+
+  return trailing;
+}
+
 describe("route security registry (E.2)", () => {
   it("manifest covers every route file", () => {
     const routeFiles = [...new Glob("**/*.route.ts").scanSync({ cwd: SRC_ROOT })].sort();
@@ -96,6 +128,10 @@ describe("route security registry (E.2)", () => {
         // Per-route, not per-file: a single guarded route elsewhere in the file
         // must not vouch for a sibling that carries no guard of its own.
         expect(findUnguardedRoutes(content)).toEqual([]);
+
+        // ...and no route may quietly inherit a permission declared below the
+        // one it asks for. Split the chain: one instance per permission.
+        expect(findRoutesBelowALateGuard(content)).toEqual([]);
       }
     });
   }

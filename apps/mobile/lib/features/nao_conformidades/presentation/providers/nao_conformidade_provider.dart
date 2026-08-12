@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_detail_providers.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
@@ -9,7 +10,8 @@ final fieldSuggestionsRepositoryProvider = Provider<FieldSuggestionsRepository>(
 
 /// Local cache so detail screens (esp. REP mine view without ops GET) work.
 class NaoConformidadeCacheNotifier
-    extends StateNotifier<Map<int, NaoConformidadeSuggestion>> {
+    extends StateNotifier<Map<int, NaoConformidadeSuggestion>>
+    with DisposeSafeStateWrites<Map<int, NaoConformidadeSuggestion>> {
   NaoConformidadeCacheNotifier() : super(const {});
 
   void upsert(NaoConformidadeSuggestion suggestion) {

@@ -24,16 +24,9 @@ interface Dependencies {
 
 interface CreateSessionInput {
   userId: number;
-  userRole: Role;
   ipAddress?: string | undefined;
   userAgent?: string | undefined;
   acceptLanguage?: string | undefined;
-}
-
-export interface GeneratedSessionData {
-  refreshToken: string;
-  refreshTokenHash: string;
-  expiresAt: Date;
 }
 
 export interface GeneratedRefreshCredentials {
@@ -45,29 +38,18 @@ export interface GeneratedRefreshCredentials {
 export class SessionService {
   constructor(private readonly deps: Dependencies) {}
 
-  buildRefreshCredentials(params: {
-    userRole: Role;
-    from?: Date;
-  }): GeneratedRefreshCredentials {
+  buildRefreshCredentials(
+    params: { from?: Date } = {}
+  ): GeneratedRefreshCredentials {
     const refreshToken = generateRandomToken();
 
     return {
       refreshToken,
       refreshTokenHash: hashToken(refreshToken),
-      expiresAt: getSessionExpiresAt(params.userRole, params.from),
+      expiresAt: getSessionExpiresAt(params.from),
     };
   }
 
-  /**
-   * Generate session data for a new authentication event (login).
-   */
-  generateSessionData(params: CreateSessionInput): GeneratedSessionData {
-    const credentials = this.buildRefreshCredentials({ userRole: params.userRole });
-
-    return {
-      ...credentials,
-    };
-  }
 
   async create(params: CreateSessionInput) {
     const parsed = parseUserAgent(params.userAgent);
@@ -77,7 +59,7 @@ export class SessionService {
     });
 
     const { refreshToken, refreshTokenHash, expiresAt } =
-      this.generateSessionData(params);
+      this.buildRefreshCredentials();
 
     const { session, revokedSessionIds } =
       await this.deps.sessionRepository.createLoginSessionTransaction({

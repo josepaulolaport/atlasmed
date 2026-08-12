@@ -163,7 +163,6 @@ describe.skipIf(!dbUp)("metric sweep candidates (database)", () => {
         definitionId: definition!.id,
         verticalId: profile!.verticalId,
         productId: product!.id,
-        month: "2026-05-01",
         quantity: "12",
         updatedAt: new Date("2026-05-10T12:00:00.000Z"),
       });

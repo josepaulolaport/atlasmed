@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -22,7 +23,8 @@ final facilityPhotoUploadProvider = StateNotifierProvider.autoDispose
       return FacilityPhotoUploadController(ref, facilityId);
     });
 
-class FacilityPhotoUploadController extends StateNotifier<AsyncValue<void>> {
+class FacilityPhotoUploadController extends StateNotifier<AsyncValue<void>>
+    with DisposeSafeStateWrites<AsyncValue<void>> {
   FacilityPhotoUploadController(this._ref, this.facilityId)
     : super(const AsyncData(null));
 

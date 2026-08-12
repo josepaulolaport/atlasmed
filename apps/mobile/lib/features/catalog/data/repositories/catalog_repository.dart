@@ -212,7 +212,7 @@ class CatalogRepository {
 
   /// Every competitor product in the catalog, regardless of whether it's
   /// linked to any AtlasMed variant yet — backs the admin "gerenciar
-  /// concorrentes" picker.
+  /// outras marcas" picker.
   Future<List<CompetitorProduct>> getAllCompetitorProducts() async {
     final response = await _get(
       _uri('/competitor-products', const {'limit': '500', 'isActive': 'true'}),

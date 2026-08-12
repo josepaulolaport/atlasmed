@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/boundary_impact.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
@@ -23,7 +24,8 @@ final territoryEditorControllerProvider = StateNotifierProvider.autoDispose
       return TerritoryEditorController(ref, target);
     });
 
-class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
+class TerritoryEditorController extends StateNotifier<TerritoryEditorState>
+    with DisposeSafeStateWrites<TerritoryEditorState> {
   TerritoryEditorController(this._ref, this.target)
     : super(TerritoryEditorState(isCreating: target.isCreating)) {
     _load();

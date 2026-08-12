@@ -1,8 +1,5 @@
 import {
-  monthKeyAt,
   recomputeMetricSnapshots,
-  trailingMonths,
-  type MonthKey,
   type RecomputeMetricSnapshotsResult,
 } from "@atlasmed/facility-insights";
 import { createMetricSnapshotStore, type AnyDatabase } from "@atlasmed/database";
@@ -26,27 +23,14 @@ export class RecomputeMetricSnapshotsUseCase {
 
   async execute(input: {
     profileId: number;
-    months: MonthKey[];
     computedAt?: Date;
   }): Promise<RecomputeMetricSnapshotsResult> {
     const store = createMetricSnapshotStore(this.deps.database ?? db);
     return recomputeMetricSnapshots(store, {
       profileId: input.profileId,
-      months: input.months,
       computedAt: input.computedAt ?? new Date(),
     });
   }
-}
-
-/**
- * The window a write-triggered recompute covers.
- *
- * A single edit can only affect the month it belongs to — but the displayed
- * figure averages a trailing window, so the months either side are what a reader
- * actually sees move. Kept here so the trigger and the sweep agree on it.
- */
-export function windowForInstant(instant: Date, monthsInWindow: number): MonthKey[] {
-  return trailingMonths(monthKeyAt(instant), monthsInWindow);
 }
 
 export type { RecomputeMetricSnapshotsResult as RecomputeResult };

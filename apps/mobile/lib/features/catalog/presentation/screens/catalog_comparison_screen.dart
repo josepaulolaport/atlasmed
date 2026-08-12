@@ -107,7 +107,7 @@ class _CatalogComparisonScreenState
             CatalogSearchBar(
               controller: _searchController,
               onChanged: _onSearchChanged,
-              hintText: 'Buscar produto concorrente…',
+              hintText: 'Buscar produto de outra marca…',
               onFilter: () => showSortFilterSheet(
                 context,
                 current: _sortColumn,

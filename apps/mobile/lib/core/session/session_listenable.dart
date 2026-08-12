@@ -7,9 +7,15 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 
 class SessionListenable extends ChangeNotifier {
   SessionListenable(this.sessionEnvironment) {
-    _subscription = sessionEnvironment.dataStream.listen((_) {
-      notifyListeners();
-    });
+    _subscription = sessionEnvironment.dataStream.listen(
+      (_) => notifyListeners(),
+      // A session that cannot be loaded is not an authenticated one: notify so
+      // the router re-evaluates and lands on the login flow.
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('SessionListenable: session stream failed: $error');
+        notifyListeners();
+      },
+    );
   }
 
   final SessionEnvironment sessionEnvironment;
