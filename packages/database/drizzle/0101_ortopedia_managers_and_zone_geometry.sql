@@ -6,7 +6,7 @@
 --
 -- Two things happen here, and the order matters:
 --   1. every manager zone and rep patch is redrawn from `states.boundary`
---   2. three MANAGER users are created and assigned those zones
+--   2. three MANAGER users are created, given the linha, and assigned those zones
 --
 -- The five zones cover the twelve states that hold clinics, not the whole country. A
 -- clinic created in one of the other fifteen (BA, MG, RS, SC, GO, MT, MS, ES and the
@@ -16,9 +16,8 @@
 -- so the zone would exist only to anticipate an expansion that has not happened.
 --
 -- The three addresses are `firstname.lastname@atlasmed.com.br`, confirmed 2026-08-11 —
--- the same domain every existing user has. It matters more than an address usually does:
--- these accounts carry an unusable password, so the password-reset link sent to this
--- address is the only way any of them ever gets in.
+-- the same domain every existing user has. They are also where "esqueci minha senha"
+-- sends the link that replaces the shared bootstrap password below.
 --
 -- IDEMPOTENT throughout: every insert is guarded and every update is a no-op on second
 -- run, so a partial failure can be retried.
@@ -124,7 +123,31 @@ SELECT v.email, v.username, v.first_name, v.last_name, 'ACTIVE', false, v.passwo
  WHERE EXISTS (SELECT 1 FROM roles WHERE name = 'MANAGER')
    AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.email) = lower(v.email));
 
--- ── 3. Assign the zones ─────────────────────────────────────────────────────────
+-- ── 3. Give them the linha ──────────────────────────────────────────────────────
+--
+-- A territory says *where* a manager works; `user_vertical_assignments` says *which
+-- linha they may see at all*, and the two are enforced separately.
+-- `canAccessVertical` refuses outright when the list is empty — not "no data", a 403 —
+-- so a manager holding five zones and no vertical row can sign in and every endpoint
+-- refuses them: assigned-clinics, unassigned-clinics, Equipe, and every filter drawer
+-- comes back empty.
+--
+-- That is exactly the "staffed but seeing nothing" failure this migration warns about
+-- at the top, and the first version of it caused precisely that. Every existing rep has
+-- a row here; the managers were created without one.
+
+INSERT INTO user_vertical_assignments (user_id, vertical_id)
+SELECT u.id, (SELECT id FROM business_verticals WHERE code = 'ORTOPEDIA')
+  FROM users u
+ WHERE lower(u.email) IN (
+         'pedro.poggian@atlasmed.com.br',
+         'marcelo.moreno@atlasmed.com.br',
+         'silvio.vieira@atlasmed.com.br'
+       )
+   AND EXISTS (SELECT 1 FROM business_verticals WHERE code = 'ORTOPEDIA')
+ ON CONFLICT (user_id, vertical_id) DO NOTHING;
+
+-- ── 4. Assign the zones ─────────────────────────────────────────────────────────
 --
 -- Pedro takes Rio de Janeiro, Marcelo takes São Paulo, and Silvio takes the remaining
 -- three: Paraná, Distrito Federal e Tocantins and Norte. Membership is territory-derived
@@ -145,7 +168,7 @@ SELECT u.id, t.id
    AND t.vertical_id = (SELECT id FROM business_verticals WHERE code = 'ORTOPEDIA')
  ON CONFLICT (user_id, territory_id) DO NOTHING;
 
--- ── 4. Re-derive clinic membership where the geometry now says otherwise ────────
+-- ── 5. Re-derive clinic membership where the geometry now says otherwise ────────
 --
 -- The boundaries moved, so the denormalised `manager_zone_id` has to catch up. On the
 -- snapshot this changes nothing — the 151 mismatched rows are mismatched precisely
