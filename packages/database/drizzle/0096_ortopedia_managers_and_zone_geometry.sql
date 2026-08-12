@@ -84,31 +84,42 @@ UPDATE territories t
 
 -- ── 2. The three managers ───────────────────────────────────────────────────────
 --
--- Created ACTIVE with an unusable password, which is the only shape that works against
--- the auth code as it stands:
+-- Created ACTIVE with a **shared bootstrap password**, chosen 2026-08-12. The
+-- plaintext is not written here — it is shared with the three of them out of band —
+-- but these are argon2id digests of a password several people know, so treat them as
+-- live credentials:
 --
---   * `users.password_hash` is NOT NULL, and `argon2.verify` throws on a malformed
---     string — `login.use-case.ts:84` verifies against the stored hash even for a
---     non-ACTIVE user, so a sentinel like '!' would be a 500 rather than a refusal.
---     Each hash below is a real argon2id digest of 32 random bytes that were generated
---     and discarded. No plaintext exists, so none of them can ever verify.
---   * PENDING would be the more honest status, but `reset-password.use-case.ts` never
---     promotes a user to ACTIVE, and `login.use-case.ts:83` refuses anything that is not
---     ACTIVE. A PENDING manager could set a password and still not get in.
+--   ⚠️ ANYONE WITH READ ACCESS TO THIS REPOSITORY CAN LOG IN AS ALL THREE MANAGERS,
+--   in every environment this migration has been applied to, until each of them
+--   changes their own password. Rotating it means another migration, or each manager
+--   using "alterar senha" after first login. That cost was weighed and accepted: the
+--   alternative was an activation email per manager before anyone could see the
+--   screen at all.
 --
--- So: ACTIVE, unusable password, and each of them activates through "esqueci minha
--- senha" — `request-password-reset.use-case.ts` has no status gate and emails the token.
+-- ACTIVE rather than PENDING because the auth code leaves no third option:
+--   * `login.use-case.ts:83` refuses any status that is not ACTIVE, and
+--     `reset-password.use-case.ts` never promotes a user to ACTIVE — so a PENDING
+--     manager could set a password and still not get in.
+--   * `users.password_hash` is NOT NULL and `argon2.verify` throws on a malformed
+--     string (`login.use-case.ts:84` verifies even for a non-ACTIVE user), so a
+--     sentinel like '!' would be a 500 rather than a refusal.
+--
+-- Each hash below is a distinct salt of the same password: free, and it keeps one of
+-- them rotatable without touching the other two.
+--
+-- "Esqueci minha senha" still works and remains the way to replace it —
+-- `request-password-reset.use-case.ts` has no status gate and email is configured.
 
 INSERT INTO users (email, username, first_name, last_name, status, email_verified, password_hash, role_id)
 SELECT v.email, v.username, v.first_name, v.last_name, 'ACTIVE', false, v.password_hash,
        (SELECT id FROM roles WHERE name = 'MANAGER')
   FROM (VALUES
     ('pedro.poggian@atlasmed.com.br',  'pedro.poggian',  'Pedro',   'Poggian',
-     '$argon2id$v=19$m=65536,t=3,p=4$YyBe7bSgJRGIr7ZfL9JPBA$NN3iSqTGY4J5Ou1SacWfN/Mr8wqxu+mwLQ/stkZmOTI'),
+     '$argon2id$v=19$m=65536,t=3,p=4$j55Xi2kubtuJaYkeDhXrQA$xzI4GYyn1t3tjB9626AfAlzPeuuy9tYBtXyRjnPs0PY'),
     ('marcelo.moreno@atlasmed.com.br', 'marcelo.moreno', 'Marcelo', 'Moreno',
-     '$argon2id$v=19$m=65536,t=3,p=4$+MDR+dli1l24+iLkRL9hWQ$khWd/LYkkJmO3pdg1X1i/93Ag1p19ThEds/swpiwzw8'),
+     '$argon2id$v=19$m=65536,t=3,p=4$SvVasahQ1UF3Zzg3r1DB/Q$Wuyq/yq+vR1L3gpJGvRyGZZZop7xmHu3WTGBTs/EWok'),
     ('silvio.vieira@atlasmed.com.br',  'silvio.vieira',  'Silvio',  'Vieira',
-     '$argon2id$v=19$m=65536,t=3,p=4$FT5EBJhlwAu6UEYk4Dzehg$Kn9NCJ940WzqwAU2MtTNzPaGJ34+tqzJBTgXKBRanNg')
+     '$argon2id$v=19$m=65536,t=3,p=4$MD5KfcKIJbPUflK4WLaAzA$0MX9cUKx6pNa9D9XQ7uz5UoA/6LGoMa2LxhQ/nzUaMQ')
   ) AS v(email, username, first_name, last_name, password_hash)
  WHERE EXISTS (SELECT 1 FROM roles WHERE name = 'MANAGER')
    AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.email) = lower(v.email));
