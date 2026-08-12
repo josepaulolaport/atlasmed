@@ -20,6 +20,12 @@ export interface PersonProjectionsHttpUseCases {
   endFacilityAffiliation(): Executable;
 }
 
+/** Query values arrive as strings; anything unusable falls back to the default. */
+function parsePositiveInt(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
   const parsed = schema.safeParse(body);
 
@@ -208,7 +214,14 @@ const listCnesSuggestionsRoute = (
       async ({ params, query }) =>
         useCase.execute({
           facilityId: params.id,
-          limit: query.limit,
+          // Parsed here rather than declared as a `query` schema. Every sibling
+          // route in this file declares none and therefore tolerates whatever
+          // the client attaches; a strict `t.Object` on this one route would
+          // turn any extra parameter into a 422, which the app renders as
+          // "não foi possível consultar" — indistinguishable from CNES being
+          // down. The use case clamps the value, so the edge check bought
+          // nothing.
+          limit: parsePositiveInt((query as Record<string, unknown>)?.limit),
         }),
       {
         detail: {
@@ -217,7 +230,6 @@ const listCnesSuggestionsRoute = (
           security: [{ bearerAuth: [] }],
         },
         params: facilityIdParams,
-        query: t.Object({ limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })) }),
       }
     );
 

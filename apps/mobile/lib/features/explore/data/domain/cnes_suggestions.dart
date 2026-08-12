@@ -51,9 +51,16 @@ class CnesSuggestion {
   /// e.g. `CRM 119508/SP`.
   final String? registrationLabel;
 
-  factory CnesSuggestion.fromMap(Map<String, dynamic> map) {
+  /// Returns null for a row it cannot make sense of, rather than throwing.
+  ///
+  /// One unparseable row used to take the whole section down: the cast threw,
+  /// the fetch's catch turned it into "não foi possível consultar", and a
+  /// serialisation bug was indistinguishable from CNES being unreachable.
+  static CnesSuggestion? tryFromMap(Map<String, dynamic> map) {
+    final personId = _asInt(map['personId']);
+    if (personId == null) return null;
     return CnesSuggestion(
-      personId: (map['personId'] as num).toInt(),
+      personId: personId,
       displayName: (map['displayName'] as String?)?.trim().isNotEmpty == true
           ? map['displayName'] as String
           : 'Sem nome',
@@ -71,6 +78,15 @@ class CnesSuggestion {
       specialty: occupation,
     );
   }
+}
+
+/// `persons.id` is a bigint, which JSON encoders may render as a number or a
+/// string depending on the driver. Accept both.
+int? _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim());
+  return null;
 }
 
 String? _nonEmpty(Object? value) {
@@ -106,7 +122,8 @@ class CnesSuggestions {
       items: rawItems is List
           ? rawItems
                 .whereType<Map<String, dynamic>>()
-                .map(CnesSuggestion.fromMap)
+                .map(CnesSuggestion.tryFromMap)
+                .whereType<CnesSuggestion>()
                 .toList(growable: false)
           : const [],
     );

@@ -159,11 +159,15 @@ async function seed(): Promise<Fixture> {
      where exists (select 1 from registry.professional_councils where cnes_id = ${COUNCIL});
   `);
 
+  // Coerced once, here. These come back from a bigint column as strings, and
+  // leaving them that way is what let the serialisation bug through: assertions
+  // compared string to string and agreed, while the client compared string to
+  // number and threw.
   return {
-    facilityId: facility!.id,
-    linkedPersonId: people[SUS_LINKED]!,
-    freePersonId: people[SUS_FREE]!,
-    adminOnlyPersonId: adminOnly!.id,
+    facilityId: Number(facility!.id),
+    linkedPersonId: Number(people[SUS_LINKED]!),
+    freePersonId: Number(people[SUS_FREE]!),
+    adminOnlyPersonId: Number(adminOnly!.id),
   };
 }
 
@@ -185,6 +189,20 @@ describe.if(dbUp)("ListCnesSuggestionsUseCase", () => {
     expect(result.status).toBe("OK");
     const ids = result.items.map((i) => i.personId);
     expect(ids).toContain(fixture.freePersonId);
+  });
+
+  it("serialises personId as a number", async () => {
+    const result = await useCase.execute({ facilityId: fixture.facilityId });
+    /**
+     * `persons.id` is bigint and the driver returns those as strings. The first
+     * version shipped `"410"` under a type that said `number`; every test here
+     * passed because the fixture ids were strings too, so both sides of the
+     * comparison were wrong in the same way. The client threw on the cast.
+     */
+    expect(result.items.length).toBeGreaterThan(0);
+    for (const item of result.items) {
+      expect(typeof item.personId).toBe("number");
+    }
   });
 
   it("excludes someone already linked to this facility, server-side", async () => {

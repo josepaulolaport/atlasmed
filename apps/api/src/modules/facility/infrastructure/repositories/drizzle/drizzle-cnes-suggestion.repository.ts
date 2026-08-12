@@ -171,7 +171,12 @@ export class DrizzleCnesSuggestionRepository {
     }[];
 
     return rows.map((row) => ({
-      personId: row.person_id,
+      // `persons.id` is bigint, and the driver hands those back as strings to
+      // avoid precision loss. Passing it through gave a payload whose personId
+      // was `"410"` while this type said `number` — the API looked correct in
+      // every test and the client threw on the cast, which surfaced as "could
+      // not consult CNES" rather than as a type error.
+      personId: Number(row.person_id),
       firstName: row.first_name,
       lastName: row.last_name,
       socialName: row.social_name,

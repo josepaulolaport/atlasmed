@@ -107,6 +107,32 @@ void main() {
       expect(messages, hasLength(4));
     });
 
+    test('accepts personId as a string, because bigint serialises that way', () {
+      // The bug that broke the live section: `persons.id` is bigint and the
+      // driver returned "410". The cast threw, the fetch's catch turned it into
+      // "não foi possível consultar", and a serialisation bug was
+      // indistinguishable from CNES being unreachable.
+      final parsed = CnesSuggestions.fromMap({
+        'status': 'OK',
+        'items': [
+          {'personId': '410', 'displayName': 'Doutor Fulano'},
+          {'personId': 411, 'displayName': 'Doutora Beltrana'},
+        ],
+      });
+      expect(parsed.items.map((i) => i.personId), [410, 411]);
+    });
+
+    test('drops an unparseable row instead of losing the whole section', () {
+      final parsed = CnesSuggestions.fromMap({
+        'status': 'OK',
+        'items': [
+          {'displayName': 'Sem id'},
+          {'personId': 7, 'displayName': 'Boa'},
+        ],
+      });
+      expect(parsed.items.single.personId, 7);
+    });
+
     test('an unrecognised status degrades to unavailable, not to OK', () {
       // A server that grows a new status must not read as "CNES had no answer".
       final parsed = CnesSuggestions.fromMap({
