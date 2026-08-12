@@ -70,10 +70,9 @@ describe.skipIf(!dbUp)("dashboard queries (database)", () => {
   });
 
   test("penetração média returns one row per definition, share within 0–1", async () => {
-    const rows = await repository.averageShareByDefinition({
-      filter: filter(),
-      months: ["2026-06-01", "2026-07-01", "2026-08-01"],
-    });
+    // No month argument since spec 0013 §4.6: one snapshot row per (clinic,
+    // metric), so there is no window for a reader to choose.
+    const rows = await repository.averageShareByDefinition({ filter: filter() });
 
     for (const row of rows) {
       expect(row.clinicsCounted).toBeGreaterThanOrEqual(0);

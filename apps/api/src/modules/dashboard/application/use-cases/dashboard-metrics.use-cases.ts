@@ -4,7 +4,6 @@ import {
   APPLICATION_TIMEZONE,
   monthBounds,
   monthKeyAt,
-  trailingMonths,
 } from "@atlasmed/facility-insights";
 import { sql } from "drizzle-orm";
 import { ForbiddenError } from "../../../../shared/errors";
@@ -29,15 +28,6 @@ import {
   type DashboardProfileFilter,
   type DashboardSubject,
 } from "../dashboard-query";
-
-/**
- * How many calendar months penetração média averages over.
- *
- * The same read-side window the clinic screen uses (spec 0013 §4.3). Two
- * different windows would make a manager's average disagree with the clinics it
- * averages, for no reason a user could discover.
- */
-const MONTHS_IN_WINDOW = 3;
 
 export interface DashboardMetricRequest {
   viewerId: number;
@@ -270,11 +260,16 @@ export class GetOrdersMetricUseCase extends DashboardMetricUseCase {
  * had a calculable share. The gap between the two is the point: a mean over 3
  * of 200 clinics is a real number about very little, and hiding that behind a
  * single percentage is how a dashboard lies without ever being wrong.
+ *
+ * Since spec 0013 §4.6 the snapshot holds one row per (clinic, metric) rather
+ * than one per month, so there is no window to choose here and no `now` to
+ * inject: the value is what is true at the clinic today. The 90-day rolling
+ * window still exists, but it lives inside the recompute that writes the row —
+ * which is where it belongs, since a reader cannot derive a day window from
+ * month facts anyway.
  */
 export class GetPenetrationMetricUseCase extends DashboardMetricUseCase {
-  async execute(
-    request: DashboardMetricRequest & { now?: Date },
-  ): Promise<{
+  async execute(request: DashboardMetricRequest): Promise<{
     verticalId: number;
     denominator: number;
     metrics: DashboardPenetrationRow[];
@@ -284,17 +279,9 @@ export class GetPenetrationMetricUseCase extends DashboardMetricUseCase {
       return { verticalId: context.verticalId, denominator: 0, metrics: [] };
     }
 
-    const months = trailingMonths(
-      monthKeyAt(request.now ?? new Date(), APPLICATION_TIMEZONE),
-      MONTHS_IN_WINDOW,
-    );
-
     const [denominator, metrics] = await Promise.all([
       this.deps.repository.countProfiles(context.filter),
-      this.deps.repository.averageShareByDefinition({
-        filter: context.filter,
-        months,
-      }),
+      this.deps.repository.averageShareByDefinition({ filter: context.filter }),
     ]);
 
     return { verticalId: context.verticalId, denominator, metrics };

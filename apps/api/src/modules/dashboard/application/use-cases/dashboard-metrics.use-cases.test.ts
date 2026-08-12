@@ -209,7 +209,7 @@ describe("penetração média (spec 0014 §7.4)", () => {
     const result = await new GetPenetrationMetricUseCase({
       repository,
       directory: fakeDirectory(),
-    }).execute({ ...request(rep), now: new Date("2026-08-11T12:00:00Z") });
+    }).execute(request(rep));
 
     expect(result.denominator).toBe(10);
     expect(result.metrics[0]).toMatchObject({
@@ -233,7 +233,7 @@ describe("penetração média (spec 0014 §7.4)", () => {
     const result = await new GetPenetrationMetricUseCase({
       repository,
       directory: fakeDirectory(),
-    }).execute({ ...request(rep), now: new Date("2026-08-11T12:00:00Z") });
+    }).execute(request(rep));
 
     expect(result.metrics[0]!.meanShare).toBeNull();
     expect(result.denominator).toBe(10);

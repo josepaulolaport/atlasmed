@@ -708,6 +708,13 @@
       "when": 1786571471715,
       "tag": "0100_share_requires_a_known_market",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1786573373647,
+      "tag": "0101_ortopedia_managers_and_zone_geometry",
+      "breakpoints": true
     }
   ]
 }

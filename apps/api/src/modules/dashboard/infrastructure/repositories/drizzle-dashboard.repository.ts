@@ -11,7 +11,6 @@ import {
   territories,
   userTerritoryAssignments,
 } from "@atlasmed/database";
-import type { MonthKey } from "@atlasmed/facility-insights";
 import { sql, eq, and, inArray, isNotNull, isNull, exists, type SQL } from "drizzle-orm";
 import type { DashboardProfileFilter } from "../../application/dashboard-query";
 
@@ -474,45 +473,38 @@ export class DrizzleDashboardRepository {
    * something that is not ampoules. One row per definition is the only
    * arithmetic that means anything.
    *
-   * `AVG ... FILTER (WHERE total > 0)` is spec 0014 §4's "counting only clinics
-   * where it is calculated": a clinic with no data must not drag the average
-   * toward zero, because no-information and no-sales are different facts
-   * (spec 0013 §4.3).
+   * **Averages the stored `share`; it does not recompute one.** That is the
+   * whole point after spec 0013 §4.6. `share` is null unless the market is
+   * actually known — either a competitor figure exists, or a rep has claimed
+   * "nenhuma outra marca" — so a clinic with orders and no competitor data
+   * contributes nothing. Dividing `ours_qty` by the total here instead would
+   * call that clinic 100% and fold it into a manager's average: the plausible
+   * wrong number the claim was introduced to prevent, arriving through the
+   * aggregate rather than the clinic screen.
    *
-   * Reads `facility_metric_snapshots`, which is what makes this aggregatable at
-   * all — before spec 0013 the share was computed per request and could not be
-   * rolled up. A profile with no snapshot rows in the window simply does not
-   * appear, and is therefore excluded from the mean rather than counted as 0.
+   * `AVG` and `COUNT` both skip nulls, which is exactly spec 0014 §4's "counting
+   * only clinics where it is calculated" — and why `COALESCE(share, 0)` must
+   * never appear here: it would average "we know nothing" in as "we sell
+   * nothing".
+   *
+   * One row per (profile, metric) since §4.6 — no month, no window, no summing.
+   * The value is what is true now, and nothing reads it as a series.
    */
   async averageShareByDefinition(input: {
     filter: DashboardProfileFilter;
-    months: MonthKey[];
   }): Promise<DashboardPenetrationRow[]> {
-    if (input.months.length === 0) return [];
-
     const scoped = buildScopedProfilesQuery(input.filter);
 
     const rows = (await db.execute(sql`
-      WITH per_profile AS (
-        SELECT s.definition_id,
-               SUM(s.ours_qty)   AS ours,
-               SUM(s.theirs_qty) AS theirs
-        FROM facility_metric_snapshots s
-        WHERE s.facility_vertical_profile_id IN (${scoped})
-          AND s.month IN (${sql.join(
-            input.months.map((month) => sql`${month}::date`),
-            sql`, `,
-          )})
-        GROUP BY s.definition_id, s.facility_vertical_profile_id
-      )
-      SELECT d.id            AS definition_id,
-             d.key           AS key,
-             d.label         AS label,
-             AVG(p.ours / NULLIF(p.ours + p.theirs, 0))
-               FILTER (WHERE p.ours + p.theirs > 0)      AS mean_share,
-             COUNT(*) FILTER (WHERE p.ours + p.theirs > 0)::int AS clinics_counted
+      SELECT d.id    AS definition_id,
+             d.key   AS key,
+             d.label AS label,
+             AVG(s.share)        AS mean_share,
+             COUNT(s.share)::int AS clinics_counted
       FROM ${productPotentialDefinitions} d
-      LEFT JOIN per_profile p ON p.definition_id = d.id
+      LEFT JOIN facility_metric_snapshots s
+        ON s.definition_id = d.id
+       AND s.facility_vertical_profile_id IN (${scoped})
       WHERE d.vertical_id = ${input.filter.verticalId}
         AND d.deleted_at IS NULL
       GROUP BY d.id, d.key, d.label

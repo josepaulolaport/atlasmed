@@ -163,24 +163,34 @@ make:
   eligibility (`APPROVED`/`INVOICED`, `SALE`/`CONSIGNMENT`); counting every row would count
   `DRAFT` and `REJECTED` orders as commercial activity.
 
-**Penetração média renders empty, and will until spec 0013's P4 triggers land.** It reads
-`facility_metric_snapshots`, and **nothing in production writes that table**:
-`RecomputeMetricSnapshotsUseCase` exists, is correct and is tested, but its only call sites
-are in `metric-snapshot-recompute.db.test.ts` — it is absent from `potentialUseCases`, from
-every route and from every workflow. The endpoint is correct; the number is `—` because
-there is nothing to average, which is the right thing for it to say.
+~~**Penetração média renders empty, and will until spec 0013's P4 triggers land.**~~
+**Superseded 2026-08-12 — the triggers landed** (PR #258). Rep edits recompute inline, order
+writes enqueue a Temporal workflow, an hourly sweep reconciles and a nightly pass covers the
+profiles nothing touched. The warning this section carried — that wiring one trigger without
+the others would snapshot only the clinics with competitor data and drag the mean down — is
+answered: all of them landed together, and the `no_other_brands` claim now decides whether a
+clinic *has* a share at all rather than leaving 100% to be inferred from silence.
 
-The usage *writer* does exist — `PUT /facilities/:id/potentials/:definitionId/usage/:productId`
-upserts `facility_product_usage` — it simply does not recompute afterwards, so the clinic
-screen (which computes live from orders + usage) is right while the snapshot stays unwritten.
-The mobile picker that would call it has no call sites either.
+The number is still `—` in an environment where nothing has been written yet, which is
+correct: it populates as orders are placed and reps record competitors.
 
-**Do not wire the recompute into the usage write on its own.** §4.4 has three triggers, and
-rule 1 — order writes enqueue a recompute — is missing too. Wiring only rules 2 and 3 would
-snapshot exactly the profiles where a rep recorded competitor data and none of the profiles
-that have orders and no competitor data. Those are the `share = 100%` clinics (spec 0013
-§9.2), so omitting them drags the aggregate mean down systematically: not an empty number, a
-plausible wrong one. Picker, triggers and the reconciliation sweep have to land together.
+### Rebased onto spec 0013 §4.6 (2026-08-12)
+
+`facility_metric_snapshots` lost its `month`. One row per (clinic-linha, metric), no series,
+so penetração média changed with it:
+
+- **It averages the stored `share`; it no longer computes one.** `share` is null unless the
+  market is genuinely known — a competitor figure exists, or a rep has claimed "nenhuma outra
+  marca". Recomputing `ours ÷ total` here would call a clinic with orders and no competitor
+  data **100%** and fold that into a manager's average: precisely the plausible wrong number
+  spec 0013 §4.6 introduced the claim to prevent, arriving through the aggregate instead of
+  the clinic screen.
+- `AVG` and `COUNT` skip nulls, which *is* §4's "counting only clinics where it is
+  calculated". `COALESCE(share, 0)` must never appear here — it averages "we know nothing" in
+  as "we sell nothing".
+- The trailing-month window is gone from this endpoint, and with it the injected clock. The
+  90-day window still exists but lives in the recompute that writes the row, which is where
+  it belongs: a reader cannot derive a day window from month facts.
 
 ## 8.2 Found in review (2026-08-11)
 
