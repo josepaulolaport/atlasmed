@@ -118,10 +118,11 @@ class _TeamScreenState extends ConsumerState<TeamScreen> {
                       ],
                     );
                   }
-                  return ListView.separated(
+                  // No separator: each row draws its own bottom border, the
+                  // same way Explorar's list does.
+                  return ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: members.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, index) => _MemberTile(
                       member: members[index],
                       sortBy: _sortBy,
@@ -201,32 +202,15 @@ class _MemberTile extends StatelessWidget {
   final String sortBy;
   final bool isManagerRoster;
 
+  /// Built to match `ClinicRow` in Explorar rather than as a bare `ListTile`:
+  /// the same bordered row, 44px rounded avatar, 15/w600 title and icon-led
+  /// 11px meta. Two lists of people in one app should not look like they came
+  /// from different products.
   @override
   Widget build(BuildContext context) {
-    final territories = member.territories.map((t) => t.name).join(', ');
-    final subtitle = [
-      if (member.assignedClinicCount > 0)
-        '${member.assignedClinicCount} clínicas',
-      if (territories.isNotEmpty) territories,
-    ].join(' · ');
+    final territories = member.territories.map((t) => t.name).join(' · ');
 
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundImage: member.avatarUrl == null
-            ? null
-            : NetworkImage(member.avatarUrl!),
-        child: member.avatarUrl == null
-            ? Text(member.displayName.characters.first.toUpperCase())
-            : null,
-      ),
-      title: Text(member.displayName),
-      subtitle: subtitle.isEmpty ? null : Text(subtitle),
-      trailing: sortBy == 'name'
-          ? const Icon(Icons.chevron_right_rounded)
-          : Text(
-              _formatMetric(sortBy, member.metricValue),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
+    return InkWell(
       onTap: () {
         if (isManagerRoster && member.roleName == 'MANAGER') {
           TeamMemberRoute(
@@ -241,6 +225,111 @@ class _MemberTile extends StatelessWidget {
           subjectRole: member.roleName,
         ).push(context);
       },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.blue100, AppColors.blueLight],
+                ),
+                image: member.avatarUrl == null
+                    ? null
+                    : DecorationImage(
+                        image: NetworkImage(member.avatarUrl!),
+                        fit: BoxFit.cover,
+                      ),
+              ),
+              alignment: Alignment.center,
+              child: member.avatarUrl != null
+                  ? null
+                  : Text(
+                      member.displayName.characters.first.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.navyBright,
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                      letterSpacing: -0.15,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      // A manager holds no clinics directly — their number is
+                      // their zones', and showing "0 clínicas" would read as a
+                      // performance figure rather than a shape of the model.
+                      if (member.assignedClinicCount > 0)
+                        _MemberMeta(
+                          icon: Icons.local_hospital_rounded,
+                          text:
+                              '${member.assignedClinicCount} '
+                              '${member.assignedClinicCount == 1 ? 'clínica' : 'clínicas'}',
+                        ),
+                      if (territories.isNotEmpty)
+                        _MemberMeta(
+                          icon: Icons.layers_rounded,
+                          text: territories,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (sortBy == 'name')
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.gray500,
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  _formatMetric(sortBy, member.metricValue),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray900,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -250,6 +339,37 @@ class _MemberTile extends StatelessWidget {
     if (value == null) return '—';
     if (_percentSorts.contains(sortBy)) return '${(value * 100).round()}%';
     return '${value.round()}';
+  }
+}
+
+/// One icon-led fact under a person's name — the shape Explorar's rows use.
+class _MemberMeta extends StatelessWidget {
+  const _MemberMeta({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 11, color: AppColors.gray500),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.gray500,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -288,21 +408,99 @@ class RepsWithoutPatchScreen extends ConsumerWidget {
                 ],
               );
             }
-            return ListView.separated(
+            return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               itemCount: members.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final member = members[index];
-                return ListTile(
-                  title: Text(member.displayName),
-                  subtitle: Text(member.email),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                return _PersonRow(
+                  title: member.displayName,
+                  subtitle: member.email,
+                  subtitleIcon: Icons.mail_outline_rounded,
                   onTap: () => UserDetailRoute(id: member.userId).push(context),
                 );
               },
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// A person row in the Explorar shape, for the lists that carry no metrics.
+class _PersonRow extends StatelessWidget {
+  const _PersonRow({
+    required this.title,
+    required this.subtitle,
+    required this.subtitleIcon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData subtitleIcon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.surfaceSecondary)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.blue100, AppColors.blueLight],
+                ),
+              ),
+              child: Text(
+                title.characters.first.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navyBright,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.gray900,
+                      letterSpacing: -0.15,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  _MemberMeta(icon: subtitleIcon, text: subtitle),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.gray500,
+            ),
+          ],
         ),
       ),
     );
