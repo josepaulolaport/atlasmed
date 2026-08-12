@@ -212,22 +212,48 @@ user's call rather than a bug.
   the role, so a REP whose scope resolved to nothing got an empty list where the
   card gave them a 403 — and an empty list reads as the reassuring answer.
 
-**Two gaps that need a product decision, not a fix:**
+**Both gaps this review opened have since been closed:**
 
-- **An admin's Equipe is empty in production.** The roster lists users holding a
-  `manager_zone`, and no user holds one: the snapshot has 2 ADMINs and 5 REPs,
-  no MANAGER, with all five zones unassigned. §2 routes an admin to reps
-  *through* managers, so today an admin has no path to any rep's Desempenho at
-  all. Either managers get assigned to those zones, or the admin roster needs to
-  list reps who sit under no listed manager. This is a data and modelling
-  question, so it is not decided here.
-- **Only `unit_type` of §5's five filters is in the UI.** The API takes all
-  five; the filter bar renders one. That one does work — the catalog holds 39
-  types and 91 subtypes and every one of the 1443 facilities carries a
-  `unit_type_id`, so item 14 ships a filter with real options. The gap is the
-  other four, and §5 argues that `manager`/`rep` are "the reason nested
-  dashboard segments are unnecessary" — an argument not yet backed by shipped
-  UI.
+- **An admin's Equipe was empty**, because no user held a `manager_zone` — the
+  snapshot had 2 ADMINs and 5 REPs and no MANAGER, so §2's "admin → managers →
+  their reps" had no first step. Migration `0096` creates the three managers and
+  assigns them the five zones. It also repairs the geometry underneath: 151 of
+  1443 profiles (10.5%) recorded a `manager_zone_id` whose polygon did not
+  contain the clinic, so the assignment would have handed a manager a book that
+  the first recompute took away.
+- **All five filters now ship**, multi-select, searchable, and progressive.
+
+## 8.3 Filters as built (spec 0014 §5)
+
+Each facet's options are computed over the scoped clinic set with **every filter
+applied except its own**. That one rule produces the progressive behaviour
+without special-casing the hierarchy: choose São Paulo and the município drawer
+becomes São Paulo's municipalities that hold clinics you can see; choose a
+gestor and the representante drawer becomes their reps; choose a representante
+and the gestor drawer narrows in turn. A facet must omit its *own* selection or
+the first choice traps you in it — picking São Paulo would collapse the estado
+list to São Paulo and leave no way to add Rio.
+
+Three decisions the spec did not make:
+
+- **Options are what exists in scope, not what exists in Brazil.** There was no
+  states or municipalities endpoint, and adding one would have been the wrong
+  answer: a manager whose zones are Paraná and Norte has no business being
+  offered Bahia, and an option that can only ever return zero clinics is a dead
+  end discovered by tapping it.
+- **Selection cascades, not just options.** Picking the *city* of Rio selects
+  the state of Rio with it; clearing that state drops the cities inside it.
+  Without the first, the two drawers give contradictory answers to one question;
+  without the second, the screen keeps filtering by a município the user
+  believes they cleared. A child survives when *another* parent is still
+  selected — irrelevant for geography, but a rep may report to two managers.
+- **`unit_type` is outside the faceting in both directions.** Its list is the
+  whole catalogue whatever else is chosen, and choosing one narrows nothing.
+  Types only; subtypes would need a filter no metric endpoint has.
+
+Both the singular (`stateId`) and plural (`stateIds`) query forms are accepted
+and merged, because installed mobile builds still send the singular and dropping
+it would make every one of them filter by nothing at all, silently.
 
 **Route tests: built after review.** They were the follow-up this section named, and
 the orders 500 (§8.2) is the argument for why they could not stay a follow-up — the
