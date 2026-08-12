@@ -107,11 +107,12 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
       }));
     },
 
-    async sumTheirs(input) {
-      if (input.definitionIds.length === 0 || input.months.length === 0) return [];
+    async listTheirsHistory(input) {
+      if (input.definitionIds.length === 0) return [];
       const rows = await database
         .select({
           definitionId: facilityProductUsage.definitionId,
+          productId: facilityProductUsage.productId,
           month: facilityProductUsage.month,
           quantity: facilityProductUsage.quantity,
           metricUnits: products.metricUnits,
@@ -122,18 +123,17 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
           and(
             eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
             inArray(facilityProductUsage.definitionId, input.definitionIds),
-            inArray(facilityProductUsage.month, input.months),
           ),
         );
 
       return rows.map((row) => ({
         definitionId: row.definitionId,
+        productId: row.productId,
         month: row.month as MonthKey,
-        // Symmetric with our own side: the rep enters product units and the
-        // packaging factor is applied at read time, never pre-multiplied.
         metricQuantity: Number(row.quantity) * Number(row.metricUnits),
       }));
     },
+
 
     async listExisting(input) {
       if (input.months.length === 0) return [];

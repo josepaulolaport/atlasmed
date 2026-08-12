@@ -40,7 +40,6 @@ export type {
   RecomputeMetricSnapshotsResult,
   SnapshotRowToWrite,
   StoredSnapshotCell,
-  TheirsByDefinitionMonth,
 } from "./metric-snapshot";
 export {
   deriveFacilityProfileFunnelFields,

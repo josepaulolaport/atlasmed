@@ -30,12 +30,6 @@ export type OursByDefinitionMonth = {
   totalQty: number;
 };
 
-export type TheirsByDefinitionMonth = {
-  definitionId: number;
-  month: MonthKey;
-  metricQuantity: number;
-};
-
 export type StoredSnapshotCell = {
   definitionId: number;
   month: MonthKey;
@@ -70,11 +64,22 @@ export interface MetricSnapshotStore {
     rangeStart: Date;
     rangeEnd: Date;
   }): Promise<OursByDefinitionMonth[]>;
-  sumTheirs(input: {
+  /**
+   * Every recorded competitor figure for these definitions, with the month it
+   * was recorded under. The caller reduces it to what stood at a given month.
+   */
+  listTheirsHistory(input: {
     profileId: number;
     definitionIds: number[];
-    months: MonthKey[];
-  }): Promise<TheirsByDefinitionMonth[]>;
+  }): Promise<
+    Array<{
+      definitionId: number;
+      productId: number;
+      month: MonthKey;
+      metricQuantity: number;
+    }>
+  >;
+
   listExisting(input: {
     profileId: number;
     months: MonthKey[];
@@ -131,7 +136,7 @@ export async function recomputeMetricSnapshots(
       rangeStart,
       rangeEnd,
     }),
-    store.sumTheirs({ profileId: profile.id, definitionIds, months }),
+    store.listTheirsHistory({ profileId: profile.id, definitionIds }),
     store.listExisting({ profileId: profile.id, months }),
   ]);
 
@@ -143,11 +148,30 @@ export async function recomputeMetricSnapshots(
     ours.set(key, (ours.get(key) ?? 0) + row.totalQty);
   }
 
+  // What each competitor product *stood at* during month M — its newest record
+  // on or before M — not the rows filed under M.
+  //
+  // A rep answers "quantas por mês" once and the figure holds until they replace
+  // it, so a month with no new record is not a month with no competitor. Reading
+  // rows filed under M made July report zero for a product recorded in June, and
+  // `theirs = 0` with `ours > 0` is a 100% share asserted on no evidence — the
+  // "confident, wrong number" §4.4 refuses when it forbids backfilling.
   const theirs = new Map<string, number>();
-  for (const row of theirsRows) {
-    if (!requested.has(row.month)) continue;
-    const key = cellKey(row.definitionId, row.month);
-    theirs.set(key, (theirs.get(key) ?? 0) + row.metricQuantity);
+  for (const month of months) {
+    const standing = new Map<string, { month: MonthKey; metricQuantity: number }>();
+    for (const row of theirsRows) {
+      if (row.month > month) continue;
+      const productKey = `${row.definitionId}:${row.productId}`;
+      const held = standing.get(productKey);
+      if (held === undefined || row.month > held.month) {
+        standing.set(productKey, { month: row.month, metricQuantity: row.metricQuantity });
+      }
+    }
+    for (const [productKey, held] of standing) {
+      const definitionId = Number(productKey.split(":")[0]);
+      const key = cellKey(definitionId, month);
+      theirs.set(key, (theirs.get(key) ?? 0) + held.metricQuantity);
+    }
   }
 
   const stored = new Map<string, { oursQty: number; theirsQty: number }>();
