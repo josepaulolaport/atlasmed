@@ -210,6 +210,14 @@ class _AtlasTopBarContent extends StatelessWidget {
     );
   }
 
+  /// The leading button, which is a *menu* inside the shell and a *back* button
+  /// above it.
+  ///
+  /// It always did both — a screen pushed over the shell has no
+  /// `AppShellScreenState` ancestor, so the tap fell through to `maybePop`. What
+  /// it did not do was say so: it drew a hamburger either way, so on a rep's
+  /// Desempenho, pushed from Equipe, the only way back looked like a menu and
+  /// nobody tried it. The icon now matches the action.
   Widget _hamburgerButton(BuildContext context) {
     final isInsideAppShell = AppShellScreenState.of(context) != null;
 
@@ -240,27 +248,35 @@ class _AtlasTopBarContent extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.menu_rounded, color: AppColors.navyDeep, size: 15),
-            // Green dot accent
-            Positioned(
-              top: 6,
-              right: 5,
-              child: Container(
-                width: 5,
-                height: 5,
-                decoration: const BoxDecoration(
-                  color: AppColors.green,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.white,
-                      blurRadius: 0,
-                      spreadRadius: 1.5,
-                    ),
-                  ],
+            Icon(
+              isInsideAppShell
+                  ? Icons.menu_rounded
+                  : Icons.arrow_back_ios_new_rounded,
+              color: AppColors.navyDeep,
+              size: 15,
+            ),
+            // Green dot accent — the drawer's "you have somewhere to go" mark.
+            // A back button has one obvious destination, so it carries none.
+            if (isInsideAppShell)
+              Positioned(
+                top: 6,
+                right: 5,
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    color: AppColors.green,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white,
+                        blurRadius: 0,
+                        spreadRadius: 1.5,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
