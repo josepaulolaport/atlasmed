@@ -6,7 +6,7 @@ import {
 import type { AnyDatabase } from "../client";
 import { facilityVerticalProfiles } from "../schema/public/facilities";
 import { orderItems, orders } from "../schema/public/orders";
-import { products } from "../schema/public/catalog";
+import { productEquivalences, products } from "../schema/public/catalog";
 import {
   facilityMetricSnapshots,
   facilityProductUsage,
@@ -103,7 +103,7 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
     async listTheirs(input) {
       if (input.definitionIds.length === 0) return [];
       const rows = await database
-        .select({
+        .selectDistinct({
           definitionId: facilityProductUsage.definitionId,
           productId: facilityProductUsage.productId,
           productName: products.name,
@@ -112,13 +112,20 @@ export function createMetricSnapshotStore(database: AnyDatabase): MetricSnapshot
         })
         .from(facilityProductUsage)
         .innerJoin(products, eq(products.id, facilityProductUsage.productId))
-        // Only products still linked to the metric count (§4.6), matching our
-        // own side, which has always joined this table. Rows for an unlinked
-        // product stay put and count again if it is relinked.
+        // Only products that still count toward the metric (§4.6), matching our
+        // own side. For a competitor that is *derived*, not curated: nothing
+        // links a competitor product to a definition — the catalogue screen
+        // links our variants — so it counts when it is the equivalent of one of
+        // ours that is linked. Joining `product_potential_links` directly, as
+        // this once did, filtered out every competitor row there has ever been.
+        .innerJoin(
+          productEquivalences,
+          eq(productEquivalences.competitorProductId, facilityProductUsage.productId),
+        )
         .innerJoin(
           productPotentialLinks,
           and(
-            eq(productPotentialLinks.productId, facilityProductUsage.productId),
+            eq(productPotentialLinks.productId, productEquivalences.productId),
             eq(productPotentialLinks.definitionId, facilityProductUsage.definitionId),
           ),
         )

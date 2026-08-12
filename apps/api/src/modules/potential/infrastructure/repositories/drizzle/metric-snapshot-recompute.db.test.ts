@@ -9,6 +9,7 @@ import {
   orderItems,
   orders,
   productPotentialDefinitions,
+  productEquivalences,
   productPotentialLinks,
   products,
   states,
@@ -93,11 +94,28 @@ async function seedProduct(
       ownership: input.ownership,
     })
     .returning({ id: products.id });
-  if (input.link) {
+  if (input.link && input.ownership === "OWN") {
     await tx.insert(productPotentialLinks).values({
       productId: product!.id,
       definitionId: scenario.definitionId,
       verticalId: scenario.verticalId,
+    });
+  }
+  if (input.link && input.ownership === "COMPETITOR") {
+    // A competitor product is never linked to a metric — the catalogue screen
+    // links our variants, and nothing offers a competitor there. It counts
+    // because it is the equivalent of one of ours that *is* linked, which is
+    // the relation the comparativo screen maintains. Seeding it any other way
+    // would be testing a shape production cannot produce.
+    const anchor = await seedProduct(tx, scenario, {
+      name: `${input.name}-ANCHOR`,
+      metricUnits: "1",
+      ownership: "OWN",
+      link: true,
+    });
+    await tx.insert(productEquivalences).values({
+      productId: anchor,
+      competitorProductId: product!.id,
     });
   }
   return product!.id;
@@ -474,7 +492,7 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
     });
   });
 
-  test("an unlinked competitor product stops counting", async () => {
+  test("a competitor stops counting when it no longer matches a linked product", async () => {
     await withRollback(async (tx) => {
       const scenario = await seedScenario(tx, "UNLINK");
       const theirProduct = await seedProduct(tx, scenario, {
@@ -493,13 +511,15 @@ describe.skipIf(!dbUp)("metric snapshot recompute (database)", () => {
       await recompute(tx, scenario.profileId);
       expect(Number((await readSnapshot(tx, scenario.profileId))!.theirsQty)).toBeCloseTo(10, 2);
 
+      // Drop the equivalence that made it count. Same effect as unlinking the
+      // product of ours it stood against.
       await tx
-        .delete(productPotentialLinks)
-        .where(eq(productPotentialLinks.productId, theirProduct));
+        .delete(productEquivalences)
+        .where(eq(productEquivalences.competitorProductId, theirProduct));
       await recompute(tx, scenario.profileId);
 
-      // Matches our own side, which has always joined the link table. The row
-      // survives and counts again if the product is relinked.
+      // Matches our own side, which has always joined the link table. The usage
+      // row survives and counts again if the equivalence comes back.
       expect(Number((await readSnapshot(tx, scenario.profileId))!.theirsQty)).toBe(0);
     });
   });

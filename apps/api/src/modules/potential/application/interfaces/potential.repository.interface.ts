@@ -152,6 +152,19 @@ export interface PotentialRepository {
     verticalId: number;
   }): Promise<boolean>;
 
+  /**
+   * The other brands that count toward this metric.
+   *
+   * Derived, never curated: a competitor product belongs to a metric when it is
+   * the equivalent of one of *our* products linked to that metric. Nothing
+   * links a competitor to a definition directly — the catalogue screen offers
+   * only our own products — so requiring such a link would be requiring a row
+   * no one can create.
+   */
+  listCompetitorProductsForDefinition(definitionId: number): Promise<
+    Array<{ productId: number; productName: string; productCode: string | null }>
+  >;
+
   /** A product may be linked in several linhas, so the definition is required. */
   findLink(input: {
     productId: number;

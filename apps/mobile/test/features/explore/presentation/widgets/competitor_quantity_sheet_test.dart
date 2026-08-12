@@ -1,6 +1,5 @@
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
-import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
-import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/repositories/potential_definitions_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_potential_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/competitor_quantity_sheet.dart';
@@ -13,20 +12,27 @@ import 'package:flutter_test/flutter_test.dart';
 /// different row — so removal is the only correction available to a rep who
 /// recorded the wrong product. A quantity of 0 is not a substitute: it says the
 /// clinic uses none of it, which is a claim, not the absence of one.
-class _FakeCatalogRepository extends CatalogRepository {
+/// The picker offers the brands that count toward this metric, not the whole
+/// catalogue: a product outside that set is filtered out of every read, so
+/// offering one would be offering a figure that disappears.
+class _FakeDefinitionsRepository extends PotentialDefinitionsRepository {
+  _FakeDefinitionsRepository({this.products});
+
+  final List<LinkedPotentialProduct>? products;
+
   @override
-  Future<List<CompetitorProduct>> getAllCompetitorProducts() async => [
-    CompetitorProduct(
-      id: 9,
-      name: 'Marca A',
-      manufacturer: 'Fabricante',
-      countryOfOrigin: 'BR',
-      price17: 0,
-      price18: 0,
-      price20: 0,
-      brasindiceUpdatedAt: DateTime.utc(2026, 3, 1),
-    ),
-  ];
+  Future<List<LinkedPotentialProduct>> listCompetitorProducts(
+    int definitionId,
+  ) async =>
+      products ??
+      const [
+        LinkedPotentialProduct(
+          productId: 9,
+          definitionId: 3,
+          name: 'Marca A',
+          code: 'MA-1',
+        ),
+      ];
 }
 
 class _RecordingPotentialRepository extends FacilityPotentialRepository {
@@ -80,6 +86,7 @@ void main() {
     WidgetTester tester, {
     required FacilityPotentialRepository repository,
     CompetitorUsage? existing,
+    PotentialDefinitionsRepository? definitionsRepository,
   }) async {
     late BuildContext hostContext;
 
@@ -108,7 +115,8 @@ void main() {
         definitionId: 3,
         repository: repository,
         existing: existing,
-        catalogRepository: _FakeCatalogRepository(),
+        definitionsRepository:
+            definitionsRepository ?? _FakeDefinitionsRepository(),
       ),
     );
     await tester.pumpAndSettle();
@@ -120,6 +128,44 @@ void main() {
     await tester.pumpAndSettle();
     await popped;
   }
+
+  testWidgets('offers the brands that count toward this metric', (
+    tester,
+  ) async {
+    // The bug this replaces: the picker listed every competitor product in the
+    // catalogue. A competitor counts toward a metric only when it is the
+    // equivalent of one of our products linked to it, and the read derives it
+    // that way — so picking any other brand wrote a row that was filtered
+    // straight back out. The rep added a brand and the screen redrew unchanged.
+    final repository = _RecordingPotentialRepository();
+    final showing = await openSheet(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('competitor-product-picker')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Marca A'), findsWidgets);
+
+    await tester.tap(find.text('Marca A').last);
+    await tester.pumpAndSettle();
+    await dismiss(tester, showing);
+  });
+
+  testWidgets('says so when no other brand counts toward the metric', (
+    tester,
+  ) async {
+    // An empty picker with no caption reads as a failed load. It is neither —
+    // nothing is catalogued yet, and only an admin can change that.
+    final repository = _RecordingPotentialRepository();
+    final showing = await openSheet(
+      tester,
+      repository: repository,
+      definitionsRepository: _FakeDefinitionsRepository(products: const []),
+    );
+
+    expect(find.textContaining('Nenhuma outra marca'), findsOneWidget);
+
+    await dismiss(tester, showing);
+  });
 
   testWidgets('a new row offers no removal — there is nothing to remove', (
     tester,

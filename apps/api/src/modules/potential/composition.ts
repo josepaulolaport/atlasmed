@@ -3,6 +3,7 @@ import {
   CreatePotentialDefinitionUseCase,
   LinkProductPotentialUseCase,
   ListDefinitionProductsUseCase,
+  ListDefinitionCompetitorProductsUseCase,
   ListFacilityPotentialsUseCase,
   ListPotentialDefinitionsUseCase,
   SetFacilityProductUsageUseCase,
@@ -41,4 +42,6 @@ export const potentialUseCases = {
   linkProduct: () => new LinkProductPotentialUseCase(deps),
   unlinkProduct: () => new UnlinkProductPotentialUseCase(deps),
   listDefinitionProducts: () => new ListDefinitionProductsUseCase(deps),
+  listDefinitionCompetitorProducts: () =>
+    new ListDefinitionCompetitorProductsUseCase(deps),
 };

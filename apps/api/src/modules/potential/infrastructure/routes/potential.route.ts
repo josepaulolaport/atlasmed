@@ -262,6 +262,36 @@ const listDefinitionProductsRoute = new Elysia()
     },
   );
 
+/**
+ * The other brands a rep may record against a metric.
+ *
+ * Derived, not curated: a competitor product counts toward a metric when it is
+ * the equivalent of one of our products linked to that metric. The catalogue
+ * has no way to link a competitor to a definition, so this is the only answer
+ * there is — and it is the same set the write validates against.
+ */
+const listDefinitionCompetitorProductsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "CATALOG"))
+  .get(
+    "/potential-definitions/:id/competitor-products",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      return potentialUseCases.listDefinitionCompetitorProducts().execute({
+        definitionId: params.id,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "List the other brands that count toward a potential metric",
+        tags: ["Potential"],
+        security: [{ bearerAuth: [] }],
+      },
+      params: t.Object({ id: t.Number({ minimum: 1 }) }),
+    },
+  );
+
 const linkProductRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "CATALOG"))
@@ -327,5 +357,6 @@ export const potentialRoute = new Elysia()
   .use(updateDefinitionRoute)
   .use(deleteDefinitionRoute)
   .use(listDefinitionProductsRoute)
+  .use(listDefinitionCompetitorProductsRoute)
   .use(linkProductRoute)
   .use(unlinkProductRoute);

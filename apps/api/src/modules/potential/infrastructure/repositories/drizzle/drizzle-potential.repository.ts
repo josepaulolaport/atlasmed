@@ -4,6 +4,7 @@ import {
   facilityVerticalProfiles,
   productPotentialDefinitions,
   productPotentialLinks,
+  productEquivalences,
   productVerticals,
   products,
 } from "@atlasmed/database";
@@ -381,6 +382,33 @@ export class DrizzlePotentialRepository implements PotentialRepository {
    * product may now be linked in several linhas — asking by product alone no
    * longer identifies a row.
    */
+  /**
+   * The other brands that count toward a metric, derived through equivalences.
+   *
+   * `product_potential_links` holds only our products — the catalogue screen
+   * links variants, and there is no way to link a competitor product to a
+   * metric. So a competitor belongs to the metric when it is the equivalent of
+   * one of ours that is linked to it, which is a relation the comparativo
+   * screen already maintains.
+   */
+  async listCompetitorProductsForDefinition(definitionId: number) {
+    const rows = await this.database
+      .selectDistinct({
+        productId: products.id,
+        productName: products.name,
+        productCode: products.code,
+      })
+      .from(productEquivalences)
+      .innerJoin(
+        productPotentialLinks,
+        eq(productPotentialLinks.productId, productEquivalences.productId),
+      )
+      .innerJoin(products, eq(products.id, productEquivalences.competitorProductId))
+      .where(eq(productPotentialLinks.definitionId, definitionId))
+      .orderBy(asc(products.name));
+    return rows;
+  }
+
   async findLink(input: {
     productId: number;
     definitionId: number;

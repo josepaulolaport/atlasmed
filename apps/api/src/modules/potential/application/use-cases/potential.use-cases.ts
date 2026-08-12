@@ -277,8 +277,28 @@ export class SetFacilityProductUsageUseCase {
       );
     }
 
-    // A non-competitor product is refused by the composite foreign key, but
-    // failing here names the reason instead of surfacing a constraint error.
+    // The product must be one that counts toward this metric — that is, an
+    // equivalent of one of our products linked to it.
+    //
+    // Nothing in the schema says so: the only product foreign key checks that
+    // it is a COMPETITOR product. But the read derives eligibility the same
+    // way, so a product outside that set wrote a row and then vanished from the
+    // answer — the rep added a brand, the screen redrew unchanged, and their
+    // figure sat where nobody would ever see it. A write that succeeds
+    // invisibly is worse than one that fails, so this one fails.
+    const eligible =
+      await this.deps.potentialRepository.listCompetitorProductsForDefinition(
+        input.definitionId,
+      );
+    if (!eligible.some((product) => product.productId === input.productId)) {
+      throw new ValidationError([
+        {
+          field: "productId",
+          message: "product does not count toward this potential metric",
+        },
+      ]);
+    }
+
     await this.deps.potentialRepository.upsertUsage({
       profileId,
       definitionId: input.definitionId,
@@ -633,6 +653,38 @@ export class UnlinkProductPotentialUseCase {
       definitionId: input.definitionId,
     });
     return { ok: true };
+  }
+}
+
+/**
+ * The other brands that count toward a metric — the rep's picker.
+ *
+ * Same set the write validates against, deliberately: a picker that can offer
+ * something the write refuses is a picker that produces error messages.
+ */
+export class ListDefinitionCompetitorProductsUseCase {
+  constructor(private readonly deps: { potentialRepository: PotentialRepository }) {}
+
+  async execute(input: { definitionId: number; scope: ScopeContext }) {
+    const definition = await this.deps.potentialRepository.findDefinitionById(
+      input.definitionId,
+    );
+    if (!definition || definition.deletedAt) {
+      throw new ResourceNotFoundError("PotentialDefinition", input.definitionId);
+    }
+    assertVerticalAccess(input.scope, definition.verticalId);
+    const products =
+      await this.deps.potentialRepository.listCompetitorProductsForDefinition(
+        input.definitionId,
+      );
+    return {
+      data: products.map((p) => ({
+        productId: p.productId,
+        definitionId: input.definitionId,
+        name: p.productName,
+        code: p.productCode,
+      })),
+    };
   }
 }
 

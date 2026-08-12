@@ -1,5 +1,4 @@
-import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
-import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/repositories/potential_definitions_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/facility_potential.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_potential_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -23,7 +22,7 @@ class CompetitorQuantitySheet extends StatefulWidget {
     required this.repository,
     required this.definitionId,
     this.existing,
-    this.catalogRepository,
+    this.definitionsRepository,
   });
 
   final String definitionLabel;
@@ -34,7 +33,7 @@ class CompetitorQuantitySheet extends StatefulWidget {
   final CompetitorUsage? existing;
 
   /// Injectable so the sheet can be driven in tests without a network.
-  final CatalogRepository? catalogRepository;
+  final PotentialDefinitionsRepository? definitionsRepository;
 
   @override
   State<CompetitorQuantitySheet> createState() =>
@@ -42,13 +41,13 @@ class CompetitorQuantitySheet extends StatefulWidget {
 }
 
 class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
-  late final CatalogRepository _catalog =
-      widget.catalogRepository ?? CatalogRepository();
+  late final PotentialDefinitionsRepository _definitions =
+      widget.definitionsRepository ?? PotentialDefinitionsRepository();
   late final TextEditingController _quantity = TextEditingController(
     text: widget.existing == null ? '' : _fmt(widget.existing!.quantity),
   );
 
-  List<CompetitorProduct> _products = const [];
+  List<LinkedPotentialProduct> _products = const [];
   int? _selectedProductId;
   bool _loadingProducts = true;
   bool _saving = false;
@@ -67,13 +66,31 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
     super.dispose();
   }
 
+  /// The other brands that count toward this metric — not the whole catalogue.
+  ///
+  /// A competitor product counts when it is the equivalent of one of our
+  /// products linked to the metric. Offering all 500 brands let a rep pick one
+  /// that could never appear: the server wrote the row, the read derived
+  /// eligibility the same way and filtered it straight back out, and the figure
+  /// vanished on the next redraw. The server refuses that now; this stops it
+  /// being offered in the first place.
   Future<void> _loadProducts() async {
     try {
-      final products = await _catalog.getAllCompetitorProducts();
+      final eligible = await _definitions.listCompetitorProducts(
+        widget.definitionId,
+      );
       if (!mounted) return;
       setState(() {
-        _products = products;
+        _products = eligible;
         _loadingProducts = false;
+        // An empty picker with no caption reads as the app failing to load.
+        // This metric simply has no other brands catalogued yet, and that is
+        // an admin's job, not something the rep can resolve here.
+        if (_products.isEmpty) {
+          _error =
+              'Nenhuma outra marca está cadastrada como equivalente dos '
+              'produtos desta métrica. Fale com o catálogo para incluir.';
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -259,7 +276,7 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                   items: [
                     for (final product in _products)
                       DropdownMenuItem(
-                        value: product.id,
+                        value: product.productId,
                         child: Text(
                           product.name,
                           overflow: TextOverflow.ellipsis,

@@ -52,8 +52,19 @@ function createRepository(
     linkProduct: async () => undefined,
     unlinkProduct: async () => false,
     listProductsForDefinition: async () => [],
+    // Eligible by default: the picker offers exactly this set, so the refusal
+    // is the exception and the test that wants it says so.
+    listCompetitorProductsForDefinition: async () => [
+      { productId: 10, productName: "Marca A", productCode: "MA-1" },
+    ],
     productBelongsToVertical: async () => false,
-    findLink: async () => null,
+    // Linked by default: a metric's products are what the rep picks from, so
+    // the unlinked case is the exception and each test that wants it says so.
+    findLink: async (input) => ({
+      productId: input.productId,
+      definitionId: input.definitionId,
+      verticalId: 1,
+    }),
     ...overrides,
   };
 }
@@ -367,6 +378,34 @@ describe("zero is not a quantity, and the claim that replaces it", () => {
     });
 
     expect(claims).toEqual([{ value: false }]);
+  });
+
+  it("refuses a product that does not count toward the metric", async () => {
+    // The read derives eligibility the same way, so a product outside that set
+    // is written and then filtered out of the answer: the rep adds a brand, the
+    // screen redraws unchanged, and their figure sits where nobody will see it.
+    // The write fails instead.
+    const upserted: unknown[] = [];
+    await expect(
+      new SetFacilityProductUsageUseCase({
+        potentialRepository: repo({
+          listCompetitorProductsForDefinition: async () => [],
+          upsertUsage: async (input) => {
+            upserted.push(input);
+          },
+        }),
+      }).execute({
+        facilityId: 1,
+        verticalId: 1,
+        definitionId: 7,
+        productId: 10,
+        quantity: 12,
+        userId: 3,
+        scope: globalScope,
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+
+    expect(upserted).toEqual([]);
   });
 
   it("refuses the claim while competitor products are recorded", async () => {
