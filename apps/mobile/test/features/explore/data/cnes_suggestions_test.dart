@@ -77,7 +77,7 @@ void main() {
       });
       // ADR 0006 accepted the risk of a stale snapshot reading as current fact;
       // this label is what retires it.
-      expect(parsed.referenceLabel, 'segundo o CNES em maio de 2026');
+      expect(parsed.referenceShort, 'maio/2026');
     });
 
     test('omits the date label when nothing has been loaded', () {
@@ -86,7 +86,7 @@ void main() {
         'reference': null,
         'items': const [],
       });
-      expect(parsed.referenceLabel, isNull);
+      expect(parsed.referenceShort, isNull);
       expect(parsed.status, CnesSuggestionsStatus.registryEmpty);
     });
 

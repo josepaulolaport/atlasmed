@@ -166,8 +166,12 @@ class CnesSuggestions {
     'dezembro',
   ];
 
-  /// `segundo o CNES em maio de 2026`, or null when no snapshot is loaded.
-  String? get referenceLabel {
+  /// `maio/2026`, or null when no snapshot is loaded.
+  ///
+  /// Short because it rides on the section header rather than standing as its
+  /// own line — a rep needs to know which month they are looking at, not a
+  /// sentence about it.
+  String? get referenceShort {
     final raw = reference;
     if (raw == null) return null;
     final parts = raw.split('-');
@@ -175,7 +179,7 @@ class CnesSuggestions {
     final year = int.tryParse(parts[0]);
     final month = int.tryParse(parts[1]);
     if (year == null || month == null || month < 1 || month > 12) return null;
-    return 'segundo o CNES em ${_months[month - 1]} de $year';
+    return '${_months[month - 1]}/$year';
   }
 
   /// What the section says when it has nothing to list.

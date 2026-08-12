@@ -241,10 +241,6 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     final items = <Object>[];
 
     if (_source == _DoctorSource.cnes) {
-      // The date belongs here, not on a section header, because on this tab it
-      // qualifies everything below it.
-      items.add('_section_header_cnes');
-
       final linked = _cnesLinkedRows;
       if (linked.isNotEmpty) {
         items.add('_section_header_associated');
@@ -452,26 +448,6 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     );
   }
 
-  /// Header for the CNES block, carrying the snapshot's date.
-  ///
-  /// The date is the point: ADR 0006 accepted the risk that users read a stale
-  /// registry as current fact, and this is what retires it. Without a loaded
-  /// snapshot there is no date to show and the label is simply omitted.
-  Widget _buildCnesHeader() {
-    final label = _cnes?.referenceLabel;
-    // The pill already names the source, so this carries only the date — the
-    // part a rep cannot infer and the reason ADR 0006's accepted staleness risk
-    // is retired.
-    if (label == null) return const SizedBox(height: 8);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 11.5, color: AppColors.gray400),
-      ),
-    );
-  }
-
   Widget _buildDoctorList(
     List<ProfessionalRoster> filtered,
     List<Object> sectioned,
@@ -487,10 +463,16 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               return _buildSectionHeader('Já associados');
             case '_section_header_available':
               return _buildSectionHeader('Disponíveis');
-            case '_section_header_cnes':
-              return _buildCnesHeader();
             case '_section_header_cnes_new':
-              return _buildSectionHeader('Sugeridos pelo CNES');
+              // The competence rides here rather than on its own line: it
+              // qualifies these rows, and it is the reason ADR 0006's accepted
+              // staleness risk is retired.
+              final reference = _cnes?.referenceShort;
+              return _buildSectionHeader(
+                reference == null
+                    ? 'Sugeridos pelo CNES'
+                    : 'Sugeridos pelo CNES (dados $reference)',
+              );
             case '_section_cnes_empty':
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
