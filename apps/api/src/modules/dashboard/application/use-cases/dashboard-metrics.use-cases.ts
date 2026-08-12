@@ -22,6 +22,7 @@ import {
   resolveDenominator,
   resolveSingleVerticalId,
   resolveSubject,
+  type DashboardDenominator,
   type DashboardDirectoryPort,
   type DashboardFacet,
   type DashboardFilters,
@@ -73,21 +74,19 @@ abstract class DashboardMetricUseCase {
   constructor(protected readonly deps: Dependencies) {}
 
   /**
-   * The same scope, but with one facet's own selection left out — the predicate
-   * behind that facet's option list (spec 0014 §5). Null when the scope resolves
-   * to nothing, in which case there are no options to offer.
+   * Who these numbers are about, before any filter is applied.
+   *
+   * Split out from `resolve` because the filter-options endpoint needs the same
+   * subject five times over, once per facet, and re-deriving it each time meant
+   * five `findUser` lookups and five zone lookups for one request.
    */
-  protected async resolveFor(
+  protected async resolveSubjectScope(
     request: DashboardMetricRequest,
-    offering: DashboardFacet,
-  ): Promise<DashboardProfileFilter | null> {
-    return (await this.resolve(request, offering)).filter;
-  }
-
-  protected async resolve(
-    request: DashboardMetricRequest,
-    offering?: DashboardFacet,
-  ): Promise<DashboardMetricContext> {
+  ): Promise<{
+    verticalId: number;
+    subject: DashboardSubject;
+    denominator: DashboardDenominator;
+  }> {
     const accessibleVerticalIds = resolveVerticalIds({
       role: request.viewerRole,
       assignedVerticalIds: request.scope.assignedVerticalIds ?? [],
@@ -115,12 +114,20 @@ abstract class DashboardMetricUseCase {
       directory: this.deps.directory,
     });
 
+    return { verticalId, subject, denominator };
+  }
+
+  protected async resolve(
+    request: DashboardMetricRequest,
+  ): Promise<DashboardMetricContext> {
+    const { verticalId, subject, denominator } =
+      await this.resolveSubjectScope(request);
+
     const resolved = await buildProfileFilter({
       verticalId,
       denominator,
       filters: request.filters,
       directory: this.deps.directory,
-      offering,
     });
 
     return {
@@ -337,13 +344,12 @@ export class GetUnassignedClinicsMetricUseCase extends DashboardMetricUseCase {
  */
 export class GetFilterOptionsUseCase extends DashboardMetricUseCase {
   constructor(
-    deps: Dependencies & { listUnitTypes: () => Promise<DashboardFilterOption[]> },
+    private readonly filterDeps: Dependencies & {
+      listUnitTypes: () => Promise<DashboardFilterOption[]>;
+    },
   ) {
-    super(deps);
-    this.listUnitTypes = deps.listUnitTypes;
+    super(filterDeps);
   }
-
-  private readonly listUnitTypes: () => Promise<DashboardFilterOption[]>;
 
   async execute(request: DashboardMetricRequest): Promise<{
     verticalId: number;
@@ -353,17 +359,26 @@ export class GetFilterOptionsUseCase extends DashboardMetricUseCase {
     reps: DashboardFilterOption[];
     unitTypes: DashboardFilterOption[];
   }> {
-    const [context, unitTypes] = await Promise.all([
-      this.resolve(request),
-      this.listUnitTypes(),
+    // The subject is resolved once and reused by all four facets. It is the
+    // same person for every drawer, and re-deriving it per facet cost five
+    // `findUser` lookups and five zone lookups for one request.
+    const [{ verticalId, denominator }, unitTypes] = await Promise.all([
+      this.resolveSubjectScope(request),
+      this.filterDeps.listUnitTypes(),
     ]);
 
     const facet = async (
       offering: DashboardFacet,
       list: (filter: DashboardProfileFilter) => Promise<DashboardFilterOption[]>,
     ) => {
-      const resolved = await this.resolveFor(request, offering);
-      return resolved ? list(resolved) : [];
+      const resolved = await buildProfileFilter({
+        verticalId,
+        denominator,
+        filters: request.filters,
+        directory: this.deps.directory,
+        offering,
+      });
+      return resolved.empty ? [] : list(resolved.filter);
     };
 
     const [states, municipalities, managers, reps] = await Promise.all([
@@ -376,7 +391,7 @@ export class GetFilterOptionsUseCase extends DashboardMetricUseCase {
     ]);
 
     return {
-      verticalId: context.verticalId,
+      verticalId,
       states,
       municipalities,
       managers,

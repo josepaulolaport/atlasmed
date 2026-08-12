@@ -271,29 +271,39 @@ export class DrizzleDashboardRepository {
     const scoped = buildScopedProfilesQuery(filter);
 
     const rows = await db.execute(sql`
-      SELECT u.id AS id,
+      SELECT DISTINCT
+             u.id AS id,
              COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''), u.email) AS label,
-             -- Filtered on the role join rather than on mgr.id: the role is a
-             -- LEFT JOIN, so a non-MANAGER holding that zone still has an id
-             -- and would otherwise be offered as somebody's manager.
-             COALESCE(
-               ARRAY_AGG(DISTINCT mgr.id) FILTER (WHERE mgr_role.id IS NOT NULL),
-               ARRAY[]::bigint[]
-             ) AS parent_ids
+             -- A correlated subquery of INNER JOINs, not a LEFT JOIN chain.
+             -- In a LEFT JOIN, a condition in the ON clause does not filter the
+             -- row out — it only nulls the joined side — so a rep holding a
+             -- territory that is *not* a patch would still have had that
+             -- territory's parent counted as their manager. Here every
+             -- condition genuinely excludes.
+             COALESCE((
+               SELECT ARRAY_AGG(DISTINCT mgr.id)
+                 FROM user_territory_assignments patch_uta
+                 JOIN territories patch
+                   ON patch.id = patch_uta.territory_id AND patch.is_active
+                 JOIN territory_types patch_tt
+                   ON patch_tt.id = patch.territory_type_id AND patch_tt.slug = 'patch'
+                 JOIN territories zone
+                   ON zone.id = patch.manager_territory_id AND zone.is_active
+                 JOIN territory_types zone_tt
+                   ON zone_tt.id = zone.territory_type_id AND zone_tt.slug = 'manager_zone'
+                 JOIN user_territory_assignments zone_uta ON zone_uta.territory_id = zone.id
+                 JOIN users mgr ON mgr.id = zone_uta.user_id AND mgr.deleted_at IS NULL
+                 JOIN roles mgr_role ON mgr_role.id = mgr.role_id AND mgr_role.name = 'MANAGER'
+                WHERE patch_uta.user_id = u.id
+                  -- Per linha, like findManagerZoneIds: a rep may work Ortopedia
+                  -- here and something else elsewhere, and the other linha's
+                  -- manager is not a parent in this one.
+                  AND patch.vertical_id = ${filter.verticalId}
+             ), ARRAY[]::bigint[]) AS parent_ids
         FROM ${facilityVerticalRepAssignments} a
         JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL
-        LEFT JOIN user_territory_assignments patch_uta ON patch_uta.user_id = u.id
-        LEFT JOIN territories patch
-          ON patch.id = patch_uta.territory_id AND patch.is_active
-        LEFT JOIN territory_types patch_tt
-          ON patch_tt.id = patch.territory_type_id AND patch_tt.slug = 'patch'
-        LEFT JOIN user_territory_assignments zone_uta
-          ON zone_uta.territory_id = patch.manager_territory_id
-        LEFT JOIN users mgr ON mgr.id = zone_uta.user_id AND mgr.deleted_at IS NULL
-        LEFT JOIN roles mgr_role ON mgr_role.id = mgr.role_id AND mgr_role.name = 'MANAGER'
        WHERE a.facility_vertical_profile_id IN (${scoped})
          AND a.ended_at IS NULL
-       GROUP BY u.id, u.first_name, u.last_name, u.email
        ORDER BY label
     `);
 

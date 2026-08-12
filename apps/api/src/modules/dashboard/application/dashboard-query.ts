@@ -247,8 +247,15 @@ export async function buildProfileFilter(input: {
     input.offering === "municipality"
       ? []
       : selected(input.filters.municipalityId, input.filters.municipalityIds);
-  // Never omitted: unit type sits outside faceting in both directions.
-  const unitTypeIds = selected(input.filters.unitTypeId, input.filters.unitTypeIds);
+  // Unit type sits outside the faceting in *both* directions, so it is omitted
+  // whenever any facet is being offered — not just its own. Applying it here
+  // would make choosing "Hospital Geral" shrink the state, município, gestor and
+  // representante drawers, which is exactly the influence it is meant not to
+  // have. It still filters every metric; it just does not decide what the other
+  // drawers may offer.
+  const unitTypeIds = input.offering
+    ? []
+    : selected(input.filters.unitTypeId, input.filters.unitTypeIds);
 
   let zoneIds: number[] | null =
     input.denominator.kind === "zones" ? input.denominator.zoneIds : null;

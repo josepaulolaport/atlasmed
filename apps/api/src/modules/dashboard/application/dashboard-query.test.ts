@@ -246,13 +246,34 @@ describe("buildProfileFilter", () => {
     });
   });
 
-  it("keeps unit type applied even when offering a facet — it is outside the faceting", async () => {
+  it("drops unit type when offering any facet — it narrows nothing", async () => {
+    // Spec 0014 §5 as decided: unit type is outside the faceting in *both*
+    // directions. Applying it here would make choosing "Hospital Geral" shrink
+    // the state, município, gestor and representante drawers.
+    const resolved = await buildProfileFilter({
+      verticalId: 1,
+      denominator: { kind: "global" },
+      filters: { unitTypeIds: [4], stateIds: [35] },
+      directory: directory(),
+      offering: "municipality",
+    });
+
+    expect(resolved).toEqual({
+      empty: false,
+      filter: expect.objectContaining({
+        unitTypeIds: null,
+        // The other facets still narrow each other.
+        stateIds: [35],
+      }),
+    });
+  });
+
+  it("still applies unit type to the metrics themselves", async () => {
     const resolved = await buildProfileFilter({
       verticalId: 1,
       denominator: { kind: "global" },
       filters: { unitTypeIds: [4] },
       directory: directory(),
-      offering: "state",
     });
 
     expect(resolved).toEqual({

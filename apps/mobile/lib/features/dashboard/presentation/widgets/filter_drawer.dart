@@ -145,9 +145,13 @@ class _FilterDrawerState extends State<FilterDrawer> {
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () => Navigator.of(
-                      context,
-                    ).pop(_selected.toList(growable: false)),
+                    // Sorted, because the selection is part of the provider key
+                    // and that key is order-sensitive: picking Rio then São
+                    // Paulo would otherwise be a different scope from picking
+                    // them the other way round, and refetch the whole screen
+                    // for a selection that is the same set.
+                    onPressed: () =>
+                        Navigator.of(context).pop(_selected.toList()..sort()),
                     child: Text(
                       _selected.isEmpty
                           ? 'Aplicar'
