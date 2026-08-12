@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   facilities,
@@ -13,12 +12,13 @@ import {
   registryStates,
   type AnyDatabase,
 } from "@atlasmed/database";
-import { readCsvRecords } from "../parse/csv-stream";
 import {
-  CURATED_COUNCILS,
+  REQUIRED_COLUMNS,
   sourceFileName,
   type CnesReference,
+  type CnesSourceName,
 } from "../cnes-files";
+import { directoryCnesSource, type CnesSource } from "../source";
 
 /**
  * Scoped incremental load of the CNES export into `registry.*`.
@@ -44,20 +44,47 @@ import {
 
 export interface LoadRegistryOptions {
   db: AnyDatabase;
-  /** Directory holding the extracted `tb*.csv` / `rl*.csv` files. */
-  csvDir: string;
   reference: CnesReference;
-  /**
-   * CBO prefixes to import. v1 is `["225"]` (médicos); widening this pulls in
-   * cohorts whose registrations are about half-populated.
-   */
-  occupationPrefixes?: readonly string[];
+  /** Where the CSVs come from. Defaults to `csvDir` on disk. */
+  source?: CnesSource;
+  /** Convenience for the smoke script and tests: extracted files in a directory. */
+  csvDir?: string;
   onProgress?: (message: string, detail?: Record<string, unknown>) => void;
+  /**
+   * Last gate before the roster is replaced. Throwing here aborts the run with
+   * the old snapshot intact.
+   *
+   * The loader deliberately does not decide what "too few" means: that needs the
+   * previous run's numbers, which live in `ingestion.cnes_runs` and belong to the
+   * worker. This is the seam — the package counts, the caller judges.
+   */
+  beforePromote?: (summary: PromotionSummary) => Promise<void>;
+}
+
+/** What the run is about to write, offered for judgement before it writes it. */
+export interface PromotionSummary {
+  scopedFacilities: number;
+  facilitiesUpserted: number;
+  professionals: number;
+  registrations: number;
+  /** Facility↔professional rows the run is about to install. */
+  vinculos: number;
+  occupationLinks: number;
 }
 
 export interface LoadRegistryResult {
   scopedFacilities: number;
   facilitiesUpserted: number;
+  /**
+   * In scope but absent from `tbEstabelecimento` — almost always a wrong
+   * `cnes_code` on our side. Such a clinic silently yields no suggestions, so the
+   * count is the only signal the operator gets.
+   */
+  scopedFacilitiesMissingFromDump: number;
+  /** Scoped, present, but carrying no CO_UNIDADE — carga cannot be joined to it. */
+  scopedFacilitiesWithoutUnitCode: number;
+  /** Gestor município blank or absent from the catalogue; stored as null. */
+  facilitiesWithoutMunicipality: number;
   auxStates: number;
   auxMunicipalities: number;
   auxOccupations: number;
@@ -67,8 +94,12 @@ export interface LoadRegistryResult {
   /** In carga but absent from `tbDadosProfissionalSus` — skipped entirely. */
   professionalsOrphaned: number;
   registrationsUpserted: number;
-  /** Council code absent from the curated map, or blank UF/number. */
-  registrationsSkipped: number;
+  /**
+   * Scoped carga rows carrying no usable registration — unknown council, or blank
+   * UF/number. These people are **not imported**: the registration is what makes
+   * someone resolvable, so a row without one describes nobody we can act on.
+   */
+  cargaRowsWithoutRegistration: number;
   /** Same (council, UF, number) already held by a different professional. */
   registrationsConflicted: number;
   vinculos: number;
@@ -89,6 +120,40 @@ function clean(value: string | undefined): string {
   return (value ?? "").trim();
 }
 
+/**
+ * True only for the one violation the loader is designed to absorb: two SUS ids
+ * claiming the same `(council, UF, number)`.
+ *
+ * Matching on the constraint name as well as the SQLSTATE matters — the same
+ * `23505` is raised by the `(professional, council, UF)` unique, which the upsert
+ * targets and must never see, and treating that as expected would hide a broken
+ * conflict target behind a plausible-looking counter.
+ */
+function isRegistrationIdentityConflict(error: unknown): boolean {
+  const e = error as { code?: unknown; constraint_name?: unknown } | null;
+  return (
+    e?.code === "23505" &&
+    e?.constraint_name === "registry_professional_registrations_council_state_number_key"
+  );
+}
+
+const KEY_SEPARATOR = " ";
+
+/** Composite map key for one person at one establishment. */
+function pairKeyOf(facilityCnesId: string, professionalCnesId: string): string {
+  return `${facilityCnesId}${KEY_SEPARATOR}${professionalCnesId}`;
+}
+
+/** Composite map key for one council registration slot: council + UF. */
+function registrationKeyOf(councilCnesId: string, stateCode: string): string {
+  return `${councilCnesId}${KEY_SEPARATOR}${stateCode}`;
+}
+
+function splitPairKey(key: string): [string, string] {
+  const at = key.indexOf(KEY_SEPARATOR);
+  return [key.slice(0, at), key.slice(at + KEY_SEPARATOR.length)];
+}
+
 /** CNES writes booleans as `S`/`N`. */
 function toBool(value: string | undefined): boolean | null {
   const v = clean(value).toUpperCase();
@@ -100,15 +165,22 @@ function toBool(value: string | undefined): boolean | null {
 export async function loadRegistryFromCsv(
   options: LoadRegistryOptions
 ): Promise<LoadRegistryResult> {
-  const { db, csvDir, reference } = options;
-  const prefixes = options.occupationPrefixes ?? ["225"];
+  const { db, reference } = options;
   const log = options.onProgress ?? (() => {});
-  const file = (name: Parameters<typeof sourceFileName>[0]) =>
-    join(csvDir, sourceFileName(name, reference));
+  const source =
+    options.source ??
+    (options.csvDir
+      ? directoryCnesSource({ csvDir: options.csvDir, reference })
+      : (() => {
+          throw new Error("loadRegistryFromCsv needs either `source` or `csvDir`");
+        })());
 
   const result: LoadRegistryResult = {
     scopedFacilities: 0,
     facilitiesUpserted: 0,
+    scopedFacilitiesMissingFromDump: 0,
+    scopedFacilitiesWithoutUnitCode: 0,
+    facilitiesWithoutMunicipality: 0,
     auxStates: 0,
     auxMunicipalities: 0,
     auxOccupations: 0,
@@ -117,7 +189,7 @@ export async function loadRegistryFromCsv(
     professionalsUpserted: 0,
     professionalsOrphaned: 0,
     registrationsUpserted: 0,
-    registrationsSkipped: 0,
+    cargaRowsWithoutRegistration: 0,
     registrationsConflicted: 0,
     vinculos: 0,
     occupationLinks: 0,
@@ -150,10 +222,36 @@ export async function loadRegistryFromCsv(
     return result;
   }
 
+  // ── Step 0b — Preflight the headers ──────────────────────────────────────
+  //
+  // Every column is read by name off a `Record<string, string>` that returns `""`
+  // for anything absent, so a renamed CNES column does not fail — it loads a table
+  // of empty strings and reports success. `NO_PROFISSIONAL` disappearing would
+  // name every doctor after their SUS id; `CO_CONSELHO_CLASSE` disappearing would
+  // silently drop every registration, i.e. the join key. Fail before writing.
+  const missingColumns: string[] = [];
+  for (const [name, required] of Object.entries(REQUIRED_COLUMNS) as [
+    CnesSourceName,
+    readonly string[],
+  ][]) {
+    const header = new Set(await source.header(name));
+    for (const column of required) {
+      if (!header.has(column)) {
+        missingColumns.push(`${sourceFileName(name, reference)}:${column}`);
+      }
+    }
+  }
+  if (missingColumns.length > 0) {
+    throw new Error(
+      `CNES export is missing expected columns — refusing to load a partial registry: ${missingColumns.join(", ")}`
+    );
+  }
+  log("preflight passed", { files: Object.keys(REQUIRED_COLUMNS).length });
+
   // ── Step 1 — Aux dimensions, insert-new-only ─────────────────────────────
 
   const stateRows: { cnesId: string; name: string }[] = [];
-  for await (const r of readCsvRecords(file("states"))) {
+  for await (const r of source.records("states")) {
     const cnesId = clean(r.CO_SIGLA);
     if (cnesId.length !== 2) continue;
     stateRows.push({ cnesId, name: clean(r.NO_DESCRICAO) || cnesId });
@@ -165,7 +263,7 @@ export async function loadRegistryFromCsv(
 
   const knownStates = new Set(stateRows.map((s) => s.cnesId));
   const municipalityRows: { cnesId: string; name: string; stateCnesId: string }[] = [];
-  for await (const r of readCsvRecords(file("municipalities"))) {
+  for await (const r of source.records("municipalities")) {
     const cnesId = clean(r.CO_MUNICIPIO);
     const stateCnesId = clean(r.CO_SIGLA_ESTADO);
     // A municipality whose UF is absent would violate the FK and abort the batch.
@@ -176,6 +274,7 @@ export async function loadRegistryFromCsv(
     await db.insert(registryMunicipalities).values(part).onConflictDoNothing();
   }
   result.auxMunicipalities = municipalityRows.length;
+  const knownMunicipalities = new Set(municipalityRows.map((m) => m.cnesId));
 
   const occupationRows: {
     cnesId: string;
@@ -183,7 +282,7 @@ export async function loadRegistryFromCsv(
     isHealthOccupation: boolean | null;
     isRegulated: boolean | null;
   }[] = [];
-  for await (const r of readCsvRecords(file("occupations"))) {
+  for await (const r of source.records("occupations")) {
     const cnesId = clean(r.CO_CBO);
     if (!cnesId) continue;
     occupationRows.push({
@@ -199,12 +298,31 @@ export async function loadRegistryFromCsv(
   result.auxOccupations = occupationRows.length;
   const knownOccupations = new Set(occupationRows.map((o) => o.cnesId));
 
-  await db
-    .insert(registryProfessionalCouncils)
-    .values(CURATED_COUNCILS.map((c) => ({ ...c })))
-    .onConflictDoNothing();
-  result.auxCouncils = CURATED_COUNCILS.length;
-  const knownCouncils = new Set(CURATED_COUNCILS.map((c) => c.cnesId));
+  /**
+   * Councils are **read**, never written (ADR 0009 § 6).
+   *
+   * The export ships two disagreeing council code systems — CRM is `10` in
+   * `tbConselhoClasse` and `71` in the órgão-emissor codes `tbCargaHorariaSus`
+   * actually uses — so seeding from it mislabels every doctor's council. The
+   * table is curated by hand; this reads the whitelist back out.
+   *
+   * An empty table is fatal rather than silent: every registration would be
+   * skipped, no professional would be importable, and the run would report a
+   * clean success over an empty registry.
+   */
+  const councilRows = await db
+    .select({ cnesId: registryProfessionalCouncils.cnesId })
+    .from(registryProfessionalCouncils)
+    .where(eq(registryProfessionalCouncils.isActive, true));
+  const knownCouncils = new Set(councilRows.map((c) => c.cnesId));
+  if (knownCouncils.size === 0) {
+    throw new Error(
+      "registry.professional_councils is empty — seed it by hand before loading " +
+        "(ADR 0009 §6). Without a council whitelist every registration is skipped " +
+        "and the run would import nobody while reporting success."
+    );
+  }
+  result.auxCouncils = knownCouncils.size;
 
   log("aux loaded", {
     states: result.auxStates,
@@ -218,6 +336,7 @@ export async function loadRegistryFromCsv(
   // `tbCargaHorariaSus` joins on CO_UNIDADE, not CO_CNES, so the staff scan is
   // impossible without this mapping.
   const cnesIdByUnitCode = new Map<string, string>();
+  const facilitiesFoundInDump = new Set<string>();
   const facilityBuffer: (typeof registryFacilities.$inferInsert)[] = [];
 
   async function flushFacilities() {
@@ -239,6 +358,7 @@ export async function loadRegistryFromCsv(
           addressComplement: sql`excluded.address_complement`,
           neighborhood: sql`excluded.neighborhood`,
           postalCode: sql`excluded.postal_code`,
+          municipalityCnesId: sql`excluded.municipality_cnes_id`,
           phoneNumber: sql`excluded.phone_number`,
           email: sql`excluded.email`,
           unitTypeCode: sql`excluded.unit_type_code`,
@@ -249,13 +369,29 @@ export async function loadRegistryFromCsv(
     facilityBuffer.length = 0;
   }
 
-  for await (const r of readCsvRecords(file("establishments"))) {
+  for await (const r of source.records("establishments")) {
     const cnesId = clean(r.CO_CNES);
     const atlasmedId = atlasIdByCnes.get(cnesId);
     if (atlasmedId === undefined) continue;
 
+    facilitiesFoundInDump.add(cnesId);
+
+    /**
+     * Null rather than a código the FK would reject: `ON DELETE restrict` means
+     * an unknown município aborts the whole batch, and one unmappable code is
+     * not worth losing a thousand clinics over.
+     */
+    const gestor = clean(r.CO_MUNICIPIO_GESTOR);
+    let municipalityCnesId: string | null = null;
+    if (knownMunicipalities.has(gestor)) {
+      municipalityCnesId = gestor;
+    } else {
+      result.facilitiesWithoutMunicipality += 1;
+    }
+
     const unitCode = clean(r.CO_UNIDADE);
     if (unitCode) cnesIdByUnitCode.set(unitCode, cnesId);
+    else result.scopedFacilitiesWithoutUnitCode += 1;
 
     facilityBuffer.push({
       cnesId,
@@ -270,6 +406,7 @@ export async function loadRegistryFromCsv(
       addressComplement: clean(r.NO_COMPLEMENTO) || null,
       neighborhood: clean(r.NO_BAIRRO) || null,
       postalCode: clean(r.CO_CEP) || null,
+      municipalityCnesId,
       phoneNumber: clean(r.NU_TELEFONE) || null,
       email: clean(r.NO_EMAIL) || null,
       unitTypeCode: clean(r.TP_UNIDADE) || null,
@@ -277,30 +414,61 @@ export async function loadRegistryFromCsv(
     if (facilityBuffer.length >= BATCH) await flushFacilities();
   }
   await flushFacilities();
+  result.scopedFacilitiesMissingFromDump = atlasIdByCnes.size - facilitiesFoundInDump.size;
   log("facilities upserted", {
     upserted: result.facilitiesUpserted,
     unitCodes: cnesIdByUnitCode.size,
+    missingFromDump: result.scopedFacilitiesMissingFromDump,
+    withoutUnitCode: result.scopedFacilitiesWithoutUnitCode,
+    withoutMunicipality: result.facilitiesWithoutMunicipality,
   });
+  if (result.scopedFacilitiesMissingFromDump > 0) {
+    // Not fatal — but a clinic CNES has never heard of yields an empty suggestion
+    // list that is indistinguishable from "no colleagues found".
+    log("scoped facilities absent from the dump — check their cnes_code", {
+      count: result.scopedFacilitiesMissingFromDump,
+      cnesCodes: [...atlasIdByCnes.keys()]
+        .filter((code) => !facilitiesFoundInDump.has(code))
+        .slice(0, 20),
+    });
+  }
 
   // ── Step 3 — Scan scoped carga ───────────────────────────────────────────
 
   /** facilityCnesId → set of professional SUS ids. */
   const staffByFacility = new Map<string, Set<string>>();
-  /** `${facility} ${sus}` → set of CBO codes. */
+  /** {@link pairKeyOf} → the CBO codes that person holds at that establishment. */
   const cbosByPair = new Map<string, Set<string>>();
-  /** sus → `${council} ${uf}` → number. */
+  /** SUS id → {@link registrationKeyOf} → registration number. */
   const registrationsBySus = new Map<string, Map<string, string>>();
   const susIds = new Set<string>();
 
-  for await (const r of readCsvRecords(file("workload"))) {
-    const cbo = clean(r.CO_CBO);
-    if (!prefixes.some((p) => cbo.startsWith(p))) continue;
-
+  for await (const r of source.records("workload")) {
     const facilityCnesId = cnesIdByUnitCode.get(clean(r.CO_UNIDADE));
     if (facilityCnesId === undefined) continue;
 
     const sus = clean(r.CO_PROFISSIONAL_SUS);
     if (!sus) continue;
+
+    /**
+     * The registration is the gate, not the CBO (ADR 0009 § 5).
+     *
+     * An earlier version kept rows whose CBO started with `225` and treated the
+     * registration as optional. That inferred "is a doctor" from an occupation
+     * code, when what actually makes someone resolvable against `public` is
+     * holding a council registration. A row without one describes a person we
+     * cannot act on, so it never enters the registry.
+     */
+    const council = clean(r.CO_CONSELHO_CLASSE);
+    const uf = clean(r.SG_UF_CRM).toUpperCase();
+    const number = clean(r.NU_REGISTRO);
+    if (!knownCouncils.has(council) || uf.length !== 2 || !number) {
+      result.cargaRowsWithoutRegistration += 1;
+      continue;
+    }
+
+    // Captured for display; no longer decides who is imported.
+    const cbo = clean(r.CO_CBO);
 
     susIds.add(sus);
 
@@ -311,26 +479,21 @@ export async function loadRegistryFromCsv(
     }
     staff.add(sus);
 
-    const pairKey = `${facilityCnesId} ${sus}`;
+    const pairKey = pairKeyOf(facilityCnesId, sus);
     let cbos = cbosByPair.get(pairKey);
     if (!cbos) {
       cbos = new Set();
       cbosByPair.set(pairKey, cbos);
     }
-    cbos.add(cbo);
+    if (cbo) cbos.add(cbo);
 
-    const council = clean(r.CO_CONSELHO_CLASSE);
-    const uf = clean(r.SG_UF_CRM).toUpperCase();
-    const number = clean(r.NU_REGISTRO);
-    if (knownCouncils.has(council) && uf.length === 2 && number) {
-      let regs = registrationsBySus.get(sus);
-      if (!regs) {
-        regs = new Map();
-        registrationsBySus.set(sus, regs);
-      }
-      // Dual-UF registrations are legitimate and become two rows.
-      regs.set(`${council} ${uf}`, number);
+    let regs = registrationsBySus.get(sus);
+    if (!regs) {
+      regs = new Map();
+      registrationsBySus.set(sus, regs);
     }
+    // Dual-UF registrations are legitimate and become two rows.
+    regs.set(registrationKeyOf(council, uf), number);
   }
   result.professionalsSeen = susIds.size;
   log("carga scanned", {
@@ -368,7 +531,7 @@ export async function loadRegistryFromCsv(
     professionalBuffer.length = 0;
   }
 
-  for await (const r of readCsvRecords(file("professionals"))) {
+  for await (const r of source.records("professionals")) {
     const sus = clean(r.CO_PROFISSIONAL_SUS);
     if (!susIds.has(sus) || foundSus.has(sus)) continue;
     foundSus.add(sus);
@@ -392,11 +555,12 @@ export async function loadRegistryFromCsv(
 
   // ── Step 5 — Registrations: absolute identity, keep-first on conflict ─────
 
+  const conflictSamples: string[] = [];
   const registrationRows: (typeof registryProfessionalRegistrations.$inferInsert)[] = [];
   for (const [sus, regs] of registrationsBySus) {
     if (!foundSus.has(sus)) continue;
     for (const [key, registrationNumber] of regs) {
-      const [councilCnesId, stateCode] = key.split(" ") as [string, string];
+      const [councilCnesId, stateCode] = splitPairKey(key);
       registrationRows.push({
         professionalCnesId: sus,
         councilCnesId,
@@ -405,8 +569,6 @@ export async function loadRegistryFromCsv(
       });
     }
   }
-  result.registrationsSkipped =
-    [...susIds].filter((s) => foundSus.has(s) && !registrationsBySus.has(s)).length;
 
   for (const part of chunk(registrationRows)) {
     // Two conflict targets are in play and only one can be named per statement.
@@ -450,11 +612,17 @@ export async function loadRegistryFromCsv(
               },
             });
           result.registrationsUpserted += 1;
-        } catch {
-          // The global unique fired: this CRM belongs to another SUS id. Keep the
-          // first owner. Reassigning would move a doctor's identity onto a
-          // stranger, which is worse than one missing registration.
+        } catch (error) {
+          // Only the global identity unique may be absorbed: this CRM belongs to
+          // another SUS id, so keep the first owner — reassigning would move a
+          // doctor's identity onto a stranger. Anything else (a dropped
+          // connection, a check violation) is a real failure and must not be
+          // laundered into a conflict count that reads as a normal load.
+          if (!isRegistrationIdentityConflict(error)) throw error;
           result.registrationsConflicted += 1;
+          conflictSamples.push(
+            `${row.councilCnesId}/${row.stateCode}/${row.registrationNumber} claimed by another SUS id (this one: ${row.professionalCnesId})`
+          );
         }
       }
     }
@@ -462,13 +630,30 @@ export async function loadRegistryFromCsv(
   log("registrations upserted", {
     upserted: result.registrationsUpserted,
     conflicted: result.registrationsConflicted,
-    skipped: result.registrationsSkipped,
+    cargaRowsWithoutRegistration: result.cargaRowsWithoutRegistration,
   });
+  if (conflictSamples.length > 0) {
+    // A dropped registration makes its owner unjoinable to `public`; naming a few
+    // is the difference between "the loader is fine" and a data problem someone
+    // can go look at.
+    log("registrations dropped — CRM already held by another SUS id", {
+      count: conflictSamples.length,
+      samples: conflictSamples.slice(0, 20),
+    });
+  }
 
   // ── Step 6 — Replace the staff snapshot, per scoped facility ──────────────
   //
   // One transaction: the roster must never be observable as half-deleted.
-  const scopedCnesIds = [...staffByFacility.keys()];
+  //
+  // The delete is scoped to **every facility we operate**, not to the ones that
+  // happen to have staff in this dump. A clinic whose last registered professional
+  // left reports no qualifying carga row at all, so it is absent from
+  // `staffByFacility` — scoping the delete there would skip it and leave the
+  // departed doctor suggested forever.
+  // "Replaced wholesale per scoped facility" means the scope is `public`, which is
+  // also where step 0 got it.
+  const scopedCnesIds = [...atlasIdByCnes.keys()];
   const vinculoRows: (typeof registryFacilityProfessionals.$inferInsert)[] = [];
   const occupationRowsToInsert: (typeof registryFacilityProfessionalOccupations.$inferInsert)[] =
     [];
@@ -477,7 +662,7 @@ export async function loadRegistryFromCsv(
     for (const sus of staff) {
       if (!foundSus.has(sus)) continue;
       vinculoRows.push({ facilityCnesId, professionalCnesId: sus });
-      for (const cbo of cbosByPair.get(`${facilityCnesId} ${sus}`) ?? []) {
+      for (const cbo of cbosByPair.get(pairKeyOf(facilityCnesId, sus)) ?? []) {
         if (!knownOccupations.has(cbo)) {
           result.occupationsUnmapped += 1;
           continue;
@@ -489,6 +674,26 @@ export async function loadRegistryFromCsv(
         });
       }
     }
+  }
+
+  /**
+   * The gate runs here, not after: past this point the old roster is gone.
+   *
+   * A thin export — a partial publication, a column that changed meaning, a
+   * scope query that returned less than it should — loads without error and
+   * silently empties every clinic's suggestions. Nothing about that looks like a
+   * failure from the outside, which is why it has to be refused before the
+   * delete rather than noticed afterwards.
+   */
+  if (options.beforePromote) {
+    await options.beforePromote({
+      scopedFacilities: result.scopedFacilities,
+      facilitiesUpserted: result.facilitiesUpserted,
+      professionals: result.professionalsUpserted,
+      registrations: result.registrationsUpserted,
+      vinculos: vinculoRows.length,
+      occupationLinks: occupationRowsToInsert.length,
+    });
   }
 
   await db.transaction(async (tx) => {

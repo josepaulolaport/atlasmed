@@ -1,9 +1,10 @@
 /**
  * Manual end-to-end load against a real CNES dump.
  *
- * Not a CI test — it needs the ~8 GB extracted export, which no runner has. It
- * exists because "the loader typechecks" is not evidence it loads: this is how
- * you find out, before a monthly workflow does it unattended.
+ * Not a CI test — it needs the extracted export (2.87 GB across 109 files in
+ * 202605, of which the six we read are 2.01 GB), which no runner has. It exists
+ * because "the loader typechecks" is not evidence it loads: this is how you find
+ * out, before a monthly workflow does it unattended.
  *
  *   DATABASE_URL=postgresql://…/atlasmed_scratch \
  *     bun scripts/smoke-load.ts <csvDir> <YYYYMM>

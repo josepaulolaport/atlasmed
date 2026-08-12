@@ -64,7 +64,16 @@ export const cnesRuns = ingestionSchema.table(
     stats: jsonb("stats"),
     /** Output of the post-load validation gate. */
     validationReport: jsonb("validation_report"),
-    /** Archive keys + checksums, so a run can be replayed without re-fetching. */
+    /**
+     * What the archive looked like to this run: total size, and the name, offset
+     * and both sizes of each entry actually read.
+     *
+     * Not archive *storage* — nothing is kept, and a replay always re-fetches
+     * (ADR 0009 §4). This is the diagnostic for the failure that will eventually
+     * happen: DATASUS changes the export, and the question is whether an entry
+     * moved, changed size, or stopped existing. Comparing two runs' manifests
+     * answers that; the alternative is downloading 725 MB by hand.
+     */
     archiveManifest: jsonb("archive_manifest"),
     error: text("error"),
   },

@@ -31,10 +31,6 @@ export function archiveFileName(reference: CnesReference): string {
   return `BASE_DE_DADOS_CNES_${formatReference(reference)}.ZIP`;
 }
 
-export function archiveObjectKey(reference: CnesReference): string {
-  return `cnes/${formatReference(reference)}/${archiveFileName(reference)}`;
-}
-
 /** Logical name → file stem. Suffix the competence to get the real filename. */
 export const CNES_SOURCE_STEMS = {
   establishments: "tbEstabelecimento",
@@ -59,7 +55,21 @@ export function sourceFileName(
  * the preflight check instead of loading a table full of empty strings.
  */
 export const REQUIRED_COLUMNS: Record<CnesSourceName, readonly string[]> = {
-  establishments: ["CO_UNIDADE", "CO_CNES", "NO_RAZAO_SOCIAL", "NO_FANTASIA", "TP_UNIDADE"],
+  establishments: [
+    "CO_UNIDADE",
+    "CO_CNES",
+    "NO_RAZAO_SOCIAL",
+    "NO_FANTASIA",
+    "TP_UNIDADE",
+    /**
+     * The *managing* município — `tbEstabelecimento` carries no plain
+     * `CO_MUNICIPIO`. For every clinic we operate the two coincide: measured
+     * 1423 of 1423 against our own `facilities.municipality_id`, zero
+     * divergences, zero blanks (202605). See the note on
+     * `registry.facilities.municipality_cnes_id`.
+     */
+    "CO_MUNICIPIO_GESTOR",
+  ],
   workload: [
     "CO_UNIDADE",
     "CO_PROFISSIONAL_SUS",
@@ -75,21 +85,21 @@ export const REQUIRED_COLUMNS: Record<CnesSourceName, readonly string[]> = {
 } as const;
 
 /**
- * Órgão-emissor council codes — **not** `tbConselhoClasse`.
+ * Council codes are **curated in the database, not in code** (ADR 0009 §6).
  *
- * The dump carries two disagreeing council code systems; `tbCargaHorariaSus`
- * uses órgão emissor, where CRM is `71`. On the 202605 dump, `71` accounts for
- * 99.56 % of the 1 758 035 rows with a CBO `225*` occupation, which is the only
- * cohort v1 imports.
+ * The dump carries two disagreeing council code systems — `tbConselhoClasse`
+ * calls CRM `10`, while the órgão-emissor codes `tbCargaHorariaSus` actually
+ * carries call it `71` — so seeding from the export mislabels every doctor's
+ * council. `registry.professional_councils` is filled by hand once and the
+ * loader only reads it; a code absent from it is skipped, never guessed, because
+ * a registration filed under an invented council reads as authoritative.
  *
- * Codes absent from this map are **skipped, never guessed**: a registration
- * filed under an invented council is worse than a missing one, because it reads
- * as authoritative. The loader reports how many it skipped.
+ * Seed for reference (`atlasmed_id` bridges to `person_professional_registration_councils`):
+ *
+ * ```sql
+ * INSERT INTO registry.professional_councils (cnes_id, name, abbreviation, atlasmed_id)
+ * VALUES ('71', 'Conselho Regional de Medicina', 'CRM', 10);
+ * ```
+ *
+ * On the 202605 dump `71` accounts for 99.56 % of rows carrying a CBO `225*`.
  */
-export const CURATED_COUNCILS: readonly {
-  cnesId: string;
-  name: string;
-  abbreviation: string;
-}[] = [
-  { cnesId: "71", name: "Conselho Regional de Medicina", abbreviation: "CRM" },
-];

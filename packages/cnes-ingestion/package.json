@@ -13,8 +13,6 @@
   },
   "dependencies": {
     "@atlasmed/database": "workspace:*",
-    "@atlasmed/observability": "workspace:*",
-    "@aws-sdk/client-s3": "^3.1093.0",
     "basic-ftp": "^5.0.5",
     "drizzle-orm": "^0.45.2"
   },

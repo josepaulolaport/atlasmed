@@ -30,11 +30,24 @@ export interface CsvStreamOptions {
 }
 
 /**
+ * Bytes to parse: a path on disk, or any async byte source.
+ *
+ * The archive reader yields inflated chunks that were never a file, so the
+ * parser cannot assume a path — that assumption is what would have forced the
+ * worker to extract 2 GB to disk first.
+ */
+export type CsvBytes = string | AsyncIterable<Uint8Array>;
+
+function toByteStream(source: CsvBytes): AsyncIterable<Uint8Array> {
+  return typeof source === "string" ? Bun.file(source).stream() : source;
+}
+
+/**
  * Yields raw field arrays, header row included. Use {@link readCsvRecords} for
  * header-keyed access.
  */
 export async function* streamCsvRows(
-  filePath: string,
+  source: CsvBytes,
   options: CsvStreamOptions = {}
 ): AsyncGenerator<string[], void, undefined> {
   const delimiter = options.delimiter ?? ";";
@@ -49,7 +62,7 @@ export async function* streamCsvRows(
   let pendingQuote = false;
   let sawAnyChar = false;
 
-  const stream = Bun.file(filePath).stream();
+  const stream = toByteStream(source);
 
   for await (const chunk of stream) {
     // `stream: true` keeps multi-byte sequences intact across chunk boundaries.
@@ -125,12 +138,12 @@ export type CsvRecord = Record<string, string>;
  * import. Rows longer than the header keep only the mapped columns.
  */
 export async function* readCsvRecords(
-  filePath: string,
+  source: CsvBytes,
   options: CsvStreamOptions = {}
 ): AsyncGenerator<CsvRecord, void, undefined> {
   let header: string[] | null = null;
 
-  for await (const row of streamCsvRows(filePath, options)) {
+  for await (const row of streamCsvRows(source, options)) {
     if (header === null) {
       header = row.map((h) => h.trim());
       continue;
@@ -146,12 +159,15 @@ export async function* readCsvRecords(
   }
 }
 
-/** Reads only the header row. Used by the post-extract preflight check. */
+/**
+ * Reads only the header row, then stops — closing the generator early, which
+ * aborts the underlying fetch rather than pulling the rest of the entry.
+ */
 export async function readCsvHeader(
-  filePath: string,
+  source: CsvBytes,
   options: CsvStreamOptions = {}
 ): Promise<string[]> {
-  for await (const row of streamCsvRows(filePath, options)) {
+  for await (const row of streamCsvRows(source, options)) {
     return row.map((h) => h.trim());
   }
   return [];

@@ -151,8 +151,15 @@ export const registryFacilities = registrySchema.table(
     /** CO_CNES (7 digits). */
     cnesId: text("cnes_id").primaryKey(),
     /**
-     * CO_UNIDADE — município + CNES. This, not `cnes_id`, is the key
-     * `tbCargaHorariaSus` joins on, so the staff scan needs it resolvable.
+     * CO_UNIDADE — a 30-character opaque key, UF letters then a zero-padded
+     * number (`AP00000000000000099990010000004`, dump 202605). This, not
+     * `cnes_id`, is what `tbCargaHorariaSus` joins on, so the staff scan needs it
+     * resolvable.
+     *
+     * It is **not** derivable from anything we hold: an earlier note here
+     * described it as município + CNES, which the real export disproves. The
+     * establishment file is the only source, which is why it must be read before
+     * the carga scan.
      */
     cnesUnitCode: text("cnes_unit_code"),
     /** → public.facilities.id */
@@ -166,6 +173,19 @@ export const registryFacilities = registrySchema.table(
     addressComplement: text("address_complement"),
     neighborhood: text("neighborhood"),
     postalCode: text("postal_code"),
+    /**
+     * Source `CO_MUNICIPIO_GESTOR` — the município that *manages* the unit.
+     * `tbEstabelecimento` carries no plain `CO_MUNICIPIO`, so this is the only
+     * municipality the export offers.
+     *
+     * For everything this table holds the two are the same thing: the loader
+     * only upserts clinics we operate, and the gestor matched our own
+     * `facilities.municipality_id` on 1423 of 1423, with no divergence and no
+     * blanks (202605). **If the scope ever widens** to units we do not operate —
+     * state- or federally-managed hospitals — the gestor can differ from where
+     * the establishment actually is, and this column would quietly stop meaning
+     * what its name says.
+     */
     municipalityCnesId: text("municipality_cnes_id"),
     phoneNumber: text("phone_number"),
     email: text("email"),
