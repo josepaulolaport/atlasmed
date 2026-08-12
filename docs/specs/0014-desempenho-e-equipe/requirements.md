@@ -280,6 +280,60 @@ injected-plugin form only as the literal `authPlugin: any = auth`, so the better
 `authPlugin: typeof auth = auth` read as unguarded. It now matches any annotation whose
 default is production `auth`, and still rejects an injected plugin with no default.
 
+## 8.4 Verified on device (2026-08-12)
+
+Everything above had been proved at the query, use-case and route layers. None of
+it had been *used*. Driving the real app as a real manager found four defects
+that no unit test could have, because each needed the whole chain — a manager
+who exists, holding zones, with reps under them, tapping a control.
+
+**What the manager path actually does**
+
+| | Pedro | Silvio | Admin |
+|---|---|---|---|
+| Clínicas | 146 | 1134 | 1424 |
+| Território | Rio de Janeiro | 3 territórios | global, unlabelled |
+| Equipe | Adriana alone | 3 reps, 242 + 445 + 447 = 1134 | managers |
+
+Filter drawers: options are the viewer's own (Silvio is offered his ten states
+and his three reps, never Rio or São Paulo); search narrows, and a term with no
+clinics in scope says so rather than offering a dead option; selection cascades
+both ways — picking the *município* of Ananindeua selected Pará by itself and cut
+1134 to 9, picking the *rep* Mauro Araujo selected Silvio by itself and cut it to
+447, and clearing either parent dropped its child. Sorting Equipe by a metric
+shows that metric per person. A rep's Desempenho, opened from the roster, drops
+"Clínicas não atribuídas" and keeps everything else.
+
+**The four defects**
+
+1. **The managers had no linha.** `0101` created them and gave them zones but no
+   `user_vertical_assignments` row, and `canAccessVertical` refuses outright on
+   an empty list — a 403, not an empty result. They could sign in and see
+   nothing: the exact "staffed but seeing nothing" failure that migration warns
+   about in its own header.
+2. **Sorting Equipe by any metric returned 403.** `findManagedUserIds` is a raw
+   `db.execute` over a bigint column, so postgres-js returns strings while the
+   signature promises `number[]`. `resolveSubject` asks
+   `managedUserIds.includes(subjectUserId)` — `['4','5','6'].includes(4)` is
+   false. Every earlier consumer fed those ids back into SQL, where the two
+   compare equal, so the lie went unnoticed until something compared them in
+   JavaScript.
+3. **The cached user outlived the session.** Logout cleared the session and not
+   the user, and `currentValueOrResolve()` returns a cached value without
+   refetching, so signing in as somebody else kept the previous person's name
+   and — through `currentUserRoleProvider` — their role. `UserRepository` now
+   depends on `SessionEnvironment`, so it re-resolves when a session is
+   established.
+4. **"Clínicas não atribuídas" keyed off the viewer, not the subject** (§8.2),
+   which is what made an admin opening a rep's Desempenho request a metric the
+   API is right to refuse.
+
+**Two operational notes.** Scopes are cached in Redis at `scope:user:<id>`, so a
+scope resolved before a fix keeps its stale shape until it expires — both (1) and
+(2) looked unfixed until that key was dropped. And the mobile app takes its API
+from `--dart-define-from-file=config.development.json`; built without it, it
+silently targets the default remote host rather than localhost.
+
 ## 9. Deferred
 
 - **Admin CRUD surface** (item 12) — documented, not scheduled. Shortlist when picked up:
