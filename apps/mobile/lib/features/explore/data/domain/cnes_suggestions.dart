@@ -69,6 +69,8 @@ class CnesSuggestion {
     );
   }
 
+  /// The same shape the rest of the sheet renders, so a CNES row and a row from
+  /// our own data are drawn by one widget rather than two that drift apart.
   ProfessionalRoster toRoster() {
     return ProfessionalRoster(
       id: personId,
@@ -76,6 +78,7 @@ class CnesSuggestion {
       initials: initialsFromName(displayName),
       hue: hueFromName(displayName),
       specialty: occupation,
+      crm: registrationLabel,
     );
   }
 }

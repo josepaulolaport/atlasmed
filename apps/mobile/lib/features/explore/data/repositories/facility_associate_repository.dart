@@ -256,6 +256,10 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
       initials: initialsFromName(name),
       hue: hueFromName(name),
       specialty: d.specialty,
+      // The API already resolves primary-or-first and preformats it
+      // (`CRM/SP 123456`); dropping it here is why the pool rows showed a
+      // specialty and no registration while every other surface showed both.
+      crm: d.primaryRegistrationDisplay,
     );
   }
 }

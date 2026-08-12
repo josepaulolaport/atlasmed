@@ -30,6 +30,8 @@ Future<List<ProfessionalRoster>?> showAssociateDoctorsSheet(
   );
 }
 
+enum _DoctorSource { ours, cnes }
+
 class _AssociateDoctorsSheet extends StatefulWidget {
   const _AssociateDoctorsSheet({
     required this.alreadyAssociatedIds,
@@ -59,6 +61,15 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   /// Fetched once on open rather than per keystroke: the set does not depend on
   /// the search query, and it changes only when the registry is reloaded.
   CnesSuggestions? _cnes;
+
+  /// Which source the list is showing.
+  ///
+  /// A switch rather than stacked sections: the two answer different questions —
+  /// "who is in our base" versus "who does CNES place here" — and stacking them
+  /// buried the CNES list under a search pool that can run to dozens of rows.
+  /// Selection is deliberately shared across both, so a rep can pick from either
+  /// and save once.
+  _DoctorSource _source = _DoctorSource.ours;
 
   /// Cached copy of already-associated doctors for pinning at the top.
   List<ProfessionalRoster> get _associated => widget.alreadyAssociatedDoctors;
@@ -157,19 +168,29 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
 
   List<ProfessionalRoster> get _filtered => _pool;
 
-  /// Suggestions worth showing: CNES rows for people not already linked and not
-  /// already listed elsewhere in the sheet.
+  /// CNES rows for people not already linked here, matching the current search.
   ///
-  /// The server excludes people linked to this clinic (AC 2), but the sheet is
-  /// live — someone selected in this session is still unlinked server-side, and
-  /// showing them twice would let one person be counted in two sections.
+  /// No longer deduplicated against the search pool. With the two sources on
+  /// separate tabs they answer different questions, and a doctor who is both in
+  /// our base and placed here by CNES belongs on both — the shared selection
+  /// keeps the two views consistent.
+  ///
+  /// Filtered locally because the list is one bounded fetch rather than a query:
+  /// searching while on this tab should narrow what is in front of you, not sit
+  /// inert.
   List<CnesSuggestion> get _cnesRows {
     final suggestions = _cnes;
     if (suggestions == null) return const [];
-    final poolIds = _filtered.map((d) => d.id).toSet();
+    final query = _query.trim().toLowerCase();
     return suggestions.items
         .where((s) => !widget.alreadyAssociatedIds.contains(s.personId))
-        .where((s) => !poolIds.contains(s.personId))
+        .where(
+          (s) =>
+              query.isEmpty ||
+              s.displayName.toLowerCase().contains(query) ||
+              (s.occupation ?? '').toLowerCase().contains(query) ||
+              (s.registrationLabel ?? '').toLowerCase().contains(query),
+        )
         .toList(growable: false);
   }
 
@@ -187,33 +208,26 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         .toList();
     final cnes = _cnesRows;
 
-    // The CNES block is rendered even when empty — its whole value is telling
-    // the difference between "CNES knows nobody new" and "this clinic has no
-    // CNES code", which an absent section cannot express.
-    final showCnesSection = _cnes != null;
-
     final items = <Object>[];
-    if (associated.isNotEmpty) {
-      items.add('_section_header_associated');
-      items.addAll(associated);
-    }
 
-    // Second: above the generic pool, because a CNES match is the strongest
-    // signal in the sheet, and below the people already here, which is context.
-    if (showCnesSection) {
-      if (items.isNotEmpty) items.add('_section_divider');
+    if (_source == _DoctorSource.cnes) {
+      // The date belongs here, not on a section header, because on this tab it
+      // qualifies everything below it.
       items.add('_section_header_cnes');
       if (cnes.isEmpty) {
         items.add('_section_cnes_empty');
       } else {
         items.addAll(cnes);
       }
+      return items;
     }
 
+    if (associated.isNotEmpty) {
+      items.add('_section_header_associated');
+      items.addAll(associated);
+    }
     if (available.isNotEmpty) {
-      if (items.isNotEmpty) {
-        items.add('_section_divider');
-      }
+      if (items.isNotEmpty) items.add('_section_divider');
       items.add('_section_header_available');
       items.addAll(available);
     }
@@ -279,6 +293,15 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                   value: _query,
                   hintText: 'Buscar médico, especialidade, CRM…',
                   onChanged: _onQueryChanged,
+                ),
+                const SizedBox(height: 12),
+                _SourceToggle(
+                  source: _source,
+                  cnesCount: _cnesRows.length,
+                  // Null until the fetch settles, so the pill can say "—"
+                  // rather than claim zero before it knows.
+                  cnesLoaded: _cnes != null,
+                  onChanged: (next) => setState(() => _source = next),
                 ),
               ],
             ),
@@ -394,72 +417,16 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   /// snapshot there is no date to show and the label is simply omitted.
   Widget _buildCnesHeader() {
     final label = _cnes?.referenceLabel;
+    // The pill already names the source, so this carries only the date — the
+    // part a rep cannot infer and the reason ADR 0006's accepted staleness risk
+    // is retired.
+    if (label == null) return const SizedBox(height: 8);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Vinculados a esta clínica no CNES',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.gray500,
-              letterSpacing: 0.3,
-            ),
-          ),
-          if (label != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 11.5, color: AppColors.gray400),
-            ),
-          ],
-        ],
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 11.5, color: AppColors.gray400),
       ),
-    );
-  }
-
-  /// A suggestion row.
-  ///
-  /// Same checkbox-and-save flow as every other row: selecting one only stages
-  /// it, and nothing is written until the sheet is confirmed. CNES suggests, a
-  /// human confirms — ADR 0004 Q21 — and the resulting link is an ordinary
-  /// `person_facilities` row, indistinguishable from a manual one (AC 6).
-  Widget _buildCnesRow(CnesSuggestion suggestion) {
-    final selected = _selected.contains(suggestion.personId);
-    final subtitle = [
-      if (suggestion.occupation != null) suggestion.occupation!,
-      if (suggestion.registrationLabel != null) suggestion.registrationLabel!,
-    ].join(' · ');
-
-    return CheckboxListTile(
-      value: selected,
-      onChanged: _saving
-          ? null
-          : (v) => setState(() {
-              if (v == true) {
-                _selected.add(suggestion.personId);
-              } else {
-                _selected.remove(suggestion.personId);
-              }
-            }),
-      controlAffinity: ListTileControlAffinity.trailing,
-      dense: true,
-      title: Text(
-        suggestion.displayName,
-        style: const TextStyle(
-          fontSize: 14.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.gray900,
-        ),
-      ),
-      subtitle: subtitle.isEmpty
-          ? null
-          : Text(
-              subtitle,
-              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
-            ),
     );
   }
 
@@ -503,74 +470,81 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
           return const SizedBox.shrink();
         }
 
-        if (item is CnesSuggestion) return _buildCnesRow(item);
+        // A CNES suggestion renders through the same tile as everything else —
+        // same avatar, same type scale, same subtitle rule — because two
+        // builders for one row shape is how they end up looking different.
+        if (item is CnesSuggestion) return _buildPersonTile(item.toRoster());
 
-        // Doctor row
-        final d = item as ProfessionalRoster;
-        final selected = _selected.contains(d.id);
-        final isAssociated = widget.alreadyAssociatedIds.contains(d.id);
-        return CheckboxListTile(
-          value: selected,
-          onChanged: _saving
-              ? null
-              : (v) {
-                  if (v == false && isAssociated) {
-                    setState(() => _selected.remove(d.id));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        duration: const Duration(seconds: 4),
-                        content: Text('${d.name} removido'),
-                        action: SnackBarAction(
-                          label: 'Desfazer',
-                          onPressed: () {
-                            setState(() => _selected.add(d.id));
-                          },
-                        ),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  } else {
-                    setState(() {
-                      if (v == true) {
-                        _selected.add(d.id);
-                      } else {
-                        _selected.remove(d.id);
-                      }
-                    });
-                  }
-                },
-          controlAffinity: ListTileControlAffinity.trailing,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-          secondary: CircleAvatar(
-            backgroundColor: HSLColor.fromAHSL(1, d.hue, 0.48, 0.88).toColor(),
-            child: Text(
-              d.initials,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: HSLColor.fromAHSL(1, d.hue, 0.55, 0.32).toColor(),
-              ),
-            ),
-          ),
-          title: Text(
-            d.name,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.gray900,
-            ),
-          ),
-          subtitle: Text(
-            [
-              if (d.specialty != null) d.specialty!,
-              if (d.crm != null) d.crm!,
-            ].join(' · '),
-            style: const TextStyle(fontSize: 12, color: AppColors.gray500),
-          ),
-          activeColor: AppColors.navyBright,
-        );
+        return _buildPersonTile(item as ProfessionalRoster);
       },
     );
+  }
+
+  Widget _buildPersonTile(ProfessionalRoster d) {
+    {
+      final selected = _selected.contains(d.id);
+      final isAssociated = widget.alreadyAssociatedIds.contains(d.id);
+      return CheckboxListTile(
+        value: selected,
+        onChanged: _saving
+            ? null
+            : (v) {
+                if (v == false && isAssociated) {
+                  setState(() => _selected.remove(d.id));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      duration: const Duration(seconds: 4),
+                      content: Text('${d.name} removido'),
+                      action: SnackBarAction(
+                        label: 'Desfazer',
+                        onPressed: () {
+                          setState(() => _selected.add(d.id));
+                        },
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } else {
+                  setState(() {
+                    if (v == true) {
+                      _selected.add(d.id);
+                    } else {
+                      _selected.remove(d.id);
+                    }
+                  });
+                }
+              },
+        controlAffinity: ListTileControlAffinity.trailing,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        secondary: CircleAvatar(
+          backgroundColor: HSLColor.fromAHSL(1, d.hue, 0.48, 0.88).toColor(),
+          child: Text(
+            d.initials,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: HSLColor.fromAHSL(1, d.hue, 0.55, 0.32).toColor(),
+            ),
+          ),
+        ),
+        title: Text(
+          d.name,
+          style: const TextStyle(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.gray900,
+          ),
+        ),
+        subtitle: Text(
+          [
+            if (d.specialty != null) d.specialty!,
+            if (d.crm != null) d.crm!,
+          ].join(' · '),
+          style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+        ),
+        activeColor: AppColors.navyBright,
+      );
+    }
   }
 
   Future<void> _confirm() async {
@@ -622,6 +596,100 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     } finally {
       repo.dispose();
     }
+  }
+}
+
+/// Switches the list between our own base and what CNES records at this clinic.
+class _SourceToggle extends StatelessWidget {
+  const _SourceToggle({
+    required this.source,
+    required this.cnesCount,
+    required this.cnesLoaded,
+    required this.onChanged,
+  });
+
+  final _DoctorSource source;
+  final int cnesCount;
+  final bool cnesLoaded;
+  final ValueChanged<_DoctorSource> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.gray100,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SourceTab(
+              label: 'Nossa base',
+              selected: source == _DoctorSource.ours,
+              onTap: () => onChanged(_DoctorSource.ours),
+            ),
+          ),
+          Expanded(
+            child: _SourceTab(
+              label: cnesLoaded ? 'CNES ($cnesCount)' : 'CNES',
+              selected: source == _DoctorSource.cnes,
+              onTap: () => onChanged(_DoctorSource.cnes),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceTab extends StatelessWidget {
+  const _SourceTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: selected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? AppColors.gray900 : AppColors.gray500,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
