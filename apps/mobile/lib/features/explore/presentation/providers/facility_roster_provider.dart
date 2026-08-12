@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_roster_constants.dart'
     show facilityRosterPageSize;
@@ -57,7 +58,8 @@ typedef FacilityRosterPageLoader<T> =
       required int page,
     });
 
-class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>> {
+class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>>
+    with DisposeSafeStateWrites<FacilityRosterState<T>> {
   FacilityRosterNotifier({
     required this.facilityId,
     required FacilityRosterPageLoader<T> loadPage,

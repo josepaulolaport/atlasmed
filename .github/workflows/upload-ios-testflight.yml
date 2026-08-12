@@ -37,13 +37,20 @@ concurrency:
 jobs:
   build-and-upload:
     if: inputs.mode == 'build'
-    runs-on: macos-15
+    # mapbox_maps_flutter 2.26+ ships MapboxCommon built with Swift 6.2.4;
+    # macos-15 defaults to Xcode 16.4 / Swift 6.1 and fails the compile.
+    runs-on: macos-26
     environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Select Xcode 26.6
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.6"
 
       - name: Read Flutter version from FVM
         id: fvm
@@ -176,11 +183,16 @@ jobs:
 
   upload-from-release:
     if: inputs.mode == 'from_release'
-    runs-on: macos-15
+    runs-on: macos-26
     environment: production
     steps:
       - name: Checkout (scripts)
         uses: actions/checkout@v5
+
+      - name: Select Xcode 26.6
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.6"
 
       - name: Download IPA from release
         env:

@@ -4,7 +4,6 @@ import {
   Role,
   type ScopeContext,
 } from "@atlasmed/access";
-import { monthKeyAt } from "@atlasmed/facility-insights";
 import { resolveVerticalIds } from "../../../access/application/services/vertical-access.service";
 import { ValidationError } from "../../../../shared/errors";
 import { logger } from "../../../../infrastructure/logging/logger";
@@ -223,7 +222,7 @@ export class GetOrderUseCase {
  * carries the request, and a use-case test must be able to make it fail.
  */
 export interface MetricSnapshotRecomputeQueue {
-  enqueue(input: { facilityVerticalProfileId: number; months: string[] }): Promise<unknown>;
+  enqueue(input: { facilityVerticalProfileId: number }): Promise<unknown>;
 }
 
 export class CreateOrderUseCase {
@@ -252,17 +251,17 @@ export class CreateOrderUseCase {
     const queue = this.deps.metricSnapshotQueue;
     if (!queue) return;
 
-    const month = monthKeyAt(order.orderedAt ?? order.createdAt);
     try {
+      // The whole profile, not the order's month: a recompute rebuilds every
+      // metric from a rolling window, so when the order was placed changes
+      // nothing about what has to be recomputed.
       await queue.enqueue({
         facilityVerticalProfileId: order.facilityVerticalProfileId,
-        months: [month],
       });
     } catch (error) {
       logger.error("facility_metric_snapshot.trigger_enqueue_failed", {
         orderId: order.id,
         facilityVerticalProfileId: order.facilityVerticalProfileId,
-        month,
         error: error instanceof Error ? error.message : String(error),
       });
     }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:atlasmed_mobile_app/core/state/dispose_safe_state_notifier.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/facility_api.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_bucket.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/clinic_providers.dart';
@@ -57,7 +58,8 @@ class ExploreState {
   }
 }
 
-class ExploreNotifier extends StateNotifier<ExploreState> {
+class ExploreNotifier extends StateNotifier<ExploreState>
+    with DisposeSafeStateWrites<ExploreState> {
   ExploreNotifier(this._ref) : super(const ExploreState()) {
     final location = _ref.read(locationSessionProvider).location;
     if (location != null) state = state.copyWith(origin: location);

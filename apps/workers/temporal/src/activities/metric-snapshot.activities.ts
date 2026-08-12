@@ -6,32 +6,30 @@ import {
   type AnyDatabase,
 } from "@atlasmed/database";
 import {
-  monthKeyAt,
   recomputeMetricSnapshots,
-  trailingMonths,
-  type MonthKey,
 } from "@atlasmed/facility-insights";
 import { getDb } from "../infrastructure/db";
 import { logger } from "../logger";
 
 /**
- * RECONCILE — profiles whose inputs changed inside a watermark window.
- * BACKFILL  — every profile, paged.
+ * RECONCILE — profiles whose orders changed inside a watermark window. Usage
+ *              writes recompute inline, so they are not watched here.
+ * NIGHTLY   — every profile, paged. `ours` is a rolling 90-day window, so a
+ *              clinic's value moves with the calendar even when nothing about it
+ *              changed — and the watermark selects precisely those clinics never.
  * TRIGGER   — exactly the profiles named by the caller, one page, no paging.
  *
  * TRIGGER exists because a write to one order should recompute one profile.
  * Selection is the only difference: the recompute itself is the same pure
  * function of stored state, so a triggered run and a swept run of the same
- * (profile, month) produce the same row (spec 0013 §4.4).
+ * (profile, metric) produce the same row (spec 0013 §4.4, §4.6).
  */
-export type MetricSnapshotMode = "RECONCILE" | "BACKFILL" | "TRIGGER";
+export type MetricSnapshotMode = "RECONCILE" | "NIGHTLY" | "TRIGGER";
 
 export interface MetricSnapshotBatchInput {
   mode: MetricSnapshotMode;
   cursor: number | null;
   limit: number;
-  /** Months to recompute. Explicit — the activity decides nothing about which. */
-  months: MonthKey[];
   /** RECONCILE only: the half-open watermark window. */
   since?: string;
   until?: string;
@@ -69,8 +67,7 @@ export interface MetricSnapshotBatchStore {
   listAllProfileIds(input: { afterProfileId: number; limit: number }): Promise<number[]>;
   recompute(input: {
     profileId: number;
-    months: MonthKey[];
-    computedAt: Date;
+      computedAt: Date;
   }): Promise<{ written: number; differed: number }>;
 }
 
@@ -114,13 +111,6 @@ export function createMetricSnapshotBatchActivity(dependencies: {
       // bug, and recomputing nothing must never look like recomputing something.
       throw ApplicationFailure.nonRetryable(message, "MetricSnapshotValidationFailure");
     }
-    if (input.months.length === 0) {
-      throw ApplicationFailure.nonRetryable(
-        "months must not be empty",
-        "MetricSnapshotValidationFailure",
-      );
-    }
-
     const cursor = input.cursor ?? 0;
     let profileIds: number[];
     if (input.mode === "TRIGGER") {
@@ -128,7 +118,7 @@ export function createMetricSnapshotBatchActivity(dependencies: {
     } else {
       try {
         profileIds =
-          input.mode === "BACKFILL"
+          input.mode === "NIGHTLY"
             ? await dependencies.store.listAllProfileIds({ afterProfileId: cursor, limit: input.limit })
             : await dependencies.store.listChangedProfileIds({
                 since: new Date(input.since!),
@@ -162,8 +152,7 @@ export function createMetricSnapshotBatchActivity(dependencies: {
       try {
         const result = await dependencies.store.recompute({
           profileId,
-          months: input.months,
-          computedAt,
+            computedAt,
         });
         written += result.written;
         differed += result.differed;
@@ -206,7 +195,6 @@ export async function recalculateMetricSnapshotsBatch(
 export interface MetricSnapshotLifecycleLogInput {
   action: string;
   mode: MetricSnapshotMode;
-  months: MonthKey[];
   processed: number;
   written: number;
   differed: number;
@@ -228,11 +216,6 @@ export async function logMetricSnapshotLifecycle(
   const level = input.failed > 0 ? "error" : "info";
   logger[level](input.action, {
     mode: input.mode,
-    // The logger takes scalars, and the window is more useful as its bounds than
-    // as a list — three entries today, but the constant is a deploy away.
-    monthsFrom: input.months[0],
-    monthsTo: input.months[input.months.length - 1],
-    monthCount: input.months.length,
     processed: input.processed,
     written: input.written,
     differed: input.differed,
@@ -241,7 +224,3 @@ export async function logMetricSnapshotLifecycle(
   });
 }
 
-/** The trailing window a run covers, ending at `instant`'s month. */
-export function windowMonths(instant: Date, monthsInWindow: number): MonthKey[] {
-  return trailingMonths(monthKeyAt(instant), monthsInWindow);
-}

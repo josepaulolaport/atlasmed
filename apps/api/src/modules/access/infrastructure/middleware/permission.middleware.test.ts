@@ -317,4 +317,87 @@ describe("PermissionMiddleware", () => {
       expect(response.status).toBe(403);
     });
   });
+
+  describe("a guard leaks onto every route declared after it", () => {
+    /**
+     * This is the behaviour, not the wish — and the reason route files must
+     * declare one Elysia instance per permission.
+     *
+     * `onBeforeHandle({ as: "scoped" })` attaches to the *parent* chain, which
+     * is what lets the guard read `getUser` from auth. The cost is that it also
+     * runs for every route registered later in that chain, so
+     *
+     *   .use(requirePermission("read", X)).get(...)
+     *   .use(requirePermission("delete", X)).delete(...)
+     *   .use(requirePermission("read", X)).get(...)   // reads, but needs delete
+     *
+     * silently ANDs the guards together. Nothing in the middleware can prevent
+     * that; `route-security.registry.test.ts` enforces the structure instead, by
+     * rejecting a guard declared after a route in the same chain.
+     */
+    function chainedApp(role: "ADMIN" | "MANAGER") {
+      const auth = new Elysia({ name: `auth-chain-${role}` }).derive(
+        { as: "scoped" },
+        async () => ({ getUser: async () => ({ id: 99, role: { name: role } }) })
+      );
+
+      return new Elysia()
+        .onError(({ error, set }) => {
+          if (error instanceof AppError) {
+            set.status = error.statusCode;
+            return { error: error.toClientJSON() };
+          }
+          throw error;
+        })
+        .use(auth)
+        .use(requirePermission("read", "TERRITORY"))
+        .get("/first-read", () => ({ ok: true }))
+        .use(requirePermission("delete", "TERRITORY"))
+        .delete("/destroy", () => ({ ok: true }))
+        .use(requirePermission("read", "TERRITORY"))
+        .get("/later-read", () => ({ ok: true }));
+    }
+
+    it("lets a MANAGER read before any stronger guard is declared", async () => {
+      const response = await chainedApp("MANAGER").handle(
+        new Request("http://localhost/first-read")
+      );
+
+      expect(response.status).toBe(200);
+    });
+
+    it("still refuses a MANAGER the delete it genuinely lacks", async () => {
+      const response = await chainedApp("MANAGER").handle(
+        new Request("http://localhost/destroy", { method: "DELETE" })
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    it("refuses a MANAGER a plain read that sits below a delete guard", async () => {
+      // MANAGER has read TERRITORY and not delete TERRITORY, and this route only
+      // ever claimed to need a read. It is refused anyway. Every 403 of this
+      // shape is a permission the route never asked for.
+      const response = await chainedApp("MANAGER").handle(
+        new Request("http://localhost/later-read")
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    it("leaves ADMIN unaffected either way", async () => {
+      const app = chainedApp("ADMIN");
+
+      expect(
+        (await app.handle(new Request("http://localhost/later-read"))).status
+      ).toBe(200);
+      expect(
+        (
+          await app.handle(
+            new Request("http://localhost/destroy", { method: "DELETE" })
+          )
+        ).status
+      ).toBe(200);
+    });
+  });
 });

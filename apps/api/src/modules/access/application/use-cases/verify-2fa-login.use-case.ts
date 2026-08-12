@@ -92,7 +92,6 @@ export class Verify2FALoginUseCase {
 
     const session = await this.deps.sessionService.create({
       userId: user.id,
-      userRole: user.role.name as any,
       ipAddress: params.ipAddress ?? pendingLogin.ipAddress,
       userAgent: params.userAgent ?? pendingLogin.userAgent,
       acceptLanguage: params.acceptLanguage ?? pendingLogin.acceptLanguage,

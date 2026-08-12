@@ -202,7 +202,6 @@ Widget _app(
   _InteractionRepository repository,
   _NotesRepository notes, {
   _MutationRepository? mutations,
-  VoidCallback? onNewOrder,
   VoidCallback? onReschedule,
   VoidCallback? onCancel,
 }) => ProviderScope(
@@ -219,7 +218,6 @@ Widget _app(
     theme: AppTheme.light,
     home: InteractionScreen(
       interactionId: 1,
-      onNewOrder: onNewOrder,
       onReschedule: onReschedule,
       onCancel: onCancel,
     ),
@@ -258,6 +256,28 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Iniciar interação'), findsOneWidget);
+  });
+
+  testWidgets('a scheduled interaction offers no new-order action', (
+    tester,
+  ) async {
+    // Scheduled and in-progress are the two states that used to show it. The
+    // flow it opened could not be finished — checkout wants a clinic plus an
+    // interaction or a doctor, and its pickers are stubs over empty lists — so
+    // the action is gone rather than present and failing at the last step.
+    final repository = _InteractionRepository(_detail());
+    await tester.pumpWidget(_app(repository, _NotesRepository()));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Iniciar interação'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    // Starting the interaction is still offered; only ordering is withdrawn.
+    expect(find.text('Iniciar interação'), findsOneWidget);
+    expect(find.text('Novo pedido'), findsNothing);
   });
 
   testWidgets('explicit early start refreshes the workspace', (tester) async {

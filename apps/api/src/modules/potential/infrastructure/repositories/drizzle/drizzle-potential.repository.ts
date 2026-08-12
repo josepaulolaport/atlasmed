@@ -1,17 +1,22 @@
 import {
+  facilityMetricSnapshots,
   facilityProductUsage,
   facilityVerticalProfiles,
   productPotentialDefinitions,
   productPotentialLinks,
+  productEquivalences,
   productVerticals,
   products,
 } from "@atlasmed/database";
-import { createMetricSnapshotStore, type Database } from "@atlasmed/database";
+import {
+  createMetricSnapshotStore,
+  listTheirsStanding,
+  sumOursByProduct,
+  type Database,
+} from "@atlasmed/database";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
-import type { MonthKey } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
-  DefinitionMonthQtySum,
   FacilityProductUsageRecord,
   PotentialDefinitionRecord,
   PotentialRepository,
@@ -139,76 +144,31 @@ export class DrizzlePotentialRepository implements PotentialRepository {
   }
 
   /** Stored snapshots — delegated, so the read path and the sweep agree. */
-  async listMetricSnapshots(input: {
-    profileId: number;
-    months: MonthKey[];
-  }) {
-    return createMetricSnapshotStore(this.database).listExisting(input);
-  }
 
   /**
-   * Competitor quantities for the given months.
+   * The quantity standing for each competitor product of a metric.
    *
-   * `months` is explicit rather than "the latest": the read path averages a
-   * trailing window and the recompute handler wants exactly one month, and
-   * neither should be expressed as a `LIMIT` over an implicit ordering.
+   * One row per product (§4.6). Products no longer linked to the metric are
+   * excluded, matching our own side — their rows stay put and count again if
+   * the link is restored.
    */
-  async listUsage(input: {
-    profileId: number;
-    definitionIds: number[];
-    months: MonthKey[];
-  }): Promise<FacilityProductUsageRecord[]> {
-    if (input.definitionIds.length === 0 || input.months.length === 0) return [];
-    const rows = await this.database
-      .select({
-        definitionId: facilityProductUsage.definitionId,
-        productId: facilityProductUsage.productId,
-        productName: products.name,
-        month: facilityProductUsage.month,
-        quantity: facilityProductUsage.quantity,
-        metricUnits: products.metricUnits,
-        updatedAt: facilityProductUsage.updatedAt,
-      })
-      .from(facilityProductUsage)
-      .innerJoin(products, eq(products.id, facilityProductUsage.productId))
-      .where(
-        and(
-          eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
-          inArray(facilityProductUsage.definitionId, input.definitionIds),
-          inArray(facilityProductUsage.month, input.months),
-        ),
-      )
-      .orderBy(asc(facilityProductUsage.month), asc(products.name));
-
-    return rows.map((row) => ({
-      definitionId: row.definitionId,
-      productId: row.productId,
-      productName: row.productName,
-      month: row.month,
-      /** Product units, as the rep entered them. */
-      quantity: Number(row.quantity),
-      /** Metric units — quantity × the product's packaging factor. */
-      metricQuantity: Number(row.quantity) * Number(row.metricUnits),
-      updatedAt: row.updatedAt,
-    }));
+  async listUsage(input: { profileId: number; definitionIds: number[] }) {
+    return listTheirsStanding(this.database, input);
   }
 
+
   /**
-   * Sets one competitor quantity, replacing any previous figure for the same
-   * (profile, definition, product, month). The rep supplies only the number; the
-   * vertical comes from the definition, so the two composite foreign keys cannot
-   * disagree.
+   * Sets the quantity standing for (profile, definition, product).
    *
-   * The month is part of the key because the rep's answer is an observation
-   * about a month (spec 0013 §4.1, amended 2026-08-11) — overwriting it would
-   * silently rewrite what was true in every earlier month.
+   * Recording the same product again replaces the figure — a competitor carries
+   * one number and the rep corrects it (§4.6). The vertical comes from the
+   * definition, so the two composite foreign keys cannot disagree.
    */
   async upsertUsage(input: {
     profileId: number;
     definitionId: number;
     verticalId: number;
     productId: number;
-    month: MonthKey;
     quantity: number;
     updatedByUserId: number;
   }): Promise<void> {
@@ -219,7 +179,6 @@ export class DrizzlePotentialRepository implements PotentialRepository {
         definitionId: input.definitionId,
         verticalId: input.verticalId,
         productId: input.productId,
-        month: input.month,
         quantity: String(input.quantity),
         updatedByUserId: input.updatedByUserId,
       })
@@ -228,7 +187,6 @@ export class DrizzlePotentialRepository implements PotentialRepository {
           facilityProductUsage.facilityVerticalProfileId,
           facilityProductUsage.definitionId,
           facilityProductUsage.productId,
-          facilityProductUsage.month,
         ],
         set: {
           quantity: String(input.quantity),
@@ -238,11 +196,64 @@ export class DrizzlePotentialRepository implements PotentialRepository {
       });
   }
 
-  async deleteUsage(input: {
+  /**
+   * Records or withdraws "no other brand is sold here".
+   *
+   * Upserts, because the claim can be made about a clinic no recompute has
+   * touched yet — and writes only the claim's two columns, never the derived
+   * figures, which are the recompute's to own.
+   */
+  async setNoOtherBrands(input: {
+    profileId: number;
+    definitionId: number;
+    verticalId: number;
+    value: boolean;
+  }): Promise<void> {
+    const claim = {
+      noOtherBrands: input.value,
+      noOtherBrandsSetAt: input.value ? new Date() : null,
+    };
+    await this.database
+      .insert(facilityMetricSnapshots)
+      .values({
+        facilityVerticalProfileId: input.profileId,
+        definitionId: input.definitionId,
+        verticalId: input.verticalId,
+        oursQty: "0",
+        theirsQty: "0",
+        ...claim,
+      })
+      .onConflictDoUpdate({
+        target: [
+          facilityMetricSnapshots.facilityVerticalProfileId,
+          facilityMetricSnapshots.definitionId,
+        ],
+        set: claim,
+      });
+  }
+
+  async listNoOtherBrands(input: { profileId: number; definitionIds: number[] }) {
+    if (input.definitionIds.length === 0) return [];
+    const rows = await this.database
+      .select({
+        definitionId: facilityMetricSnapshots.definitionId,
+        noOtherBrands: facilityMetricSnapshots.noOtherBrands,
+        setAt: facilityMetricSnapshots.noOtherBrandsSetAt,
+      })
+      .from(facilityMetricSnapshots)
+      .where(
+        and(
+          eq(facilityMetricSnapshots.facilityVerticalProfileId, input.profileId),
+          inArray(facilityMetricSnapshots.definitionId, input.definitionIds),
+        ),
+      );
+    return rows;
+  }
+
+  async deleteUsageForProduct(input: {
     profileId: number;
     definitionId: number;
     productId: number;
-    month: MonthKey;
   }): Promise<boolean> {
     const deleted = await this.database
       .delete(facilityProductUsage)
@@ -251,10 +262,9 @@ export class DrizzlePotentialRepository implements PotentialRepository {
           eq(facilityProductUsage.facilityVerticalProfileId, input.profileId),
           eq(facilityProductUsage.definitionId, input.definitionId),
           eq(facilityProductUsage.productId, input.productId),
-          eq(facilityProductUsage.month, input.month),
         ),
       )
-      .returning({ id: facilityProductUsage.id });
+      .returning({ productId: facilityProductUsage.productId });
     return deleted.length > 0;
   }
 
@@ -267,15 +277,26 @@ export class DrizzlePotentialRepository implements PotentialRepository {
    * `metric_units` multiplication and the São Paulo month boundary, every one of
    * which was silently wrong at some point before P4-1.
    */
-  async sumAtlasmedQtyByDefinitionAndMonth(input: {
+  async sumAtlasmedQtyByDefinition(input: {
     facilityId: number;
     verticalId: number;
     definitionIds: number[];
     rangeStart: Date;
     rangeEnd: Date;
-  }): Promise<DefinitionMonthQtySum[]> {
+  }) {
     return createMetricSnapshotStore(this.database).sumOurs(input);
   }
+
+  async sumAtlasmedQtyByDefinitionAndProduct(input: {
+    facilityId: number;
+    verticalId: number;
+    definitionIds: number[];
+    rangeStart: Date;
+    rangeEnd: Date;
+  }) {
+    return sumOursByProduct(this.database, input);
+  }
+
 
   /**
    * Links a product to a metric, replacing whatever it was linked to *in that
@@ -361,6 +382,33 @@ export class DrizzlePotentialRepository implements PotentialRepository {
    * product may now be linked in several linhas — asking by product alone no
    * longer identifies a row.
    */
+  /**
+   * The other brands that count toward a metric, derived through equivalences.
+   *
+   * `product_potential_links` holds only our products — the catalogue screen
+   * links variants, and there is no way to link a competitor product to a
+   * metric. So a competitor belongs to the metric when it is the equivalent of
+   * one of ours that is linked to it, which is a relation the comparativo
+   * screen already maintains.
+   */
+  async listCompetitorProductsForDefinition(definitionId: number) {
+    const rows = await this.database
+      .selectDistinct({
+        productId: products.id,
+        productName: products.name,
+        productCode: products.code,
+      })
+      .from(productEquivalences)
+      .innerJoin(
+        productPotentialLinks,
+        eq(productPotentialLinks.productId, productEquivalences.productId),
+      )
+      .innerJoin(products, eq(products.id, productEquivalences.competitorProductId))
+      .where(eq(productPotentialLinks.definitionId, definitionId))
+      .orderBy(asc(products.name));
+    return rows;
+  }
+
   async findLink(input: {
     productId: number;
     definitionId: number;

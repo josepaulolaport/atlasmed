@@ -1,7 +1,7 @@
-import { monthBounds, type MonthKey } from "./market-metric";
+import { monthlyRateFromDays, rollingWindow } from "./market-metric";
 
 /**
- * Recomputing `facility_metric_snapshots` for one profile (spec 0013 §4.4).
+ * Recomputing `facility_metric_snapshots` for one profile (spec 0013 §4.4, §4.6).
  *
  * **Why this lives in a package rather than in the API module.** The Temporal
  * worker cannot import from `apps/api` — it depends only on packages — so a
@@ -16,6 +16,10 @@ import { monthBounds, type MonthKey } from "./market-metric";
  * fifty times, concurrently or out of order, and the result is identical. That
  * is what makes at-least-once delivery acceptable and what lets the whole table
  * be truncated and rebuilt.
+ *
+ * **One row per (profile, metric)** since §4.6. There are no months: the metric
+ * says what is true now. `ours` is a rolling 90-day window, which is why the
+ * value moves with the calendar and not only with events — see the nightly pass.
  */
 
 export type ProfileForSnapshot = {
@@ -24,21 +28,22 @@ export type ProfileForSnapshot = {
   verticalId: number;
 };
 
-export type OursByDefinitionMonth = {
+export type OursByDefinition = {
   definitionId: number;
-  month: MonthKey;
   totalQty: number;
 };
 
-export type TheirsByDefinitionMonth = {
+/** One competitor product's standing figure at a clinic. */
+export type TheirsByProduct = {
   definitionId: number;
-  month: MonthKey;
-  metricQuantity: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  updatedAt: Date;
 };
 
 export type StoredSnapshotCell = {
   definitionId: number;
-  month: MonthKey;
   oursQty: number;
   theirsQty: number;
 };
@@ -47,7 +52,6 @@ export type SnapshotRowToWrite = {
   profileId: number;
   definitionId: number;
   verticalId: number;
-  month: MonthKey;
   oursQty: number;
   theirsQty: number;
   computedAt: Date;
@@ -59,26 +63,31 @@ export type SnapshotRowToWrite = {
  * Deliberately narrow: the API's repository and the worker's drizzle queries are
  * different objects with different lifetimes, and neither should have to satisfy
  * an interface shaped by the other's convenience.
+ *
+ * Note what is absent — the `no_other_brands` claim. It shares a row with the
+ * derived figures but it is an input, and this algorithm neither reads nor
+ * writes it. The share that depends on it is computed by the database.
  */
 export interface MetricSnapshotStore {
   findProfile(profileId: number): Promise<ProfileForSnapshot | null>;
   listDefinitionIds(input: { verticalId: number }): Promise<number[]>;
+  /** Eligible order quantities over a date range, summed per metric. */
   sumOurs(input: {
     facilityId: number;
     verticalId: number;
     definitionIds: number[];
     rangeStart: Date;
     rangeEnd: Date;
-  }): Promise<OursByDefinitionMonth[]>;
-  sumTheirs(input: {
+  }): Promise<OursByDefinition[]>;
+  /**
+   * The figure standing for each competitor product, for products still linked
+   * to the metric. One row per product — a rep answers once and replaces.
+   */
+  listTheirs(input: {
     profileId: number;
     definitionIds: number[];
-    months: MonthKey[];
-  }): Promise<TheirsByDefinitionMonth[]>;
-  listExisting(input: {
-    profileId: number;
-    months: MonthKey[];
-  }): Promise<StoredSnapshotCell[]>;
+  }): Promise<TheirsByProduct[]>;
+  listExisting(input: { profileId: number }): Promise<StoredSnapshotCell[]>;
   upsert(rows: SnapshotRowToWrite[]): Promise<void>;
 }
 
@@ -88,102 +97,95 @@ export type RecomputeMetricSnapshotsResult = {
   written: number;
   /** Rows whose value actually moved — a lost trigger's fingerprint. */
   differed: number;
-  months: MonthKey[];
 };
 
 export async function recomputeMetricSnapshots(
   store: MetricSnapshotStore,
   input: {
     profileId: number;
-    /** Explicit months. The caller decides the window; this decides nothing. */
-    months: MonthKey[];
+    /**
+     * The instant the window is measured from. Injectable so a recompute is a
+     * function of its arguments and not of when it happened to run.
+     */
     computedAt: Date;
   },
 ): Promise<RecomputeMetricSnapshotsResult> {
-  if (input.months.length === 0) {
-    return { profileId: input.profileId, written: 0, differed: 0, months: [] };
-  }
-
   const profile = await store.findProfile(input.profileId);
   if (!profile) {
     // Not an error: a profile can be deleted between a trigger being enqueued
     // and the handler running. There is simply nothing left to compute.
-    return { profileId: input.profileId, written: 0, differed: 0, months: [] };
+    return { profileId: input.profileId, written: 0, differed: 0 };
   }
 
-  const months = [...new Set(input.months)].sort();
   const definitionIds = await store.listDefinitionIds({ verticalId: profile.verticalId });
   if (definitionIds.length === 0) {
-    return { profileId: profile.id, written: 0, differed: 0, months };
+    return { profileId: profile.id, written: 0, differed: 0 };
   }
 
-  // One range spanning every requested month, then bucketed in memory — the
-  // alternative is a query per month, and the months are contiguous in every
-  // caller we have.
-  const rangeStart = monthBounds(months[0]!).start;
-  const rangeEnd = monthBounds(months[months.length - 1]!).end;
+  const window = rollingWindow(input.computedAt);
 
   const [oursRows, theirsRows, existing] = await Promise.all([
     store.sumOurs({
       facilityId: profile.facilityId,
       verticalId: profile.verticalId,
       definitionIds,
-      rangeStart,
-      rangeEnd,
+      rangeStart: window.start,
+      rangeEnd: window.end,
     }),
-    store.sumTheirs({ profileId: profile.id, definitionIds, months }),
-    store.listExisting({ profileId: profile.id, months }),
+    store.listTheirs({ profileId: profile.id, definitionIds }),
+    store.listExisting({ profileId: profile.id }),
   ]);
 
-  const requested = new Set(months);
-  const ours = new Map<string, number>();
+  // Ours: a quantity observed over the window, normalised to a month. Raw
+  // quantities — `metric_units` is an information field since §4.6.
+  const ours = new Map<number, number>();
   for (const row of oursRows) {
-    if (!requested.has(row.month)) continue;
-    const key = cellKey(row.definitionId, row.month);
-    ours.set(key, (ours.get(key) ?? 0) + row.totalQty);
+    ours.set(row.definitionId, (ours.get(row.definitionId) ?? 0) + row.totalQty);
   }
 
-  const theirs = new Map<string, number>();
+  // Theirs: the sum of what stands recorded per product. Not an average over
+  // anything — the rep answers "quantas por mês", so each figure is already a
+  // monthly rate and holds until they replace it.
+  const theirs = new Map<number, number>();
   for (const row of theirsRows) {
-    if (!requested.has(row.month)) continue;
-    const key = cellKey(row.definitionId, row.month);
-    theirs.set(key, (theirs.get(key) ?? 0) + row.metricQuantity);
+    theirs.set(row.definitionId, (theirs.get(row.definitionId) ?? 0) + row.quantity);
   }
 
-  const stored = new Map<string, { oursQty: number; theirsQty: number }>();
+  const stored = new Map<number, StoredSnapshotCell>();
   for (const row of existing) {
-    if (!requested.has(row.month)) continue;
-    stored.set(cellKey(row.definitionId, row.month), {
-      oursQty: row.oursQty,
-      theirsQty: row.theirsQty,
-    });
+    stored.set(row.definitionId, row);
   }
 
-  // Every cell with an input *or* an existing row. The second half is what
+  // Every metric with an input *or* an existing row. The second half is what
   // corrects a row whose inputs have since vanished — an order deleted, a usage
-  // row removed. Recomputing only the cells that still have inputs would leave
+  // row removed. Recomputing only the metrics that still have inputs would leave
   // yesterday's figure standing and report success.
-  const cells = new Set<string>([...ours.keys(), ...theirs.keys(), ...stored.keys()]);
+  const definitions = new Set<number>([
+    ...ours.keys(),
+    ...theirs.keys(),
+    ...stored.keys(),
+  ]);
 
   const rows: SnapshotRowToWrite[] = [];
-  // Counts rows whose *value* moved, not rows touched. A nonzero count on a
-  // reconciliation run means the stored figure was stale — a trigger was lost.
-  // Reporting it is the difference between a sweep that heals silently and one
-  // that tells you the trigger is unreliable.
   let differed = 0;
-  for (const cell of cells) {
-    const { definitionId, month } = parseCellKey(cell);
-    const oursQty = ours.get(cell) ?? 0;
-    const theirsQty = theirs.get(cell) ?? 0;
-    const before = stored.get(cell);
-    if (!before || before.oursQty !== oursQty || before.theirsQty !== theirsQty) {
+
+  for (const definitionId of definitions) {
+    const oursQty = monthlyRateFromDays(ours.get(definitionId) ?? 0);
+    const theirsQty = theirs.get(definitionId) ?? 0;
+
+    const before = stored.get(definitionId);
+    if (
+      before === undefined ||
+      !nearlyEqual(before.oursQty, oursQty) ||
+      !nearlyEqual(before.theirsQty, theirsQty)
+    ) {
       differed += 1;
     }
+
     rows.push({
       profileId: profile.id,
       definitionId,
       verticalId: profile.verticalId,
-      month,
       oursQty,
       theirsQty,
       computedAt: input.computedAt,
@@ -192,14 +194,13 @@ export async function recomputeMetricSnapshots(
 
   await store.upsert(rows);
 
-  return { profileId: profile.id, written: rows.length, differed, months };
+  return { profileId: profile.id, written: rows.length, differed };
 }
 
-function cellKey(definitionId: number, month: MonthKey): string {
-  return `${definitionId}|${month}`;
-}
-
-function parseCellKey(key: string): { definitionId: number; month: MonthKey } {
-  const [definitionId, month] = key.split("|");
-  return { definitionId: Number(definitionId), month: month! };
+/**
+ * Both sides are stored as `numeric(14,2)`, so comparing them exactly would
+ * report a difference for every re-read of an unchanged row.
+ */
+function nearlyEqual(a: number, b: number): boolean {
+  return Math.abs(a - b) < 0.005;
 }

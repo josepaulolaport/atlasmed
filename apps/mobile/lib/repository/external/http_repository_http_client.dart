@@ -45,7 +45,7 @@ class HttpRepositoryHttpClient extends RepositoryHttpClient {
       final metadata = <String, String>{
         'method': request.method.name.toUpperCase(),
         'url': request.url.toString(),
-        'headers': _hideJwt(headers.toString()),
+        'headers': redactHeaders(headers).toString(),
         'body': encodedBody ?? '',
       };
 
@@ -89,6 +89,7 @@ class HttpRepositoryHttpClient extends RepositoryHttpClient {
         statusCode: response.statusCode,
         body: response.body,
         headers: response.headers,
+        requestHeaders: headers,
       );
     } on SocketException catch (e) {
       BaseRepository.logger(

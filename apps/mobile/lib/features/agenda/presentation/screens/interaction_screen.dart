@@ -35,13 +35,11 @@ class InteractionScreen extends ConsumerWidget {
   const InteractionScreen({
     super.key,
     required this.interactionId,
-    this.onNewOrder,
     this.onReschedule,
     this.onCancel,
   });
 
   final int interactionId;
-  final VoidCallback? onNewOrder;
   final VoidCallback? onReschedule;
   final VoidCallback? onCancel;
 
@@ -75,13 +73,6 @@ class InteractionScreen extends ConsumerWidget {
           onComplete: ({correctionReason}) => ref
               .read(interactionProvider(interactionId).notifier)
               .complete(correctionReason: correctionReason),
-          onNewOrder:
-              onNewOrder ??
-              () => NewOrderRoute(
-                interactionId: detail.id,
-                facilityId: detail.facility.id,
-                facilityName: detail.facility.displayName,
-              ).push(context),
           onRefresh: () =>
               ref.read(interactionProvider(interactionId).notifier).load(),
           onReschedule:
@@ -194,7 +185,6 @@ class _InteractionContent extends ConsumerWidget {
     required this.commandError,
     required this.onStart,
     required this.onComplete,
-    required this.onNewOrder,
     required this.onRefresh,
     this.onReschedule,
     this.onCancel,
@@ -205,7 +195,6 @@ class _InteractionContent extends ConsumerWidget {
   final String? commandError;
   final Future<bool> Function() onStart;
   final Future<bool> Function({String? correctionReason}) onComplete;
-  final VoidCallback onNewOrder;
   final Future<void> Function() onRefresh;
   final VoidCallback? onReschedule;
   final VoidCallback? onCancel;
@@ -245,7 +234,6 @@ class _InteractionContent extends ConsumerWidget {
               command: command,
               onStart: onStart,
               onComplete: onComplete,
-              onNewOrder: onNewOrder,
               onReschedule: onReschedule,
               onCancel: onCancel,
             ),
@@ -503,7 +491,6 @@ class _ActionsCard extends StatelessWidget {
     required this.command,
     required this.onStart,
     required this.onComplete,
-    required this.onNewOrder,
     this.onReschedule,
     this.onCancel,
   });
@@ -512,7 +499,6 @@ class _ActionsCard extends StatelessWidget {
   final String? command;
   final Future<bool> Function() onStart;
   final Future<bool> Function({String? correctionReason}) onComplete;
-  final VoidCallback onNewOrder;
   final VoidCallback? onReschedule;
   final VoidCallback? onCancel;
 
@@ -520,9 +506,6 @@ class _ActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final busy = command != null;
     final isRecurring = detail.recurrence != CalendarRecurrence.none;
-    final canOrder =
-        detail.status == InteractionStatus.scheduled ||
-        detail.status == InteractionStatus.inProgress;
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -549,14 +532,9 @@ class _ActionsCard extends StatelessWidget {
               icon: const Icon(Icons.fact_check_outlined),
               label: const Text('Corrigir como concluído'),
             ),
-          if (canOrder) ...[
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: busy ? null : onNewOrder,
-              icon: const Icon(Icons.add_shopping_cart_outlined),
-              label: const Text('Novo pedido'),
-            ),
-          ],
+          // A "Novo pedido" action sat here. Creating an order is withdrawn
+          // until an order belongs to an interaction — see the note in
+          // router/routes.dart. Nothing routes to the order-creation screens.
           if (detail.status == InteractionStatus.scheduled &&
               (onReschedule != null || onCancel != null)) ...[
             const Divider(height: 24),

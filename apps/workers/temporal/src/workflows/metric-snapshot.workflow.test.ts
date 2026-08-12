@@ -86,38 +86,29 @@ describe("runMetricSnapshotWorkflow", () => {
     expect(call!.since).toBe("2026-03-15T08:00:00.000Z");
   });
 
-  test("RECONCILE recomputes a trailing window, not just the current month", async () => {
+  test("NIGHTLY visits every profile and sends no watermark window", async () => {
+    // The nightly pass exists because `ours` is a rolling 90-day window: a
+    // clinic's value moves as orders age out of it, with no event for a
+    // watermark to select. So it must not be given one.
     const harness = createDependencies([page()]);
-    await runMetricSnapshotWorkflow({ mode: "RECONCILE" }, harness.dependencies);
-    // The displayed figure averages three months, so an order landing today
-    // moves what a reader sees for the two before it.
-    expect(harness.calls[0]!.months).toHaveLength(3);
-  });
-
-  test("BACKFILL passes its explicit months through and sends no window", async () => {
-    const harness = createDependencies([page()]);
-    await runMetricSnapshotWorkflow(
-      { mode: "BACKFILL", months: ["2025-11-01", "2025-12-01"] },
-      harness.dependencies,
-    );
+    await runMetricSnapshotWorkflow({ mode: "NIGHTLY" }, harness.dependencies);
 
     const [call] = harness.calls;
-    expect(call!.months).toEqual(["2025-11-01", "2025-12-01"]);
+    expect(call!.mode).toBe("NIGHTLY");
     expect(call!.since).toBeUndefined();
     expect(call!.until).toBeUndefined();
   });
 
-  test("TRIGGER carries the named profiles and months through, and sends no window", async () => {
+  test("TRIGGER carries the named profiles through, and sends no window", async () => {
     const harness = createDependencies([page({ processed: 1, written: 1, nextCursor: null })]);
 
     await runMetricSnapshotWorkflow(
-      { mode: "TRIGGER", profileIds: [42], months: ["2026-03-01"] },
+      { mode: "TRIGGER", profileIds: [42] },
       harness.dependencies,
     );
 
     expect(harness.calls).toHaveLength(1);
     expect(harness.calls[0]!.profileIds).toEqual([42]);
-    expect(harness.calls[0]!.months).toEqual(["2026-03-01"]);
     expect(harness.calls[0]!.since).toBeUndefined();
     expect(harness.calls[0]!.until).toBeUndefined();
     // Named as a trigger in the log, not as a sweep — otherwise a reconcile
@@ -199,13 +190,4 @@ describe("runMetricSnapshotWorkflow", () => {
     expect(totals).toEqual({ processed: 11, written: 22, differed: 4, failed: 1 });
   });
 
-  test("BACKFILL with no months is refused rather than silently recomputing nothing", async () => {
-    const harness = createDependencies([page()]);
-    await expect(
-      runMetricSnapshotWorkflow(
-        { mode: "BACKFILL", months: [] },
-        { ...harness.dependencies, windowMonths: () => [] },
-      ),
-    ).rejects.toThrow(/at least one month/);
-  });
 });

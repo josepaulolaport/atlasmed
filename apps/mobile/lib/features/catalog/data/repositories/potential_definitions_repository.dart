@@ -168,6 +168,33 @@ class PotentialDefinitionsRepository {
         .toList(growable: false);
   }
 
+  /// The other brands a rep may record against this metric.
+  ///
+  /// Derived server-side: a competitor product counts toward a metric when it is
+  /// the equivalent of one of our products linked to it. Nothing links a
+  /// competitor to a metric directly, so this is the only answer there is — and
+  /// it is the same set the write validates against, so the picker cannot offer
+  /// something the save will refuse.
+  Future<List<LinkedPotentialProduct>> listCompetitorProducts(
+    int definitionId,
+  ) async {
+    final response = await _send(
+      _uri('/potential-definitions/$definitionId/competitor-products'),
+      RepositoryHttpMethod.get,
+    );
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = decoded['data'];
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map(
+          (row) =>
+              LinkedPotentialProduct.fromJson(Map<String, dynamic>.from(row)),
+        )
+        .toList(growable: false);
+  }
+
   Future<void> linkProduct({
     required int productId,
     required int definitionId,

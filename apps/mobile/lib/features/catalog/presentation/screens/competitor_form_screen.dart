@@ -157,7 +157,7 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
         scrolledUnderElevation: 0,
         foregroundColor: AppColors.gray950,
         title: Text(
-          _isEditing ? 'Editar concorrente' : 'Novo concorrente',
+          _isEditing ? 'Editar marca' : 'Nova marca',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
         ),
       ),

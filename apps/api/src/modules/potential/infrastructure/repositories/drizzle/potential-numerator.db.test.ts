@@ -165,30 +165,33 @@ function currentMonthRange() {
 }
 
 describe.skipIf(!dbUp)("penetration numerator (database)", () => {
-  test("ten boxes of five count as fifty, not ten", async () => {
+  test("ten boxes of five count as ten — metric_units does not multiply", async () => {
     await withRollback(async (tx) => {
-      const scenario = await seedScenario(tx, "BOX");
-      const productId = await seedLinkedProduct(tx, scenario, "T-BOX-OF-5", "5");
+      const scenario = await seedScenario(tx, "UNITS");
+      // metric_units is an information field since §4.6, so the numerator is the
+      // raw order quantity. This reverses the rule §4.2 introduced, and it holds
+      // only while every product in a metric is measured in the same unit —
+      // nothing enforces that, and §7 records it as deferred.
+      const productId = await seedLinkedProduct(tx, scenario, "T-BOXES", "5");
 
-      await seedOrderLine(tx, {
+      await seedOrderLineAt(tx, {
         profileId: scenario.profileId,
         productId,
         quantity: "10",
-        type: "SALE",
-        status: "APPROVED",
+        orderedAt: new Date("2026-03-15T12:00:00.000Z"),
       });
 
-      const [sum] = await new DrizzlePotentialRepository(
+      const sums = await new DrizzlePotentialRepository(
         tx as never
-      ).sumAtlasmedQtyByDefinitionAndMonth({
+      ).sumAtlasmedQtyByDefinition({
         facilityId: scenario.facilityId,
         verticalId: scenario.verticalId,
         definitionIds: [scenario.definitionId],
-        ...currentMonthRange(),
+        rangeStart: monthBounds("2026-03-01").start,
+        rangeEnd: monthBounds("2026-03-01").end,
       });
 
-      // Spec 0013 §9.1, the headline acceptance criterion.
-      expect(sum?.totalQty).toBe(50);
+      expect(sums[0]?.totalQty).toBe(10);
     });
   });
 
@@ -222,7 +225,7 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
 
       const [sum] = await new DrizzlePotentialRepository(
         tx as never
-      ).sumAtlasmedQtyByDefinitionAndMonth({
+      ).sumAtlasmedQtyByDefinition({
         facilityId: scenario.facilityId,
         verticalId: scenario.verticalId,
         definitionIds: [scenario.definitionId],
@@ -276,7 +279,7 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
 
       const [sum] = await new DrizzlePotentialRepository(
         tx as never
-      ).sumAtlasmedQtyByDefinitionAndMonth({
+      ).sumAtlasmedQtyByDefinition({
         facilityId: orto.facilityId,
         verticalId: orto.verticalId,
         definitionIds: [orto.definitionId],
@@ -288,79 +291,14 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
     });
   });
 
-  test("an order is counted in its São Paulo month, not its UTC month", async () => {
+
+  test("every order in the window sums into one figure", async () => {
     await withRollback(async (tx) => {
-      const scenario = await seedScenario(tx, "TZ");
-      const productId = await seedLinkedProduct(tx, scenario, "T-TIMEZONE", "1");
+      const scenario = await seedScenario(tx, "SUM");
+      const productId = await seedLinkedProduct(tx, scenario, "T-SUM", "1");
 
-      // 1 April 01:00 UTC is 31 March 22:00 in São Paulo. The rep who entered
-      // it would call this a March order, and so must we.
-      await seedOrderLineAt(tx, {
-        profileId: scenario.profileId,
-        productId,
-        quantity: "6",
-        orderedAt: new Date("2026-04-01T01:00:00.000Z"),
-      });
-
-      const march = monthBounds("2026-03-01");
-      const april = monthBounds("2026-04-01");
-
-      const inMarch = await new DrizzlePotentialRepository(
-        tx as never
-      ).sumAtlasmedQtyByDefinitionAndMonth({
-        facilityId: scenario.facilityId,
-        verticalId: scenario.verticalId,
-        definitionIds: [scenario.definitionId],
-        rangeStart: march.start,
-        rangeEnd: march.end,
-      });
-      const inApril = await new DrizzlePotentialRepository(
-        tx as never
-      ).sumAtlasmedQtyByDefinitionAndMonth({
-        facilityId: scenario.facilityId,
-        verticalId: scenario.verticalId,
-        definitionIds: [scenario.definitionId],
-        rangeStart: april.start,
-        rangeEnd: april.end,
-      });
-
-      expect(inMarch[0]?.totalQty).toBe(6);
-      expect(inMarch[0]?.month).toBe("2026-03-01");
-      expect(inApril).toHaveLength(0);
-    });
-  });
-
-  test("a future-dated order does not leak into the current month", async () => {
-    await withRollback(async (tx) => {
-      const scenario = await seedScenario(tx, "FUT");
-      const productId = await seedLinkedProduct(tx, scenario, "T-FUTURE", "1");
-
-      // The window this replaced had no upper bound, so this counted.
-      await seedOrderLineAt(tx, {
-        profileId: scenario.profileId,
-        productId,
-        quantity: "99",
-        orderedAt: new Date(Date.now() + 90 * 86_400_000),
-      });
-
-      const sums = await new DrizzlePotentialRepository(
-        tx as never
-      ).sumAtlasmedQtyByDefinitionAndMonth({
-        facilityId: scenario.facilityId,
-        verticalId: scenario.verticalId,
-        definitionIds: [scenario.definitionId],
-        ...currentMonthRange(),
-      });
-
-      expect(sums).toHaveLength(0);
-    });
-  });
-
-  test("each month is reported separately, so a window can be averaged", async () => {
-    await withRollback(async (tx) => {
-      const scenario = await seedScenario(tx, "MUL");
-      const productId = await seedLinkedProduct(tx, scenario, "T-MULTI-MONTH", "1");
-
+      // Two orders, two months apart. There are no buckets any more (§4.6), so
+      // the metric is one number over the range.
       await seedOrderLineAt(tx, {
         profileId: scenario.profileId,
         productId,
@@ -376,7 +314,7 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
 
       const sums = await new DrizzlePotentialRepository(
         tx as never
-      ).sumAtlasmedQtyByDefinitionAndMonth({
+      ).sumAtlasmedQtyByDefinition({
         facilityId: scenario.facilityId,
         verticalId: scenario.verticalId,
         definitionIds: [scenario.definitionId],
@@ -384,12 +322,8 @@ describe.skipIf(!dbUp)("penetration numerator (database)", () => {
         rangeEnd: monthBounds("2026-03-01").end,
       });
 
-      // February is absent rather than zero — the read path supplies the zero,
-      // because "no orders" and "no row" must average the same way.
-      const byMonth = new Map(sums.map((row) => [row.month, row.totalQty]));
-      expect(byMonth.get("2026-01-01")).toBe(10);
-      expect(byMonth.get("2026-03-01")).toBe(20);
-      expect(byMonth.has("2026-02-01")).toBe(false);
+      expect(sums).toHaveLength(1);
+      expect(sums[0]?.totalQty).toBe(30);
     });
   });
 });

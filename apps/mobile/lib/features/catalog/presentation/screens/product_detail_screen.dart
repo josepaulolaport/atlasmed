@@ -287,7 +287,7 @@ class _HeroCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            '${product.competitorMatchCount} concorrentes',
+                            '${product.competitorMatchCount} outras marcas',
                             style: const TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
@@ -335,7 +335,7 @@ class _TabBar extends StatelessWidget {
       (_ProductDetailTab.overview, 'Visão geral'),
       (_ProductDetailTab.use, 'Uso'),
       (_ProductDetailTab.evidence, 'Evidências'),
-      (_ProductDetailTab.competitors, 'Concorrentes'),
+      (_ProductDetailTab.competitors, 'Outras marcas'),
     ];
 
     return Container(
@@ -452,7 +452,7 @@ class _ComingSoonTab extends StatelessWidget {
   String get _label => switch (tab) {
     _ProductDetailTab.use => 'Uso',
     _ProductDetailTab.evidence => 'Evidências',
-    _ProductDetailTab.competitors => 'Concorrentes',
+    _ProductDetailTab.competitors => 'Outras marcas',
     _ProductDetailTab.overview => 'Visão geral',
   };
 

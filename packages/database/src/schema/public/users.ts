@@ -182,6 +182,29 @@ export const invitations = pgTable(
     index("invitations_email_idx").on(t.email),
     index("invitations_phone_number_idx").on(t.phoneNumber),
     index("invitations_status_idx").on(t.status),
+    /*
+     * At most one live invitation per person.
+     *
+     * `InviteUserUseCase` looks for an existing PENDING invite and refuses if it
+     * finds one, but check-then-insert is not atomic: two requests that overlap
+     * both see nothing and both insert, and a double-tap on "Enviar convite" is
+     * enough. The result is two invites with two working accept links for one
+     * person — the second one dead-ends on the users unique index with a
+     * conflict the invitee cannot act on.
+     *
+     * Partial, because the rule is about *live* invites: a revoked or expired
+     * invitation must not block re-inviting, and an accepted one certainly must
+     * not. `lower(email)` matches `users_email_lower_uidx`, so an invite cannot
+     * be keyed differently from the user it creates — the application check is
+     * case-sensitive today and would let `Joao@x.com` past a pending
+     * `joao@x.com`.
+     */
+    uniqueIndex("invitations_pending_email_uidx")
+      .on(sql`lower(${t.email})`)
+      .where(sql`${t.status} = 'PENDING' AND ${t.email} IS NOT NULL`),
+    uniqueIndex("invitations_pending_phone_number_uidx")
+      .on(t.phoneNumber)
+      .where(sql`${t.status} = 'PENDING' AND ${t.phoneNumber} IS NOT NULL`),
     index("invitations_accepted_by_user_id_idx").on(t.acceptedByUserId),
     index("invitations_invited_by_user_id_idx").on(t.invitedByUserId),
   ]

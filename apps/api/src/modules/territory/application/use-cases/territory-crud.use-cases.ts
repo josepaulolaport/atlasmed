@@ -259,7 +259,11 @@ export class TerritoryCrudUseCases {
     };
   }
 
-  async getTerritory(id: number, scope: ScopeContext) {
+  async getTerritory(
+    id: number,
+    scope: ScopeContext,
+    include?: { boundary?: boolean }
+  ) {
     // Spec 0010 §2.2 — reading a territory by id must respect territory scope.
     assertResourceInScope(scope, "territory", id);
 
@@ -267,13 +271,29 @@ export class TerritoryCrudUseCases {
     if (!territory) {
       return null;
     }
-    return serializeTerritory(await this.enrichTerritory(id));
+    const serialized = serializeTerritory(await this.enrichTerritory(id));
+    if (!include?.boundary) {
+      return serialized;
+    }
+    // Same contract as the list route, so a caller can read one territory or a
+    // page of them without switching shapes.
+    return {
+      ...serialized,
+      boundary: await this.deps.spatialRepository.getBoundaryAsGeoJson(id),
+    };
   }
 
+  /**
+   * @param include Extra data to embed per row. `boundary` exists because every
+   *   client that lists territories also draws them: without it each caller
+   *   followed the list with one `GET /territories/:id/boundary` per row, and
+   *   the mobile pickers did so sequentially.
+   */
   async listTerritories(
     format: "tree" | "flat" = "flat",
     scope?: ScopeContext,
-    filters?: { typeSlug?: string; managerTerritoryId?: number; verticalId?: number }
+    filters?: { typeSlug?: string; managerTerritoryId?: number; verticalId?: number },
+    include?: { boundary?: boolean }
   ) {
     // Spec 0010 §2.2/§2.1 — `verticalId` may only narrow the caller's assigned set,
     // never widen it. Throws before any query when the filter is not assigned.
@@ -311,10 +331,23 @@ export class TerritoryCrudUseCases {
       );
     }
 
+    const boundaries = include?.boundary
+      ? await this.deps.spatialRepository.getBoundariesAsGeoJson(
+          filtered.map((t) => t.id)
+        )
+      : null;
+
     const enriched = await Promise.all(
-      filtered.map(async (t) =>
-        serializeTerritory(await this.enrichTerritory(t.id))
-      )
+      filtered.map(async (t) => {
+        const serialized = serializeTerritory(await this.enrichTerritory(t.id));
+        if (!boundaries) {
+          return serialized;
+        }
+        // Explicitly null, not absent, when the territory has no geometry: the
+        // caller asked for boundaries, so "this one has none" is an answer and
+        // must not be read as "not loaded".
+        return { ...serialized, boundary: boundaries.get(t.id) ?? null };
+      })
     );
 
     if (format === "flat") {
@@ -464,14 +497,13 @@ export class TerritoryCrudUseCases {
    * "tree" format nests rep patches under their manager zone
    * (via managerTerritoryId); everything else is a root node.
    */
-  private buildTree(
-    territories: ReturnType<typeof serializeTerritory>[]
-  ): Array<ReturnType<typeof serializeTerritory> & { children: unknown[] }> {
+  private buildTree<T extends ReturnType<typeof serializeTerritory>>(
+    territories: T[]
+  ): Array<T & { children: unknown[] }> {
     const byId = new Map(
       territories.map((t) => [t.id, { ...t, children: [] as unknown[] }])
     );
-    const roots: Array<ReturnType<typeof serializeTerritory> & { children: unknown[] }> =
-      [];
+    const roots: Array<T & { children: unknown[] }> = [];
 
     for (const territory of byId.values()) {
       if (territory.managerTerritoryId && byId.has(territory.managerTerritoryId)) {
