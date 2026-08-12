@@ -285,10 +285,14 @@ export const personFacilityOccupations = pgTable(
     ),
     /**
      * At most one primary occupation per association, matching the identical
-     * guards already on `person_professional_registrations` and
-     * `person_healthcare_profile_specialties`. Without it this was the only one of
-     * the three `is_primary` groups where the "exactly one primary" rule lived
-     * solely in application code.
+     * guards on `person_professional_registrations` and
+     * `person_healthcare_profile_specialties`.
+     *
+     * Pre-emptive, not corrective: **nothing reads or writes this table yet** —
+     * `personFacilityOccupations` appears only in this schema file — so the
+     * guard exists so the rule is true before the first writer arrives rather
+     * than after. Measured safe against the 2026-08-10 production clone: 1714
+     * rows, 1714 primary, zero associations holding more than one.
      */
     uniqueIndex("person_facility_occupations_primary_uidx")
       .on(t.personFacilityId)

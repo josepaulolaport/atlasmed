@@ -708,6 +708,13 @@
       "when": 1786571471715,
       "tag": "0100_share_requires_a_known_market",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1786574840028,
+      "tag": "0101_cnes_registry_and_ingestion",
+      "breakpoints": true
     }
   ]
 }
