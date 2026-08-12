@@ -276,7 +276,7 @@ class _OurProductsTable extends StatelessWidget {
       return const Padding(
         padding: EdgeInsets.only(top: 14),
         child: Text(
-          'Nenhum produto nosso vendido neste período.',
+          'Nenhum produto AtlasMed vendido nos últimos 3 meses.',
           style: TextStyle(fontSize: 13, height: 1.3, color: AppColors.gray500),
         ),
       );

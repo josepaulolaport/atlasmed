@@ -271,7 +271,7 @@ void main() {
 
       // "Nothing sold" and "not loaded" must not look the same.
       expect(
-        find.text('Nenhum produto nosso vendido neste período.'),
+        find.text('Nenhum produto AtlasMed vendido nos últimos 3 meses.'),
         findsOneWidget,
       );
     });
