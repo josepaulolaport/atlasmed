@@ -71,6 +71,13 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   /// and save once.
   _DoctorSource _source = _DoctorSource.ours;
 
+  /// People the server reports as already linked here, from the CNES view.
+  ///
+  /// Kept beside `alreadyAssociatedIds` rather than merged into it: that set is
+  /// the caller's, and `_confirm` uses both to decide who actually needs an
+  /// association request.
+  final Set<int> _cnesLinkedIds = {};
+
   /// Cached copy of already-associated doctors for pinning at the top.
   List<ProfessionalRoster> get _associated => widget.alreadyAssociatedDoctors;
 
@@ -96,7 +103,17 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     try {
       final suggestions = await repo.fetchCnesSuggestions();
       if (!mounted) return;
-      setState(() => _cnes = suggestions);
+      setState(() {
+        _cnes = suggestions;
+        // The server's notion of "linked here" is authoritative and can be wider
+        // than the caller's `alreadyAssociatedIds`. Without this they would
+        // render unchecked in a section titled "já associados", and — worse —
+        // `_confirm` would post an association for someone already associated.
+        _cnesLinkedIds
+          ..clear()
+          ..addAll(suggestions.linked.map((s) => s.personId));
+        _selected.addAll(_cnesLinkedIds);
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() => _cnes = CnesSuggestions.unavailable());
@@ -178,20 +195,33 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   /// Filtered locally because the list is one bounded fetch rather than a query:
   /// searching while on this tab should narrow what is in front of you, not sit
   /// inert.
+  bool _matchesQuery(CnesSuggestion s) {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    return s.displayName.toLowerCase().contains(query) ||
+        (s.occupation ?? '').toLowerCase().contains(query) ||
+        (s.registrationLabel ?? '').toLowerCase().contains(query);
+  }
+
+  /// CNES places them here and they are not linked yet — the actionable half.
   List<CnesSuggestion> get _cnesRows {
     final suggestions = _cnes;
     if (suggestions == null) return const [];
-    final query = _query.trim().toLowerCase();
-    return suggestions.items
+    return suggestions.unlinked
         .where((s) => !widget.alreadyAssociatedIds.contains(s.personId))
-        .where(
-          (s) =>
-              query.isEmpty ||
-              s.displayName.toLowerCase().contains(query) ||
-              (s.occupation ?? '').toLowerCase().contains(query) ||
-              (s.registrationLabel ?? '').toLowerCase().contains(query),
-        )
+        .where(_matchesQuery)
         .toList(growable: false);
+  }
+
+  /// CNES places them here and we already have them linked.
+  ///
+  /// Shown on this tab because the question it answers is about the snapshot —
+  /// how much of what CNES records here do we already cover — which our own
+  /// roster cannot say.
+  List<CnesSuggestion> get _cnesLinkedRows {
+    final suggestions = _cnes;
+    if (suggestions == null) return const [];
+    return suggestions.linked.where(_matchesQuery).toList(growable: false);
   }
 
   /// Combined items list with section headers for the list view.
@@ -214,9 +244,18 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
       // The date belongs here, not on a section header, because on this tab it
       // qualifies everything below it.
       items.add('_section_header_cnes');
+
+      final linked = _cnesLinkedRows;
+      if (linked.isNotEmpty) {
+        items.add('_section_header_associated');
+        items.addAll(linked);
+        items.add('_section_divider');
+      }
+
       if (cnes.isEmpty) {
         items.add('_section_cnes_empty');
       } else {
+        items.add('_section_header_cnes_new');
         items.addAll(cnes);
       }
       return items;
@@ -447,6 +486,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               return _buildSectionHeader('Disponíveis');
             case '_section_header_cnes':
               return _buildCnesHeader();
+            case '_section_header_cnes_new':
+              return _buildSectionHeader('Sugeridos pelo CNES');
             case '_section_cnes_empty':
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -483,7 +524,12 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   Widget _buildPersonTile(ProfessionalRoster d) {
     {
       final selected = _selected.contains(d.id);
-      final isAssociated = widget.alreadyAssociatedIds.contains(d.id);
+      // Includes people the server reports as linked here, so unchecking one on
+      // the CNES tab offers the same undo as anywhere else rather than silently
+      // dropping a real association.
+      final isAssociated =
+          widget.alreadyAssociatedIds.contains(d.id) ||
+          _cnesLinkedIds.contains(d.id);
       return CheckboxListTile(
         value: selected,
         onChanged: _saving
@@ -563,6 +609,14 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
         .where((d) => _selected.contains(d.id))
         .toList(growable: false);
     if (chosen.isEmpty || !_useApi) return;
+    // Everyone the server already counts as linked here, from either source.
+    // `alreadyAssociatedIds` alone is the caller's view and can be narrower, and
+    // posting an association for someone already associated is a write nobody
+    // asked for.
+    final alreadyLinked = <int>{
+      ...widget.alreadyAssociatedIds,
+      ..._cnesLinkedIds,
+    };
 
     // Associate existing persons only (POST { personId }).
     setState(() => _saving = true);
@@ -571,7 +625,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
       // Only call associate for doctors not already linked — already-
       // associated ones are pre-checked and don't need an API call.
       final newlySelected = chosen
-          .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
+          .where((d) => !alreadyLinked.contains(d.id))
           .toList();
       final associated = <ProfessionalRoster>[];
       for (final doctor in newlySelected) {

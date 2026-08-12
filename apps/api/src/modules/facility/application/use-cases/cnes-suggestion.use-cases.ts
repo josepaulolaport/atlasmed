@@ -20,6 +20,15 @@ export interface CnesSuggestionItem {
   occupations: string[];
   /** "CRM 119508/SP", or null when the registration is incomplete. */
   registrationLabel: string | null;
+  /**
+   * Already linked at this clinic as a clinician.
+   *
+   * Returned rather than filtered so the CNES view can show "of the people CNES
+   * places here, these you already have" — coverage against this snapshot,
+   * which our own roster cannot express. AC 2 is unaffected: these are labelled
+   * and never appear as suggestions.
+   */
+  alreadyLinked: boolean;
 }
 
 export interface CnesSuggestionsResponse {
@@ -92,6 +101,7 @@ export class ListCnesSuggestionsUseCase {
         occupation: row.occupations[0] ?? null,
         occupations: row.occupations,
         registrationLabel: registrationLabelOf(row),
+        alreadyLinked: row.alreadyLinked,
       })),
       status: "OK",
       reference: context.loadedReference,

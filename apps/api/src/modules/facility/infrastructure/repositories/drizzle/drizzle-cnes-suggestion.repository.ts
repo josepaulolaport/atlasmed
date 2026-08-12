@@ -27,6 +27,16 @@ export interface CnesSuggestion {
   registrationNumber: string | null;
   registrationStateCode: string | null;
   registrationCouncil: string | null;
+  /**
+   * Already linked here as a clinician.
+   *
+   * Returned rather than filtered out: the CNES view is scoped to this
+   * snapshot, so "of the people CNES places at this clinic, these you already
+   * have" is a different and more useful statement than our whole roster. AC 2
+   * still holds — they are labelled, and the client keeps them out of the
+   * suggestion section.
+   */
+  alreadyLinked: boolean;
 }
 
 export interface CnesSuggestionContext {
@@ -111,7 +121,8 @@ export class DrizzleCnesSuggestionRepository {
         )                                  as occupations,
         max(rr.registration_number)        as registration_number,
         max(rr.state_code)                 as registration_state_code,
-        max(rc.abbreviation)               as registration_council
+        max(rc.abbreviation)               as registration_council,
+        bool_or(pf.id is not null)         as already_linked
       from registry.facilities rf
       join registry.facility_professionals fp
         on fp.facility_cnes_id = rf.cnes_id
@@ -130,34 +141,29 @@ export class DrizzleCnesSuggestionRepository {
         on rr.professional_cnes_id = rp.cnes_id
       left join registry.professional_councils rc
         on rc.cnes_id = rr.council_cnes_id
+      -- Left-joined rather than used in a NOT EXISTS, so an existing link
+      -- labels the row instead of removing it. The classification is what makes
+      -- it a *clinician* link: 211 active links are administrative contacts, and
+      -- treating those as "already associated" would hide a doctor from both
+      -- sections of the sheet at once.
+      left join person_facilities pf
+        on pf.person_id = hp.person_id
+       and pf.facility_id = ${input.facilityId}
+       and pf.ended_at is null
+       and exists (
+         select 1
+           from person_facility_classification_assignments pfca
+           join person_facility_classifications pfc
+             on pfc.id = pfca.classification_id
+          where pfca.person_facility_id = pf.id
+            and pfc.code = 'HEALTHCARE_PROFESSIONAL'
+       )
       where rf.atlasmed_id = ${input.facilityId}
         and p.deleted_at is null
-        -- Already linked here *as a healthcare professional*, so not a
-        -- suggestion. Server-side, which is acceptance criterion 3: the client
-        -- used to fetch every doctor in the CRM and filter locally, silently
-        -- losing anyone past its page size.
-        --
-        -- The classification matters. person_facilities is the link; what kind
-        -- of link it is lives in person_facility_classification_assignments,
-        -- and 211 active links are administrative contacts rather than
-        -- clinicians. Excluding on the bare link would hide a doctor who happens
-        -- to be this clinic's admin contact from both sections at once - absent
-        -- from the healthcare-scoped "ja associados" list, and suppressed here -
-        -- leaving no way to associate them as a doctor at all.
-        and not exists (
-          select 1
-            from person_facilities pf
-            join person_facility_classification_assignments pfca
-              on pfca.person_facility_id = pf.id
-            join person_facility_classifications pfc
-              on pfc.id = pfca.classification_id
-           where pf.person_id = hp.person_id
-             and pf.facility_id = ${input.facilityId}
-             and pf.ended_at is null
-             and pfc.code = 'HEALTHCARE_PROFESSIONAL'
-        )
       group by hp.person_id, p.first_name, p.last_name, p.social_name
-      order by p.first_name, p.last_name
+      -- Unlinked first: the suggestions are the actionable half, and the linked
+      -- rows are context for how much of this clinic CNES already agrees with.
+      order by bool_or(pf.id is not null), p.first_name, p.last_name
       limit ${input.limit}
     `)) as unknown as {
       person_id: number;
@@ -168,6 +174,7 @@ export class DrizzleCnesSuggestionRepository {
       registration_number: string | null;
       registration_state_code: string | null;
       registration_council: string | null;
+      already_linked: boolean | null;
     }[];
 
     return rows.map((row) => ({
@@ -184,6 +191,7 @@ export class DrizzleCnesSuggestionRepository {
       registrationNumber: row.registration_number,
       registrationStateCode: row.registration_state_code,
       registrationCouncil: row.registration_council,
+      alreadyLinked: row.already_linked === true,
     }));
   }
 }

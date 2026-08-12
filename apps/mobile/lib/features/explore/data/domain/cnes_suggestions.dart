@@ -39,6 +39,7 @@ class CnesSuggestion {
     required this.displayName,
     this.occupation,
     this.registrationLabel,
+    this.alreadyLinked = false,
   });
 
   final int personId;
@@ -50,6 +51,13 @@ class CnesSuggestion {
 
   /// e.g. `CRM 119508/SP`.
   final String? registrationLabel;
+
+  /// Already linked at this clinic as a clinician, per the server.
+  ///
+  /// Shown in its own section on the CNES tab rather than hidden, so the tab
+  /// answers "of the people CNES places here, which do we already have" — which
+  /// is about this snapshot, not about our roster in general.
+  final bool alreadyLinked;
 
   /// Returns null for a row it cannot make sense of, rather than throwing.
   ///
@@ -66,6 +74,7 @@ class CnesSuggestion {
           : 'Sem nome',
       occupation: _nonEmpty(map['occupation']),
       registrationLabel: _nonEmpty(map['registrationLabel']),
+      alreadyLinked: map['alreadyLinked'] == true,
     );
   }
 
@@ -133,6 +142,14 @@ class CnesSuggestions {
   }
 
   bool get hasItems => items.isNotEmpty;
+
+  /// CNES places them here and they are not linked yet — the actionable half.
+  List<CnesSuggestion> get unlinked =>
+      items.where((i) => !i.alreadyLinked).toList(growable: false);
+
+  /// CNES places them here and we already have them linked.
+  List<CnesSuggestion> get linked =>
+      items.where((i) => i.alreadyLinked).toList(growable: false);
 
   static const _months = [
     'janeiro',

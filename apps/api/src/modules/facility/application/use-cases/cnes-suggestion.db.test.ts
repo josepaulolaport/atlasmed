@@ -205,24 +205,42 @@ describe.if(dbUp)("ListCnesSuggestionsUseCase", () => {
     }
   });
 
-  it("excludes someone already linked to this facility, server-side", async () => {
+  it("labels someone already linked rather than dropping them", async () => {
     const result = await useCase.execute({ facilityId: fixture.facilityId });
-    expect(result.items.map((i) => i.personId)).not.toContain(fixture.linkedPersonId);
+
+    const linked = result.items.find((i) => i.personId === fixture.linkedPersonId);
+    /**
+     * Returned, not filtered. The CNES tab answers "of the people CNES places
+     * here, which do we already have" — coverage against this snapshot, which
+     * our own roster cannot express. AC 2 still holds because the client keeps
+     * these out of the suggestion section.
+     */
+    expect(linked).toBeDefined();
+    expect(linked!.alreadyLinked).toBe(true);
+  });
+
+  it("marks a suggestible person as not linked", async () => {
+    const result = await useCase.execute({ facilityId: fixture.facilityId });
+    const free = result.items.find((i) => i.personId === fixture.freePersonId);
+    expect(free!.alreadyLinked).toBe(false);
+  });
+
+  it("does not count an administrative-contact link as linked", async () => {
+    const result = await useCase.execute({ facilityId: fixture.facilityId });
+    const adminOnly = result.items.find(
+      (i) => i.personId === fixture.adminOnlyPersonId
+    );
+    // They hold a person_facilities row, but not as a clinician — so they are
+    // still someone a rep needs to associate.
+    expect(adminOnly!.alreadyLinked).toBe(false);
   });
 
   it("omits registry people who do not exist on our side", async () => {
     const result = await useCase.execute({ facilityId: fixture.facilityId });
-    // Four registry vínculos here: one linked as a clinician (excluded), one
-    // unknown to us (omitted), and two suggestible.
-    expect(result.items).toHaveLength(2);
-  });
-
-  it("still suggests someone linked only as an administrative contact", async () => {
-    const result = await useCase.execute({ facilityId: fixture.facilityId });
-    // `person_facilities` says "linked"; the classification says as what. The
-    // "já associados" section is healthcare-scoped, so excluding on the bare
-    // link would hide this doctor from every section of the sheet.
-    expect(result.items.map((i) => i.personId)).toContain(fixture.adminOnlyPersonId);
+    // Four registry vínculos here; the one unknown to us is omitted, leaving
+    // three — one of them labelled as already linked.
+    expect(result.items).toHaveLength(3);
+    expect(result.items.filter((i) => !i.alreadyLinked)).toHaveLength(2);
   });
 
   it("reports the loaded competence so the UI can date the snapshot", async () => {

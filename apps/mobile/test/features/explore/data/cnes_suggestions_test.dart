@@ -133,6 +133,22 @@ void main() {
       expect(parsed.items.single.personId, 7);
     });
 
+    test('splits linked from unlinked so the CNES tab can show both', () {
+      final parsed = CnesSuggestions.fromMap({
+        'status': 'OK',
+        'items': [
+          {'personId': 1, 'displayName': 'Nova', 'alreadyLinked': false},
+          {'personId': 2, 'displayName': 'Ja associada', 'alreadyLinked': true},
+          // Absent flag must not read as linked, or a suggestion would be
+          // filed under "já associados" and never offered.
+          {'personId': 3, 'displayName': 'Sem flag'},
+        ],
+      });
+
+      expect(parsed.unlinked.map((i) => i.personId), [1, 3]);
+      expect(parsed.linked.map((i) => i.personId), [2]);
+    });
+
     test('an unrecognised status degrades to unavailable, not to OK', () {
       // A server that grows a new status must not read as "CNES had no answer".
       final parsed = CnesSuggestions.fromMap({
