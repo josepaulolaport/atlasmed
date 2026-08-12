@@ -86,7 +86,33 @@ Production backend services deploy to Uncloud with `deploy/uncloud.compose.yml`.
 | `atlasmed-minio` | `https://storage.tdomains.uk` (S3 API) | S3-compatible storage for app files. Console stays private. Presigned URLs use `STORAGE_PUBLIC_ENDPOINT`; API still talks to MinIO on the internal `STORAGE_ENDPOINT`. |
 
 All service names use the `atlasmed-` prefix to avoid collisions with other services already running in the cluster.
-All production services are pinned to the Uncloud machine named `atlasmed` via `x-machines: atlasmed`.
+All production services are pinned to the Uncloud machine named `oracle-luis` via
+`x-machines: oracle-luis` — the arm64 machine, which is why the images build for
+`linux/arm64`. Note that a *different* machine in the cluster is named `atlasmed`; nothing
+of ours runs on it, and the name is a trap worth reading twice.
+
+### Public DNS points at one machine on purpose
+
+Every machine in the cluster runs Caddy (`caddy` is a `global` service), and Uncloud's DNS
+answers every `*.b1ixob.uncld.dev` name with *all* machine IPs. Any machine will therefore
+accept a request and relay it over the WireGuard overlay to whichever machine actually runs
+the container. That relay costs real latency: measured from Brazil on 2026-08-12, landing on
+a relaying machine roughly doubled time-to-first-byte versus landing on `oracle-luis`
+directly.
+
+So the Cloudflare record for `api.tdomains.uk` is an A record holding `oracle-luis`'s public
+IP directly. `storage.tdomains.uk` is a CNAME to `api.tdomains.uk` and follows it; Caddy
+routes both by Host header, so one record serves both.
+
+It was previously pointed at the machine named `atlasmed` — almost certainly because this
+file used to say services ran there. They never did. Every production request landed on a
+machine running none of them and relayed across, and nothing looked broken, because a relay
+is slow rather than wrong. That is why the machine name is called out above.
+
+**If you change `x-machines:` for `atlasmed-api`, or `oracle-luis`'s public IP changes, you
+must update that Cloudflare record too.** Uncloud's own DNS follows the cluster
+automatically; a pinned A record does not, and nothing in CI checks it. The failure is
+silent — the origin simply stops answering. `uc machine ls` prints the current public IPs.
 The API creates `STORAGE_BUCKET` on startup when object storage is configured.
 
 ## One-time setup
