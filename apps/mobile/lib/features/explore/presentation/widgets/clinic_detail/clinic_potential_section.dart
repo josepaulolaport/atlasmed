@@ -47,40 +47,51 @@ class ClinicPotentialSection extends ConsumerWidget {
               ),
             ),
           )
-        else
-          async.when(
-            loading: () => const ClinicDetailCard(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+        // Deliberately not `async.when`: every edit in this section refetches,
+        // and `when` renders its loading branch for that refetch, so the card
+        // the rep is reading was replaced by a spinner each time they saved.
+        // A card that blinks on every edit reads as something breaking.
+        //
+        // So the spinner and the error card are for the *first* load only —
+        // when there is genuinely nothing to show. Once there is a page, it
+        // stays on screen while the next one is fetched. A refresh that fails
+        // leaves the previous answer up rather than replacing it with an error;
+        // the write that triggered it reports its own failure in a snackbar, so
+        // the rep is told either way.
+        else if (!async.hasValue && async.isLoading)
+          const ClinicDetailCard(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
             ),
-            error: (err, _) => ClinicDetailCard(
-              child: Column(
-                children: [
-                  Text(
-                    'Não foi possível carregar potencial.',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.gray500,
-                    ),
+          )
+        else if (!async.hasValue)
+          ClinicDetailCard(
+            child: Column(
+              children: [
+                const Text(
+                  'Não foi possível carregar potencial.',
+                  style: TextStyle(fontSize: 14, color: AppColors.gray500),
+                ),
+                TextButton(
+                  onPressed: () => ref.invalidate(
+                    clinicDetailPotentialsProvider(facilityId),
                   ),
-                  TextButton(
-                    onPressed: () => ref.invalidate(
-                      clinicDetailPotentialsProvider(facilityId),
-                    ),
-                    child: const Text('Tentar de novo'),
-                  ),
-                ],
-              ),
+                  child: const Text('Tentar de novo'),
+                ),
+              ],
             ),
-            data: (page) {
+          )
+        else
+          Builder(
+            builder: (context) {
+              final page = async.valueOrNull;
               if (page == null || page.items.isEmpty) {
                 return const ClinicaEmptySection(
                   icon: Icons.insights_outlined,
@@ -165,12 +176,17 @@ Future<void> _editCompetitor(
       ),
     );
     if (updated != null) {
-      ref.invalidate(
-        facilityPotentialsProvider((
-          facilityId: facilityId,
-          verticalId: verticalId,
-        )),
-      );
+      // The page the write returned, not a re-fetch: it is the recomputed
+      // answer from the same request, so the numbers change as the sheet
+      // closes instead of a round trip later.
+      ref
+          .read(
+            facilityPotentialsProvider((
+              facilityId: facilityId,
+              verticalId: verticalId,
+            )).notifier,
+          )
+          .applyServerPage(updated);
     }
   } finally {
     repository.dispose();
@@ -191,13 +207,18 @@ Future<void> _setNoOtherBrands(
     verticalId: verticalId,
   );
   try {
-    await repository.setNoOtherBrands(definitionId: definitionId, value: value);
-    ref.invalidate(
-      facilityPotentialsProvider((
-        facilityId: facilityId,
-        verticalId: verticalId,
-      )),
+    final updated = await repository.setNoOtherBrands(
+      definitionId: definitionId,
+      value: value,
     );
+    ref
+        .read(
+          facilityPotentialsProvider((
+            facilityId: facilityId,
+            verticalId: verticalId,
+          )).notifier,
+        )
+        .applyServerPage(updated);
   } catch (error) {
     if (!context.mounted) return;
     // Named, not swallowed: a checkbox that springs back with no explanation
