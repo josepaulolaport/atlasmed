@@ -510,10 +510,15 @@ class SubjectDashboardRoute extends GoRouteData with $SubjectDashboardRoute {
   const SubjectDashboardRoute({
     required this.subjectUserId,
     @TypedQueryParameter(name: 'subjectName') this.subjectName,
+    @TypedQueryParameter(name: 'subjectRole') this.subjectRole,
   });
 
   final int subjectUserId;
   final String? subjectName;
+
+  /// Carried so the screen knows which cards the *subject* may be asked about —
+  /// "Clínicas não atribuídas" is a zone question and a rep holds no zones.
+  final String? subjectRole;
 
   static final GlobalKey<NavigatorState> $parentNavigatorKey = rootNavigatorKey;
 
@@ -522,6 +527,7 @@ class SubjectDashboardRoute extends GoRouteData with $SubjectDashboardRoute {
     return DashboardScreen(
       subjectUserId: subjectUserId,
       subjectName: subjectName,
+      subjectRole: subjectRole,
     );
   }
 }

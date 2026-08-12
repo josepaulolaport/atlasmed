@@ -736,6 +736,7 @@ mixin $SubjectDashboardRoute on GoRouteData {
       SubjectDashboardRoute(
         subjectUserId: int.parse(state.pathParameters['subjectUserId']!),
         subjectName: state.uri.queryParameters['subjectName'],
+        subjectRole: state.uri.queryParameters['subjectRole'],
       );
 
   SubjectDashboardRoute get _self => this as SubjectDashboardRoute;
@@ -745,6 +746,7 @@ mixin $SubjectDashboardRoute on GoRouteData {
     '/team/member/${Uri.encodeComponent(_self.subjectUserId.toString())}',
     queryParams: {
       if (_self.subjectName != null) 'subjectName': _self.subjectName,
+      if (_self.subjectRole != null) 'subjectRole': _self.subjectRole,
     },
   );
 

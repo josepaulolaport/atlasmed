@@ -4,10 +4,16 @@ import 'package:flutter/material.dart';
 
 /// One metric, one card, one request (spec 0014 §4).
 ///
-/// The card owns its own loading and error state because the endpoint behind it
-/// is independent: a failed penetração leaves cobertura on screen, and a slow
-/// one shows a skeleton beside finished neighbours instead of blanking the
-/// screen the way one fat summary request did.
+/// A slow endpoint shows a skeleton beside its finished neighbours rather than
+/// blanking the screen the way one fat summary request did.
+///
+/// **A failing one still does not degrade to this card alone.** `RepositoryState`
+/// has only `empty` and `ready` — there is no error variant — so a non-2xx
+/// throws out of `Repository.resolve` as an unhandled exception and takes the
+/// screen with it. §4's "independently able to fail" is therefore only half
+/// true: the requests are independent, the failures are not. Giving the
+/// repository layer an error state is the fix, and it is bigger than this
+/// widget.
 class DashboardMetricCard<T> extends StatelessWidget {
   const DashboardMetricCard({
     super.key,

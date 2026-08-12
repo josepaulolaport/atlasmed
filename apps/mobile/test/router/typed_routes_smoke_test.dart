@@ -37,6 +37,17 @@ void main() {
       SubjectDashboardRoute(subjectUserId: 5, subjectName: 'Ana').location,
       '/team/member/5?subjectName=Ana',
     );
+    // The subject's role rides along so the screen knows which cards may be
+    // asked about them: "Clínicas não atribuídas" is a zone question, and a rep
+    // holds no zones, so requesting it for one earns a 403.
+    expect(
+      SubjectDashboardRoute(
+        subjectUserId: 5,
+        subjectName: 'Ana',
+        subjectRole: 'REP',
+      ).location,
+      '/team/member/5?subjectName=Ana&subjectRole=REP',
+    );
     expect(TeamMemberRoute(managerId: 2).location, '/team/manager/2');
     expect(const RepsWithoutPatchRoute().location, '/team/reps-without-patch');
   });

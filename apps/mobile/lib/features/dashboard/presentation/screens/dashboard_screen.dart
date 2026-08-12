@@ -22,10 +22,25 @@ import 'package:atlasmed_mobile_app/router/routes.dart';
 /// same metrics, same filters — which is why the spec has no nested dashboard
 /// segments.
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key, this.subjectUserId, this.subjectName});
+  const DashboardScreen({
+    super.key,
+    this.subjectUserId,
+    this.subjectName,
+    this.subjectRole,
+  });
 
   final int? subjectUserId;
   final String? subjectName;
+
+  /// The subject's role, when the screen was opened from a roster that knew it.
+  ///
+  /// Needed because "Clínicas não atribuídas" is a question about *zones*, and
+  /// whether the screen may ask it depends on whose numbers these are, not on
+  /// who is looking. An admin viewing a rep must not see that card: every clinic
+  /// in a rep's denominator is assigned to them by definition, so the answer is
+  /// always 0 — which is why the API refuses it rather than returning a
+  /// reassuring zero (spec 0014 §4).
+  final String? subjectRole;
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -66,9 +81,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final selectedVerticalId = ref.watch(dashboardSelectedVerticalIdProvider);
     final scope = ref.watch(dashboardScopeArgsProvider(widget.subjectUserId));
     // Clínicas não atribuídas is a manager question: a rep holds no zones, so
-    // the API refuses it for them rather than answering a reassuring 0.
+    // the API refuses it rather than answering a reassuring 0.
+    //
+    // It turns on the *subject*, not the viewer. Reading the viewer's role here
+    // meant an admin opening a rep's Desempenho still rendered the card, and
+    // the 403 it earned took the whole screen down rather than one tile.
+    //
+    // A subject whose role we were not told is treated as ineligible: the
+    // screen is reachable by deep link, and hiding a card an admin could have
+    // seen is a smaller failure than crashing on one they could not.
     final role = ref.watch(currentUserRoleProvider);
-    final canSeeUnassigned = role != null && role != UserRoleName.rep;
+    final canSeeUnassigned = widget.subjectUserId == null
+        ? (role != null && role != UserRoleName.rep)
+        : (widget.subjectRole != null &&
+              widget.subjectRole!.toUpperCase() != 'REP');
 
     return Scaffold(
       backgroundColor: AppColors.background,

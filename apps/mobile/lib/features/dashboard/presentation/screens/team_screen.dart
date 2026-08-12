@@ -238,6 +238,7 @@ class _MemberTile extends StatelessWidget {
         SubjectDashboardRoute(
           subjectUserId: member.userId,
           subjectName: member.displayName,
+          subjectRole: member.roleName,
         ).push(context);
       },
     );
