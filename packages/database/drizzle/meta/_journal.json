@@ -677,8 +677,36 @@
     {
       "idx": 96,
       "version": "7",
-      "when": 1786559928078,
-      "tag": "0096_one_value_per_clinic_metric",
+      "when": 1786569595071,
+      "tag": "0096_one_value_per_clinic_metric_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1786571430757,
+      "tag": "0097_one_value_per_metric_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1786571460724,
+      "tag": "0098_drop_metric_month_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1786571470971,
+      "tag": "0099_no_other_brands_claim",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1786571471715,
+      "tag": "0100_share_requires_a_known_market",
       "breakpoints": true
     }
   ]

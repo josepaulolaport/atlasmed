@@ -1,0 +1,3 @@
+ALTER TABLE "facility_metric_snapshots" ADD COLUMN "no_other_brands" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "facility_metric_snapshots" ADD COLUMN "no_other_brands_set_at" timestamp;--> statement-breakpoint
+ALTER TABLE "facility_metric_snapshots" ADD CONSTRAINT "facility_metric_snapshots_no_other_brands_excludes_theirs" CHECK (not "facility_metric_snapshots"."no_other_brands" or "facility_metric_snapshots"."theirs_qty" = 0);
