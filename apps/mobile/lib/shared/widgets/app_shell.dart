@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
@@ -93,6 +94,36 @@ class AppShellScreenState extends State<AppShellScreen> {
 /// Convenience call to open the AppShell drawer from any descendant context.
 void openAppDrawer(BuildContext context) =>
     AppShellScreenState.of(context)?.openDrawer();
+
+/// Signing out drops the session **and** the cached user.
+///
+/// The session was never the only thing identifying a person. `UserRepository`
+/// is a long-lived singleton and `currentValueOrResolve()` returns its cached
+/// value without refetching — it says so in its own doc comment — so a logout
+/// that clears only the session leaves the previous user's name, e-mail and
+/// role in place. The next person to sign in then inherits them: the drawer
+/// greets them by someone else's name, and `currentUserRoleProvider` reports
+/// someone else's role to every screen that gates on it, until the app is
+/// restarted.
+///
+/// Revoking remotely is best effort. An expired token or a dead network must
+/// not leave the app signed in locally, so the user is cleared in a `finally` —
+/// but the failure is logged rather than swallowed, because a revoke that
+/// quietly failed leaves a live session on the server.
+Future<void> performLogout({
+  required Future<void> Function() revokeSession,
+  required Future<void> Function() clearUser,
+}) async {
+  try {
+    await revokeSession();
+  } catch (error) {
+    BaseRepository.logger(
+      'Logout: failed to revoke the remote session: $error',
+    );
+  } finally {
+    await clearUser();
+  }
+}
 
 // ======================================================================
 // AtlasTopBar — legacy inline bar with hamburger + breadcrumb
@@ -437,7 +468,11 @@ class AtlasDrawer extends ConsumerWidget {
                     _DrawerFooter(
                       onLogout: () {
                         Navigator.of(context).pop();
-                        repository.delete();
+                        final userRepository = ref.read(userProvider);
+                        performLogout(
+                          revokeSession: repository.delete,
+                          clearUser: userRepository.clear,
+                        );
                       },
                     ),
                   ],

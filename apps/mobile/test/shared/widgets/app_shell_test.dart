@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  _logoutTests();
+
   group('AppNavigationItem', () {
     const explore = AppNavigationItem(
       branchIndex: 0,
@@ -86,3 +88,50 @@ void main() {
 }
 
 void _ignoreBranch(int _) {}
+
+/// Regression: logging out cleared the session and left the *user* cached.
+///
+/// `UserRepository` is a long-lived singleton and `currentValueOrResolve()`
+/// returns its cached value without refetching, so the next person to sign in
+/// inherited the previous one's identity — the drawer greeted them by the wrong
+/// name and `currentUserRoleProvider` reported the wrong role — until the app
+/// was restarted. Found by signing in as a manager and being shown the admin.
+void _logoutTests() {
+  group('performLogout', () {
+    test('clears the cached user after revoking the session', () async {
+      final calls = <String>[];
+
+      await performLogout(
+        revokeSession: () async => calls.add('revoke'),
+        clearUser: () async => calls.add('clear'),
+      );
+
+      expect(calls, ['revoke', 'clear']);
+    });
+
+    test('clears the cached user even when the revoke fails', () async {
+      var cleared = false;
+
+      // An expired token or no network must not leave the app signed in
+      // locally: the identity is what the next sign-in would inherit.
+      await performLogout(
+        revokeSession: () async => throw Exception('offline'),
+        clearUser: () async => cleared = true,
+      );
+
+      expect(cleared, isTrue);
+    });
+
+    test('does not rethrow a failed revoke at the call site', () async {
+      // The drawer calls this without awaiting, so a thrown error would become
+      // an unhandled async exception rather than anything a user could act on.
+      await expectLater(
+        performLogout(
+          revokeSession: () async => throw Exception('boom'),
+          clearUser: () async {},
+        ),
+        completes,
+      );
+    });
+  });
+}
