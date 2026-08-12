@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_suggestions.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -53,6 +54,12 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   String? _error;
   Timer? _debounce;
 
+  /// CNES-sourced suggestions for this clinic (spec 0012 §5).
+  ///
+  /// Fetched once on open rather than per keystroke: the set does not depend on
+  /// the search query, and it changes only when the registry is reloaded.
+  CnesSuggestions? _cnes;
+
   /// Cached copy of already-associated doctors for pinning at the top.
   List<ProfessionalRoster> get _associated => widget.alreadyAssociatedDoctors;
 
@@ -66,6 +73,25 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     super.initState();
     _selected.addAll(widget.alreadyAssociatedIds);
     _loadPool();
+    _loadCnesSuggestions();
+  }
+
+  /// Never throws into the sheet: a CNES outage must not stop someone
+  /// associating a doctor by hand, so a failure degrades to an explanatory
+  /// section rather than an error state over the whole surface.
+  Future<void> _loadCnesSuggestions() async {
+    if (!_useApi) return;
+    final repo = FacilityAssociateRepository(widget.facilityId!);
+    try {
+      final suggestions = await repo.fetchCnesSuggestions();
+      if (!mounted) return;
+      setState(() => _cnes = suggestions);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cnes = CnesSuggestions.unavailable());
+    } finally {
+      repo.dispose();
+    }
   }
 
   @override
@@ -131,11 +157,27 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
 
   List<ProfessionalRoster> get _filtered => _pool;
 
+  /// Suggestions worth showing: CNES rows for people not already linked and not
+  /// already listed elsewhere in the sheet.
+  ///
+  /// The server excludes people linked to this clinic (AC 2), but the sheet is
+  /// live — someone selected in this session is still unlinked server-side, and
+  /// showing them twice would let one person be counted in two sections.
+  List<CnesSuggestion> get _cnesRows {
+    final suggestions = _cnes;
+    if (suggestions == null) return const [];
+    final poolIds = _filtered.map((d) => d.id).toSet();
+    return suggestions.items
+        .where((s) => !widget.alreadyAssociatedIds.contains(s.personId))
+        .where((s) => !poolIds.contains(s.personId))
+        .toList(growable: false);
+  }
+
   /// Combined items list with section headers for the list view.
-  /// Items are either [String] section headers or [ProfessionalRoster] rows.
+  /// Items are [String] markers, [ProfessionalRoster] rows, or [CnesSuggestion]
+  /// rows.
   List<Object> get _sectionedItems {
     final fd = _filtered;
-    if (fd.isEmpty) return const [];
 
     final associated = fd
         .where((d) => widget.alreadyAssociatedIds.contains(d.id))
@@ -143,14 +185,33 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     final available = fd
         .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
         .toList();
+    final cnes = _cnesRows;
+
+    // The CNES block is rendered even when empty — its whole value is telling
+    // the difference between "CNES knows nobody new" and "this clinic has no
+    // CNES code", which an absent section cannot express.
+    final showCnesSection = _cnes != null;
 
     final items = <Object>[];
     if (associated.isNotEmpty) {
       items.add('_section_header_associated');
       items.addAll(associated);
     }
+
+    // Second: above the generic pool, because a CNES match is the strongest
+    // signal in the sheet, and below the people already here, which is context.
+    if (showCnesSection) {
+      if (items.isNotEmpty) items.add('_section_divider');
+      items.add('_section_header_cnes');
+      if (cnes.isEmpty) {
+        items.add('_section_cnes_empty');
+      } else {
+        items.addAll(cnes);
+      }
+    }
+
     if (available.isNotEmpty) {
-      if (associated.isNotEmpty) {
+      if (items.isNotEmpty) {
         items.add('_section_divider');
       }
       items.add('_section_header_available');
@@ -254,7 +315,11 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                       ),
                     ),
                   )
-                : filtered.isEmpty
+                // Not `filtered.isEmpty`: the CNES section can have rows when
+                // the search pool has none, and short-circuiting on the pool
+                // alone hid the suggestions exactly when they were the only
+                // thing to show.
+                : _sectionedItems.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -322,6 +387,82 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     );
   }
 
+  /// Header for the CNES block, carrying the snapshot's date.
+  ///
+  /// The date is the point: ADR 0006 accepted the risk that users read a stale
+  /// registry as current fact, and this is what retires it. Without a loaded
+  /// snapshot there is no date to show and the label is simply omitted.
+  Widget _buildCnesHeader() {
+    final label = _cnes?.referenceLabel;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Vinculados a esta clínica no CNES',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.gray500,
+              letterSpacing: 0.3,
+            ),
+          ),
+          if (label != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11.5, color: AppColors.gray400),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// A suggestion row.
+  ///
+  /// Same checkbox-and-save flow as every other row: selecting one only stages
+  /// it, and nothing is written until the sheet is confirmed. CNES suggests, a
+  /// human confirms — ADR 0004 Q21 — and the resulting link is an ordinary
+  /// `person_facilities` row, indistinguishable from a manual one (AC 6).
+  Widget _buildCnesRow(CnesSuggestion suggestion) {
+    final selected = _selected.contains(suggestion.personId);
+    final subtitle = [
+      if (suggestion.occupation != null) suggestion.occupation!,
+      if (suggestion.registrationLabel != null) suggestion.registrationLabel!,
+    ].join(' · ');
+
+    return CheckboxListTile(
+      value: selected,
+      onChanged: _saving
+          ? null
+          : (v) => setState(() {
+              if (v == true) {
+                _selected.add(suggestion.personId);
+              } else {
+                _selected.remove(suggestion.personId);
+              }
+            }),
+      controlAffinity: ListTileControlAffinity.trailing,
+      dense: true,
+      title: Text(
+        suggestion.displayName,
+        style: const TextStyle(
+          fontSize: 14.5,
+          fontWeight: FontWeight.w600,
+          color: AppColors.gray900,
+        ),
+      ),
+      subtitle: subtitle.isEmpty
+          ? null
+          : Text(
+              subtitle,
+              style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+            ),
+    );
+  }
+
   Widget _buildDoctorList(
     List<ProfessionalRoster> filtered,
     List<Object> sectioned,
@@ -337,6 +478,20 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
               return _buildSectionHeader('Já associados');
             case '_section_header_available':
               return _buildSectionHeader('Disponíveis');
+            case '_section_header_cnes':
+              return _buildCnesHeader();
+            case '_section_cnes_empty':
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  _cnes?.emptyMessage ?? '',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.gray400,
+                    height: 1.4,
+                  ),
+                ),
+              );
             case '_section_divider':
               return const Divider(
                 height: 12,
@@ -347,6 +502,8 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
           }
           return const SizedBox.shrink();
         }
+
+        if (item is CnesSuggestion) return _buildCnesRow(item);
 
         // Doctor row
         final d = item as ProfessionalRoster;
@@ -417,7 +574,20 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   }
 
   Future<void> _confirm() async {
-    final chosen = _pool.where((d) => _selected.contains(d.id)).toList();
+    // Candidates come from the pool AND the CNES section. A suggestion is
+    // deliberately absent from the pool — the server excludes people already
+    // linked here, and the search knows nothing about the registry. Selecting
+    // from `_pool` alone silently dropped every suggestion on save: the
+    // checkbox ticked, the sheet closed, and nothing was associated.
+    final candidates = <int, ProfessionalRoster>{
+      for (final suggestion in _cnesRows)
+        suggestion.personId: suggestion.toRoster(),
+      // Pool entries win on conflict: they carry the richer roster data.
+      for (final doctor in _pool) doctor.id: doctor,
+    };
+    final chosen = candidates.values
+        .where((d) => _selected.contains(d.id))
+        .toList(growable: false);
     if (chosen.isEmpty || !_useApi) return;
 
     // Associate existing persons only (POST { personId }).

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api/professional_api.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/domain/cnes_suggestions.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/person_facility_role_catalog.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/domain/professional_roster.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
@@ -43,6 +44,35 @@ class FacilityAssociateRepository extends Repository<PaginatedProfessionals>
   @override
   PaginatedProfessionals fromJson(String json) =>
       PaginatedProfessionals.fromJson(json);
+
+  /// Professionals CNES associates with this clinic that we already hold and
+  /// that are not linked here yet — `GET …/healthcare-professionals/cnes-suggestions`.
+  ///
+  /// The exclusion of already-linked people happens server-side (spec 0012
+  /// AC 3), so this list never needs local filtering the way [searchDoctors]
+  /// does.
+  Future<CnesSuggestions> fetchCnesSuggestions() async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('$_healthcarePath/cnes-suggestions'),
+        method: RepositoryHttpMethod.get,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityAssociateException(
+          'Falha ao buscar sugestões do CNES (${response.statusCode})',
+        );
+      }
+      return CnesSuggestions.unavailable();
+    }
+
+    return CnesSuggestions.fromMap(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
+  }
 
   /// Global Explorar search — `GET /healthcare-professionals`.
   Future<List<ProfessionalRoster>> searchDoctors({

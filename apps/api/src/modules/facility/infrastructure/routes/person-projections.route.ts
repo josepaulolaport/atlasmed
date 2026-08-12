@@ -7,6 +7,7 @@ import {
   CLASSIFICATION,
   personUseCases,
 } from "../../../person/composition";
+import { ListCnesSuggestionsUseCase } from "../../application/use-cases/cnes-suggestion.use-cases";
 
 type Executable = { execute(input: any): Promise<any> };
 
@@ -184,6 +185,39 @@ const patchHealthcareRoute = (
         },
         params: affiliationParams,
         body: t.Object(patchBody),
+      }
+    );
+
+/**
+ * CNES-suggested professionals for a clinic (spec 0012 §5).
+ *
+ * Read-only and scoped to one facility, so it carries the same permissions as
+ * the roster it sits beside — a suggestion reveals that a person exists and
+ * where they work, which is exactly what `read PERSON` + `read FACILITY` gate.
+ */
+const listCnesSuggestionsRoute = (
+  useCase: Executable = new ListCnesSuggestionsUseCase(),
+  authPlugin: any = auth
+) =>
+  new Elysia()
+    .use(authPlugin)
+    .use(requirePermission("read", "PERSON"))
+    .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+    .get(
+      "/facilities/:id/healthcare-professionals/cnes-suggestions",
+      async ({ params, query }) =>
+        useCase.execute({
+          facilityId: params.id,
+          limit: query.limit,
+        }),
+      {
+        detail: {
+          summary: "Professionals CNES associates with this facility, not yet linked",
+          tags: ["Persons"],
+          security: [{ bearerAuth: [] }],
+        },
+        params: facilityIdParams,
+        query: t.Object({ limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })) }),
       }
     );
 
@@ -435,9 +469,20 @@ const deleteAdminRoute = (
 
 export function createPersonProjectionsRoutes(
   useCases: PersonProjectionsHttpUseCases = personUseCases,
-  authPlugin: any = auth
+  authPlugin: any = auth,
+  cnesSuggestionsUseCase: Executable = new ListCnesSuggestionsUseCase()
 ) {
   return new Elysia()
+    /**
+     * `cnes-suggestions` occupies the same path slot as `:personFacilityId` in
+     * `getHealthcareRoute`, which is typed as an integer — so if the dynamic
+     * route won the match, this endpoint would 422 instead of answering.
+     *
+     * It does not: Elysia's router prefers the static segment, verified by
+     * registering this route last and watching the integration test still pass.
+     * The order here is only for readability, and the test is the real guard.
+     */
+    .use(listCnesSuggestionsRoute(cnesSuggestionsUseCase, authPlugin))
     .use(listHealthcareRoute(useCases, authPlugin))
     .use(createHealthcareRoute(useCases, authPlugin))
     .use(getHealthcareRoute(useCases, authPlugin))
