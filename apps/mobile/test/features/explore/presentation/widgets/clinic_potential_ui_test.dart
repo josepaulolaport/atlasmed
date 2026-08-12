@@ -396,17 +396,37 @@ void main() {
       expect(find.textContaining('/2026'), findsOneWidget);
     });
 
-    testWidgets('is not offered to a rep who may not edit', (tester) async {
+    testWidgets('is absent for a rep who may not edit', (tester) async {
+      // Absent, not present-and-failing — the same rule the add affordance
+      // follows.
       tester.view.physicalSize = narrowPhone;
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(host(PotentialRowHarness(item: item())));
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const Key('potential-no-other-brands')), findsNothing);
+    });
+
+    testWidgets('a standing claim is still shown to a read-only viewer', (
+      tester,
+    ) async {
+      // Hiding it would make a 100% share look unexplained.
+      tester.view.physicalSize = narrowPhone;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        host(PotentialRowHarness(item: item(noOtherBrands: true))),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('potential-no-other-brands')),
+        findsOneWidget,
+      );
       final checkbox = tester.widget<Checkbox>(
         find.byKey(const Key('potential-no-other-brands')),
       );
-      // Present but inert, matching how the add affordance behaves.
       expect(checkbox.onChanged, isNull);
     });
   });

@@ -1,4 +1,3 @@
-import type { StoredSnapshotCell } from "@atlasmed/facility-insights";
 
 export type PotentialDefinitionRecord = {
   id: number;
@@ -60,13 +59,6 @@ export interface PotentialRepository {
   }): Promise<number | null>;
 
 
-  /**
-   * The stored snapshot for each metric of this profile.
-   *
-   * A cache: the read path computes from the inputs when a profile has none, so
-   * "absent" is normal rather than an error.
-   */
-  listMetricSnapshots(input: { profileId: number }): Promise<StoredSnapshotCell[]>;
 
   /**
    * The quantity standing for each competitor product of a metric.

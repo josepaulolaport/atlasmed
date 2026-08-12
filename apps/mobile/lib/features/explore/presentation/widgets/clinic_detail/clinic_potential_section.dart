@@ -335,6 +335,13 @@ class _NoOtherBrandsClaim extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Absent, not present-and-failing — the same rule the add affordance
+    // follows two widgets down. A read-only clinic showing a checkbox nobody
+    // can tick invites the rep to try.
+    if (onChanged == null && !item.noOtherBrands) {
+      return const SizedBox.shrink();
+    }
+
     final claimable = item.competitors.isEmpty;
     if (!claimable && !item.noOtherBrands) return const SizedBox.shrink();
 

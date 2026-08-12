@@ -13,9 +13,9 @@ import 'package:flutter/services.dart';
 /// pair a profile in one linha with a metric in another — that invariant is the
 /// server's, and this screen simply has no way to express the wrong thing.
 ///
-/// The quantity is in *product units*, exactly as printed on the box. It is
-/// multiplied by the product's `metric_units` on read, symmetric with how our
-/// own order lines are counted, so the rep never does arithmetic in their head.
+/// The quantity is the standing monthly figure in the metric's own unit — one
+/// number per product, replaced rather than accumulated (spec 0013 §4.6). No
+/// conversion happens on read, so what the rep types is what the list shows.
 class CompetitorQuantitySheet extends StatefulWidget {
   const CompetitorQuantitySheet({
     super.key,
@@ -285,15 +285,9 @@ class _CompetitorQuantitySheetState extends State<CompetitorQuantitySheet> {
                 ],
                 decoration: InputDecoration(
                   labelText: 'Quantidade por mês',
-                  // The list shows this product in metric units and this field
-                  // takes packaging units, so the number here will not match the
-                  // row that was just tapped. Saying so is cheaper than a rep
-                  // deciding the figure was lost.
-                  helperText: widget.existing == null
-                      ? 'Na unidade da embalagem, como o rep a conhece.'
-                      : 'Na unidade da embalagem. A lista mostra o total '
-                            'convertido para a unidade da métrica.',
-                  helperMaxLines: 3,
+                  // One standing figure, not an addition to what is there: the
+                  // rep is stating what the clinic uses now.
+                  helperText: 'Quanto a clínica usa por mês, hoje.',
                   border: const OutlineInputBorder(),
                 ),
               ),

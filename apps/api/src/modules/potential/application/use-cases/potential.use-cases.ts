@@ -8,13 +8,9 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 import {
-  addMonths,
   deriveShare,
-  monthKeyAt,
   monthlyRateFromDays,
   rollingWindow,
-  trailingMonths,
-  type MonthKey,
 } from "@atlasmed/facility-insights";
 import type { PotentialRepository } from "../interfaces/potential.repository.interface";
 
@@ -29,7 +25,6 @@ import type { PotentialRepository } from "../interfaces/potential.repository.int
  * future-dated orders counted, and which depended on the clock, so the same
  * month could never be recomputed to the same number.
  */
-const MONTHS_IN_WINDOW = 3;
 
 function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
   const assigned = scope.assignedVerticalIds ?? [];
@@ -39,16 +34,6 @@ function assertVerticalAccess(scope: ScopeContext, verticalId: number) {
   }
 }
 
-/**
- * The months one edit invalidates.
- *
- * An edit belongs to a single month, but the displayed figure averages a
- * trailing window — so the months after it change too. Recomputing only the
- * edited month would leave the visible number stale.
- */
-function windowFor(month: MonthKey): MonthKey[] {
-  return trailingMonths(addMonths(month, MONTHS_IN_WINDOW - 1), MONTHS_IN_WINDOW);
-}
 
 function slugKey(raw: string): string {
   return raw
@@ -74,7 +59,6 @@ export class ListFacilityPotentialsUseCase {
     assertVerticalAccess(input.scope, input.verticalId);
 
     const now = input.now ?? new Date();
-    const currentMonth = monthKeyAt(now);
     // Ours is a rolling day window (spec 0013 §4.3), which is what stops a
     // partial month from dragging the number down. Theirs no longer names
     // months at all — it is the figure standing per product.
@@ -203,11 +187,6 @@ export class ListFacilityPotentialsUseCase {
            * nothing into.
            */
           share,
-          /**
-           * The current month, still sent for the write path: an edit records
-           * against a month even though the read no longer averages them.
-           */
-          month: currentMonth,
           /**
            * What stands recorded per competitor product. These sum to
            * `competitorMonthlyQty`; `updatedAt` is the only signal a figure is
