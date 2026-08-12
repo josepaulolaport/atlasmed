@@ -22,7 +22,6 @@ export {
   rollingWindow,
   MarketMetricValidationError,
   addMonths,
-  averageMonthly,
   deriveShare,
   monthBounds,
   monthKeyAt,

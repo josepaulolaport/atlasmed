@@ -3,7 +3,6 @@ import {
   APPLICATION_TIMEZONE,
   MarketMetricValidationError,
   addMonths,
-  averageMonthly,
   deriveShare,
   monthBounds,
   monthKeyAt,
@@ -170,22 +169,6 @@ describe("deriveShare", () => {
   });
 });
 
-describe("averageMonthly", () => {
-  it("divides by the window, not by the months supplied", () => {
-    // One month of 30 across a three-month window is an average of 10 — the
-    // silent months are real zeros, not missing data.
-    expect(averageMonthly([30, 0, 0], 3)).toBe(10);
-  });
-
-  it("treats an empty history as zero rather than dividing by zero", () => {
-    expect(averageMonthly([], 3)).toBe(0);
-  });
-
-  it("rejects a non-positive window", () => {
-    expect(() => averageMonthly([1], 0)).toThrow(MarketMetricValidationError);
-  });
-});
-
 describe("APPLICATION_TIMEZONE", () => {
   it("is São Paulo, because the rep's months are the product's months", () => {
     expect(APPLICATION_TIMEZONE).toBe("America/Sao_Paulo");
@@ -201,11 +184,12 @@ describe("rolling window", () => {
 
   it("does not understate a steady clinic early in the month", () => {
     // The defect this replaces: on the 5th, three *calendar* months divides two
-    // full months plus five days by three. A clinic selling 30/month reads ~21.
-    const calendarStyle = averageMonthly([30, 30, 5], 3);
-    const rolling = monthlyRateFromDays(90, 90);
+    // full months plus five days by three, so a clinic selling 30/month reads
+    // ~21 and appears to recover as the month fills in. Spelled out here rather
+    // than called, because the function that did it is gone.
+    const calendarStyle = [30, 30, 5].reduce((a, b) => a + b, 0) / 3;
     expect(calendarStyle).toBeCloseTo(21.67, 1);
-    expect(rolling).toBe(30);
+    expect(monthlyRateFromDays(90, 90)).toBe(30);
   });
 
   it("normalises by the days actually covered", () => {

@@ -253,26 +253,3 @@ export function monthlyRateFromDays(
   return (quantity / days) * DAYS_PER_MONTH;
 }
 
-/**
- * The trailing monthly mean over a fixed window of months.
- *
- * Still used for month-keyed figures — the rep's competitor quantities are
- * already monthly *rates*, so they are averaged, never day-normalised.
- *
- * Divides by the window, not by the number of months supplied — a clinic that
- * recorded in one of the last three months averages over three, because the two
- * silent months are real zeros rather than missing data.
- */
-export function averageMonthly(
-  monthlyQuantities: readonly number[],
-  monthsInWindow: number,
-): number {
-  if (!Number.isInteger(monthsInWindow) || monthsInWindow < 1) {
-    throw new MarketMetricValidationError(
-      "INVALID_WINDOW",
-      `Window must be a positive whole number of months, received ${monthsInWindow}`,
-    );
-  }
-  const sum = monthlyQuantities.reduce((total, value) => total + value, 0);
-  return sum / monthsInWindow;
-}

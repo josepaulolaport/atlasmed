@@ -2,7 +2,6 @@ import { and, asc, eq, gt, gte, inArray, isNotNull, isNull, lt, sql } from "driz
 import { union } from "drizzle-orm/pg-core";
 import {
   type MetricSnapshotStore,
-  type MonthKey,
 } from "@atlasmed/facility-insights";
 import type { AnyDatabase } from "../client";
 import { facilityVerticalProfiles } from "../schema/public/facilities";

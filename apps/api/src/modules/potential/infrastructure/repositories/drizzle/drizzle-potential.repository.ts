@@ -14,7 +14,6 @@ import {
   type Database,
 } from "@atlasmed/database";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
-import type { MonthKey } from "@atlasmed/facility-insights";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityProductUsageRecord,
