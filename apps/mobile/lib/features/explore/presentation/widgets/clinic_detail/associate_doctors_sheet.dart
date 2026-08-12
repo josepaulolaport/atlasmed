@@ -336,7 +336,10 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                 const SizedBox(height: 12),
                 _SourceToggle(
                   source: _source,
-                  cnesCount: _cnesRows.length,
+                  // Everyone CNES places here, linked or not — the pill counts
+                  // what the tab contains rather than only the actionable part,
+                  // so the number matches the rows below it.
+                  cnesCount: _cnesRows.length + _cnesLinkedRows.length,
                   // Null until the fetch settles, so the pill can say "—"
                   // rather than claim zero before it knows.
                   cnesLoaded: _cnes != null,
