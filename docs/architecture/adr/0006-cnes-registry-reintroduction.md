@@ -44,7 +44,12 @@ Reintroduce a `registry` Postgres schema, **substantially narrower** than what w
 - No FTP adapter, archive storage, or monthly Temporal ingest workflow.
 - No `ingestion` schema, no run/diff/suggestion tables, no suggestion review surface.
 - No `/registry/*` API module.
-- No write-back from registry to `public`.
+- ~~No write-back from registry to `public`.~~ **Narrowed 2026-08-11.** No *automated*
+  reconciliation: the loader never writes to `public`, and no background process promotes registry
+  rows. A user may import a doctor CNES lists at their clinic — creating a `public` person from
+  registry data after confirming it — which is a human act, and which
+  `registry.professionals.atlasmed_id` ("set on link or promote, never by the loader") was always
+  shaped for. Spec 0012 §5.
 
 **No stored link between `public` and `registry` for professionals.** The correspondence is a
 **join on an identifier present in both**, evaluated per query. See spec 0012.

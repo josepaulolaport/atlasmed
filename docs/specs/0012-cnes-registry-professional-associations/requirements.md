@@ -132,9 +132,57 @@ that **CNES associates with this clinic AND that already exist in our database**
 the §3.2 join, excluding those already linked to this facility. One tap associates them, creating
 a normal `person_facilities` row.
 
-Professionals CNES lists at the clinic but which do **not** exist in our database are **not
-shown** in this pass. Surfacing them would require creating a person from registry data, which is
-§6.
+**Professionals CNES lists at the clinic that we do not hold are shown too**, flagged as not yet
+registered. Selecting one starts an *import*: the rep confirms a pre-filled profile and we create
+the person from CNES data plus their input.
+
+*(Amended 2026-08-11. The original text deferred these to §6 on the grounds that showing them
+requires creating a person from registry data. The measurement changed the calculus: of 25 217
+registry vínculos at clinics we operate, only 2 012 resolve to someone we hold — **92 % are
+invisible**, covering 18 098 doctors, of whom 5 764 are orthopedists. A suggestion list that
+silently omits nine tenths of the clinic's staff is not a partial feature, it is a misleading one.)*
+
+**Import is resolve-or-create, never create.** Before inserting anyone, look up the registration
+`(council, UF, número)` in `person_professional_registrations`; if it is held, link that person and
+backfill their `cnes_professional_id` instead. Measured today at 0 collisions out of 18 098 — but
+that number only stays zero until a rep creates a doctor by hand who also appears in CNES, and the
+unique on `(council_id, state_code, registration_number)` means the alternative to resolving is a
+constraint violation. A concurrent import that loses that race must link, not error.
+
+**What CNES can and cannot fill.**
+
+| | |
+|---|---|
+| name | `NO_PROFISSIONAL`, uppercase and single-field — needs splitting and pt-BR title casing |
+| CNS | present |
+| CPF | **masked on 100 % of rows** (`XXX.392.286.XX`); imported people have no CPF |
+| CRM | present, and it is the identity key |
+| e-mail, telefone | absent — the rep supplies these or they stay empty |
+
+`splitPersonName` (`facility_associate_repository.dart:234`), orphaned by `ad80e203` and flagged
+below as "may become relevant again", becomes relevant again here.
+
+**Occupation is not specialty.** A CBO belongs to the vínculo — it is what someone does *at that
+clinic* — and 1 854 of 19 137 professionals carry more than one, up to seven (one doctor is
+`MEDICO EM MEDICINA INTENSIVA` at one clinic and `MEDICO ORTOPEDISTA` at another). So:
+
+- the vínculo's CBO populates `person_facility_occupations` for **that** facility;
+- the person's specialties come from the **union** of their CBOs across clinics, written to
+  `person_healthcare_profile_specialties`.
+
+Taking the viewed clinic's CBO as the person's specialty would make the same doctor an intensivist
+or an orthopedist depending on which clinic the rep happened to open.
+
+**The CBO → specialty mapping does not exist yet.** `healthcare_specialties` has 66 rows and 67
+distinct CBOs appear among our doctors — the same concept in two catalogues — but
+`registry.occupations.atlasmed_id` points at `public.occupations` (the 28-row facility-role
+catalogue), not at specialties. A second bridge column is needed, hand-curated like the councils
+and for the same reason. **Until it exists the import form shows the CNES occupation text as
+context and the rep chooses the specialty**; a wrong specialty is worse than an empty one because
+it drives targeting.
+
+**Any role may import.** The action is gated by facility access, not by a create-person
+permission.
 
 Two immediate improvements independent of the registry, worth taking with it:
 - Push the "already associated" filter **server-side** — the endpoint already accepts
@@ -146,24 +194,21 @@ Two immediate improvements independent of the registry, worth taking with it:
 remains a manual act. Recording that a link originated from a CNES suggestion was considered and
 **deferred** — no provenance column in this pass.
 
-## 6. CFM portal import — deferred, documented
+## 6. Importing a doctor we do not hold
 
-Source: `https://portal.cfm.org.br/busca-medicos`.
-
-When a user cannot find a doctor in our database, they import directly from CFM. The record is
-created from an authoritative registry, then we make a **best-effort** attempt to resolve them in
-the CNES data. Success is a bonus, not a precondition — an imported doctor is usable either way.
-Once resolved, they appear in the CNES association filter.
+**CNES-sourced import is in scope since 2026-08-11** — see §5. The CFM portal remains deferred;
+what follows is why creating a doctor at all is legitimate, which applies to both sources.
 
 ⚠️ **This partially reverses `ad80e203`**, which removed the create-doctor flow with the note
 *"Product has no create-doctor surface; keep associate-existing only."* The reversal is on
-different grounds: that removal targeted **free-form typing producing junk records**; CFM-sourced
-creation pulls from an authoritative registry. Same principle as registry-import-instead-of-create
-for facilities (spec 0010 § 6). Record this reasoning in the implementing PR so the reversal is
-not read as a regression.
+different grounds: that removal targeted **free-form typing producing junk records**; a CNES- or
+CFM-sourced import pulls a name and a registration from an authoritative registry and asks a human
+to confirm them. Same principle as registry-import-instead-of-create for facilities (spec 0010
+§ 6). Record this reasoning in the implementing PR so the reversal is not read as a regression.
 
-Note the vestigial `splitPersonName` helper (`facility_associate_repository.dart:234`), orphaned
-by `ad80e203`, may become relevant again — or should be deleted now and rewritten deliberately.
+**Deferred: the CFM portal** (`https://portal.cfm.org.br/busca-medicos`), for doctors CNES does
+not place at the clinic at all. The record would be created from CFM, then resolved against CNES
+on a best-effort basis — success a bonus, not a precondition.
 
 ## 7. Deferred
 
